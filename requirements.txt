@@ -1,0 +1,5 @@
+fenjing
+openai
+httpx
+beautifulsoup4
+
