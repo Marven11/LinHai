@@ -127,7 +127,7 @@ class OpenAiAnswer:
 class OpenAi:
     def __init__(self, *, api_key: str, base_url: str, model: str, openai_config: dict):
         self.model = model
-        self.openai = AsyncOpenAI(api_key=api_key, base_url=base_url, **openai_config)
+        self.openai = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=10, **openai_config)
 
     async def answer_stream(
         self,
