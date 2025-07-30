@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import TypedDict, cast, Union
 import toml
 from pathlib import Path
 import re
@@ -36,9 +36,15 @@ def validate_config(config: Config) -> None:
     if not llm_config["model"]:
         raise ConfigValidationError("model cannot be empty")
 
-def load_config() -> Config:
-    """从config.toml加载配置并验证"""
-    config_path = Path(__file__).parent / "config.toml"
+def load_config(config_path: Union[str, Path, None] = None) -> Config:
+    """从指定路径加载配置并验证
+    参数:
+        config_path: 配置文件路径，可以是str或Path对象，默认为linhai/config.toml
+    """
+    if config_path is None:
+        config_path = Path(__file__).parent / "config.toml"
+    elif isinstance(config_path, str):
+        config_path = Path(config_path)
     config_data = toml.load(config_path)
     config = cast(Config, config_data)
     validate_config(config)

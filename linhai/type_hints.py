@@ -2,6 +2,9 @@ from __future__ import annotations
 from typing import Union, Optional, Iterable, TypedDict, Literal
 from typing_extensions import Required, TypeAlias
 
+# Agent状态类型
+AgentState = Literal["waiting_user", "working", "paused"]
+
 
 class ChatCompletionContentPartTextParam(TypedDict):
     text: Required[str]
@@ -65,8 +68,8 @@ ChatCompletionMessageParam: TypeAlias = Union[
     SystemMessage,
     UserMessage,
     AssistantMessage,
-    # ToolMessage,
-    # FunctionMessage
+    ToolMessage,
+    FunctionMessage
 ]
 
 __all__ = [
@@ -76,4 +79,5 @@ __all__ = [
     "ToolMessage",
     "FunctionMessage",
     "ChatCompletionMessageParam",
+    "AgentState",
 ]
