@@ -7,7 +7,7 @@
 - [ ] 完成工具类
 - [ ] 完成LLM对接部分
     - [x] 基本适配OpenAI
-    - [ ] 编写测试
+    - [x] 编写测试
     - [ ] 支持打断Token生成
 - [ ] 完成Agent逻辑
 
@@ -15,15 +15,21 @@
 
 - 没有特殊情况，数据传递一般使用TypedDict
 - 多个对象之间的交流一般使用Queue
-- 每个模块都有对应的unit test测试其的功能
+- 每个模块都应该有对应的unit test测试其的功能
+- 没有特殊情况，每个新建的变量都要加上类型注释（type hint）
+- 所有函数和方法都需要编写文档注释，写好输入输出的类型注释
+- 没有特殊情况，不要使用`# `注释代码片段在干什么
+- 类型检查器是必需的：类型检查器的输出可以极大帮助LLM修复漏洞
+- 不要在语句结尾和空行处留下多余的空格
 
-# 运行单元测试
+# LLM规范
 
-使用以下命令激活venv并运行单元测试
+如果你是辅助用户编写代码的机器人，你需要注意以下几点：
 
-```shell
-. ./.secret.sh && . ./.venv/bin/activate && python -m linhai test
-```
+- 如果你遇到了什么问题，请询问用户
+- 如果你思考了未来的任务，且任务不能一步完成，你应该在输出时提及你对未来的计划
+    - 如：“当前我们遇到了...问题，未来应先...，然后...”
+- 你应该注意上方的“代码风格与规范”，根据提及的代码风格编写代码
 
 # Agent设计
 
@@ -106,29 +112,6 @@ Agent的运行过程为响应式，Agent需要通过Queue接受用户的消息�
     - 回复用户：回复用户的请求，跳转到“等待用户”状态，等待用户的消息
     - 调用工具：发送消息调用工具，跳转到“自动运行”状态，等待工具的响应
 
-
-## Agent的System Prompt设计
-
-```markdown
-# 情景
-
-你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、小心谨慎的人工智能Agent
-
-# 流程
-
-## 处理用户输入
-
-...
-
-## 调用工具
-
-...
-
-# 注意
-
-...
-```
-
 ## Agent如何调用工具
 
 为了减少Prompt长度，减少资源占用，同时为每个工具提供详尽的使用方法，工具的使用说明被外置在文档中
@@ -171,6 +154,8 @@ select函数用来让Agent同时等待多个queue，Agent需要同时等待用�
 
 - `test` 运行unittest
 - `chat` 使用对应的config调用LLM聊天
+- `agent` 启动Agent，让Agent和用户进行交流
+    - 初始化用户和工具的Queue，把用户的消息Pipe进Queue中，然后等待Agent输出（将消息Pipe进Queue中），从Pipe中拿到Agent的输出后打印出来
 
 其他地方没写好，暂时先添加调用unittest运行单元测试的功能
 
@@ -184,8 +169,90 @@ LanguageModel Protocol提供`answer_stream`函数，根据输入聊天历史流�
 
 llm.py应该支持打断当前回答消息的生成
 
-## Agent
+## 工具 tool/
 
-TODO 文档未编写完毕
+### base.py
 
-Agent为响应式的
+定义工具的定义函数等
+
+### tools/calculation.py
+
+定义一个用来测试的工具：计算两个数字的和
+
+## Agent agent.py
+
+Agent响应式地从Queue接受用户和工具的消息
+
+这个函数实现Agent本身和初始化Agent的逻辑等，方便main.py等函数调用
+
+## 外界交互
+
+Agent持有四个Queue，用户输入消息Queue，工具输入消息Queue，用户输出消息Queue和工具输出消息Queue
+
+因为还没有开发完毕，Agent的工具输入输出Queue可以先传一个无用的Queue
+
+## 读取LLM响应流程
+
+## Agent类设计
+
+以下是伪代码
+
+```python
+
+class Agent:
+    def __init__(self, ...):
+        """
+        初始化状态、保存OpenAi类、Queue、工具等
+        """
+    async def state_waiting_user(self):
+        # 等待用户
+    async def state_working(self):
+        # 自动运行
+    async def state_paused(self):
+        # 暂停运行
+    async def handle_user_message(self, ...):
+        # 处理用户消息
+    async def handle_tool_message(self, ...):
+        # 处理工具消息
+    # 因为client.chat.completions.create返回的数据比较复杂
+    # 这里开几个工具函数解析里面的数据
+    async def collect_tool_calls(self, ...):
+        pass
+    async def read_token_stream(self, ...):
+        """读取LLM响应"""
+        # 这里就是用async for chunk in response读取LLM响应的地方，这个函数可能会比较长
+    async def run(self):
+        """
+        事件循环
+        """
+        
+        while True:
+            # 判断当前状态，转到对应的状态函数
+            if self.state == ...:
+                ...
+
+```
+
+## System Prompt设计
+
+```markdown
+# 情景
+
+你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、小心谨慎的人工智能Agent
+
+你有时会出错，有时会健忘，但是你会根据用户的需求和你自己的观察修正自己，完成任务。
+
+# 流程
+
+## 处理用户输入
+
+...
+
+## 调用工具
+
+...
+
+# 注意
+
+...
+```
