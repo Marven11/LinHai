@@ -54,7 +54,6 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
         self.memory = {"language": "zh-CN"}
-        self.task_context = {}
 
         self.messages: list[Message] = [
             ChatMessage(
@@ -70,22 +69,54 @@ class Agent:
             if chat_msg is None:
                 break
 
-            await self.handle_user_message(chat_msg)
+            await self.handle_messages([chat_msg])
 
     async def state_working(self):
         """自动运行状态"""
+        is_tool_message_received = False
+        messages: list[Message] = []
         logger.info("Agent进入自动运行状态")
+        while not is_tool_message_received:
+            try:
+                queues = [self.user_input_queue, self.tool_output_queue]
+                async for msg, index in select(*queues):
+                    try:
+                        if index == 0:
+                            messages.append(cast(ChatMessage, msg))
+                        elif index == 1:
+                            messages.insert(
+                                0, cast(ToolResultMessage | ToolErrorMessage, msg)
+                            )
+                            is_tool_message_received = True
+                            break
+                    except QueueClosed:
+                        logger.info("处理消息时队列已关闭")
+                        break
+            except QueueClosed:
+                logger.info("所有队列已关闭")
+                break
+            except Exception as e:
+                logger.error("处理消息时出错: %s", str(e))
+                self.state = "paused"
+                raise RuntimeError("处理消息时出错") from e
+        await self.handle_messages(messages)
+
+    async def state_paused(self):
+        """暂停运行状态"""
+        messages: list[Message] = []
+        logger.info("Agent进入暂停运行状态")
         while self.state == "working":
             try:
                 queues = [self.user_input_queue, self.tool_output_queue]
                 async for msg, index in select(*queues):
                     try:
                         if index == 0:
-                            msg = cast(ChatMessage, msg)
-                            await self.handle_user_message(msg)
+                            messages.append(cast(ChatMessage, msg))
                         elif index == 1:
-                            msg = cast(ToolResultMessage | ToolErrorMessage, msg)
-                            await self.handle_tool_message(msg)
+                            messages.insert(
+                                0, cast(ToolResultMessage | ToolErrorMessage, msg)
+                            )
+                            break
                     except QueueClosed:
                         logger.info("处理消息时队列已关闭")
                         break
@@ -97,63 +128,23 @@ class Agent:
                 self.state = "paused"
                 raise RuntimeError("处理消息时出错") from e
 
-    async def state_paused(self):
-        """暂停运行状态"""
-        logger.info("Agent进入暂停状态")
-        while self.state == "paused":
-            try:
-                queues = [self.user_input_queue, self.tool_output_queue]
-                async for msg, index in select(*queues):
-                    try:
-                        if index == 0:
-                            await self.handle_user_message(msg)
-                        elif index == 1:
-                            await self.handle_tool_message(msg)
-                    except QueueClosed:
-                        logger.info("处理消息时队列已关闭")
-                        break
-            except QueueClosed:
-                logger.info("所有队列已关闭")
-                break
-            except Exception as e:
-                logger.error("处理消息时出错: %s", str(e))
-                raise RuntimeError("处理消息时出错") from e
-
-    async def handle_user_message(self, msg: ChatMessage):
-        """处理用户消息"""
-        logger.info("处理用户消息: %s", msg.message)
-
-        self._update_context_from_message(msg)
-
-        self.messages.append(msg)
-
-        try:
-            await self._generate_response()
-        except Exception as e:
-            logger.error("处理用户消息时出错: %s", str(e))
-            self.state = "paused"
-            raise RuntimeError("处理用户消息时出错") from e
-
-    async def handle_tool_message(self, msg: ToolResultMessage | ToolErrorMessage):
-        """处理工具消息"""
-        logger.info("收到工具消息: %s", msg.content)
-        self.task_context["last_tool_message"] = msg.content
-        self.messages.append(msg)
-
-        # 根据PROJECT.md，工具消息处理后继续自动运行
-        self.state = "working"
-        await self._generate_response()
+        await self.handle_messages(messages)
 
     async def call_tool(self, tool_call: ToolCallMessage):
         """调用工具并发送请求"""
         await self.tool_input_queue.put(tool_call)
         self.state = "working"  # 进入自动运行状态等待工具结果
 
-    def _update_context_from_message(self, msg: ChatMessage):
-        """从用户消息更新上下文"""
-        self.task_context["last_user_message"] = msg.message
+    async def handle_messages(self, messages: list[Message]):
+        """处理新的消息"""
+        self.messages += messages
+        try:
+            return await self.generate_response()
+        except Exception:
+            self.state = "paused"
+            raise
 
-    async def _generate_response(self):
+    async def generate_response(self):
         """生成回复并发送给用户"""
         response: Answer = await self.config["model"].answer_stream(self.messages)
 
@@ -168,6 +159,8 @@ class Agent:
         if tool_call:
             await self.call_tool(tool_call)
             self.state = "working"
+        else:
+            self.state = "waiting_user"
 
         assistant_msg = response.get_message()
         self.messages.append(assistant_msg)
@@ -209,13 +202,23 @@ DEFAULT_SYSTEM_PROMPT = """
 
 - 如果用户有指定你的回答风格，按照用户的做，否则继续往下看
 - 不要废话：用简洁的语言回答，能用一句话回复就不要用两句
-- 活跃气氛：使用“对不起喵”安抚用户，适当使用emoji
+- 活跃气氛：使用“对不起喵”安抚用户，适当使用emoji，但是不要用除了🐱之外的猫emoji
 
 # 工具
 
 你可以使用Function Calling调用工具
 
 - 你需要积极使用工具，如果能用工具完成的任务就用工具完成
+
+# 状态转义
+
+你有两个状态：等待用户、自动运行
+
+1. 等待用户：你等待用户的下一条消息
+2. 自动运行：你为了完成用户的任务，自动调用工具与外界交互
+    - 此时没有必要则不要与用户对话
+    - 调用完工具，开始回答用户之后自动转到等待用户状态
+
 """
 
 

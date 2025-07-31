@@ -57,7 +57,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_initial_state(self):
         self.assertEqual(self.agent.state, "waiting_user")
 
-    async def test_handle_user_message(self):
+    async def test_handle_messages(self):
         # Setup
         test_msg = ChatMessage(role="user", message="Hello", name="test_user")
 
@@ -71,7 +71,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Test
-        await self.agent.handle_user_message(test_msg)
+        await self.agent.handle_messages([test_msg])
 
         # 验证 user_output_queue 收到了正确的 tokens 和最终 Answer
         tokens = []
@@ -97,7 +97,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(content, "Hi there")
 
         # 验证上下文更新
-        self.assertEqual(self.agent.task_context["last_user_message"], "Hello")
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_state_transitions(self):
@@ -140,7 +139,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             len(self.agent.messages),
             5,
-            "Should have system + user + tool + user_response + tool_response messages",
+            f"Should have 5 messages but {self.agent.messages=}",
         )
 
         # 查找用户消息
@@ -168,14 +167,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_handling(self):
         # Setup error
-        self.mock_llm.answer_stream.side_effect = Exception("Test error")
+        self.mock_llm.answer_stream.side_effect = RuntimeError("Test error")
         test_msg = ChatMessage(role="user", message="Error test", name="user")
 
         # Test and verify exception is raised
         with self.assertRaises(RuntimeError) as cm:
-            await self.agent.handle_user_message(test_msg)
+            await self.agent.handle_messages([test_msg])
         
-        self.assertEqual(str(cm.exception), "处理用户消息时出错")
+        self.assertEqual(str(cm.exception), "Test error")
         self.assertEqual(self.agent.state, "paused")
 
     async def test_run_loop(self):

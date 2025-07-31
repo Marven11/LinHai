@@ -5,7 +5,7 @@ import sys
 import asyncio
 
 from linhai.config import load_config
-from linhai.llm import ChatMessage, OpenAi, Message
+from linhai.llm import ChatMessage, OpenAi, Message, AnswerToken, Answer
 from linhai.agent import Agent, create_agent
 from linhai.queue import Queue
 
@@ -44,8 +44,7 @@ async def chat_loop(llm: OpenAi):
             break
 
 
-
-async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue):
+async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue[AnswerToken | Answer]):
     """与Agent进行交互式聊天"""
     print("输入'quit'退出聊天")
 
@@ -63,9 +62,13 @@ async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue)
             print("\nAI: ", end="", flush=True)
             while True:
                 output = await output_queue.get()
-                if hasattr(output, "get_message"): 
+                if isinstance(output, dict):  # AnswerToken
+                    print(output["content"], end="", flush=True)
+                else:
+                    tool_call = output.get_tool_call()
+                    if tool_call:
+                        print(f"{tool_call.function_name}(...)", end="")
                     break
-                print(output["content"], end="", flush=True)
             print()
 
     except KeyboardInterrupt:
@@ -113,7 +116,7 @@ def main():
         asyncio.run(chat_loop(llm))
     elif args.command == "agent":
         agent, input_queue, output_queue, tool_manager = create_agent(args.config)
-        
+
         async def run_agent():
             # 启动ToolManager
             tool_task = asyncio.create_task(tool_manager.run())
