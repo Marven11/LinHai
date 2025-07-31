@@ -1,12 +1,12 @@
+from typing import Sequence
 import argparse
 import unittest
 import sys
 import asyncio
-from typing import Sequence
 
 from linhai.config import load_config
-from linhai.llm import ChatMessage, OpenAi
-from linhai.agent import Agent, AgentConfig
+from linhai.llm import ChatMessage, OpenAi, Message
+from linhai.agent import Agent, create_agent
 from linhai.queue import Queue
 
 
@@ -21,7 +21,7 @@ def run_tests():
 
 async def chat_loop(llm: OpenAi):
     """与LLM进行交互式聊天"""
-    history: Sequence[ChatMessage] = []
+    history: Sequence[Message] = []
 
     print("输入'quit'退出聊天")
     while True:
@@ -44,36 +44,6 @@ async def chat_loop(llm: OpenAi):
             break
 
 
-def create_agent(config_path: str = "./config.toml") -> tuple[Agent, Queue, Queue]:
-    """创建并配置Agent实例
-    参数:
-        config_path: 配置文件路径
-    """
-    config = load_config(config_path)
-    llm = OpenAi(
-        api_key=config["llm"]["api_key"],
-        base_url=config["llm"]["base_url"],
-        model=config["llm"]["model"],
-        openai_config={},
-    )
-
-    user_input_queue = Queue()
-    user_output_queue = Queue()
-    tool_input_queue = Queue()
-    tool_output_queue = Queue()
-
-    agent_config: AgentConfig = {"system_prompt": "你是一个智能助手", "model": llm}
-
-    agent = Agent(
-        config=agent_config,
-        user_input_queue=user_input_queue,
-        user_output_queue=user_output_queue,
-        tool_input_queue=tool_input_queue,
-        tool_output_queue=tool_output_queue,
-    )
-
-    return agent, user_input_queue, user_output_queue
-
 
 async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue):
     """与Agent进行交互式聊天"""
@@ -83,11 +53,12 @@ async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue)
 
     try:
         while True:
-            user_input = input("\nYou: ")
-            if user_input.lower() == "quit":
-                break
+            if agent.state == "waiting_user":
+                user_input = input("\nYou: ")
+                if user_input.lower() == "quit":
+                    break
 
-            await input_queue.put(ChatMessage("user", user_input))
+                await input_queue.put(ChatMessage("user", user_input))
 
             print("\nAI: ", end="", flush=True)
             while True:
@@ -141,8 +112,21 @@ def main():
         )
         asyncio.run(chat_loop(llm))
     elif args.command == "agent":
-        agent, input_queue, output_queue = create_agent(args.config)
-        asyncio.run(agent_chat_loop(agent, input_queue, output_queue))
+        agent, input_queue, output_queue, tool_manager = create_agent(args.config)
+        
+        async def run_agent():
+            # 启动ToolManager
+            tool_task = asyncio.create_task(tool_manager.run())
+            try:
+                await agent_chat_loop(agent, input_queue, output_queue)
+            finally:
+                tool_task.cancel()
+                try:
+                    await tool_task
+                except asyncio.CancelledError:
+                    pass
+
+        asyncio.run(run_agent())
     else:
         parser.print_help()
         sys.exit(1)

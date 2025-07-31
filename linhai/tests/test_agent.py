@@ -1,11 +1,12 @@
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from typing import TypedDict
+from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ChatMessage
 from linhai.queue import Queue
+from linhai.tool.main import ToolResultMessage
 
 
 # 定义模拟的 AnswerToken 和 Answer
@@ -32,6 +33,9 @@ class MockAnswer:
     def get_message(self) -> ChatMessage:
         content = "".join(token["content"] for token in self.tokens)
         return ChatMessage(role="assistant", message=content)
+        
+    def get_tool_call(self) -> dict[str, Any] | None:
+        return None
 
 
 class TestAgent(unittest.IsolatedAsyncioTestCase):
@@ -88,7 +92,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 验证最终 Answer 对象
         self.assertIsNotNone(final_answer, "Final Answer object not found")
         assert final_answer is not None  # 让Pylance识别类型
-        self.assertEqual(final_answer.get_message().message, "Hi there")
+        content = final_answer.get_message().to_chat_message().get("content")
+        self.assertIsNotNone(content)
+        self.assertEqual(content, "Hi there")
 
         # 验证上下文更新
         self.assertEqual(self.agent.task_context["last_user_message"], "Hello")
@@ -105,7 +111,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_message_processing(self):
         # Setup
         user_msg = ChatMessage(role="user", message="Hi", name="user")
-        tool_msg = ChatMessage(role="tool", message="result", name="tool_call_123")
+        tool_msg = ToolResultMessage(tool_call_id="123", content="result")
 
         # 创建MockAnswer对象并设置LLM mock
         mock_answer = MockAnswer([
@@ -138,14 +144,21 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
 
         # 查找用户消息
-        user_messages = [msg for msg in self.agent.messages if msg.role == "user"]
+        user_messages = [msg for msg in self.agent.messages 
+                        if msg.to_chat_message().get("role") == "user"]
         self.assertEqual(len(user_messages), 1, "Should have one user message")
-        self.assertEqual(user_messages[0].message, "Hi")
+        content = user_messages[0].to_chat_message().get("content")
+        self.assertIsNotNone(content)
+        self.assertEqual(content, "Hi")
 
         # 查找工具消息
-        tool_messages = [msg for msg in self.agent.messages if msg.role == "tool"]
+        tool_messages = [msg for msg in self.agent.messages 
+                        if msg.to_chat_message().get("role") == "tool"]
         self.assertEqual(len(tool_messages), 1, "Should have one tool message")
-        self.assertIn("result", tool_messages[0].message)
+        content = tool_messages[0].to_chat_message().get("content")
+        self.assertIsNotNone(content)
+        self.assertTrue(isinstance(content, str))
+        self.assertIn("result", str(content))
 
         task.cancel()
         try:
@@ -158,10 +171,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.side_effect = Exception("Test error")
         test_msg = ChatMessage(role="user", message="Error test", name="user")
 
-        # Test
-        await self.agent.handle_user_message(test_msg)
-
-        # Verify
+        # Test and verify exception is raised
+        with self.assertRaises(RuntimeError) as cm:
+            await self.agent.handle_user_message(test_msg)
+        
+        self.assertEqual(str(cm.exception), "处理用户消息时出错")
         self.assertEqual(self.agent.state, "paused")
 
     async def test_run_loop(self):

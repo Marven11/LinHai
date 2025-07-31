@@ -9,10 +9,13 @@ class TestMain(unittest.IsolatedAsyncioTestCase):
     @patch("builtins.print")
     async def test_chat_loop(self, mock_print, mock_input):
         mock_llm = MagicMock(spec=OpenAi)
-        mock_answer = AsyncMock()
-        mock_answer.__aiter__.return_value = [
-            {"content": "Hi", "reasoning_content": None}
-        ]
+        
+        # 创建模拟的异步迭代器
+        async def mock_aiter():
+            yield {"content": "Hi", "reasoning_content": None}
+        
+        mock_answer = MagicMock()
+        mock_answer.__aiter__.side_effect = mock_aiter
         mock_answer.get_message.return_value = ChatMessage("assistant", "Hi")
         mock_llm.answer_stream.return_value = mock_answer
 

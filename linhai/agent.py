@@ -1,10 +1,21 @@
 import asyncio
 import logging
-from typing import TypedDict, Any
+from typing import TypedDict, Any, cast
 
-from linhai.llm import ChatMessage, LanguageModel, AnswerToken, Answer
+from linhai.llm import (
+    Message,
+    ChatMessage,
+    LanguageModel,
+    AnswerToken,
+    Answer,
+    OpenAi,
+    ToolCallMessage,
+)
 from linhai.queue import Queue, QueueClosed, select
 from linhai.type_hints import AgentState
+from linhai.config import load_config
+from linhai.tool.main import ToolManager, ToolErrorMessage, ToolResultMessage
+from linhai.tool.base import get_tools_info
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +33,8 @@ class Agent:
         config: AgentConfig,
         user_input_queue: Queue[ChatMessage],
         user_output_queue: Queue[AnswerToken | Answer],
-        tool_input_queue: Queue[ChatMessage],
-        tool_output_queue: Queue[Any],
+        tool_input_queue: Queue[ToolCallMessage],
+        tool_output_queue: Queue[ToolResultMessage | ToolErrorMessage],
     ):
         """
         初始化Agent
@@ -45,7 +56,7 @@ class Agent:
         self.memory = {"language": "zh-CN"}
         self.task_context = {}
 
-        self.messages = [
+        self.messages: list[Message] = [
             ChatMessage(
                 role="system", message=self.config["system_prompt"], name="system"
             )
@@ -70,8 +81,10 @@ class Agent:
                 async for msg, index in select(*queues):
                     try:
                         if index == 0:
+                            msg = cast(ChatMessage, msg)
                             await self.handle_user_message(msg)
                         elif index == 1:
+                            msg = cast(ToolResultMessage | ToolErrorMessage, msg)
                             await self.handle_tool_message(msg)
                     except QueueClosed:
                         logger.info("处理消息时队列已关闭")
@@ -116,20 +129,25 @@ class Agent:
 
         try:
             await self._generate_response()
-            self.state = "waiting_user"
         except Exception as e:
             logger.error("处理用户消息时出错: %s", str(e))
             self.state = "paused"
             raise RuntimeError("处理用户消息时出错") from e
 
-    async def handle_tool_message(self, msg: ChatMessage):
+    async def handle_tool_message(self, msg: ToolResultMessage | ToolErrorMessage):
         """处理工具消息"""
-        logger.info("收到工具消息: %s", msg.message)
-        self.task_context["last_tool_message"] = msg.message
-
+        logger.info("收到工具消息: %s", msg.content)
+        self.task_context["last_tool_message"] = msg.content
         self.messages.append(msg)
 
+        # 根据PROJECT.md，工具消息处理后继续自动运行
+        self.state = "working"
         await self._generate_response()
+
+    async def call_tool(self, tool_call: ToolCallMessage):
+        """调用工具并发送请求"""
+        await self.tool_input_queue.put(tool_call)
+        self.state = "working"  # 进入自动运行状态等待工具结果
 
     def _update_context_from_message(self, msg: ChatMessage):
         """从用户消息更新上下文"""
@@ -137,13 +155,19 @@ class Agent:
 
     async def _generate_response(self):
         """生成回复并发送给用户"""
-
         response: Answer = await self.config["model"].answer_stream(self.messages)
 
+        # 普通回复处理
         async for token in response:
             await self.user_output_queue.put(token)
 
         await self.user_output_queue.put(response)
+
+        # 检查是否需要调用工具
+        tool_call = response.get_tool_call()
+        if tool_call:
+            await self.call_tool(tool_call)
+            self.state = "working"
 
         assistant_msg = response.get_message()
         self.messages.append(assistant_msg)
@@ -162,6 +186,8 @@ class Agent:
                 else:
                     logger.error("遇到未知状态: %s，退出运行循环", self.state)
                     break
+
+                # 不再需要pending_tool_call检查
             except asyncio.CancelledError:
                 logger.info("Agent任务被取消")
                 break
@@ -175,14 +201,63 @@ class Agent:
 DEFAULT_SYSTEM_PROMPT = """
 # 情景
 
-你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、小心谨慎的人工智能Agent
+你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、小心谨慎、回复简洁的人工智能Agent
 
 你有时会出错，有时会健忘，但是你会根据用户的需求和你自己的观察修正自己，完成任务。
 
-# 注意
+# 风格
 
-- 用用户使用的语言进行交流
-- 保持友好和专业的态度
-- 仔细思考用户的每个请求
-- 如果遇到不确定的事情，可以询问用户
+- 如果用户有指定你的回答风格，按照用户的做，否则继续往下看
+- 不要废话：用简洁的语言回答，能用一句话回复就不要用两句
+- 活跃气氛：使用“对不起喵”安抚用户，适当使用emoji
+
+# 工具
+
+你可以使用Function Calling调用工具
+
+- 你需要积极使用工具，如果能用工具完成的任务就用工具完成
 """
+
+
+def create_agent(
+    config_path: str = "./config.toml",
+) -> tuple[Agent, Queue[ChatMessage], Queue[AnswerToken | Answer], ToolManager]:
+    """创建并配置Agent实例
+    参数:
+        config_path: 配置文件路径
+    返回:
+        tuple[Agent, 用户输入队列, 用户输出队列, ToolManager实例]
+    """
+    config = load_config(config_path)
+    tools_info = get_tools_info()
+
+    llm = OpenAi(
+        api_key=config["llm"]["api_key"],
+        base_url=config["llm"]["base_url"],
+        model=config["llm"]["model"],
+        openai_config={},
+        tools=tools_info,
+    )
+
+    user_input_queue: Queue[ChatMessage] = Queue()
+    user_output_queue: Queue[AnswerToken | Answer] = Queue()
+    tool_input_queue: Queue[ToolCallMessage] = Queue()
+    tool_output_queue: Queue[Any] = Queue()
+
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+
+    agent_config: AgentConfig = {"system_prompt": system_prompt, "model": llm}
+
+    agent = Agent(
+        config=agent_config,
+        user_input_queue=user_input_queue,
+        user_output_queue=user_output_queue,
+        tool_input_queue=tool_input_queue,
+        tool_output_queue=tool_output_queue,
+    )
+
+    tool_manager = ToolManager(
+        tool_input_queue=tool_input_queue, tool_output_queue=tool_output_queue
+    )
+
+    return agent, user_input_queue, user_output_queue, tool_manager

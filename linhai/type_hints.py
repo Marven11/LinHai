@@ -64,7 +64,7 @@ class FunctionMessage(TypedDict, total=False):
     name: Required[str]
 
 
-ChatCompletionMessageParam: TypeAlias = Union[
+LanguageModelMessage: TypeAlias = Union[
     SystemMessage,
     UserMessage,
     AssistantMessage,
@@ -78,6 +78,6 @@ __all__ = [
     "AssistantMessage",
     "ToolMessage",
     "FunctionMessage",
-    "ChatCompletionMessageParam",
+    "LanguageModelMessage",
     "AgentState",
 ]
