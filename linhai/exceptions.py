@@ -14,8 +14,14 @@ class NetworkError(LinHaiError):
 class LLMResponseError(LinHaiError):
     """LLM输出格式错误"""
 
+
+class ConfigValidationError(LinHaiError):
+    """配置验证失败异常"""
+
+
 __all__ = [
     "LinHaiError",
     "NetworkError", 
-    "LLMResponseError"
+    "LLMResponseError",
+    "ConfigValidationError"
 ]

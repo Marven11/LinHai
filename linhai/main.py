@@ -57,16 +57,13 @@ def create_agent(config_path: str = "./config.toml") -> tuple[Agent, Queue, Queu
         openai_config={},
     )
 
-    # 创建Agent所需队列
     user_input_queue = Queue()
     user_output_queue = Queue()
     tool_input_queue = Queue()
     tool_output_queue = Queue()
 
-    # 创建Agent配置
     agent_config: AgentConfig = {"system_prompt": "你是一个智能助手", "model": llm}
 
-    # 创建Agent实例
     agent = Agent(
         config=agent_config,
         user_input_queue=user_input_queue,
@@ -82,24 +79,20 @@ async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue)
     """与Agent进行交互式聊天"""
     print("输入'quit'退出聊天")
 
-    # 启动Agent运行
     agent_task = asyncio.create_task(agent.run())
 
     try:
         while True:
-            # 获取用户输入
             user_input = input("\nYou: ")
             if user_input.lower() == "quit":
                 break
 
-            # 发送用户消息
             await input_queue.put(ChatMessage("user", user_input))
 
-            # 接收Agent回复
             print("\nAI: ", end="", flush=True)
             while True:
                 output = await output_queue.get()
-                if hasattr(output, "get_message"):  # 完整回答
+                if hasattr(output, "get_message"): 
                     break
                 print(output["content"], end="", flush=True)
             print()

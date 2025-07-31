@@ -82,6 +82,7 @@ class Agent:
             except Exception as e:
                 logger.error("处理消息时出错: %s", str(e))
                 self.state = "paused"
+                raise RuntimeError("处理消息时出错") from e
 
     async def state_paused(self):
         """暂停运行状态"""
@@ -103,6 +104,7 @@ class Agent:
                 break
             except Exception as e:
                 logger.error("处理消息时出错: %s", str(e))
+                raise RuntimeError("处理消息时出错") from e
 
     async def handle_user_message(self, msg: ChatMessage):
         """处理用户消息"""
@@ -114,10 +116,11 @@ class Agent:
 
         try:
             await self._generate_response()
-            self.state = "waiting_user" 
+            self.state = "waiting_user"
         except Exception as e:
             logger.error("处理用户消息时出错: %s", str(e))
             self.state = "paused"
+            raise RuntimeError("处理用户消息时出错") from e
 
     async def handle_tool_message(self, msg: ChatMessage):
         """处理工具消息"""
@@ -165,7 +168,9 @@ class Agent:
             except Exception as e:
                 logger.error("Agent运行出错: %s", str(e))
                 self.state = "paused"
+                raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
+
 
 DEFAULT_SYSTEM_PROMPT = """
 # 情景
