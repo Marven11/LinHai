@@ -185,10 +185,12 @@ Agent在调用工具时，首先会使用`lookup_tool_docs`查阅对应的文档
 
 # 消息设计
 
-为了更好地管理输入给LLM的消息，本项目的消息分为两种：
+LLM的消息是根据系统文件等外部信息动态生成的，本项目的消息分为两种：
 
 1. 在llm.py中定义的Message，用以表示更加多样的消息类型，如工具处理结果/错误信息，全局记忆消息等
 2. 在type_hints.py中定义的LanguageModelMessage, 和OpenAI库的LLM消息类型兼容
+
+生成LLM回复时，Message会被动态地转换为LanguageModelMessage，以实现动态修改System Prompt、全局记忆等内容
 
 # 项目分层设计
 

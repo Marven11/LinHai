@@ -1,6 +1,7 @@
+from pathlib import Path
+from typing import TypedDict, Any, cast
 import asyncio
 import logging
-from typing import TypedDict, Any, cast
 
 from linhai.llm import (
     Message,
@@ -10,6 +11,7 @@ from linhai.llm import (
     Answer,
     OpenAi,
     ToolCallMessage,
+    LanguageModelMessage,
 )
 from linhai.queue import Queue, QueueClosed, select
 from linhai.type_hints import AgentState
@@ -25,6 +27,18 @@ class AgentConfig(TypedDict):
 
     system_prompt: str
     model: LanguageModel
+
+
+class GlobalMemory:
+    def __init__(self, filepath: Path):
+        assert filepath.exists(), f"{filepath} not exists"
+        self.filepath = filepath
+
+    def to_chat_message(self) -> LanguageModelMessage:
+        return {
+            "role": "system",
+            "content": f"# 全局记忆\n\n{self.filepath.read_text()}",
+        }
 
 
 class Agent:
@@ -53,13 +67,18 @@ class Agent:
         self.tool_output_queue = tool_output_queue
 
         self.state: AgentState = "waiting_user"
-        self.memory = {"language": "zh-CN"}
 
         self.messages: list[Message] = [
             ChatMessage(
                 role="system", message=self.config["system_prompt"], name="system"
-            )
+            ),
         ]
+
+        # 加载全局记忆
+        memory_config = config.get("memory", {})
+        memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md"))
+        if memory_filepath.exists():
+            self.messages.append(GlobalMemory(memory_filepath))
 
     async def state_waiting_user(self):
         """等待用户状态"""
