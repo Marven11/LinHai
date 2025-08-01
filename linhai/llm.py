@@ -12,6 +12,10 @@ class Message(Protocol):
     def to_chat_message(self) -> LanguageModelMessage: ...
 
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.to_chat_message()})"
+
+
 class ChatMessage:
     def __init__(self, role: str, message: str, name: str | None = None):
         self.role = role
@@ -24,6 +28,8 @@ class ChatMessage:
             msg["name"] = self.name
         return cast(LanguageModelMessage, msg)
 
+    def __repr__(self) -> str:
+        return f"ChatMessage(role={self.role!r}, message={self.message!r}, name={self.name!r})"
 
 class ToolCallMessage:
     def __init__(

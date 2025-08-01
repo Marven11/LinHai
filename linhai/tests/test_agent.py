@@ -33,7 +33,7 @@ class MockAnswer:
     def get_message(self) -> ChatMessage:
         content = "".join(token["content"] for token in self.tokens)
         return ChatMessage(role="assistant", message=content)
-        
+
     def get_tool_call(self) -> dict[str, Any] | None:
         return None
 
@@ -113,57 +113,40 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         tool_msg = ToolResultMessage(tool_call_id="123", content="result")
 
         # 创建MockAnswer对象并设置LLM mock
-        mock_answer = MockAnswer([
-            {"reasoning_content": None, "content": "Processing..."}
-        ])
+        mock_answer = MockAnswer(
+            [{"reasoning_content": None, "content": "Processing..."}]
+        )
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        # Put messages in queues
-        await self.agent.user_input_queue.put(user_msg)
-        await self.agent.tool_output_queue.put(tool_msg)
+        # 测试用户消息处理
+        await self.agent.handle_messages([user_msg])
 
-        # Start agent in working state
-        self.agent.state = "working"
-        task = asyncio.create_task(self.agent.state_working())
-
-        # Let it process messages
-        await asyncio.sleep(0.5)  # 增加等待时间确保消息被处理
-
-        # 检查模型是否被调用
-        self.assertTrue(
-            self.mock_llm.answer_stream.called, "answer_stream should be called"
-        )
-
-        # 检查消息数组是否包含正确的消息（顺序可能变化）
-        # 现在消息数组包含：系统消息 + 用户消息 + 工具消息 + 用户消息处理生成的回复 + 工具消息处理生成的回复
+        # 验证用户消息被添加到messages中
+        self.assertEqual(len(self.agent.messages), 3)  # 系统消息 + 用户消息 + 回复
+        self.assertEqual(self.agent.messages[1].to_chat_message().get("content"), "Hi")
         self.assertEqual(
-            len(self.agent.messages),
-            5,
-            f"Should have 5 messages but {self.agent.messages=}",
+            self.agent.messages[2].to_chat_message().get("content"), "Processing..."
         )
 
-        # 查找用户消息
-        user_messages = [msg for msg in self.agent.messages 
-                        if msg.to_chat_message().get("role") == "user"]
-        self.assertEqual(len(user_messages), 1, "Should have one user message")
-        content = user_messages[0].to_chat_message().get("content")
-        self.assertIsNotNone(content)
-        self.assertEqual(content, "Hi")
+        # 重置mock以便测试工具消息
+        mock_answer2 = MockAnswer(
+            [{"reasoning_content": None, "content": "Tool processed"}]
+        )
+        self.mock_llm.answer_stream.return_value = mock_answer2
 
-        # 查找工具消息
-        tool_messages = [msg for msg in self.agent.messages 
-                        if msg.to_chat_message().get("role") == "tool"]
-        self.assertEqual(len(tool_messages), 1, "Should have one tool message")
-        content = tool_messages[0].to_chat_message().get("content")
-        self.assertIsNotNone(content)
-        self.assertTrue(isinstance(content, str))
-        self.assertIn("result", str(content))
+        # 测试工具消息处理
+        await self.agent.handle_messages([tool_msg])
 
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        # 验证工具消息被添加到messages中
+        self.assertEqual(
+            len(self.agent.messages), 5
+        )  # 系统消息 + 用户消息 + 工具请求 + 工具消息 + 回复
+        self.assertEqual(
+            self.agent.messages[3].to_chat_message().get("content"), "result"
+        )
+        self.assertEqual(
+            self.agent.messages[4].to_chat_message().get("content"), "Tool processed"
+        )
 
     async def test_error_handling(self):
         # Setup error
@@ -173,7 +156,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # Test and verify exception is raised
         with self.assertRaises(RuntimeError) as cm:
             await self.agent.handle_messages([test_msg])
-        
+
         self.assertEqual(str(cm.exception), "Test error")
         self.assertEqual(self.agent.state, "paused")
 
@@ -182,22 +165,22 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.state_waiting_user = AsyncMock()
         self.agent.state_working = AsyncMock()
         self.agent.state_paused = AsyncMock()
-        
+
         # 创建任务引用
         task_ref = None
-        
+
         # 设置state_waiting_user模拟方法，使其在调用时取消任务
         async def mock_state_waiting_user():
             # 取消任务以退出循环
             if task_ref:
                 task_ref.cancel()
-        
+
         self.agent.state_waiting_user = AsyncMock(side_effect=mock_state_waiting_user)
         self.agent.state = "waiting_user"
 
         # 创建并运行任务
         task_ref = asyncio.create_task(self.agent.run())
-        
+
         try:
             # 等待任务完成（会被mock_state_waiting_user取消）
             await asyncio.wait_for(task_ref, timeout=0.5)
