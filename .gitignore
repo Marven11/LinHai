@@ -4,3 +4,5 @@ dist
 .direnv/
 .secret.*
 config.toml
+.DS_Store
+.venv

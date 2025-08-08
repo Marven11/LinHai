@@ -1,4 +1,5 @@
 import asyncio
+import json
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
@@ -110,7 +111,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_message_processing(self):
         # Setup
         user_msg = ChatMessage(role="user", message="Hi", name="user")
-        tool_msg = ToolResultMessage(tool_call_id="123", content="result")
+        tool_msg = ToolResultMessage(content="result")
 
         # 创建MockAnswer对象并设置LLM mock
         mock_answer = MockAnswer(
@@ -122,10 +123,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_messages([user_msg])
 
         # 验证用户消息被添加到messages中
-        self.assertEqual(len(self.agent.messages), 3)  # 系统消息 + 用户消息 + 回复
-        self.assertEqual(self.agent.messages[1].to_chat_message().get("content"), "Hi")
         self.assertEqual(
-            self.agent.messages[2].to_chat_message().get("content"), "Processing..."
+            len(self.agent.messages), 4
+        )  # 系统消息 + 全局记忆 + 用户消息 + 回复
+        self.assertEqual(self.agent.messages[2].to_chat_message().get("content"), "Hi")
+        self.assertEqual(
+            self.agent.messages[3].to_chat_message().get("content"), "Processing..."
         )
 
         # 重置mock以便测试工具消息
@@ -134,18 +137,20 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_llm.answer_stream.return_value = mock_answer2
 
-        # 测试工具消息处理
+        # 测试工具消息处理 - 直接调用handle_messages
         await self.agent.handle_messages([tool_msg])
 
         # 验证工具消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 5
-        )  # 系统消息 + 用户消息 + 工具请求 + 工具消息 + 回复
+            len(self.agent.messages), 6
+        )  # 系统消息 + 全局记忆 + 用户消息 + 回复 + 工具消息 + 回复
+        # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[3].to_chat_message().get("content"), "result"
+            self.agent.messages[-2].to_chat_message().get("content"), "result"
         )
+        # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[4].to_chat_message().get("content"), "Tool processed"
+            self.agent.messages[-1].to_chat_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):
@@ -193,6 +198,39 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 验证state_waiting_user被调用
         self.agent.state_waiting_user.assert_called_once()
 
+
+    async def test_markdown_tool_call(self):
+        """测试Agent能正确解析markdown格式的工具调用"""
+        # 模拟LLM返回包含工具调用的markdown响应
+        tool_call_response = """```json
+{
+    "name": "add_numbers", 
+    "arguments": {
+        "a": 2,
+        "b": 2
+    }
+}
+```"""
+        
+        # 创建MockAnswer对象
+        mock_answer = MockAnswer([
+            {"reasoning_content": None, "content": tool_call_response}
+        ])
+        self.mock_llm.answer_stream.return_value = mock_answer
+
+        # 发送用户消息触发处理
+        await self.agent.handle_messages([
+            ChatMessage(role="user", message="Calculate 2+2")
+        ])
+
+        # 验证工具调用请求被发送到tool_input_queue
+        self.assertFalse(self.agent.tool_input_queue.empty())
+        tool_call = await self.agent.tool_input_queue.get()
+        self.assertEqual(tool_call.function_name, "add_numbers")
+        self.assertEqual(json.loads(tool_call.function_arguments), {"a": 2, "b": 2})
+
+        # 验证状态转换
+        self.assertEqual(self.agent.state, "working")
 
 if __name__ == "__main__":
     unittest.main()

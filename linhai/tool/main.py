@@ -1,5 +1,6 @@
 import asyncio
 import json
+from typing import cast
 
 from linhai.queue import Queue
 from linhai.llm import Message, ToolCallMessage
@@ -10,31 +11,35 @@ from linhai.tool.base import call_tool
 class ToolResultMessage(Message):
     """工具成功结果消息"""
 
-    def __init__(self, tool_call_id: str, content: str):
-        self.tool_call_id = tool_call_id
+    def __init__(self, content: str):
         self.content = content
 
     def to_chat_message(self) -> LanguageModelMessage:
-        return {
-            "role": "tool",
-            "content": self.content,
-            "tool_call_id": self.tool_call_id,
-        }
+        return cast(
+            LanguageModelMessage,
+            {
+                "role": "user",
+                "name": "tool-result",
+                "content": self.content,
+            },
+        )
 
 
 class ToolErrorMessage(Message):
     """工具错误消息"""
 
-    def __init__(self, tool_call_id: str, content: str):
-        self.tool_call_id = tool_call_id
+    def __init__(self, content: str):
         self.content = content
 
     def to_chat_message(self) -> LanguageModelMessage:
-        return {
-            "role": "tool",
-            "content": self.content,
-            "tool_call_id": self.tool_call_id,
-        }
+        return cast(
+            LanguageModelMessage,
+            {
+                "role": "user",
+                "name": "tool-error",
+                "content": self.content,
+            },
+        )
 
 
 class ToolManager:
@@ -63,29 +68,28 @@ class ToolManager:
         """
         if not tool_call.function_name:
             await self.tool_output_queue.put(
-                ToolErrorMessage(tool_call_id=tool_call.id or "", content="Invalid tool call: missing function name")
+                ToolErrorMessage(content="Invalid tool call: missing function name")
             )
             return
 
         try:
-            args = json.loads(tool_call.function_arguments) if tool_call.function_arguments else {}
+            args = (
+                json.loads(tool_call.function_arguments)
+                if tool_call.function_arguments
+                else {}
+            )
             result = call_tool(tool_call.function_name, args)
 
             await self.tool_output_queue.put(
-                ToolResultMessage(
-                    tool_call_id=tool_call.id or "", 
-                    content=json.dumps(result, ensure_ascii=False)
-                )
+                ToolResultMessage(content=json.dumps(result, ensure_ascii=False))
             )
 
         except json.JSONDecodeError as e:
             await self.tool_output_queue.put(
-                ToolErrorMessage(tool_call_id=tool_call.id or "", content=f"Invalid arguments JSON: {str(e)}")
+                ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")
             )
         except Exception as e:
-            await self.tool_output_queue.put(
-                ToolErrorMessage(tool_call_id=tool_call.id or "", content=str(e))
-            )
+            await self.tool_output_queue.put(ToolErrorMessage(content=str(e)))
 
     async def run(self) -> None:
         """启动工具管理器主循环"""

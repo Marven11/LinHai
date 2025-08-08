@@ -3,6 +3,7 @@ from typing import TypedDict, Callable, Type
 type_to_json_repr = {
     "int": "number",
     "float": "number",
+    "str": "string",
     "dict": "object",
     "list": "list",
     "bool": "bool",
@@ -13,7 +14,7 @@ type_to_json_repr = {
 class ToolArgInfo(TypedDict):
 
     desc: str
-    type: Type[int | float | dict | list | bool | None]
+    type: Type[int | float | str | dict | list | bool | None]
 
 
 class Tool(TypedDict):
@@ -94,7 +95,7 @@ def tool_to_toolinfo(tool: Tool) -> dict:
 
 
 def call_tool(
-    name: str, args: dict[str, int | float | dict | list | bool | None]
+    name: str, args: dict[str, int | float | str | dict | list | bool | None]
 ) -> dict:
     """调用指定工具
 
@@ -112,7 +113,7 @@ def call_tool(
 
 def get_tools_info() -> list[dict]:
     """获取所有工具的信息列表
-    
+
     Returns:
         工具信息字典列表，格式符合OpenAI工具调用规范
     """

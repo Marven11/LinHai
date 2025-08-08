@@ -24,11 +24,12 @@ class Config(TypedDict):
 def validate_config(config: Config) -> None:
     """验证配置有效性"""
     llm_config = config["llm"]
-    memory_config = config["memory"]
 
-    # 验证memory文件路径
-    if not memory_config["file_path"]:
-        raise ConfigValidationError("memory.file_path cannot be empty")
+    # 验证memory文件路径（可选）
+    if "memory" in config:
+        memory_config = config["memory"]
+        if not memory_config.get("file_path"):
+            raise ConfigValidationError("memory.file_path cannot be empty")
 
     # 验证base_url
     try:

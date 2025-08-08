@@ -1,4 +1,4 @@
-from typing import Sequence, Protocol, TypedDict, AsyncIterator, Optional, Literal
+from typing import Sequence, Protocol, TypedDict, AsyncIterator
 from typing import cast
 import asyncio
 
@@ -10,7 +10,6 @@ from linhai.type_hints import LanguageModelMessage, ToolMessage
 
 class Message(Protocol):
     def to_chat_message(self) -> LanguageModelMessage: ...
-
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_chat_message()})"
@@ -31,20 +30,15 @@ class ChatMessage:
     def __repr__(self) -> str:
         return f"ChatMessage(role={self.role!r}, message={self.message!r}, name={self.name!r})"
 
+
 class ToolCallMessage:
     def __init__(
         self,
-        index: int = 0,
-        id: Optional[str] = None,
         function_name: str = "",
         function_arguments: str = "",
-        type: Optional[Literal["function"]] = None,
     ):
-        self.index = index
-        self.id = id
         self.function_name = function_name
         self.function_arguments = function_arguments
-        self.type = type
 
     def to_chat_message(self) -> LanguageModelMessage:
         msg = {
@@ -52,13 +46,10 @@ class ToolCallMessage:
             "content": "",
             "tool_calls": [
                 {
-                    "index": self.index,
-                    "id": self.id,
                     "function": {
                         "name": self.function_name,
                         "arguments": self.function_arguments,
                     },
-                    "type": self.type,
                 }
             ],
         }
@@ -155,15 +146,8 @@ class OpenAiAnswer:
                 tool_call = delta.tool_calls[0]
                 if not self._tool_call:
                     self._tool_call = ToolCallMessage()
-                if tool_call.index:
-                    self._tool_call.index = tool_call.index
-                if tool_call.id:
-                    self._tool_call.id = tool_call.id
-                if tool_call.type:
-                    self._tool_call.type = tool_call.type
                 if tool_call.function and tool_call.function.name:
                     self._tool_call.function_name = tool_call.function.name
-
                 if tool_call.function and tool_call.function.arguments:
                     self._tool_call.function_arguments += tool_call.function.arguments
 
@@ -202,7 +186,7 @@ class OpenAi:
         base_url: str,
         model: str,
         openai_config: dict,
-        tools: list[dict] | None = None
+        tools: list[dict] | None = None,
     ):
         self.model = model
         self.openai = AsyncOpenAI(

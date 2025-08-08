@@ -2,6 +2,10 @@ from pathlib import Path
 from typing import TypedDict, Any, cast
 import asyncio
 import logging
+import json
+import traceback
+
+from linhai.markdown_parser import extract_tool_calls
 
 from linhai.llm import (
     Message,
@@ -167,22 +171,34 @@ class Agent:
         """生成回复并发送给用户"""
         response: Answer = await self.config["model"].answer_stream(self.messages)
 
-        # 普通回复处理
         async for token in response:
             await self.user_output_queue.put(token)
 
         await self.user_output_queue.put(response)
 
-        # 检查是否需要调用工具
-        tool_call = response.get_tool_call()
-        if tool_call:
-            await self.call_tool(tool_call)
-            self.state = "working"
+        chat_message = cast(ChatMessage, response.get_message())
+        full_response = chat_message.message
+        tool_calls = extract_tool_calls(full_response)
+        if tool_calls:
+            for call in tool_calls:
+                try:
+                    if "name" in call and "arguments" in call:
+                        tool_call = ToolCallMessage(
+                            function_name=call["name"],
+                            function_arguments=json.dumps(call["arguments"])
+                        )
+                        await self.call_tool(tool_call)
+                        self.state = "working"
+                        break
+                except Exception:
+                    traceback.print_exc()
+                    continue
+            else:
+                self.state = "waiting_user"
         else:
             self.state = "waiting_user"
 
-        assistant_msg = response.get_message()
-        self.messages.append(assistant_msg)
+        self.messages.append(chat_message)
 
     async def run(self):
         """Agent主循环"""
@@ -199,7 +215,6 @@ class Agent:
                     logger.error("遇到未知状态: %s，退出运行循环", self.state)
                     break
 
-                # 不再需要pending_tool_call检查
             except asyncio.CancelledError:
                 logger.info("Agent任务被取消")
                 break
@@ -219,14 +234,31 @@ DEFAULT_SYSTEM_PROMPT = """
 
 # 风格
 
-- 如果用户有指定你的回答风格，按照用户的做，否则继续往下看
-- 不要废话：用简洁的语言回答，能用一句话回复就不要用两句
+- 如果用户有指定你的回答风格, 按照用户的做, 否则继续往下看
+- 不要废话: 用简洁的语言回答, 能用一句话回复就不要用两句
 
 # 工具
 
-你可以使用Function Calling调用工具
+你可以使用Markdown中的JSON code block调用工具，格式如下:
+
+```json
+{
+    "name": "工具名称",
+    "arguments": {
+        "参数1": "值1",
+        "参数2": "值2"
+    }
+}
+```
+
+所有工具如下:
+
+TOOLS
+
+注意:
 
 - 你需要积极使用工具，如果能用工具完成的任务就用工具完成
+- 工具调用必须使用上述JSON格式的code block
 
 # 状态转义
 
@@ -257,7 +289,6 @@ def create_agent(
         base_url=config["llm"]["base_url"],
         model=config["llm"]["model"],
         openai_config={},
-        tools=tools_info,
     )
 
     user_input_queue: Queue[ChatMessage] = Queue()
@@ -265,7 +296,9 @@ def create_agent(
     tool_input_queue: Queue[ToolCallMessage] = Queue()
     tool_output_queue: Queue[Any] = Queue()
 
-    system_prompt = DEFAULT_SYSTEM_PROMPT
+    system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
+        "TOOLS", json.dumps(tools_info, indent=2)
+    )
 
     agent_config: AgentConfig = {"system_prompt": system_prompt, "model": llm}
 
