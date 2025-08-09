@@ -6,6 +6,7 @@ from linhai.queue import Queue
 from linhai.llm import Message, ToolCallMessage
 from linhai.type_hints import LanguageModelMessage
 from linhai.tool.base import call_tool
+from linhai.tool.tools import command
 
 
 class ToolResultMessage(Message):
@@ -68,7 +69,13 @@ class ToolManager:
                 else {}
             )
             result = call_tool(tool_call.function_name, args)
-            return ToolResultMessage(content=json.dumps(result, ensure_ascii=False))
+            return ToolResultMessage(
+                content=(
+                    result
+                    if isinstance(result, str)
+                    else json.dumps(result, ensure_ascii=False)
+                )
+            )
 
         except json.JSONDecodeError as e:
             return ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")

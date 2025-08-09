@@ -189,7 +189,8 @@ class Agent:
             elif tool_calls:
                 self.messages.append(
                     AgentRuntimeErrorMessage(
-                        f"添加{WAITING_USER_MARKER!r}的同时调用了工具，暂停自动运行失败，你可能需要等待工具的调用结果"
+                        f"添加{WAITING_USER_MARKER!r}的同时调用了工具，暂停自动运行失败，你可能需要等待工具的调用结果。"
+                        f"你不应该在调用了工具时请求等待用户的回答"
                     )
                 )
             else:
@@ -197,8 +198,8 @@ class Agent:
         elif self.state == "working" and not tool_calls:
             self.messages.append(
                 AgentRuntimeErrorMessage(
-                    f"你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答，"
-                    f"你可能需要使用{WAITING_USER_MARKER!r}等待用户回答"
+                    f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答，"
+                    f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
                 )
             )
 
@@ -261,6 +262,7 @@ TOOLS
 
 - 你需要积极使用工具，如果能用工具完成的任务就用工具完成
 - 工具调用必须使用上述JSON格式的code block
+- 避免复读工具的输出
 
 # 状态转义
 
@@ -296,7 +298,7 @@ def create_agent(
     user_output_queue: Queue[AnswerToken | Answer] = Queue()
 
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
-        "TOOLS", json.dumps(tools_info, indent=2)
+        "TOOLS", json.dumps(tools_info, ensure_ascii=False, indent=2)
     )
 
     agent_config: AgentConfig = {"system_prompt": system_prompt, "model": llm}

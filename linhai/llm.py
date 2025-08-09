@@ -208,6 +208,7 @@ class OpenAi:
             "model": self.model,
             "messages": messages,
             "stream": True,
+            "temperature": 0.1
         }
 
         if self.tools:
