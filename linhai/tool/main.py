@@ -45,32 +45,21 @@ class ToolErrorMessage(Message):
 class ToolManager:
     """工具管理器，负责处理工具调用请求"""
 
-    def __init__(
-        self,
-        tool_input_queue: Queue[ToolCallMessage],
-        tool_output_queue: Queue[Message],
-    ):
-        """
-        初始化工具管理器
+    def __init__(self):
+        """初始化工具管理器"""
+        pass
+
+    async def process_tool_call(self, tool_call: ToolCallMessage) -> Message:
+        """处理单个工具调用请求并返回结果
 
         Args:
-            tool_input_queue: 接收工具调用请求的队列
-            tool_output_queue: 发送工具调用结果的队列
-        """
-        self.tool_input_queue = tool_input_queue
-        self.tool_output_queue = tool_output_queue
+            tool_call: 工具调用请求对象，包含函数名和参数
 
-    async def process_tool_call(self, tool_call: ToolCallMessage) -> None:
-        """处理单个工具调用请求
-
-        Args:
-            tool_call: 工具调用请求对象，包含工具调用ID、函数名和参数
+        Returns:
+            Message: 工具调用结果消息
         """
         if not tool_call.function_name:
-            await self.tool_output_queue.put(
-                ToolErrorMessage(content="Invalid tool call: missing function name")
-            )
-            return
+            return ToolErrorMessage(content="Invalid tool call: missing function name")
 
         try:
             args = (
@@ -79,37 +68,9 @@ class ToolManager:
                 else {}
             )
             result = call_tool(tool_call.function_name, args)
-
-            await self.tool_output_queue.put(
-                ToolResultMessage(content=json.dumps(result, ensure_ascii=False))
-            )
+            return ToolResultMessage(content=json.dumps(result, ensure_ascii=False))
 
         except json.JSONDecodeError as e:
-            await self.tool_output_queue.put(
-                ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")
-            )
+            return ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")
         except Exception as e:
-            await self.tool_output_queue.put(ToolErrorMessage(content=str(e)))
-
-    async def run(self) -> None:
-        """启动工具管理器主循环"""
-        while True:
-            tool_call = await self.tool_input_queue.get()
-            await self.process_tool_call(tool_call)
-
-
-async def start_tool_manager(
-    tool_input_queue: Queue, tool_output_queue: Queue
-) -> ToolManager:
-    """启动工具管理器
-
-    Args:
-        tool_input_queue: 接收工具调用请求的队列
-        tool_output_queue: 发送工具调用结果的队列
-
-    Returns:
-        初始化的ToolManager实例
-    """
-    manager = ToolManager(tool_input_queue, tool_output_queue)
-    asyncio.create_task(manager.run())
-    return manager
+            return ToolErrorMessage(content=str(e))

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TypedDict, Any, cast
+from typing import TypedDict, cast
 import asyncio
 import logging
 import json
@@ -17,13 +17,23 @@ from linhai.llm import (
     ToolCallMessage,
     LanguageModelMessage,
 )
-from linhai.queue import Queue, QueueClosed, select
+from linhai.queue import Queue, QueueClosed
 from linhai.type_hints import AgentState
 from linhai.config import load_config
-from linhai.tool.main import ToolManager, ToolErrorMessage, ToolResultMessage
+from linhai.tool.main import ToolManager
 from linhai.tool.base import get_tools_info
 
 logger = logging.getLogger(__name__)
+
+WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
+
+
+class AgentRuntimeErrorMessage(Message):
+    def __init__(self, message: str):
+        self.message = message
+
+    def to_chat_message(self) -> LanguageModelMessage:
+        return {"role": "system", "content": self.message}
 
 
 class AgentConfig(TypedDict):
@@ -51,8 +61,7 @@ class Agent:
         config: AgentConfig,
         user_input_queue: Queue[ChatMessage],
         user_output_queue: Queue[AnswerToken | Answer],
-        tool_input_queue: Queue[ToolCallMessage],
-        tool_output_queue: Queue[ToolResultMessage | ToolErrorMessage],
+        tool_manager: ToolManager,
     ):
         """
         初始化Agent
@@ -61,14 +70,12 @@ class Agent:
             config: Agent配置
             user_input_queue: 用户输入消息队列
             user_output_queue: 发送给用户的消息队列
-            tool_input_queue: 发送给工具的消息队列
-            tool_output_queue: 工具返回结果的消息队列
+            tool_manager: 工具管理器实例
         """
         self.config = config
         self.user_input_queue = user_input_queue
         self.user_output_queue = user_output_queue
-        self.tool_input_queue = tool_input_queue
-        self.tool_output_queue = tool_output_queue
+        self.tool_manager = tool_manager
 
         self.state: AgentState = "waiting_user"
 
@@ -96,67 +103,42 @@ class Agent:
 
     async def state_working(self):
         """自动运行状态"""
-        is_tool_message_received = False
-        messages: list[Message] = []
         logger.info("Agent进入自动运行状态")
-        while not is_tool_message_received:
+        # 直接处理用户输入消息
+        if not self.user_input_queue.empty():
             try:
-                queues = [self.user_input_queue, self.tool_output_queue]
-                async for msg, index in select(*queues):
-                    try:
-                        if index == 0:
-                            messages.append(cast(ChatMessage, msg))
-                        elif index == 1:
-                            messages.insert(
-                                0, cast(ToolResultMessage | ToolErrorMessage, msg)
-                            )
-                            is_tool_message_received = True
-                            break
-                    except QueueClosed:
-                        logger.info("处理消息时队列已关闭")
-                        break
+                msg = await self.user_input_queue.get()
+                await self.handle_messages([cast(ChatMessage, msg)])
             except QueueClosed:
-                logger.info("所有队列已关闭")
-                break
+                logger.info("用户输入队列已关闭")
             except Exception as e:
                 logger.error("处理消息时出错: %s", str(e))
                 self.state = "paused"
                 raise RuntimeError("处理消息时出错") from e
-        await self.handle_messages(messages)
+        else:
+            await self.generate_response()
 
     async def state_paused(self):
         """暂停运行状态"""
-        messages: list[Message] = []
         logger.info("Agent进入暂停运行状态")
-        while self.state == "working":
-            try:
-                queues = [self.user_input_queue, self.tool_output_queue]
-                async for msg, index in select(*queues):
-                    try:
-                        if index == 0:
-                            messages.append(cast(ChatMessage, msg))
-                        elif index == 1:
-                            messages.insert(
-                                0, cast(ToolResultMessage | ToolErrorMessage, msg)
-                            )
-                            break
-                    except QueueClosed:
-                        logger.info("处理消息时队列已关闭")
-                        break
-            except QueueClosed:
-                logger.info("所有队列已关闭")
-                break
-            except Exception as e:
-                logger.error("处理消息时出错: %s", str(e))
-                self.state = "paused"
-                raise RuntimeError("处理消息时出错") from e
-
-        await self.handle_messages(messages)
+        try:
+            msg = await self.user_input_queue.get()
+            await self.handle_messages([cast(ChatMessage, msg)])
+        except QueueClosed:
+            logger.info("用户输入队列已关闭")
+        except Exception as e:
+            logger.error("处理消息时出错: %s", str(e))
+            raise RuntimeError("处理消息时出错") from e
 
     async def call_tool(self, tool_call: ToolCallMessage):
-        """调用工具并发送请求"""
-        await self.tool_input_queue.put(tool_call)
-        self.state = "working"  # 进入自动运行状态等待工具结果
+        """直接调用工具并处理结果"""
+        try:
+            tool_result = await self.tool_manager.process_tool_call(tool_call)
+            self.messages.append(tool_result)
+            self.state = "working"
+        except Exception as e:
+            logger.error(f"工具调用失败: {str(e)}")
+            self.state = "paused"
 
     async def handle_messages(self, messages: list[Message]):
         """处理新的消息"""
@@ -178,27 +160,47 @@ class Agent:
 
         chat_message = cast(ChatMessage, response.get_message())
         full_response = chat_message.message
+
         tool_calls = extract_tool_calls(full_response)
-        if tool_calls:
-            for call in tool_calls:
-                try:
-                    if "name" in call and "arguments" in call:
-                        tool_call = ToolCallMessage(
-                            function_name=call["name"],
-                            function_arguments=json.dumps(call["arguments"])
-                        )
-                        await self.call_tool(tool_call)
-                        self.state = "working"
-                        break
-                except Exception:
-                    traceback.print_exc()
-                    continue
-            else:
-                self.state = "waiting_user"
-        else:
-            self.state = "waiting_user"
+
+        for call in tool_calls:
+            try:
+                if "name" in call and "arguments" in call:
+                    tool_call = ToolCallMessage(
+                        function_name=call["name"],
+                        function_arguments=json.dumps(call["arguments"]),
+                    )
+                    await self.call_tool(tool_call)
+                    self.state = "working"
+            except Exception:
+                traceback.print_exc()
+                continue
 
         self.messages.append(chat_message)
+
+        if WAITING_USER_MARKER in full_response:
+            last_line = full_response.strip().rpartition("\n")[2]
+            if WAITING_USER_MARKER not in last_line:
+                self.messages.append(
+                    AgentRuntimeErrorMessage(
+                        f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
+                    )
+                )
+            elif tool_calls:
+                self.messages.append(
+                    AgentRuntimeErrorMessage(
+                        f"添加{WAITING_USER_MARKER!r}的同时调用了工具，暂停自动运行失败，你可能需要等待工具的调用结果"
+                    )
+                )
+            else:
+                self.state = "waiting_user"
+        elif self.state == "working" and not tool_calls:
+            self.messages.append(
+                AgentRuntimeErrorMessage(
+                    f"你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答，"
+                    f"你可能需要使用{WAITING_USER_MARKER!r}等待用户回答"
+                )
+            )
 
     async def run(self):
         """Agent主循环"""
@@ -266,9 +268,8 @@ TOOLS
 
 1. 等待用户：你等待用户的下一条消息
 2. 自动运行：你为了完成用户的任务，自动调用工具与外界交互
-    - 此时没有必要则不要与用户对话
-    - 调用完工具，开始回答用户之后自动转到等待用户状态
 
+如果你完成了任务，或者需要等待用户回答一些问题，你可以在回答的最后一行加上`#LINHAI_WAITING_USER`等待用户回答。
 """
 
 
@@ -293,8 +294,6 @@ def create_agent(
 
     user_input_queue: Queue[ChatMessage] = Queue()
     user_output_queue: Queue[AnswerToken | Answer] = Queue()
-    tool_input_queue: Queue[ToolCallMessage] = Queue()
-    tool_output_queue: Queue[Any] = Queue()
 
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "TOOLS", json.dumps(tools_info, indent=2)
@@ -302,16 +301,13 @@ def create_agent(
 
     agent_config: AgentConfig = {"system_prompt": system_prompt, "model": llm}
 
+    tool_manager = ToolManager()
+
     agent = Agent(
         config=agent_config,
         user_input_queue=user_input_queue,
         user_output_queue=user_output_queue,
-        tool_input_queue=tool_input_queue,
-        tool_output_queue=tool_output_queue,
-    )
-
-    tool_manager = ToolManager(
-        tool_input_queue=tool_input_queue, tool_output_queue=tool_output_queue
+        tool_manager=tool_manager,
     )
 
     return agent, user_input_queue, user_output_queue, tool_manager

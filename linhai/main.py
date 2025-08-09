@@ -115,21 +115,8 @@ def main():
         )
         asyncio.run(chat_loop(llm))
     elif args.command == "agent":
-        agent, input_queue, output_queue, tool_manager = create_agent(args.config)
-
-        async def run_agent():
-            # 启动ToolManager
-            tool_task = asyncio.create_task(tool_manager.run())
-            try:
-                await agent_chat_loop(agent, input_queue, output_queue)
-            finally:
-                tool_task.cancel()
-                try:
-                    await tool_task
-                except asyncio.CancelledError:
-                    pass
-
-        asyncio.run(run_agent())
+        agent, input_queue, output_queue, _ = create_agent(args.config)
+        asyncio.run(agent_chat_loop(agent, input_queue, output_queue))
     else:
         parser.print_help()
         sys.exit(1)

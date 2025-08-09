@@ -47,13 +47,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         config = AgentConfig(
             {"system_prompt": "Test system prompt", "model": self.mock_llm}
         )
-        self.queues = {
-            "user_input_queue": Queue(),
-            "user_output_queue": Queue(),
-            "tool_input_queue": Queue(),
-            "tool_output_queue": Queue(),
-        }
-        self.agent = Agent(config, **self.queues)
+        self.user_input_queue = Queue()
+        self.user_output_queue = Queue()
+        self.tool_manager = MagicMock()
+        self.agent = Agent(
+            config=config,
+            user_input_queue=self.user_input_queue,
+            user_output_queue=self.user_output_queue,
+            tool_manager=self.tool_manager
+        )
 
     async def test_initial_state(self):
         self.assertEqual(self.agent.state, "waiting_user")
@@ -218,14 +220,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         ])
         self.mock_llm.answer_stream.return_value = mock_answer
 
+        # 设置tool_manager的process_tool_call模拟
+        self.tool_manager.process_tool_call = AsyncMock()
+
         # 发送用户消息触发处理
         await self.agent.handle_messages([
             ChatMessage(role="user", message="Calculate 2+2")
         ])
 
-        # 验证工具调用请求被发送到tool_input_queue
-        self.assertFalse(self.agent.tool_input_queue.empty())
-        tool_call = await self.agent.tool_input_queue.get()
+        # 验证tool_manager.process_tool_call被调用
+        self.tool_manager.process_tool_call.assert_called_once()
+        tool_call = self.tool_manager.process_tool_call.call_args[0][0]
         self.assertEqual(tool_call.function_name, "add_numbers")
         self.assertEqual(json.loads(tool_call.function_arguments), {"a": 2, "b": 2})
 
