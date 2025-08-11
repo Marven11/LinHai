@@ -32,7 +32,7 @@ class AgentRuntimeErrorMessage(Message):
     def __init__(self, message: str):
         self.message = message
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         return {"role": "system", "content": self.message}
 
 
@@ -48,7 +48,7 @@ class GlobalMemory:
         assert filepath.exists(), f"{filepath} not exists"
         self.filepath = filepath
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         return {
             "role": "system",
             "content": f"# 全局记忆\n\n{self.filepath.read_text()}",

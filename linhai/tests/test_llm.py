@@ -18,7 +18,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
     def test_chat_message_creation(self):
         """测试ChatMessage类的创建和转换功能"""
         msg = ChatMessage(role="user", message="Hello")
-        chat_msg = msg.to_chat_message()
+        chat_msg = msg.to_llm_message()
         self.assertEqual(chat_msg.get("role"), "user")
         self.assertEqual(chat_msg.get("content"), "Hello")
 

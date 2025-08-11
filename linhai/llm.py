@@ -9,10 +9,10 @@ from linhai.type_hints import LanguageModelMessage, ToolMessage
 
 
 class Message(Protocol):
-    def to_chat_message(self) -> LanguageModelMessage: ...
+    def to_llm_message(self) -> LanguageModelMessage: ...
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.to_chat_message()})"
+        return f"{self.__class__.__name__}({self.to_llm_message()})"
 
 
 class ChatMessage:
@@ -21,7 +21,7 @@ class ChatMessage:
         self.message = message
         self.name = name
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         msg = {"role": self.role, "content": self.message}
         if self.name is not None:
             msg["name"] = self.name
@@ -40,7 +40,7 @@ class ToolCallMessage:
         self.function_name = function_name
         self.function_arguments = function_arguments
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         msg = {
             "role": "assistant",
             "content": "",
@@ -201,7 +201,7 @@ class OpenAi:
         if not history:
             raise ValueError("history is empty")
         messages = [
-            cast(ChatCompletionMessageParam, msg.to_chat_message()) for msg in history
+            cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
         params = {

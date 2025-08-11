@@ -15,7 +15,7 @@ class ToolResultMessage(Message):
     def __init__(self, content: str):
         self.content = content
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         return cast(
             LanguageModelMessage,
             {
@@ -32,7 +32,7 @@ class ToolErrorMessage(Message):
     def __init__(self, content: str):
         self.content = content
 
-    def to_chat_message(self) -> LanguageModelMessage:
+    def to_llm_message(self) -> LanguageModelMessage:
         return cast(
             LanguageModelMessage,
             {

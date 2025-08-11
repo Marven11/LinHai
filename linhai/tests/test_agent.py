@@ -95,7 +95,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 验证最终 Answer 对象
         self.assertIsNotNone(final_answer, "Final Answer object not found")
         assert final_answer is not None  # 让Pylance识别类型
-        content = final_answer.get_message().to_chat_message().get("content")
+        content = final_answer.get_message().to_llm_message().get("content")
         self.assertIsNotNone(content)
         self.assertEqual(content, "Hi there")
 
@@ -128,9 +128,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             len(self.agent.messages), 4
         )  # 系统消息 + 全局记忆 + 用户消息 + 回复
-        self.assertEqual(self.agent.messages[2].to_chat_message().get("content"), "Hi")
+        self.assertEqual(self.agent.messages[2].to_llm_message().get("content"), "Hi")
         self.assertEqual(
-            self.agent.messages[3].to_chat_message().get("content"), "Processing..."
+            self.agent.messages[3].to_llm_message().get("content"), "Processing..."
         )
 
         # 重置mock以便测试工具消息
@@ -148,11 +148,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )  # 系统消息 + 全局记忆 + 用户消息 + 回复 + 工具消息 + 回复
         # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[-2].to_chat_message().get("content"), "result"
+            self.agent.messages[-2].to_llm_message().get("content"), "result"
         )
         # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[-1].to_chat_message().get("content"), "Tool processed"
+            self.agent.messages[-1].to_llm_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):
