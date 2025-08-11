@@ -5,9 +5,9 @@ import sys
 import asyncio
 
 from linhai.config import load_config
-from linhai.llm import ChatMessage, OpenAi, Message, AnswerToken, Answer
-from linhai.agent import Agent, create_agent
-from linhai.queue import Queue
+from linhai.llm import ChatMessage, OpenAi, Message
+from linhai.agent import create_agent
+from linhai.cli_ui import CLIApp
 
 
 def run_tests():
@@ -44,43 +44,6 @@ async def chat_loop(llm: OpenAi):
             break
 
 
-async def agent_chat_loop(agent: Agent, input_queue: Queue, output_queue: Queue[AnswerToken | Answer]):
-    """与Agent进行交互式聊天"""
-    print("输入'quit'退出聊天")
-
-    agent_task = asyncio.create_task(agent.run())
-
-    try:
-        while True:
-            if agent.state == "waiting_user":
-                user_input = input("\nYou: ")
-                if user_input.lower() == "quit":
-                    break
-
-                await input_queue.put(ChatMessage("user", user_input))
-
-            print("\nAI: ", end="", flush=True)
-            while True:
-                output = await output_queue.get()
-                if isinstance(output, dict):  # AnswerToken
-                    print(output["content"], end="", flush=True)
-                else:
-                    tool_call = output.get_tool_call()
-                    if tool_call:
-                        print(f"{tool_call.function_name}(...)", end="")
-                    break
-            print()
-
-    except KeyboardInterrupt:
-        print("\n聊天已中断")
-    finally:
-        agent_task.cancel()
-        try:
-            await agent_task
-        except asyncio.CancelledError:
-            pass
-
-
 def main():
     parser = argparse.ArgumentParser(description="LinHai 主程序")
     subparsers = parser.add_subparsers(dest="command", required=True, help="可用命令")
@@ -115,8 +78,10 @@ def main():
         )
         asyncio.run(chat_loop(llm))
     elif args.command == "agent":
+
         agent, input_queue, output_queue, _ = create_agent(args.config)
-        asyncio.run(agent_chat_loop(agent, input_queue, output_queue))
+        app = CLIApp(agent, input_queue, output_queue)
+        app.run()
     else:
         parser.print_help()
         sys.exit(1)

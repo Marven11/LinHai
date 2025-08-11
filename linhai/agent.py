@@ -17,7 +17,7 @@ from linhai.llm import (
     ToolCallMessage,
     LanguageModelMessage,
 )
-from linhai.queue import Queue, QueueClosed
+from asyncio import Queue, QueueEmpty
 from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
@@ -59,8 +59,8 @@ class Agent:
     def __init__(
         self,
         config: AgentConfig,
-        user_input_queue: Queue[ChatMessage],
-        user_output_queue: Queue[AnswerToken | Answer],
+        user_input_queue: "Queue[ChatMessage]",
+        user_output_queue: "Queue[AnswerToken | Answer]",
         tool_manager: ToolManager,
     ):
         """
@@ -109,7 +109,7 @@ class Agent:
             try:
                 msg = await self.user_input_queue.get()
                 await self.handle_messages([cast(ChatMessage, msg)])
-            except QueueClosed:
+            except QueueEmpty:
                 logger.info("用户输入队列已关闭")
             except Exception as e:
                 logger.error("处理消息时出错: %s", str(e))
@@ -124,7 +124,7 @@ class Agent:
         try:
             msg = await self.user_input_queue.get()
             await self.handle_messages([cast(ChatMessage, msg)])
-        except QueueClosed:
+        except QueueEmpty:
             logger.info("用户输入队列已关闭")
         except Exception as e:
             logger.error("处理消息时出错: %s", str(e))
@@ -245,13 +245,7 @@ DEFAULT_SYSTEM_PROMPT = """
 你可以使用Markdown中的JSON code block调用工具，格式如下:
 
 ```json
-{
-    "name": "工具名称",
-    "arguments": {
-        "参数1": "值1",
-        "参数2": "值2"
-    }
-}
+{ "name": "工具名称", "arguments": { "参数1": "值1", "参数2": "值2" } }
 ```
 
 所有工具如下:
@@ -272,12 +266,48 @@ TOOLS
 2. 自动运行：你为了完成用户的任务，自动调用工具与外界交互
 
 如果你完成了任务，或者需要等待用户回答一些问题，你可以在回答的最后一行加上`#LINHAI_WAITING_USER`等待用户回答。
+
+# 示例输出
+
+## 正常聊天时不需要主动暂停
+
+user: 你是?
+agent: 我是林海漫游哦
+user: 你是猫娘吗
+agent: 是的喵~
+
+## 调用工具后需要主动暂停，表示当前不需要继续运行而应该继续等待用户
+
+user: 计算1+1
+agent: ```json
+{"name": "xxx", "arguments": {...} }
+```
+agent: 答案是2喵~ #LINHAI_WAITING_USER
+
+## 可以同时调用多个工具
+
+user: 帮我写两个文件...
+agent: 好的，以下是两个...
+
+```json
+...
+```
+
+```json
+...
+```
+
+tool: ...
+tool: ...
+
+agent: 创建好了喵~ #LINHAI_WAITING_USER
+
 """
 
 
 def create_agent(
     config_path: str = "./config.toml",
-) -> tuple[Agent, Queue[ChatMessage], Queue[AnswerToken | Answer], ToolManager]:
+) -> tuple[Agent, "Queue[ChatMessage]", "Queue[AnswerToken | Answer]", ToolManager]:
     """创建并配置Agent实例
     参数:
         config_path: 配置文件路径
@@ -294,8 +324,8 @@ def create_agent(
         openai_config={},
     )
 
-    user_input_queue: Queue[ChatMessage] = Queue()
-    user_output_queue: Queue[AnswerToken | Answer] = Queue()
+    user_input_queue: "Queue[ChatMessage]" = Queue()
+    user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
 
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "TOOLS", json.dumps(tools_info, ensure_ascii=False, indent=2)

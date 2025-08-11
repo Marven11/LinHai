@@ -21,7 +21,7 @@
 # 代码风格与规范
 
 - 没有特殊情况，数据传递一般使用TypedDict
-- 多个对象之间的交流一般使用Queue
+- 多个对象之间的交流使用asyncio.Queue
 - 每个模块都应该有对应的unit test测试其的功能
 - 没有特殊情况，每个新建的变量都要加上类型注释（type hint）
 - 所有函数和方法都需要编写文档注释，写好输入输出的类型注释
@@ -101,7 +101,7 @@ Agent在发送工具调用消息，等待工具处理完成返回消息时处于
 
 ## 消息响应
 
-Agent的运行过程为响应式，Agent需要通过Queue接受用户的消息和工具的运行结果
+Agent的运行过程为响应式，Agent需要通过asyncio.Queue接受用户的消息和工具的运行结果
 
 在主循环中，Agent应该根据当前任务自动运行，同时适时await用户和工具发来的消息
 
@@ -228,15 +228,6 @@ LLM的消息是根据系统文件等外部信息动态生成的，本项目的�
 
 现在暂时只用来存放LLM API的base_url, api_key和model name
 
-### queue.py
-
-基于asyncio.Queue的异步队列，定义各类和队列相关的操作
-
-队列用来传输各种消息，设计类似于Golang中的chan，支持类似Golang中select的操作
-
-支持一个select函数，这个select函数支持等到多个Queue，直到所有Queue关闭
-
-select函数用来让Agent同时等待多个queue，Agent需要同时等待用户发来的消息、工具发来的消息等等，且用户可能会提前关闭Queue
 
 ### main.py
 

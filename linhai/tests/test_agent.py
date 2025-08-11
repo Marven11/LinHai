@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
-from linhai.llm import ChatMessage
-from linhai.queue import Queue
+from linhai.llm import ChatMessage, AnswerToken, Answer
+from asyncio import Queue
 from linhai.tool.main import ToolResultMessage
 
 
@@ -47,8 +47,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         config = AgentConfig(
             {"system_prompt": "Test system prompt", "model": self.mock_llm}
         )
-        self.user_input_queue = Queue()
-        self.user_output_queue = Queue()
+        self.user_input_queue: "Queue[ChatMessage]" = Queue()
+        self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
         self.tool_manager = MagicMock()
         self.agent = Agent(
             config=config,
