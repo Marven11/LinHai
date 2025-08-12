@@ -37,6 +37,7 @@ class MessageWidget(Static):
                 "markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
+                word_wrap=True,
             ),
             border_style={
                 "user": "yellow",
@@ -63,11 +64,11 @@ class CLIApp(App):
     }
     #chat-container {
         height: 80%;
-        overflow-y: auto;
         background: #2E3440;
     }
     #input {
         height: 20%;
+        min-height: 3;
         background: #2E3440;
         border: round yellow;
     }
