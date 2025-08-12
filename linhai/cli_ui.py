@@ -15,10 +15,13 @@ from linhai.agent import Agent
 class MessageWidget(Static):
     """单条消息显示组件"""
 
-    def __init__(self, role: str, content: str):
+    def __init__(self, role: str, content: str, is_reasoning: bool = False):
         super().__init__()
         self.role = role
         self.content = content
+        self.is_reasoning = is_reasoning
+        if is_reasoning:
+            self.role += "-reasoning"
 
     def append_content(self, new_content: str) -> None:
         """追加内容到消息"""
@@ -30,10 +33,17 @@ class MessageWidget(Static):
         self.remove_children()
         panel = Panel(
             Syntax(
-                self.content, "markdown", theme="nord-darker", background_color="#2E3440"
+                self.content,
+                "markdown",
+                theme="nord-darker",
+                background_color="#2E3440",
             ),
-            border_style="yellow" if self.role == "user" else "green",
-            title="user" if self.role == "user" else "agent",
+            border_style={
+                "user": "yellow",
+                "assistant": "green",
+                "assistant-reasoning": "grey50",
+            }.get(self.role, "grey50"),
+            title=self.role,
             title_align="left",
             expand=True,
             style="on #2E3440",
@@ -132,16 +142,27 @@ class CLIApp(App):
         while True:
             output = await self.user_output_queue.get()
             if isinstance(output, dict):  # AnswerToken
+                if output["reasoning_content"]:
+                    is_reasoning = True
+                    content = output["reasoning_content"]
+                elif output["content"]:
+                    is_reasoning = False
+                    content = output["content"]
+                else:
+                    continue
+                if current_message and current_message.is_reasoning != is_reasoning:
+                    current_message = None
+
                 if current_message is None:
-                    # 创建新消息
+
                     current_message = MessageWidget(
-                        role="assistant", content=output["content"]
+                        role="assistant", content=content, is_reasoning=is_reasoning
                     )
                     await asyncio.sleep(0)
                     self.query_one("#chat-container").mount(current_message)
                     self.messages.append(current_message.to_message())
                 else:
-                    current_message.append_content(output["content"])
+                    current_message.append_content(content)
                 current_message.update_display()
                 self.query_one("#chat-container").scroll_end()
             else:  # Answer

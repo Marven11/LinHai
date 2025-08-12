@@ -152,7 +152,7 @@ class OpenAiAnswer:
                     self._tool_call.function_arguments += tool_call.function.arguments
 
             token: AnswerToken = {
-                "reasoning_content": None,
+                "reasoning_content": getattr(delta, "reasoning_content", None),
                 "content": content,
             }
             return token
