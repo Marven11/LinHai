@@ -1,6 +1,7 @@
+from asyncio import Queue
+from typing import List
 import asyncio
-from typing import List, cast
-import asyncio
+
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, Input
@@ -8,7 +9,6 @@ from textual import events
 from rich.syntax import Syntax
 from rich.panel import Panel
 from linhai.llm import Message, ChatMessage, AnswerToken, Answer
-from asyncio import Queue
 from linhai.agent import Agent
 
 
