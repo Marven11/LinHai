@@ -114,6 +114,7 @@ class OpenAiAnswer:
         self._content = ""
         self._stream = stream
         self._interrupted = False
+        self.total_tokens = 0
         # 生成时会慢慢构造ToolCallMessage的每一个属性，除了argument
         self._tool_call: ToolCallMessage | None = None
         # 函数参数会以token形式一个个传过来
@@ -151,6 +152,10 @@ class OpenAiAnswer:
                 if tool_call.function and tool_call.function.arguments:
                     self._tool_call.function_arguments += tool_call.function.arguments
 
+            # 从chunk中提取token计数（如果API返回）
+            if hasattr(chunk, "usage") and chunk.usage:
+                self.total_tokens = chunk.usage.total_tokens
+
             token: AnswerToken = {
                 "reasoning_content": getattr(delta, "reasoning_content", None),
                 "content": content,
@@ -176,6 +181,10 @@ class OpenAiAnswer:
     def interrupt(self):
         """中断当前回答的生成"""
         self._interrupted = True
+
+    def get_token_count(self) -> int:
+        """获取当前回答的token总数"""
+        return self.total_tokens
 
 
 class OpenAi:
@@ -208,7 +217,7 @@ class OpenAi:
             "model": self.model,
             "messages": messages,
             "stream": True,
-            "temperature": 0.1
+            "temperature": 0.1,
         }
 
         if self.tools:
