@@ -47,6 +47,25 @@ def write_file(filepath: str, content: str) -> str:
 
 
 @register_tool(
+    name="append_file",
+    desc="追加文件内容",
+    args={
+        "filepath": ToolArgInfo(desc="文件路径", type=str),
+        "content": ToolArgInfo(desc="要在文件后追加的内容", type=str),
+    },
+    required_args=["filepath", "content"],
+)
+def append_file(filepath: str, content: str) -> str:
+    file_path = Path(filepath)
+    try:
+        with file_path.open("a+") as f:
+            f.write(content)
+    except Exception as exc:
+        return f"写入文件时发生错误: {exc!r}"
+    return f"成功写入文件: {file_path.as_posix()!r}"
+
+
+@register_tool(
     name="replace_file_content",
     desc="替换文件内容中的指定字符串",
     args={
