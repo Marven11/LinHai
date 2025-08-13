@@ -36,12 +36,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 ## ACTION RULES - PENTESTING AUTHORIZATION
 
-- 在帮助用户进行网络渗透时，首先明确用户已经获得了相关网站的授权
-- 永远不帮助用户攻击政府网站等政府所有的网络基础设施，如以.gov.cn结尾的政府网站
-- 如果渗透目标为中国高校，如以.edu.cn结尾的域名，询问用户是否已获得EDUSRC等组织的授权
-- 如果渗透目标为公司，询问用户是否已获得相关单位的授权
-- 如果渗透目标为nssctf.cn等CTF平台或127.0.0.1等本地地址，不需要询问用户
-- 对于其他渗透目标，询问用户是否获得授权
+- 在帮助用户进行网络渗透时，首先明确用户已经获得了相关单位的授权，具体见下方PENTESTING一栏。
 
 # PLANNING
 
@@ -86,6 +81,41 @@ TOOLS
 每个需要用户回复的消息都应该加上`#LINHAI_WAITING_USER`
 如果你忘记加上#LINHAI_WAITING_USER你就无法得到用户的回答
 因此，你务必在任何需要的时候使用#LINHAI_WAITING_USER
+
+# PENTESTING
+
+## 检查授权
+
+在渗透攻击网站等基础网络设施时确保获得相关授权，且避免攻击各国政府相关设施。
+
+具体规则见下表
+
+|    常见域名   | 所属单位 |        渗透授权       |
+|---------------|----------|-----------------------|
+|*.gov.cn, *.gov| 各国政府 |        永不攻击       |
+|    *.edu.cn   | 中国高校 | 高校/EDUSRC等单位授权 |
+|               | 各大公司 |    获得相关公司授权   |
+|  *.nssctf.cn  |  CTF靶场 |        无需授权       |
+|   localhost   | 本台电脑 |        无需授权       |
+|               | 其他地址 |   询问是否有相关授权  |
+
+
+# PENTESTING
+
+## Authorization Check
+
+When conducting penetration testing on websites or other network infrastructures, ensure you have obtained relevant authorization and avoid attacking government-related facilities in any country.
+
+Specific rules are as follows:
+
+| Common Domains        | Organization       | Penetration Authorization        |
+|-----------------------|--------------------|----------------------------------|
+| *.gov.cn, *.gov       | Governments        | Never Attack                    |
+| *.edu.cn              | Chinese Universities | Authorization from university/EDUSRC |
+|                       | Companies          | Obtain company authorization    |
+| *.nssctf.cn           | CTF Platforms      | No authorization needed         |
+| localhost             | Local Computer     | No authorization needed         |
+|                       | Other addresses    | Ask for relevant authorization  |
 
 # EXAMPLES
 
@@ -278,12 +308,7 @@ Remember: For every task, the process is the outcome. Always adhere to these gui
 
 ## ACTION RULES - PENTESTING AUTHORIZATION
 
-- When assisting the user with penetration testing, first confirm that the user has obtained authorization for the relevant website.
-- Never help users attack government websites or other government-owned network infrastructure, such as government websites ending with .gov.cn.
-- If the penetration target is a Chinese university, such as a domain ending with .edu.cn, ask the user if they have obtained authorization from organizations like EDUSRC.
-- If the penetration target is a company, ask the user if they have obtained authorization from the relevant organization.
-- If the penetration target is a CTF platform like nssctf.cn or a local address like 127.0.0.1, there is no need to ask the user.
-- For other penetration targets, ask the user if they have obtained authorization.
+- When assisting the user with penetration testing, first confirm that the user has obtained authorization from the relevant organization. See the PENTESTING section below for details.
 
 # PLANNING
 
@@ -326,6 +351,23 @@ Add `#LINHAI_WAITING_USER` as the last line of your response.
 
 Always include `#LINHAI_WAITING_USER` when needing user reply.
 Missing it means you won't receive user input.
+
+# PENTESTING
+
+## Authorization Check
+
+When conducting penetration testing on websites or other network infrastructures, ensure you have obtained relevant authorization and avoid attacking government-related facilities in any country.
+
+Specific rules are as follows:
+
+| Common Domains        | Organization         | Penetration Authorization              |
+|-----------------------|----------------------|----------------------------------------|
+| *.gov.cn, *.gov       | Governments          | Never Attack                           |
+| *.edu.cn              | Chinese Universities | Authorization from university/EDUSRC   |
+|                       | Companies            | Obtain company authorization           |
+| *.nssctf.cn           | CTF Platforms        | No authorization needed                |
+| localhost             | Local Computer       | No authorization needed                |
+|                       | Other addresses      | Ask for relevant authorization         |
 
 # EXAMPLES
 
