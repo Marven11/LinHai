@@ -155,6 +155,16 @@ class Agent:
 
         async for token in response:
             await self.user_output_queue.put(token)
+            if not self.user_input_queue.empty():
+                await self.user_output_queue.put(response)
+                chat_message = cast(ChatMessage, response.get_message())
+                self.messages.append(chat_message)
+                self.messages.append(
+                    ChatMessage(role="system", message="用户打断了你的回答")
+                )
+                self.messages.append(await self.user_input_queue.get())
+                response.interrupt()
+                return await self.generate_response()
 
         await self.user_output_queue.put(response)
 
@@ -219,9 +229,6 @@ class Agent:
                 self.state = "paused"
                 raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
-
-
-
 
 
 def create_agent(
