@@ -3,3 +3,4 @@ openai
 httpx
 beautifulsoup4
 mistune
+requests
