@@ -30,7 +30,7 @@ def read_file(filepath: str) -> str:
 
 @register_tool(
     name="write_file",
-    desc="写入文件内容",
+    desc="写入文件内容，如果没有必要则不要使用这个tool，而是优先使用replace_file_content或者append_file修改文件",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type=str),
         "content": ToolArgInfo(desc="要写入的内容", type=str),

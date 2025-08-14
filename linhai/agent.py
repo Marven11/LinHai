@@ -52,7 +52,13 @@ class GlobalMemory:
     def to_llm_message(self) -> LanguageModelMessage:
         return {
             "role": "system",
-            "content": f"# 全局记忆\n\n{self.filepath.read_text()}",
+            "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，内容如下
+
+{self.filepath.read_text()}
+""",
         }
 
 
