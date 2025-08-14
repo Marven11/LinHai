@@ -58,7 +58,7 @@ class CompressRequest(Message):
 
     def to_llm_message(self) -> LanguageModelMessage:
         prompt = COMPRESS_HISTORY_PROMPT.replace(
-            "SUMMERIZATION", "\n".join(self.messages_summerization)
+            "{|SUMMERIZATION|}", "\n".join(self.messages_summerization)
         )
         return {
             "role": "system",
@@ -336,7 +336,7 @@ def create_agent(
     user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
 
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
-        "TOOLS", json.dumps(tools_info, ensure_ascii=False, indent=2)
+        "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
     )
 
     agent_config: AgentConfig = {
