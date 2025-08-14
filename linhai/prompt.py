@@ -60,7 +60,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 ## 工具列表
 
-TOOLS
+{|TOOLS|}
 
 ## 何时保持谨慎
 
@@ -358,7 +358,7 @@ Use Markdown JSON code blocks to call tools:
 
 ## Tool List
 
-TOOLS
+{|TOOLS|}
 
 ## Tool Usage Principles
 
@@ -581,13 +581,17 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 
 请对以下内容进行简要总结，使用markdown分点：
 
-- 主要任务与用户的核心意图
-- 关键的技术概念
-- 出现的错误、异常及其修复过程
-- 问题的分析与解决过程
-- 所有用户提出的问题与需求
-- 重要的待办事项与未完成任务
-- 当前正在进行的工作内容
+1. 主要目标：主要任务是什么，任务需要完成什么目标，达到什么效果
+2. 关键概念：文档或其他信息源中提到的关键技术概念
+    - 为了节省资源，这里仅总结该任务专有的信息
+    - 如python基础等公开已知的、LLM已经学会的信息不在此列
+    - 这些技术概念应该关键到没有这些信息Agent就没法良好地完成工作
+3. 文件代码：关键且有用的各类文件和代码片段
+4. 问题与解：Agent在执行任务时遇到的各类问题，如果有解法则提供解法
+5. 待办任务：当前Agent规划好的，需要完成的各类任务，使用分级bullet point记录，`[ ]`和`[x]`标记未完成和已经完成
+6. 当前任务：当前Agent正在处理的任务
+7. 未来任务：列出未来可能需要完成的任务
+8. 用户输入：用户提出的每一个要求，提供的每一个信息，**用户的每一条信息都很重要！**
 
 ## 2. 消息评分
 
@@ -630,8 +634,56 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 
 # 当前历史信息和编号
 
-SUMMERIZATION
+{|SUMMERIZATION|}
 
 """
 
-COMPRESS_HISTORY_PROMPT = COMPRESS_HISTORY_PROMPT_ZH
+COMPRESS_HISTORY_PROMPT_EN = """
+# Context
+
+Due to excessive message history, you need to compress conversation history by removing less important messages to save space and improve efficiency.
+
+# Steps
+
+## 1. Summarize Messages
+
+Provide a brief markdown summary of:
+1. Main objectives
+2. Key technical concepts
+3. Critical files/code snippets
+4. Problems & solutions
+5. Pending tasks ([ ]/[x] format)
+6. Current task
+7. Future tasks
+8. All user inputs (VERY IMPORTANT)
+
+## 2. Score Messages
+
+Rate each message (1-10) based on:
+- Key decisions/requirements
+- Code/config changes
+- Important errors/fixes
+- Essential context for future tasks
+
+# Output Format
+
+Markdown JSON block with:
+- `id`: Message index
+- `summary`: One-line summary
+- `score`: Importance score
+
+# Example Output
+
+```json
+[
+  {"id": 0, "summary": "System prompt", "score": 10},
+  {"id": 1, "summary": "User request", "score": 10}
+]
+```
+
+# Current History
+
+{|SUMMERIZATION|}
+"""
+
+COMPRESS_HISTORY_PROMPT = COMPRESS_HISTORY_PROMPT_EN  # Default to English version
