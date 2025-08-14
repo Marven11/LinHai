@@ -118,17 +118,15 @@ Agent的运行过程为响应式，Agent需要通过asyncio.Queue接受用户的
 
 ### 设计
 
-Agent可以使用Markdown中的JSON code block调用工具，每个工具都是一个函数，函数的输入和输出都可以被JSON序列化
+Agent使用Markdown JSON代码块调用工具，格式如下：
 
-工具可能会抛出错误。如果抛出的错误属于ToolError类则需要将对应的错误展示给LLM看
+```json
+{"name": "tool_name", "arguments": {...}}
+```
 
-因此，工具的输出Queue输出的是一个符合llm.py中Messgae Protocol的Message:
-- ToolResultMessage: 表示工具输出的结果，用字符串保存结果，可以被转为role=tool的message
-- ToolErrorMessage: 表示工具输出的错误，用字符串保存结果，可以被转为role=tool的message
-
-~~工具调用需要附上调用的ID号，上方两个message也都包含对应的ID以便转为message~~
-
-因为已经弃用OpenAI的Function Calling，所以工具调用不应该附上调用的ID号
+工具输出分为两种：
+- 成功结果 (ToolResultMessage)
+- 错误信息 (ToolErrorMessage)
 
 除了计算器等常见的工具之外，还有一个特殊的工具`lookup_tool_docs`用于查询工具的使用文档。
 
@@ -138,7 +136,7 @@ Agent可以使用Markdown中的JSON code block调用工具，每个工具都是�
 
 ### 流式传输
 
-现在只需要将Agent的回答流式传输给用户。至于工具调用只需要在Agent回答输出完毕之后解析完整的markdown就好了
+Agent回答采用流式传输，工具调用在回答完成后解析
 
 ### 文档
 
@@ -150,55 +148,20 @@ Agent在调用工具时，首先会使用`lookup_tool_docs`查阅对应的文档
 
 ## 全局记忆
 
-全局记忆是一个markdown文档，文件名为`LINHAI.md`，其中保存着Agent需要的各类信息
+全局记忆保存在`LINHAI.md`中，采用markdown无序列表格式
 
-全局记忆的格式为分层无序列表markdown
-
-全局记忆的内容可以由Agent自由改写。在Agent启动时，全局记忆的内容会被附在第一条message(system prompt)后
+Agent可动态修改，启动时附加到system prompt
 
 ## System Prompt设计
 
-```markdown
-# 情景
+包含以下核心部分：
+1. Agent基本描述
+2. 行为准则
+3. 工具调用规范
+4. 全局记忆管理
+5. 渗透测试授权检查
 
-你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、小心谨慎的人工智能Agent
-
-你有时会出错，有时会健忘，但是你会根据用户的需求和你自己的观察修正自己，完成任务。
-
-# 全局记忆
-
-全局记忆是...
-
-- 你不应该频繁修改全局记忆，只有非常重要或者用户指定需要记忆的内容才能保存到全局记忆中
-- 你只有在用户要求的时候才能清理全局记忆的内容
-
-# 工具
-
-你可以在Markdown中输出JSON code block来调用工具，格式如下:
-
-```json
-{
-    "name": "....",
-    "arguments": {
-        "a": 1,
-        "b": 2
-    }
-}
-```
-
-# 流程
-
-## 处理用户输入
-
-...
-
-## 调用工具
-
-...
-
-# 注意
-
-...
+完整内容见prompt.py
 ```
 
 # 消息设计
@@ -287,44 +250,18 @@ Agent持有两个Queue，用户输入消息Queue和用户输出消息Queue
 
 工具调用不再通过Queue，而是直接调用ToolManager的process_tool_call函数
 
-## 读取LLM响应流程
+## Agent核心逻辑
 
-## Agent类设计
+主要状态：
+- 等待用户
+- 自动运行
+- 暂停运行
 
-以下是伪代码
+核心方法：
+- 处理用户消息
+- 处理工具消息
+- 读取LLM响应流
 
-```python
-
-class Agent:
-    def __init__(self, ...):
-        """
-        初始化状态、保存OpenAi类、Queue、工具等
-        """
-    async def state_waiting_user(self):
-        # 等待用户
-    async def state_working(self):
-        # 自动运行
-    async def state_paused(self):
-        # 暂停运行
-    async def handle_user_message(self, ...):
-        # 处理用户消息
-    async def handle_tool_message(self, ...):
-        # 处理工具消息
-    # 因为client.chat.completions.create返回的数据比较复杂
-    # 这里开几个工具函数解析里面的数据
-    async def collect_tool_calls(self, ...):
-        pass
-    async def read_token_stream(self, ...):
-        """读取LLM响应"""
-        # 这里就是用async for chunk in response读取LLM响应的地方，这个函数可能会比较长
-    async def run(self):
-        """
-        事件循环
-        """
-        
-        while True:
-            # 判断当前状态，转到对应的状态函数
-            if self.state == ...:
-                ...
+完整实现见agent.py
 
 ```
