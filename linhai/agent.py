@@ -1,12 +1,13 @@
 from pathlib import Path
 from typing import TypedDict, cast
+from reprlib import Repr
 import asyncio
 import logging
 import json
 import traceback
 
-from linhai.markdown_parser import extract_tool_calls
-
+from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
+from linhai.exceptions import LLMResponseError
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -14,6 +15,7 @@ from linhai.llm import (
     AnswerToken,
     Answer,
     OpenAi,
+    OpenAiAnswer,
     ToolCallMessage,
     LanguageModelMessage,
 )
@@ -22,9 +24,11 @@ from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
 from linhai.tool.base import get_tools_info
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT
+from linhai.prompt import DEFAULT_SYSTEM_PROMPT, COMPRESS_HISTORY_PROMPT
 
 logger = logging.getLogger(__name__)
+
+repr_obj = Repr(maxstring=50)
 
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
@@ -37,11 +41,37 @@ class AgentRuntimeErrorMessage(Message):
         return {"role": "system", "content": self.message}
 
 
+class OpenAiUsage(Message):
+    def __init__(self, total_tokens: int):
+        self.total_tokens = total_tokens
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return {
+            "role": "system",
+            "content": f"当前token总用量为: {self.total_tokens} ({self.total_tokens/1000:.2f} k)",
+        }
+
+
+class CompressRequest(Message):
+    def __init__(self, messages_summerization: str):
+        self.messages_summerization = messages_summerization
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        prompt = COMPRESS_HISTORY_PROMPT.replace(
+            "SUMMERIZATION", "\n".join(self.messages_summerization)
+        )
+        return {
+            "role": "system",
+            "content": prompt,
+        }
+
+
 class AgentConfig(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
     model: LanguageModel
+    compress_threshold: float
 
 
 class GlobalMemory:
@@ -137,6 +167,41 @@ class Agent:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
 
+    async def compress(self):
+        messages = [msg.to_llm_message() for msg in self.messages]
+        messages_summerization = "\n".join(
+            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
+            for i, msg in enumerate(messages)
+        )
+        self.messages.append(CompressRequest(messages_summerization))
+        answer = await self.generate_response()
+        try:
+            scores_data = extract_json_blocks(
+                str(answer.get_message().to_llm_message().get("content", ""))
+            )
+            if len(scores_data) != 1:
+                raise LLMResponseError("数据数量有误")
+            scores = scores_data.pop()
+            todelete_indicies = set(
+                int(info.get("id", "-1"))
+                for info in scores
+                if float(info.get("score", "10") < 8)
+            )
+            self.messages = [
+                msg
+                for idx, msg in enumerate(self.messages)
+                if (idx in todelete_indicies and idx >= 2)
+                or isinstance(msg, CompressRequest)
+            ]
+            self.messages.append(
+                ChatMessage(
+                    role="system",
+                    message="压缩已经完成，你可以继续完成工作或者向用户报告了",
+                )
+            )
+        except Exception:
+            pass
+
     async def call_tool(self, tool_call: ToolCallMessage):
         """直接调用工具并处理结果"""
         try:
@@ -155,33 +220,36 @@ class Agent:
             self.state = "paused"
             raise
 
-    async def generate_response(self):
+    async def generate_response(self, auto_compress: bool = False) -> Answer:
         """生成回复并发送给用户"""
-        response: Answer = await self.config["model"].answer_stream(self.messages)
+        answer: Answer = await self.config["model"].answer_stream(self.messages)
 
-        async for token in response:
+        async for token in answer:
             await self.user_output_queue.put(token)
             if not self.user_input_queue.empty():
-                await self.user_output_queue.put(response)
-                chat_message = cast(ChatMessage, response.get_message())
+                await self.user_output_queue.put(answer)
+                chat_message = cast(ChatMessage, answer.get_message())
                 self.messages.append(chat_message)
                 self.messages.append(
                     ChatMessage(role="system", message="用户打断了你的回答")
                 )
                 self.messages.append(await self.user_input_queue.get())
-                response.interrupt()
+                answer.interrupt()
                 return await self.generate_response()
 
-        await self.user_output_queue.put(response)
+        await self.user_output_queue.put(answer)
 
-        chat_message = cast(ChatMessage, response.get_message())
+        chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
 
         tool_calls = extract_tool_calls(full_response)
 
         for call in tool_calls:
             try:
-                if "name" in call and "arguments" in call:
+                if call.get("name") == "compress_history":
+                    await self.compress()
+                    continue
+                elif "name" in call and "arguments" in call:
                     tool_call = ToolCallMessage(
                         function_name=call["name"],
                         function_arguments=json.dumps(call["arguments"]),
@@ -211,6 +279,14 @@ class Agent:
                     f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
                 )
             )
+
+        if isinstance(answer, OpenAiAnswer):
+            if auto_compress and answer.total_tokens > self.config.get(
+                "compress_threshold", 65536 * 0.8
+            ):
+                await self.compress()
+
+        return answer
 
     async def run(self):
         """Agent主循环"""
@@ -263,7 +339,11 @@ def create_agent(
         "TOOLS", json.dumps(tools_info, ensure_ascii=False, indent=2)
     )
 
-    agent_config: AgentConfig = {"system_prompt": system_prompt, "model": llm}
+    agent_config: AgentConfig = {
+        "system_prompt": system_prompt,
+        "model": llm,
+        "compress_threshold": float(config.get("compress_threshold", 65536 * 0.8)),
+    }
 
     tool_manager = ToolManager()
 

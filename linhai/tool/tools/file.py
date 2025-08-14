@@ -67,7 +67,9 @@ def append_file(filepath: str, content: str) -> str:
 
 @register_tool(
     name="replace_file_content",
-    desc="替换文件内容中的指定字符串",
+    desc="替换文件内容中的指定字符串。"
+    "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
+    "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type=str),
         "old": ToolArgInfo(desc="要替换的字符串", type=str),

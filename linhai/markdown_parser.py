@@ -17,6 +17,31 @@ class CodeBlockRenderer(mistune.HTMLRenderer):
         return super().block_code(code, info)
 
 
+def extract_json_blocks(markdown_text: str) -> List[Any]:
+    """
+    从Markdown文本中提取所有JSON代码块
+
+    Args:
+        markdown_text: 要解析的Markdown文本
+
+    Returns:
+        包含所有JSON代码块内容的列表，每个元素是解析后的数据
+    """
+    renderer = CodeBlockRenderer()
+    markdown = mistune.create_markdown(renderer=renderer)
+    markdown(markdown_text)
+
+    json_blocks = []
+    for block in renderer.code_blocks:
+        if block["language"].lower() == "json":
+            try:
+                data = json.loads(block["content"])
+                json_blocks.append(data)
+            except json.JSONDecodeError:
+                continue
+    return json_blocks
+
+
 def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
     """
     从Markdown文本中提取JSON格式的工具调用
@@ -27,18 +52,9 @@ def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
     Returns:
         包含工具调用信息的列表，每个元素是包含'name'和'arguments'的字典
     """
-    renderer = CodeBlockRenderer()
-    markdown = mistune.create_markdown(renderer=renderer)
-    markdown(markdown_text)
-    
+    json_blocks = extract_json_blocks(markdown_text)
     tool_calls = []
-    for block in renderer.code_blocks:
-        if block["language"].lower() == "json":
-            try:
-                data = json.loads(block["content"])
-                if isinstance(data, dict) and "name" in data and "arguments" in data:
-                    tool_calls.append(data)
-            except json.JSONDecodeError:
-                continue
-                
+    for data in json_blocks:
+        if isinstance(data, dict) and "name" in data and "arguments" in data:
+            tool_calls.append(data)
     return tool_calls

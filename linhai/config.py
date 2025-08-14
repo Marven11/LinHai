@@ -19,6 +19,8 @@ class MemoryConfig(TypedDict):
 class Config(TypedDict):
     llm: LLMConfig
     memory: MemoryConfig
+    compress_threshold: float
+    compress_threshold: float
 
 
 def validate_config(config: Config) -> None:
