@@ -2,7 +2,7 @@ import asyncio
 import json
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from typing import TypedDict, Any
+from typing import TypedDict, Any, cast
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ChatMessage, AnswerToken, Answer
@@ -44,9 +44,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
-        config = AgentConfig(
-            {"system_prompt": "Test system prompt", "model": self.mock_llm}
-        )
+
+        config: AgentConfig = {
+            "system_prompt": "Test system prompt", 
+            "model": self.mock_llm,
+            "compress_threshold": 0.8  # 添加缺失的必需字段
+        }
         self.user_input_queue: "Queue[ChatMessage]" = Queue()
         self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
         self.tool_manager = MagicMock()
