@@ -91,7 +91,7 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
         file_path.write_text(new_content)
     except Exception as exc:
         return f"替换内容时发生错误: {exc!r}"
-    return f"文件内容已替换，路径: {file_path.as_posix()!r}"
+    return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，"
 
 
 @register_tool(

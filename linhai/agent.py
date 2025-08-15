@@ -174,7 +174,7 @@ class Agent:
             for i, msg in enumerate(messages)
         )
         self.messages.append(CompressRequest(messages_summerization))
-        answer = await self.generate_response()
+        answer = await self.generate_response(enable_compress=False)
         try:
             scores_data = extract_json_blocks(
                 str(answer.get_message().to_llm_message().get("content", ""))
@@ -199,8 +199,13 @@ class Agent:
                     message="压缩已经完成，你可以继续完成工作或者向用户报告了",
                 )
             )
-        except Exception:
-            pass
+        except LLMResponseError:
+            self.messages.append(
+                ChatMessage(
+                    role="system",
+                    message="错误：你没有输出需要的score，请调用工具重新启动流程",
+                )
+            )
 
     async def call_tool(self, tool_call: ToolCallMessage):
         """直接调用工具并处理结果"""
@@ -220,7 +225,7 @@ class Agent:
             self.state = "paused"
             raise
 
-    async def generate_response(self, auto_compress: bool = False) -> Answer:
+    async def generate_response(self, enable_compress: bool = False) -> Answer:
         """生成回复并发送给用户"""
         answer: Answer = await self.config["model"].answer_stream(self.messages)
 
@@ -247,9 +252,17 @@ class Agent:
         for call in tool_calls:
             try:
                 if call.get("name") == "compress_history":
-                    await self.compress()
-                    continue
-                elif "name" in call and "arguments" in call:
+                    if enable_compress:
+                        await self.compress()
+                    else:
+                        self.messages.append(
+                            ChatMessage(
+                                role="system",
+                                message="当前禁止调用compress_history工具，你是不是弄错什么了？",
+                            )
+                        )
+                    return await self.generate_response()
+                if "name" in call and "arguments" in call:
                     tool_call = ToolCallMessage(
                         function_name=call["name"],
                         function_arguments=json.dumps(call["arguments"]),
@@ -281,10 +294,11 @@ class Agent:
             )
 
         if isinstance(answer, OpenAiAnswer):
-            if auto_compress and answer.total_tokens > self.config.get(
+            if enable_compress and answer.total_tokens > self.config.get(
                 "compress_threshold", 65536 * 0.8
             ):
                 await self.compress()
+                return await self.generate_response()
 
         return answer
 
