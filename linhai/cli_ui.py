@@ -21,13 +21,18 @@ class MessageWidget(Static):
         self.role = role
         self.content = content
         self.is_reasoning = is_reasoning
+        self.lazy_counter = 0
         if is_reasoning:
             self.role += "-reasoning"
 
-    def append_content(self, new_content: str) -> None:
+    def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
         self.content += new_content
-        self.update_display()
+        if self.lazy_counter < len(self.content) // 300:
+            self.lazy_counter += 1
+        else:
+            self.update_display()
+            self.lazy_counter = 0
 
     def update_display(self) -> None:
         """更新消息显示"""
@@ -169,13 +174,15 @@ class CLIApp(App):
                     await asyncio.sleep(0)
                     container.mount(current_message)
                     self.messages.append(current_message.to_message())
+                    current_message.update_display()
                 else:
-                    current_message.append_content(content)
+                    current_message.append_content_lazy(content)
 
-                current_message.update_display()
                 if should_scroll:
                     container.scroll_end()
             else:  # Answer
+                if current_message:
+                    current_message.update_display()
                 tool_call = output.get_tool_call()
                 if tool_call:
                     # 处理工具调用
