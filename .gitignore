@@ -6,3 +6,4 @@ dist
 config.toml
 .DS_Store
 .venv
+.vscode
