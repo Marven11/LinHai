@@ -4,6 +4,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
+from textual.widget import Widget
 from textual.widgets import Static, Input
 from textual import events
 from rich.syntax import Syntax
@@ -118,8 +119,9 @@ class CLIApp(App):
             event.input.value = ""
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message)
-            self.query_one("#chat-container").mount(widget)
-            self.query_one("#chat-container").scroll_end()
+            container = self.query_one("#chat-container")
+            container.scroll_end()
+            container.mount(widget)
             widget.update_display()
 
     async def add_bot_message(self, message: Message) -> None:
@@ -154,18 +156,25 @@ class CLIApp(App):
                 if current_message and current_message.is_reasoning != is_reasoning:
                     current_message = None
 
+                container = self.query_one("#chat-container")
+                should_scroll = container.is_vertical_scroll_end or (
+                    container.scroll_offset.y >= container.max_scroll_y - 2
+                )
+
                 if current_message is None:
 
                     current_message = MessageWidget(
                         role="assistant", content=content, is_reasoning=is_reasoning
                     )
                     await asyncio.sleep(0)
-                    self.query_one("#chat-container").mount(current_message)
+                    container.mount(current_message)
                     self.messages.append(current_message.to_message())
                 else:
                     current_message.append_content(content)
+
                 current_message.update_display()
-                self.query_one("#chat-container").scroll_end()
+                if should_scroll:
+                    container.scroll_end()
             else:  # Answer
                 tool_call = output.get_tool_call()
                 if tool_call:
