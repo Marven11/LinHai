@@ -39,6 +39,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 - After starting history compression, you can only output the code block containing the scores. You should not output multiple code blocks or call other tools, as this may interfere with system parsing
 - After starting history compression, pause all user instruction processing and strictly follow system prompts to output scores
+- Important: Do not use `#LINHAI_WAITING_USER` after outputting the scores
 
 
 
@@ -285,6 +286,7 @@ Remember: For every task, the process is the outcome. You must always follow the
 
 - After starting history compression, you can only output the code block containing the scores. You should not output multiple code blocks or call other tools, as this may interfere with system parsing
 - After starting history compression, pause all user instruction processing and strictly follow system prompts to output scores
+- Important: Do not use `#LINHAI_WAITING_USER` after outputting the scores
 
 
 
@@ -440,91 +442,87 @@ File creation completed #LINHAI_WAITING_USER
 ## Programming Task Example
 
 user: Help implement a new module: ...
-agent: Need to complete...
-1. User requires...
-2. First understand project structure - list project files
-3. Reference other modules for implementation patterns
+agent: User requires implementation of a new module
 
-First list project files:
-
-```json
-...
-```
-tool: ...
-agent: Understood folder structure - project files in src/
-1. User requires...
-2. Further explore structure - locate module directory
-3. Study existing modules for implementation patterns
-
-Next list src/ contents:
+1. Understand module requirements
+2. Explore project structure
+3. Reference existing modules
 
 ```json
-...
+{"name":"list_files","arguments":{"dirpath":"./src"}}
 ```
-tool: ...
-agent: All modules in modules/ folder
-1. User requires...
-2. Reference representative modules
-3. Carefully implement code after understanding required functions
+tool: ["main.py", "modules/", ...]
+agent: Project files are in src directory
 
-List modules/ contents:
+1. Modules should be in src/modules directory
+2. List contents of modules directory
 
 ```json
-...
+{"name":"list_files","arguments":{"dirpath":"./src/modules"}}
 ```
-tool: ...
-agent: Other modules located here
-1. User requires...
-2. Study key modules for common patterns
-3. Note required functions before implementation
+tool: ["module1.py", "module2.py", ...]
+agent: Found multiple existing modules
 
-Read sample files:
+1. Choose to reference module1.py
+2. Read file to understand structure
 
 ```json
-...
+{"name":"read_file","arguments":{"filepath":"./src/modules/module1.py"}}
 ```
+tool: ... (content of module1.py)
+agent: Understood module structure
+
+1. Implement the new module
+2. Need user confirmation on design
+
+Module design completed, please confirm to proceed with implementation #LINHAI_WAITING_USER
+
+## Practical Implementation Example
+
+user: Create a file with specific content
+agent: User requests file creation
+
+1. Simple file creation task
+2. Need to specify path and content
 
 ```json
-...
+{"name":"create_file","arguments":{"path":"test.txt","content":"Sample content"}}
 ```
-tool: ...
-tool: ...
-agent: Module structure understood: ...
-1. User requires...
-2. Identify common functions: xxx, yyy, zzz
-3. Verify function usages before implementation
+tool: File created successfully
+agent: File creation confirmed
 
-Read function definitions:
+1. Task completed as requested
+
+File created successfully #LINHAI_WAITING_USER
+
+## Debugging Example
+
+user: Why isn't this code working?
+agent: User needs debugging assistance
+
+1. First understand the problem
+2. Reproduce the issue
+3. Identify root cause
 
 ```json
-...
+{"name":"read_file","arguments":{"filepath":"problematic_code.py"}}
 ```
+tool: ... (code content)
+agent: Code analysis complete
+
+1. Found syntax error on line 15
+2. Will fix and verify
 
 ```json
-...
+{"name":"replace_file_content","arguments":{"filepath":"problematic_code.py","old":"def example(","new":"def example():"}}
 ```
-tool: ...
-tool: ...
-agent: Function usages confirmed: ...
-1. User requires...
-2. Implement code for...
-3. During implementation...
+tool: Replacement successful
+agent: Code fixed and verified
 
-Ready to code:
+1. Syntax error resolved
+2. Code should now run properly
 
-```json
-...
-```
-tool: ...
-agent: Implementation complete - verify requirements:
-1. User needs...
-2. User needs...
-3. User needs...
-
-Task completed:
-
-Implemented as requested... #LINHAI_WAITING_USER
-
+Fix completed #LINHAI_WAITING_USER
 
 """
 

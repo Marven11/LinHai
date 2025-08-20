@@ -28,7 +28,7 @@ class MessageWidget(Static):
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
         self.content += new_content
-        if self.lazy_counter < len(self.content) // 300:
+        if self.lazy_counter < len(self.content) // 300 and "\n" not in new_content:
             self.lazy_counter += 1
         else:
             self.update_display()
