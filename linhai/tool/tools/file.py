@@ -1,6 +1,34 @@
 from linhai.tool.base import register_tool, ToolArgInfo
 from pathlib import Path
-import os
+import difflib
+import json
+
+
+def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
+
+    linenum = search_string.count("\n") + 1
+    lines = content.splitlines()
+
+    chunks = [
+        "\n".join(lines[i : i + linenum]) for i in range(0, len(lines) - linenum + 1)
+    ]
+
+    similarities = []
+    for i, chunk in enumerate(chunks):
+        similarity = difflib.SequenceMatcher(None, search_string, chunk).ratio()
+        similarities.append((similarity, i, chunk))
+    similarities.sort(key=lambda x: x[0], reverse=True)
+    results = [
+        {
+            "similarity": similarity,
+            "start_line": chunk_index + 1,
+            "end_line": chunk_index + linenum,
+            "content": chunk_content,
+        }
+        for similarity, chunk_index, chunk_content in similarities[:top_n]
+    ]
+
+    return results
 
 
 @register_tool(
@@ -85,8 +113,14 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
         return f"路径{file_path.as_posix()!r}不是文件"
     try:
         content = file_path.read_text()
+        similar_info = json.dumps(
+            find_most_similar_in_files(old, content), indent=2, ensure_ascii=False
+        )
         if old not in content:
-            return f"内容{old!r}在文件{file_path.as_posix()!r}中未找到"
+            return (
+                f"内容{old!r}在文件{file_path.as_posix()!r}中未找到。"
+                f"内容类似的部分如下: {similar_info}"
+            )
         new_content = content.replace(old, new)
         file_path.write_text(new_content)
     except Exception as exc:
