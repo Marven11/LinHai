@@ -1,5 +1,5 @@
 from typing import TypedDict, cast, Union
-import toml
+import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -61,7 +61,7 @@ def load_config(config_path: Union[str, Path, None] = None) -> Config:
         config_path = Path(__file__).parent / "config.toml"
     elif isinstance(config_path, str):
         config_path = Path(config_path)
-    config_data = toml.load(config_path)
+    config_data = tomllib.load(config_path.open("rb"))
     config = cast(Config, config_data)
     validate_config(config)
     return config
