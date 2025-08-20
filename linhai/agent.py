@@ -211,6 +211,12 @@ class Agent:
         """直接调用工具并处理结果"""
         try:
             tool_result = await self.tool_manager.process_tool_call(tool_call)
+            self.messages.append(
+                ChatMessage(
+                    role="system",
+                    message=f"你调用了工具{tool_call.function_name!r}，结果如下",
+                )
+            )
             self.messages.append(tool_result)
         except Exception as e:
             logger.error(f"工具调用失败: {str(e)}")

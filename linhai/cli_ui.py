@@ -4,7 +4,6 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
-from textual.widget import Widget
 from textual.widgets import Static, Input
 from textual import events
 from rich.syntax import Syntax
