@@ -7,7 +7,7 @@ from linhai.tool.base import register_tool, ToolArgInfo
 @register_tool(
     name="run_command",
     desc="执行系统命令并返回输出",
-    args={"command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type=str)},
+    args={"command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str")},
     required_args=["command"],
 )
 def run_command(command: str) -> str:
@@ -37,7 +37,7 @@ def run_command(command: str) -> str:
 @register_tool(
     name="change_directory",
     desc="改变当前工作目录",
-    args={"directory": ToolArgInfo(desc="目标目录的路径", type=str)},
+    args={"directory": ToolArgInfo(desc="目标目录的路径", type="str")},
     required_args=["directory"],
 )
 def change_directory(directory: str) -> str:

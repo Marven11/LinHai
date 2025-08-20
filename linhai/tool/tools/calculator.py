@@ -5,8 +5,8 @@ from linhai.tool.base import register_tool, ToolArgInfo
     name="add_numbers",
     desc="计算两个数字的和",
     args={
-        "a": ToolArgInfo(desc="第一个数字", type=float),
-        "b": ToolArgInfo(desc="第二个数字", type=float)
+        "a": ToolArgInfo(desc="第一个数字", type="float"),
+        "b": ToolArgInfo(desc="第二个数字", type="float")
     },
     required_args=["a", "b"]
 )

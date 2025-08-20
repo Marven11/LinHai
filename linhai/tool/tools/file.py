@@ -7,7 +7,7 @@ import os
     name="read_file",
     desc="读取文件",
     args={
-        "filepath": ToolArgInfo(desc="文件路径", type=str),
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
     },
     required_args=["filepath"],
 )
@@ -32,8 +32,8 @@ def read_file(filepath: str) -> str:
     name="write_file",
     desc="写入文件内容，如果没有必要则不要使用这个tool，而是优先使用replace_file_content或者append_file修改文件",
     args={
-        "filepath": ToolArgInfo(desc="文件路径", type=str),
-        "content": ToolArgInfo(desc="要写入的内容", type=str),
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "content": ToolArgInfo(desc="要写入的内容", type="str"),
     },
     required_args=["filepath", "content"],
 )
@@ -50,8 +50,8 @@ def write_file(filepath: str, content: str) -> str:
     name="append_file",
     desc="追加文件内容",
     args={
-        "filepath": ToolArgInfo(desc="文件路径", type=str),
-        "content": ToolArgInfo(desc="要在文件后追加的内容", type=str),
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
     },
     required_args=["filepath", "content"],
 )
@@ -71,9 +71,9 @@ def append_file(filepath: str, content: str) -> str:
     "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
     "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。",
     args={
-        "filepath": ToolArgInfo(desc="文件路径", type=str),
-        "old": ToolArgInfo(desc="要替换的字符串", type=str),
-        "new": ToolArgInfo(desc="新的字符串", type=str),
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "old": ToolArgInfo(desc="要替换的字符串", type="str"),
+        "new": ToolArgInfo(desc="新的字符串", type="str"),
     },
     required_args=["filepath", "old", "new"],
 )
@@ -98,7 +98,7 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
     name="list_files",
     desc="列出指定文件夹中的文件(使用./表示当前文件夹)",
     args={
-        "dirpath": ToolArgInfo(desc="文件夹路径，使用./表示当前目录", type=str),
+        "dirpath": ToolArgInfo(desc="文件夹路径，使用./表示当前目录", type="str"),
     },
     required_args=["dirpath"],
 )
@@ -127,7 +127,7 @@ def list_files(dirpath: str) -> str:
     name="get_absolute_path",
     desc="获取路径的绝对路径",
     args={
-        "path": ToolArgInfo(desc="相对或绝对路径", type=str),
+        "path": ToolArgInfo(desc="相对或绝对路径", type="str"),
     },
     required_args=["path"],
 )
