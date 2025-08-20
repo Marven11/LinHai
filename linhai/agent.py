@@ -225,7 +225,7 @@ class Agent:
             self.state = "paused"
             raise
 
-    async def generate_response(self, enable_compress: bool = False) -> Answer:
+    async def generate_response(self, enable_compress: bool = True) -> Answer:
         """生成回复并发送给用户"""
         answer: Answer = await self.config["model"].answer_stream(self.messages)
 
