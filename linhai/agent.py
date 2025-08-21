@@ -50,7 +50,7 @@ class CompressRequest(Message):
             "{|SUMMERIZATION|}", "\n".join(self.messages_summerization)
         )
         return {
-            "role": "system",
+            "role": "user",
             "content": prompt,
         }
 
