@@ -41,17 +41,6 @@ class AgentRuntimeErrorMessage(Message):
         return {"role": "system", "content": self.message}
 
 
-class OpenAiUsage(Message):
-    def __init__(self, total_tokens: int):
-        self.total_tokens = total_tokens
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {
-            "role": "system",
-            "content": f"当前token总用量为: {self.total_tokens} ({self.total_tokens/1000:.2f} k)",
-        }
-
-
 class CompressRequest(Message):
     def __init__(self, messages_summerization: str):
         self.messages_summerization = messages_summerization
@@ -121,6 +110,9 @@ class Agent:
                 role="system", message=self.config["system_prompt"], name="system"
             ),
         ]
+
+        self.last_token_usage = None
+        self.current_enable_compress = True
 
         # 加载全局记忆
         memory_config = config.get("memory", {})
@@ -207,8 +199,37 @@ class Agent:
                 )
             )
 
-    async def call_tool(self, tool_call: ToolCallMessage):
-        """直接调用工具并处理结果"""
+    async def call_tool(self, tool_call: ToolCallMessage) -> bool:
+        """直接调用工具并处理结果，返回是否需要进行早期返回"""
+        if tool_call.function_name == "compress_history":
+            if self.current_enable_compress:
+                await self.compress()
+            else:
+                self.messages.append(
+                    ChatMessage(
+                        role="system",
+                        message="当前禁止调用compress_history工具，你是不是弄错什么了？",
+                    )
+                )
+            return True  # 需要早期返回
+        if tool_call.function_name == "get_token_usage":
+            if self.last_token_usage is not None:
+                self.messages.append(
+                    ChatMessage(
+                        role="system",
+                        message=f"当前token总用量为: {self.last_token_usage} "
+                        f"({self.last_token_usage/1000:.2f} k)",
+                    )
+                )
+            else:
+                self.messages.append(
+                    ChatMessage(
+                        role="system",
+                        message="暂无token用量信息",
+                    )
+                )
+            return False  # 不需要早期返回
+
         try:
             tool_result = await self.tool_manager.process_tool_call(tool_call)
             self.messages.append(
@@ -220,11 +241,10 @@ class Agent:
             self.messages.append(tool_result)
             if self.state == "waiting_user":
                 self.state = "working"
+            return False  # 不需要早期返回
         except Exception as e:
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
-            # deepseek v3.1 如果这里没有用户消息，则会变成以assitant消息结尾
-            # 然后就会生成失败，因此加上一条兜底的用户消息
             self.messages.append(
                 ChatMessage(
                     role="user",
@@ -232,6 +252,7 @@ class Agent:
                 )
             )
             self.state = "paused"
+            return False  # 不需要早期返回
 
     async def handle_messages(self, messages: list[Message]):
         """处理新的消息"""
@@ -244,6 +265,7 @@ class Agent:
 
     async def generate_response(self, enable_compress: bool = True) -> Answer:
         """生成回复并发送给用户"""
+        self.current_enable_compress = enable_compress
         answer: Answer = await self.config["model"].answer_stream(self.messages)
 
         async for token in answer:
@@ -269,23 +291,14 @@ class Agent:
 
         for call in tool_calls:
             try:
-                if call.get("name") == "compress_history":
-                    if enable_compress:
-                        await self.compress()
-                    else:
-                        self.messages.append(
-                            ChatMessage(
-                                role="system",
-                                message="当前禁止调用compress_history工具，你是不是弄错什么了？",
-                            )
-                        )
-                    return await self.generate_response()
                 if "name" in call and "arguments" in call:
                     tool_call = ToolCallMessage(
                         function_name=call["name"],
                         function_arguments=json.dumps(call["arguments"]),
                     )
-                    await self.call_tool(tool_call)
+                    early_return = await self.call_tool(tool_call)
+                    if early_return:
+                        return await self.generate_response()
             except Exception:
                 traceback.print_exc()
                 continue
@@ -309,6 +322,7 @@ class Agent:
             )
 
         if isinstance(answer, OpenAiAnswer):
+            self.last_token_usage = answer.total_tokens
             if enable_compress and answer.total_tokens > self.config.get(
                 "compress_threshold", 65536 * 0.8
             ):

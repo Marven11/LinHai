@@ -15,3 +15,13 @@ from linhai.tool.base import register_tool
 )
 def compress_history() -> str:
     return ""
+
+
+@register_tool(
+    name="get_token_usage",
+    desc="获取token使用情况。",
+    args={},
+    required_args=[],
+)
+def get_token_usage() -> str:
+    return ""
