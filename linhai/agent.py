@@ -115,7 +115,7 @@ class Agent:
 
         # 加载全局记忆
         memory_config = config.get("memory", {})
-        memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md"))
+        memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
         if memory_filepath.exists():
             self.messages.append(GlobalMemory(memory_filepath))
 
@@ -151,6 +151,7 @@ class Agent:
         logger.info("Agent进入暂停运行状态")
         try:
             msg = await self.user_input_queue.get()
+            self.state = "waiting_user"
             await self.handle_messages([cast(ChatMessage, msg)])
         except QueueEmpty:
             logger.info("用户输入队列已关闭")
