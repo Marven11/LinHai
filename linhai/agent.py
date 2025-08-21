@@ -176,21 +176,26 @@ class Agent:
             todelete_indicies = set(
                 int(info.get("id", "-1"))
                 for info in scores
-                if float(info.get("score", "10") < 8)
+                if float(info.get("score", "10") < 6)
             )
             self.messages = [
                 msg
                 for idx, msg in enumerate(self.messages)
-                if (idx in todelete_indicies and idx >= 2)
-                or isinstance(msg, CompressRequest)
+                if idx <= 2
+                or idx in todelete_indicies
+                or not isinstance(msg, CompressRequest)
             ]
             self.messages.append(
                 RuntimeMessage("压缩已经完成，你可以继续完成工作或者向用户报告了")
             )
-        except LLMResponseError:
+        except LLMResponseError as exc:
             self.messages.append(
-                RuntimeMessage("错误：你没有输出需要的score，请调用工具重新启动流程")
+                RuntimeMessage(
+                    f"错误：你没有输出需要的score，请调用工具重新启动流程: {exc!r}"
+                )
             )
+        except Exception as exc:
+            self.messages.append(RuntimeMessage(f"错误：{exc!r}"))
 
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """直接调用工具并处理结果，返回是否需要进行早期返回"""
