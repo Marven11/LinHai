@@ -252,6 +252,7 @@ class Agent:
 
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
+        self.messages.append(chat_message)
 
         tool_calls = extract_tool_calls(full_response)
 
@@ -278,8 +279,6 @@ class Agent:
             except Exception:
                 traceback.print_exc()
                 continue
-
-        self.messages.append(chat_message)
 
         if WAITING_USER_MARKER in full_response:
             last_line = full_response.strip().rpartition("\n")[2]
