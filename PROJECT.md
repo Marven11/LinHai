@@ -15,7 +15,8 @@
         - [x] 弃用OpenAI的残废工具调用，使用markdown json code block的形式让Agent调用工具
         - [x] 添加基础工具（文件/命令/计算）
         - [ ] 实现lookup_tool_docs功能
-    - [ ] 任务规划
+        - [ ] agent调用工具需要获得用户确认
+    - [x] 任务规划
     - [x] 用户响应
     - [x] 历史压缩
     - [x] 全局记忆管理
@@ -30,6 +31,7 @@
 - 没有特殊情况，不要使用`# `注释代码片段在干什么
 - 类型检查器是必需的：类型检查器的输出可以极大帮助LLM修复漏洞
 - 不要在语句结尾和空行处留下多余的空格
+- 使用pylint和black自动找出代码风格问题
 
 # LLM规范
 
@@ -46,12 +48,11 @@
 
 Agent具有以下功能
 
-- 工具调用：调用各类MCP形式的工具
-    - 为了减少Prompt长度，工具的文档保存均保存在单独的文件中
+- 工具调用：调用各类的工具
     - Agent在调用工具时，首先需要根据工具对应的文档条目名查询文档，获得工具的用法，然后调用工具
     - 为了完成工作，Agent会不可避免地需要操控用户的电脑，有些操作需要获得用户确认
 - 历史压缩：在上下文过长时压缩上下文
-- 用户响应：分析用户的输入，并据此调整当前任务等信息
+- 用户响应：用户可以随时打断agent输出，调整agent行为
 - 任务规划：在任务开始时规划TODOLIST，指定当前任务的最终目标和当前已经规划的任务
     - 对于渗透任务来说未来的小任务往往是未知的，在打进机器之前难以知道机器内部的信息
 - 全局记忆：在单独的文件中保存用户的偏好等，Agent在运行时会动态修改这个全局记忆
@@ -77,7 +78,7 @@ Agent会在任务开始时或其他适当的时机总结当前的任务进程和
 
 ## 响应生成
 
-Agent在调用LLM生成Token时，Token的生成可能会被Agent打断，此时Agent应该停止手中的工作，回到等待用户新消息的状态
+Agent在调用LLM生成Token时，Token的生成可能会被Agent打断，此时Agent应该根据用户消息调整行为
 
 ## 状态转移
 
@@ -103,18 +104,9 @@ Agent在发送工具调用消息，等待工具处理完成返回消息时处于
 
 ## 消息响应
 
-Agent的运行过程为响应式，Agent需要通过asyncio.Queue接受用户的消息和工具的运行结果
+Agent的运行过程为响应式，Agent需要通过asyncio.Queue接受用户的消息
 
-在主循环中，Agent应该根据当前任务自动运行，同时适时await用户和工具发来的消息
-
-当获得消息时，Agent应：
-
-1. 分析消息，提取其中的关键信息
-2. 如果需要的话，改写全局记忆和当前任务
-3. 根据当前的信息回复用户或调用工具
-4. 跳转到其他状态
-    - 如果选择等待用户则跳转到等待用户状态
-    - 如果调用了其他工具则跳转到自动运行状态
+在主循环中，Agent应该根据当前任务自动运行，适时等待用户的消息
 
 ## 工具调用
 
@@ -164,7 +156,7 @@ Agent可动态修改，启动时附加到system prompt
 5. 渗透测试授权检查
 
 完整内容见prompt.py
-```
+
 
 # 消息设计
 
@@ -174,96 +166,3 @@ LLM的消息是根据系统文件等外部信息动态生成的，本项目的�
 2. 在type_hints.py中定义的LanguageModelMessage, 和OpenAI库的LLM消息类型兼容
 
 生成LLM回复时，Message会被动态地转换为LanguageModelMessage，以实现动态修改System Prompt、全局记忆等内容
-
-# 项目分层设计
-
-## utils类
-
-### exceptions.py
-
-定义程序运行时的各类错误
-
-### type_hints.py
-
-定义其他函数使用的各种类型
-
-### config.py
-
-从config.toml中读取配置，保存为一个TypedDict以供其他模块读取
-
-现在暂时只用来存放LLM API的base_url, api_key和model name
-
-
-### main.py
-
-主函数，解析命令行参数，启动对应功能
-
-当前支持以下子命令
-
-- `test` 运行unittest
-- `chat` 使用对应的config调用LLM聊天
-- `agent` 启动Agent，让Agent和用户进行交流
-    - 初始化用户和工具的Queue，把用户的消息Pipe进Queue中，然后等待Agent输出（将消息Pipe进Queue中），从Pipe中拿到Agent的输出后打印出来
-    - 支持指定LINHAI.md和config.toml等位置，默认当前目录
-
-其他地方没写好，暂时先添加调用unittest运行单元测试的功能
-
-## Agent相关
-
-### global_memory.py
-
-全局记忆的实现放在`global_memory.py`中，其中实现了一个类`AgentGlobalMemory`，支持修改
-
-### agent.py
-
-Agent响应式地从Queue接受用户和工具的消息
-
-这个函数实现Agent本身和初始化Agent的逻辑等，方便main.py等函数调用
-
-## LLM对接 llm.py
-
-提供一个Procol LanguageModel, 用于让其他模块调用LLM
-
-LanguageModel Protocol提供`answer_stream`函数，根据输入聊天历史流式生成LLM的回答
-
-`answer_stream`函数返回一个`Answer`对象，其设计类似`requests`库中的`Response`类，用户可以遍历这个对象，获得当前LLM的回答的每个Token，在生成完毕后可以调用对应函数获得回答的全部文本和思考的文本
-
-llm.py应该支持打断当前回答消息的生成
-
-## 工具 tool/
-
-### base.py
-
-定义工具的定义函数等，参考tool_example.py
-
-### main.py
-
-定义ToolManager类，这个类负责使用Queue和Agent通信，从Agent接受工具信息，调用对应的工具，并发送工具的输出
-
-工具的输出必须可以被JSON序列化，便于展示给Agent
-
-### tools/calculation.py
-
-定义一个用来测试的工具：计算两个数字的和
-
-## 外界交互
-
-Agent持有两个Queue，用户输入消息Queue和用户输出消息Queue
-
-工具调用不再通过Queue，而是直接调用ToolManager的process_tool_call函数
-
-## Agent核心逻辑
-
-主要状态：
-- 等待用户
-- 自动运行
-- 暂停运行
-
-核心方法：
-- 处理用户消息
-- 处理工具消息
-- 读取LLM响应流
-
-完整实现见agent.py
-
-```
