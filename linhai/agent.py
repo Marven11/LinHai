@@ -218,8 +218,19 @@ class Agent:
                 )
             )
             self.messages.append(tool_result)
+            if self.state == "waiting_user":
+                self.state = "working"
         except Exception as e:
-            logger.error(f"工具调用失败: {str(e)}")
+            msg = f"工具调用失败: {str(e)} {repr(e)}"
+            logger.error(msg)
+            # deepseek v3.1 如果这里没有用户消息，则会变成以assitant消息结尾
+            # 然后就会生成失败，因此加上一条兜底的用户消息
+            self.messages.append(
+                ChatMessage(
+                    role="user",
+                    message=msg,
+                )
+            )
             self.state = "paused"
 
     async def handle_messages(self, messages: list[Message]):
@@ -275,7 +286,6 @@ class Agent:
                         function_arguments=json.dumps(call["arguments"]),
                     )
                     await self.call_tool(tool_call)
-                    self.state = "working"
             except Exception:
                 traceback.print_exc()
                 continue
