@@ -36,10 +36,11 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
     desc="读取文件",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),
     },
     required_args=["filepath"],
 )
-def read_file(filepath: str) -> str:
+def read_file(filepath: str, show_line_numbers: bool = False) -> str:
     file_path = Path(filepath)
     if not file_path.exists():
         return f"文件路径{file_path.as_posix()!r}不存在"
@@ -50,10 +51,18 @@ def read_file(filepath: str) -> str:
     except Exception as exc:
         return f"发生错误: {exc!r}"
 
+    if show_line_numbers:
+        # 添加行号
+        lines = content.splitlines()
+        numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
+        formatted_content = "\n".join(numbered_lines)
+    else:
+        formatted_content = content
+
     return f"""\
 文件路径为: {file_path.as_posix()!r}
 文件内容如下，不要复读文件内容:
-{content}"""
+{formatted_content}"""
 
 
 @register_tool(

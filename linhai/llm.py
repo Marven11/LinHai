@@ -15,8 +15,21 @@ class Message(Protocol):
         return f"{self.__class__.__name__}({self.to_llm_message()})"
 
 
+class SystemMessage:
+    def __init__(self, message: str):
+        self.message = message
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return cast(LanguageModelMessage, {"role": "system", "content": self.message})
+
+    def __repr__(self) -> str:
+        return f"SystemMessage(message={self.message!r})"
+
+
 class ChatMessage:
     def __init__(self, role: str, message: str, name: str | None = None):
+        if role == "system":
+            raise ValueError("System role is not supported in ChatMessage. Use SystemMessage instead.")
         self.role = role
         self.message = message
         self.name = name

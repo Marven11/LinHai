@@ -11,6 +11,7 @@ from linhai.exceptions import LLMResponseError
 from linhai.llm import (
     Message,
     ChatMessage,
+    SystemMessage,
     LanguageModel,
     AnswerToken,
     Answer,
@@ -33,14 +34,6 @@ repr_obj = Repr(maxstring=50)
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 
-class AgentRuntimeErrorMessage(Message):
-    def __init__(self, message: str):
-        self.message = message
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {"role": "system", "content": self.message}
-
-
 class CompressRequest(Message):
     def __init__(self, messages_summerization: str):
         self.messages_summerization = messages_summerization
@@ -53,6 +46,14 @@ class CompressRequest(Message):
             "role": "user",
             "content": prompt,
         }
+
+
+class RuntimeMessage(Message):
+    def __init__(self, message: str):
+        self.message = message
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return {"role": "user", "content": f"<runtime>{self.message}</runtime>"}
 
 
 class AgentConfig(TypedDict):
@@ -106,9 +107,7 @@ class Agent:
         self.state: AgentState = "waiting_user"
 
         self.messages: list[Message] = [
-            ChatMessage(
-                role="system", message=self.config["system_prompt"], name="system"
-            ),
+            SystemMessage(self.config["system_prompt"]),
         ]
 
         self.last_token_usage = None
@@ -186,17 +185,11 @@ class Agent:
                 or isinstance(msg, CompressRequest)
             ]
             self.messages.append(
-                ChatMessage(
-                    role="system",
-                    message="压缩已经完成，你可以继续完成工作或者向用户报告了",
-                )
+                RuntimeMessage("压缩已经完成，你可以继续完成工作或者向用户报告了")
             )
         except LLMResponseError:
             self.messages.append(
-                ChatMessage(
-                    role="system",
-                    message="错误：你没有输出需要的score，请调用工具重新启动流程",
-                )
+                RuntimeMessage("错误：你没有输出需要的score，请调用工具重新启动流程")
             )
 
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
@@ -206,37 +199,27 @@ class Agent:
                 await self.compress()
             else:
                 self.messages.append(
-                    ChatMessage(
-                        role="system",
-                        message="当前禁止调用compress_history工具，你是不是弄错什么了？",
+                    RuntimeMessage(
+                        "当前禁止调用compress_history工具，你是不是弄错什么了？"
                     )
                 )
-            return True  # 需要早期返回
+            return True
         if tool_call.function_name == "get_token_usage":
             if self.last_token_usage is not None:
                 self.messages.append(
-                    ChatMessage(
-                        role="system",
-                        message=f"当前token总用量为: {self.last_token_usage} "
-                        f"({self.last_token_usage/1000:.2f} k)",
+                    RuntimeMessage(
+                        f"当前token总用量为: {self.last_token_usage} "
+                        f"({self.last_token_usage/1000:.2f} k)"
                     )
                 )
             else:
-                self.messages.append(
-                    ChatMessage(
-                        role="system",
-                        message="暂无token用量信息",
-                    )
-                )
-            return False  # 不需要早期返回
+                self.messages.append(RuntimeMessage("暂无token用量信息"))
+            return False
 
         try:
             tool_result = await self.tool_manager.process_tool_call(tool_call)
             self.messages.append(
-                ChatMessage(
-                    role="system",
-                    message=f"你调用了工具{tool_call.function_name!r}，结果如下",
-                )
+                RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
             )
             self.messages.append(tool_result)
             if self.state == "waiting_user":
@@ -245,14 +228,9 @@ class Agent:
         except Exception as e:
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
-            self.messages.append(
-                ChatMessage(
-                    role="user",
-                    message=msg,
-                )
-            )
+            self.messages.append(RuntimeMessage(msg))
             self.state = "paused"
-            return False  # 不需要早期返回
+            return False
 
     async def handle_messages(self, messages: list[Message]):
         """处理新的消息"""
@@ -274,9 +252,7 @@ class Agent:
                 await self.user_output_queue.put(answer)
                 chat_message = cast(ChatMessage, answer.get_message())
                 self.messages.append(chat_message)
-                self.messages.append(
-                    ChatMessage(role="system", message="用户打断了你的回答")
-                )
+                self.messages.append(RuntimeMessage("用户打断了你的回答"))
                 self.messages.append(await self.user_input_queue.get())
                 answer.interrupt()
                 return await self.generate_response()
@@ -307,16 +283,25 @@ class Agent:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
                 self.messages.append(
-                    AgentRuntimeErrorMessage(
+                    RuntimeMessage(
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
                 )
             else:
                 self.state = "waiting_user"
+
+        # 检查是否同时调用工具和等待用户
+        if tool_calls and WAITING_USER_MARKER in full_response:
+            self.messages.append(
+                RuntimeMessage(
+                    f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
+                    f"工具调用和等待用户是互斥的，请只选择其中一种方式"
+                )
+            )
         elif self.state == "working" and not tool_calls:
             self.messages.append(
-                AgentRuntimeErrorMessage(
-                    f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答，"
+                RuntimeMessage(
+                    f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
                     f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
                 )
             )
