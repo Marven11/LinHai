@@ -1,11 +1,15 @@
+"""Unit tests for the LLM module."""
+
 import asyncio
 import unittest
-import timeout_decorator
 from unittest.mock import AsyncMock, MagicMock, patch
-from linhai.llm import OpenAi, ChatMessage
+
+from linhai.llm import ChatMessage, OpenAi
 
 
 class TestLLM(unittest.IsolatedAsyncioTestCase):
+    """Test cases for the LLM classes."""
+
     def setUp(self):
         # 创建模拟的OpenAi实例
         self.llm = OpenAi(
@@ -16,14 +20,14 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_chat_message_creation(self):
-        """测试ChatMessage类的创建和转换功能"""
+        """Test ChatMessage creation and conversion."""
         msg = ChatMessage(role="user", message="Hello")
         chat_msg = msg.to_llm_message()
         self.assertEqual(chat_msg.get("role"), "user")
         self.assertEqual(chat_msg.get("content"), "Hello")
 
     async def test_openai_answer_stream(self):
-        """测试OpenAi answer_stream的基本功能"""
+        """Test basic functionality of answer_stream."""
         # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
@@ -34,7 +38,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             mock_chunk1.choices[0].delta.content = "Hello"
             await asyncio.sleep(0)  # 让出控制权
             yield mock_chunk1
-            
+
             mock_chunk2 = MagicMock()
             mock_chunk2.choices = [MagicMock()]
             mock_chunk2.choices[0].delta.content = " World"
@@ -46,12 +50,11 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         mock_client.chat.completions.create.return_value = mock_stream()
 
         # 使用patch直接替换openai属性
-        with patch.object(self.llm, 'openai', mock_client):
+        with patch.object(self.llm, "openai", mock_client):
             # 运行测试，添加超时控制
             history = [ChatMessage(role="user", message="Hi")]
             answer = await asyncio.wait_for(
-                self.llm.answer_stream(history),
-                timeout=5.0
+                self.llm.answer_stream(history), timeout=5.0
             )
 
             # 验证流式响应
@@ -63,7 +66,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             mock_client.chat.completions.create.assert_called_once()
 
     async def test_openai_answer_interrupt(self):
-        """测试OpenAi answer_stream的中断功能"""
+        """Test interrupt functionality of answer_stream."""
         # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
@@ -73,7 +76,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             mock_chunk1.choices = [MagicMock()]
             mock_chunk1.choices[0].delta.content = "Hello"
             yield mock_chunk1
-            
+
             mock_chunk2 = MagicMock()
             mock_chunk2.choices = [MagicMock()]
             mock_chunk2.choices[0].delta.content = " World"
@@ -84,12 +87,11 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         mock_client.chat.completions.create.return_value = mock_stream()
 
         # 使用patch直接替换openai属性
-        with patch.object(self.llm, 'openai', mock_client):
+        with patch.object(self.llm, "openai", mock_client):
             # 运行测试，添加超时控制
             history = [ChatMessage(role="user", message="Hi")]
             answer = await asyncio.wait_for(
-                self.llm.answer_stream(history),
-                timeout=5.0
+                self.llm.answer_stream(history), timeout=5.0
             )
 
             # 收集流式响应并在中途中断
@@ -106,12 +108,12 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             mock_client.chat.completions.create.assert_called_once()
 
     def test_openai_initialization(self):
-        """测试OpenAi类的初始化"""
+        """Test OpenAi initialization."""
         self.assertEqual(self.llm.model, "test_model")
 
     @patch("openai.AsyncOpenAI")
     async def test_openai_error_handling(self, mock_openai_class):
-        """测试错误处理情况"""
+        """Test error handling in OpenAi."""
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             side_effect=Exception("API Error")
@@ -122,8 +124,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             history = [ChatMessage(role="user", message="Hi")]
             # 添加超时控制
             answer = await asyncio.wait_for(
-                self.llm.answer_stream(history),
-                timeout=5.0
+                self.llm.answer_stream(history), timeout=5.0
             )
             async for _ in answer:
                 pass

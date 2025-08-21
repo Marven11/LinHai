@@ -1,11 +1,15 @@
+"""Unit tests for the config module."""
 import unittest
 from unittest.mock import patch
-from linhai.config import load_config, ConfigValidationError
+
+from linhai.config import ConfigValidationError, load_config
 
 
 class TestConfig(unittest.TestCase):
+    """Test cases for the config module."""
     @patch("toml.load")
     def test_load_config_valid(self, mock_toml):
+        """Test loading a valid config."""
         mock_toml.return_value = {
             "llm": {
                 "base_url": "https://api.example.com",
@@ -21,6 +25,7 @@ class TestConfig(unittest.TestCase):
 
     @patch("toml.load")
     def test_load_config_invalid_url(self, mock_toml):
+        """Test loading a config with invalid URL."""
         mock_toml.return_value = {
             "llm": {
                 "base_url": "invalid_url",
@@ -33,6 +38,7 @@ class TestConfig(unittest.TestCase):
 
     @patch("toml.load")
     def test_load_config_empty_api_key(self, mock_toml):
+        """Test loading a config with empty API key."""
         mock_toml.return_value = {
             "llm": {
                 "base_url": "https://api.example.com",
@@ -45,6 +51,7 @@ class TestConfig(unittest.TestCase):
 
     @patch("toml.load")
     def test_load_config_empty_model(self, mock_toml):
+        """Test loading a config with empty model."""
         mock_toml.return_value = {
             "llm": {
                 "base_url": "https://api.example.com",

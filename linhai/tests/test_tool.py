@@ -1,13 +1,23 @@
+"""Unit tests for the tool module."""
+
 import json
 import unittest
 import unittest.mock
 
-from linhai.tool.main import ToolManager
-from linhai.tool.base import call_tool, register_tool, ToolArgInfo, get_tools_info
 from linhai.llm import ToolCallMessage
+from linhai.tool.base import (
+    ToolArgInfo,
+    call_tool,
+    get_tools_info,
+    register_tool,
+    tools,
+)
+from linhai.tool.main import ToolManager
 
 
 class TestToolManager(unittest.IsolatedAsyncioTestCase):
+    """Test cases for the ToolManager class."""
+
     async def asyncSetUp(self):
         self.manager = ToolManager()
 
@@ -48,10 +58,10 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
 
 class TestToolFunctions(unittest.TestCase):
+    """Test cases for tool functions."""
+
     def setUp(self):
         # 清空工具注册表
-        from linhai.tool.base import tools
-
         tools.clear()
 
     def test_register_and_call_tool(self):
@@ -62,8 +72,8 @@ class TestToolFunctions(unittest.TestCase):
             name="add_numbers",
             desc="Add two numbers",
             args={
-                "a": ToolArgInfo(desc="First number", type=int),
-                "b": ToolArgInfo(desc="Second number", type=int),
+                "a": ToolArgInfo(desc="First number", type="int"),
+                "b": ToolArgInfo(desc="Second number", type="int"),
             },
             required_args=["a", "b"],
         )
@@ -82,8 +92,8 @@ class TestToolFunctions(unittest.TestCase):
             name="multiply_numbers",
             desc="Multiply two numbers",
             args={
-                "x": ToolArgInfo(desc="First number", type=int),
-                "y": ToolArgInfo(desc="Second number", type=int),
+                "x": ToolArgInfo(desc="First number", type="int"),
+                "y": ToolArgInfo(desc="Second number", type="int"),
             },
             required_args=["x", "y"],
         )

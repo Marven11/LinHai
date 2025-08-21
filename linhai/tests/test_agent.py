@@ -1,22 +1,28 @@
+"""Unit tests for the agent module."""
+
 import asyncio
 import json
 import unittest
+from asyncio import Queue
 from unittest.mock import AsyncMock, MagicMock
-from typing import TypedDict, Any, cast
+from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ChatMessage, AnswerToken, Answer
-from asyncio import Queue
 from linhai.tool.main import ToolResultMessage
 
 
 # 定义模拟的 AnswerToken 和 Answer
 class MockAnswerToken(TypedDict):
+    """Mock implementation of AnswerToken for testing."""
+
     reasoning_content: str | None
     content: str
 
 
 class MockAnswer:
+    """Mock implementation of Answer for testing."""
+
     def __init__(self, tokens: list[MockAnswerToken]):
         self.tokens = tokens
         self.index = 0
@@ -32,23 +38,26 @@ class MockAnswer:
         return token
 
     def get_message(self) -> ChatMessage:
+        """Get the message content from the tokens."""
         content = "".join(token["content"] for token in self.tokens)
         return ChatMessage(role="assistant", message=content)
 
     def get_tool_call(self) -> dict[str, Any] | None:
+        """Get the tool call from the tokens, if any."""
         return None
 
 
 class TestAgent(unittest.IsolatedAsyncioTestCase):
+    """Test cases for the Agent class."""
+
     def setUp(self):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
-
         config: AgentConfig = {
-            "system_prompt": "Test system prompt", 
+            "system_prompt": "Test system prompt",
             "model": self.mock_llm,
-            "compress_threshold": 0.8  # 添加缺失的必需字段
+            "compress_threshold": 0.8,  # 添加缺失的必需字段
         }
         self.user_input_queue: "Queue[ChatMessage]" = Queue()
         self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
@@ -57,13 +66,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             config=config,
             user_input_queue=self.user_input_queue,
             user_output_queue=self.user_output_queue,
-            tool_manager=self.tool_manager
+            tool_manager=self.tool_manager,
         )
 
     async def test_initial_state(self):
+        """Test agent initial state."""
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_handle_messages(self):
+        """Test message handling functionality."""
         # Setup
         test_msg = ChatMessage(role="user", message="Hello", name="test_user")
 
@@ -106,6 +117,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_state_transitions(self):
+        """Test agent state transitions."""
         # Test state transitions
         self.agent.state = "working"
         self.assertEqual(self.agent.state, "working")
@@ -114,6 +126,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.state, "paused")
 
     async def test_message_processing(self):
+        """Test message processing functionality."""
         # Setup
         user_msg = ChatMessage(role="user", message="Hi", name="user")
         tool_msg = ToolResultMessage(content="result")
@@ -159,6 +172,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_error_handling(self):
+        """Test error handling functionality."""
         # Setup error
         self.mock_llm.answer_stream.side_effect = RuntimeError("Test error")
         test_msg = ChatMessage(role="user", message="Error test", name="user")
@@ -171,6 +185,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.state, "paused")
 
     async def test_run_loop(self):
+        """Test agent run loop functionality."""
         # Setup
         self.agent.state_waiting_user = AsyncMock()
         self.agent.state_working = AsyncMock()
@@ -203,7 +218,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 验证state_waiting_user被调用
         self.agent.state_waiting_user.assert_called_once()
 
-
     async def test_markdown_tool_call(self):
         """测试Agent能正确解析markdown格式的工具调用"""
         # 模拟LLM返回包含工具调用的markdown响应
@@ -216,20 +230,20 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     }
 }
 ```"""
-        
+
         # 创建MockAnswer对象
-        mock_answer = MockAnswer([
-            {"reasoning_content": None, "content": tool_call_response}
-        ])
+        mock_answer = MockAnswer(
+            [{"reasoning_content": None, "content": tool_call_response}]
+        )
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # 设置tool_manager的process_tool_call模拟
         self.tool_manager.process_tool_call = AsyncMock()
 
         # 发送用户消息触发处理
-        await self.agent.handle_messages([
-            ChatMessage(role="user", message="Calculate 2+2")
-        ])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="Calculate 2+2")]
+        )
 
         # 验证tool_manager.process_tool_call被调用
         self.tool_manager.process_tool_call.assert_called_once()
@@ -239,6 +253,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证状态转换
         self.assertEqual(self.agent.state, "working")
+
 
 if __name__ == "__main__":
     unittest.main()

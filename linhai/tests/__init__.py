@@ -1,1 +1,1 @@
-from linhai.tests import test_queue
+"""Test modules for the linhai package."""
