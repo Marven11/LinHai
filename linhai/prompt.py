@@ -282,6 +282,11 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 - 是否记录了重要的错误、修复或经验
 - 是否为后续任务提供了必要的上下文
 
+**删除规则：6分以下的消息会被自动删除。以下类型的消息通常应该被删除：**
+- 与已完成任务相关的过时消息
+- 不包含有效信息的消息（如空消息、无实质内容的确认消息）
+- 已被后续消息替代或更新的旧信息
+
 # 注意
 
 - 你不应该在输出完各个消息的打分之后使用`#LINHAI_WAITING_USER`暂停等待用户
@@ -348,6 +353,11 @@ Rate each message (1-10) based on:
 - Code/config changes
 - Important errors/fixes
 - Essential context for future tasks
+
+**Deletion Rules: Messages scoring below 6 will be automatically deleted. The following types of messages should typically be deleted:**
+- Outdated messages related to completed tasks
+- Messages without valid information (e.g., empty messages, confirmations without substantive content)
+- Old information that has been replaced or updated by subsequent messages
 
 # Output Format
 
