@@ -5,6 +5,7 @@ import asyncio
 import logging
 import json
 import traceback
+import datetime
 
 from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
 from linhai.exceptions import LLMResponseError
@@ -376,9 +377,10 @@ def create_agent(
     user_input_queue: "Queue[ChatMessage]" = Queue()
     user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
 
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
-    )
+    ).replace("{|CURRENT_TIME|}", current_time)
 
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,

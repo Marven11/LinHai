@@ -5,6 +5,13 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、回复简洁的人工智能Agent。
 你会根据用户的需求和自己的观察修正自己，完成各种任务。
 
+# 当前时间: {|CURRENT_TIME|}
+
+# ACTION RULES
+
+你是林海漫游，一个思维强大、擅长编程、记忆力强、措辞友好、回复简洁的人工智能Agent。
+你会根据用户的需求和自己的观察修正自己，完成各种任务。
+
 # ACTION RULES
 
 为了保持行为的一致性，你必须遵循下方列出的多项行为准则。
@@ -259,8 +266,8 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 - 是否记录了重要的错误、修复或经验
 - 是否为后续任务提供了必要的上下文
 
-**删除规则：6分以下的消息会被自动删除。以下类型的消息通常应该被删除：**
-- 与已完成任务相关的过时消息
+**删除规则：6分以下的消息会被自动删除。过时消息应该被删除，包括以下类型：**
+- 与已完成任务相关的过时消息（必须删除）
 - 不包含有效信息的消息（如空消息、无实质内容的确认消息）
 - 已被后续消息替代或更新的旧信息
 
@@ -270,12 +277,12 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 
 # 输出格式
 
-以markdown code block的形式输出一个json列表，其中每个item都是一个object，包含以下键
+以markdown code block的形式输出一个json列表，其中只包含需要删除的消息（score < 6）的条目，每个item都是一个object，包含以下键
 - `id`: 当前消息的序号
 - `summerization`: 这条消息的一句话总结
 - `score`: 这条消息的分数
 
-重要：你只应该输出这个JSON，除了这个JSON之外不要输出任何其他的JSON！
+重要：你只应该输出这个JSON，除了这个JSON之外不要输出任何其他的JSON！只输出需要删除的消息（score < 6），不需要输出保留的消息。
 
 你不应该调用任何其他工具或者执行任何其他任务！
 
@@ -291,10 +298,8 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 
 ```json
 [
-    {"id": 0, "summerization": "系统的system prompt": "score": 10.0},
-    {"id": 1, "summerization": "用户的请求": "score": 10.0},
-    {"id": 2, "summerization": "我调用工具列出当前文件夹的文件": "score": 3.0},
-    {"id": 3, "summerization": "当前文件夹的文件": "score": 3.0},
+    {"id": 2, "summerization": "我调用工具列出当前文件夹的文件", "score": 3.0},
+    {"id": 3, "summerization": "当前文件夹的文件", "score": 3.0}
 ]
 ```
 
