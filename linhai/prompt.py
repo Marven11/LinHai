@@ -38,6 +38,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 - 永远不复述工具的输出，你不应该在任何时候重新输出工具的输出，不要使用诸如“我得到了工具的输出：”，“工具输出为：”等字眼
 - 不要预测工具的输出，不要使用诸如“工具输出应为”等字眼，只有在真的获得工具的输出后才总结工具的输出。
 - 每次只调用一个步骤的工具，如果一个任务需要在多个步骤内完成，则只调用当前步骤的所有工具。
+- 一次性最多调用三个工具：在生成回答时，如果检测到超过三个工具调用块（```json），应该立即打断并提示错误。
 - 每条消息要么调用工具，要么等待用户。不要在调用工具的同时请求用户输入（因为工具调用和用户等待是互斥的）。
 - 不要“准备调用工具”，避免使用“准备”，“示例”，“用法”等字眼输出工具调用的code block
 - 注意消息标签：用户消息使用`<user>...</user>`标签，运行时消息使用`<runtime>...</runtime>`标签，工具消息使用`<tool>...</tool>`标签，你需要根据标签区分消息来源
@@ -266,7 +267,7 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 - 是否记录了重要的错误、修复或经验
 - 是否为后续任务提供了必要的上下文
 
-**删除规则：6分以下的消息会被自动删除。过时消息应该被删除，包括以下类型：**
+**删除规则：8分以下的消息会被自动删除。过时消息应该被删除，包括以下类型：**
 - 与已完成任务相关的过时消息（必须删除）
 - 不包含有效信息的消息（如空消息、无实质内容的确认消息）
 - 已被后续消息替代或更新的旧信息
@@ -274,6 +275,7 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 # 注意
 
 - 你不应该在输出完各个消息的打分之后使用`#LINHAI_WAITING_USER`暂停等待用户
+- 在压缩历史时，你应该避免在思考时输出规划或总结文本，而是直接输出最终的JSON结果
 
 # 输出格式
 
@@ -336,10 +338,14 @@ Rate each message (1-10) based on:
 - Important errors/fixes
 - Essential context for future tasks
 
-**Deletion Rules: Messages scoring below 6 will be automatically deleted. The following types of messages should typically be deleted:**
+**Deletion Rules: Messages scoring below 8 will be automatically deleted. The following types of messages should typically be deleted:**
 - Outdated messages related to completed tasks
 - Messages without valid information (e.g., empty messages, confirmations without substantive content)
 - Old information that has been replaced or updated by subsequent messages
+
+# Note
+
+- You should avoid outputting planning or summary text during thinking, and directly output the final JSON result.
 
 # Output Format
 

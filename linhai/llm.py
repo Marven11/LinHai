@@ -139,6 +139,12 @@ class Answer(Protocol):
         """
         raise NotImplementedError
 
+    def get_current_content(self) -> str:
+        """
+        获取当前累积的回答内容
+        """
+        raise NotImplementedError
+
 
 class LanguageModel(Protocol):
     async def answer_stream(
@@ -221,6 +227,10 @@ class OpenAiAnswer:
     def interrupt(self):
         """中断当前回答的生成"""
         self._interrupted = True
+
+    def get_current_content(self) -> str:
+        """获取当前累积的回答内容"""
+        return self._content
 
     def get_token_count(self) -> int:
         """获取当前回答的token总数"""

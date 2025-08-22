@@ -199,7 +199,7 @@ class Agent:
             todelete_indicies = set(
                 int(info.get("id", "-1"))
                 for info in scores
-                if float(info.get("score", "10")) < 6
+                if float(info.get("score", "10")) < 8
             )
             self.messages = [
                 msg
@@ -210,8 +210,11 @@ class Agent:
                     and not isinstance(msg, CompressRequest)
                 )
             ]
+            # Report compression statistics
+            original_count = len(messages)
+            compressed_count = len(self.messages)
             self.messages.append(
-                RuntimeMessage("压缩已经完成，你可以继续完成工作或者向用户报告了")
+                RuntimeMessage(f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，减少了{original_count - compressed_count}条消息")
             )
         except LLMResponseError as exc:
             self.messages.append(
@@ -339,6 +342,16 @@ class Agent:
 
         async for token in answer:
             await self.user_output_queue.put(token)
+            
+            # Real-time check for too many tool calls
+            current_content = answer.get_current_content()
+            json_block_count = current_content.count("```json")
+            if json_block_count > 3:
+                await self.user_output_queue.put(answer)
+                self.messages.append(RuntimeMessage("错误：一次性调用了超过三个工具，最多只能调用三个工具。请分多次调用。"))
+                answer.interrupt()
+                return await self.generate_response()
+            
             if not self.user_input_queue.empty():
                 await self.user_output_queue.put(answer)
                 chat_message = cast(ChatMessage, answer.get_message())
