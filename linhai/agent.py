@@ -61,7 +61,7 @@ class AgentConfig(TypedDict):
 
     system_prompt: str
     model: LanguageModel
-    compress_threshold: float
+    compress_threshold: int
 
 
 class GlobalMemory:
@@ -176,7 +176,7 @@ class Agent:
             todelete_indicies = set(
                 int(info.get("id", "-1"))
                 for info in scores
-                if float(info.get("score", "10") < 6)
+                if float(info.get("score", "10")) < 6
             )
             self.messages = [
                 msg
@@ -323,7 +323,7 @@ class Agent:
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
             if enable_compress and answer.total_tokens > self.config.get(
-                "compress_threshold", 65536 * 0.8
+                "compress_threshold", int(65536 * 0.8)
             ):
                 await self.compress()
                 return await self.generate_response()
@@ -384,7 +384,7 @@ def create_agent(
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
         "model": llm,
-        "compress_threshold": float(config.get("compress_threshold", 65536 * 0.8)),
+        "compress_threshold": int(config.get("compress_threshold", 65536 * 0.8)),
     }
 
     tool_manager = ToolManager()
