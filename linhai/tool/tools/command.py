@@ -7,21 +7,27 @@ from linhai.tool.base import register_tool, ToolArgInfo
 @register_tool(
     name="run_command",
     desc="执行系统命令并返回输出",
-    args={"command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str")},
+    args={
+        "command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str"),
+        "timeout": ToolArgInfo(desc="超时时间（秒），默认2秒", type="float")
+    },
     required_args=["command"],
 )
-def run_command(command: str) -> str:
+def run_command(command: str, timeout: float = 2.0) -> str:
     """执行系统命令并返回输出
 
     Args:
         command: 要执行的命令字符串，如 "ls -l"
+        timeout: 超时时间（秒），默认2秒
 
     Returns:
         命令执行的输出结果
     """
+    if timeout > 600:
+        return "Timeout value exceeds maximum limit of 600 seconds"
     try:
         result = subprocess.run(
-            command, shell=True, capture_output=True, text=True,check=False
+            command, shell=True, capture_output=True, text=True, check=False, timeout=timeout
         )
         return f"""
 {result.stdout}
@@ -30,6 +36,8 @@ def run_command(command: str) -> str:
 
 {result.stderr}
 """
+    except subprocess.TimeoutExpired:
+        return f"Command timed out after {timeout} seconds"
     except subprocess.CalledProcessError as e:
         return f"Command failed with error: {e.stderr}"
 
