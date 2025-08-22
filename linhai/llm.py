@@ -35,7 +35,10 @@ class ChatMessage:
         self.name = name
 
     def to_llm_message(self) -> LanguageModelMessage:
-        msg = {"role": self.role, "content": self.message}
+        content = self.message
+        if self.role == "user":
+            content = f"<user>{content}</user>"
+        msg = {"role": self.role, "content": content}
         if self.name is not None:
             msg["name"] = self.name
         return cast(LanguageModelMessage, msg)
