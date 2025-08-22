@@ -326,7 +326,6 @@ class Agent:
                 "compress_threshold", int(65536 * 0.8)
             ):
                 await self.compress()
-                return await self.generate_response()
 
         return answer
 
