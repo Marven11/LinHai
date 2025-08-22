@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import TypedDict, cast, NotRequired
 from reprlib import Repr
 import asyncio
 import logging
@@ -19,6 +19,7 @@ from linhai.llm import (
     OpenAi,
     OpenAiAnswer,
     ToolCallMessage,
+    ToolConfirmationMessage,
     LanguageModelMessage,
 )
 from asyncio import Queue, QueueEmpty
@@ -63,6 +64,8 @@ class AgentConfig(TypedDict):
     system_prompt: str
     model: LanguageModel
     compress_threshold: int
+    memory: NotRequired[dict]  # 可选 memory 字段
+    tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
 
 
 class GlobalMemory:
@@ -88,6 +91,8 @@ class Agent:
         config: AgentConfig,
         user_input_queue: "Queue[ChatMessage]",
         user_output_queue: "Queue[AnswerToken | Answer]",
+        tool_request_queue: "Queue[ToolCallMessage]",
+        tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
         tool_manager: ToolManager,
     ):
         """
@@ -97,11 +102,15 @@ class Agent:
             config: Agent配置
             user_input_queue: 用户输入消息队列
             user_output_queue: 发送给用户的消息队列
+            tool_request_queue: 工具请求队列
+            tool_confirmation_queue: 工具确认队列
             tool_manager: 工具管理器实例
         """
         self.config = config
         self.user_input_queue = user_input_queue
         self.user_output_queue = user_output_queue
+        self.tool_request_queue = tool_request_queue
+        self.tool_confirmation_queue = tool_confirmation_queue
         self.tool_manager = tool_manager
 
         self.state: AgentState = "waiting_user"
@@ -118,6 +127,14 @@ class Agent:
         memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
         if memory_filepath.exists():
             self.messages.append(GlobalMemory(memory_filepath))
+
+        # 解析tool_confirmation配置并存储
+        tool_confirmation_config = self.config.get("tool_confirmation", {})
+        self.skip_confirmation = tool_confirmation_config.get(
+            "skip_confirmation", False
+        )
+        self.whitelist = tool_confirmation_config.get("whitelist", [])
+        self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
     async def state_waiting_user(self):
         """等待用户状态"""
@@ -188,8 +205,10 @@ class Agent:
                 msg
                 for idx, msg in enumerate(self.messages)
                 if idx <= 2
-                or idx in todelete_indicies
-                or not isinstance(msg, CompressRequest)
+                or (
+                    idx not in todelete_indicies
+                    and not isinstance(msg, CompressRequest)
+                )
             ]
             self.messages.append(
                 RuntimeMessage("压缩已经完成，你可以继续完成工作或者向用户报告了")
@@ -227,20 +246,72 @@ class Agent:
                 self.messages.append(RuntimeMessage("暂无token用量信息"))
             return False
 
-        try:
-            tool_result = await self.tool_manager.process_tool_call(tool_call)
-            self.messages.append(
-                RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
+        # 使用存储的tool_confirmation配置（在初始化时解析）
+        if self.skip_confirmation or tool_call.function_name in self.whitelist:
+            try:
+                tool_result = await self.tool_manager.process_tool_call(tool_call)
+                self.messages.append(
+                    RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
+                )
+                self.messages.append(tool_result)
+                if self.state == "waiting_user":
+                    self.state = "working"
+                return False  # 不需要早期返回
+            except Exception as e:
+                msg = f"工具调用失败: {str(e)} {repr(e)}"
+                logger.error(msg)
+                self.messages.append(RuntimeMessage(msg))
+                self.state = "paused"
+                return False
+
+        # 需要用户确认：发送工具请求到队列
+        await self.tool_request_queue.put(tool_call)
+        self.messages.append(
+            RuntimeMessage(
+                f"已发送工具调用请求: {tool_call.function_name}，等待用户确认..."
             )
-            self.messages.append(tool_result)
-            if self.state == "waiting_user":
-                self.state = "working"
-            return False  # 不需要早期返回
-        except Exception as e:
-            msg = f"工具调用失败: {str(e)} {repr(e)}"
-            logger.error(msg)
-            self.messages.append(RuntimeMessage(msg))
-            self.state = "paused"
+        )
+
+        # 使用存储的timeout配置（在初始化时解析）
+        timeout_seconds = self.timeout_seconds
+        try:
+            confirmation = await asyncio.wait_for(
+                self.tool_confirmation_queue.get(), timeout=timeout_seconds
+            )
+        except asyncio.TimeoutError:
+            self.messages.append(
+                RuntimeMessage(f"工具调用确认超时（{timeout_seconds}秒），已取消调用")
+            )
+            return False
+
+        # 检查确认消息是否匹配当前工具调用
+        if confirmation.tool_call.function_name != tool_call.function_name:
+            self.messages.append(
+                RuntimeMessage("错误：收到的确认消息不匹配当前工具调用")
+            )
+            return False
+
+        # 根据确认状态执行或取消
+        if confirmation.confirmed:
+            try:
+                tool_result = await self.tool_manager.process_tool_call(tool_call)
+                self.messages.append(
+                    RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
+                )
+                self.messages.append(tool_result)
+                if self.state == "waiting_user":
+                    self.state = "working"
+                return False  # 不需要早期返回
+            except Exception as e:
+                msg = f"工具调用失败: {str(e)} {repr(e)}"
+                logger.error(msg)
+                self.messages.append(RuntimeMessage(msg))
+                self.state = "paused"
+                return False
+        else:
+            self.messages.append(
+                RuntimeMessage(f"用户取消了工具调用: {tool_call.function_name}")
+            )
             return False
 
     async def handle_messages(self, messages: list[Message]):
@@ -358,12 +429,19 @@ class Agent:
 
 def create_agent(
     config_path: str = "./config.toml",
-) -> tuple[Agent, "Queue[ChatMessage]", "Queue[AnswerToken | Answer]", ToolManager]:
+) -> tuple[
+    Agent,
+    "Queue[ChatMessage]",
+    "Queue[AnswerToken | Answer]",
+    "Queue[ToolCallMessage]",
+    "Queue[ToolConfirmationMessage]",
+    ToolManager,
+]:
     """创建并配置Agent实例
     参数:
         config_path: 配置文件路径
     返回:
-        tuple[Agent, 用户输入队列, 用户输出队列, ToolManager实例]
+        tuple[Agent, 用户输入队列, 用户输出队列, 工具请求队列, 工具确认队列, ToolManager实例]
     """
     config = load_config(config_path)
     tools_info = get_tools_info()
@@ -377,16 +455,28 @@ def create_agent(
 
     user_input_queue: "Queue[ChatMessage]" = Queue()
     user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
+    tool_request_queue: "Queue[ToolCallMessage]" = Queue()
+    tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
 
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
     ).replace("{|CURRENT_TIME|}", current_time)
 
+    # 确保 config 是字典类型
+    config_dict = cast(dict, config)
+    # 解析tool_confirmation配置
+    tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
+    skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
+    whitelist = tool_confirmation_config.get("whitelist", [])
+
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
         "model": llm,
-        "compress_threshold": int(config.get("agent", {}).get("compress_threshold", 65536 * 0.8)),
+        "compress_threshold": int(
+            config_dict.get("agent", {}).get("compress_threshold", 65536 * 0.8)
+        ),
+        "tool_confirmation": tool_confirmation_config,
     }
 
     tool_manager = ToolManager()
@@ -395,7 +485,16 @@ def create_agent(
         config=agent_config,
         user_input_queue=user_input_queue,
         user_output_queue=user_output_queue,
+        tool_request_queue=tool_request_queue,
+        tool_confirmation_queue=tool_confirmation_queue,
         tool_manager=tool_manager,
     )
 
-    return agent, user_input_queue, user_output_queue, tool_manager
+    return (
+        agent,
+        user_input_queue,
+        user_output_queue,
+        tool_request_queue,
+        tool_confirmation_queue,
+        tool_manager,
+    )

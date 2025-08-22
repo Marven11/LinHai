@@ -65,11 +65,7 @@ class FunctionMessage(TypedDict, total=False):
 
 
 LanguageModelMessage: TypeAlias = Union[
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-    ToolMessage,
-    FunctionMessage
+    SystemMessage, UserMessage, AssistantMessage, ToolMessage, FunctionMessage
 ]
 
 __all__ = [

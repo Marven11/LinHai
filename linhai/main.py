@@ -79,8 +79,21 @@ def main():
         asyncio.run(chat_loop(llm))
     elif args.command == "agent":
 
-        agent, input_queue, output_queue, _ = create_agent(args.config)
-        app = CLIApp(agent, input_queue, output_queue)
+        (
+            agent,
+            input_queue,
+            output_queue,
+            tool_request_queue,
+            tool_confirmation_queue,
+            _,
+        ) = create_agent(args.config)
+        app = CLIApp(
+            agent,
+            input_queue,
+            output_queue,
+            tool_request_queue,
+            tool_confirmation_queue,
+        )
         app.run()
     else:
         parser.print_help()

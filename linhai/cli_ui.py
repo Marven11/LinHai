@@ -1,5 +1,5 @@
 from asyncio import Queue
-from typing import List
+from typing import List, Optional
 import asyncio
 
 from textual.app import App, ComposeResult
@@ -8,7 +8,14 @@ from textual.widgets import Static, Input
 from textual import events
 from rich.syntax import Syntax
 from rich.panel import Panel
-from linhai.llm import Message, ChatMessage, AnswerToken, Answer
+from linhai.llm import (
+    Message,
+    ChatMessage,
+    AnswerToken,
+    Answer,
+    ToolCallMessage,
+    ToolConfirmationMessage,
+)
 from linhai.agent import Agent
 
 
@@ -87,15 +94,21 @@ class CLIApp(App):
         agent: Agent,
         user_input_queue: "Queue[ChatMessage]",
         user_output_queue: "Queue[Answer | AnswerToken]",
+        tool_request_queue: "Queue[ToolCallMessage]",
+        tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
     ):
         super().__init__()
         self.messages: List[Message] = []
         self.agent = agent
         self.user_input_queue = user_input_queue
         self.user_output_queue = user_output_queue
+        self.tool_request_queue = tool_request_queue
+        self.tool_confirmation_queue = tool_confirmation_queue
         self.current_response_buffer = ""
         self.output_watcher_task = None
         self.agent_task = None
+        self.tool_request_watcher_task = None
+        self.current_tool_request: Optional[ToolCallMessage] = None
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -115,6 +128,33 @@ class CLIApp(App):
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理用户输入"""
+        if self.current_tool_request:
+            # 处理工具确认响应
+            user_input = event.value.strip().lower()
+            if user_input in ["y", "yes", "是"]:
+                confirmed = True
+            elif user_input in ["n", "no", "否"]:
+                confirmed = False
+            else:
+                # 无效输入，提示重新输入
+                event.input.value = ""
+                self.query_one("#input").placeholder = (
+                    "请输入 'y' 或 'n' 来确认工具调用"
+                )
+                return
+
+            # 发送确认消息
+            confirmation = ToolConfirmationMessage(
+                tool_call=self.current_tool_request, confirmed=confirmed
+            )
+            await self.tool_confirmation_queue.put(confirmation)
+
+            # 重置当前工具请求
+            self.current_tool_request = None
+            event.input.value = ""
+            self.query_one("#input").placeholder = "输入消息..."
+            return
+
         if event.value:
             # 添加用户消息
             user_msg = ChatMessage(role="user", message=event.value)
@@ -193,6 +233,7 @@ class CLIApp(App):
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
+        self.tool_request_watcher_task = asyncio.create_task(self.watch_tool_request_queue())
         self.agent_task = asyncio.create_task(self.agent.run())
 
     async def on_unmount(self) -> None:
@@ -206,3 +247,14 @@ class CLIApp(App):
         """处理键盘事件"""
         if event.key == "ctrl+c":
             self.app.exit()
+
+    async def watch_tool_request_queue(self):
+        """监听工具请求队列并显示确认提示"""
+        while True:
+            tool_request = await self.tool_request_queue.get()
+            self.current_tool_request = tool_request
+            # 显示确认提示
+            self.query_one("#input").placeholder = (
+                f"确认执行工具 {tool_request.function_name} 吗？(y/n)"
+            )
+            # 等待用户输入（通过 on_input_submitted 处理）

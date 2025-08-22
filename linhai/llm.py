@@ -29,7 +29,9 @@ class SystemMessage:
 class ChatMessage:
     def __init__(self, role: str, message: str, name: str | None = None):
         if role == "system":
-            raise ValueError("System role is not supported in ChatMessage. Use SystemMessage instead.")
+            raise ValueError(
+                "System role is not supported in ChatMessage. Use SystemMessage instead."
+            )
         self.role = role
         self.message = message
         self.name = name
@@ -70,6 +72,28 @@ class ToolCallMessage:
             ],
         }
         return cast(ToolMessage, msg)
+
+
+class ToolConfirmationMessage:
+    def __init__(
+        self,
+        tool_call: ToolCallMessage,
+        confirmed: bool,
+    ):
+        self.tool_call = tool_call
+        self.confirmed = confirmed
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return cast(
+            LanguageModelMessage,
+            {
+                "role": "user",
+                "content": f"<tool_confirmation>tool_call={self.tool_call.function_name}, confirmed={self.confirmed}</tool_confirmation>",
+            },
+        )
+
+    def __repr__(self) -> str:
+        return f"ToolConfirmationMessage(tool_call={self.tool_call!r}, confirmed={self.confirmed!r})"
 
 
 class AnswerToken(TypedDict):
