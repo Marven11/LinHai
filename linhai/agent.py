@@ -66,7 +66,6 @@ class AgentConfig(TypedDict):
 
 class GlobalMemory:
     def __init__(self, filepath: Path):
-        assert filepath.exists(), f"{filepath} not exists"
         self.filepath = filepath
 
     def to_llm_message(self) -> LanguageModelMessage:
@@ -249,6 +248,15 @@ class Agent:
 
     async def generate_response(self, enable_compress: bool = True) -> Answer:
         """生成回复并发送给用户"""
+        # Check if the last message is from assistant, add empty user message if so
+        if len(self.messages) > 0:
+            last_msg = self.messages[-1]
+            if isinstance(last_msg, ChatMessage):
+                llm_msg = last_msg.to_llm_message()
+                if llm_msg.get("role") == "assistant":
+                    empty_user_msg = ChatMessage(role="user", message="")
+                    self.messages.append(empty_user_msg)
+
         self.current_enable_compress = enable_compress
         answer: Answer = await self.config["model"].answer_stream(self.messages)
 
