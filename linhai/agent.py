@@ -146,6 +146,11 @@ class Agent:
         else:
             await self.generate_response()
 
+        if self.last_token_usage > self.config.get(
+            "compress_threshold", int(65536 * 0.8)
+        ):
+            await self.compress()
+
     async def state_paused(self):
         """暂停运行状态"""
         logger.info("Agent进入暂停运行状态")
@@ -323,10 +328,6 @@ class Agent:
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
-            if enable_compress and answer.total_tokens > self.config.get(
-                "compress_threshold", int(65536 * 0.8)
-            ):
-                await self.compress()
 
         return answer
 
