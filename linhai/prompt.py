@@ -34,6 +34,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 - 每条消息要么调用工具，要么等待用户。不要在调用工具的同时请求用户输入（因为工具调用和用户等待是互斥的）。
 - 不要“准备调用工具”，避免使用“准备”，“示例”，“用法”等字眼输出工具调用的code block
 - 注意消息标签：用户消息使用`<user>...</user>`标签，运行时消息使用`<runtime>...</runtime>`标签，工具消息使用`<tool>...</tool>`标签，你需要根据标签区分消息来源
+- 在文件编辑时，优先使用replace_file_content或append_file修改现有文件，而不是创建新文件
 
 ## ACTION RULES - HISTORY COMPRESSION
 

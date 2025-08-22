@@ -384,7 +384,7 @@ def create_agent(
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
         "model": llm,
-        "compress_threshold": int(config.get("compress_threshold", 65536 * 0.8)),
+        "compress_threshold": int(config.get("agent", {}).get("compress_threshold", 65536 * 0.8)),
     }
 
     tool_manager = ToolManager()
