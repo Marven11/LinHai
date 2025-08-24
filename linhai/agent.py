@@ -167,7 +167,7 @@ class Agent:
         else:
             await self.generate_response()
 
-        if self.last_token_usage > self.config.get(
+        if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold", int(65536 * 0.8)
         ):
             await self.compress()
@@ -270,6 +270,11 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(
                         f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM"
+                    )
+                )
+                self.messages.append(
+                    RuntimeMessage(
+                        "现在你是廉价LLM"
                     )
                 )
                 return False
@@ -410,7 +415,7 @@ class Agent:
         if self.cheap_llm_remaining_messages > 0:
             self.cheap_llm_remaining_messages -= 1
             if self.cheap_llm_remaining_messages == 0:
-                self.messages.append(RuntimeMessage("廉价LLM模式已结束，切换回主模型"))
+                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
 
         tool_calls = extract_tool_calls(full_response)
 
@@ -439,7 +444,7 @@ class Agent:
             else:
                 self.state = "waiting_user"
 
-        # 检查是否同时调用工具和等待用户
+        # 检查是否同时调用工具和等待用户message_count
         if tool_calls and WAITING_USER_MARKER in full_response:
             self.messages.append(
                 RuntimeMessage(
@@ -480,6 +485,9 @@ class Agent:
                 break
             except Exception as e:
                 logger.error("Agent运行出错: %s", str(e))
+                self.messages.append(RuntimeMessage(
+                    f"Agent运行出错: {str(e)} {repr(e)}"
+                ))
                 self.state = "paused"
                 raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
@@ -546,6 +554,8 @@ def create_agent(
         ),
         "tool_confirmation": tool_confirmation_config,
     }
+    if cheap_llm:
+        agent_config["cheap_model"] = cheap_llm
 
     tool_manager = ToolManager()
 

@@ -1,4 +1,4 @@
-from linhai.tool.base import register_tool
+from linhai.tool.base import register_tool, ToolArgInfo
 
 # 调用会被agent拦截的，和agent运行流程相关的tool
 # 具体见agent.py
@@ -30,12 +30,7 @@ def get_token_usage() -> str:
 @register_tool(
     name="switch_to_cheap_llm",
     desc="切换到廉价LLM模式，指定接下来要使用的消息数量。",
-    args={
-        "message_count": {
-            "desc": "要使用廉价LLM的消息数量",
-            "type": "int"
-        }
-    },
+    args={"message_count": ToolArgInfo(desc="要使用廉价LLM的消息数量", type="int")},
     required_args=["message_count"],
 )
 def switch_to_cheap_llm(message_count: int) -> str:
