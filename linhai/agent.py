@@ -58,14 +58,24 @@ class RuntimeMessage(Message):
         return {"role": "user", "content": f"<runtime>{self.message}</runtime>"}
 
 
+class DestroyedRuntimeMessage(Message):
+    def __init__(self):
+        pass
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        return {
+            "role": "user",
+            "content": "<destroyed><runtime>本条消息已被截断</runtime></destroyed>",
+        }
+
+
 class AgentConfig(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
     model: LanguageModel
-    compress_threshold: int
-    compress_threshold_soft: NotRequired[int]  # 软压缩限制
-    compress_threshold_hard: NotRequired[int]  # 硬压缩限制
+    compress_threshold_soft: int
+    compress_threshold_hard: int
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
     cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
@@ -171,7 +181,17 @@ class Agent:
             await self.generate_response()
 
         if self.last_token_usage and self.last_token_usage > self.config.get(
-            "compress_threshold", int(65536 * 0.8)
+            "compress_threshold_soft", int(65536 * 0.5)
+        ):
+            if not self.destroy_runtime_messages():
+                self.messages.append(
+                    RuntimeMessage(
+                        f"现在的Token用量为{self.last_token_usage}，做完这个步骤就压缩历史吧"
+                    )
+                )
+
+        if self.last_token_usage and self.last_token_usage > self.config.get(
+            "compress_threshold_hard", int(65536 * 0.8)
         ):
             await self.compress()
 
@@ -187,6 +207,24 @@ class Agent:
         except Exception as e:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
+
+    def destroy_runtime_messages(self) -> bool:
+        should_destroy_info: list[bool] = [
+            (not isinstance(msg, RuntimeMessage) and idx < len(self.messages) / 2)
+            for idx, msg in enumerate(self.messages)
+        ]
+        if sum(should_destroy_info) < 10:
+            return False
+        self.messages = [
+            msg if not should_destroy else DestroyedRuntimeMessage()
+            for msg, should_destroy in zip(self.messages, should_destroy_info)
+        ]
+        self.messages.append(
+            RuntimeMessage(
+                f"因为历史上下文过长，已经删除了{sum(should_destroy_info)}条消息"
+            )
+        )
+        return True
 
     async def compress(self):
         messages = [msg.to_llm_message() for msg in self.messages]
@@ -632,8 +670,11 @@ def create_agent(
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
         "model": llm,
-        "compress_threshold": int(
-            config_dict.get("agent", {}).get("compress_threshold", 65536 * 0.8)
+        "compress_threshold_hard": int(
+            config_dict.get("agent", {}).get("compress_threshold_hard", 65536 * 0.8)
+        ),
+        "compress_threshold_soft": int(
+            config_dict.get("agent", {}).get("compress_threshold_soft", 65536 * 0.5)
         ),
         "tool_confirmation": tool_confirmation_config,
     }
