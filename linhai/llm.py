@@ -289,12 +289,14 @@ class OpenAi:
                 # 使用asyncio.wait_for添加超时
                 stream = await asyncio.wait_for(
                     self.openai.chat.completions.create(**params),
-                    timeout=timeout_seconds
+                    timeout=timeout_seconds,
                 )
                 return OpenAiAnswer(stream)
             except asyncio.TimeoutError:
                 if attempt == max_retries - 1:
-                    raise TimeoutError(f"Request timed out after {timeout_seconds} seconds") from None
+                    raise TimeoutError(
+                        f"Request timed out after {timeout_seconds} seconds"
+                    ) from None
                 else:
                     await asyncio.sleep(retry_delay)
             except Exception:

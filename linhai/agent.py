@@ -202,20 +202,29 @@ class Agent:
         if "cheap_model" in self.config:
             self.cheap_llm_remaining_messages = 1
 
-        answer = await self.generate_response(enable_compress=False, disable_waiting_user_warning=True)
+        answer = await self.generate_response(
+            enable_compress=False, disable_waiting_user_warning=True
+        )
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
         # 恢复廉价LLM状态
         self.cheap_llm_remaining_messages = original_cheap_remaining
         try:
             scores_data = extract_json_blocks(full_response)
-            if len(scores_data) != 1:
+            if len(scores_data) == 0:
+                self.messages.append(
+                    RuntimeMessage(
+                        "错误：没有检测到json block，请确保输出包含正确的json格式评分数据"
+                    )
+                )
+                return
+            elif len(scores_data) != 1:
                 self.messages.append(
                     RuntimeMessage("数据数量有误，你应该重新开启压缩历史流程")
                 )
                 return
             scores = scores_data.pop()
-            
+
             # 检查scores数量是否严重少于消息数量（少于80%）
             original_count = len(messages)
             scores_count = len(scores)
@@ -227,7 +236,7 @@ class Agent:
                     )
                 )
                 return
-            
+
             todelete_indicies = set(
                 int(info.get("id", "-1"))
                 for info in scores
@@ -332,7 +341,12 @@ class Agent:
 
         # 廉价LLM模式下限制工具调用：只允许读取相关工具
         if self.cheap_llm_remaining_messages > 0:
-            allowed_tools = {"read_file", "list_files", "get_absolute_path", "get_token_usage"}
+            allowed_tools = {
+                "read_file",
+                "list_files",
+                "get_absolute_path",
+                "get_token_usage",
+            }
             if tool_call.function_name not in allowed_tools:
                 # 自动切换回普通LLM
                 self.cheap_llm_remaining_messages = 0
@@ -429,7 +443,9 @@ class Agent:
         else:
             return self.config["model"]
 
-    async def generate_response(self, enable_compress: bool = True, disable_waiting_user_warning: bool = False) -> Answer:
+    async def generate_response(
+        self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
+    ) -> Answer:
         """生成回复并发送给用户"""
         # Check if the last message is from assistant, add empty user message if so
         if len(self.messages) > 0:

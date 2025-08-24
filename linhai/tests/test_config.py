@@ -1,4 +1,5 @@
 """Unit tests for the config module."""
+
 import unittest
 from unittest.mock import patch, mock_open
 import tomllib
@@ -8,6 +9,7 @@ from linhai.config import ConfigValidationError, load_config
 
 class TestConfig(unittest.TestCase):
     """Test cases for the config module."""
+
     @patch("pathlib.Path.open")
     def test_load_config_valid(self, mock_open):
         """Test loading a valid config."""
@@ -20,7 +22,7 @@ model = "test_model"
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
         mock_open.return_value.read.return_value = config_content
-        
+
         config = load_config()
         self.assertIsInstance(config, dict)
         self.assertEqual(config["llm"]["base_url"], "https://api.example.com")
@@ -39,7 +41,7 @@ model = "test_model"
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
         mock_open.return_value.read.return_value = config_content
-        
+
         with self.assertRaises(ConfigValidationError):
             load_config()
 
@@ -55,7 +57,7 @@ model = "test_model"
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
         mock_open.return_value.read.return_value = config_content
-        
+
         with self.assertRaises(ConfigValidationError):
             load_config()
 
@@ -71,7 +73,7 @@ model = ""
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
         mock_open.return_value.read.return_value = config_content
-        
+
         with self.assertRaises(ConfigValidationError):
             load_config()
 

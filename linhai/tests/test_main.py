@@ -1,4 +1,5 @@
 """Unit tests for the main module."""
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -8,6 +9,7 @@ from linhai.main import chat_loop
 
 class TestMain(unittest.IsolatedAsyncioTestCase):
     """Test cases for the main module."""
+
     @patch("builtins.input", side_effect=["hello", "quit"])
     @patch("builtins.print")
     async def test_chat_loop(self, mock_print, _mock_input):
