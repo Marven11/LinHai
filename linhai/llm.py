@@ -53,10 +53,15 @@ class ToolCallMessage:
     def __init__(
         self,
         function_name: str = "",
-        function_arguments: str = "",
+        function_arguments: str | dict = "",
     ):
         self.function_name = function_name
-        self.function_arguments = function_arguments
+        if isinstance(function_arguments, dict):
+            import json
+
+            self.function_arguments = json.dumps(function_arguments)
+        else:
+            self.function_arguments = function_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
         msg = {
