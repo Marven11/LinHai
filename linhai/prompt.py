@@ -84,6 +84,13 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 - 如果调用工具会修改用户电脑上的任何信息，如代码文件、仓库信息，或对外界造成可逆或不可逆的影响，则应该谨慎思考。
 - 如果调用工具仅仅是为了获取任务相关信息，不会造成信息丢失，也不会造成卡顿、崩溃等问题，则应该不假思索地执行。
 
+## ACTION RULES - CHEAP LLM USAGE
+
+- 积极使用廉价LLM模式读取文件、查看代码和获取信息，以节省成本
+- 避免使用廉价LLM编写代码或进行复杂决策，因为廉价LLM的代码质量可能较差
+- 在读取文件前，优先调用switch_to_cheap_llm工具切换到廉价LLM模式
+- 廉价LLM最多只能用于3个连续消息，超过后会自动切换回普通LLM
+
 比如说：
 
 - 对于修改文件、提交commit、执行危险命令等操作，应该谨慎思考。
@@ -266,11 +273,14 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 - 是否涉及重要的代码、配置或文件变更
 - 是否记录了重要的错误、修复或经验
 - 是否为后续任务提供了必要的上下文
+- 是否包含文件修改的tool调用（这类消息应该保留）
 
 **删除规则：8分以下的消息会被自动删除。过时消息应该被删除，包括以下类型：**
 - 与已完成任务相关的过时消息（必须删除）
 - 不包含有效信息的消息（如空消息、无实质内容的确认消息）
 - 已被后续消息替代或更新的旧信息
+
+**特别注意：在压缩历史时，应该保留对文件修改的tool调用消息，并删除已经过时的文件内容。最好在压缩后重新读取相关文件以确保信息是最新的。**
 
 # 注意
 
@@ -337,11 +347,14 @@ Rate each message (1-10) based on:
 - Code/config changes
 - Important errors/fixes
 - Essential context for future tasks
+- File modification tool calls (these messages should be preserved)
 
 **Deletion Rules: Messages scoring below 8 will be automatically deleted. The following types of messages should typically be deleted:**
 - Outdated messages related to completed tasks
 - Messages without valid information (e.g., empty messages, confirmations without substantive content)
 - Old information that has been replaced or updated by subsequent messages
+
+**Special Note: When compressing history, preserve file modification tool call messages and delete outdated file content. It's best to re-read relevant files after compression to ensure information is up-to-date.**
 
 # Note
 

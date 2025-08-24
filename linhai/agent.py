@@ -31,7 +31,7 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT, COMPRESS_HISTORY_PROMPT
 
 logger = logging.getLogger(__name__)
 
-repr_obj = Repr(maxstring=50)
+repr_obj = Repr(maxstring=100)
 
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
@@ -192,7 +192,17 @@ class Agent:
             for i, msg in enumerate(messages)
         )
         self.messages.append(CompressRequest(messages_summerization))
+
+        # 保存当前廉价LLM状态
+        original_cheap_remaining = self.cheap_llm_remaining_messages
+        # 如果廉价LLM可用，设置为使用1个消息进行压缩
+        if "cheap_model" in self.config:
+            self.cheap_llm_remaining_messages = 1
+
         answer = await self.generate_response(enable_compress=False)
+
+        # 恢复廉价LLM状态
+        self.cheap_llm_remaining_messages = original_cheap_remaining
         try:
             scores_data = extract_json_blocks(
                 str(answer.get_message().to_llm_message().get("content", ""))
@@ -258,6 +268,13 @@ class Agent:
             return False
 
         if tool_call.function_name == "switch_to_cheap_llm":
+            # 检查廉价LLM是否可用
+            if "cheap_model" not in self.config:
+                self.messages.append(
+                    RuntimeMessage("错误：廉价LLM未配置，无法启用廉价LLM模式")
+                )
+                return False
+
             # 解析参数
             try:
                 args = json.loads(tool_call.function_arguments)
@@ -267,6 +284,13 @@ class Agent:
                     self.messages.append(RuntimeMessage("错误：消息数量必须大于0"))
                     return False
 
+                # 添加消息数量限制，最多3个消息
+                if message_count > 3:
+                    self.messages.append(
+                        RuntimeMessage("错误：廉价LLM最多只能使用3个消息")
+                    )
+                    return False
+
                 self.cheap_llm_remaining_messages = message_count
 
                 self.messages.append(
@@ -274,18 +298,17 @@ class Agent:
                         f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM"
                     )
                 )
-                self.messages.append(
-                    RuntimeMessage(
-                        "现在你是廉价LLM"
-                    )
-                )
+                self.messages.append(RuntimeMessage("现在你是廉价LLM"))
                 return False
             except json.JSONDecodeError:
                 self.messages.append(RuntimeMessage("错误：无法解析工具参数"))
                 return False
 
         # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
-        if tool_call.function_name == "read_file" and self.cheap_llm_remaining_messages == 0:
+        if (
+            tool_call.function_name == "read_file"
+            and self.cheap_llm_remaining_messages == 0
+        ):
             self.messages.append(
                 RuntimeMessage(
                     "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
@@ -369,6 +392,13 @@ class Agent:
             self.state = "paused"
             raise
 
+    async def _select_model(self) -> LanguageModel:
+        """选择适当的模型基于廉价LLM剩余消息计数"""
+        if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
+            return self.config["cheap_model"]
+        else:
+            return self.config["model"]
+
     async def generate_response(self, enable_compress: bool = True) -> Answer:
         """生成回复并发送给用户"""
         # Check if the last message is from assistant, add empty user message if so
@@ -382,11 +412,8 @@ class Agent:
 
         self.current_enable_compress = enable_compress
 
-        # 根据剩余消息计数选择模型
-        if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
-            model = self.config["cheap_model"]
-        else:
-            model = self.config["model"]
+        # 选择模型
+        model = await self._select_model()
 
         answer: Answer = await model.answer_stream(self.messages)
 
@@ -434,7 +461,7 @@ class Agent:
                 if "name" in call and "arguments" in call:
                     tool_call = ToolCallMessage(
                         function_name=call["name"],
-                        function_arguments=json.dumps(call["arguments"]),
+                        function_arguments=call["arguments"],
                     )
                     early_return = await self.call_tool(tool_call)
                     if early_return:
@@ -495,9 +522,9 @@ class Agent:
                 break
             except Exception as e:
                 logger.error("Agent运行出错: %s", str(e))
-                self.messages.append(RuntimeMessage(
-                    f"Agent运行出错: {str(e)} {repr(e)}"
-                ))
+                self.messages.append(
+                    RuntimeMessage(f"Agent运行出错: {str(e)} {repr(e)}")
+                )
                 self.state = "paused"
                 raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
@@ -553,8 +580,6 @@ def create_agent(
     config_dict = cast(dict, config)
     # 解析tool_confirmation配置
     tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
-    skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
-    whitelist = tool_confirmation_config.get("whitelist", [])
 
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
