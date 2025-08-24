@@ -289,12 +289,14 @@ COMPRESS_HISTORY_PROMPT_ZH = """
 
 # 输出格式
 
-以markdown code block的形式输出一个json列表，其中只包含需要删除的消息（score < 6）的条目，每个item都是一个object，包含以下键
+首先输出主要任务等内容，格式为markdown
+
+然后以markdown code block的形式输出一个json列表，其中只包含需要删除的消息（score < 8）的条目，每个item都是一个object，包含以下键
 - `id`: 当前消息的序号
 - `summerization`: 这条消息的一句话总结
 - `score`: 这条消息的分数
 
-重要：你只应该输出这个JSON，除了这个JSON之外不要输出任何其他的JSON！只输出需要删除的消息（score < 6），不需要输出保留的消息。
+重要：你只应该输出这个JSON，除了这个JSON之外不要输出任何其他的JSON！只输出需要删除的消息（score < 8），不需要输出保留的消息。
 
 你不应该调用任何其他工具或者执行任何其他任务！
 
