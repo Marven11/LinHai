@@ -198,7 +198,9 @@ class Agent:
                 str(answer.get_message().to_llm_message().get("content", ""))
             )
             if len(scores_data) != 1:
-                raise LLMResponseError("数据数量有误")
+                self.messages.append(
+                    RuntimeMessage("数据数量有误，你应该重新开启压缩历史流程")
+                )
             scores = scores_data.pop()
             todelete_indicies = set(
                 int(info.get("id", "-1"))
@@ -281,6 +283,14 @@ class Agent:
             except json.JSONDecodeError:
                 self.messages.append(RuntimeMessage("错误：无法解析工具参数"))
                 return False
+
+        # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
+        if tool_call.function_name == "read_file" and self.cheap_llm_remaining_messages == 0:
+            self.messages.append(
+                RuntimeMessage(
+                    "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
+                )
+            )
 
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
