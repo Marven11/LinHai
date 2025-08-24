@@ -64,6 +64,8 @@ class AgentConfig(TypedDict):
     system_prompt: str
     model: LanguageModel
     compress_threshold: int
+    compress_threshold_soft: NotRequired[int]  # 软压缩限制
+    compress_threshold_hard: NotRequired[int]  # 硬压缩限制
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
     cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
@@ -122,6 +124,7 @@ class Agent:
 
         self.last_token_usage = None
         self.current_enable_compress = True
+        self.soft_compress_triggered = False  # 软压缩限制触发标志
 
         # 廉价LLM状态跟踪
         self.cheap_llm_remaining_messages = 0
@@ -199,19 +202,32 @@ class Agent:
         if "cheap_model" in self.config:
             self.cheap_llm_remaining_messages = 1
 
-        answer = await self.generate_response(enable_compress=False)
-
+        answer = await self.generate_response(enable_compress=False, disable_waiting_user_warning=True)
+        chat_message = cast(ChatMessage, answer.get_message())
+        full_response = chat_message.message
         # 恢复廉价LLM状态
         self.cheap_llm_remaining_messages = original_cheap_remaining
         try:
-            scores_data = extract_json_blocks(
-                str(answer.get_message().to_llm_message().get("content", ""))
-            )
+            scores_data = extract_json_blocks(full_response)
             if len(scores_data) != 1:
                 self.messages.append(
                     RuntimeMessage("数据数量有误，你应该重新开启压缩历史流程")
                 )
+                return
             scores = scores_data.pop()
+            
+            # 检查scores数量是否严重少于消息数量（少于80%）
+            original_count = len(messages)
+            scores_count = len(scores)
+            if scores_count < original_count * 0.8:
+                self.messages.append(
+                    RuntimeMessage(
+                        f"警告：scores数量({scores_count})严重少于消息数量({original_count})，"
+                        f"请输出所有消息的分数（包括分数低的！！！），然后重新开始压缩流程"
+                    )
+                )
+                return
+            
             todelete_indicies = set(
                 int(info.get("id", "-1"))
                 for info in scores
@@ -298,7 +314,6 @@ class Agent:
                         f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM"
                     )
                 )
-                self.messages.append(RuntimeMessage("现在你是廉价LLM"))
                 return False
             except json.JSONDecodeError:
                 self.messages.append(RuntimeMessage("错误：无法解析工具参数"))
@@ -314,6 +329,21 @@ class Agent:
                     "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
                 )
             )
+
+        # 廉价LLM模式下限制工具调用：只允许读取相关工具
+        if self.cheap_llm_remaining_messages > 0:
+            allowed_tools = {"read_file", "list_files", "get_absolute_path", "get_token_usage"}
+            if tool_call.function_name not in allowed_tools:
+                # 自动切换回普通LLM
+                self.cheap_llm_remaining_messages = 0
+                self.messages.append(
+                    RuntimeMessage(
+                        f"错误：廉价LLM模式下不允许调用{tool_call.function_name!r}工具。"
+                        "已自动切换回普通LLM模式。廉价LLM只能用于读取文件、查看目录和获取信息。"
+                    )
+                )
+                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
+                return False
 
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
@@ -399,7 +429,7 @@ class Agent:
         else:
             return self.config["model"]
 
-    async def generate_response(self, enable_compress: bool = True) -> Answer:
+    async def generate_response(self, enable_compress: bool = True, disable_waiting_user_warning: bool = False) -> Answer:
         """生成回复并发送给用户"""
         # Check if the last message is from assistant, add empty user message if so
         if len(self.messages) > 0:
@@ -482,20 +512,21 @@ class Agent:
                 self.state = "waiting_user"
 
         # 检查是否同时调用工具和等待用户message_count
-        if tool_calls and WAITING_USER_MARKER in full_response:
-            self.messages.append(
-                RuntimeMessage(
-                    f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
-                    f"工具调用和等待用户是互斥的，请只选择其中一种方式"
+        if not disable_waiting_user_warning:
+            if tool_calls and WAITING_USER_MARKER in full_response:
+                self.messages.append(
+                    RuntimeMessage(
+                        f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
+                        f"工具调用和等待用户是互斥的，请只选择其中一种方式"
+                    )
                 )
-            )
-        elif self.state == "working" and not tool_calls:
-            self.messages.append(
-                RuntimeMessage(
-                    f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
-                    f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
+            elif self.state == "working" and not tool_calls:
+                self.messages.append(
+                    RuntimeMessage(
+                        f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
+                        f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
+                    )
                 )
-            )
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
@@ -520,13 +551,14 @@ class Agent:
             except asyncio.CancelledError:
                 logger.info("Agent任务被取消")
                 break
-            except Exception as e:
-                logger.error("Agent运行出错: %s", str(e))
-                self.messages.append(
-                    RuntimeMessage(f"Agent运行出错: {str(e)} {repr(e)}")
-                )
-                self.state = "paused"
-                raise RuntimeError("Agent运行出错") from e
+            # 感觉pause不应该存在，至少不应该这么用
+            # except Exception as e:
+            #     logger.error("Agent运行出错: %s", str(e))
+            #     self.messages.append(
+            #         RuntimeMessage(f"Agent运行出错: {str(e)} {repr(e)}")
+            #     )
+            #     self.state = "paused"
+            #     raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
 
 
