@@ -233,7 +233,9 @@ class CLIApp(App):
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
-        self.tool_request_watcher_task = asyncio.create_task(self.watch_tool_request_queue())
+        self.tool_request_watcher_task = asyncio.create_task(
+            self.watch_tool_request_queue()
+        )
         self.agent_task = asyncio.create_task(self.agent.run())
 
     async def on_unmount(self) -> None:
