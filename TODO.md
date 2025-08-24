@@ -14,9 +14,20 @@
     - [x] 最好将获取llm的逻辑放在独立的函数中，然后将llm从self.config["xxx_model"]中移出，放到`self._xxx_model`中
 - [x] ToolCallMessage中的argument没必要使用json dump
 - [x] create_agent中skip_confirmation和whitelist没有使用
-- [x] 仔细修复每个文件中的警告，包括pylint和mypy，然后用black格式化
-- [ ] 历史压缩功能，在scores数量严重少于消息数量时（80%以下）警告agent需要输出所有分数（包括分数低的！！！），提醒agent重新开始压缩流程
-- [ ] 历史压缩功能，在system prompt中写清楚只有所有列出的消息中分数低的消息才会被删除，所以务必输出分数低的消息（分数高的消息则无所谓）
+- [x] 历史压缩功能，在scores数量严重少于消息数量时（80%以下）警告agent需要输出所有分数（包括分数低的！！！），提醒agent重新开始压缩流程
+- [x] 历史压缩功能，在system prompt中写清楚只有所有列出的消息中分数低的消息才会被删除，所以务必输出分数低的消息（分数高的消息则无所谓）
+- [x] 历史压缩功能：现在的历史压缩threashold太硬了，应该在配置中支持软压缩限制compress_threshold_soft和硬压缩限制compress_threshold_hard，软压缩限制达到之后提醒LLM应该开始压缩（每次generate_response都提醒，问题不大），硬压缩限制达到之后直接开启压缩流程
+- [x] 全局记忆功能：修改prompt, 在用户要求“记住”的时候最好加入到全局记忆中
+- [x] 廉价LLM功能：让廉价LLM不要修改文件，如果所有文件都读取完毕，且没有读取其他消息的必要，则调用工具切换到普通LLM
+- [x] 廉价LLM功能：每次生成前都插入一条消息，提醒agent现在是廉价LLM还是普通LLM，然后删除切换LLM时的runtime message（因为不需要重复提醒）
+- [x] LINHAI_WAITING_USER的检测会在输出历史压缩的时候仍然警告agent“既没有使用LINHAI_WAITING_USER又没有调用工具”，generate_response应该加上一个选项关闭警告功能（默认打开警告）
+- [x] 给llm.py加上超时功能和失败重试功能
+- [x] 修改prompt: 在切换到廉价LLM时，尽量限制步数，否则廉价LLM可能会尝试修改文件
+- [ ] 使用工具运行命令时改成异步等待，否则会阻塞cli_ui渲染TUI
+- [ ] 历史压缩功能：现在没有检测到json block也会提示“数据数量有误”而不是直接提示“没有找到”
+- [ ] 仔细修复每个文件中的警告，包括pylint和mypy
+- [ ] 用black格式化
+
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 
