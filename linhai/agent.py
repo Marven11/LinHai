@@ -66,6 +66,7 @@ class AgentConfig(TypedDict):
     compress_threshold: int
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
+    cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
 
 
 class GlobalMemory:
@@ -121,6 +122,9 @@ class Agent:
 
         self.last_token_usage = None
         self.current_enable_compress = True
+
+        # 廉价LLM状态跟踪
+        self.cheap_llm_remaining_messages = 0
 
         # 加载全局记忆
         memory_config = config.get("memory", {})
@@ -214,7 +218,9 @@ class Agent:
             original_count = len(messages)
             compressed_count = len(self.messages)
             self.messages.append(
-                RuntimeMessage(f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，减少了{original_count - compressed_count}条消息")
+                RuntimeMessage(
+                    f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，减少了{original_count - compressed_count}条消息"
+                )
             )
         except LLMResponseError as exc:
             self.messages.append(
@@ -248,6 +254,28 @@ class Agent:
             else:
                 self.messages.append(RuntimeMessage("暂无token用量信息"))
             return False
+
+        if tool_call.function_name == "switch_to_cheap_llm":
+            # 解析参数
+            try:
+                args = json.loads(tool_call.function_arguments)
+                message_count = args.get("message_count", 1)
+
+                if message_count <= 0:
+                    self.messages.append(RuntimeMessage("错误：消息数量必须大于0"))
+                    return False
+
+                self.cheap_llm_remaining_messages = message_count
+
+                self.messages.append(
+                    RuntimeMessage(
+                        f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM"
+                    )
+                )
+                return False
+            except json.JSONDecodeError:
+                self.messages.append(RuntimeMessage("错误：无法解析工具参数"))
+                return False
 
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
@@ -338,20 +366,31 @@ class Agent:
                     self.messages.append(empty_user_msg)
 
         self.current_enable_compress = enable_compress
-        answer: Answer = await self.config["model"].answer_stream(self.messages)
+
+        # 根据剩余消息计数选择模型
+        if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
+            model = self.config["cheap_model"]
+        else:
+            model = self.config["model"]
+
+        answer: Answer = await model.answer_stream(self.messages)
 
         async for token in answer:
             await self.user_output_queue.put(token)
-            
+
             # Real-time check for too many tool calls
             current_content = answer.get_current_content()
             json_block_count = current_content.count("```json")
             if json_block_count > 3:
                 await self.user_output_queue.put(answer)
-                self.messages.append(RuntimeMessage("错误：一次性调用了超过三个工具，最多只能调用三个工具。请分多次调用。"))
+                self.messages.append(
+                    RuntimeMessage(
+                        "错误：一次性调用了超过三个工具，最多只能调用三个工具。请分多次调用。"
+                    )
+                )
                 answer.interrupt()
                 return await self.generate_response()
-            
+
             if not self.user_input_queue.empty():
                 await self.user_output_queue.put(answer)
                 chat_message = cast(ChatMessage, answer.get_message())
@@ -366,6 +405,12 @@ class Agent:
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
         self.messages.append(chat_message)
+
+        # 减少廉价LLM剩余消息计数
+        if self.cheap_llm_remaining_messages > 0:
+            self.cheap_llm_remaining_messages -= 1
+            if self.cheap_llm_remaining_messages == 0:
+                self.messages.append(RuntimeMessage("廉价LLM模式已结束，切换回主模型"))
 
         tool_calls = extract_tool_calls(full_response)
 
@@ -465,6 +510,16 @@ def create_agent(
         model=config["llm"]["model"],
         openai_config={},
     )
+
+    # 加载廉价LLM配置
+    cheap_llm = None
+    if "cheap" in config["llm"]:
+        cheap_llm = OpenAi(
+            api_key=config["llm"]["cheap"]["api_key"],
+            base_url=config["llm"]["cheap"]["base_url"],
+            model=config["llm"]["cheap"]["model"],
+            openai_config={},
+        )
 
     user_input_queue: "Queue[ChatMessage]" = Queue()
     user_output_queue: "Queue[AnswerToken | Answer]" = Queue()

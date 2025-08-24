@@ -25,3 +25,18 @@ def compress_history() -> str:
 )
 def get_token_usage() -> str:
     return ""
+
+
+@register_tool(
+    name="switch_to_cheap_llm",
+    desc="切换到廉价LLM模式，指定接下来要使用的消息数量。",
+    args={
+        "message_count": {
+            "desc": "要使用廉价LLM的消息数量",
+            "type": "int"
+        }
+    },
+    required_args=["message_count"],
+)
+def switch_to_cheap_llm(message_count: int) -> str:
+    return ""
