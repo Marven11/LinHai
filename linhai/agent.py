@@ -1,3 +1,4 @@
+"""Agent核心模块，负责处理消息、调用工具和管理状态。"""
 from pathlib import Path
 from typing import TypedDict, cast, NotRequired
 from reprlib import Repr
@@ -6,6 +7,7 @@ import logging
 import json
 import traceback
 import datetime
+from asyncio import Queue, QueueEmpty
 
 from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
 from linhai.exceptions import LLMResponseError
@@ -22,7 +24,6 @@ from linhai.llm import (
     ToolConfirmationMessage,
     LanguageModelMessage,
 )
-from asyncio import Queue, QueueEmpty
 from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
@@ -37,6 +38,8 @@ WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 
 class CompressRequest(Message):
+    """压缩请求消息，用于请求压缩历史消息。"""
+
     def __init__(self, messages_summerization: str):
         self.messages_summerization = messages_summerization
 
@@ -51,6 +54,8 @@ class CompressRequest(Message):
 
 
 class RuntimeMessage(Message):
+    """运行时消息，用于向LLM传递运行时信息。"""
+
     def __init__(self, message: str):
         self.message = message
 
@@ -59,6 +64,8 @@ class RuntimeMessage(Message):
 
 
 class DestroyedRuntimeMessage(Message):
+    """被截断的运行时消息，表示消息已被截断。"""
+
     def __init__(self):
         pass
 
@@ -82,23 +89,53 @@ class AgentConfig(TypedDict):
 
 
 class GlobalMemory:
+    """全局记忆类，用于读取和呈现全局记忆文件内容。"""
+
     def __init__(self, filepath: Path):
         self.filepath = filepath
 
     def to_llm_message(self) -> LanguageModelMessage:
-        return {
-            "role": "system",
-            "content": f"""
+        """
+        将全局记忆转换为LLM消息格式。
+        
+        返回:
+            LanguageModelMessage: 包含全局记忆内容的系统消息
+        """
+        try:
+            content = self.filepath.read_text()
+            return {
+                "role": "system",
+                "content": f"""
 # 全局记忆
 
 文件位于{self.filepath.as_posix()!r}，内容如下
 
-{self.filepath.read_text()}
+{content}
 """,
-        }
+            }
+        except FileNotFoundError:
+            return {
+                "role": "system",
+                "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
+""",
+            }
+        except Exception as e:
+            return {
+                "role": "system",
+                "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
+""",
+            }
 
 
 class Agent:
+    """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
+
     def __init__(
         self,
         config: AgentConfig,
@@ -142,8 +179,7 @@ class Agent:
         # 加载全局记忆
         memory_config = config.get("memory", {})
         memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
-        if memory_filepath.exists():
-            self.messages.append(GlobalMemory(memory_filepath))
+        self.messages.append(GlobalMemory(memory_filepath))  # 总是添加，无论文件是否存在
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -154,7 +190,11 @@ class Agent:
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
     async def state_waiting_user(self):
-        """等待用户状态"""
+        """
+        处理等待用户状态。
+        
+        在这个状态下，Agent会等待用户输入消息，然后处理这些消息。
+        """
         logger.info("Agent进入等待用户状态")
         while self.state == "waiting_user":
             chat_msg = await self.user_input_queue.get()
@@ -164,7 +204,12 @@ class Agent:
             await self.handle_messages([chat_msg])
 
     async def state_working(self):
-        """自动运行状态"""
+        """
+        处理自动运行状态。
+        
+        在这个状态下，Agent会自动处理消息并生成响应，
+        同时监控token使用量并在需要时触发压缩。
+        """
         logger.info("Agent进入自动运行状态")
         # 直接处理用户输入消息
         if not self.user_input_queue.empty():
@@ -196,7 +241,12 @@ class Agent:
             await self.compress()
 
     async def state_paused(self):
-        """暂停运行状态"""
+        """
+        处理暂停运行状态。
+        
+        在这个状态下，Agent会等待用户输入来恢复运行，
+        通常用于处理错误或异常情况后的恢复。
+        """
         logger.info("Agent进入暂停运行状态")
         try:
             msg = await self.user_input_queue.get()
@@ -209,6 +259,12 @@ class Agent:
             raise RuntimeError("处理消息时出错") from e
 
     def destroy_runtime_messages(self) -> bool:
+        """
+        销毁运行时消息以减少上下文长度。
+        
+        返回:
+            bool: 是否成功销毁了消息
+        """
         should_destroy_info: list[bool] = [
             (not isinstance(msg, RuntimeMessage) and idx < len(self.messages) / 2)
             for idx, msg in enumerate(self.messages)
@@ -227,6 +283,12 @@ class Agent:
         return True
 
     async def compress(self):
+        """
+        压缩历史消息以减少上下文长度。
+        
+        通过请求LLM对历史消息进行评分，然后删除评分较低的消息
+        来减少上下文长度，从而节省token使用量。
+        """
         messages = [msg.to_llm_message() for msg in self.messages]
         messages_summerization = "\n".join(
             f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
@@ -294,7 +356,8 @@ class Agent:
             compressed_count = len(self.messages)
             self.messages.append(
                 RuntimeMessage(
-                    f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，减少了{original_count - compressed_count}条消息"
+                    f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，"
+                    f"减少了{original_count - compressed_count}条消息"
                 )
             )
         except LLMResponseError as exc:
@@ -307,7 +370,15 @@ class Agent:
             self.messages.append(RuntimeMessage(f"错误：{exc!r}"))
 
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
-        """直接调用工具并处理结果，返回是否需要进行早期返回"""
+        """
+        直接调用工具并处理结果。
+        
+        参数:
+            tool_call: 工具调用消息
+            
+        返回:
+            bool: 是否需要进行早期返回
+        """
         if tool_call.function_name == "compress_history":
             if self.current_enable_compress:
                 await self.compress()
@@ -373,7 +444,8 @@ class Agent:
         ):
             self.messages.append(
                 RuntimeMessage(
-                    "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
+                    "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用"
+                    "switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
                 )
             )
 
@@ -391,7 +463,8 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(
                         f"错误：廉价LLM模式下不允许调用{tool_call.function_name!r}工具。"
-                        "已自动切换回普通LLM模式。廉价LLM只能用于读取文件、查看目录和获取信息。"
+                        "已自动切换回普通LLM模式。廉价LLM只能用于读取文件、"
+                        "查看目录和获取信息。"
                     )
                 )
                 self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
@@ -466,7 +539,15 @@ class Agent:
             return False
 
     async def handle_messages(self, messages: list[Message]):
-        """处理新的消息"""
+        """
+        处理新的消息并将其添加到消息历史中。
+        
+        参数:
+            messages: 要处理的消息列表
+        
+        返回:
+            生成的响应
+        """
         self.messages += messages
         try:
             return await self.generate_response()
@@ -475,7 +556,12 @@ class Agent:
             raise
 
     async def _select_model(self) -> LanguageModel:
-        """选择适当的模型基于廉价LLM剩余消息计数"""
+        """
+        根据廉价LLM剩余消息计数选择合适的模型。
+        
+        返回:
+            LanguageModel: 选择的语言模型实例
+        """
         if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
             return self.config["cheap_model"]
         else:
@@ -484,7 +570,16 @@ class Agent:
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
     ) -> Answer:
-        """生成回复并发送给用户"""
+        """
+        生成回复并发送给用户。
+        
+        参数:
+            enable_compress: 是否启用压缩功能
+            disable_waiting_user_warning: 是否禁用等待用户警告
+        
+        返回:
+            Answer: 生成的回答对象
+        """
         # Check if the last message is from assistant, add empty user message if so
         if len(self.messages) > 0:
             last_msg = self.messages[-1]
@@ -588,7 +683,12 @@ class Agent:
         return answer
 
     async def run(self):
-        """Agent主循环"""
+        """
+        Agent主循环，负责状态机的管理和状态切换。
+        
+        根据当前状态调用相应的状态处理函数，
+        并处理异常和取消事件。
+        """
         logger.info("Agent启动")
         while True:
             try:
@@ -660,12 +760,16 @@ def create_agent(
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
-    ).replace("{|CURRENT_TIME|}", current_time)
+    ).replace(
+        "{|CURRENT_TIME|}", current_time
+    )
 
     # 确保 config 是字典类型
     config_dict = cast(dict, config)
     # 解析tool_confirmation配置
-    tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
+    tool_confirmation_config = config_dict.get(
+        "agent", {}
+    ).get("tool_confirmation", {})
 
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
