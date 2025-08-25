@@ -231,12 +231,12 @@ class Agent:
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_soft", int(65536 * 0.5)
         ):
-            if not self.destroy_runtime_messages():
-                self.messages.append(
-                    RuntimeMessage(
-                        f"现在的Token用量为{self.last_token_usage}，做完这个步骤就压缩历史吧"
-                    )
+            # if not self.destroy_runtime_messages():
+            self.messages.append(
+                RuntimeMessage(
+                    f"现在的Token用量为{self.last_token_usage}，做完这个步骤就压缩历史吧"
                 )
+            )
 
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_hard", int(65536 * 0.8)
@@ -330,18 +330,6 @@ class Agent:
                 )
                 return
             scores = scores_data.pop()
-
-            # 检查scores数量是否严重少于消息数量（少于80%）
-            original_count = len(messages)
-            scores_count = len(scores)
-            if scores_count < original_count * 0.8:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"警告：scores数量({scores_count})严重少于消息数量({original_count})，"
-                        f"请输出所有消息的分数（包括分数低的！！！），然后重新开始压缩流程"
-                    )
-                )
-                return
 
             todelete_indicies = set(
                 int(info.get("id", "-1"))
