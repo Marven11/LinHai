@@ -1,6 +1,6 @@
 """LLM模块，定义语言模型相关的消息类和协议。"""
 
-from typing import Sequence, Protocol, TypedDict, AsyncIterator, cast
+from typing import Sequence, Protocol, TypedDict, AsyncIterator, cast, runtime_checkable
 import asyncio
 import json
 
@@ -10,6 +10,7 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 
 
+@runtime_checkable
 class Message(Protocol):
     """消息协议，定义消息类的接口。"""
 
