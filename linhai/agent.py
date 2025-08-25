@@ -412,10 +412,10 @@ class Agent:
                     self.messages.append(RuntimeMessage("错误：消息数量必须大于0"))
                     return False
 
-                # 添加消息数量限制，最多3个消息
-                if message_count > 3:
+                # 添加消息数量限制，最多5个消息
+                if message_count > 5:
                     self.messages.append(
-                        RuntimeMessage("错误：廉价LLM最多只能使用3个消息")
+                        RuntimeMessage("错误：廉价LLM最多只能使用5个消息")
                     )
                     return False
 
@@ -423,7 +423,7 @@ class Agent:
 
                 self.messages.append(
                     RuntimeMessage(
-                        f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM"
+                        f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM。请在规划中列出所有需要读取的文件和列出的文件夹。"
                     )
                 )
                 return False
@@ -438,8 +438,7 @@ class Agent:
         ):
             self.messages.append(
                 RuntimeMessage(
-                    "提醒：读取文件时没有使用廉价LLM。建议在读取文件前调用"
-                    "switch_to_cheap_llm工具切换到廉价LLM模式以节省成本。"
+                    "提醒：读取文件时建议使用廉价LLM以节省成本。"
                 )
             )
 
