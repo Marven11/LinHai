@@ -445,7 +445,7 @@ class Agent:
             and self.cheap_llm_remaining_messages == 0
         ):
             self.messages.append(
-                RuntimeMessage("提醒：读取文件时建议使用廉价LLM以节省成本。")
+                RuntimeMessage("提醒：读取多个文件时建议使用廉价LLM以节省成本。")
             )
 
         # 廉价LLM模式下限制工具调用：只允许读取相关工具
