@@ -1,33 +1,46 @@
-from typing import Sequence, Protocol, TypedDict, AsyncIterator
-from typing import cast
-import asyncio
+"""LLM模块，定义语言模型相关的消息类和协议。"""
 
+from typing import Sequence, Protocol, TypedDict, AsyncIterator, cast
+import asyncio
+import json
 
 from openai import AsyncOpenAI
+from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 
 
 class Message(Protocol):
-    def to_llm_message(self) -> LanguageModelMessage: ...
+    """消息协议，定义消息类的接口。"""
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_llm_message()})"
 
 
 class SystemMessage:
+    """系统消息类，用于表示系统角色消息。"""
+
     def __init__(self, message: str):
+        """初始化系统消息。"""
         self.message = message
 
     def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
         return cast(LanguageModelMessage, {"role": "system", "content": self.message})
 
     def __repr__(self) -> str:
+        """返回消息的字符串表示。"""
         return f"SystemMessage(message={self.message!r})"
 
 
 class ChatMessage:
+    """聊天消息类，用于表示用户或助理角色消息。"""
+
     def __init__(self, role: str, message: str, name: str | None = None):
+        """初始化聊天消息。"""
         if role == "system":
             raise ValueError(
                 "System role is not supported in ChatMessage. Use SystemMessage instead."
@@ -37,6 +50,7 @@ class ChatMessage:
         self.name = name
 
     def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
         content = self.message
         if self.role == "user":
             content = f"<user>{content}</user>"
@@ -46,24 +60,27 @@ class ChatMessage:
         return cast(LanguageModelMessage, msg)
 
     def __repr__(self) -> str:
+        """返回消息的字符串表示。"""
         return f"ChatMessage(role={self.role!r}, message={self.message!r}, name={self.name!r})"
 
 
 class ToolCallMessage:
+    """工具调用消息类，用于表示助理调用工具的消息。"""
+
     def __init__(
         self,
         function_name: str = "",
         function_arguments: str | dict = "",
     ):
+        """初始化工具调用消息。"""
         self.function_name = function_name
         if isinstance(function_arguments, dict):
-            import json
-
             self.function_arguments = json.dumps(function_arguments)
         else:
             self.function_arguments = function_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
         msg = {
             "role": "assistant",
             "content": "",
@@ -78,30 +95,48 @@ class ToolCallMessage:
         }
         return cast(ToolMessage, msg)
 
+    def __repr__(self) -> str:
+        """返回消息的字符串表示。"""
+        return (
+            f"ToolCallMessage(function_name={self.function_name!r}, "
+            f"function_arguments={self.function_arguments!r})"
+        )
+
 
 class ToolConfirmationMessage:
+    """工具确认消息类，用于表示用户对工具调用的确认消息。"""
+
     def __init__(
         self,
         tool_call: ToolCallMessage,
         confirmed: bool,
     ):
+        """初始化工具确认消息。"""
         self.tool_call = tool_call
         self.confirmed = confirmed
 
     def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
         return cast(
             LanguageModelMessage,
             {
                 "role": "user",
-                "content": f"<tool_confirmation>tool_call={self.tool_call.function_name}, confirmed={self.confirmed}</tool_confirmation>",
+                "content": f"<tool_confirmation>tool_call={self.tool_call.function_name}, "
+                f"confirmed={self.confirmed}</tool_confirmation>",
             },
         )
 
     def __repr__(self) -> str:
-        return f"ToolConfirmationMessage(tool_call={self.tool_call!r}, confirmed={self.confirmed!r})"
+        """返回消息的字符串表示。"""
+        return (
+            f"ToolConfirmationMessage(tool_call={self.tool_call!r}, "
+            f"confirmed={self.confirmed!r})"
+        )
 
 
 class AnswerToken(TypedDict):
+    """LLM回答的token表示，包含推理内容和普通内容。"""
+
     reasoning_content: str | None
     content: str
 
@@ -152,14 +187,27 @@ class Answer(Protocol):
 
 
 class LanguageModel(Protocol):
+    """语言模型协议，定义语言模型的基本接口。"""
+
     async def answer_stream(
         self,
         history: Sequence[Message],
-    ) -> Answer: ...
+    ) -> Answer:
+        """异步流式生成回答。
+
+        参数:
+            history: 消息历史序列
+
+        返回:
+            Answer: 回答对象
+        """
 
 
 class OpenAiAnswer:
+    """OpenAI回答类，用于处理OpenAI API的流式响应。"""
+
     def __init__(self, stream):
+        """初始化OpenAI回答。"""
         self._tokens = []
         self._reasoning_content = None
         self._content = ""
@@ -172,13 +220,15 @@ class OpenAiAnswer:
         self._tool_call_argument_json: str = ""
 
     def get_tool_call(self) -> ToolCallMessage | None:
-        """在LLM生成完毕之后读取工具调用"""
+        """在LLM生成完毕之后读取工具调用。"""
         return self._tool_call
 
     def __aiter__(self):
+        """返回异步迭代器。"""
         return self
 
     async def __anext__(self):
+        """获取下一个token。"""
         if self._interrupted:
             raise StopAsyncIteration
 
@@ -222,27 +272,31 @@ class OpenAiAnswer:
             raise StopAsyncIteration from exc
 
     def get_message(self) -> Message:
+        """获取完整的消息对象。"""
         if self._tool_call:
             return self._tool_call
         return ChatMessage(role="assistant", message=self._content)
 
     def get_reasoning_message(self) -> str | None:
+        """获取推理消息（如果存在）。"""
         return None
 
     def interrupt(self):
-        """中断当前回答的生成"""
+        """中断当前回答的生成。"""
         self._interrupted = True
 
     def get_current_content(self) -> str:
-        """获取当前累积的回答内容"""
+        """获取当前累积的回答内容。"""
         return self._content
 
     def get_token_count(self) -> int:
-        """获取当前回答的token总数"""
+        """获取当前回答的token总数。"""
         return self.total_tokens
 
 
 class OpenAi:
+    """OpenAI语言模型实现，用于与OpenAI API交互。"""
+
     def __init__(
         self,
         *,
@@ -252,6 +306,15 @@ class OpenAi:
         openai_config: dict,
         tools: list[dict] | None = None,
     ):
+        """初始化OpenAI语言模型。
+
+        参数:
+            api_key: OpenAI API密钥
+            base_url: API基础URL
+            model: 模型名称
+            openai_config: 额外的OpenAI配置
+            tools: 可用工具列表
+        """
         self.model = model
         self.openai = AsyncOpenAI(
             api_key=api_key, base_url=base_url, timeout=10, **openai_config
@@ -262,13 +325,26 @@ class OpenAi:
         self,
         history: Sequence[Message],
     ) -> Answer:
+        """异步流式生成回答。
+
+        参数:
+            history: 消息历史序列
+
+        返回:
+            Answer: 回答对象
+
+        异常:
+            ValueError: 如果history为空
+            TimeoutError: 如果请求超时
+            RuntimeError: 如果重试后仍失败
+        """
         if not history:
             raise ValueError("history is empty")
         messages = [
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
-        params: dict[str, object] = {
+        params = {
             "model": self.model,
             "messages": messages,
             "stream": True,
@@ -288,7 +364,7 @@ class OpenAi:
             try:
                 # 使用asyncio.wait_for添加超时
                 stream = await asyncio.wait_for(
-                    self.openai.chat.completions.create(**params),
+                    self.openai.chat.completions.create(**params),  # type: ignore
                     timeout=timeout_seconds,
                 )
                 return OpenAiAnswer(stream)
@@ -297,12 +373,10 @@ class OpenAi:
                     raise TimeoutError(
                         f"Request timed out after {timeout_seconds} seconds"
                     ) from None
-                else:
-                    await asyncio.sleep(retry_delay)
-            except Exception:
+                await asyncio.sleep(retry_delay)
+            except OpenAIError:
                 if attempt == max_retries - 1:
                     raise
-                else:
-                    await asyncio.sleep(retry_delay)
+                await asyncio.sleep(retry_delay)
         # 添加明确的返回语句
         raise RuntimeError("Failed to create OpenAI answer after retries")
