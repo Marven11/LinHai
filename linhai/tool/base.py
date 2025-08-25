@@ -1,3 +1,7 @@
+"""工具基础模块。
+
+包含工具定义、注册和调用相关的基类和函数。
+"""
 from typing import TypedDict, Callable, Any
 
 

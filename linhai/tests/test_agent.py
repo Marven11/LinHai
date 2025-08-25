@@ -57,7 +57,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         config: AgentConfig = {
             "system_prompt": "Test system prompt",
             "model": self.mock_llm,
-            "compress_threshold": 0.8,  # 添加缺失的必需字段
+            "compress_threshold_soft": 500,  # 使用正确的键
+            "compress_threshold_hard": 800,  # 使用正确的键
         }
         self.user_input_queue: "Queue[ChatMessage]" = Queue()
         self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()

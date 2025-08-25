@@ -1,3 +1,5 @@
+"""Prompts for LinHai agent."""
+
 DEFAULT_SYSTEM_PROMPT_ZH = """
 
 # AGENT PROFILE

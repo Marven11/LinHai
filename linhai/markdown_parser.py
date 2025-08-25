@@ -1,6 +1,8 @@
+"""Markdown解析模块，用于从Markdown文本中提取JSON代码块和工具调用。"""
+
 import json
-import mistune
 from typing import List, Dict, Any
+import mistune
 
 
 class CodeBlockRenderer(mistune.HTMLRenderer):

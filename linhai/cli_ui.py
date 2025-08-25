@@ -1,5 +1,6 @@
+"""Command-line interface for LinHai agent."""
 from asyncio import Queue
-from typing import List, Optional
+from typing import List, Optional, cast
 import asyncio
 
 from textual.app import App, ComposeResult
@@ -69,6 +70,7 @@ class MessageWidget(Static):
 
 
 class CLIApp(App):
+    """Textual-based CLI application for LinHai agent interaction."""
     CSS = """
     Screen {
         layout: vertical;
@@ -105,9 +107,9 @@ class CLIApp(App):
         self.tool_request_queue = tool_request_queue
         self.tool_confirmation_queue = tool_confirmation_queue
         self.current_response_buffer = ""
-        self.output_watcher_task = None
-        self.agent_task = None
-        self.tool_request_watcher_task = None
+        self.output_watcher_task: Optional[asyncio.Task] = None
+        self.agent_task: Optional[asyncio.Task] = None
+        self.tool_request_watcher_task: Optional[asyncio.Task] = None
         self.current_tool_request: Optional[ToolCallMessage] = None
 
     def compose(self) -> ComposeResult:
@@ -138,7 +140,7 @@ class CLIApp(App):
             else:
                 # 无效输入，提示重新输入
                 event.input.value = ""
-                self.query_one("#input").placeholder = (
+                cast(Input, self.query_one("#input")).placeholder = (
                     "请输入 'y' 或 'n' 来确认工具调用"
                 )
                 return
@@ -152,7 +154,7 @@ class CLIApp(App):
             # 重置当前工具请求
             self.current_tool_request = None
             event.input.value = ""
-            self.query_one("#input").placeholder = "输入消息..."
+            cast(Input, self.query_one("#input")).placeholder = "输入消息..."
             return
 
         if event.value:

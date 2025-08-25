@@ -1,10 +1,22 @@
-from linhai.tool.base import register_tool, ToolArgInfo
+"""文件操作工具模块，提供文件读写、内容替换等功能。"""
+
 from pathlib import Path
 import difflib
 import json
+from linhai.tool.base import register_tool, ToolArgInfo
 
 
 def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
+    """在内容中查找与搜索字符串最相似的部分。
+    
+    Args:
+        search_string: 要搜索的字符串
+        content: 要搜索的内容
+        top_n: 返回前N个最相似的结果
+    
+    Returns:
+        包含相似度、行号和内容的字典列表
+    """
 
     linenum = search_string.count("\n") + 1
     lines = content.splitlines()
@@ -41,14 +53,23 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
     required_args=["filepath"],
 )
 def read_file(filepath: str, show_line_numbers: bool = False) -> str:
+    """读取文件内容。
+
+    Args:
+        filepath: 文件路径
+        show_line_numbers: 是否显示行号
+
+    Returns:
+        文件内容字符串，包含路径信息
+    """
     file_path = Path(filepath)
     if not file_path.exists():
         return f"文件路径{file_path.as_posix()!r}不存在"
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
     try:
-        content = file_path.read_text()
-    except Exception as exc:
+        content = file_path.read_text(encoding='utf-8')
+    except OSError as exc:
         return f"发生错误: {exc!r}"
 
     if show_line_numbers:
@@ -75,10 +96,19 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> str:
     required_args=["filepath", "content"],
 )
 def write_file(filepath: str, content: str) -> str:
+    """写入内容到文件。
+
+    Args:
+        filepath: 文件路径
+        content: 要写入的内容
+
+    Returns:
+        成功或错误消息
+    """
     file_path = Path(filepath)
     try:
-        file_path.write_text(content)
-    except Exception as exc:
+        file_path.write_text(content, encoding='utf-8')
+    except OSError as exc:
         return f"写入文件时发生错误: {exc!r}"
     return f"成功写入文件: {file_path.as_posix()!r}"
 
@@ -93,11 +123,20 @@ def write_file(filepath: str, content: str) -> str:
     required_args=["filepath", "content"],
 )
 def append_file(filepath: str, content: str) -> str:
+    """追加内容到文件末尾。
+
+    Args:
+        filepath: 文件路径
+        content: 要追加的内容
+
+    Returns:
+        成功或错误消息
+    """
     file_path = Path(filepath)
     try:
-        with file_path.open("a+") as f:
+        with file_path.open("a+", encoding='utf-8') as f:
             f.write(content)
-    except Exception as exc:
+    except OSError as exc:
         return f"写入文件时发生错误: {exc!r}"
     return f"成功写入文件: {file_path.as_posix()!r}"
 
@@ -115,13 +154,23 @@ def append_file(filepath: str, content: str) -> str:
     required_args=["filepath", "old", "new"],
 )
 def replace_file_content(filepath: str, old: str, new: str) -> str:
+    """替换文件内容中的指定字符串。
+
+    Args:
+        filepath: 文件路径
+        old: 要替换的字符串
+        new: 新的字符串
+
+    Returns:
+        成功或错误消息
+    """
     file_path = Path(filepath)
     if not file_path.exists():
         return f"文件路径{file_path.as_posix()!r}不存在"
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
     try:
-        content = file_path.read_text()
+        content = file_path.read_text(encoding='utf-8')
         similar_info = json.dumps(
             find_most_similar_in_files(old, content), indent=2, ensure_ascii=False
         )
@@ -131,8 +180,8 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
                 f"内容类似的部分如下: {similar_info}"
             )
         new_content = content.replace(old, new)
-        file_path.write_text(new_content)
-    except Exception as exc:
+        file_path.write_text(new_content, encoding='utf-8')
+    except OSError as exc:
         return f"替换内容时发生错误: {exc!r}"
     return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，"
 
@@ -146,6 +195,14 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
     required_args=["dirpath"],
 )
 def list_files(dirpath: str) -> str:
+    """列出指定文件夹中的文件和子目录。
+
+    Args:
+        dirpath: 文件夹路径
+
+    Returns:
+        包含文件列表和子目录列表的字符串
+    """
     if dirpath == "./":
         dirpath = "."
     dir_path = Path(dirpath)
@@ -162,7 +219,7 @@ def list_files(dirpath: str) -> str:
 {"\n".join(files)}
 子目录列表:
 {"\n".join(dirs)}"""
-    except Exception as exc:
+    except OSError as exc:
         return f"列出文件时发生错误: {exc!r}"
 
 
@@ -175,8 +232,16 @@ def list_files(dirpath: str) -> str:
     required_args=["path"],
 )
 def get_absolute_path(path: str) -> str:
+    """获取路径的绝对路径。
+
+    Args:
+        path: 相对或绝对路径
+
+    Returns:
+        绝对路径字符串或错误消息
+    """
     try:
         abs_path = Path(path).absolute()
         return f"绝对路径: {abs_path.as_posix()}"
-    except Exception as exc:
+    except OSError as exc:
         return f"获取绝对路径时发生错误: {exc!r}"

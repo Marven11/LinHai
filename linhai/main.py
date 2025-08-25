@@ -1,4 +1,9 @@
-from typing import Sequence
+"""
+LinHai 主程序入口模块。
+
+提供命令行接口，支持运行测试、聊天和Agent模式。
+"""
+from typing import List
 import argparse
 import unittest
 import sys
@@ -21,7 +26,7 @@ def run_tests():
 
 async def chat_loop(llm: OpenAi):
     """与LLM进行交互式聊天"""
-    history: Sequence[Message] = []
+    history: List[Message] = []
 
     print("输入'quit'退出聊天")
     while True:
@@ -45,11 +50,12 @@ async def chat_loop(llm: OpenAi):
 
 
 def main():
+    """主函数，解析命令行参数并执行相应命令。"""
     parser = argparse.ArgumentParser(description="LinHai 主程序")
     subparsers = parser.add_subparsers(dest="command", required=True, help="可用命令")
 
     # 添加test命令
-    test_parser = subparsers.add_parser("test", help="运行单元测试")
+    subparsers.add_parser("test", help="运行单元测试")
 
     # 添加chat命令
     chat_parser = subparsers.add_parser("chat", help="与LLM聊天")

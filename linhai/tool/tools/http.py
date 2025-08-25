@@ -1,7 +1,9 @@
-from linhai.tool.base import register_tool
-import requests
-from typing import Optional
+"""HTTP工具模块，提供发送HTTP请求的功能。"""
 
+from typing import Optional
+import requests
+
+from linhai.tool.base import register_tool
 
 @register_tool(
     name="http_request",
@@ -27,8 +29,8 @@ def http_request(
     """
     try:
         response = requests.request(
-            method=method, url=url, params=params, headers=headers, data=data
+            method=method, url=url, params=params, headers=headers, data=data, timeout=10
         )
         return response.text
-    except Exception as e:
+    except requests.RequestException as e:
         return f"请求失败: {str(e)}"

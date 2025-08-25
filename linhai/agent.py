@@ -40,6 +40,7 @@ WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 class CompressRequest(Message):
     """压缩请求消息，用于请求压缩历史消息。"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, messages_summerization: str):
@@ -57,6 +58,7 @@ class CompressRequest(Message):
 
 class RuntimeMessage(Message):
     """运行时消息，用于向LLM传递运行时信息。"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, message: str):
@@ -68,6 +70,7 @@ class RuntimeMessage(Message):
 
 class DestroyedRuntimeMessage(Message):
     """被截断的运行时消息，表示消息已被截断。"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self):
@@ -94,6 +97,7 @@ class AgentConfig(TypedDict):
 
 class GlobalMemory:
     """全局记忆类，用于读取和呈现全局记忆文件内容。"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, filepath: Path):
@@ -127,7 +131,7 @@ class GlobalMemory:
 文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
 """,
             }
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except (IOError, OSError) as e:
             return {
                 "role": "system",
                 "content": f"""
@@ -225,7 +229,7 @@ class Agent:
                 await self.handle_messages([cast(ChatMessage, msg)])
             except QueueEmpty:
                 logger.info("用户输入队列已关闭")
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except (QueueEmpty, RuntimeError) as e:
                 logger.error("处理消息时出错: %s", str(e))
                 self.state = "paused"
                 raise RuntimeError("处理消息时出错") from e
@@ -261,7 +265,7 @@ class Agent:
             await self.handle_messages([cast(ChatMessage, msg)])
         except QueueEmpty:
             logger.info("用户输入队列已关闭")
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except (RuntimeError, asyncio.CancelledError) as e:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
 
@@ -328,7 +332,7 @@ class Agent:
                     )
                 )
                 return
-            elif len(scores_data) != 1:
+            if len(scores_data) != 1:
                 self.messages.append(
                     RuntimeMessage("数据数量有误，你应该重新开启压缩历史流程")
                 )
@@ -441,9 +445,7 @@ class Agent:
             and self.cheap_llm_remaining_messages == 0
         ):
             self.messages.append(
-                RuntimeMessage(
-                    "提醒：读取文件时建议使用廉价LLM以节省成本。"
-                )
+                RuntimeMessage("提醒：读取文件时建议使用廉价LLM以节省成本。")
             )
 
         # 廉价LLM模式下限制工具调用：只允许读取相关工具
@@ -478,7 +480,7 @@ class Agent:
                 if self.state == "waiting_user":
                     self.state = "working"
                 return False  # 不需要早期返回
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))
@@ -523,7 +525,7 @@ class Agent:
                 if self.state == "waiting_user":
                     self.state = "working"
                 return False  # 不需要早期返回
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))
@@ -561,8 +563,7 @@ class Agent:
         """
         if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
             return self.config["cheap_model"]
-        else:
-            return self.config["model"]
+        return self.config["model"]
 
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False

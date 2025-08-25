@@ -1,3 +1,7 @@
+"""工具模块主文件。
+
+包含工具消息类和管理器，用于处理工具调用请求和返回结果。
+"""
 import json
 from typing import cast
 
@@ -45,7 +49,6 @@ class ToolManager:
 
     def __init__(self):
         """初始化工具管理器"""
-        pass
 
     async def process_tool_call(self, tool_call: ToolCallMessage) -> Message:
         """处理单个工具调用请求并返回结果
@@ -76,5 +79,5 @@ class ToolManager:
 
         except json.JSONDecodeError as e:
             return ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))

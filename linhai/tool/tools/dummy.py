@@ -1,3 +1,8 @@
+"""虚拟工具模块，提供与Agent流程相关的特殊工具函数。
+
+这些工具函数通常由Agent内部处理，不会实际执行外部操作。
+"""
+
 from linhai.tool.base import register_tool, ToolArgInfo
 
 # 调用会被agent拦截的，和agent运行流程相关的tool
@@ -14,6 +19,13 @@ from linhai.tool.base import register_tool, ToolArgInfo
     required_args=[],
 )
 def compress_history() -> str:
+    """压缩历史消息工具函数。
+    
+    此函数由Agent内部处理，用于触发历史压缩流程。
+    
+    Returns:
+        str: 空字符串，实际处理由Agent完成。
+    """
     return ""
 
 
@@ -24,6 +36,13 @@ def compress_history() -> str:
     required_args=[],
 )
 def get_token_usage() -> str:
+    """获取token使用情况工具函数。
+    
+    此函数由Agent内部处理，用于获取当前token用量。
+    
+    Returns:
+        str: 空字符串，实际处理由Agent完成。
+    """
     return ""
 
 
@@ -34,4 +53,15 @@ def get_token_usage() -> str:
     required_args=["message_count"],
 )
 def switch_to_cheap_llm(message_count: int) -> str:
+    """切换到廉价LLM模式工具函数。
+    
+    此函数由Agent内部处理，用于切换LLM模式。
+    
+    Args:
+        message_count: 要使用廉价LLM的消息数量。
+    
+    Returns:
+        str: 空字符串，实际处理由Agent完成。
+    """
+    _ = message_count  # 避免未使用参数警告
     return ""

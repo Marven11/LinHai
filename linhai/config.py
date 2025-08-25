@@ -1,3 +1,4 @@
+"""Configuration module for LinHai agent."""
 from typing import TypedDict, cast, Union
 import tomllib
 from pathlib import Path
@@ -7,12 +8,14 @@ from .exceptions import ConfigValidationError
 
 
 class CheapLLMConfig(TypedDict):
+    """Configuration for cheap LLM mode."""
     base_url: str
     api_key: str
     model: str
 
 
 class LLMConfig(TypedDict):
+    """LLM配置类型定义。"""
     base_url: str
     api_key: str
     model: str
@@ -20,10 +23,12 @@ class LLMConfig(TypedDict):
 
 
 class MemoryConfig(TypedDict):
+    """内存配置类型定义。"""
     file_path: str
 
 
 class Config(TypedDict):
+    """主配置类型定义。"""
     llm: LLMConfig
     memory: MemoryConfig
     compress_threshold_soft: float
