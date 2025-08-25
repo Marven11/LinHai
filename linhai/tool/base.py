@@ -82,11 +82,16 @@ def get_tools_info() -> list[dict]:
     """
     tool_info_list = []
     for tool in tools.values():
-        parameters = {"type": "object", "properties": {}, "required": tool["required"]}
+        properties: dict[str, Any] = {}
+        parameters = {
+            "type": "object",
+            "properties": properties,
+            "required": tool["required"],
+        }
 
         for arg_name, arg_info in tool["args"].items():
             # 直接使用类型字符串作为OpenAI格式的type字段
-            parameters["properties"][arg_name] = {
+            properties[arg_name] = {
                 "description": arg_info["desc"],
                 "type": arg_info["type"],  # 直接使用原始类型字符串
             }

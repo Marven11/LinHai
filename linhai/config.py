@@ -6,10 +6,17 @@ from urllib.parse import urlparse
 from .exceptions import ConfigValidationError
 
 
+class CheapLLMConfig(TypedDict):
+    base_url: str
+    api_key: str
+    model: str
+
+
 class LLMConfig(TypedDict):
     base_url: str
     api_key: str
     model: str
+    cheap: CheapLLMConfig
 
 
 class MemoryConfig(TypedDict):
@@ -19,8 +26,8 @@ class MemoryConfig(TypedDict):
 class Config(TypedDict):
     llm: LLMConfig
     memory: MemoryConfig
-    compress_threshold: float
-    compress_threshold: float
+    compress_threshold_soft: float
+    compress_threshold_hard: float
 
 
 def validate_config(config: Config) -> None:
@@ -50,6 +57,16 @@ def validate_config(config: Config) -> None:
     # 验证model
     if not llm_config["model"]:
         raise ConfigValidationError("model cannot be empty")
+
+    # 验证cheap配置（如果存在）
+    if "cheap" in llm_config:
+        cheap_config = llm_config["cheap"]
+        if not cheap_config.get("base_url"):
+            raise ConfigValidationError("cheap.base_url cannot be empty")
+        if not cheap_config.get("api_key"):
+            raise ConfigValidationError("cheap.api_key cannot be empty")
+        if not cheap_config.get("model"):
+            raise ConfigValidationError("cheap.model cannot be empty")
 
 
 def load_config(config_path: Union[str, Path, None] = None) -> Config:

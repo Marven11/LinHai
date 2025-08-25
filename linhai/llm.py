@@ -268,7 +268,7 @@ class OpenAi:
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
-        params = {
+        params: dict[str, object] = {
             "model": self.model,
             "messages": messages,
             "stream": True,
@@ -304,3 +304,5 @@ class OpenAi:
                     raise
                 else:
                     await asyncio.sleep(retry_delay)
+        # 添加明确的返回语句
+        raise RuntimeError("Failed to create OpenAI answer after retries")

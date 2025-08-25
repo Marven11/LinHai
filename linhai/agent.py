@@ -1,4 +1,5 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
+
 from pathlib import Path
 from typing import TypedDict, cast, NotRequired
 from reprlib import Repr
@@ -97,7 +98,7 @@ class GlobalMemory:
     def to_llm_message(self) -> LanguageModelMessage:
         """
         将全局记忆转换为LLM消息格式。
-        
+
         返回:
             LanguageModelMessage: 包含全局记忆内容的系统消息
         """
@@ -179,7 +180,9 @@ class Agent:
         # 加载全局记忆
         memory_config = config.get("memory", {})
         memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
-        self.messages.append(GlobalMemory(memory_filepath))  # 总是添加，无论文件是否存在
+        self.messages.append(
+            GlobalMemory(memory_filepath)
+        )  # 总是添加，无论文件是否存在
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -192,7 +195,7 @@ class Agent:
     async def state_waiting_user(self):
         """
         处理等待用户状态。
-        
+
         在这个状态下，Agent会等待用户输入消息，然后处理这些消息。
         """
         logger.info("Agent进入等待用户状态")
@@ -206,7 +209,7 @@ class Agent:
     async def state_working(self):
         """
         处理自动运行状态。
-        
+
         在这个状态下，Agent会自动处理消息并生成响应，
         同时监控token使用量并在需要时触发压缩。
         """
@@ -243,7 +246,7 @@ class Agent:
     async def state_paused(self):
         """
         处理暂停运行状态。
-        
+
         在这个状态下，Agent会等待用户输入来恢复运行，
         通常用于处理错误或异常情况后的恢复。
         """
@@ -261,10 +264,13 @@ class Agent:
     def destroy_runtime_messages(self) -> bool:
         """
         销毁运行时消息以减少上下文长度。
-        
+
         返回:
             bool: 是否成功销毁了消息
         """
+        self.messages = [
+            msg for msg in self.messages if not isinstance(msg, DestroyedRuntimeMessage)
+        ]
         should_destroy_info: list[bool] = [
             (not isinstance(msg, RuntimeMessage) and idx < len(self.messages) / 2)
             for idx, msg in enumerate(self.messages)
@@ -285,7 +291,7 @@ class Agent:
     async def compress(self):
         """
         压缩历史消息以减少上下文长度。
-        
+
         通过请求LLM对历史消息进行评分，然后删除评分较低的消息
         来减少上下文长度，从而节省token使用量。
         """
@@ -372,10 +378,10 @@ class Agent:
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
-        
+
         参数:
             tool_call: 工具调用消息
-            
+
         返回:
             bool: 是否需要进行早期返回
         """
@@ -541,10 +547,10 @@ class Agent:
     async def handle_messages(self, messages: list[Message]):
         """
         处理新的消息并将其添加到消息历史中。
-        
+
         参数:
             messages: 要处理的消息列表
-        
+
         返回:
             生成的响应
         """
@@ -558,7 +564,7 @@ class Agent:
     async def _select_model(self) -> LanguageModel:
         """
         根据廉价LLM剩余消息计数选择合适的模型。
-        
+
         返回:
             LanguageModel: 选择的语言模型实例
         """
@@ -572,11 +578,11 @@ class Agent:
     ) -> Answer:
         """
         生成回复并发送给用户。
-        
+
         参数:
             enable_compress: 是否启用压缩功能
             disable_waiting_user_warning: 是否禁用等待用户警告
-        
+
         返回:
             Answer: 生成的回答对象
         """
@@ -685,7 +691,7 @@ class Agent:
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。
-        
+
         根据当前状态调用相应的状态处理函数，
         并处理异常和取消事件。
         """
@@ -760,16 +766,12 @@ def create_agent(
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
         "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
-    ).replace(
-        "{|CURRENT_TIME|}", current_time
-    )
+    ).replace("{|CURRENT_TIME|}", current_time)
 
     # 确保 config 是字典类型
     config_dict = cast(dict, config)
     # 解析tool_confirmation配置
-    tool_confirmation_config = config_dict.get(
-        "agent", {}
-    ).get("tool_confirmation", {})
+    tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
 
     agent_config: AgentConfig = {
         "system_prompt": system_prompt,
