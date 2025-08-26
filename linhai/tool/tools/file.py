@@ -320,3 +320,101 @@ def sed_file(filepath: str, expression: str) -> str:
         return f"sed执行错误: {e.stderr}"
     except Exception as e:
         return f"执行sed文件修改时发生错误: {str(e)}"
+
+
+@register_tool(
+    name="show_file_with_git_changes",
+    desc="显示文件内容并高亮git修改状态（新增或修改的行）",
+    args={
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+    },
+    required_args=["filepath"],
+)
+def show_file_with_git_changes(filepath: str) -> str:
+    """显示文件内容并标记git修改状态。
+    
+    Args:
+        filepath: 文件路径
+        
+    Returns:
+        文件内容字符串，包含git修改状态标记
+    """
+    file_path = Path(filepath)
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
+    
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return f"发生错误: {exc!r}"
+    
+    # 获取git修改状态
+    added_lines = set()
+    modified_lines = set()
+    
+    try:
+        import subprocess
+        # 获取git diff输出
+        result = subprocess.run(
+            ["git", "diff", "--unified=0", "--", file_path.as_posix()],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and result.stdout:
+            # 解析git diff输出
+            lines = result.stdout.splitlines()
+            for line in lines:
+                if line.startswith("@@"):
+                    # 解析@@ -a,b +c,d @@格式，获取新版本的行号
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        new_part = parts[2]  # 例如 "+1,5"
+                        if new_part.startswith("+"):
+                            line_info = new_part[1:].split(",")  # 移除"+"，分割
+                            start_line = int(line_info[0])
+                            line_count = int(line_info[1]) if len(line_info) > 1 else 1
+                            for i in range(start_line, start_line + line_count):
+                                added_lines.add(i)  # 标记为新增行
+        
+        # 检查git status获取修改状态（对于已跟踪但未暂存的文件）
+        status_result = subprocess.run(
+            ["git", "status", "--porcelain", "--", file_path.as_posix()],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if status_result.returncode == 0 and status_result.stdout:
+            # 如果状态显示修改（如 " M file.txt"），则所有行都可能被修改
+            status_line = status_result.stdout.strip()
+            if status_line.startswith(" M") or status_line.startswith("MM"):
+                # 标记所有行为修改（简化处理，实际可能需要更精细的diff）
+                lines = content.splitlines()
+                for i in range(1, len(lines) + 1):
+                    modified_lines.add(i)
+    
+    except Exception as e:
+        # 如果git命令失败或不在git仓库中，忽略错误
+        return f"无法获取git状态: {str(e)}。文件内容:\n{content}"
+    
+    # 格式化输出，添加状态标记
+    lines = content.splitlines()
+    formatted_lines = []
+    for i, line in enumerate(lines, 1):
+        if i in added_lines:
+            prefix = "+ "  # 新增行
+        elif i in modified_lines:
+            prefix = "M "  # 修改行
+        else:
+            prefix = "  "  # 未修改行
+        formatted_lines.append(f"{prefix}{line}")
+    
+    formatted_content = "\n".join(formatted_lines)
+    
+    return f"""\
+文件路径为: {file_path.as_posix()!r}
+Git修改状态: '+'表示新增行, 'M'表示修改行
+文件内容如下，不要复读文件内容:
+{formatted_content}"""
