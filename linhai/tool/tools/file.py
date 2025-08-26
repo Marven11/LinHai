@@ -4,16 +4,17 @@ from pathlib import Path
 import difflib
 import json
 from linhai.tool.base import register_tool, ToolArgInfo
+import subprocess
 
 
 def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
     """在内容中查找与搜索字符串最相似的部分。
-    
+
     Args:
         search_string: 要搜索的字符串
         content: 要搜索的内容
         top_n: 返回前N个最相似的结果
-    
+
     Returns:
         包含相似度、行号和内容的字典列表
     """
@@ -68,7 +69,7 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> str:
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
     try:
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
     except OSError as exc:
         return f"发生错误: {exc!r}"
 
@@ -107,7 +108,7 @@ def write_file(filepath: str, content: str) -> str:
     """
     file_path = Path(filepath)
     try:
-        file_path.write_text(content, encoding='utf-8')
+        file_path.write_text(content, encoding="utf-8")
     except OSError as exc:
         return f"写入文件时发生错误: {exc!r}"
     return f"成功写入文件: {file_path.as_posix()!r}"
@@ -134,7 +135,7 @@ def append_file(filepath: str, content: str) -> str:
     """
     file_path = Path(filepath)
     try:
-        with file_path.open("a+", encoding='utf-8') as f:
+        with file_path.open("a+", encoding="utf-8") as f:
             f.write(content)
     except OSError as exc:
         return f"写入文件时发生错误: {exc!r}"
@@ -170,7 +171,7 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
     try:
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
         similar_info = json.dumps(
             find_most_similar_in_files(old, content), indent=2, ensure_ascii=False
         )
@@ -180,7 +181,7 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
                 f"内容类似的部分如下: {similar_info}"
             )
         new_content = content.replace(old, new)
-        file_path.write_text(new_content, encoding='utf-8')
+        file_path.write_text(new_content, encoding="utf-8")
     except OSError as exc:
         return f"替换内容时发生错误: {exc!r}"
     return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，"
@@ -245,3 +246,77 @@ def get_absolute_path(path: str) -> str:
         return f"绝对路径: {abs_path.as_posix()}"
     except OSError as exc:
         return f"获取绝对路径时发生错误: {exc!r}"
+
+
+@register_tool(
+    name="sed_expression",
+    desc="执行sed表达式并查看输出结果",
+    args={
+        "expression": ToolArgInfo(desc="sed表达式，如's/old/new/g'", type="str"),
+        "input_text": ToolArgInfo(desc="输入文本", type="str"),
+    },
+    required_args=["expression", "input_text"],
+)
+def sed_expression(expression: str, input_text: str) -> str:
+    """执行sed表达式并返回结果。
+
+    Args:
+        expression: sed表达式
+        input_text: 输入文本
+
+    Returns:
+        处理后的文本或错误消息
+    """
+    try:
+        result = subprocess.run(
+            ["sed", expression],
+            input=input_text,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        return f"sed表达式执行结果:\n{result.stdout}"
+    except subprocess.CalledProcessError as e:
+        return f"sed执行错误: {e.stderr}"
+    except Exception as e:
+        return f"执行sed表达式时发生错误: {str(e)}"
+
+
+@register_tool(
+    name="sed_file",
+    desc="使用sed表达式直接修改文件",
+    args={
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "expression": ToolArgInfo(desc="sed表达式，如's/old/new/g'", type="str"),
+    },
+    required_args=["filepath", "expression"],
+)
+def sed_file(filepath: str, expression: str) -> str:
+    """使用sed表达式直接修改文件。
+
+    Args:
+        filepath: 文件路径
+        expression: sed表达式
+
+    Returns:
+        修改结果或错误消息
+    """
+    file_path = Path(filepath)
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
+
+    try:
+        # 使用sed -i 进行原地修改
+        result = subprocess.run(
+            ["sed", "-i", expression, file_path.as_posix()],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return f"文件{file_path.as_posix()!r}已使用sed表达式'{expression}'成功修改 {result.returncode=}"
+    except subprocess.CalledProcessError as e:
+        return f"sed执行错误: {e.stderr}"
+    except Exception as e:
+        return f"执行sed文件修改时发生错误: {str(e)}"

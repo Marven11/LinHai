@@ -1,7 +1,7 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 from pathlib import Path
-from typing import TypedDict, cast, NotRequired
+from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any
 from reprlib import Repr
 import asyncio
 import logging
@@ -143,6 +143,99 @@ class GlobalMemory:
             }
 
 
+# 生命周期回调类型定义
+from typing import TypeAlias
+
+BeforeMessageGenerationCallback: TypeAlias = Callable[
+    ["Agent", bool, bool],  # agent, enable_compress, disable_waiting_user_warning
+    Awaitable[None]
+]
+
+AfterMessageGenerationCallback: TypeAlias = Callable[
+    ["Agent", Answer, str, list[dict]],  # agent, answer, full_response, tool_calls
+    Awaitable[None]
+]
+
+BeforeToolCallCallback: TypeAlias = Callable[
+    ["Agent", ToolCallMessage],  # agent, tool_call
+    Awaitable[None]
+]
+
+AfterToolCallCallback: TypeAlias = Callable[
+    ["Agent", ToolCallMessage, Any, bool],  # agent, tool_call, tool_result, success
+    Awaitable[None]
+]
+
+
+
+
+class Lifecycle:
+    """生命周期回调管理器，使用明确的参数传递。"""
+
+    def __init__(self):
+        self._before_message_generation_callbacks: list[BeforeMessageGenerationCallback] = []
+        self._after_message_generation_callbacks: list[AfterMessageGenerationCallback] = []
+        self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
+        self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
+
+
+    def register_before_message_generation(self, callback: BeforeMessageGenerationCallback):
+        """注册消息生成前的回调。"""
+        self._before_message_generation_callbacks.append(callback)
+
+    def register_after_message_generation(self, callback: AfterMessageGenerationCallback):
+        """注册消息生成后的回调。"""
+        self._after_message_generation_callbacks.append(callback)
+
+    def register_before_tool_call(self, callback: BeforeToolCallCallback):
+        """注册工具调用前的回调。"""
+        self._before_tool_call_callbacks.append(callback)
+
+    def register_after_tool_call(self, callback: AfterToolCallCallback):
+        """注册工具调用后的回调。"""
+        self._after_tool_call_callbacks.append(callback)
+
+
+
+    async def trigger_before_message_generation(
+        self, agent: "Agent", enable_compress: bool, disable_waiting_user_warning: bool
+    ):
+        """触发消息生成前的事件。"""
+        for callback in self._before_message_generation_callbacks:
+            try:
+                await callback(agent, enable_compress, disable_waiting_user_warning)
+            except Exception as e:
+                logger.error("Before message generation callback error: %s", e)
+
+    async def trigger_after_message_generation(
+        self, agent: "Agent", answer: Answer, full_response: str, tool_calls: list[dict]
+    ):
+        """触发消息生成后的事件。"""
+        for callback in self._after_message_generation_callbacks:
+            try:
+                await callback(agent, answer, full_response, tool_calls)
+            except Exception as e:
+                logger.error("After message generation callback error: %s", e)
+
+    async def trigger_before_tool_call(self, agent: "Agent", tool_call: ToolCallMessage):
+        """触发工具调用前的事件。"""
+        for callback in self._before_tool_call_callbacks:
+            try:
+                await callback(agent, tool_call)
+            except Exception as e:
+                logger.error("Before tool call callback error: %s", e)
+
+    async def trigger_after_tool_call(
+        self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any, success: bool
+    ):
+        """触发工具调用后的事件。"""
+        for callback in self._after_tool_call_callbacks:
+            try:
+                await callback(agent, tool_call, tool_result, success)
+            except Exception as e:
+                logger.error("After tool call callback error: %s", e)
+
+
 class Agent:
     """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
 
@@ -185,6 +278,9 @@ class Agent:
 
         # 廉价LLM状态跟踪
         self.cheap_llm_remaining_messages = 0
+
+        # 生命周期回调管理器
+        self.lifecycle = Lifecycle()
 
         # 加载全局记忆
         memory_config = config.get("memory", {})
@@ -465,10 +561,16 @@ class Agent:
                 self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
                 return False
 
+        # 触发工具调用前的生命周期事件
+        await self.lifecycle.trigger_before_tool_call(self, tool_call)
+
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
             try:
                 tool_result = await self.tool_manager.process_tool_call(tool_call)
+                # 触发工具调用后的生命周期事件（成功）
+                await self.lifecycle.trigger_after_tool_call(self, tool_call, tool_result, True)
+                
                 self.messages.append(
                     RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
                 )
@@ -477,6 +579,9 @@ class Agent:
                     self.state = "working"
                 return False  # 不需要早期返回
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
+                # 触发工具调用后的生命周期事件（失败）
+                await self.lifecycle.trigger_after_tool_call(self, tool_call, e, False)
+                
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))
@@ -585,6 +690,11 @@ class Agent:
 
         self.current_enable_compress = enable_compress
 
+        # 触发消息生成前的生命周期事件
+        await self.lifecycle.trigger_before_message_generation(
+            self, enable_compress, disable_waiting_user_warning
+        )
+
         # 选择模型
         model = await self._select_model()
 
@@ -621,12 +731,6 @@ class Agent:
         full_response = chat_message.message
         self.messages.append(chat_message)
 
-        # 减少廉价LLM剩余消息计数
-        if self.cheap_llm_remaining_messages > 0:
-            self.cheap_llm_remaining_messages -= 1
-            if self.cheap_llm_remaining_messages == 0:
-                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
-
         tool_calls = extract_tool_calls(full_response)
 
         for call in tool_calls:
@@ -643,6 +747,12 @@ class Agent:
                 traceback.print_exc()
                 continue
 
+        # 减少廉价LLM剩余消息计数
+        if self.cheap_llm_remaining_messages > 0:
+            self.cheap_llm_remaining_messages -= 1
+            if self.cheap_llm_remaining_messages == 0:
+                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
+
         if WAITING_USER_MARKER in full_response:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
@@ -651,8 +761,7 @@ class Agent:
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
                 )
-            else:
-                self.state = "waiting_user"
+            self.state = "waiting_user"
 
         # 检查是否同时调用工具和等待用户message_count
         if not disable_waiting_user_warning:
@@ -673,6 +782,11 @@ class Agent:
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
+
+        # 触发消息生成后的生命周期事件
+        await self.lifecycle.trigger_after_message_generation(
+            self, answer, full_response, tool_calls
+        )
 
         return answer
 
