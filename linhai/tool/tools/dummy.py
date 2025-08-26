@@ -65,3 +65,20 @@ def switch_to_cheap_llm(message_count: int) -> str:
     """
     _ = message_count  # 避免未使用参数警告
     return ""
+
+
+@register_tool(
+    name="thanox_history",
+    desc="随机删除一半消息（不包括前5条系统消息）。调用这个工具来触发随机删除流程。",
+    args={},
+    required_args=[],
+)
+def thanox_history() -> str:
+    """随机删除历史消息工具函数。
+    
+    此函数由Agent内部处理，用于触发随机删除流程。
+    
+    Returns:
+        str: 空字符串，实际处理由Agent完成。
+    """
+    return ""

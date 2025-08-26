@@ -8,6 +8,7 @@ import logging
 import json
 import traceback
 import datetime
+import random
 from asyncio import Queue, QueueEmpty
 
 from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
@@ -239,7 +240,6 @@ class Agent:
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_soft", int(65536 * 0.5)
         ):
-            # if not self.destroy_runtime_messages():
             self.messages.append(
                 RuntimeMessage(
                     f"现在的Token用量为{self.last_token_usage}，做完这个步骤就压缩历史吧"
@@ -249,7 +249,8 @@ class Agent:
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_hard", int(65536 * 0.8)
         ):
-            await self.compress()
+            # await self.compress()
+            await self.thanox_history()
 
     async def state_paused(self):
         """
@@ -268,33 +269,6 @@ class Agent:
         except (RuntimeError, asyncio.CancelledError) as e:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
-
-    def destroy_runtime_messages(self) -> bool:
-        """
-        销毁运行时消息以减少上下文长度。
-
-        返回:
-            bool: 是否成功销毁了消息
-        """
-        self.messages = [
-            msg for msg in self.messages if not isinstance(msg, DestroyedRuntimeMessage)
-        ]
-        should_destroy_info: list[bool] = [
-            (not isinstance(msg, RuntimeMessage) and idx < len(self.messages) / 2)
-            for idx, msg in enumerate(self.messages)
-        ]
-        if sum(should_destroy_info) < 10:
-            return False
-        self.messages = [
-            msg if not should_destroy else DestroyedRuntimeMessage()
-            for msg, should_destroy in zip(self.messages, should_destroy_info)
-        ]
-        self.messages.append(
-            RuntimeMessage(
-                f"因为历史上下文过长，已经删除了{sum(should_destroy_info)}条消息"
-            )
-        )
-        return True
 
     async def compress(self):
         """
@@ -371,6 +345,24 @@ class Agent:
         except Exception as exc:
             self.messages.append(RuntimeMessage(f"错误：{exc!r}"))
 
+    async def thanox_history(self):
+        """随机删除一半消息（不包括前5条系统消息）"""
+        if len(self.messages) <= 10:
+            return
+
+        indices_to_delete = random.sample(
+            range(5, len(self.messages)), len(self.messages) // 2
+        )
+
+        self.messages = [
+            msg if idx not in indices_to_delete else DestroyedRuntimeMessage()
+            for idx, msg in enumerate(self.messages)
+        ]
+
+        self.messages.append(
+            RuntimeMessage(f"thanox_history: 随机删除了{len(indices_to_delete)}条消息")
+        )
+
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
@@ -390,6 +382,10 @@ class Agent:
                         "当前禁止调用compress_history工具，你是不是弄错什么了？"
                     )
                 )
+            return True
+
+        if tool_call.function_name == "thanox_history":
+            await self.thanox_history()
             return True
         if tool_call.function_name == "get_token_usage":
             if self.last_token_usage is not None:
