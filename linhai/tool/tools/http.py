@@ -5,6 +5,7 @@ import requests
 
 from linhai.tool.base import register_tool
 
+
 @register_tool(
     name="http_request",
     desc="使用requests库发送HTTP请求并获取响应内容",
@@ -29,7 +30,12 @@ def http_request(
     """
     try:
         response = requests.request(
-            method=method, url=url, params=params, headers=headers, data=data, timeout=10
+            method=method,
+            url=url,
+            params=params,
+            headers=headers,
+            data=data,
+            timeout=10,
         )
         return response.text
     except requests.RequestException as e:

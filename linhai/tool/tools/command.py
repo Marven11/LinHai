@@ -135,3 +135,57 @@ def change_directory(directory: str) -> str:
         return f"Changed directory to: {directory}"
     except OSError as e:
         return f"Error changing directory: {str(e)}"
+
+
+@register_tool(
+    name="show_git_changes",
+    desc="显示git修改，通过展示git的输出展示文件什么地方被修改",
+    args={
+        "filepath": ToolArgInfo(
+            desc="文件路径，必须指定", type="str"
+        ),
+    },
+    required_args=["filepath"],
+)
+def show_git_changes(filepath: str = "") -> str:
+    """显示git修改，展示文件的修改内容。
+
+    Args:
+        filepath: 文件路径(可选)，不指定则显示所有修改
+
+    Returns:
+        git diff输出或错误消息
+    """
+    try:
+        # 构建git diff命令
+        if filepath:
+            cmd = f"git diff -- {filepath}"
+        else:
+            cmd = "git diff"
+
+        # 执行git diff命令
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            if "not a git repository" in result.stderr:
+                return "当前目录不是git仓库"
+            return f"git命令执行错误: {result.stderr}"
+
+        if not result.stdout.strip():
+            if filepath:
+                return f"文件{filepath!r}没有未暂存的修改"
+            else:
+                return "没有未暂存的修改"
+
+        return result.stdout
+
+    except subprocess.TimeoutExpired:
+        return "git命令执行超时"
+    except Exception as e:
+        return f"执行git命令时发生错误: {str(e)}"

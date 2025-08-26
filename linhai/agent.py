@@ -148,42 +148,46 @@ from typing import TypeAlias
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[
     ["Agent", bool, bool],  # agent, enable_compress, disable_waiting_user_warning
-    Awaitable[None]
+    Awaitable[None],
 ]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
     ["Agent", Answer, str, list[dict]],  # agent, answer, full_response, tool_calls
-    Awaitable[None]
+    Awaitable[None],
 ]
 
 BeforeToolCallCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage],  # agent, tool_call
-    Awaitable[None]
+    ["Agent", ToolCallMessage], Awaitable[None]  # agent, tool_call
 ]
 
 AfterToolCallCallback: TypeAlias = Callable[
     ["Agent", ToolCallMessage, Any, bool],  # agent, tool_call, tool_result, success
-    Awaitable[None]
+    Awaitable[None],
 ]
-
-
 
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
 
     def __init__(self):
-        self._before_message_generation_callbacks: list[BeforeMessageGenerationCallback] = []
-        self._after_message_generation_callbacks: list[AfterMessageGenerationCallback] = []
+        self._before_message_generation_callbacks: list[
+            BeforeMessageGenerationCallback
+        ] = []
+        self._after_message_generation_callbacks: list[
+            AfterMessageGenerationCallback
+        ] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
 
-
-    def register_before_message_generation(self, callback: BeforeMessageGenerationCallback):
+    def register_before_message_generation(
+        self, callback: BeforeMessageGenerationCallback
+    ):
         """注册消息生成前的回调。"""
         self._before_message_generation_callbacks.append(callback)
 
-    def register_after_message_generation(self, callback: AfterMessageGenerationCallback):
+    def register_after_message_generation(
+        self, callback: AfterMessageGenerationCallback
+    ):
         """注册消息生成后的回调。"""
         self._after_message_generation_callbacks.append(callback)
 
@@ -194,8 +198,6 @@ class Lifecycle:
     def register_after_tool_call(self, callback: AfterToolCallCallback):
         """注册工具调用后的回调。"""
         self._after_tool_call_callbacks.append(callback)
-
-
 
     async def trigger_before_message_generation(
         self, agent: "Agent", enable_compress: bool, disable_waiting_user_warning: bool
@@ -217,7 +219,9 @@ class Lifecycle:
             except Exception as e:
                 logger.error("After message generation callback error: %s", e)
 
-    async def trigger_before_tool_call(self, agent: "Agent", tool_call: ToolCallMessage):
+    async def trigger_before_tool_call(
+        self, agent: "Agent", tool_call: ToolCallMessage
+    ):
         """触发工具调用前的事件。"""
         for callback in self._before_tool_call_callbacks:
             try:
@@ -226,7 +230,11 @@ class Lifecycle:
                 logger.error("Before tool call callback error: %s", e)
 
     async def trigger_after_tool_call(
-        self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any, success: bool
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
     ):
         """触发工具调用后的事件。"""
         for callback in self._after_tool_call_callbacks:
@@ -569,8 +577,10 @@ class Agent:
             try:
                 tool_result = await self.tool_manager.process_tool_call(tool_call)
                 # 触发工具调用后的生命周期事件（成功）
-                await self.lifecycle.trigger_after_tool_call(self, tool_call, tool_result, True)
-                
+                await self.lifecycle.trigger_after_tool_call(
+                    self, tool_call, tool_result, True
+                )
+
                 self.messages.append(
                     RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
                 )
@@ -581,7 +591,7 @@ class Agent:
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 # 触发工具调用后的生命周期事件（失败）
                 await self.lifecycle.trigger_after_tool_call(self, tool_call, e, False)
-                
+
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))

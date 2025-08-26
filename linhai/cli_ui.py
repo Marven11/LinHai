@@ -1,4 +1,5 @@
 """Command-line interface for LinHai agent."""
+
 from asyncio import Queue
 from typing import List, Optional, cast
 import asyncio
@@ -71,6 +72,7 @@ class MessageWidget(Static):
 
 class CLIApp(App):
     """Textual-based CLI application for LinHai agent interaction."""
+
     CSS = """
     Screen {
         layout: vertical;

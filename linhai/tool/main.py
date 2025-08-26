@@ -2,6 +2,7 @@
 
 包含工具消息类和管理器，用于处理工具调用请求和返回结果。
 """
+
 import json
 from typing import cast, Any
 
@@ -25,7 +26,7 @@ class ToolResultMessage(Message):
                 content_str = json.dumps(self.content, ensure_ascii=False)
             except (TypeError, ValueError):
                 content_str = str(self.content)
-        
+
         return cast(
             LanguageModelMessage,
             {
@@ -78,11 +79,11 @@ class ToolManager:
                 else {}
             )
             result = call_tool(tool_call.function_name, args)
-            
+
             # 如果工具返回的是 Message 实例，直接返回
             if isinstance(result, Message):
                 return result
-            
+
             # 否则，用 ToolResultMessage 包装
             return ToolResultMessage(content=result)
 

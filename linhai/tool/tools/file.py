@@ -249,172 +249,80 @@ def get_absolute_path(path: str) -> str:
 
 
 @register_tool(
-    name="sed_expression",
-    desc="执行sed表达式并查看输出结果",
+    name="run_sed_expression",
+    desc="执行sed表达式并返回输出，不修改文件",
     args={
-        "expression": ToolArgInfo(desc="sed表达式，如's/old/new/g'", type="str"),
-        "input_text": ToolArgInfo(desc="输入文本", type="str"),
-    },
-    required_args=["expression", "input_text"],
-)
-def sed_expression(expression: str, input_text: str) -> str:
-    """执行sed表达式并返回结果。
-
-    Args:
-        expression: sed表达式
-        input_text: 输入文本
-
-    Returns:
-        处理后的文本或错误消息
-    """
-    try:
-        result = subprocess.run(
-            ["sed", expression],
-            input=input_text,
-            text=True,
-            capture_output=True,
-            check=True,
-        )
-        return f"sed表达式执行结果:\n{result.stdout}"
-    except subprocess.CalledProcessError as e:
-        return f"sed执行错误: {e.stderr}"
-    except Exception as e:
-        return f"执行sed表达式时发生错误: {str(e)}"
-
-
-@register_tool(
-    name="sed_file",
-    desc="使用sed表达式直接修改文件",
-    args={
+        "expression": ToolArgInfo(desc="sed表达式", type="str"),
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "expression": ToolArgInfo(desc="sed表达式，如's/old/new/g'", type="str"),
     },
-    required_args=["filepath", "expression"],
+    required_args=["expression", "filepath"],
 )
-def sed_file(filepath: str, expression: str) -> str:
-    """使用sed表达式直接修改文件。
+def run_sed_expression(expression: str, filepath: str) -> str:
+    """执行sed表达式并返回输出。
 
     Args:
-        filepath: 文件路径
         expression: sed表达式
+        filepath: 文件路径
 
     Returns:
-        修改结果或错误消息
+        sed命令输出或错误消息
     """
     file_path = Path(filepath)
     if not file_path.exists():
         return f"文件路径{file_path.as_posix()!r}不存在"
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
-
     try:
-        # 使用sed -i 进行原地修改
+        # 运行sed命令，不修改文件
         result = subprocess.run(
-            ["sed", "-i", expression, file_path.as_posix()],
+            ["sed", expression, file_path.as_posix()],
             capture_output=True,
             text=True,
             check=True,
         )
-        return f"文件{file_path.as_posix()!r}已使用sed表达式'{expression}'成功修改 {result.returncode=}"
-    except subprocess.CalledProcessError as e:
-        return f"sed执行错误: {e.stderr}"
-    except Exception as e:
-        return f"执行sed文件修改时发生错误: {str(e)}"
-
-
-@register_tool(
-    name="show_file_with_git_changes",
-    desc="显示文件内容并高亮git修改状态（新增或修改的行）",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-    },
-    required_args=["filepath"],
-)
-def show_file_with_git_changes(filepath: str) -> str:
-    """显示文件内容并标记git修改状态。
-    
-    Args:
-        filepath: 文件路径
-        
-    Returns:
-        文件内容字符串，包含git修改状态标记
-    """
-    file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
-    
-    try:
-        content = file_path.read_text(encoding="utf-8")
+        return result.stdout
+    except subprocess.CalledProcessError as exc:
+        return f"sed命令执行错误: {exc.stderr}"
     except OSError as exc:
-        return f"发生错误: {exc!r}"
-    
-    # 获取git修改状态
-    added_lines = set()
-    modified_lines = set()
-    
+        return f"运行sed时发生错误: {exc!r}"
+
+
+@register_tool(
+    name="modify_file_with_sed",
+    desc="使用sed表达式修改文件，支持mac和linux的区别",
+    args={
+        "expression": ToolArgInfo(desc="sed表达式", type="str"),
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+    },
+    required_args=["expression", "filepath"],
+)
+def modify_file_with_sed(expression: str, filepath: str) -> str:
+    """使用sed表达式修改文件。
+
+    Args:
+        expression: sed表达式
+        filepath: 文件路径
+
+    Returns:
+        成功或错误消息
+    """
+    import platform  # 局部导入以检测操作系统
+
+    file_path = Path(filepath)
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
     try:
-        import subprocess
-        # 获取git diff输出
-        result = subprocess.run(
-            ["git", "diff", "--unified=0", "--", file_path.as_posix()],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode == 0 and result.stdout:
-            # 解析git diff输出
-            lines = result.stdout.splitlines()
-            for line in lines:
-                if line.startswith("@@"):
-                    # 解析@@ -a,b +c,d @@格式，获取新版本的行号
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        new_part = parts[2]  # 例如 "+1,5"
-                        if new_part.startswith("+"):
-                            line_info = new_part[1:].split(",")  # 移除"+"，分割
-                            start_line = int(line_info[0])
-                            line_count = int(line_info[1]) if len(line_info) > 1 else 1
-                            for i in range(start_line, start_line + line_count):
-                                added_lines.add(i)  # 标记为新增行
-        
-        # 检查git status获取修改状态（对于已跟踪但未暂存的文件）
-        status_result = subprocess.run(
-            ["git", "status", "--porcelain", "--", file_path.as_posix()],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if status_result.returncode == 0 and status_result.stdout:
-            # 如果状态显示修改（如 " M file.txt"），则所有行都可能被修改
-            status_line = status_result.stdout.strip()
-            if status_line.startswith(" M") or status_line.startswith("MM"):
-                # 标记所有行为修改（简化处理，实际可能需要更精细的diff）
-                lines = content.splitlines()
-                for i in range(1, len(lines) + 1):
-                    modified_lines.add(i)
-    
-    except Exception as e:
-        # 如果git命令失败或不在git仓库中，忽略错误
-        return f"无法获取git状态: {str(e)}。文件内容:\n{content}"
-    
-    # 格式化输出，添加状态标记
-    lines = content.splitlines()
-    formatted_lines = []
-    for i, line in enumerate(lines, 1):
-        if i in added_lines:
-            prefix = "+ "  # 新增行
-        elif i in modified_lines:
-            prefix = "M "  # 修改行
-        else:
-            prefix = "  "  # 未修改行
-        formatted_lines.append(f"{prefix}{line}")
-    
-    formatted_content = "\n".join(formatted_lines)
-    
-    return f"""\
-文件路径为: {file_path.as_posix()!r}
-Git修改状态: '+'表示新增行, 'M'表示修改行
-文件内容如下，不要复读文件内容:
-{formatted_content}"""
+        # 检测操作系统处理-i选项差异
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            cmd = ["sed", "-i", "", expression, file_path.as_posix()]
+        else:  # Linux或其他
+            cmd = ["sed", "-i", expression, file_path.as_posix()]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return f"文件{file_path.as_posix()!r}已使用sed表达式修改"
+    except subprocess.CalledProcessError as exc:
+        return f"sed命令执行错误: {exc.stderr}"
+    except OSError as exc:
+        return f"运行sed时发生错误: {exc!r}"

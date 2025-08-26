@@ -3,6 +3,7 @@ LinHai 主程序入口模块。
 
 提供命令行接口，支持运行测试、聊天和Agent模式。
 """
+
 from typing import List
 import argparse
 import unittest

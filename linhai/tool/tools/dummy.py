@@ -20,9 +20,9 @@ from linhai.tool.base import register_tool, ToolArgInfo
 )
 def compress_history() -> str:
     """压缩历史消息工具函数。
-    
+
     此函数由Agent内部处理，用于触发历史压缩流程。
-    
+
     Returns:
         str: 空字符串，实际处理由Agent完成。
     """
@@ -37,9 +37,9 @@ def compress_history() -> str:
 )
 def get_token_usage() -> str:
     """获取token使用情况工具函数。
-    
+
     此函数由Agent内部处理，用于获取当前token用量。
-    
+
     Returns:
         str: 空字符串，实际处理由Agent完成。
     """
@@ -54,12 +54,12 @@ def get_token_usage() -> str:
 )
 def switch_to_cheap_llm(message_count: int) -> str:
     """切换到廉价LLM模式工具函数。
-    
+
     此函数由Agent内部处理，用于切换LLM模式。
-    
+
     Args:
         message_count: 要使用廉价LLM的消息数量。
-    
+
     Returns:
         str: 空字符串，实际处理由Agent完成。
     """
@@ -75,9 +75,9 @@ def switch_to_cheap_llm(message_count: int) -> str:
 )
 def thanox_history() -> str:
     """随机删除历史消息工具函数。
-    
+
     此函数由Agent内部处理，用于触发随机删除流程。
-    
+
     Returns:
         str: 空字符串，实际处理由Agent完成。
     """
