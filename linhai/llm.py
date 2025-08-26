@@ -16,6 +16,7 @@ class Message(Protocol):
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
+        raise NotImplementedError()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_llm_message()})"
@@ -202,6 +203,7 @@ class LanguageModel(Protocol):
         返回:
             Answer: 回答对象
         """
+        raise NotImplementedError()
 
 
 class OpenAiAnswer:
@@ -361,6 +363,7 @@ class OpenAi:
         max_retries = 3
         retry_delay = 1  # 重试延迟，秒
 
+        answer = None
         for attempt in range(max_retries):
             try:
                 # 使用asyncio.wait_for添加超时
@@ -368,7 +371,8 @@ class OpenAi:
                     self.openai.chat.completions.create(**params),  # type: ignore
                     timeout=timeout_seconds,
                 )
-                return OpenAiAnswer(stream)
+                answer = OpenAiAnswer(stream)
+                break
             except asyncio.TimeoutError:
                 if attempt == max_retries - 1:
                     raise TimeoutError(
@@ -379,5 +383,7 @@ class OpenAi:
                 if attempt == max_retries - 1:
                     raise
                 await asyncio.sleep(retry_delay)
-        # 添加明确的返回语句
-        raise RuntimeError("Failed to create OpenAI answer after retries")
+        if answer is not None:
+            return answer
+        else:
+            raise RuntimeError("Failed to create OpenAI answer after retries")

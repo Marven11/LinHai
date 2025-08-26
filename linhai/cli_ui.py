@@ -140,7 +140,7 @@ class CLIApp(App):
             else:
                 # 无效输入，提示重新输入
                 event.input.value = ""
-                cast(Input, self.query_one("#input")).placeholder = (
+                cast(Input, self.query_one("#input")).placeholder = (  # type: ignore
                     "请输入 'y' 或 'n' 来确认工具调用"
                 )
                 return
@@ -154,7 +154,7 @@ class CLIApp(App):
             # 重置当前工具请求
             self.current_tool_request = None
             event.input.value = ""
-            cast(Input, self.query_one("#input")).placeholder = "输入消息..."
+            cast(Input, self.query_one("#input")).placeholder = "输入消息..."  # type: ignore
             return
 
         if event.value:
@@ -258,7 +258,7 @@ class CLIApp(App):
             tool_request = await self.tool_request_queue.get()
             self.current_tool_request = tool_request
             # 显示确认提示
-            self.query_one("#input").placeholder = (
+            self.query_one("#input").placeholder = (  # type: ignore
                 f"确认执行工具 {tool_request.function_name} 吗？(y/n)"
             )
             # 等待用户输入（通过 on_input_submitted 处理）
