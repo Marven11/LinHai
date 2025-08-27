@@ -477,7 +477,7 @@ class Agent:
 
             # 解析参数
             try:
-                args = json.loads(tool_call.function_arguments)
+                args = tool_call.function_arguments  # 现在直接是字典，无需解析
                 message_count = args.get("message_count", 1)
 
                 if message_count <= 0:
@@ -499,8 +499,8 @@ class Agent:
                     )
                 )
                 return False
-            except json.JSONDecodeError:
-                self.messages.append(RuntimeMessage("错误：无法解析工具参数"))
+            except (TypeError, AttributeError):
+                self.messages.append(RuntimeMessage("错误：工具参数格式不正确"))
                 return False
 
         # 检查如果是read_file工具且没有使用廉价LLM，提醒agent

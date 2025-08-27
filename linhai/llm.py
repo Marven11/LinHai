@@ -77,9 +77,14 @@ class ToolCallMessage:
         """初始化工具调用消息。"""
         self.function_name = function_name
         if isinstance(function_arguments, dict):
-            self.function_arguments = json.dumps(function_arguments)
-        else:
             self.function_arguments = function_arguments
+        else:
+            # 如果是字符串，尝试解析为字典
+            try:
+                self.function_arguments = json.loads(function_arguments) if function_arguments else {}
+            except json.JSONDecodeError:
+                # 解析失败时设置为空字典
+                self.function_arguments = {}
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
@@ -90,7 +95,7 @@ class ToolCallMessage:
                 {
                     "function": {
                         "name": self.function_name,
-                        "arguments": self.function_arguments,
+                        "arguments": json.dumps(self.function_arguments),
                     },
                 }
             ],
@@ -245,16 +250,6 @@ class OpenAiAnswer:
             delta = chunk.choices[0].delta
             content = delta.content or ""
             self._content += content
-
-            # 检查是否有工具调用
-            if delta.tool_calls:
-                tool_call = delta.tool_calls[0]
-                if not self._tool_call:
-                    self._tool_call = ToolCallMessage()
-                if tool_call.function and tool_call.function.name:
-                    self._tool_call.function_name = tool_call.function.name
-                if tool_call.function and tool_call.function.arguments:
-                    self._tool_call.function_arguments += tool_call.function.arguments
 
             # 从chunk中提取token计数（如果API返回）
             if hasattr(chunk, "usage") and chunk.usage:

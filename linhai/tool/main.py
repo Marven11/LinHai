@@ -73,11 +73,8 @@ class ToolManager:
             return ToolErrorMessage(content="Invalid tool call: missing function name")
 
         try:
-            args = (
-                json.loads(tool_call.function_arguments)
-                if tool_call.function_arguments
-                else {}
-            )
+            # function_arguments 现在直接是字典，无需解析
+            args = tool_call.function_arguments if tool_call.function_arguments else {}
             result = call_tool(tool_call.function_name, args)
 
             # 如果工具返回的是 Message 实例，直接返回
@@ -87,7 +84,5 @@ class ToolManager:
             # 否则，用 ToolResultMessage 包装
             return ToolResultMessage(content=result)
 
-        except json.JSONDecodeError as e:
-            return ToolErrorMessage(content=f"Invalid arguments JSON: {str(e)}")
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))

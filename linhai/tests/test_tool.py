@@ -24,7 +24,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
         mock_tool_call = ToolCallMessage(
-            function_name="add_numbers", function_arguments=json.dumps({"a": 3, "b": 5})
+            function_name="add_numbers", function_arguments={"a": 3, "b": 5}
         )
 
         # 模拟工具调用
@@ -43,7 +43,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_failed_tool_call(self):
         """测试失败的工具调用"""
         mock_tool_call = ToolCallMessage(
-            function_name="invalid_tool", function_arguments="{}"
+            function_name="invalid_tool", function_arguments={}
         )
 
         # 模拟工具抛出异常
