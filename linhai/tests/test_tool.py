@@ -38,7 +38,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
             # 验证返回结果
             self.assertEqual(type(result).__name__, "ToolResultMessage")
-            self.assertEqual(getattr(result, "content"), "8")
+            self.assertEqual(getattr(result, "content"), 8)
 
     async def test_failed_tool_call(self):
         """测试失败的工具调用"""

@@ -24,7 +24,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         msg = ChatMessage(role="user", message="Hello")
         chat_msg = msg.to_llm_message()
         self.assertEqual(chat_msg.get("role"), "user")
-        self.assertEqual(chat_msg.get("content"), "Hello")
+        self.assertEqual(chat_msg.get("content"), "<user>Hello</user>")
 
     async def test_openai_answer_stream(self):
         """Test basic functionality of answer_stream."""

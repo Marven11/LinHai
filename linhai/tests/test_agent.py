@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
-from linhai.llm import ChatMessage, AnswerToken, Answer
+from linhai.llm import ChatMessage, AnswerToken, Answer, ToolCallMessage, ToolConfirmationMessage
 from linhai.tool.main import ToolResultMessage
 
 
@@ -46,6 +46,10 @@ class MockAnswer:
         """Get the tool call from the tokens, if any."""
         return None
 
+    def get_current_content(self) -> str:
+        """Get the current accumulated response content."""
+        return "".join(token["content"] for token in self.tokens[:self.index])
+
 
 class TestAgent(unittest.IsolatedAsyncioTestCase):
     """Test cases for the Agent class."""
@@ -59,14 +63,22 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             "model": self.mock_llm,
             "compress_threshold_soft": 500,  # 使用正确的键
             "compress_threshold_hard": 800,  # 使用正确的键
+            "tool_confirmation": {
+                "skip_confirmation": True,  # 跳过确认
+                "whitelist": ["add_numbers"],  # 将 add_numbers 加入白名单
+            },
         }
         self.user_input_queue: "Queue[ChatMessage]" = Queue()
         self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
+        self.tool_request_queue: "Queue[ToolCallMessage]" = Queue()
+        self.tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
         self.tool_manager = MagicMock()
         self.agent = Agent(
             config=config,
             user_input_queue=self.user_input_queue,
             user_output_queue=self.user_output_queue,
+            tool_request_queue=self.tool_request_queue,
+            tool_confirmation_queue=self.tool_confirmation_queue,
             tool_manager=self.tool_manager,
         )
 
@@ -145,7 +157,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             len(self.agent.messages), 4
         )  # 系统消息 + 全局记忆 + 用户消息 + 回复
-        self.assertEqual(self.agent.messages[2].to_llm_message().get("content"), "Hi")
+        self.assertEqual(self.agent.messages[2].to_llm_message().get("content"), "<user>Hi</user>")
         self.assertEqual(
             self.agent.messages[3].to_llm_message().get("content"), "Processing..."
         )
