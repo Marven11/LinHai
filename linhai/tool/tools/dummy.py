@@ -82,3 +82,20 @@ def thanox_history() -> str:
         str: 空字符串，实际处理由Agent完成。
     """
     return ""
+
+
+@register_tool(
+    name="compress_history_range",
+    desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
+    args={},
+    required_args=[],
+)
+def compress_history_range() -> str:
+    """压缩指定范围历史消息工具函数。
+
+    此函数由Agent内部处理，用于触发指定范围的历史压缩流程。
+
+    Returns:
+        str: 空字符串，实际处理由Agent完成。
+    """
+    return ""

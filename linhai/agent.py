@@ -35,7 +35,7 @@ from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
 from linhai.tool.base import get_tools_info
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT
+from linhai.prompt import DEFAULT_SYSTEM_PROMPT, COMPRESS_RANGE_PROMPT
 from linhai.agent_plugin import register_default_plugins
 
 logger = logging.getLogger(__name__)
@@ -431,6 +431,115 @@ class Agent:
             RuntimeMessage(f"thanox_history: 随机删除了{len(indices_to_delete)}条消息")
         )
 
+    async def compress_range(self):
+        """
+        压缩指定范围的历史消息以减少上下文长度。
+
+        通过提示LLM输出要压缩的消息范围（start_id和end_id），
+        然后删除指定范围内的消息。
+        """
+        messages = [msg.to_llm_message() for msg in self.messages]
+        messages_summerization = "\n".join(
+            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
+            for i, msg in enumerate(messages)
+        )
+        self.messages.append(
+            RuntimeMessage(
+                COMPRESS_RANGE_PROMPT.replace(
+                    "{|SUMMERIZATION|}", messages_summerization
+                )
+            )
+        )
+
+        # 保存当前廉价LLM状态
+        original_cheap_remaining = self.cheap_llm_remaining_messages
+        # 如果廉价LLM可用，设置为使用1个消息进行压缩
+        if "cheap_model" in self.config:
+            self.cheap_llm_remaining_messages = 1
+
+        # 生成响应，让LLM输出范围
+        answer = await self.generate_response(
+            enable_compress=False, disable_waiting_user_warning=True
+        )
+        chat_message = cast(ChatMessage, answer.get_message())
+        full_response = chat_message.message
+        # 恢复廉价LLM状态
+        self.cheap_llm_remaining_messages = original_cheap_remaining
+
+        try:
+            # 解析LLM输出，提取JSON块
+            json_blocks = extract_json_blocks(full_response)
+            if len(json_blocks) == 0:
+                self.messages.append(
+                    RuntimeMessage(
+                        "错误：没有检测到JSON block，请确保输出包含正确的JSON格式范围数据"
+                    )
+                )
+                return
+
+            # 提取第一个JSON块
+            range_data = json_blocks[0]
+            if not isinstance(range_data, dict):
+                self.messages.append(
+                    RuntimeMessage("错误：JSON block 格式不正确，应为字典")
+                )
+                return
+
+            start_id = range_data.get("start_id")
+            end_id = range_data.get("end_id")
+
+            if start_id is None or end_id is None:
+                self.messages.append(
+                    RuntimeMessage("错误：JSON block 必须包含 start_id 和 end_id 字段")
+                )
+                return
+
+            # 验证参数类型
+            if not isinstance(start_id, int) or not isinstance(end_id, int):
+                self.messages.append(
+                    RuntimeMessage("错误：start_id 和 end_id 必须为整数")
+                )
+                return
+
+            # 参数验证
+            if start_id < 0 or end_id < 0:
+                self.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
+                return
+
+            if start_id > end_id:
+                self.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
+                return
+
+            # 确保不删除前5条系统消息
+            if start_id <= 5:
+                self.messages.append(RuntimeMessage("错误：不能删除前5条系统消息"))
+                return
+
+            # 检查范围大小，至少10条消息
+            range_size = end_id - start_id + 1
+            if range_size < 10:
+                self.messages.append(RuntimeMessage("错误：压缩范围至少需要10条消息"))
+                return
+
+            # 检查范围是否有效
+            if end_id >= len(self.messages):
+                self.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
+                return
+
+            # 直接删除指定范围的消息
+            del self.messages[start_id : end_id + 1]
+
+            # 报告压缩统计
+            self.messages.append(
+                RuntimeMessage(
+                    f"范围压缩已完成，删除了{range_size}条消息（从{start_id}到{end_id}）"
+                )
+            )
+        except Exception as exc:
+            self.messages.append(
+                RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
+            )
+
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
@@ -448,6 +557,17 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(
                         "当前禁止调用compress_history工具，你是不是弄错什么了？"
+                    )
+                )
+            return True
+
+        if tool_call.function_name == "compress_history_range":
+            if self.current_enable_compress:
+                await self.compress_range()
+            else:
+                self.messages.append(
+                    RuntimeMessage(
+                        "当前禁止调用compress_history_range工具，你是不是弄错什么了？"
                     )
                 )
             return True
