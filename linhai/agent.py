@@ -11,6 +11,11 @@ import datetime
 import random
 from asyncio import Queue, QueueEmpty
 
+from linhai.agent_base import (
+    RuntimeMessage,
+    CompressRequest,
+    DestroyedRuntimeMessage,
+)
 from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
 from linhai.exceptions import LLMResponseError
 from linhai.llm import (
@@ -30,58 +35,12 @@ from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
 from linhai.tool.base import get_tools_info
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT, COMPRESS_HISTORY_PROMPT
+from linhai.prompt import DEFAULT_SYSTEM_PROMPT
+from linhai.agent_plugin import register_default_plugins
 
 logger = logging.getLogger(__name__)
 
 repr_obj = Repr(maxstring=100)
-
-WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
-
-
-class CompressRequest(Message):
-    """压缩请求消息，用于请求压缩历史消息。"""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, messages_summerization: str):
-        self.messages_summerization = messages_summerization
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        prompt = COMPRESS_HISTORY_PROMPT.replace(
-            "{|SUMMERIZATION|}", "\n".join(self.messages_summerization)
-        )
-        return {
-            "role": "user",
-            "content": prompt,
-        }
-
-
-class RuntimeMessage(Message):
-    """运行时消息，用于向LLM传递运行时信息。"""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, message: str):
-        self.message = message
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {"role": "user", "content": f"<runtime>{self.message}</runtime>"}
-
-
-class DestroyedRuntimeMessage(Message):
-    """被截断的运行时消息，表示消息已被截断。"""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self):
-        pass
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {
-            "role": "user",
-            "content": "<destroyed><runtime>本条消息已被截断</runtime></destroyed>",
-        }
 
 
 class AgentConfig(TypedDict):
@@ -287,8 +246,13 @@ class Agent:
         # 廉价LLM状态跟踪
         self.cheap_llm_remaining_messages = 0
 
+        # Plugin使用的变量
+        self.current_disable_waiting_user_warning = False
+
         # 生命周期回调管理器
         self.lifecycle = Lifecycle()
+        # 注册默认Plugin
+        register_default_plugins(self.lifecycle)
 
         # 加载全局记忆
         memory_config = config.get("memory", {})
@@ -699,6 +663,7 @@ class Agent:
                     self.messages.append(empty_user_msg)
 
         self.current_enable_compress = enable_compress
+        self.current_disable_waiting_user_warning = disable_waiting_user_warning
 
         # 触发消息生成前的生命周期事件
         await self.lifecycle.trigger_before_message_generation(
@@ -762,33 +727,6 @@ class Agent:
             self.cheap_llm_remaining_messages -= 1
             if self.cheap_llm_remaining_messages == 0:
                 self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
-
-        if WAITING_USER_MARKER in full_response:
-            last_line = full_response.strip().rpartition("\n")[2]
-            if WAITING_USER_MARKER not in last_line:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
-                    )
-                )
-            self.state = "waiting_user"
-
-        # 检查是否同时调用工具和等待用户message_count
-        if not disable_waiting_user_warning:
-            if tool_calls and WAITING_USER_MARKER in full_response:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
-                        f"工具调用和等待用户是互斥的，请只选择其中一种方式"
-                    )
-                )
-            elif self.state == "working" and not tool_calls:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
-                        f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
-                    )
-                )
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
