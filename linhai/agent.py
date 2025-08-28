@@ -801,12 +801,18 @@ class Agent:
             # Real-time check for too many tool calls
             current_content = answer.get_current_content()
             json_block_count = current_content.count("```json")
-            if json_block_count > 3:
+
+            # 基于回答长度动态调整JSON块限制
+            content_length = len(current_content)
+            if content_length < 1000:  # 小于1000字符，允许最多5个工具调用
+                max_json_blocks = 5
+            else:  # 大于等于1000字符，只允许1个工具调用
+                max_json_blocks = 1
+
+            if json_block_count > max_json_blocks:
                 await self.user_output_queue.put(answer)
                 self.messages.append(
-                    RuntimeMessage(
-                        "错误：一次性调用了超过三个工具，最多只能调用三个工具。请分多次调用。"
-                    )
+                    RuntimeMessage(f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，最多允许{max_json_blocks}个工具调用。请分多次调用。")
                 )
                 answer.interrupt()
                 return await self.generate_response()
