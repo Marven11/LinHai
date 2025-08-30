@@ -370,7 +370,7 @@ COMPRESS_RANGE_PROMPT_ZH = """
 # 注意
 
 - 这个工具专门用于压缩连续完成小任务的过程消息，效果比单个删除更好
-- 一般至少删除10条消息，包含之前完成的多个小步骤
+- 一般至少删除20条消息，包含之前完成的多个小步骤
 - 禁止删除前5条消息（一般包括system prompt等）
 - 你不应该在输出之后使用`#LINHAI_WAITING_USER`暂停等待用户
 - 在压缩历史时，你应该避免在思考时输出规划或总结文本，而是直接输出最终的JSON结果
@@ -378,7 +378,9 @@ COMPRESS_RANGE_PROMPT_ZH = """
 
 # 输出格式
 
-以markdown code block的形式输出一个JSON对象，包含以下字段：
+首先输出主要任务等内容，格式为markdown
+
+然后以markdown code block的形式输出**一个**JSON对象，不多不少，包含以下字段：
 - `start_id`: 要压缩范围的起始消息ID（包含）
 - `end_id`: 要压缩范围的结束消息ID（包含）
 
