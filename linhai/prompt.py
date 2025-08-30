@@ -50,6 +50,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 - 在开始历史压缩之后，你只能输出包含打分的那块code block，你不应该同时输出多个code block，更不应该调用其他工具，否则会干扰系统解析出你的打分
 - 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。
+- 优先使用compress_history_range压缩连续的一系列消息
 
 ## ACTION RULES - PENTESTING AUTHORIZATION
 
@@ -373,6 +374,7 @@ COMPRESS_RANGE_PROMPT_ZH = """
 - 禁止删除前5条消息（一般包括system prompt等）
 - 你不应该在输出之后使用`#LINHAI_WAITING_USER`暂停等待用户
 - 在压缩历史时，你应该避免在思考时输出规划或总结文本，而是直接输出最终的JSON结果
+- 删除尽可能多的，涉及已完成任务的消息
 
 # 输出格式
 
@@ -386,14 +388,14 @@ COMPRESS_RANGE_PROMPT_ZH = """
 
 # 输出示例
 
-- 主要目标: 压缩历史消息以节省空间并提升效率
+- 主要目标: 用户要求...
 - 关键概念: 无
 - 文件代码: 无
 - 问题与解: 无
 - 待办任务: 无
-- 当前任务: 选择压缩范围
+- 当前任务: 在压缩历史之后继续完成...
 - 未来任务: 无
-- 用户输入: 用户请求压缩指定范围的历史消息
+- 用户输入: 用户请求...
 
 ```json
 {
@@ -405,6 +407,10 @@ COMPRESS_RANGE_PROMPT_ZH = """
 # 当前历史信息和编号
 
 {|SUMMERIZATION|}
+
+# 建议
+
+- 你最好压缩大约{|SUGGESTED_MESSAGE_COUNT|}条消息
 
 """
 

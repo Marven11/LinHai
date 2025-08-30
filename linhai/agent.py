@@ -447,6 +447,8 @@ class Agent:
             RuntimeMessage(
                 COMPRESS_RANGE_PROMPT.replace(
                     "{|SUMMERIZATION|}", messages_summerization
+                ).replace(
+                    "{|SUGGESTED_MESSAGE_COUNT|}", str(int(len(messages) * 0.8))
                 )
             )
         )
