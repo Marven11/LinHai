@@ -800,7 +800,7 @@ class Agent:
 
             # Real-time check for too many tool calls
             current_content = answer.get_current_content()
-            json_block_count = current_content.count("```json")
+            json_block_count = current_content.count("\n```json")
 
             # 基于回答长度动态调整JSON块限制
             content_length = len(current_content)
