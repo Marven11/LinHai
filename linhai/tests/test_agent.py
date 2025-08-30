@@ -270,7 +270,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call.assert_called_once()
         tool_call = self.tool_manager.process_tool_call.call_args[0][0]
         self.assertEqual(tool_call.function_name, "add_numbers")
-        self.assertEqual(json.loads(tool_call.function_arguments), {"a": 2, "b": 2})
+        self.assertEqual(tool_call.function_arguments, {"a": 2, "b": 2})
 
         # 验证状态转换
         self.assertEqual(self.agent.state, "working")
