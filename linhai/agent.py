@@ -618,6 +618,9 @@ class Agent:
                         f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM。请在规划中列出所有需要读取的文件和列出的文件夹。"
                     )
                 )
+                # 自动转到自动运行state
+                if self.state == "waiting_user":
+                    self.state = "working"
                 return False
             except (TypeError, AttributeError):
                 self.messages.append(RuntimeMessage("错误：工具参数格式不正确"))
