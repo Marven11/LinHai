@@ -95,7 +95,7 @@ class ToolCallMessage:
                 {
                     "function": {
                         "name": self.function_name,
-                        "arguments": json.dumps(self.function_arguments),
+                        "arguments": self.function_arguments,
                     },
                 }
             ],
