@@ -14,6 +14,7 @@ from asyncio import Queue, QueueEmpty
 from linhai.agent_base import (
     RuntimeMessage,
     CompressRequest,
+    CompressRangeRequest,
     DestroyedRuntimeMessage,
 )
 from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
@@ -35,7 +36,7 @@ from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
 from linhai.tool.base import get_tools_info
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT, COMPRESS_RANGE_PROMPT
+from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 
 logger = logging.getLogger(__name__)
@@ -438,20 +439,8 @@ class Agent:
         通过提示LLM输出要压缩的消息范围（start_id和end_id），
         然后删除指定范围内的消息。
         """
-        messages = [msg.to_llm_message() for msg in self.messages]
-        messages_summerization = "\n".join(
-            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
-            for i, msg in enumerate(messages)
-        )
-        self.messages.append(
-            RuntimeMessage(
-                COMPRESS_RANGE_PROMPT.replace(
-                    "{|SUMMERIZATION|}", messages_summerization
-                ).replace(
-                    "{|SUGGESTED_MESSAGE_COUNT|}", str(int(len(messages) * 0.8))
-                )
-            )
-        )
+
+        self.messages.append(CompressRangeRequest(self.messages))
 
         # 保存当前廉价LLM状态
         original_cheap_remaining = self.cheap_llm_remaining_messages
@@ -817,7 +806,9 @@ class Agent:
             if json_block_count > max_json_blocks:
                 await self.user_output_queue.put(answer)
                 self.messages.append(
-                    RuntimeMessage(f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，最多允许{max_json_blocks}个工具调用。请分多次调用。")
+                    RuntimeMessage(
+                        f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，最多允许{max_json_blocks}个工具调用。请分多次调用。"
+                    )
                 )
                 answer.interrupt()
                 return await self.generate_response()
