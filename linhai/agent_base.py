@@ -39,11 +39,6 @@ class CompressRangeRequest(Message):
         self.agent_messages = agent_messages
 
     def to_llm_message(self) -> LanguageModelMessage:
-        if self.agent_messages[-1] is not self:
-            return {
-                "role": "user",
-                "content": "<runtime>已经失效的compress_range_request prompt</runtime>",
-            }
         messages = [msg.to_llm_message() for msg in self.agent_messages]
         messages_summerization = "\n".join(
             f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"

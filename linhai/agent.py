@@ -346,6 +346,17 @@ class Agent:
         通过请求LLM对历史消息进行评分，然后删除评分较低的消息
         来减少上下文长度，从而节省token使用量。
         """
+
+        self.messages = [
+            (
+                RuntimeMessage("已经失效的历史压缩prompt")
+                if isinstance(msg, CompressRequest)
+                else msg
+            )
+            for msg in self.messages
+        ]
+
+
         messages = [msg.to_llm_message() for msg in self.messages]
         messages_summerization = "\n".join(
             f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
@@ -439,6 +450,15 @@ class Agent:
         通过提示LLM输出要压缩的消息范围（start_id和end_id），
         然后删除指定范围内的消息。
         """
+
+        self.messages = [
+            (
+                RuntimeMessage("已经失效的历史压缩prompt")
+                if isinstance(msg, CompressRangeRequest)
+                else msg
+            )
+            for msg in self.messages
+        ]
 
         self.messages.append(CompressRangeRequest(self.messages))
 
