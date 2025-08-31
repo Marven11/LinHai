@@ -494,20 +494,12 @@ class Agent:
 
         self.messages.append(CompressRangeRequest(messages_summerization, len(self.messages)))
 
-        # 保存当前廉价LLM状态
-        original_cheap_remaining = self.cheap_llm_remaining_messages
-        # 如果廉价LLM可用，设置为使用1个消息进行压缩
-        if "cheap_model" in self.config:
-            self.cheap_llm_remaining_messages = 1
-
         # 生成响应，让LLM输出范围
         answer = await self.generate_response(
             enable_compress=False, disable_waiting_user_warning=True
         )
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
-        # 恢复廉价LLM状态
-        self.cheap_llm_remaining_messages = original_cheap_remaining
 
         try:
             # 解析LLM输出，提取JSON块
@@ -544,6 +536,13 @@ class Agent:
                 )
                 return
 
+            # 确保不删除前5条系统消息
+            if start_id <= 5:
+                self.messages.append(
+                    RuntimeMessage("错误：start_id不能小于等于5,已经更正为6")
+                )
+                start_id = 6
+
             # 参数验证
             if start_id < 0 or end_id < 0:
                 self.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
@@ -551,11 +550,6 @@ class Agent:
 
             if start_id > end_id:
                 self.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
-                return
-
-            # 确保不删除前5条系统消息
-            if start_id <= 5:
-                self.messages.append(RuntimeMessage("错误：不能删除前5条系统消息"))
                 return
 
             # 检查范围大小，至少10条消息
