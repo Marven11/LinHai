@@ -595,7 +595,7 @@ class Agent:
         """
         if self.state == "waiting_user":
             self.state = "working"
-        if tool_call.function_name == "compress_history":
+        if tool_call.function_name == "compress_history_global":
             if self.current_enable_compress:
                 await self.compress()
             else:
