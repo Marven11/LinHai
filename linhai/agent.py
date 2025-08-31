@@ -345,7 +345,7 @@ class Agent:
             "compress_threshold_hard", int(65536 * 0.8)
         ):
             # await self.compress()
-            await self.thanox_history()
+            await self.compress_range()
 
     async def state_paused(self):
         """
