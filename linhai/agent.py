@@ -125,6 +125,11 @@ AfterToolCallCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+DuringMessageGenerationCallback: TypeAlias = Callable[
+    ["Agent", Answer, str],  # agent, answer, current_content
+    Awaitable[bool],  # 返回True表示中断，False表示继续
+]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -138,6 +143,9 @@ class Lifecycle:
         ] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
+        self._during_message_generation_callbacks: list[
+            DuringMessageGenerationCallback
+        ] = []
 
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback
@@ -158,6 +166,24 @@ class Lifecycle:
     def register_after_tool_call(self, callback: AfterToolCallCallback):
         """注册工具调用后的回调。"""
         self._after_tool_call_callbacks.append(callback)
+
+    def register_during_message_generation(self, callback: DuringMessageGenerationCallback):
+        """注册消息生成中的回调。"""
+        self._during_message_generation_callbacks.append(callback)
+
+    async def trigger_during_message_generation(
+        self, agent: "Agent", answer: Answer, current_content: str
+    ) -> bool:
+        """触发消息生成中的事件。"""
+        should_interrupt = False
+        for callback in self._during_message_generation_callbacks:
+            try:
+                result = await callback(agent, answer, current_content)
+                if result:
+                    should_interrupt = True
+            except Exception as e:
+                logger.error("During message generation callback error: %s", e)
+        return should_interrupt
 
     async def trigger_before_message_generation(
         self, agent: "Agent", enable_compress: bool, disable_waiting_user_warning: bool
@@ -460,7 +486,13 @@ class Agent:
             for msg in self.messages
         ]
 
-        self.messages.append(CompressRangeRequest(self.messages))
+        messages = [msg.to_llm_message() for msg in self.messages]
+        messages_summerization = "\n".join(
+            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
+            for i, msg in enumerate(messages)
+        )
+
+        self.messages.append(CompressRangeRequest(messages_summerization, len(self.messages)))
 
         # 保存当前廉价LLM状态
         original_cheap_remaining = self.cheap_llm_remaining_messages
@@ -561,6 +593,8 @@ class Agent:
         返回:
             bool: 是否需要进行早期返回
         """
+        if self.state == "waiting_user":
+            self.state = "working"
         if tool_call.function_name == "compress_history":
             if self.current_enable_compress:
                 await self.compress()
@@ -731,8 +765,6 @@ class Agent:
                     RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
                 )
                 self.messages.append(tool_result)
-                if self.state == "waiting_user":
-                    self.state = "working"
                 return False  # 不需要早期返回
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
@@ -812,25 +844,14 @@ class Agent:
         async for token in answer:
             await self.user_output_queue.put(token)
 
-            # Real-time check for too many tool calls
+            # 实时检查工具调用量（通过lifecycle回调处理）
             current_content = answer.get_current_content()
-            json_block_count = current_content.count("\n```json")
 
-            # 基于回答长度动态调整JSON块限制
-            content_length = len(current_content)
-            if content_length < 1000:  # 小于1000字符，允许最多5个工具调用
-                max_json_blocks = 5
-            else:  # 大于等于1000字符，只允许1个工具调用
-                max_json_blocks = 1
-
-            if json_block_count > max_json_blocks:
-                await self.user_output_queue.put(answer)
-                self.messages.append(
-                    RuntimeMessage(
-                        f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，最多允许{max_json_blocks}个工具调用。请分多次调用。"
-                    )
-                )
-                answer.interrupt()
+            # 触发消息生成中的生命周期事件
+            should_interrupt = await self.lifecycle.trigger_during_message_generation(
+                self, answer, current_content
+            )
+            if should_interrupt:
                 return await self.generate_response()
 
             if not self.user_input_queue.empty():

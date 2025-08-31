@@ -14,7 +14,8 @@ from linhai.tool.base import register_tool, ToolArgInfo
     desc="压缩历史：总结历史消息并删除不重要的消息。"
     "调用这个特殊工具来开始压缩历史的流程。在调用之后会出现一条system prompt."
     "按照出现的system prompt执行流程即可。"
-    "不要执行多余的步骤",
+    "不要执行多余的步骤。"
+    "优先使用compress_history_range而不是这个工具",
     args={},
     required_args=[],
 )

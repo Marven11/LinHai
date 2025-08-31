@@ -33,22 +33,15 @@ class CompressRequest(Message):
 
 class CompressRangeRequest(Message):
 
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, agent_messages: list):
-        self.agent_messages = agent_messages
+    def __init__(self, messages_summerization: str, message_length: int):
+        self.messages_summerization = messages_summerization
+        self.message_length = message_length
 
     def to_llm_message(self) -> LanguageModelMessage:
-        messages = [msg.to_llm_message() for msg in self.agent_messages]
-        messages_summerization = "\n".join(
-            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
-            for i, msg in enumerate(messages)
-        )
+
         prompt = COMPRESS_RANGE_PROMPT.replace(
-            "{|SUMMERIZATION|}", messages_summerization
-        ).replace(
-            "{|SUGGESTED_MESSAGE_COUNT|}", str(int(len(self.agent_messages) * 0.8))
-        )
+            "{|SUMMERIZATION|}", self.messages_summerization
+        ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.8)))
         return {
             "role": "user",
             "content": f"<runtime>{prompt}</runtime>",

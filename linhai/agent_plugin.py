@@ -58,11 +58,43 @@ class MarkerValidationPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class ToolCallCountPlugin(Plugin):
+    """工具调用量检查Plugin。"""
+
+    async def during_message_generation(self, agent, answer, current_content):
+        """检查工具调用量是否超过限制。"""
+        json_block_count = current_content.count("\n```json")
+
+        content_length = len(current_content)
+        if content_length < 2000:
+            max_json_blocks = 5
+        else:
+            max_json_blocks = 1
+
+        if json_block_count > max_json_blocks:
+            await agent.user_output_queue.put(answer)
+            agent.messages.append(
+                RuntimeMessage(
+                    f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
+                    f"最多允许{max_json_blocks}个工具调用。请分多次调用。"
+                )
+            )
+            answer.interrupt()
+            return True
+
+        return False
+
+    def register(self, lifecycle):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
+
+
 def register_default_plugins(lifecycle) -> None:
     """注册默认的Plugin。"""
     plugins = [
         WaitingUserPlugin(),
         MarkerValidationPlugin(),
+        ToolCallCountPlugin(),
     ]
 
     for plugin in plugins:
