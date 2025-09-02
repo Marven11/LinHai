@@ -13,7 +13,6 @@ from asyncio import Queue, QueueEmpty
 
 from linhai.agent_base import (
     RuntimeMessage,
-    CompressRequest,
     CompressRangeRequest,
     DestroyedRuntimeMessage,
 )
@@ -366,91 +365,6 @@ class Agent:
         except (RuntimeError, asyncio.CancelledError) as e:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
-
-    async def compress(self):
-        """
-        压缩历史消息以减少上下文长度。
-
-        通过请求LLM对历史消息进行评分，然后删除评分较低的消息
-        来减少上下文长度，从而节省token使用量。
-        """
-
-        self.messages = [
-            (
-                RuntimeMessage("已经失效的历史压缩prompt")
-                if isinstance(msg, CompressRequest)
-                else msg
-            )
-            for msg in self.messages
-        ]
-
-        messages = [msg.to_llm_message() for msg in self.messages]
-        messages_summerization = "\n".join(
-            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
-            for i, msg in enumerate(messages)
-        )
-        self.messages.append(CompressRequest(messages_summerization))
-
-        # 保存当前廉价LLM状态
-        original_cheap_remaining = self.cheap_llm_remaining_messages
-        # 如果廉价LLM可用，设置为使用1个消息进行压缩
-        if "cheap_model" in self.config:
-            self.cheap_llm_remaining_messages = 1
-
-        answer = await self.generate_response(
-            enable_compress=False, disable_waiting_user_warning=True
-        )
-        chat_message = cast(ChatMessage, answer.get_message())
-        full_response = chat_message.message
-        # 恢复廉价LLM状态
-        self.cheap_llm_remaining_messages = original_cheap_remaining
-        try:
-            scores_data = extract_json_blocks(full_response)
-            if len(scores_data) == 0:
-                self.messages.append(
-                    RuntimeMessage(
-                        "错误：没有检测到json block，请确保输出包含正确的json格式评分数据"
-                    )
-                )
-                return
-            if len(scores_data) != 1:
-                self.messages.append(
-                    RuntimeMessage("数据数量有误，你应该重新开启压缩历史流程")
-                )
-                return
-            scores = scores_data.pop()
-
-            todelete_indicies = set(
-                int(info.get("id", "-1"))
-                for info in scores
-                if float(info.get("score", "10")) < 8
-            )
-            self.messages = [
-                msg
-                for idx, msg in enumerate(self.messages)
-                if idx <= 2
-                or (
-                    idx not in todelete_indicies
-                    and not isinstance(msg, CompressRequest)
-                )
-            ]
-            # Report compression statistics
-            original_count = len(messages)
-            compressed_count = len(self.messages)
-            self.messages.append(
-                RuntimeMessage(
-                    f"压缩已经完成，消息数量从{original_count}条减少到{compressed_count}条，"
-                    f"减少了{original_count - compressed_count}条消息"
-                )
-            )
-        except LLMResponseError as exc:
-            self.messages.append(
-                RuntimeMessage(
-                    f"错误：你没有输出需要的score，请调用工具重新启动流程: {exc!r}"
-                )
-            )
-        except Exception as exc:
-            self.messages.append(RuntimeMessage(f"错误：{exc!r}"))
 
     async def thanox_history(self):
         """随机删除一半消息（不包括前5条系统消息）"""
