@@ -141,9 +141,7 @@ def change_directory(directory: str) -> str:
     name="show_git_changes",
     desc="显示git修改，通过展示git的输出展示文件什么地方被修改",
     args={
-        "filepath": ToolArgInfo(
-            desc="文件路径，必须指定", type="str"
-        ),
+        "filepath": ToolArgInfo(desc="文件路径，必须指定", type="str"),
     },
     required_args=["filepath"],
 )

@@ -10,27 +10,6 @@ from linhai.tool.base import register_tool, ToolArgInfo
 
 
 @register_tool(
-    name="compress_history_global",
-    desc="全局压缩历史：总结所有历史消息并删除不重要的消息。"
-    "调用这个特殊工具来开始全局压缩历史的流程。在调用之后会出现一条system prompt."
-    "按照出现的system prompt执行流程即可。"
-    "不要执行多余的步骤。"
-    "优先使用compress_history_range进行范围压缩而不是这个全局压缩工具",
-    args={},
-    required_args=[],
-)
-def compress_history_global() -> str:
-    """全局压缩历史消息工具函数。
-
-    此函数由Agent内部处理，用于触发全局历史压缩流程。
-
-    Returns:
-        str: 空字符串，实际处理由Agent完成。
-    """
-    return ""
-
-
-@register_tool(
     name="get_token_usage",
     desc="获取token使用情况。",
     args={},

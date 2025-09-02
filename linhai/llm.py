@@ -81,7 +81,9 @@ class ToolCallMessage:
         else:
             # 如果是字符串，尝试解析为字典
             try:
-                self.function_arguments = json.loads(function_arguments) if function_arguments else {}
+                self.function_arguments = (
+                    json.loads(function_arguments) if function_arguments else {}
+                )
             except json.JSONDecodeError:
                 # 解析失败时设置为空字典
                 self.function_arguments = {}

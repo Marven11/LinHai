@@ -167,7 +167,9 @@ class Lifecycle:
         """注册工具调用后的回调。"""
         self._after_tool_call_callbacks.append(callback)
 
-    def register_during_message_generation(self, callback: DuringMessageGenerationCallback):
+    def register_during_message_generation(
+        self, callback: DuringMessageGenerationCallback
+    ):
         """注册消息生成中的回调。"""
         self._during_message_generation_callbacks.append(callback)
 
@@ -382,7 +384,6 @@ class Agent:
             for msg in self.messages
         ]
 
-
         messages = [msg.to_llm_message() for msg in self.messages]
         messages_summerization = "\n".join(
             f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
@@ -492,7 +493,9 @@ class Agent:
             for i, msg in enumerate(messages)
         )
 
-        self.messages.append(CompressRangeRequest(messages_summerization, len(self.messages)))
+        self.messages.append(
+            CompressRangeRequest(messages_summerization, len(self.messages))
+        )
 
         # 生成响应，让LLM输出范围
         answer = await self.generate_response(
@@ -589,16 +592,6 @@ class Agent:
         """
         if self.state == "waiting_user":
             self.state = "working"
-        if tool_call.function_name == "compress_history_global":
-            if self.current_enable_compress:
-                await self.compress()
-            else:
-                self.messages.append(
-                    RuntimeMessage(
-                        "当前禁止调用compress_history工具，你是不是弄错什么了？"
-                    )
-                )
-            return True
 
         if tool_call.function_name == "compress_history_range":
             if self.current_enable_compress:
