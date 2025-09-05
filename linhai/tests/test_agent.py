@@ -79,6 +79,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.tool_request_queue: "Queue[ToolCallMessage]" = Queue()
         self.tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
         self.tool_manager = MagicMock()
+        self.tool_manager.get_tools_info.return_value = []
+        self.tool_manager.process_tool_call = AsyncMock()
+        self.tool_manager.get_workflow.return_value = None
         self.agent = Agent(
             config=config,
             user_input_queue=self.user_input_queue,
