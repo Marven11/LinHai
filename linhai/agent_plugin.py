@@ -16,8 +16,30 @@ class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
     async def after_message_generation(self, agent, answer, full_response, tool_calls):
-        """检查等待用户标记的位置。"""
-        if WAITING_USER_MARKER in full_response:
+        """检查等待用户标记的位置和工具调用冲突。"""
+        has_waiting_marker = WAITING_USER_MARKER in full_response
+        
+        # 检查是否同时调用工具和等待用户
+        if not agent.current_disable_waiting_user_warning:
+            if tool_calls and has_waiting_marker:
+                agent.messages.append(
+                    RuntimeMessage(
+                        f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
+                        f"工具调用和等待用户是互斥的，请只选择其中一种方式"
+                    )
+                )
+                return
+            elif agent.state == "working" and not tool_calls and not has_waiting_marker:
+                agent.messages.append(
+                    RuntimeMessage(
+                        f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
+                        f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
+                    )
+                )
+                return
+        
+        # 如果存在等待用户标记，检查位置并设置状态
+        if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
                 agent.messages.append(
@@ -25,33 +47,9 @@ class WaitingUserPlugin(Plugin):
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
                 )
-            agent.state = "waiting_user"
-
-    def register(self, lifecycle):
-        """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
-
-
-class MarkerValidationPlugin(Plugin):
-    """综合验证Plugin。"""
-
-    async def after_message_generation(self, agent, answer, full_response, tool_calls):
-        """检查是否同时调用工具和等待用户。"""
-        if not agent.current_disable_waiting_user_warning:
-            if tool_calls and WAITING_USER_MARKER in full_response:
-                agent.messages.append(
-                    RuntimeMessage(
-                        f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
-                        f"工具调用和等待用户是互斥的，请只选择其中一种方式"
-                    )
-                )
-            elif agent.state == "working" and not tool_calls:
-                agent.messages.append(
-                    RuntimeMessage(
-                        f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
-                        f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
-                    )
-                )
+            else:
+                # 所有检查通过，设置等待用户状态
+                agent.state = "waiting_user"
 
     def register(self, lifecycle):
         """注册到after_message_generation回调。"""
@@ -93,7 +91,6 @@ def register_default_plugins(lifecycle) -> None:
     """注册默认的Plugin。"""
     plugins = [
         WaitingUserPlugin(),
-        MarkerValidationPlugin(),
         ToolCallCountPlugin(),
     ]
 
