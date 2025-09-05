@@ -3,7 +3,7 @@
 包含工具定义、注册和调用相关的基类和函数。
 """
 
-from typing import TypedDict, Callable, Any
+from typing import TypedDict, Callable, Any, NotRequired
 
 
 class ToolArgInfo(TypedDict):
@@ -23,7 +23,7 @@ class Tool(TypedDict):
     func: Callable  # 工具函数
 
 
-tools: dict[str, Tool] = {}
+global_tools: dict[str, Tool] = {}
 
 
 def register_tool(
@@ -50,7 +50,7 @@ def register_tool(
         Returns:
             装饰后的函数
         """
-        tools[name] = {
+        global_tools[name] = {
             "name": name,
             "func": f,
             "desc": desc,
@@ -72,12 +72,12 @@ def call_tool(name: str, args: dict[str, Any]) -> Any:
     Returns:
         工具执行结果
     """
-    if name not in tools:
+    if name not in global_tools:
         raise ValueError(f"Tool not found: {name}")
-    return tools[name]["func"](**args)
+    return global_tools[name]["func"](**args)
 
 
-def get_tools_info() -> list[dict]:
+def get_tools_info(tools: dict[str, Tool]) -> list[dict]:
     """获取所有工具的信息列表
 
     返回格式符合OpenAI工具调用规范

@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any
-from reprlib import Repr
 import asyncio
 import logging
 import json
@@ -13,11 +12,9 @@ from asyncio import Queue, QueueEmpty
 
 from linhai.agent_base import (
     RuntimeMessage,
-    CompressRangeRequest,
     DestroyedRuntimeMessage,
 )
-from linhai.markdown_parser import extract_tool_calls, extract_json_blocks
-from linhai.exceptions import LLMResponseError
+from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -34,13 +31,11 @@ from linhai.llm import (
 from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.main import ToolManager
-from linhai.tool.base import get_tools_info
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
+from linhai.agent_workflow import compress_history_range
 
 logger = logging.getLogger(__name__)
-
-repr_obj = Repr(maxstring=100)
 
 
 class AgentConfig(TypedDict):
@@ -128,6 +123,8 @@ DuringMessageGenerationCallback: TypeAlias = Callable[
     ["Agent", Answer, str],  # agent, answer, current_content
     Awaitable[bool],  # 返回True表示中断，False表示继续
 ]
+
+
 
 
 class Lifecycle:
@@ -263,8 +260,21 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        system_prompt = (
+            self.config["system_prompt"]
+            .replace(
+                "{|TOOLS|}",
+                json.dumps(
+                    self.tool_manager.get_tools_info(), ensure_ascii=False, indent=2
+                ),
+            )
+            .replace("{|CURRENT_TIME|}", current_time)
+        )
+
         self.messages: list[Message] = [
-            SystemMessage(self.config["system_prompt"]),
+            SystemMessage(system_prompt),
         ]
 
         self.last_token_usage = None
@@ -346,7 +356,7 @@ class Agent:
             "compress_threshold_hard", int(65536 * 0.8)
         ):
             # await self.compress()
-            await self.compress_range()
+            await compress_history_range(self)
 
     async def state_paused(self):
         """
@@ -384,116 +394,6 @@ class Agent:
             RuntimeMessage(f"thanox_history: 随机删除了{len(indices_to_delete)}条消息")
         )
 
-    async def compress_range(self):
-        """
-        压缩指定范围的历史消息以减少上下文长度。
-
-        通过提示LLM输出要压缩的消息范围（start_id和end_id），
-        然后删除指定范围内的消息。
-        """
-
-        self.messages = [
-            (
-                RuntimeMessage("已经失效的历史压缩prompt")
-                if isinstance(msg, CompressRangeRequest)
-                else msg
-            )
-            for msg in self.messages
-        ]
-
-        messages = [msg.to_llm_message() for msg in self.messages]
-        messages_summerization = "\n".join(
-            f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
-            for i, msg in enumerate(messages)
-        )
-
-        self.messages.append(
-            CompressRangeRequest(messages_summerization, len(self.messages))
-        )
-
-        # 生成响应，让LLM输出范围
-        answer = await self.generate_response(
-            enable_compress=False, disable_waiting_user_warning=True
-        )
-        chat_message = cast(ChatMessage, answer.get_message())
-        full_response = chat_message.message
-
-        try:
-            # 解析LLM输出，提取JSON块
-            json_blocks = extract_json_blocks(full_response)
-            if len(json_blocks) == 0:
-                self.messages.append(
-                    RuntimeMessage(
-                        "错误：没有检测到JSON block，请确保输出包含正确的JSON格式范围数据"
-                    )
-                )
-                return
-
-            # 提取第一个JSON块
-            range_data = json_blocks[0]
-            if not isinstance(range_data, dict):
-                self.messages.append(
-                    RuntimeMessage("错误：JSON block 格式不正确，应为字典")
-                )
-                return
-
-            start_id = range_data.get("start_id")
-            end_id = range_data.get("end_id")
-
-            if start_id is None or end_id is None:
-                self.messages.append(
-                    RuntimeMessage("错误：JSON block 必须包含 start_id 和 end_id 字段")
-                )
-                return
-
-            # 验证参数类型
-            if not isinstance(start_id, int) or not isinstance(end_id, int):
-                self.messages.append(
-                    RuntimeMessage("错误：start_id 和 end_id 必须为整数")
-                )
-                return
-
-            # 确保不删除前5条系统消息
-            if start_id <= 5:
-                self.messages.append(
-                    RuntimeMessage("错误：start_id不能小于等于5,已经更正为6")
-                )
-                start_id = 6
-
-            # 参数验证
-            if start_id < 0 or end_id < 0:
-                self.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
-                return
-
-            if start_id > end_id:
-                self.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
-                return
-
-            # 检查范围大小，至少10条消息
-            range_size = end_id - start_id + 1
-            if range_size < 10:
-                self.messages.append(RuntimeMessage("错误：压缩范围至少需要10条消息"))
-                return
-
-            # 检查范围是否有效
-            if end_id >= len(self.messages):
-                self.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
-                return
-
-            # 直接删除指定范围的消息
-            del self.messages[start_id : end_id + 1]
-
-            # 报告压缩统计
-            self.messages.append(
-                RuntimeMessage(
-                    f"范围压缩已完成，删除了{range_size}条消息（从{start_id}到{end_id}）"
-                )
-            )
-        except Exception as exc:
-            self.messages.append(
-                RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
-            )
-
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
@@ -507,16 +407,11 @@ class Agent:
         if self.state == "waiting_user":
             self.state = "working"
 
-        if tool_call.function_name == "compress_history_range":
-            if self.current_enable_compress:
-                await self.compress_range()
-            else:
-                self.messages.append(
-                    RuntimeMessage(
-                        "当前禁止调用compress_history_range工具，你是不是弄错什么了？"
-                    )
-                )
-            return True
+        # 检查是否是workflow工具
+        workflow = self.tool_manager.get_workflow(tool_call.function_name)
+        if workflow:
+            workflow_function = workflow["func"]
+            return await workflow_function(self)
 
         if tool_call.function_name == "thanox_history":
             await self.thanox_history()
@@ -853,7 +748,6 @@ def create_agent(
         tuple[Agent, 用户输入队列, 用户输出队列, 工具请求队列, 工具确认队列, ToolManager实例]
     """
     config = load_config(config_path)
-    tools_info = get_tools_info()
 
     llm = OpenAi(
         api_key=config["llm"]["api_key"],
@@ -877,18 +771,13 @@ def create_agent(
     tool_request_queue: "Queue[ToolCallMessage]" = Queue()
     tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
 
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    system_prompt = DEFAULT_SYSTEM_PROMPT.replace(
-        "{|TOOLS|}", json.dumps(tools_info, ensure_ascii=False, indent=2)
-    ).replace("{|CURRENT_TIME|}", current_time)
-
     # 确保 config 是字典类型
     config_dict = cast(dict, config)
     # 解析tool_confirmation配置
     tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
 
     agent_config: AgentConfig = {
-        "system_prompt": system_prompt,
+        "system_prompt": DEFAULT_SYSTEM_PROMPT,
         "model": llm,
         "compress_threshold_hard": int(
             config_dict.get("agent", {}).get("compress_threshold_hard", 65536 * 0.8)
@@ -902,6 +791,11 @@ def create_agent(
         agent_config["cheap_model"] = cheap_llm
 
     tool_manager = ToolManager()
+    tool_manager.register_workflow(
+        "compress_history_range",
+        "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
+        compress_history_range,
+    )
 
     agent = Agent(
         config=agent_config,

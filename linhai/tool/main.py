@@ -4,11 +4,11 @@
 """
 
 import json
-from typing import cast, Any
+from typing import cast, Any, Callable, Awaitable, Coroutine
 
 from linhai.llm import Message, ToolCallMessage
 from linhai.type_hints import LanguageModelMessage
-from linhai.tool.base import call_tool
+from linhai.tool.base import call_tool, Tool, get_tools_info, global_tools
 
 
 class ToolResultMessage(Message):
@@ -59,6 +59,21 @@ class ToolManager:
 
     def __init__(self):
         """初始化工具管理器"""
+        self.workflows: dict[str, Tool] = {}
+
+    def register_workflow(
+        self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]
+    ):
+        self.workflows[name] = Tool(
+            name=name, desc=desc, args={}, required=[], func=func
+        )
+
+    def get_workflow(self, name: str):
+        return self.workflows.get(name)
+
+    def get_tools_info(self) -> list[dict]:
+        tools = {**global_tools, **self.workflows}
+        return get_tools_info(tools)
 
     async def process_tool_call(self, tool_call: ToolCallMessage) -> Message:
         """处理单个工具调用请求并返回结果

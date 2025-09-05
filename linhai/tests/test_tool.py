@@ -1,6 +1,5 @@
 """Unit tests for the tool module."""
 
-import json
 import unittest
 import unittest.mock
 
@@ -10,7 +9,7 @@ from linhai.tool.base import (
     call_tool,
     get_tools_info,
     register_tool,
-    tools,
+    global_tools,
 )
 from linhai.tool.main import ToolManager
 
@@ -62,7 +61,7 @@ class TestToolFunctions(unittest.TestCase):
 
     def setUp(self):
         # 清空工具注册表
-        tools.clear()
+        global_tools.clear()
 
     def test_register_and_call_tool(self):
         """测试工具注册和调用"""
@@ -101,7 +100,7 @@ class TestToolFunctions(unittest.TestCase):
             return x * y
 
         # 获取工具信息
-        tools_info = get_tools_info()
+        tools_info = get_tools_info(global_tools)
         self.assertEqual(len(tools_info), 1)
         self.assertEqual(tools_info[0]["function"]["name"], "multiply_numbers")
         self.assertEqual(
