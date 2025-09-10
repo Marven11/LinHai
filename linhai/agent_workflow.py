@@ -4,13 +4,11 @@ from typing import cast
 from reprlib import Repr
 
 import linhai
-from linhai.agent_base import (
-    RuntimeMessage,
-    CompressRangeRequest,
-)
+from linhai.agent_base import RuntimeMessage, CompressRangeRequest, GlobalMemory
 from linhai.markdown_parser import extract_json_blocks
 from linhai.llm import (
     ChatMessage,
+    SystemMessage,
 )
 
 repr_obj = Repr(maxstring=100)
@@ -83,12 +81,24 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
             agent.messages.append(RuntimeMessage("错误：start_id 和 end_id 必须为整数"))
             return True
 
-        # 确保不删除前3条系统消息
-        if start_id < 3:
+        # 通过检查消息类来确定最小安全ID，保护系统消息
+        max_system_index = -1
+        for i, msg in enumerate(agent.messages):
+            if isinstance(msg, (SystemMessage, GlobalMemory)):
+                max_system_index = i
+
+        if max_system_index == -1:
+            min_safe_id = 0
+        else:
+            min_safe_id = max_system_index + 1
+
+        if start_id < min_safe_id:
             agent.messages.append(
-                RuntimeMessage("错误：start_id不能小于3,已经更正为3")
+                RuntimeMessage(
+                    f"错误：start_id不能小于{min_safe_id},已经更正为{min_safe_id}"
+                )
             )
-            start_id = 3
+            start_id = min_safe_id
 
         # 参数验证
         if start_id < 0 or end_id < 0:
@@ -117,7 +127,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                 content = msg.message
                 if content:
                     deleted_user_messages.append(content)
-        
+
         # 直接删除指定范围的消息
         del agent.messages[start_id : end_id + 1]
 
@@ -130,7 +140,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                 start_id,
                 RuntimeMessage(
                     f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
-                )
+                ),
             )
 
         # 报告压缩统计

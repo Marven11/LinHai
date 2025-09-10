@@ -1,4 +1,5 @@
 from reprlib import Repr
+from pathlib import Path
 
 from linhai.llm import (
     Message,
@@ -55,3 +56,51 @@ class DestroyedRuntimeMessage(Message):
             "role": "user",
             "content": "<destroyed><runtime>本条消息已被截断</runtime></destroyed>",
         }
+
+
+
+class GlobalMemory:
+    """全局记忆类，用于读取和呈现全局记忆文件内容。"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, filepath: Path):
+        self.filepath = filepath
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """
+        将全局记忆转换为LLM消息格式。
+
+        返回:
+            LanguageModelMessage: 包含全局记忆内容的系统消息
+        """
+        try:
+            content = self.filepath.read_text()
+            return {
+                "role": "system",
+                "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，内容如下
+
+{content}
+""",
+            }
+        except FileNotFoundError:
+            return {
+                "role": "system",
+                "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
+""",
+            }
+        except (IOError, OSError) as e:
+            return {
+                "role": "system",
+                "content": f"""
+# 全局记忆
+
+文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
+""",
+            }

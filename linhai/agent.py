@@ -13,6 +13,7 @@ from asyncio import Queue, QueueEmpty
 from linhai.agent_base import (
     RuntimeMessage,
     DestroyedRuntimeMessage,
+    GlobalMemory,
 )
 from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import (
@@ -50,51 +51,34 @@ class AgentConfig(TypedDict):
     cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
 
 
-class GlobalMemory:
-    """全局记忆类，用于读取和呈现全局记忆文件内容。"""
+
+class CheapLlmStatusMessage:
+    """廉价LLM状态消息类，用于显示廉价LLM模式的可用性。"""
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, filepath: Path):
-        self.filepath = filepath
+    def __init__(self, is_cheap_llm_available: bool):
+        self.is_cheap_llm_available = is_cheap_llm_available
 
     def to_llm_message(self) -> LanguageModelMessage:
         """
-        将全局记忆转换为LLM消息格式。
+        将廉价LLM状态转换为LLM消息格式。
 
         返回:
-            LanguageModelMessage: 包含全局记忆内容的系统消息
+            LanguageModelMessage: 包含廉价LLM状态内容的系统消息
         """
-        try:
-            content = self.filepath.read_text()
-            return {
-                "role": "system",
-                "content": f"""
-# 全局记忆
+        if self.is_cheap_llm_available:
+            status = "廉价LLM模式可用，请积极使用廉价LLM"
+        else:
+            status = "廉价LLM模式不可用，请勿使用廉价LLM"
+        return {
+            "role": "system",
+            "content": f"""
+# 廉价LLM状态
 
-文件位于{self.filepath.as_posix()!r}，内容如下
-
-{content}
+{status}
 """,
-            }
-        except FileNotFoundError:
-            return {
-                "role": "system",
-                "content": f"""
-# 全局记忆
-
-文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
-""",
-            }
-        except (IOError, OSError) as e:
-            return {
-                "role": "system",
-                "content": f"""
-# 全局记忆
-
-文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
-""",
-            }
+        }
 
 
 # 生命周期回调类型定义
@@ -298,6 +282,9 @@ class Agent:
         self.messages.append(
             GlobalMemory(memory_filepath)
         )  # 总是添加，无论文件是否存在
+
+        # 添加廉价LLM状态消息
+        self.messages.append(CheapLlmStatusMessage("cheap_model" in self.config))
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
