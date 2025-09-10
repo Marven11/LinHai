@@ -4,11 +4,13 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 修改prompt，在用户要求为某个项目编写代码时，cd到代码的工作空间文件夹（一般和pyproject.toml等项目配置文件平级）
+- [x] 修改prompt，在用户要求为某个项目编写代码时，cd到代码的工作空间文件夹（一般和pyproject.toml等项目配置文件平级）
 - [ ] 把廉价LLM的prompt移动到agent.py的对应Message对象中，如果有则提示agent如何使用，如果没有则提示当前廉价LLM没有配置
 - [ ] 把run_simple_command的命令注入检测改为白名单：只包含`[a-zA-Z0-9-_ /*=+'"><]`这些最基础的字符
 - [ ] 运行命令run_simple_command在输入命令不安全时提供一个更好的prompt，展示白名单正则并提示agent禁用的原因，如这个命令不符合正则xxx，建议使用run_complex_command
     - 解释原因时一定要通过展示正则等途径解释是命令的什么地方不安全
+- [ ] agent输出不正确的工具调用markdown code block时runtime不会提示工具调用语法不合法，而是直接提示没有工具调用
+    - [ ] 应该在解析工具调用的语法错误时返回
 - [ ] 仔细修复每个文件中的警告，包括pylint和mypy
 - [ ] 用black格式化
 
