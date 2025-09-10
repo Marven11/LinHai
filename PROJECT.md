@@ -2,14 +2,14 @@
 
 林海漫游，一个专精软件工程和渗透攻击的AI Agent
 
-# 项目TODOLIST
+# 项目ROADMAP
 
 - [x] 完成工具类（基础工具已实现）
 - [x] 完成LLM对接部分
     - [x] 基本适配OpenAI
     - [x] 编写测试
     - [x] 支持打断Token生成
-- [ ] 完成Agent逻辑
+- [x] 完成Agent逻辑
     - [x] 基本聊天
     - [x] 工具调用
         - [x] 弃用OpenAI的残废工具调用，使用markdown json code block的形式让Agent调用工具
@@ -20,6 +20,10 @@
     - [x] 用户响应
     - [x] 历史压缩
     - [x] 全局记忆管理
+- [ ] 使用浏览器拉取微信公众号/知乎回答/...等文章并自动转为markdown
+    - 应该有一个全局的功能，给定一个文章的网页，自动爬取HTML并转为markdown
+- [ ] 改进CLI
+- [ ] 编写webui
 
 # 代码风格与规范
 
