@@ -9,7 +9,7 @@
 - [x] 删除历史消息时删除了过程中的用户消息，但仍然保留开头的用户消息，导致agent忽略过程中的用户消息，从开头的用户消息开始回复
     - 可以在删除时在原位置加上一条runtime消息，内容为所有被删除的用户消息
     - 应该要修改unittest
-- [ ] 修复所有unittest
+- [x] 修复所有unittest
 - [ ] prompt中加入当前廉价LLM是否可用
     - 现在在廉价LLM不可用时，agent仍然会尝试使用廉价LLM
     - 建议在system prompt中加入廉价LLM的消息，和global memory一样用单独的message对象表示，而不是像当前时间一样再给system prompt加上替换字符串的marker

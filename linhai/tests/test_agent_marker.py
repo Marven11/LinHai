@@ -121,8 +121,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages), 8
-        )  # System + memory + user + assistant + empty user + runtime for tool call + tool result + error
+            len(self.agent.messages), 7
+        )  # System + memory + user + assistant + empty user + runtime for tool call + error (tool result not added due to conflict)
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint

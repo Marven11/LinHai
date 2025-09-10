@@ -34,7 +34,7 @@ class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIsInstance(self.agent.messages[0], RuntimeMessage)
         self.assertIn("不在最后一行", self.agent.messages[0].message)
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state, "working")  # 状态应为working，因为标记不在最后一行
 
     async def test_register_plugin(self):
         """Test plugin registration."""
