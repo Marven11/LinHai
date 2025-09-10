@@ -5,6 +5,7 @@ import subprocess
 import re
 from linhai.tool.base import register_tool, ToolArgInfo
 
+VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> ]+$')
 
 def execute_command(command: str, timeout: float = 2.0) -> str:
     """执行系统命令并返回输出（内部函数）
@@ -49,21 +50,7 @@ def validate_simple_command(command: str) -> bool:
     Returns:
         True如果命令安全，False如果包含危险模式
     """
-    # 检查命令注入模式：$() 和 ``
-    if re.search(r"\$\s*\([^)]+\)", command) or re.search(r"`[^`]+`", command):
-        return False
-
-    # 提取第一个单词（命令名）
-    parts = command.strip().split()
-    if not parts:
-        return False
-    command_name = parts[0]
-
-    # 检查命令名是否只包含允许的字符：字母、数字、横杠、下划线
-    if not re.fullmatch(r"[a-zA-Z0-9\-_]+", command_name):
-        return False
-
-    return True
+    return VALIDATE_COMMAND_REGEX.fullmatch(command) is not None
 
 
 @register_tool(
@@ -86,7 +73,10 @@ def run_simple_command(command: str, timeout: float = 2.0) -> str:
         命令执行的输出结果或错误信息
     """
     if not validate_simple_command(command):
-        return "Error: Command contains dangerous patterns or invalid command name."
+        return (
+            f"错误：命令包含不允许的字符，应符合这个正则{VALIDATE_COMMAND_REGEX.pattern}"
+            "如果需要使用其他字符，请使用run_complex_command工具。"
+        )
 
     return execute_command(command, timeout)
 
@@ -154,6 +144,7 @@ def show_git_changes(filepath: str = "") -> str:
     Returns:
         git diff输出或错误消息
     """
+    output = ""
     try:
         # 构建git diff命令
         if filepath:
@@ -172,18 +163,20 @@ def show_git_changes(filepath: str = "") -> str:
 
         if result.returncode != 0:
             if "not a git repository" in result.stderr:
-                return "当前目录不是git仓库"
-            return f"git命令执行错误: {result.stderr}"
-
-        if not result.stdout.strip():
-            if filepath:
-                return f"文件{filepath!r}没有未暂存的修改"
+                output = "当前目录不是git仓库"
             else:
-                return "没有未暂存的修改"
-
-        return result.stdout
+                output = f"git命令执行错误: {result.stderr}"
+        elif not result.stdout.strip():
+            if filepath:
+                output = f"文件{filepath!r}没有未暂存的修改"
+            else:
+                output = "没有未暂存的修改"
+        else:
+            output = result.stdout
 
     except subprocess.TimeoutExpired:
-        return "git命令执行超时"
-    except Exception as e:
-        return f"执行git命令时发生错误: {str(e)}"
+        output = "git命令执行超时"
+    except (OSError, subprocess.SubprocessError) as e:
+        output = f"执行git命令时发生错误: {str(e)}"
+
+    return output

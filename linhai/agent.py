@@ -9,13 +9,14 @@ import traceback
 import datetime
 import random
 from asyncio import Queue, QueueEmpty
+import mistune
 
 from linhai.agent_base import (
     RuntimeMessage,
     DestroyedRuntimeMessage,
     GlobalMemory,
 )
-from linhai.markdown_parser import extract_tool_calls
+from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors, CodeBlockRenderer
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -65,19 +66,51 @@ class CheapLlmStatusMessage:
         将廉价LLM状态转换为LLM消息格式。
 
         返回:
-            LanguageModelMessage: 包含廉价LLM状态内容的系统消息
+            LanguageModelMessage: 包含廉价LLM状态和规则的系统消息
         """
         if self.is_cheap_llm_available:
             status = "廉价LLM模式可用，请积极使用廉价LLM"
-        else:
-            status = "廉价LLM模式不可用，请勿使用廉价LLM"
-        return {
-            "role": "system",
-            "content": f"""
+            intro = """
+有时需要探索文件内容时可以使用廉价LLM完成，以减少成本。
+
+因为廉价LLM能力较差，运行时会禁止廉价LLM使用部分工具，因此廉价LLM不能也不应该
+  - 执行命令
+  - 写文件
+  - 调用其他修改当前环境的工具
+"""
+            rules = """
+## ACTION RULES - CHEAP LLM USAGE
+
+- 积极使用廉价LLM模式读取文件、查看代码和获取信息，以节省成本
+- 根据以下规则判断是否需要使用廉价LLM
+  - 多文件读取：如果需要读取多个内容(文件内容/文件夹内容/...)且已知目标位置，则直接调用多个工具，不需要使用廉价LLM
+  - 项目探索：如果需要读取多个内容(文件内容/文件夹内容/...)但目标位置未知，则需要使用廉价LLM
+  - 项目探索：如果需要读取内容，根据内容的结果探索更多内容（如读取文档并根据文档行动），则需要使用廉价LLM
+  - 修改文件：如果需要执行修改文件等会影响当前环境的内容，禁止使用廉价LLM!
+- 避免使用廉价LLM编写代码或进行复杂决策，因为廉价LLM的代码质量可能较差
+- 在调用廉价LLM前，首先在规划中列出当前需要读取的内容，需要探索的目标
+- 廉价LLM最多只能用于5个连续消息，超过后会自动切换回普通LLM
+  - 如果廉价LLM提前完成了任务则需要调用工具切换回普通LLM（将计数器设置为0）
+"""
+            content = f"""
 # 廉价LLM状态
 
 {status}
-""",
+
+{intro}
+
+{rules}
+"""
+        else:
+            status = "廉价LLM模式不可用，请勿使用廉价LLM"
+            content = f"""
+# 廉价LLM状态
+
+{status}
+"""
+        return {
+            "role": "system",
+            "content": content,
         }
 
 
@@ -652,7 +685,10 @@ class Agent:
         full_response = chat_message.message
         self.messages.append(chat_message)
 
-        tool_calls = extract_tool_calls(full_response)
+        tool_calls, errors = extract_tool_calls_with_errors(full_response)
+        
+        for error in errors:
+            self.messages.append(RuntimeMessage(error))
 
         for call in tool_calls:
             try:
