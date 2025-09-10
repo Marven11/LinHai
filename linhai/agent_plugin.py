@@ -18,7 +18,7 @@ class WaitingUserPlugin(Plugin):
     async def after_message_generation(self, agent, answer, full_response, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
         has_waiting_marker = WAITING_USER_MARKER in full_response
-        
+
         # 检查是否同时调用工具和等待用户
         if not agent.current_disable_waiting_user_warning:
             if tool_calls and has_waiting_marker:
@@ -29,7 +29,7 @@ class WaitingUserPlugin(Plugin):
                     )
                 )
                 return
-            elif agent.state == "working" and not tool_calls and not has_waiting_marker:
+            if agent.state == "working" and not tool_calls and not has_waiting_marker:
                 agent.messages.append(
                     RuntimeMessage(
                         f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
@@ -37,7 +37,7 @@ class WaitingUserPlugin(Plugin):
                     )
                 )
                 return
-        
+
         # 如果存在等待用户标记，检查位置并设置状态
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
