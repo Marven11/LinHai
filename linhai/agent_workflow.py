@@ -83,12 +83,12 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
             agent.messages.append(RuntimeMessage("错误：start_id 和 end_id 必须为整数"))
             return True
 
-        # 确保不删除前5条系统消息
-        if start_id <= 5:
+        # 确保不删除前3条系统消息
+        if start_id < 3:
             agent.messages.append(
-                RuntimeMessage("错误：start_id不能小于等于5,已经更正为6")
+                RuntimeMessage("错误：start_id不能小于3,已经更正为3")
             )
-            start_id = 6
+            start_id = 3
 
         # 参数验证
         if start_id < 0 or end_id < 0:
@@ -110,8 +110,28 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
             agent.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
             return True
 
+        # 收集被删除的用户消息内容
+        deleted_user_messages = []
+        for msg in agent.messages[start_id : end_id + 1]:
+            if isinstance(msg, ChatMessage) and msg.role == "user":
+                content = msg.message
+                if content:
+                    deleted_user_messages.append(content)
+        
         # 直接删除指定范围的消息
         del agent.messages[start_id : end_id + 1]
+
+        # 如果删除了用户消息，在原位置添加runtime消息包含被删除的用户消息内容
+        if deleted_user_messages:
+            user_messages_summary = "\n".join(
+                f"- {msg}" for msg in deleted_user_messages
+            )
+            agent.messages.insert(
+                start_id,
+                RuntimeMessage(
+                    f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
+                )
+            )
 
         # 报告压缩统计
         agent.messages.append(

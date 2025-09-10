@@ -192,20 +192,18 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test ToolManager workflow registration functionality."""
         # Test registering a workflow
         mock_workflow = AsyncMock(return_value=True)
-        
+
         self.tool_manager.register_workflow(
-            "test_workflow",
-            "A test workflow",
-            mock_workflow
+            "test_workflow", "A test workflow", mock_workflow
         )
-        
+
         # Verify workflow is registered
         workflow = self.tool_manager.get_workflow("test_workflow")
         self.assertIsNotNone(workflow)
         assert workflow is not None
         self.assertEqual(workflow["func"], mock_workflow)
         self.assertEqual(workflow["desc"], "A test workflow")
-        
+
         # Test getting non-existent workflow
         self.assertIsNone(self.tool_manager.get_workflow("non_existent_workflow"))
 
@@ -214,20 +212,18 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Register a workflow
         mock_workflow = AsyncMock(return_value=True)
         self.tool_manager.register_workflow(
-            "test_workflow",
-            "A test workflow",
-            mock_workflow
+            "test_workflow", "A test workflow", mock_workflow
         )
-        
+
         # Get tools info
         tools_info = self.tool_manager.get_tools_info()
-        
+
         # Should include both global tools and workflows
         workflow_names = [tool["function"]["name"] for tool in tools_info]
-        
+
         # Check that our workflow is included
         self.assertIn("test_workflow", workflow_names)
-        
+
         # Also check that some global tools are present
         self.assertTrue(any("add_numbers" in name for name in workflow_names))
 
@@ -238,9 +234,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.register_workflow(
             "add_numbers",  # This name exists in global tools
             "Workflow version of add_numbers",
-            mock_workflow
+            mock_workflow,
         )
-        
+
         # Get the workflow (should get the workflow, not the global tool)
         workflow = self.tool_manager.get_workflow("add_numbers")
         self.assertIsNotNone(workflow)
@@ -253,31 +249,114 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Register a workflow
         mock_workflow = AsyncMock(return_value=True)
         self.tool_manager.register_workflow(
-            "test_workflow",
-            "A test workflow description",
-            mock_workflow
+            "test_workflow", "A test workflow description", mock_workflow
         )
-        
+
         # Get tools info
         tools_info = self.tool_manager.get_tools_info()
-        
+
         # Find our workflow
         workflow_info = None
         for tool in tools_info:
             if tool["function"]["name"] == "test_workflow":
                 workflow_info = tool
                 break
-        
+
         self.assertIsNotNone(workflow_info)
         assert workflow_info is not None
-        
+
         # Check structure
         self.assertEqual(workflow_info["type"], "function")
         self.assertEqual(workflow_info["function"]["name"], "test_workflow")
-        self.assertEqual(workflow_info["function"]["description"], "A test workflow description")
+        self.assertEqual(
+            workflow_info["function"]["description"], "A test workflow description"
+        )
         self.assertEqual(workflow_info["function"]["parameters"]["type"], "object")
         self.assertEqual(workflow_info["function"]["parameters"]["properties"], {})
         self.assertEqual(workflow_info["function"]["parameters"]["required"], [])
+
+    async def test_compress_history_range_user_message_protection(self):
+        """Test that user messages are protected during history compression."""
+        # Create a mock agent
+        mock_agent = MagicMock()
+
+        # Setup mock messages with user messages that should be protected
+        # Use ChatMessage for user messages to properly simulate role="user"
+        mock_messages = [
+            RuntimeMessage("System message"),
+            ChatMessage(role="user", message="Important user input 1"),
+            ChatMessage(role="user", message="Important user input 2"),
+            ChatMessage("assistant", "Assistant response 1"),
+            ChatMessage(role="user", message="Important user input 3"),
+            ChatMessage("assistant", "Assistant response 2"),
+            RuntimeMessage("<runtime>Tool output</runtime>"),
+            ChatMessage(
+                role="user", message="Complete TODO.md tasks"
+            ),  # This should be protected
+            ChatMessage("assistant", "Assistant response 3"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+            RuntimeMessage("<runtime>Another tool output</runtime>"),
+            ChatMessage("assistant", "Assistant response x"),
+        ]
+        mock_agent.messages = mock_messages
+
+        # Mock generate_response to return a response with JSON block for compression range
+        mock_response = MagicMock()
+        mock_response.get_message.return_value = ChatMessage(
+            role="assistant",
+            message="""
+## 用户输入
+- 目标：用户要求完成TODO.md中的内容，这是重要输入
+- 建议：用户强烈建议处理历史压缩问题
+
+```json
+{"start_id": 2, "end_id": 15}
+```
+""",
+        )
+        mock_agent.generate_response = AsyncMock(return_value=mock_response)
+
+        # Call the function
+        result = await compress_history_range(mock_agent)
+
+        # Verify the function completed successfully
+        self.assertTrue(result)
+
+        # Verify that user messages were protected by checking if a runtime summary was added
+        # After compression, there should be a runtime message summarizing the deleted user messages
+        # Check that the runtime message contains a summary of user inputs
+        runtime_messages = [
+            msg
+            for msg in mock_agent.messages
+            if isinstance(msg, RuntimeMessage)
+            and "历史压缩已删除以下用户消息" in msg.message
+        ]
+        self.assertGreater(
+            len(runtime_messages),
+            0,
+            "No runtime message summarizing user messages was found in: "
+            + repr(mock_agent.messages),
+        )
+
+        # Verify the summary contains key user inputs
+        summary_message = runtime_messages[0].message
+        self.assertIn("Complete TODO.md tasks", summary_message)
+        self.assertIn("Important user input", summary_message)
 
 
 if __name__ == "__main__":
