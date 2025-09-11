@@ -164,13 +164,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证用户消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 4
-        )  # 系统消息 + 全局记忆 + 用户消息 + 回复
+            len(self.agent.messages), 5
+        )  # 系统消息 + 全局记忆 + 廉价LLM状态 + 用户消息 + 回复
         self.assertEqual(
-            self.agent.messages[2].to_llm_message().get("content"), "<user>Hi</user>"
+            self.agent.messages[3].to_llm_message().get("content"), "<user>Hi</user>"
         )
         self.assertEqual(
-            self.agent.messages[3].to_llm_message().get("content"), "Processing..."
+            self.agent.messages[4].to_llm_message().get("content"), "Processing..."
         )
 
         # 重置mock以便测试工具消息
@@ -184,15 +184,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 6
-        )  # 系统消息 + 全局记忆 + 用户消息 + 回复 + 工具消息 + 回复
+            len(self.agent.messages), 7
+        )  # 系统消息 + 全局记忆 + 廉价LLM状态 + 用户消息 + 回复 + 工具消息 + 回复
         # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[-2].to_llm_message().get("content"), "result"
+            self.agent.messages[5].to_llm_message().get("content"), "result"
         )
         # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[-1].to_llm_message().get("content"), "Tool processed"
+            self.agent.messages[6].to_llm_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):

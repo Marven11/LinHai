@@ -90,8 +90,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages), 5
-        )  # System + memory + user + assistant + error
+            len(self.agent.messages), 6
+        )  # System + global memory + cheap LLM status + user + assistant + error
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
@@ -121,8 +121,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages), 7
-        )  # System + memory + user + assistant + empty user + runtime for tool call + error (tool result not added due to conflict)
+            len(self.agent.messages), 8
+        )  # System + global memory + cheap LLM status + user + assistant + empty user + runtime for tool call + error (tool result not added due to conflict)
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
@@ -143,8 +143,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if warning message was added
         self.assertEqual(
-            len(self.agent.messages), 5
-        )  # System + memory + user + assistant + warning
+            len(self.agent.messages), 6
+        )  # System + global memory + cheap LLM status + user + assistant + warning
         warning_msg = self.agent.messages[-1]
         self.assertIsInstance(warning_msg, RuntimeMessage)
         assert isinstance(warning_msg, RuntimeMessage)
@@ -163,8 +163,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 4
-        )  # System + memory + user + assistant
+            len(self.agent.messages), 5
+        )  # System + global memory + cheap LLM status + user + assistant
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages
         runtime_msgs = [
@@ -190,8 +190,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 6
-        )  # System + memory + user + assistant + runtime for tool call + tool result
+            len(self.agent.messages), 7
+        )  # System + global memory + cheap LLM status + user + assistant + runtime for tool call + tool result
         # Verify no error messages related to marker validation
         runtime_msgs = [
             msg
@@ -212,8 +212,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 4
-        )  # System + memory + user + assistant
+            len(self.agent.messages), 5
+        )  # System + global memory + cheap LLM status + user + assistant
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages
         runtime_msgs = [
