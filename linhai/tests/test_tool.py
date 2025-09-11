@@ -116,3 +116,96 @@ class TestToolFunctions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestInsertAtLineTool(unittest.TestCase):
+    """Test cases for the insert_at_line tool."""
+
+    def setUp(self):
+        # 清空工具注册表
+        global_tools.clear()
+        # 注册insert_at_line工具
+        from linhai.tool.tools.file import insert_at_line
+        global_tools["insert_at_line"] = {
+            "name": "insert_at_line",
+            "func": insert_at_line,
+            "desc": "将内容插入到文件的指定行号位置",
+            "args": {
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
+                "content": ToolArgInfo(desc="要插入的内容", type="str"),
+            },
+            "required": ["filepath", "line_number", "content"],
+        }
+
+    @unittest.mock.patch("linhai.tool.tools.file.Path")
+    def test_insert_at_line_success(self, mock_path):
+        """测试成功插入内容到指定行"""
+        # 模拟文件存在且是文件
+        mock_file = mock_path.return_value
+        mock_file.exists.return_value = True
+        mock_file.is_file.return_value = True
+        mock_file.read_text.return_value = "line1\nline2\nline3"
+        
+        # 调用工具
+        result = call_tool("insert_at_line", {
+            "filepath": "test.txt",
+            "line_number": 2,
+            "content": "inserted line"
+        })
+        
+        # 验证写入的内容
+        mock_file.write_text.assert_called_once_with("line1\ninserted line\nline2\nline3", encoding="utf-8")
+        self.assertIn("成功在文件", result)
+
+    @unittest.mock.patch("linhai.tool.tools.file.Path")
+    def test_insert_at_line_invalid_line_number(self, mock_path):
+        """测试无效行号的情况"""
+        mock_file = mock_path.return_value
+        mock_file.exists.return_value = True
+        mock_file.is_file.return_value = True
+        mock_file.read_text.return_value = "line1\nline2\nline3"
+        
+        # 行号太小
+        result = call_tool("insert_at_line", {
+            "filepath": "test.txt",
+            "line_number": 0,
+            "content": "inserted line"
+        })
+        self.assertIn("行号0无效", result)
+        
+        # 行号太大
+        result = call_tool("insert_at_line", {
+            "filepath": "test.txt",
+            "line_number": 5,
+            "content": "inserted line"
+        })
+        self.assertIn("行号5无效", result)
+
+    @unittest.mock.patch("linhai.tool.tools.file.Path")
+    def test_insert_at_line_file_not_exists(self, mock_path):
+        """测试文件不存在的情况"""
+        mock_file = mock_path.return_value
+        mock_file.exists.return_value = False
+        
+        result = call_tool("insert_at_line", {
+            "filepath": "nonexistent.txt",
+            "line_number": 1,
+            "content": "inserted line"
+        })
+        self.assertIn("文件路径", result)
+        self.assertIn("不存在", result)
+
+    @unittest.mock.patch("linhai.tool.tools.file.Path")
+    def test_insert_at_line_not_file(self, mock_path):
+        """测试路径不是文件的情况"""
+        mock_file = mock_path.return_value
+        mock_file.exists.return_value = True
+        mock_file.is_file.return_value = False
+        
+        result = call_tool("insert_at_line", {
+            "filepath": "directory/",
+            "line_number": 1,
+            "content": "inserted line"
+        })
+        self.assertIn("不是文件", result)

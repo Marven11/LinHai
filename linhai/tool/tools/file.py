@@ -326,3 +326,45 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
         return f"sed命令执行错误: {exc.stderr}"
     except OSError as exc:
         return f"运行sed时发生错误: {exc!r}"
+
+
+@register_tool(
+    name="insert_at_line",
+    desc="将内容插入到文件的指定行号位置",
+    args={
+        "filepath": ToolArgInfo(desc="文件路径", type="str"),
+        "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
+        "content": ToolArgInfo(desc="要插入的内容", type="str"),
+    },
+    required_args=["filepath", "line_number", "content"],
+)
+def insert_at_line(filepath: str, line_number: int, content: str) -> str:
+    """将内容插入到文件的指定行号位置。
+
+    Args:
+        filepath: 文件路径
+        line_number: 要插入的行号（从1开始）
+        content: 要插入的内容
+
+    Returns:
+        成功或错误消息
+    """
+    file_path = Path(filepath)
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
+    try:
+        # 读取文件内容
+        current_content = file_path.read_text(encoding="utf-8")
+        lines = current_content.splitlines()
+        # 检查行号是否有效
+        if line_number < 1 or line_number > len(lines) + 1:
+            return f"行号{line_number}无效，有效范围是1到{len(lines) + 1}"
+        # 插入内容
+        lines.insert(line_number - 1, content)  # 列表索引从0开始，行号从1开始
+        new_content = "\n".join(lines)
+        file_path.write_text(new_content, encoding="utf-8")
+        return f"成功在文件{file_path.as_posix()!r}的第{line_number}行插入内容"
+    except OSError as exc:
+        return f"插入内容时发生错误: {exc!r}"
