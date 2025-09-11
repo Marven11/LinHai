@@ -44,6 +44,37 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
     return results
 
 
+def validate_file(file_path: Path) -> str:
+    """验证文件是否适合操作：检查是否存在、是文件、大小不超过1MB，并且是纯文本。
+
+    Args:
+        file_path: 文件路径对象
+
+    Returns:
+        空字符串如果验证通过，否则错误消息
+    """
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
+
+    # 检查文件大小
+    file_size = file_path.stat().st_size
+    if isinstance(file_size, int) and file_size > 1024 * 1024:  # 1MB
+        return f"文件{file_path.as_posix()!r}过大（{file_size}字节），超过1MB限制"
+
+    # 检查是否为纯文本：尝试读取文件并检查编码
+    try:
+        content = file_path.read_text(encoding="utf-8")
+        # 如果成功读取，则认为是文本文件
+    except UnicodeDecodeError:
+        return f"文件{file_path.as_posix()!r}不是纯文本文件（UTF-8编码错误）"
+    except OSError as exc:
+        return f"读取文件时发生错误: {exc!r}"
+
+    return ""  # 验证通过
+
+
 @register_tool(
     name="read_file",
     desc="读取文件",
@@ -64,10 +95,10 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> str:
         文件内容字符串，包含路径信息
     """
     file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
+    validation_error = validate_file(file_path)
+    if validation_error:
+        return validation_error
+
     try:
         content = file_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -107,6 +138,10 @@ def write_file(filepath: str, content: str) -> str:
         成功或错误消息
     """
     file_path = Path(filepath)
+    if file_path.exists():
+        validation_error = validate_file(file_path)
+        if validation_error:
+            return validation_error
     try:
         file_path.write_text(content, encoding="utf-8")
     except OSError as exc:
@@ -134,6 +169,10 @@ def append_file(filepath: str, content: str) -> str:
         成功或错误消息
     """
     file_path = Path(filepath)
+    if file_path.exists():
+        validation_error = validate_file(file_path)
+        if validation_error:
+            return validation_error
     try:
         with file_path.open("a+", encoding="utf-8") as f:
             f.write(content)
@@ -166,10 +205,9 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
         成功或错误消息
     """
     file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
+    validation_error = validate_file(file_path)
+    if validation_error:
+        return validation_error
     try:
         content = file_path.read_text(encoding="utf-8")
         similar_info = json.dumps(
@@ -268,10 +306,9 @@ def run_sed_expression(expression: str, filepath: str) -> str:
         sed命令输出或错误消息
     """
     file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
+    validation_error = validate_file(file_path)
+    if validation_error:
+        return validation_error
     try:
         # 运行sed命令，不修改文件
         result = subprocess.run(
@@ -309,10 +346,9 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
     import platform  # 局部导入以检测操作系统
 
     file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
+    validation_error = validate_file(file_path)
+    if validation_error:
+        return validation_error
     try:
         # 检测操作系统处理-i选项差异
         system = platform.system()
@@ -350,10 +386,9 @@ def insert_at_line(filepath: str, line_number: int, content: str) -> str:
         成功或错误消息
     """
     file_path = Path(filepath)
-    if not file_path.exists():
-        return f"文件路径{file_path.as_posix()!r}不存在"
-    if not file_path.is_file():
-        return f"路径{file_path.as_posix()!r}不是文件"
+    validation_error = validate_file(file_path)
+    if validation_error:
+        return validation_error
     try:
         # 读取文件内容
         current_content = file_path.read_text(encoding="utf-8")
