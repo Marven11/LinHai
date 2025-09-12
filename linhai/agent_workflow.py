@@ -143,6 +143,10 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                 ),
             )
 
+        agent.messages = [
+            msg for msg in agent.messages if not isinstance(msg, CompressRangeRequest)
+        ]
+
         # 报告压缩统计
         agent.messages.append(
             RuntimeMessage(

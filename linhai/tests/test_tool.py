@@ -146,14 +146,14 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
-        
+
         # 调用工具
         result = call_tool("insert_at_line", {
             "filepath": "test.txt",
             "line_number": 2,
             "content": "inserted line"
         })
-        
+
         # 验证写入的内容
         mock_file.write_text.assert_called_once_with("line1\ninserted line\nline2\nline3", encoding="utf-8")
         self.assertIn("成功在文件", result)
@@ -165,7 +165,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
-        
+
         # 行号太小
         result = call_tool("insert_at_line", {
             "filepath": "test.txt",
@@ -173,7 +173,7 @@ class TestInsertAtLineTool(unittest.TestCase):
             "content": "inserted line"
         })
         self.assertIn("行号0无效", result)
-        
+
         # 行号太大
         result = call_tool("insert_at_line", {
             "filepath": "test.txt",
@@ -187,7 +187,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         """测试文件不存在的情况"""
         mock_file = mock_path.return_value
         mock_file.exists.return_value = False
-        
+
         result = call_tool("insert_at_line", {
             "filepath": "nonexistent.txt",
             "line_number": 1,
@@ -202,7 +202,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = False
-        
+
         result = call_tool("insert_at_line", {
             "filepath": "directory/",
             "line_number": 1,

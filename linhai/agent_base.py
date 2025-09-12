@@ -1,3 +1,5 @@
+"""Agent基础模块，包含运行时消息和全局记忆类。"""
+
 from reprlib import Repr
 from pathlib import Path
 
@@ -15,6 +17,7 @@ WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 
 class CompressRangeRequest(Message):
+    """压缩范围请求消息类，用于处理历史消息压缩。"""
 
     def __init__(self, messages_summerization: str, message_length: int):
         self.messages_summerization = messages_summerization

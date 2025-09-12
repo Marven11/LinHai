@@ -54,7 +54,7 @@ def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
     Returns:
         包含工具调用信息的列表，每个元素是包含'name'和'arguments'的字典
     """
-    tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
+    tool_calls, _ = extract_tool_calls_with_errors(markdown_text)
     return tool_calls
 
 
@@ -71,10 +71,10 @@ def extract_tool_calls_with_errors(markdown_text: str) -> Tuple[List[Dict[str, A
     renderer = CodeBlockRenderer()
     markdown = mistune.create_markdown(renderer=renderer)
     markdown(markdown_text)
-    
+
     tool_calls = []
     errors = []
-    
+
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == "json":
             try:
@@ -85,5 +85,5 @@ def extract_tool_calls_with_errors(markdown_text: str) -> Tuple[List[Dict[str, A
                     errors.append(f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的工具调用，已忽略")
             except json.JSONDecodeError:
                 errors.append(f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的JSON，已忽略")
-    
+
     return tool_calls, errors

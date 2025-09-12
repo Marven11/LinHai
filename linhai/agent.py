@@ -9,14 +9,13 @@ import traceback
 import datetime
 import random
 from asyncio import Queue, QueueEmpty
-import mistune
 
 from linhai.agent_base import (
     RuntimeMessage,
     DestroyedRuntimeMessage,
     GlobalMemory,
 )
-from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors, CodeBlockRenderer
+from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -686,7 +685,7 @@ class Agent:
         self.messages.append(chat_message)
 
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
-        
+
         for error in errors:
             self.messages.append(RuntimeMessage(error))
 

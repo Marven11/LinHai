@@ -247,7 +247,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 模拟LLM返回包含工具调用的markdown响应
         tool_call_response = """```json
 {
-    "name": "add_numbers", 
+    "name": "add_numbers",
     "arguments": {
         "a": 2,
         "b": 2
