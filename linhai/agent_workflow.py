@@ -129,30 +129,25 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                     deleted_user_messages.append(content)
 
         # 直接删除指定范围的消息
-        del agent.messages[start_id : end_id + 1]
+        agent.messages[start_id : end_id + 1] = [
+            RuntimeMessage(
+                f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）"
+            ),
+        ]
 
-        # 如果删除了用户消息，在原位置添加runtime消息包含被删除的用户消息内容
+        # 如果删除了用户消息，添加额外的消息包含被删除的用户消息内容
         if deleted_user_messages:
             user_messages_summary = "\n".join(
                 f"- {msg}" for msg in deleted_user_messages
             )
             agent.messages.insert(
-                start_id,
-                RuntimeMessage(
-                    f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
-                ),
+                start_id + 1,
+                RuntimeMessage(f"被删除的用户消息内容：\n{user_messages_summary}"),
             )
 
         agent.messages = [
             msg for msg in agent.messages if not isinstance(msg, CompressRangeRequest)
         ]
-
-        # 报告压缩统计
-        agent.messages.append(
-            RuntimeMessage(
-                f"范围压缩已完成，删除了{range_size}条消息（从{start_id}到{end_id}）"
-            )
-        )
     except Exception as exc:
         agent.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")

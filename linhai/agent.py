@@ -1,7 +1,8 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 from pathlib import Path
-from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any
+from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any, TypeAlias
+
 import asyncio
 import logging
 import json
@@ -49,7 +50,6 @@ class AgentConfig(TypedDict):
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
     cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
-
 
 
 class CheapLlmStatusMessage:
@@ -114,7 +114,6 @@ class CheapLlmStatusMessage:
 
 
 # 生命周期回调类型定义
-from typing import TypeAlias
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[
     ["Agent", bool, bool],  # agent, enable_compress, disable_waiting_user_warning
@@ -139,8 +138,6 @@ DuringMessageGenerationCallback: TypeAlias = Callable[
     ["Agent", Answer, str],  # agent, answer, current_content
     Awaitable[bool],  # 返回True表示中断，False表示继续
 ]
-
-
 
 
 class Lifecycle:
