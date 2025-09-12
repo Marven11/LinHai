@@ -257,8 +257,16 @@ class OpenAiAnswer:
             if hasattr(chunk, "usage") and chunk.usage:
                 self.total_tokens = chunk.usage.total_tokens
 
+            reasoning_content = getattr(delta, "reasoning_content", None)
+            if reasoning_content:
+                self._reasoning_content = (
+                    self._reasoning_content + reasoning_content
+                    if self._reasoning_content
+                    else reasoning_content
+                )
+
             token: AnswerToken = {
-                "reasoning_content": getattr(delta, "reasoning_content", None),
+                "reasoning_content": reasoning_content,
                 "content": content,
             }
             return token
@@ -279,7 +287,7 @@ class OpenAiAnswer:
 
     def get_reasoning_message(self) -> str | None:
         """获取推理消息（如果存在）。"""
-        return None
+        return self._reasoning_content
 
     def interrupt(self):
         """中断当前回答的生成。"""

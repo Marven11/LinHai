@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from linhai.agent_base import RuntimeMessage, WAITING_USER_MARKER
-
+from linhai.llm import Answer
 
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
@@ -15,7 +15,7 @@ class Plugin(ABC):
 class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
-    async def after_message_generation(self, agent, answer, full_response, tool_calls):
+    async def after_message_generation(self, agent, answer: Answer, full_response, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
@@ -59,7 +59,7 @@ class WaitingUserPlugin(Plugin):
 class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
-    async def during_message_generation(self, agent, answer, current_content):
+    async def during_message_generation(self, agent, answer: Answer, current_content):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json")
 
@@ -75,6 +75,35 @@ class ToolCallCountPlugin(Plugin):
                 RuntimeMessage(
                     f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
                     f"最多允许{max_json_blocks}个工具调用。请分多次调用。"
+                )
+            )
+            answer.interrupt()
+            return True
+
+        return False
+
+    def register(self, lifecycle):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
+
+
+class ThinkingToolCallPlugin(Plugin):
+    """禁止过度思考工具调用plugin"""
+
+    async def during_message_generation(self, agent, answer: Answer, current_content):
+        """检查工具调用量是否超过限制。"""
+        current_reasoning_content = answer.get_reasoning_message()
+        if not isinstance(current_reasoning_content, str):
+            return False
+        json_block_count = current_reasoning_content.count("\n```json")
+
+        max_json_blocks = 3
+
+        if json_block_count > max_json_blocks:
+            await agent.user_output_queue.put(answer)
+            agent.messages.append(
+                RuntimeMessage(
+                    f"错误：大量思考如何使用```json调用工具，输出```json超过{max_json_blocks}次，请避免过度思考如何进行工具调用"
                 )
             )
             answer.interrupt()
