@@ -366,7 +366,7 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
 
 @register_tool(
     name="insert_at_line",
-    desc="将内容插入到文件的指定行号位置",
+    desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
