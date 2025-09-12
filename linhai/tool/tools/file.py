@@ -390,15 +390,30 @@ def insert_at_line(filepath: str, line_number: int, content: str) -> str:
     if validation_error:
         return validation_error
     try:
-        # 读取文件内容
         current_content = file_path.read_text(encoding="utf-8")
-        lines = current_content.splitlines()
-        # 检查行号是否有效
-        if line_number < 1 or line_number > len(lines) + 1:
-            return f"行号{line_number}无效，有效范围是1到{len(lines) + 1}"
-        # 插入内容
-        lines.insert(line_number - 1, content)  # 列表索引从0开始，行号从1开始
-        new_content = "\n".join(lines)
+        lines = current_content.splitlines(keepends=True)  # 保留换行符
+        num_lines = len(lines)
+        
+        if line_number < 1 or line_number > num_lines + 1:
+            return f"行号{line_number}无效，有效范围是1到{num_lines + 1}"
+        
+        # 如果内容不以换行符结尾，添加一个换行符使其成为完整行
+        content_to_insert = content
+        if not content.endswith('\n'):
+            content_to_insert = content + '\n'
+        
+        if line_number == 1:
+            new_content = content_to_insert + current_content
+        elif line_number == num_lines + 1:
+            if current_content.endswith('\n'):
+                new_content = current_content + content_to_insert
+            else:
+                new_content = current_content + '\n' + content_to_insert
+        else:
+            before = ''.join(lines[:line_number-1])
+            after = ''.join(lines[line_number-1:])
+            new_content = before + content_to_insert + after
+        
         file_path.write_text(new_content, encoding="utf-8")
         return f"成功在文件{file_path.as_posix()!r}的第{line_number}行插入内容"
     except OSError as exc:
