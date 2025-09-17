@@ -3,6 +3,9 @@
 import json
 from typing import List, Dict, Any, Tuple
 import mistune
+from reprlib import Repr
+
+repr_obj = Repr(maxstring=50)
 
 
 class CodeBlockRenderer(mistune.HTMLRenderer):
@@ -85,11 +88,12 @@ def extract_tool_calls_with_errors(
                     tool_calls.append(data)
                 else:
                     errors.append(
-                        f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的工具调用，已忽略"
+                        f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}不是合法的工具调用"
+                        "，可能为其他json数据，已忽略"
                     )
             except json.JSONDecodeError:
                 errors.append(
-                    f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的JSON，已忽略"
+                    f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}解析JSON出错，已忽略"
                 )
 
     return tool_calls, errors
