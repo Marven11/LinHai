@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from linhai.agent_base import RuntimeMessage, WAITING_USER_MARKER
 from linhai.llm import Answer
 
+
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
@@ -15,7 +16,9 @@ class Plugin(ABC):
 class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
-    async def after_message_generation(self, agent, answer: Answer, full_response, tool_calls):
+    async def after_message_generation(
+        self, agent, answer: Answer, full_response, tool_calls
+    ):
         """检查等待用户标记的位置和工具调用冲突。"""
         has_waiting_marker = WAITING_USER_MARKER in full_response
 

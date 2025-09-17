@@ -399,19 +399,19 @@ def insert_at_line(filepath: str, line_number: int, content: str) -> str:
 
         # 如果内容不以换行符结尾，添加一个换行符使其成为完整行
         content_to_insert = content
-        if not content.endswith('\n'):
-            content_to_insert = content + '\n'
+        if not content.endswith("\n"):
+            content_to_insert = content + "\n"
 
         if line_number == 1:
             new_content = content_to_insert + current_content
         elif line_number == num_lines + 1:
-            if current_content.endswith('\n'):
+            if current_content.endswith("\n"):
                 new_content = current_content + content_to_insert
             else:
-                new_content = current_content + '\n' + content_to_insert
+                new_content = current_content + "\n" + content_to_insert
         else:
-            before = ''.join(lines[:line_number-1])
-            after = ''.join(lines[line_number-1:])
+            before = "".join(lines[: line_number - 1])
+            after = "".join(lines[line_number - 1 :])
             new_content = before + content_to_insert + after
 
         file_path.write_text(new_content, encoding="utf-8")

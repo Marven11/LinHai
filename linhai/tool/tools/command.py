@@ -7,6 +7,7 @@ from linhai.tool.base import register_tool, ToolArgInfo
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
+
 def execute_command(command: str, timeout: float = 2.0) -> str:
     """执行系统命令并返回输出（内部函数）
 

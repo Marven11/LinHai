@@ -61,7 +61,6 @@ class DestroyedRuntimeMessage(Message):
         }
 
 
-
 class GlobalMemory:
     """全局记忆类，用于读取和呈现全局记忆文件内容。"""
 

@@ -58,7 +58,9 @@ def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
     return tool_calls
 
 
-def extract_tool_calls_with_errors(markdown_text: str) -> Tuple[List[Dict[str, Any]], List[str]]:
+def extract_tool_calls_with_errors(
+    markdown_text: str,
+) -> Tuple[List[Dict[str, Any]], List[str]]:
     """
     从Markdown文本中提取JSON格式的工具调用，并返回错误消息列表
 
@@ -82,8 +84,12 @@ def extract_tool_calls_with_errors(markdown_text: str) -> Tuple[List[Dict[str, A
                 if isinstance(data, dict) and "name" in data and "arguments" in data:
                     tool_calls.append(data)
                 else:
-                    errors.append(f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的工具调用，已忽略")
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的工具调用，已忽略"
+                    )
             except json.JSONDecodeError:
-                errors.append(f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的JSON，已忽略")
+                errors.append(
+                    f"工具调用解析出错：第{i+1}个markdown json code block包含不合法的JSON，已忽略"
+                )
 
     return tool_calls, errors

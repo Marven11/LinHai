@@ -142,7 +142,9 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
             )
             agent.messages.insert(
                 start_id + 1,
-                RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
+                RuntimeMessage(
+                    f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
+                ),
             )
 
         agent.messages = [

@@ -45,9 +45,15 @@ class MessageWidget(Static):
     def update_display(self) -> None:
         """更新消息显示"""
         self.remove_children()
+        content_to_display = self.content
+        if self.is_reasoning:
+            # 只显示思考内容的最后5行
+            lines = content_to_display.splitlines()
+            if len(lines) > 5:
+                content_to_display = "\n".join(lines[-5:])
         panel = Panel(
             Syntax(
-                self.content,
+                content_to_display,
                 "markdown",
                 theme="nord-darker",
                 background_color="#2E3440",

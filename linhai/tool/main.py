@@ -4,6 +4,8 @@
 """
 
 import json
+import tempfile
+import os
 from typing import cast, Any, Callable, Awaitable, Coroutine
 
 from linhai.llm import Message, ToolCallMessage
@@ -15,24 +17,39 @@ class ToolResultMessage(Message):
     """工具成功结果消息"""
 
     def __init__(self, content: Any):
-        self.content = content
-
-    def to_llm_message(self) -> LanguageModelMessage:
         # 在内部处理转换逻辑
-        if isinstance(self.content, str):
-            content_str = self.content
+        if isinstance(content, str):
+            content_str = content
         else:
             try:
-                content_str = json.dumps(self.content, ensure_ascii=False)
+                content_str = json.dumps(content, ensure_ascii=False)
             except (TypeError, ValueError):
-                content_str = str(self.content)
+                content_str = str(content)
+
+        # 检查内容长度是否超过50000字符
+        if len(content_str) > 50000:
+            # 创建临时文件保存内容
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, encoding="utf-8"
+            ) as temp_file:
+                temp_file.write(content_str)
+                temp_path = temp_file.name
+                file_size = os.path.getsize(temp_path)  # 获取文件大小
+            # 返回文件路径和大小的消息
+            message_content = f"内容过长（超过{len(content_str)}字符）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用文件读取工具访问。"
+        else:
+            message_content = content_str
+
+        self.content = message_content
+
+    def to_llm_message(self) -> LanguageModelMessage:
 
         return cast(
             LanguageModelMessage,
             {
                 "role": "user",
                 "name": "tool-result",
-                "content": content_str,
+                "content": self.content,
             },
         )
 
