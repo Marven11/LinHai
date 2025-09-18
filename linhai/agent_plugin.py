@@ -100,9 +100,9 @@ class ThinkingToolCallPlugin(Plugin):
             return False
         json_block_count = current_reasoning_content.count("\n```json toolcall")
 
-        max_json_blocks = 3
+        max_json_blocks = 2
 
-        if json_block_count > max_json_blocks:
+        if json_block_count >= max_json_blocks:
             await agent.user_output_queue.put(answer)
             agent.messages.append(
                 RuntimeMessage(
