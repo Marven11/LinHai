@@ -64,7 +64,7 @@ class ToolCallCountPlugin(Plugin):
 
     async def during_message_generation(self, agent, answer: Answer, current_content):
         """检查工具调用量是否超过限制。"""
-        json_block_count = current_content.count("\n```json")
+        json_block_count = current_content.count("\n```json toolcall")
 
         content_length = len(current_content)
         if content_length < 2000:
@@ -98,7 +98,7 @@ class ThinkingToolCallPlugin(Plugin):
         current_reasoning_content = answer.get_reasoning_message()
         if not isinstance(current_reasoning_content, str):
             return False
-        json_block_count = current_reasoning_content.count("\n```json")
+        json_block_count = current_reasoning_content.count("\n```json toolcall")
 
         max_json_blocks = 3
 
@@ -106,7 +106,7 @@ class ThinkingToolCallPlugin(Plugin):
             await agent.user_output_queue.put(answer)
             agent.messages.append(
                 RuntimeMessage(
-                    f"错误：大量思考如何使用```json调用工具，输出```json超过{max_json_blocks}次，请避免过度思考如何进行工具调用"
+                    f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall超过{max_json_blocks}次，请避免过度思考如何进行工具调用"
                 )
             )
             answer.interrupt()
@@ -124,7 +124,30 @@ def register_default_plugins(lifecycle) -> None:
     plugins = [
         WaitingUserPlugin(),
         ToolCallCountPlugin(),
+        ExcessiveCheckmarkPlugin(),
     ]
 
     for plugin in plugins:
         plugin.register(lifecycle)
+
+
+class ExcessiveCheckmarkPlugin(Plugin):
+    """检查过多完成标记的Plugin。"""
+
+    async def after_message_generation(
+        self, agent, answer: Answer, full_response, tool_calls
+    ):
+        """检查是否输出了过多的- [x]标记。"""
+        count = full_response.count("- [x]")
+        if count > 10:  # 阈值设为10
+            agent.messages.append(
+                RuntimeMessage(
+                    f"警告：你输出了过多`- [x]`标记（{count}个），"
+                    "请注意：如果完成的任务过多，可以不输出完成的小任务，只输出大任务已完成。"
+                    "提示：如果完成的任务过多（十几条），在所有小任务都完成时，可以不输出完成的小任务，只输出大任务已完成。因为小任务是过程性的，完成的细节相对于结果来说不重要。"
+                )
+            )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)

@@ -119,7 +119,7 @@ Agent的运行过程为响应式，Agent需要通过asyncio.Queue接受用户的
 
 Agent使用Markdown JSON代码块调用工具，格式如下：
 
-```json
+```json toolcall
 {"name": "tool_name", "arguments": {...}}
 ```
 

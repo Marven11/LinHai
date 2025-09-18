@@ -10,6 +10,10 @@
 - [ ] 添加一个plugin，在agent输出过多`- [x]`时（超过10个）提醒agent注意prompt中的内容，在已完成内容过多时忽略输出已经完成的小任务
     - 具体提示参考prompt.py
     - 有了这个plugin就不需要在prompt中指导agent在已完成任务过多时删除了
+- [ ] 根据新的tool call标记更新其他插件，如ToolCallCountPlugin
+- [ ] 如prompt等地方并没有提示使用新的json toolcall标记，使用grep找出对应的地方并更新
+    - [ ] 更新prompt
+    - 注意不要更新compress range时输出的，包含start id和end id的格式
 - [ ] 再次运行并修复unittest
 - [ ] 仔细修复每个文件中的警告，包括pylint和mypy
 - [ ] 用black格式化
