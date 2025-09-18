@@ -151,7 +151,7 @@ def write_file(filepath: str, content: str) -> str:
 
 @register_tool(
     name="append_file",
-    desc="追加文件内容",
+    desc="追加文件内容。" "建议：在增加文件内容时优先考虑使用此工具或insert工具",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
@@ -184,6 +184,7 @@ def append_file(filepath: str, content: str) -> str:
 @register_tool(
     name="replace_file_content",
     desc="替换文件内容中的指定字符串。"
+    "建议：在修改文件原有内容时优先使用此工具"
     "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
     "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。",
     args={
@@ -366,7 +367,8 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
 
 @register_tool(
     name="insert_at_line",
-    desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。",
+    desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。"
+    "建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
