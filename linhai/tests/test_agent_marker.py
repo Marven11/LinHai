@@ -107,7 +107,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         }
         tool_call_json = json.dumps(tool_call_data)
         response_content = (
-            f"Some response with {WAITING_USER_MARKER}\n```json\n{tool_call_json}\n```"
+            f"Some response with {WAITING_USER_MARKER}\n```json toolcall\n{tool_call_json}\n```"
         )
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
@@ -177,7 +177,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         # Mock LLM response with only tool calls
         tool_call_data = {"name": "add_numbers", "arguments": {"a": 2, "b": 2}}
         tool_call_json = json.dumps(tool_call_data)
-        response_content = f"Some response\n```json\n{tool_call_json}\n```"
+        response_content = f"Some response\n```json toolcall\n{tool_call_json}\n```"
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 

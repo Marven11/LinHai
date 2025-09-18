@@ -66,7 +66,7 @@ class TestToolCallCountPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_call_within_limit_short_content(self):
         """测试短内容时工具调用在限制内"""
-        current_content = 'Some content\n```json\n{"name": "tool1"}\n```\n```json\n{"name": "tool2"}\n```'
+        current_content = 'Some content\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
         self.answer.content = current_content
 
         result = await self.plugin.during_message_generation(
@@ -79,7 +79,7 @@ class TestToolCallCountPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_call_exceed_limit_short_content(self):
         """测试短内容时工具调用超过限制"""
-        current_content = 'Some content\n```json\n{"name": "tool1"}\n```\n```json\n{"name": "tool2"}\n```\n```json\n{"name": "tool3"}\n```\n```json\n{"name": "tool4"}\n```\n```json\n{"name": "tool5"}\n```\n```json\n{"name": "tool6"}\n```'
+        current_content = 'Some content\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```\n```json toolcall\n{"name": "tool3"}\n```\n```json toolcall\n{"name": "tool4"}\n```\n```json toolcall\n{"name": "tool5"}\n```\n```json toolcall\n{"name": "tool6"}\n```'
         self.answer.content = current_content
 
         result = await self.plugin.during_message_generation(
@@ -95,7 +95,7 @@ class TestToolCallCountPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_call_within_limit_long_content(self):
         """测试长内容时工具调用在限制内"""
-        current_content = "A" * 2000 + '\n```json\n{"name": "tool1"}\n```'
+        current_content = "A" * 2000 + '\n```json toolcall\n{"name": "tool1"}\n```'
         self.answer.content = current_content
 
         result = await self.plugin.during_message_generation(
@@ -110,7 +110,7 @@ class TestToolCallCountPlugin(unittest.IsolatedAsyncioTestCase):
         """测试长内容时工具调用超过限制"""
         current_content = (
             "A" * 2000
-            + '\n```json\n{"name": "tool1"}\n```\n```json\n{"name": "tool2"}\n```'
+            + '\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
         )
         self.answer.content = current_content
 
@@ -143,7 +143,7 @@ class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_thinking_within_limit(self):
         """测试思考中的工具调用在限制内"""
-        current_reasoning = 'Some reasoning\n```json\n{"name": "tool1"}\n```\n```json\n{"name": "tool2"}\n```'
+        current_reasoning = 'Some reasoning\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
         self.answer.set_reasoning_message(current_reasoning)
         current_content = "Some content"
 
@@ -157,7 +157,7 @@ class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_thinking_exceed_limit(self):
         """测试思考中的工具调用超过限制"""
-        current_reasoning = 'Some reasoning\n```json\n{"name": "tool1"}\n```\n```json\n{"name": "tool2"}\n```\n```json\n{"name": "tool3"}\n```\n```json\n{"name": "tool4"}\n```'
+        current_reasoning = 'Some reasoning\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```\n```json toolcall\n{"name": "tool3"}\n```\n```json toolcall\n{"name": "tool4"}\n```'
         self.answer.set_reasoning_message(current_reasoning)
         current_content = "Some content"
 
@@ -169,7 +169,7 @@ class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.user_output_queue.put.assert_called_once_with(self.answer)
         self.agent.messages.append.assert_called_once()
         call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIn("错误：大量思考如何使用```json调用工具", call_args.message)
+        self.assertIn("错误：大量思考如何使用```json toolcall调用工具", call_args.message)
         self.assertTrue(self.answer.interrupted)
 
     async def test_thinking_no_json_blocks(self):

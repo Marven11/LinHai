@@ -245,7 +245,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_markdown_tool_call(self):
         """测试Agent能正确解析markdown格式的工具调用"""
         # 模拟LLM返回包含工具调用的markdown响应
-        tool_call_response = """```json
+        tool_call_response = """```json toolcall
 {
     "name": "add_numbers",
     "arguments": {
