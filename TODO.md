@@ -4,12 +4,11 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 让ToolResultMessage在内容过长(大于50000个字符)时将文件保存到临时txt中，然后返回临时txt的路径和大小，让llm用其他文件读取的工具去读取
-    - [x] 加上对应的unittest
-- [x] 修改CLI前端的MessageWidget，在输出模型思考内容的时候只输出思考内容的最后5行，丢弃前面的内容，避免输出大量无用思考内容
-- [x] 运行并修复unittest
-- [x] 仔细修复每个文件中的警告，包括pylint和mypy
-- [x] 用black格式化
+- [ ] 现在agent的工具调用格式依赖markdown的` ```json `进行标记，这和普通的json块标记冲突，改成使用` ```json toolcall` 进行标记，参考test.py和test.md
+    - [ ] 编写/更新对应的unittest
+- [ ] 运行并修复unittest
+- [ ] 仔细修复每个文件中的警告，包括pylint和mypy
+- [ ] 用black格式化
 
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

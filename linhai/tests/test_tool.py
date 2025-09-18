@@ -386,9 +386,9 @@ class TestToolResultMessage(unittest.TestCase):
         message = ToolResultMessage(short_content)
         llm_message = message.to_llm_message()
 
-        self.assertEqual(llm_message["content"], short_content)
+        self.assertEqual(llm_message.get("content", ""), short_content)
         self.assertEqual(llm_message["role"], "user")
-        self.assertEqual(llm_message["name"], "tool-result")
+        self.assertEqual(llm_message.get("name", ""), "tool-result")
 
     def test_tool_result_message_with_long_content(self):
         """测试长内容情况，应保存到临时文件并返回文件信息"""
@@ -402,15 +402,15 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含文件信息
-        self.assertIn("内容过长", llm_message["content"])
-        self.assertIn("已保存到临时文件", llm_message["content"])
-        self.assertIn("大小", llm_message["content"])
-        self.assertIn("字节", llm_message["content"])
+        self.assertIn("内容过长", llm_message.get("content", ""))
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
+        self.assertIn("大小", llm_message.get("content", ""))
+        self.assertIn("字节", llm_message.get("content", ""))
         self.assertEqual(llm_message["role"], "user")
-        self.assertEqual(llm_message["name"], "tool-result")
+        self.assertEqual(llm_message.get("name", ""), "tool-result")
 
         # 验证返回的消息包含文件信息
-        self.assertIn("已保存到临时文件", llm_message["content"])
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
         self.assertIn("大小", llm_message["content"])
 
         # 使用更健壮的方法提取文件路径
@@ -440,9 +440,9 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 应该是JSON字符串
-        self.assertEqual(llm_message["content"], '{"key": "value", "number": 42}')
+        self.assertEqual(llm_message.get("content", ""), '{"key": "value", "number": 42}')
         self.assertEqual(llm_message["role"], "user")
-        self.assertEqual(llm_message["name"], "tool-result")
+        self.assertEqual(llm_message.get("name", ""), "tool-result")
 
     def test_tool_result_message_with_long_json_content(self):
         """测试长JSON内容情况，应保存到临时文件"""
@@ -456,13 +456,13 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含文件信息
-        self.assertIn("内容过长", llm_message["content"])
-        self.assertIn("已保存到临时文件", llm_message["content"])
-        self.assertIn("大小", llm_message["content"])
-        self.assertIn("字节", llm_message["content"])
+        self.assertIn("内容过长", llm_message.get("content", ""))
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
+        self.assertIn("大小", llm_message.get("content", ""))
+        self.assertIn("字节", llm_message.get("content", ""))
 
         # 验证返回的消息包含文件信息
-        self.assertIn("已保存到临时文件", llm_message["content"])
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
         self.assertIn("大小", llm_message["content"])
 
         # 使用更健壮的方法提取文件路径

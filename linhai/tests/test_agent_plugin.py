@@ -19,7 +19,6 @@ class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.plugin = WaitingUserPlugin()
         self.agent = MagicMock()
-        self.agent.messages = []
         self.agent.state = "working"
         self.answer = MagicMock()
 
@@ -27,20 +26,21 @@ class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
         """Test when WAITING_USER_MARKER is in the last line."""
         full_response = f"Some response\n{WAITING_USER_MARKER}"
 
-        await self.plugin.after_message_generation(self.agent, None, full_response, [])
+        await self.plugin.after_message_generation(self.agent, self.answer, full_response, [])
 
-        self.assertEqual(len(self.agent.messages), 0)
+        self.agent.messages.append.assert_not_called()
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_marker_not_in_last_line(self):
         """Test when WAITING_USER_MARKER is not in the last line."""
         full_response = f"{WAITING_USER_MARKER}\nSome other content"
 
-        await self.plugin.after_message_generation(self.agent, None, full_response, [])
+        await self.plugin.after_message_generation(self.agent, self.answer, full_response, [])
 
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIsInstance(self.agent.messages[0], RuntimeMessage)
-        self.assertIn("不在最后一行", self.agent.messages[0].message)
+        self.agent.messages.append.assert_called_once()
+        call_args = self.agent.messages.append.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("不在最后一行", call_args.message)
         self.assertEqual(
             self.agent.state, "working"
         )  # 状态应为working，因为标记不在最后一行

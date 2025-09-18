@@ -81,7 +81,7 @@ def extract_tool_calls_with_errors(
     errors = []
 
     for i, block in enumerate(renderer.code_blocks):
-        if block["language"].lower() == "json":
+        if block["language"].lower() in ["json", "json toolcall"]:
             try:
                 data = json.loads(block["content"])
                 if isinstance(data, dict) and "name" in data and "arguments" in data:
