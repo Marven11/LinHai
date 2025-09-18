@@ -106,9 +106,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             "arguments": json.dumps({"a": 2, "b": 2}),
         }
         tool_call_json = json.dumps(tool_call_data)
-        response_content = (
-            f"Some response with {WAITING_USER_MARKER}\n```json toolcall\n{tool_call_json}\n```"
-        )
+        response_content = f"Some response with {WAITING_USER_MARKER}\n```json toolcall\n{tool_call_json}\n```"
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 

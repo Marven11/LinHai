@@ -225,7 +225,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("test_workflow", workflow_names)
 
         # Also check that some global tools are present
-        self.assertTrue(any("add_numbers" in name for name in workflow_names))
+        self.assertTrue(any("safe_calculator" in name for name in workflow_names))
 
     async def test_workflow_priority_over_global_tool(self):
         """Test that workflow takes priority over global tool with same name."""

@@ -102,7 +102,7 @@ class ThinkingToolCallPlugin(Plugin):
 
         max_json_blocks = 2
 
-        if json_block_count >= max_json_blocks:
+        if json_block_count > max_json_blocks:
             await agent.user_output_queue.put(answer)
             agent.messages.append(
                 RuntimeMessage(

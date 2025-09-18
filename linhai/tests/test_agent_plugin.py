@@ -26,7 +26,9 @@ class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
         """Test when WAITING_USER_MARKER is in the last line."""
         full_response = f"Some response\n{WAITING_USER_MARKER}"
 
-        await self.plugin.after_message_generation(self.agent, self.answer, full_response, [])
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, []
+        )
 
         self.agent.messages.append.assert_not_called()
         self.assertEqual(self.agent.state, "waiting_user")
@@ -35,7 +37,9 @@ class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
         """Test when WAITING_USER_MARKER is not in the last line."""
         full_response = f"{WAITING_USER_MARKER}\nSome other content"
 
-        await self.plugin.after_message_generation(self.agent, self.answer, full_response, [])
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, []
+        )
 
         self.agent.messages.append.assert_called_once()
         call_args = self.agent.messages.append.call_args[0][0]
@@ -169,7 +173,9 @@ class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.user_output_queue.put.assert_called_once_with(self.answer)
         self.agent.messages.append.assert_called_once()
         call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIn("错误：大量思考如何使用```json toolcall调用工具", call_args.message)
+        self.assertIn(
+            "错误：大量思考如何使用```json toolcall调用工具", call_args.message
+        )
         self.assertTrue(self.answer.interrupted)
 
     async def test_thinking_no_json_blocks(self):

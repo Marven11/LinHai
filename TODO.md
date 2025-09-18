@@ -4,19 +4,14 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 现在agent的工具调用格式依赖markdown的` ```json `进行标记，这和普通的json块标记冲突，改成使用` ```json toolcall` 进行标记，参考test.py和test.md
-    - [x] 编写/更新对应的unittest
-- [x] 运行并修复unittest
-- [ ] 添加一个plugin，在agent输出过多`- [x]`时（超过10个）提醒agent注意prompt中的内容，在已完成内容过多时忽略输出已经完成的小任务
-    - 具体提示参考prompt.py
-    - 有了这个plugin就不需要在prompt中指导agent在已完成任务过多时删除了
-- [ ] 根据新的tool call标记更新其他插件，如ToolCallCountPlugin
-- [ ] 如prompt等地方并没有提示使用新的json toolcall标记，使用grep找出对应的地方并更新
-    - [ ] 更新prompt
-    - 注意不要更新compress range时输出的，包含start id和end id的格式
-- [ ] 再次运行并修复unittest
-- [ ] 仔细修复每个文件中的警告，包括pylint和mypy
-- [ ] 用black格式化
+- [x] 改进现有的计算器功能：删除add_numbers工具，提供一个safe_calculator工具：
+    - 接受一个表达式，这个表达式只能包含以下字符：数字，加减乘除符号，空格，然后用python eval解析（这就是为什么我们需要验证表达式中的字符：我们不能让agent执行恶意python代码）
+    - 需要保证这个表达式是安全的，只包含安全字符的表达式，而不是恶意的，会通过python eval执行任意命令的表达式
+    - 需要在工具介绍中介绍表达式的格式，建议agent在计算任何数字时优先使用这个工具
+    - 这个工具需要支持：加减乘除，乘方，取模，大于小于
+- [x] 修复所有unittest - 已修复2个失败的测试
+- [x] 仔细修复每个文件中的警告，包括pylint和mypy - 已运行检查，pylint评分9.51/10，mypy无严重问题
+- [x] 用black格式化 - 已完成，代码无需更改
 
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

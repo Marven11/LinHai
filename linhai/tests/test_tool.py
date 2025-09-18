@@ -440,7 +440,9 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 应该是JSON字符串
-        self.assertEqual(llm_message.get("content", ""), '{"key": "value", "number": 42}')
+        self.assertEqual(
+            llm_message.get("content", ""), '{"key": "value", "number": 42}'
+        )
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
