@@ -4,9 +4,13 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 现在agent的工具调用格式依赖markdown的` ```json `进行标记，这和普通的json块标记冲突，改成使用` ```json toolcall` 进行标记，参考test.py和test.md
-    - [ ] 编写/更新对应的unittest
-- [ ] 运行并修复unittest
+- [x] 现在agent的工具调用格式依赖markdown的` ```json `进行标记，这和普通的json块标记冲突，改成使用` ```json toolcall` 进行标记，参考test.py和test.md
+    - [x] 编写/更新对应的unittest
+- [x] 运行并修复unittest
+- [ ] 添加一个plugin，在agent输出过多`- [x]`时（超过10个）提醒agent注意prompt中的内容，在已完成内容过多时忽略输出已经完成的小任务
+    - 具体提示参考prompt.py
+    - 有了这个plugin就不需要在prompt中指导agent在已完成任务过多时删除了
+- [ ] 再次运行并修复unittest
 - [ ] 仔细修复每个文件中的警告，包括pylint和mypy
 - [ ] 用black格式化
 
