@@ -17,6 +17,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             base_url="https://test.com",
             model="test_model",
             openai_config={},
+            chat_completion_kwargs={},
         )
 
     def test_chat_message_creation(self):

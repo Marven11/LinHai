@@ -312,6 +312,7 @@ class OpenAi:
         base_url: str,
         model: str,
         openai_config: dict,
+        chat_completion_kwargs: dict,
         tools: list[dict] | None = None,
     ):
         """初始化OpenAI语言模型。
@@ -328,6 +329,7 @@ class OpenAi:
             api_key=api_key, base_url=base_url, timeout=10, **openai_config
         )
         self.tools = tools
+        self.chat_completion_kwargs = chat_completion_kwargs
 
     async def answer_stream(
         self,
@@ -357,6 +359,7 @@ class OpenAi:
             "messages": messages,
             "stream": True,
             "temperature": 0.1,
+            **self.chat_completion_kwargs
         }
 
         if self.tools:

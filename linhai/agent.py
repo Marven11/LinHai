@@ -772,7 +772,8 @@ def create_agent(
         api_key=config["llm"]["api_key"],
         base_url=config["llm"]["base_url"],
         model=config["llm"]["model"],
-        openai_config={},
+        openai_config=config["llm"].get("openai_config", {}),
+        chat_completion_kwargs=config["llm"].get("chat_completion_kwargs", {}),
     )
 
     # 加载廉价LLM配置
@@ -782,7 +783,8 @@ def create_agent(
             api_key=config["llm"]["cheap"]["api_key"],
             base_url=config["llm"]["cheap"]["base_url"],
             model=config["llm"]["cheap"]["model"],
-            openai_config={},
+            openai_config=config["llm"]["cheap"].get("openai_config", {}),
+            chat_completion_kwargs=config["llm"]["cheap"].get("chat_completion_kwargs", {}),
         )
 
     user_input_queue: "Queue[ChatMessage]" = Queue()
