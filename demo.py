@@ -17,6 +17,7 @@
 import os
 import tempfile
 import subprocess
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -46,6 +47,14 @@ def fetch_and_convert(url: str, output_md: str = "output.md") -> str:
 
         # 保存HTML内容
         html_content = driver.page_source
+
+        # 删除javascript:开头的链接
+        soup = BeautifulSoup(html_content, "html.parser")
+        for a_tag in soup.find_all("a", href=True):
+            if a_tag["href"].startswith("javascript:"):  # type: ignore
+                a_tag.decompose()
+        html_content = str(soup)
+
         with open(tmp_html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
 
@@ -58,7 +67,18 @@ def fetch_and_convert(url: str, output_md: str = "output.md") -> str:
             tmp_html_path,
             "-o",
             output_md,
-            "--to=markdown-markdown_in_html_blocks-fenced_divs-native_divs",
+            "--to=markdown"
+            "-header_attributes"
+            "-link_attributes"
+            "-fenced_code_attributes"
+            "-inline_code_attributes"
+            "-bracketed_spans"
+            "-markdown_in_html_blocks"
+            "-raw_html"
+            "-fenced_divs"
+            "-native_divs-native_spans"
+            "+simple_tables"
+            "+pipe_tables",
         ]
 
         result = subprocess.run(pandoc_cmd, capture_output=True, text=True)
