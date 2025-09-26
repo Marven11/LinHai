@@ -4,13 +4,11 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 改进现有的计算器功能：删除add_numbers工具，提供一个safe_calculator工具：
-    - 接受一个表达式，这个表达式只能包含以下字符：数字，加减乘除符号，空格，然后用python eval解析（这就是为什么我们需要验证表达式中的字符：我们不能让agent执行恶意python代码）
-    - 需要保证这个表达式是安全的，只包含安全字符的表达式，而不是恶意的，会通过python eval执行任意命令的表达式
-    - 需要在工具介绍中介绍表达式的格式，建议agent在计算任何数字时优先使用这个工具
-    - 这个工具需要支持：加减乘除，乘方，取模，大于小于
-- [x] 修复所有unittest - 已修复2个失败的测试
-- [x] 仔细修复每个文件中的警告，包括pylint和mypy - 已运行检查，pylint评分9.51/10，mypy无严重问题
+- [x] 研究如何读取互联网上的文章：
+    - 我们到目标是添加一个工具，用来读取互联网上的文章，并转为markdown让agent读取
+    - 写一个示例，使用selenium访问网站，保存对应的HTML到临时.html文件，然后使用这条pandoc命令转成markdown
+        - `pandoc {}.html -o a.md --to=markdown-markdown_in_html_blocks-fenced_divs-native_divs`
+    - 然后输出报告ANALYSIS_FETCH_ARTICLE_MARKDOWN.md，介绍过程和效果
 - [x] 用black格式化 - 已完成，代码无需更改
 
 
