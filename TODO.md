@@ -6,9 +6,12 @@
 
 - [x] 研究如何读取互联网上的文章：
     - 我们到目标是添加一个工具，用来读取互联网上的文章，并转为markdown让agent读取
-    - 写一个示例，使用selenium访问网站，保存对应的HTML到临时.html文件，然后使用这条pandoc命令转成markdown
-        - `pandoc {}.html -o a.md --to=markdown-markdown_in_html_blocks-fenced_divs-native_divs`
+    - 写一个示例demo.py，使用selenium访问网站，保存对应的HTML到临时.html文件，然后使用pandoc命令转为markdown
+    - HTML删除链接为`javascript`开头的链接元素
     - 然后输出报告ANALYSIS_FETCH_ARTICLE_MARKDOWN.md，介绍过程和效果
+- [x] 将下载文章为markdown的功能添加为工具
+    - 这个工具会将demo.py中print的内容作为字符串返回，让agent读取
+    - 将最终的markdown保存到临时文件中供agent调用其他文件读取
 - [x] 用black格式化 - 已完成，代码无需更改
 
 
@@ -18,7 +21,6 @@
 
 - [ ] 调整MCP对接命名规范（避免双下划线）
 - [ ] 改进文件编辑tool的安全性处理（允许渗透代码但警告）
-- [ ] 添加微信公众号文章读取功能
 - [ ] 让所有Message都支持序列化和反序列化，方便保存到本地文件中，不要使用pickle而是使用安全的序列化方式
 - [ ] 处理代码中的prompt injection风险
 - [ ] 研究subagent集成
