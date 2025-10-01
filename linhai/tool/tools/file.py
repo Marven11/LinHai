@@ -368,15 +368,21 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
 @register_tool(
     name="insert_at_line",
     desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。"
-    "建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。",
+    "建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。"
+    "注意：调用时需提供预期插入位置的当前行内容（不含换行符）以验证行号准确性。",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
         "content": ToolArgInfo(desc="要插入的内容", type="str"),
+        "expected_line_content": ToolArgInfo(
+            desc="预期插入位置的当前行内容（不含换行符）", type="str"
+        ),
     },
-    required_args=["filepath", "line_number", "content"],
+    required_args=["filepath", "line_number", "content", "expected_line_content"],
 )
-def insert_at_line(filepath: str, line_number: int, content: str) -> str:
+def insert_at_line(
+    filepath: str, line_number: int, content: str, expected_line_content: str
+) -> str:
     """将内容插入到文件的指定行号位置。
 
     Args:
@@ -398,6 +404,24 @@ def insert_at_line(filepath: str, line_number: int, content: str) -> str:
 
         if line_number < 1 or line_number > num_lines + 1:
             return f"行号{line_number}无效，有效范围是1到{num_lines + 1}"
+
+        # 验证当前行内容是否匹配预期
+        if line_number <= num_lines:
+            current_line = lines[line_number - 1].rstrip("\n")
+            if current_line != expected_line_content:
+                return (
+                    f"预期行内容不匹配：实际内容为'{current_line}'，预期为'{expected_line_content}'"
+                    "你可能需要重新读取文件"
+                )
+        elif line_number == num_lines + 1:
+            # 对于文件末尾的情况，预期内容应为空（因为插入到末尾之后）
+            if expected_line_content != "":
+                return (
+                    f"预期行内容不匹配：文件末尾应无内容，但预期为'{expected_line_content}'"
+                    "你可能需要重新读取文件"
+                )
+        else:
+            return f"行号{line_number}超出范围，无法验证" "你可能需要重新读取文件"
 
         # 如果内容不以换行符结尾，添加一个换行符使其成为完整行
         content_to_insert = content
