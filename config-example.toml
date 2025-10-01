@@ -1,0 +1,26 @@
+[llm]
+
+base_url = "https://api.deepseek.com/v1"
+api_key = "sk-xxx"
+model = "deepseek-reasoner"
+# model = "deepseek-chat"
+
+[llm.chat_completion_kwargs.extra_body]
+enable_thinking = true
+
+# [llm.cheap]
+# base_url = "https://api.deepseek.com/v1"
+# api_key = "sk-xxx"
+# model = "deepseek-chat"
+
+[agent]
+compress_threshold_soft = 30000
+compress_threshold_hard = 60000
+
+[agent.tool_confirmation]
+
+skip_confirmation = true
+
+[memory]
+file_path = "./LINHAI.md"
+

@@ -4,15 +4,10 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 研究如何读取互联网上的文章：
-    - 我们到目标是添加一个工具，用来读取互联网上的文章，并转为markdown让agent读取
-    - 写一个示例demo.py，使用selenium访问网站，保存对应的HTML到临时.html文件，然后使用pandoc命令转为markdown
-    - HTML删除链接为`javascript`开头的链接元素
-    - 然后输出报告ANALYSIS_FETCH_ARTICLE_MARKDOWN.md，介绍过程和效果
-- [x] 将下载文章为markdown的功能添加为工具
-    - 这个工具会将demo.py中print的内容作为字符串返回，让agent读取
-    - 将最终的markdown保存到临时文件中供agent调用其他文件读取
-- [x] 用black格式化 - 已完成，代码无需更改
+- [x] 修改/home/cube/Code/Python/LinHai/linhai/tool/tools/file.py中的insert_at_line，让模型同时提供被替换行的内容（不含换行符号）
+    - 需要验证被替换行的内容是否正确，如果不正确则返回实际的内容并提醒模型可能需要重新读取文件以确定行号
+    - 需要编写对应的unittest
+- [x] 运行所有unittest并修复错误的unittest
 
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
