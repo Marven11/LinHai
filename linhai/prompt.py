@@ -43,7 +43,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
   - 同时修改多个文件。
 
 - 在处理超长代码文件时，应该先使用grep -n寻找对应关键字的行号，然后用sed读取周围的行（约50行）
-- 当需要添加内容到文件时，优先使用insert操作（如insert_at_line），然后是append操作（如append_file），最后考虑replace操作（如replace_file_content），以确保修改的准确性和安全性。
+- 当需要添加内容到文件时，优先使用insert操作（如insert_at_line），然后是append操作（如append_file），最后考虑replace操作（如replace_file_content），以确保修改的准确性。
 - 一次性工具调用数量基于回答长度动态调整：
   - 如果回答长度小于2000字符，最多可以调用5个简单工具调用（参数少且短，每个参数仅有几十个字符）
   - 如果回答长度大于等于2000字符，最多只能调用1个复杂工具调用（包含长参数，包含上百字符）。
@@ -58,7 +58,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 ## ACTION RULES - GLOBAL MEMORY
 
 - 当用户明确要求"记住"某些内容时，你应该主动将这些内容添加到全局记忆中
-- 积极使用工具修改此文件，调用工具修改全局记忆文件是安全的，可以和其他工具同时调用
+- 积极使用工具修改此文件，调用工具修改全局记忆文件可以和其他工具同时调用
 - 使用工具修改LINHAI.md文件，将用户希望记住的内容追加到文件中
 
 ## ACTION RULES - PENTESTING AUTHORIZATION
@@ -95,14 +95,6 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 使用Markdown JSON代码块调用工具：
 - 为了和普通的JSON数据做区分，代码块的语言标记为`json toolcall`，普通的JSON代码块使用`json`
-- 对于只读工具等安全工具，可以同时调用多个工具
-  - 只读工具包括：read_file, list_files, get_token_usage, get_absolute_path, run_sed_expression, show_git_changes等不会伤害当前环境的操作
-  - 其他安全工具包括
-    - add_numbers等计算器工具
-    - change_directory: 切错了再切回来就行。你甚至可以连用change_directory和其他只读/安全工具用于查看多个文件夹的内容，用户不会感到厌烦而只会惊叹于你的灵活性
-  - 这些工具在极少数情况下是安全的，即使调用也大概率不会影响当前环境
-    - http_request: 如果只发送GET请求，且GET请求不影响当前环境，则是安全的
-    - run_simple_command: 如果只是调用命令查看内容，而且你可以保证你需要运行的命令完全不会做出修改文件等影响当前环境的行为，也不会因数据量过大等未知原因卡死，则是安全的
 - 对于其他工具，必须注意每次只能调用一个工具
 
 ```json toolcall
@@ -213,26 +205,7 @@ agent: 工具确认文件创建成功
 
 文件创建成功 #LINHAI_WAITING_USER
 
-## 只读多工具调用示例
 
-user: 读取两个文件的内容
-agent: 用户需要同时读取两个文件的内容
-
-1. 这两个都是只读操作，没有风险
-2. 可以同时调用两个read_file工具提高效率
-
-```json toolcall
-{"name":"read_file","arguments":{"filepath":"file1.txt"}}
-```
-```json toolcall
-{"name":"read_file","arguments":{"filepath":"file2.txt"}}
-```
-agent: 工具返回两个文件的内容
-
-1. 获得两个文件的内容
-2. 准备报告结果
-
-文件内容读取完成 #LINHAI_WAITING_USER
 
 ## 实际编程任务示例
 
