@@ -108,6 +108,8 @@ class ToolManager:
             # function_arguments 现在直接是字典，无需解析
             args = tool_call.function_arguments if tool_call.function_arguments else {}
             result = call_tool(tool_call.function_name, args)
+            if isinstance(result, Awaitable):
+                result = await result
 
             # 如果工具返回的是 Message 实例，直接返回
             if isinstance(result, Message):
