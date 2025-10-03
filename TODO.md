@@ -25,10 +25,11 @@
 - [x] 在prompt.py中“？”的意思后面加上“！”的意思：用户对你的行为强烈不满，要求你立即完成用户提出的要求，搁置当前的计划，同时根据用户的要求修改你当前的计划
 - [x] 让linhai/tool/tools/command.py中的命令输出不仅包含stdout和stderr，也包含status code
 - [x] 修改prompt.py，如果任务没有完成就不要暂停
-- [ ] 添加`-m`/`--message`选项，支持通过命令行参数手动指定第一条用户命令
-- [ ] 为main.py中的命令行参数编写unittest
+- [x] 添加`-m`/`--message`选项，支持通过命令行参数手动指定第一条用户命令
+- [x] 为main.py中的命令行参数编写unittest
     - 全面测试所有选项
     - 确保在使用`-m`/`--message`时input函数不会被调用，没有调用时input函数会被调用
+    - 确保在使用`-m`/`--message`时消息会被加入到agent中
 - [x] 让test_agent_*.py在消息数量有误时打印每条消息的类型和repr （最多两百字符）
 - [x] 运行所有unittest并修复过时的unittest
 

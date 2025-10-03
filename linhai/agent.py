@@ -728,6 +728,7 @@ class Agent:
 
 def create_agent(
     config_path: str = "./config.toml",
+    init_messages: list[Message] | None = None,
 ) -> tuple[
     Agent,
     "Queue[ChatMessage]",
@@ -806,9 +807,13 @@ def create_agent(
         )
         .replace("{|CURRENT_TIME|}", current_time)
     )
-    init_messages: list[Message] = [
-        SystemMessage(system_prompt),
-    ]
+    if init_messages is None:
+        init_messages = []
+    else:
+        init_messages = init_messages.copy()
+    
+    # 在用户消息前插入系统消息
+    init_messages.insert(0, SystemMessage(system_prompt))
 
     # 加载全局记忆 - 检查多个文件路径
     memory_config = agent_config.get("memory", {})

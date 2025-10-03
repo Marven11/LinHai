@@ -106,6 +106,7 @@ class CLIApp(App):
         user_output_queue: "Queue[Answer | AnswerToken]",
         tool_request_queue: "Queue[ToolCallMessage]",
         tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
+        init_message: str | None = None,
     ):
         super().__init__()
         self.messages: List[Message] = []
@@ -114,6 +115,7 @@ class CLIApp(App):
         self.user_output_queue = user_output_queue
         self.tool_request_queue = tool_request_queue
         self.tool_confirmation_queue = tool_confirmation_queue
+        self.init_message = init_message
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
         self.agent_task: Optional[asyncio.Task] = None
@@ -247,6 +249,18 @@ class CLIApp(App):
             self.watch_tool_request_queue()
         )
         self.agent_task = asyncio.create_task(self.agent.run())
+        
+        # 如果有初始消息，自动发送
+        if self.init_message:
+            user_msg = ChatMessage(role="user", message=self.init_message)
+            self.messages.append(user_msg)
+            await self.user_input_queue.put(user_msg)
+            # 更新UI
+            widget = MessageWidget(user_msg.role, user_msg.message)
+            container = self.query_one("#chat-container")
+            container.scroll_end()
+            container.mount(widget)
+            widget.update_display()
 
     async def on_unmount(self) -> None:
         """应用卸载时取消任务"""
