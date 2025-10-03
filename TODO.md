@@ -13,7 +13,7 @@
     - 如果同时修改多个文件则可以同时调用
 - [x] 修改agent.py，把检查LINHAI.md位置的逻辑等初始化self.messages的逻辑放到create_agent函数中，让agent接收一个参数init_messages
 - [x] 在检查LINHAI.md的位置时，不要只检查配置中的LINHAI.md，同时也要检查当前文件夹的LINHAI.md, AGENT.md, CLAUDE.md三个文件是否存在，以及~/.config/linhai/LINHAI.md这个路径
-- [ ] 把main.py中配置的默认路径改为~/.config/linhai/config.toml，然后把当前位置的config.toml复制到那里去
+- [x] 把main.py中配置的默认路径改为~/.config/linhai/config.toml，然后把当前位置的config.toml复制到那里去
 - [ ] 将linhai/tool/tools/command.py中的execute_command以及调用命令的两个工具都改成async的
 - [ ] 修改linhai/tool/main.py中的ToolManager，让其在工具函数返回awaitable时await这个awaitable，以同时支持异步和同步函数
     - 这个我写了，你看看实现是否合理

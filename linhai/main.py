@@ -33,7 +33,7 @@ def main():
     # 添加agent命令
     agent_parser = subparsers.add_parser("agent", help="与Agent聊天")
     agent_parser.add_argument(
-        "--config", type=str, default="./config.toml", help="配置文件路径"
+        "--config", type=str, default="~/.config/linhai/config.toml", help="配置文件路径"
     )
 
     args = parser.parse_args()
