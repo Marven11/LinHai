@@ -810,11 +810,34 @@ def create_agent(
         SystemMessage(system_prompt),
     ]
 
-    # 加载全局记忆
+    # 加载全局记忆 - 检查多个文件路径
     memory_config = agent_config.get("memory", {})
-    memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
+    
+    # 定义要检查的文件路径列表（按优先级顺序）
+    memory_filepaths = [
+        Path("./LINHAI.md").absolute(),
+        Path("./AGENT.md").absolute(), 
+        Path("./CLAUDE.md").absolute(),
+        Path("~/.config/linhai/LINHAI.md").expanduser()
+    ]
+    
+    # 如果配置中指定了文件路径，则使用配置的路径（最高优先级）
+    if "file_path" in memory_config:
+        memory_filepaths.insert(0, Path(memory_config["file_path"]).absolute())
+    
+    # 找到第一个存在的文件
+    selected_filepath = None
+    for filepath in memory_filepaths:
+        if filepath.exists():
+            selected_filepath = filepath
+            break
+    
+    # 如果没有找到存在的文件，使用列表中的第一个路径
+    if selected_filepath is None:
+        selected_filepath = memory_filepaths[0]
+    
     init_messages.append(
-        GlobalMemory(memory_filepath)
+        GlobalMemory(selected_filepath)
     )  # 总是添加，无论文件是否存在
 
     # 添加廉价LLM状态消息
