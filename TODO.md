@@ -21,7 +21,7 @@
 - [x] 为linhai/tool/main.py中的ToolManager编写unittest，测试其是否可以调用异步的工具
 - [ ] 添加对应的unittest
 - [x] 简化linhai/tool/tools/command.py的实现，尝试不要使用loop.run_in_executor，而是直接await
-- [ ] 简化linhai/tests中的文件排布，合并linhai/tests/tool/test_command_async.py和test_tool.py并删除linhai/tests/tool/文件夹
+- [x] 简化linhai/tests中的文件排布，合并linhai/tests/tool/test_command_async.py和test_tool.py并删除linhai/tests/tool/文件夹
 - [x] 在prompt.py中“？”的意思后面加上“！”的意思：用户对你的行为强烈不满，要求你立即完成用户提出的要求，搁置当前的计划，同时根据用户的要求修改你当前的计划
 - [x] 让linhai/tool/tools/command.py中的命令输出不仅包含stdout和stderr，也包含status code
 - [x] 修改prompt.py，如果任务没有完成就不要暂停
