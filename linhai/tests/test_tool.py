@@ -53,6 +53,27 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(type(result).__name__, "ToolErrorMessage")
             self.assertEqual(getattr(result, "content"), "Tool not found")
 
+    async def test_async_tool_call(self):
+        """测试异步工具调用"""
+        # 创建一个模拟的异步工具
+        async def mock_async_tool(arg1: int, arg2: int) -> int:
+            return arg1 + arg2
+
+        # 模拟工具调用返回一个Awaitable
+        with unittest.mock.patch(
+            "linhai.tool.main.call_tool", return_value=mock_async_tool(2, 3)
+        ) as mock_call:
+            mock_tool_call = ToolCallMessage(
+                function_name="mock_async_tool", function_arguments={"arg1": 2, "arg2": 3}
+            )
+            result = await self.manager.process_tool_call(mock_tool_call)
+
+            # 验证工具被正确调用
+            mock_call.assert_called_once_with("mock_async_tool", {"arg1": 2, "arg2": 3})
+
+            # 验证返回结果
+            self.assertEqual(type(result).__name__, "ToolResultMessage")
+            self.assertEqual(getattr(result, "content"), "5")
     # 移除manager_run_loop测试，因为ToolManager不再有run方法
 
 

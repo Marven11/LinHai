@@ -17,7 +17,7 @@
 - [x] 将linhai/tool/tools/command.py中的execute_command以及调用命令的两个工具都改成async的
 - [x] 修改linhai/tool/main.py中的ToolManager，让其在工具函数返回awaitable时await这个awaitable，以同时支持异步和同步函数
     - 这个我写了，你看看实现是否合理
-- [ ] 为linhai/tool/main.py中的ToolManager编写unittest，测试其是否可以调用异步的工具
+- [x] 为linhai/tool/main.py中的ToolManager编写unittest，测试其是否可以调用异步的工具
 - [ ] 添加对应的unittest
 - [ ] 简化linhai/tool/tools/command.py的实现，尝试不要使用loop.run_in_executor，而是直接await
 - [ ] 简化linhai/tests中的文件排布，合并linhai/tests/tool/test_command_async.py和test_tool.py并删除linhai/tests/tool/文件夹
