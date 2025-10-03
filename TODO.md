@@ -5,13 +5,13 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [x] （做完这一步暂停）汇报当前prompt.py中有多少种情况是禁止执行多条命令的
-- [ ] 完全删除prompt.py中关于安全与非安全工具、非只读工具的描述
-    - [ ] 使用grep仔细检查！核对每个含有“安全”或“只读”的行！
-- [ ] 使用mypy, pylint, black检查以下文件
-    - [ ] main.py
-    - [ ] tool/main.py
-    - [ ] tool/base.py
-    - [ ] tool/tools/command.py
+- [x] 完全删除prompt.py中关于安全与非安全工具、非只读工具的描述
+    - [x] 使用grep仔细检查！核对每个含有“安全”或“只读”的行！
+- [x] 使用mypy, pylint, black检查以下文件
+    - [x] main.py
+    - [x] tool/main.py
+    - [x] tool/base.py
+    - [x] tool/tools/command.py
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

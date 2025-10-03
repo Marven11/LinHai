@@ -33,11 +33,12 @@ def main():
     # 添加agent命令
     agent_parser = subparsers.add_parser("agent", help="与Agent聊天")
     agent_parser.add_argument(
-        "--config", type=str, default="~/.config/linhai/config.toml", help="配置文件路径"
+        "--config",
+        type=str,
+        default="~/.config/linhai/config.toml",
+        help="配置文件路径",
     )
-    agent_parser.add_argument(
-        "-m", "--message", type=str, help="初始用户消息"
-    )
+    agent_parser.add_argument("-m", "--message", type=str, help="初始用户消息")
 
     args = parser.parse_args()
 
@@ -48,9 +49,10 @@ def main():
     elif args.command == "agent":
 
         # 处理初始消息
-        init_messages: list[Message] | None = None
+        init_messages: list["Message"] | None = None
         if args.message:
             from linhai.llm import ChatMessage, Message
+
             init_messages = [ChatMessage(role="user", message=args.message)]
 
         (

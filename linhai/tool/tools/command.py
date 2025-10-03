@@ -26,19 +26,21 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
             command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            shell=True
+            shell=True,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=timeout
+            )
             returncode = process.returncode
         except asyncio.TimeoutError:
             process.kill()
             await process.wait()
             return f"Command timed out after {timeout} seconds"
-        
-        stdout_str = stdout.decode('utf-8') if stdout else ""
-        stderr_str = stderr.decode('utf-8') if stderr else ""
-        
+
+        stdout_str = stdout.decode("utf-8") if stdout else ""
+        stderr_str = stderr.decode("utf-8") if stderr else ""
+
         return f"""
 Return code: {returncode}
 
