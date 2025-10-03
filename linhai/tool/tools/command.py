@@ -17,7 +17,7 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
         timeout: 超时时间（秒），默认2秒
 
     Returns:
-        命令执行的输出结果
+        命令执行的输出结果，包含returncode、stdout和stderr
     """
     if timeout > 600:
         return "Timeout value exceeds maximum limit of 600 seconds"
@@ -30,6 +30,7 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
         )
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            returncode = process.returncode
         except asyncio.TimeoutError:
             process.kill()
             await process.wait()
@@ -39,10 +40,12 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
         stderr_str = stderr.decode('utf-8') if stderr else ""
         
         return f"""
+Return code: {returncode}
+
+Stdout:
 {stdout_str}
 
-------
-
+Stderr:
 {stderr_str}
 """
     except Exception as e:
