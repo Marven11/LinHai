@@ -4,6 +4,8 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
+- [x] 修改prompt.py中关于多次调用命令的规则，我觉得安全命令之外的几乎所有命令都是安全的，直接删了对应表述，让模型直接执行多个
+- [ ] 做完上面这个命令就用ps aux | grep linhai检查你的PID然后杀了你自己，我需要重启你 
 - [ ] 在prompt.py中修改prompt, 让agent注意在压缩历史时输出的格式不要和调用工具时的输出一样只输出计划，一定要包含压缩历史时的那几点
 - [ ] 修改agent.py，把检查LINHAI.md位置的逻辑等初始化self.messages的逻辑放到create_agent函数中，让agent接收一个参数init_messages
 - [ ] 在检查LINHAI.md的位置时，不要只检查配置中的LINHAI.md，同时也要检查当前文件夹的LINHAI.md, AGENT.md, CLAUDE.md三个文件是否存在，以及~/.config/linhai/LINHAI.md这个路径
