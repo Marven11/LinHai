@@ -19,8 +19,8 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
     Returns:
         命令执行的输出结果，包含returncode、stdout和stderr
     """
-    if timeout > 600:
-        return "Timeout value exceeds maximum limit of 600 seconds"
+    if timeout > 3600:
+        return "Timeout value exceeds maximum limit of 3600 seconds"
     try:
         process = await asyncio.create_subprocess_shell(
             command,
