@@ -82,6 +82,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.get_tools_info.return_value = []
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
+        
+        # 创建初始消息列表
+        from linhai.llm import SystemMessage
+        init_messages = [SystemMessage("Test system prompt")]
+        
         self.agent = Agent(
             config=config,
             user_input_queue=self.user_input_queue,
@@ -89,6 +94,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             tool_request_queue=self.tool_request_queue,
             tool_confirmation_queue=self.tool_confirmation_queue,
             tool_manager=self.tool_manager,
+            init_messages=init_messages,
         )
 
     async def test_initial_state(self):
@@ -164,13 +170,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证用户消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 5
-        )  # 系统消息 + 全局记忆 + 廉价LLM状态 + 用户消息 + 回复
+            len(self.agent.messages), 3
+        )  # 系统消息 + 用户消息 + 回复
         self.assertEqual(
-            self.agent.messages[3].to_llm_message().get("content"), "<user>Hi</user>"
+            self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
         self.assertEqual(
-            self.agent.messages[4].to_llm_message().get("content"), "Processing..."
+            self.agent.messages[2].to_llm_message().get("content"), "Processing..."
         )
 
         # 重置mock以便测试工具消息
@@ -184,15 +190,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 7
-        )  # 系统消息 + 全局记忆 + 廉价LLM状态 + 用户消息 + 回复 + 工具消息 + 回复
+            len(self.agent.messages), 5
+        )  # 系统消息 + 用户消息 + 回复 + 工具消息 + 回复
         # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[5].to_llm_message().get("content"), "result"
+            self.agent.messages[3].to_llm_message().get("content"), "result"
         )
         # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[6].to_llm_message().get("content"), "Tool processed"
+            self.agent.messages[4].to_llm_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):

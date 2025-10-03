@@ -1,7 +1,17 @@
 """Unit tests for agent plugins."""
 
+import reprlib
 import unittest
 from unittest.mock import MagicMock
+
+# 创建自定义repr函数，限制长度为200字符
+r = reprlib.Repr()
+r.maxstring = 200
+custom_repr = r.repr
+
+def format_messages_for_assert(messages):
+    """格式化消息列表用于断言错误信息"""
+    return f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
 
 from linhai.agent_plugin import (
     WaitingUserPlugin,

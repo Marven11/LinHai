@@ -1,9 +1,19 @@
 """Unit tests for agent workflow functionality."""
 
 import asyncio
+import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import cast
+
+# 创建自定义repr函数，限制长度为200字符
+r = reprlib.Repr()
+r.maxstring = 200
+custom_repr = r.repr
+
+def format_messages_for_assert(messages):
+    """格式化消息列表用于断言错误信息"""
+    return f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
 
 from linhai.agent import Agent, AgentConfig
 from linhai.agent_base import RuntimeMessage
@@ -39,6 +49,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.agent = Agent(
             config=config,
+            init_messages=[],
             user_input_queue=cast(asyncio.Queue, self.user_input_queue),
             user_output_queue=cast(asyncio.Queue, self.user_output_queue),
             tool_request_queue=cast(asyncio.Queue, self.tool_request_queue),
