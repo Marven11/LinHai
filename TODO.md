@@ -29,6 +29,7 @@
 - [ ] 为main.py中的命令行参数编写unittest
     - 全面测试所有选项
     - 确保在使用`-m`/`--message`时input函数不会被调用，没有调用时input函数会被调用
+- [x] 让test_agent_*.py在消息数量有误时打印每条消息的类型和repr （最多两百字符）
 - [x] 运行所有unittest并修复过时的unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
