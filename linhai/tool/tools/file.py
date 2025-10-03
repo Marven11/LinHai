@@ -313,7 +313,7 @@ def run_sed_expression(expression: str, filepath: str) -> str:
     try:
         # 运行sed命令，不修改文件
         result = subprocess.run(
-            ["sed", expression, file_path.as_posix()],
+            ["sed", "-n", expression, file_path.as_posix()],
             capture_output=True,
             text=True,
             check=True,
