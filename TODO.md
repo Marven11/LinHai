@@ -11,7 +11,7 @@
     - 如果需要先查询/读取/...再提交/写入/...，或者提交/写入/...的结果依赖前面工具的运行结果，则不要同时调用
     - 如同时修改一个文件的多个地方，如果可以保证修改地方不重复（修改的地方相隔至少5行）的话则可以同时调用
     - 如果同时修改多个文件则可以同时调用
-- [ ] 修改agent.py，把检查LINHAI.md位置的逻辑等初始化self.messages的逻辑放到create_agent函数中，让agent接收一个参数init_messages
+- [x] 修改agent.py，把检查LINHAI.md位置的逻辑等初始化self.messages的逻辑放到create_agent函数中，让agent接收一个参数init_messages
 - [ ] 在检查LINHAI.md的位置时，不要只检查配置中的LINHAI.md，同时也要检查当前文件夹的LINHAI.md, AGENT.md, CLAUDE.md三个文件是否存在，以及~/.config/linhai/LINHAI.md这个路径
 - [ ] 把main.py中配置的默认路径改为~/.config/linhai/config.toml，然后把当前位置的config.toml复制到那里去
 - [ ] 将linhai/tool/tools/command.py中的execute_command以及调用命令的两个工具都改成async的

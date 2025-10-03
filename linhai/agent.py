@@ -252,6 +252,7 @@ class Agent:
         tool_request_queue: "Queue[ToolCallMessage]",
         tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
         tool_manager: ToolManager,
+        init_messages: list[Message],
     ):
         """
         初始化Agent
@@ -273,22 +274,7 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        system_prompt = (
-            self.config["system_prompt"]
-            .replace(
-                "{|TOOLS|}",
-                json.dumps(
-                    self.tool_manager.get_tools_info(), ensure_ascii=False, indent=2
-                ),
-            )
-            .replace("{|CURRENT_TIME|}", current_time)
-        )
-
-        self.messages: list[Message] = [
-            SystemMessage(system_prompt),
-        ]
+        self.messages: list[Message] = init_messages
 
         self.last_token_usage = None
         self.current_enable_compress = True
@@ -304,16 +290,6 @@ class Agent:
         self.lifecycle = Lifecycle()
         # 注册默认Plugin
         register_default_plugins(self.lifecycle)
-
-        # 加载全局记忆
-        memory_config = config.get("memory", {})
-        memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
-        self.messages.append(
-            GlobalMemory(memory_filepath)
-        )  # 总是添加，无论文件是否存在
-
-        # 添加廉价LLM状态消息
-        self.messages.append(CheapLlmStatusMessage("cheap_model" in self.config))
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -818,6 +794,32 @@ def create_agent(
         compress_history_range,
     )
 
+    # 构建初始消息列表
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    system_prompt = (
+        agent_config["system_prompt"]
+        .replace(
+            "{|TOOLS|}",
+            json.dumps(
+                tool_manager.get_tools_info(), ensure_ascii=False, indent=2
+            ),
+        )
+        .replace("{|CURRENT_TIME|}", current_time)
+    )
+    init_messages: list[Message] = [
+        SystemMessage(system_prompt),
+    ]
+
+    # 加载全局记忆
+    memory_config = agent_config.get("memory", {})
+    memory_filepath = Path(memory_config.get("file_path", "./LINHAI.md")).absolute()
+    init_messages.append(
+        GlobalMemory(memory_filepath)
+    )  # 总是添加，无论文件是否存在
+
+    # 添加廉价LLM状态消息
+    init_messages.append(CheapLlmStatusMessage("cheap_model" in agent_config))
+
     agent = Agent(
         config=agent_config,
         user_input_queue=user_input_queue,
@@ -825,6 +827,7 @@ def create_agent(
         tool_request_queue=tool_request_queue,
         tool_confirmation_queue=tool_confirmation_queue,
         tool_manager=tool_manager,
+        init_messages=init_messages,
     )
 
     return (
