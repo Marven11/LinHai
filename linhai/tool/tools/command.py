@@ -1,5 +1,6 @@
 """命令执行工具模块，提供安全命令执行功能。"""
 
+import asyncio
 import os
 import subprocess
 import re
@@ -8,7 +9,7 @@ from linhai.tool.base import register_tool, ToolArgInfo
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
 
-def execute_command(command: str, timeout: float = 2.0) -> str:
+async def execute_command(command: str, timeout: float = 2.0) -> str:
     """执行系统命令并返回输出（内部函数）
 
     Args:
@@ -21,25 +22,31 @@ def execute_command(command: str, timeout: float = 2.0) -> str:
     if timeout > 600:
         return "Timeout value exceeds maximum limit of 600 seconds"
     try:
-        result = subprocess.run(
+        process = await asyncio.create_subprocess_shell(
             command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            shell=True
         )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return f"Command timed out after {timeout} seconds"
+        
+        stdout_str = stdout.decode('utf-8') if stdout else ""
+        stderr_str = stderr.decode('utf-8') if stderr else ""
+        
         return f"""
-{result.stdout}
+{stdout_str}
 
 ------
 
-{result.stderr}
+{stderr_str}
 """
-    except subprocess.TimeoutExpired:
-        return f"Command timed out after {timeout} seconds"
-    except subprocess.CalledProcessError as e:
-        return f"Command failed with error: {e.stderr}"
+    except Exception as e:
+        return f"Command failed with error: {str(e)}"
 
 
 def validate_simple_command(command: str) -> bool:
@@ -63,7 +70,7 @@ def validate_simple_command(command: str) -> bool:
     },
     required_args=["command"],
 )
-def run_simple_command(command: str, timeout: float = 2.0) -> str:
+async def run_simple_command(command: str, timeout: float = 2.0) -> str:
     """执行简单系统命令（白名单验证），只允许安全命令
 
     Args:
@@ -79,7 +86,7 @@ def run_simple_command(command: str, timeout: float = 2.0) -> str:
             "如果需要使用其他字符，请使用run_complex_command工具。"
         )
 
-    return execute_command(command, timeout)
+    return await execute_command(command, timeout)
 
 
 @register_tool(
@@ -93,7 +100,7 @@ def run_simple_command(command: str, timeout: float = 2.0) -> str:
     },
     required_args=["command"],
 )
-def run_complex_command(command: str, timeout: float = 2.0) -> str:
+async def run_complex_command(command: str, timeout: float = 2.0) -> str:
     """执行复杂系统命令（可能包含危险操作，请谨慎使用）
 
     Args:
@@ -103,7 +110,7 @@ def run_complex_command(command: str, timeout: float = 2.0) -> str:
     Returns:
         命令执行的输出结果
     """
-    return execute_command(command, timeout)
+    return await execute_command(command, timeout)
 
 
 @register_tool(
