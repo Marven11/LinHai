@@ -55,7 +55,7 @@ def main():
         output_queue,
         tool_request_queue,
         tool_confirmation_queue,
-        init_message=args.message,
+        init_message=None,  # 总是设置为None，因为消息已经通过init_messages处理
     )
     app.run()
 
