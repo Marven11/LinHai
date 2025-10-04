@@ -5,7 +5,7 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [x] 我删除了subcommand，请使用git查看当前commit相较于上一个commit的修改，然后帮我修复unittest
-- [ ] linhai/tool/tools/command.py添加一个工具让agent调用exit函数退出自己，必须指定return code
+- [x] linhai/tool/tools/command.py添加一个工具让agent调用exit函数退出自己，必须指定return code
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

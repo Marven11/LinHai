@@ -5,6 +5,7 @@ import os
 import subprocess
 import re
 from linhai.tool.base import register_tool, ToolArgInfo
+import sys
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
@@ -193,3 +194,23 @@ def show_git_changes(filepath: str = "") -> str:
         output = f"执行git命令时发生错误: {str(e)}"
 
     return output
+
+
+@register_tool(
+    name="exit_agent",
+    desc="退出Agent程序，指定返回代码",
+    args={
+        "return_code": ToolArgInfo(desc="退出代码，0表示成功，非0表示错误", type="int"),
+    },
+    required_args=["return_code"],
+)
+def exit_agent(return_code: int) -> str:
+    """退出Agent程序，指定返回代码
+
+    Args:
+        return_code: 退出代码，0表示成功，非0表示错误
+
+    Returns:
+        退出消息（实际上程序会退出，所以不会返回）
+    """
+    sys.exit(return_code)
