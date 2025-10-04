@@ -4,6 +4,7 @@ LinHai 主程序入口模块。
 提供命令行接口，支持运行测试和Agent模式。
 """
 
+from pathlib import Path
 import argparse
 import unittest
 import sys
@@ -34,7 +35,7 @@ def main():
     agent_parser = subparsers.add_parser("agent", help="与Agent聊天")
     agent_parser.add_argument(
         "--config",
-        type=str,
+        type=Path,
         default="~/.config/linhai/config.toml",
         help="配置文件路径",
     )
@@ -62,7 +63,7 @@ def main():
             tool_request_queue,
             tool_confirmation_queue,
             _,
-        ) = create_agent(args.config, init_messages)
+        ) = create_agent(args.config.expanduser(), init_messages)
         app = CLIApp(
             agent,
             input_queue,

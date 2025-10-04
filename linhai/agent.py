@@ -727,7 +727,7 @@ class Agent:
 
 
 def create_agent(
-    config_path: str = "./config.toml",
+    config_path: str | Path = "./config.toml",
     init_messages: list[Message] | None = None,
 ) -> tuple[
     Agent,
