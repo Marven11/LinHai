@@ -36,11 +36,11 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run = MagicMock(return_value=None)
         mock_cli_app.return_value = mock_app
         
-        # 测试命令行参数
-        test_args = ["linhai", "agent", "-m", "测试消息"]
+        # 测试命令行参数（新结构：直接使用-m，无agent命令）
+        test_args = ["linhai", "-m", "测试消息"]
         
         with patch.object(sys, 'argv', test_args):
-            # main()在agent命令中不会调用sys.exit，所以不需要assertRaises
+            # main()现在直接运行agent，不会调用sys.exit
             main()
         
         # 验证create_agent被调用时传入了init_messages
@@ -93,10 +93,10 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.return_value = mock_app
         
         # 测试命令行参数（不使用-m选项）
-        test_args = ["linhai", "agent"]
+        test_args = ["linhai"]
         
         with patch.object(sys, 'argv', test_args):
-            # main()在agent命令中不会调用sys.exit，所以不需要assertRaises
+            # main()现在直接运行agent，不会调用sys.exit
             main()
         
         # 验证create_agent被调用时init_messages为None
@@ -115,52 +115,6 @@ class TestMainCommandLine(unittest.TestCase):
         
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
-
-    @patch('linhai.main.run_tests')
-    def test_test_command(self, mock_run_tests):
-        """测试test命令"""
-        mock_run_tests.return_value = True
-        
-        # 测试命令行参数
-        test_args = ["linhai", "test"]
-        
-        with patch.object(sys, 'argv', test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        
-        # 验证run_tests被调用
-        mock_run_tests.assert_called_once()
-        # 验证退出码为0（成功）
-        self.assertEqual(cm.exception.code, 0)
-
-    @patch('linhai.main.run_tests')
-    def test_test_command_failure(self, mock_run_tests):
-        """测试test命令失败的情况"""
-        mock_run_tests.return_value = False
-        
-        # 测试命令行参数
-        test_args = ["linhai", "test"]
-        
-        with patch.object(sys, 'argv', test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        
-        # 验证run_tests被调用
-        mock_run_tests.assert_called_once()
-        # 验证退出码为1（失败）
-        self.assertEqual(cm.exception.code, 1)
-
-    def test_invalid_command(self):
-        """测试无效命令"""
-        # 测试无效命令行参数
-        test_args = ["linhai", "invalid_command"]
-        
-        with patch.object(sys, 'argv', test_args):
-            with self.assertRaises(SystemExit) as cm:
-                main()
-        
-        # 验证退出码为2（无效命令）
-        self.assertEqual(cm.exception.code, 2)
 
 
 if __name__ == '__main__':
