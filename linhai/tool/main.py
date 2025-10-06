@@ -52,6 +52,15 @@ class ToolResultMessage(Message):
                 "content": self.content,
             },
         )
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.to_llm_message())
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        return cls(content=data["content"])
 
 
 class ToolErrorMessage(Message):
@@ -69,6 +78,15 @@ class ToolErrorMessage(Message):
                 "content": self.content,
             },
         )
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.to_llm_message())
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        return cls(content=data["content"])
 
 
 class ToolManager:

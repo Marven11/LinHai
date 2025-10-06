@@ -20,6 +20,14 @@ class Message(Protocol):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_llm_message()})"
+    def to_json(self) -> str:
+        """转换为JSON字符串。"""
+        raise NotImplementedError()
+
+    @classmethod
+    def from_json(cls, json_str: str) -> 'Message':
+        """从JSON字符串创建消息实例。"""
+        raise NotImplementedError()
 
 
 class SystemMessage:
@@ -36,6 +44,15 @@ class SystemMessage:
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
         return f"SystemMessage(message={self.message!r})"
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.to_llm_message())
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        return cls(message=data["content"])
 
 
 class ChatMessage:
@@ -64,6 +81,20 @@ class ChatMessage:
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
         return f"ChatMessage(role={self.role!r}, message={self.message!r}, name={self.name!r})"
+    def to_json(self) -> str:
+        import json
+        data = {
+            "role": self.role,
+            "message": self.message,  # 保存原始消息，不是包装后的消息
+            "name": self.name
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        return cls(role=data["role"], message=data["message"], name=data.get("name"))
 
 
 class ToolCallMessage:
@@ -110,6 +141,19 @@ class ToolCallMessage:
             f"ToolCallMessage(function_name={self.function_name!r}, "
             f"function_arguments={self.function_arguments!r})"
         )
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.to_llm_message())
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        # 从tool_calls中提取函数名和参数
+        tool_call = data["tool_calls"][0]
+        function_name = tool_call["function"]["name"]
+        function_arguments = tool_call["function"]["arguments"]
+        return cls(function_name=function_name, function_arguments=function_arguments)
 
 
 class ToolConfirmationMessage:
@@ -141,6 +185,20 @@ class ToolConfirmationMessage:
             f"ToolConfirmationMessage(tool_call={self.tool_call!r}, "
             f"confirmed={self.confirmed!r})"
         )
+    def to_json(self) -> str:
+        import json
+        data = {
+            "tool_call": self.tool_call.to_json(),
+            "confirmed": self.confirmed
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        tool_call = ToolCallMessage.from_json(data["tool_call"])
+        return cls(tool_call=tool_call, confirmed=data["confirmed"])
 
 
 class AnswerToken(TypedDict):

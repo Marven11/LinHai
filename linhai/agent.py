@@ -112,6 +112,18 @@ class CheapLlmStatusMessage:
             "content": content,
         }
 
+    def to_json(self) -> str:
+        import json
+        data = {
+            "is_cheap_llm_available": self.is_cheap_llm_available
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        import json
+        data = json.loads(json_str)
+        return cls(is_cheap_llm_available=data["is_cheap_llm_available"])
 
 # 生命周期回调类型定义
 
