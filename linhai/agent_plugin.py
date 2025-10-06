@@ -125,6 +125,7 @@ def register_default_plugins(lifecycle) -> None:
         WaitingUserPlugin(),
         ToolCallCountPlugin(),
         ExcessiveCheckmarkPlugin(),
+        MarkdownSyntaxPlugin(),
     ]
 
     for plugin in plugins:
@@ -145,6 +146,27 @@ class ExcessiveCheckmarkPlugin(Plugin):
                     f"警告：你输出了过多`- [x]`标记（{count}个），"
                     "请注意：如果完成的任务过多，可以不输出完成的小任务，只输出大任务已完成。"
                     "提示：如果完成的任务过多（十几条），在所有小任务都完成时，可以不输出完成的小任务，只输出大任务已完成。因为小任务是过程性的，完成的细节相对于结果来说不重要。"
+                )
+            )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class MarkdownSyntaxPlugin(Plugin):
+    """Markdown语法检查Plugin。"""
+
+    async def after_message_generation(
+        self, agent, answer: Answer, full_response, tool_calls
+    ):
+        """检查markdown语法是否正确。"""
+        # 计算代码块分隔符的数量
+        code_block_count = full_response.count("```")
+        if code_block_count % 2 != 0:
+            agent.messages.append(
+                RuntimeMessage(
+                    "输出markdown语法有误，可能会导致工具调用无效"
                 )
             )
 

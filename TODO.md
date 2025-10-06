@@ -4,9 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 现在使用--message指定初始消息好像会导致初始消息被填入两次，修改对应的unittest检查这个问题
-    - [x] 看看agent的messages属性是否包含两条对应的消息
-- [x] 如果有这个问题的话那就修复，让unittest运行成功
+- [x] 在linhai/agent_plugin.py中添加一个插件，检查agent的输出是否是合法的markdown，如果不是则提示agent“输出markdown语法有误，可能会导致工具调用无效”
+- [ ] 为上面的功能添加unittest并运行
+- [ ] 运行所有unittest并修复错误的
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
