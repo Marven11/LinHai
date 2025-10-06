@@ -1,5 +1,0 @@
-
-
-```json toolcall
-{"name": "xiaoming"}
-```
