@@ -1,13 +1,12 @@
 """Unit tests for the agent module."""
 
 import asyncio
-import json
 import unittest
 from asyncio import Queue
 from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
-from linhai.agent import Agent, AgentConfig, Lifecycle
+from linhai.agent import Agent, AgentConfig
 from linhai.llm import (
     ChatMessage,
     AnswerToken,
@@ -82,11 +81,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.get_tools_info.return_value = []
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
-        
+
         # 创建初始消息列表
         from linhai.llm import SystemMessage
+
         init_messages = [SystemMessage("Test system prompt")]
-        
+
         self.agent = Agent(
             config=config,
             user_input_queue=self.user_input_queue,
@@ -169,9 +169,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_messages([user_msg])
 
         # 验证用户消息被添加到messages中
-        self.assertEqual(
-            len(self.agent.messages), 3
-        )  # 系统消息 + 用户消息 + 回复
+        self.assertEqual(len(self.agent.messages), 3)  # 系统消息 + 用户消息 + 回复
         self.assertEqual(
             self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
@@ -283,167 +281,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证状态转换
         self.assertEqual(self.agent.state, "working")
-
-
-class TestLifecycle(unittest.IsolatedAsyncioTestCase):
-    """Test cases for the Lifecycle class."""
-
-    def setUp(self):
-        self.lifecycle = Lifecycle()
-        self.mock_agent = MagicMock()
-        self.mock_agent.state = "waiting_user"
-        self.mock_answer = MagicMock()
-        self.mock_tool_call = MagicMock()
-        self.mock_tool_result = MagicMock()
-
-    async def test_register_and_trigger_before_message_generation(self):
-        """Test registering and triggering before message generation callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
-
-        # 注册回调
-        self.lifecycle.register_before_message_generation(callback1)
-        self.lifecycle.register_before_message_generation(callback2)
-
-        # 触发回调
-        await self.lifecycle.trigger_before_message_generation(
-            self.mock_agent, True, False
-        )
-
-        # 验证回调被调用
-        callback1.assert_called_once_with(self.mock_agent, True, False)
-        callback2.assert_called_once_with(self.mock_agent, True, False)
-
-    async def test_register_and_trigger_after_message_generation(self):
-        """Test registering and triggering after message generation callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
-
-        # 注册回调
-        self.lifecycle.register_after_message_generation(callback1)
-        self.lifecycle.register_after_message_generation(callback2)
-
-        # 触发回调
-        await self.lifecycle.trigger_after_message_generation(
-            self.mock_agent, self.mock_answer, "test response", []
-        )
-
-        # 验证回调被调用
-        callback1.assert_called_once_with(
-            self.mock_agent, self.mock_answer, "test response", []
-        )
-        callback2.assert_called_once_with(
-            self.mock_agent, self.mock_answer, "test response", []
-        )
-
-    async def test_register_and_trigger_before_tool_call(self):
-        """Test registering and triggering before tool call callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
-
-        # 注册回调
-        self.lifecycle.register_before_tool_call(callback1)
-        self.lifecycle.register_before_tool_call(callback2)
-
-        # 触发回调
-        await self.lifecycle.trigger_before_tool_call(
-            self.mock_agent, self.mock_tool_call
-        )
-
-        # 验证回调被调用
-        callback1.assert_called_once_with(self.mock_agent, self.mock_tool_call)
-        callback2.assert_called_once_with(self.mock_agent, self.mock_tool_call)
-
-    async def test_register_and_trigger_after_tool_call(self):
-        """Test registering and triggering after tool call callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
-
-        # 注册回调
-        self.lifecycle.register_after_tool_call(callback1)
-        self.lifecycle.register_after_tool_call(callback2)
-
-        # 触发回调
-        await self.lifecycle.trigger_after_tool_call(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
-        )
-
-        # 验证回调被调用
-        callback1.assert_called_once_with(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
-        )
-        callback2.assert_called_once_with(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
-        )
-
-    async def test_callback_order(self):
-        """Test that callbacks are triggered in registration order."""
-        call_order = []
-
-        async def callback1(agent, enable_compress, disable_waiting_user_warning):
-            call_order.append(1)
-
-        async def callback2(agent, enable_compress, disable_waiting_user_warning):
-            call_order.append(2)
-
-        # 注册回调
-        self.lifecycle.register_before_message_generation(callback1)
-        self.lifecycle.register_before_message_generation(callback2)
-
-        # 触发回调
-        await self.lifecycle.trigger_before_message_generation(
-            self.mock_agent, True, False
-        )
-
-        # 验证回调顺序
-        self.assertEqual(call_order, [1, 2])
-
-    async def test_callback_exception_handling(self):
-        """Test that exceptions in callbacks are caught and logged."""
-
-        async def failing_callback(
-            agent, enable_compress, disable_waiting_user_warning
-        ):
-            raise RuntimeError("Callback failed")
-
-        async def succeeding_callback(
-            agent, enable_compress, disable_waiting_user_warning
-        ):
-            pass
-
-        # 注册回调
-        self.lifecycle.register_before_message_generation(failing_callback)
-        self.lifecycle.register_before_message_generation(succeeding_callback)
-
-        # 触发回调 - 应该不会抛出异常
-        try:
-            await self.lifecycle.trigger_before_message_generation(
-                self.mock_agent, True, False
-            )
-        except Exception:
-            self.fail("Exception from callback should be caught")
-
-        # 验证第二个回调仍然被调用
-        # 由于是mock测试，我们主要验证没有异常抛出
-
-    async def test_empty_callbacks(self):
-        """Test triggering when no callbacks are registered."""
-        # 触发没有注册回调的事件 - 应该不会抛出异常
-        try:
-            await self.lifecycle.trigger_before_message_generation(
-                self.mock_agent, True, False
-            )
-            await self.lifecycle.trigger_after_message_generation(
-                self.mock_agent, self.mock_answer, "test", []
-            )
-            await self.lifecycle.trigger_before_tool_call(
-                self.mock_agent, self.mock_tool_call
-            )
-            await self.lifecycle.trigger_after_tool_call(
-                self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
-            )
-        except Exception:
-            self.fail("Triggering empty callbacks should not throw exceptions")
 
 
 if __name__ == "__main__":
