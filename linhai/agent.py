@@ -1,7 +1,7 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 from pathlib import Path
-from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any, TypeAlias
+from typing import TypedDict, cast, NotRequired, Callable, Awaitable, Any, TypeAlias, Sequence
 
 import asyncio
 import logging
@@ -252,7 +252,7 @@ class Agent:
         tool_request_queue: "Queue[ToolCallMessage]",
         tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
         tool_manager: ToolManager,
-        init_messages: list[Message],
+        init_messages: Sequence[Message],
     ):
         """
         初始化Agent
@@ -274,7 +274,7 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
-        self.messages: list[Message] = init_messages
+        self.messages: list[Message] = list(init_messages)
 
         self.last_token_usage = None
         self.current_enable_compress = True
@@ -728,7 +728,7 @@ class Agent:
 
 def create_agent(
     config_path: str | Path = "./config.toml",
-    init_messages: list[Message] | None = None,
+    init_messages: Sequence[Message] | None = None,
 ) -> tuple[
     Agent,
     "Queue[ChatMessage]",
@@ -810,7 +810,7 @@ def create_agent(
     if init_messages is None:
         init_messages = []
     else:
-        init_messages = init_messages.copy()
+        init_messages = list(init_messages)
     
     # 在用户消息前插入系统消息
     init_messages.insert(0, SystemMessage(system_prompt))

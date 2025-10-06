@@ -4,9 +4,11 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 在linhai/agent_plugin.py中添加一个插件，检查agent的输出是否是合法的markdown，如果不是则提示agent“输出markdown语法有误，可能会导致工具调用无效”
-- [x] 为上面的功能添加unittest并运行
-- [x] 运行所有unittest并修复错误的
+- [ ] 列出所有实现了to_llm_message的类（使用grep），这些类是实现了Message protocol的类，附带上文件路径和行号输出到ALL_MESSAGE_CLASS.md中
+- [ ] 为Message这个protocol实现to_json和from_json方法，支持保存为json字符串，或者从json字符串中读取
+- [ ] 为每个实现了Message Protocol的类实现to_json和from_json方法
+    - 每修改一个类，就修改ALL_MESSAGE_CLASS.md标记为已经完成，并且增加对应的unittest
+- [ ] 运行所有unittest并修复错误的unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
