@@ -17,6 +17,7 @@ from linhai.agent_plugin import (
     WaitingUserPlugin,
     ToolCallCountPlugin,
     ThinkingToolCallPlugin,
+    MarkdownSyntaxPlugin,
 )
 from linhai.agent_base import WAITING_USER_MARKER, RuntimeMessage
 from unittest.mock import AsyncMock
@@ -216,5 +217,56 @@ class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages.append.assert_not_called()
 
 
+class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
+    """Test cases for MarkdownSyntaxPlugin."""
+
+    async def asyncSetUp(self):
+        self.plugin = MarkdownSyntaxPlugin()
+        self.agent = MagicMock()
+        self.agent.messages = MagicMock()
+        self.agent.messages.append = MagicMock()
+        self.answer = MagicMock()
+        self.answer.content = ""
+
+    async def test_even_code_blocks(self):
+        """Test when code block count is even (correct)."""
+        full_response = "Some content\n```python\nprint('hello')\n```\nMore content"
+        
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, []
+        )
+
+        self.agent.messages.append.assert_not_called()
+
+    async def test_odd_code_blocks(self):
+        """Test when code block count is odd (error)."""
+        full_response = "Some content\n```python\nprint('hello')"
+        
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, []
+        )
+
+        self.agent.messages.append.assert_called_once()
+        call_args = self.agent.messages.append.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("输出markdown语法有误", call_args.message)
+
+    async def test_no_code_blocks(self):
+        """Test when there are no code blocks."""
+        full_response = "Some content without code blocks"
+        
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, []
+        )
+
+        self.agent.messages.append.assert_not_called()
+
+    async def test_register_plugin(self):
+        """Test plugin registration."""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
 if __name__ == "__main__":
     unittest.main()
