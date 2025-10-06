@@ -63,6 +63,44 @@ def fetch_article(url: str) -> str:
         output_md = file.name
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp_html:
         tmp_html_path = tmp_html.name
+    # 创建临时Lua filter文件
+    with tempfile.NamedTemporaryFile(suffix=".lua", delete=False, mode='w', encoding='utf-8') as tmp_lua:
+        tmp_lua_path = tmp_lua.name
+        lua_filter_content = """
+function Table(tbl)
+  -- 删除表格属性
+  tbl.attr = {}
+  -- 删除列属性
+  for i, colspec in ipairs(tbl.colspecs) do
+    colspec.attr = {}
+  end
+  -- 删除表头属性
+  if tbl.head then
+    tbl.head.attr = {}
+    for i, row in ipairs(tbl.head.rows) do
+      row.attr = {}
+      for j, cell in ipairs(row.cells) do
+        cell.attr = {}
+      end
+    end
+  end
+  -- 删除表体属性
+  for i, body in ipairs(tbl.bodies) do
+    body.attr = {}
+    for j, row in ipairs(body.rows) do
+      row.attr = {}
+      for k, cell in ipairs(row.cells) do
+        cell.attr = {}
+      end
+    end
+  end
+  -- 转换为HTML
+  return pandoc.RawBlock('html', pandoc.write(pandoc.Pandoc({tbl}), 'html'))
+end
+"""
+        tmp_lua.write(lua_filter_content)
+        tmp_lua.flush()
+
     try:
         options = webdriver.FirefoxOptions()
         options.add_argument("--headless")
@@ -74,6 +112,11 @@ def fetch_article(url: str) -> str:
             for a in soup.find_all("a", href=True):
                 if a["href"].startswith("javascript:"):  # type: ignore
                     a.decompose()
+
+            # 删除URL过长的image元素
+            for img in soup.find_all("img", src=True):
+                if len(img["src"]) > 800:
+                    img.decompose()
 
         with open(tmp_html_path, "w", encoding="utf-8") as f:
             f.write(str(soup))
@@ -88,16 +131,18 @@ def fetch_article(url: str) -> str:
                 tmp_html_path,
                 "-o",
                 output_md,
-                "--to=markdown"
-                "-header_attributes"
-                "-link_attributes"
-                "-fenced_code_attributes"
-                "-inline_code_attributes"
-                "-bracketed_spans"
-                "-markdown_in_html_blocks"
-                "-raw_html"
-                "-fenced_divs"
-                "-native_divs-native_spans"
+                "--lua-filter", tmp_lua_path,
+                "--to=markdown",
+                "-header_attributes",
+                "-link_attributes",
+                "-fenced_code_attributes",
+                "-inline_code_attributes",
+                "-bracketed_spans",
+                "-markdown_in_html_blocks",
+                "-raw_html",
+                "-fenced_divs",
+                "-native_divs",
+                "-native_spans",
                 "+pipe_tables",
             ],
             check=True,
@@ -111,3 +156,5 @@ def fetch_article(url: str) -> str:
     finally:
         if os.path.exists(tmp_html_path):
             os.unlink(tmp_html_path)
+        if os.path.exists(tmp_lua_path):
+            os.unlink(tmp_lua_path)
