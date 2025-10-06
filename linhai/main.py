@@ -34,13 +34,6 @@ def main():
 
     args = parser.parse_args()
 
-    # 处理初始消息
-    init_messages: list["Message"] | None = None
-    if args.message:
-        from linhai.llm import ChatMessage, Message
-
-        init_messages = [ChatMessage(role="user", message=args.message)]
-
     (
         agent,
         input_queue,
@@ -48,14 +41,14 @@ def main():
         tool_request_queue,
         tool_confirmation_queue,
         _,
-    ) = create_agent(args.config.expanduser(), init_messages)
+    ) = create_agent(args.config.expanduser(), None)
     app = CLIApp(
         agent,
         input_queue,
         output_queue,
         tool_request_queue,
         tool_confirmation_queue,
-        init_message=None,  # 总是设置为None，因为消息已经通过init_messages处理
+        init_message=args.message,
     )
     app.run()
 
