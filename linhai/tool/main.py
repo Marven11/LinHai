@@ -35,8 +35,10 @@ class ToolResultMessage(Message):
                 temp_file.write(content_str)
                 temp_path = temp_file.name
                 file_size = os.path.getsize(temp_path)  # 获取文件大小
-            # 返回文件路径和大小的消息
-            message_content = f"内容过长（超过{len(content_str)}字符）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。"
+            # 计算行数
+            line_count = content_str.count('\n') + 1
+            # 返回文件路径、大小和行数的消息
+            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。"
         else:
             message_content = content_str
 

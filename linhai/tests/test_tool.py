@@ -607,3 +607,48 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 清理临时文件
         os.unlink(file_path)
+
+    def test_tool_result_message_includes_line_count_for_long_content(self):
+        """测试长内容时包含行数提醒"""
+        from linhai.tool.main import ToolResultMessage
+        import os
+
+        # 生成长内容，包含多个换行符
+        lines = ["Line " + str(i) for i in range(1000)]  # 1000行
+        long_content = "\n".join(lines)  # 999个换行符，共1000行
+        # 确保内容长度超过50000字符
+        while len(long_content) < 50000:
+            long_content += "\nAdditional line to make it longer"
+
+        message = ToolResultMessage(long_content)
+        llm_message = message.to_llm_message()
+
+        # 验证返回的消息包含行数信息
+        self.assertIn("共", llm_message.get("content", ""))
+        self.assertIn("行", llm_message.get("content", ""))
+        
+        # 计算预期的行数
+        expected_line_count = long_content.count('\n') + 1
+        self.assertIn(str(expected_line_count), llm_message.get("content", ""))
+
+        # 验证其他文件信息也存在
+        self.assertIn("内容过长", llm_message.get("content", ""))
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
+        self.assertIn("大小", llm_message.get("content", ""))
+        self.assertIn("字节", llm_message.get("content", ""))
+
+        # 提取文件路径并验证临时文件
+        import re
+        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        file_path = file_match.group(1).strip()
+
+        # 验证临时文件存在且内容正确
+        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            file_content = f.read()
+        self.assertEqual(file_content, long_content)
+
+        # 清理临时文件
+        os.unlink(file_path)
