@@ -625,7 +625,7 @@ class Agent:
             if isinstance(last_msg, ChatMessage):
                 llm_msg = last_msg.to_llm_message()
                 if llm_msg.get("role") == "assistant":
-                    empty_user_msg = ChatMessage(role="user", message="")
+                    empty_user_msg = RuntimeMessage("继续")
                     self.messages.append(empty_user_msg)
 
         self.current_enable_compress = enable_compress
