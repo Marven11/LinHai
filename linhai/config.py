@@ -31,6 +31,12 @@ class MemoryConfig(TypedDict):
     file_path: str
 
 
+class ToolConfig(TypedDict):
+    """工具配置类型定义。"""
+
+    max_output_length: int
+
+
 class Config(TypedDict):
     """主配置类型定义。"""
 
@@ -38,6 +44,7 @@ class Config(TypedDict):
     memory: MemoryConfig
     compress_threshold_soft: float
     compress_threshold_hard: float
+    tool: ToolConfig
 
 
 def validate_config(config: Config) -> None:

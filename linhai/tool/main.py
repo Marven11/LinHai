@@ -6,17 +6,18 @@
 import json
 import tempfile
 import os
-from typing import cast, Any, Callable, Awaitable, Coroutine
+from typing import cast, Any, Callable, Awaitable, Coroutine, Optional
 
 from linhai.llm import Message, ToolCallMessage
 from linhai.type_hints import LanguageModelMessage
 from linhai.tool.base import call_tool, Tool, get_tools_info, global_tools
+from linhai.config import Config
 
 
 class ToolResultMessage(Message):
     """工具成功结果消息"""
 
-    def __init__(self, content: Any):
+    def __init__(self, content: Any, max_output_length: int = 50000):
         # 在内部处理转换逻辑
         if isinstance(content, str):
             content_str = content
@@ -26,8 +27,8 @@ class ToolResultMessage(Message):
             except (TypeError, ValueError):
                 content_str = str(content)
 
-        # 检查内容长度是否超过50000字符
-        if len(content_str) > 50000:
+        # 检查内容长度是否超过max_output_length字符
+        if len(content_str) > max_output_length:
             # 创建临时文件保存内容
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".txt", delete=False, encoding="utf-8"
@@ -94,9 +95,14 @@ class ToolErrorMessage(Message):
 class ToolManager:
     """工具管理器，负责处理工具调用请求"""
 
-    def __init__(self):
-        """初始化工具管理器"""
+    def __init__(self, config: Optional[Config] = None):
+        """初始化工具管理器
+        
+        Args:
+            config: 可选配置对象
+        """
         self.workflows: dict[str, Tool] = {}
+        self.config = config
 
     def register_workflow(
         self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]
@@ -135,8 +141,12 @@ class ToolManager:
             if isinstance(result, Message):
                 return result
 
-            # 否则，用 ToolResultMessage 包装
-            return ToolResultMessage(content=result)
+            # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
+            max_output_length = 50000
+            if self.config and "tool" in self.config and "max_output_length" in self.config["tool"]:
+                max_output_length = self.config["tool"]["max_output_length"]
+
+            return ToolResultMessage(content=result, max_output_length=max_output_length)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))

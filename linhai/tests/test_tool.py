@@ -74,6 +74,69 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             # 验证返回结果
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertEqual(getattr(result, "content"), "5")
+
+    async def test_tool_manager_with_config(self):
+        """测试ToolManager使用配置的情况"""
+        from linhai.config import Config
+        
+        # 创建带配置的ToolManager
+        config: Config = {
+            "llm": {
+                "base_url": "https://api.example.com",
+                "api_key": "test_key",
+                "model": "test_model"
+            },
+            "memory": {
+                "file_path": "./memory.md"
+            },
+            "compress_threshold_soft": 0.8,
+            "compress_threshold_hard": 0.9,
+            "tool": {
+                "max_output_length": 1000
+            }
+        }
+        manager_with_config = ToolManager(config=config)
+
+        # 模拟工具调用返回长内容
+        long_content = "A" * 1001  # 超过配置的1000字符限制
+        mock_tool_call = ToolCallMessage(
+            function_name="test_tool", function_arguments={}
+        )
+
+        with unittest.mock.patch(
+            "linhai.tool.main.call_tool", return_value=long_content
+        ) as mock_call:
+            result = await manager_with_config.process_tool_call(mock_tool_call)
+
+            # 验证工具被正确调用
+            mock_call.assert_called_once_with("test_tool", {})
+
+            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了1000字符限制）
+            self.assertEqual(type(result).__name__, "ToolResultMessage")
+            self.assertIn("已保存到临时文件", getattr(result, "content"))
+
+    async def test_tool_manager_without_config(self):
+        """测试ToolManager不使用配置的情况（使用默认值）"""
+        # 使用默认配置的ToolManager
+        manager_without_config = ToolManager()
+
+        # 模拟工具调用返回刚好超过默认限制的内容
+        long_content = "A" * 50001  # 超过默认的50000字符限制
+        mock_tool_call = ToolCallMessage(
+            function_name="test_tool", function_arguments={}
+        )
+
+        with unittest.mock.patch(
+            "linhai.tool.main.call_tool", return_value=long_content
+        ) as mock_call:
+            result = await manager_without_config.process_tool_call(mock_tool_call)
+
+            # 验证工具被正确调用
+            mock_call.assert_called_once_with("test_tool", {})
+
+            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了50000字符限制）
+            self.assertEqual(type(result).__name__, "ToolResultMessage")
+            self.assertIn("已保存到临时文件", getattr(result, "content"))
     # 移除manager_run_loop测试，因为ToolManager不再有run方法
 
 
@@ -553,6 +616,47 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 清理临时文件
         os.unlink(file_path)
+
+    def test_tool_result_message_with_custom_max_length(self):
+        """测试自定义最大长度限制"""
+        from linhai.tool.main import ToolResultMessage
+        import os
+
+        # 设置自定义最大长度为1000
+        custom_max_length = 1000
+        
+        # 生成刚好超过自定义限制的内容
+        long_content = "A" * 1001  # 1001个字符
+        message = ToolResultMessage(long_content, max_output_length=custom_max_length)
+        llm_message = message.to_llm_message()
+
+        # 验证返回的消息包含文件信息
+        self.assertIn("内容过长", llm_message.get("content", ""))
+        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
+        self.assertIn("大小", llm_message.get("content", ""))
+        self.assertIn("字节", llm_message.get("content", ""))
+
+        # 使用更健壮的方法提取文件路径
+        import re
+        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        file_path = file_match.group(1).strip()
+
+        # 验证临时文件存在且内容正确
+        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            file_content = f.read()
+        self.assertEqual(file_content, long_content)
+
+        # 清理临时文件
+        os.unlink(file_path)
+
+        # 测试刚好在限制内的内容
+        short_content = "A" * 1000  # 1000个字符
+        message = ToolResultMessage(short_content, max_output_length=custom_max_length)
+        llm_message = message.to_llm_message()
+        self.assertEqual(llm_message.get("content", ""), short_content)
 
     def test_tool_result_message_with_json_content(self):
         """测试JSON内容情况"""
