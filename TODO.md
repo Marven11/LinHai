@@ -8,7 +8,7 @@
 - [x] 删除linhai/config.toml的默认配置路径
 - [x] grep检查所有带缩进的import，这些import可能被放在函数内，一般是不好的实践，改掉
 - [x] 检查最大长度限制是否有unittest，如果没有则编写对应的unittest并运行
-- [ ] 使用mypy, black和pylint检查你的代码
+- [x] 使用mypy, black和pylint检查你的代码
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
