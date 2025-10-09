@@ -132,18 +132,18 @@ end
                 "-o",
                 output_md,
                 "--lua-filter", tmp_lua_path,
-                "--to=markdown",
-                "-header_attributes",
-                "-link_attributes",
-                "-fenced_code_attributes",
-                "-inline_code_attributes",
-                "-bracketed_spans",
-                "-markdown_in_html_blocks",
-                "-raw_html",
-                "-fenced_divs",
-                "-native_divs",
-                "-native_spans",
-                "+pipe_tables",
+                "--to=markdown"
+                "-header_attributes"
+                "-link_attributes"
+                "-fenced_code_attributes"
+                "-inline_code_attributes"
+                "-bracketed_spans"
+                "-markdown_in_html_blocks"
+                "-raw_html"
+                "-fenced_divs"
+                "-native_divs"
+                "-native_spans"
+                "+pipe_tables"
             ],
             check=True,
         )
