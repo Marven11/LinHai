@@ -9,9 +9,13 @@ r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr
 
+
 def format_messages_for_assert(messages):
     """格式化消息列表用于断言错误信息"""
-    return f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    return (
+        f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    )
+
 
 from linhai.agent_plugin import (
     WaitingUserPlugin,
@@ -231,7 +235,7 @@ class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_even_code_blocks(self):
         """Test when code block count is even (correct)."""
         full_response = "Some content\n```python\nprint('hello')\n```\nMore content"
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, full_response, []
         )
@@ -241,7 +245,7 @@ class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_odd_code_blocks(self):
         """Test when code block count is odd (error)."""
         full_response = "Some content\n```python\nprint('hello')"
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, full_response, []
         )
@@ -254,7 +258,7 @@ class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_no_code_blocks(self):
         """Test when there are no code blocks."""
         full_response = "Some content without code blocks"
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, full_response, []
         )
@@ -268,5 +272,7 @@ class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
         lifecycle.register_after_message_generation.assert_called_once_with(
             self.plugin.after_message_generation
         )
+
+
 if __name__ == "__main__":
     unittest.main()

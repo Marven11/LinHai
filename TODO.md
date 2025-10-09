@@ -6,7 +6,7 @@
 
 - [x] 现在linhai/tool/main.py中对输出最大长度的限制是硬编码的，改成可以通过配置文件修改
 - [x] 删除linhai/config.toml的默认配置路径
-- [ ] grep检查所有带缩进的import，这些import可能被放在函数内，一般是不好的实践，改掉
+- [x] grep检查所有带缩进的import，这些import可能被放在函数内，一般是不好的实践，改掉
 - [ ] 检查最大长度限制是否有unittest，如果没有则编写对应的unittest并运行
 - [ ] 使用mypy, black和pylint检查你的代码
 

@@ -11,9 +11,13 @@ r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr
 
+
 def format_messages_for_assert(messages):
     """格式化消息列表用于断言错误信息"""
-    return f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    return (
+        f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    )
+
 
 from linhai.agent import Agent, AgentConfig
 from linhai.agent_base import RuntimeMessage

@@ -249,7 +249,7 @@ class CLIApp(App):
             self.watch_tool_request_queue()
         )
         self.agent_task = asyncio.create_task(self.agent.run())
-        
+
         # 如果有初始消息，自动发送
         if self.init_message:
             user_msg = ChatMessage(role="user", message=self.init_message)

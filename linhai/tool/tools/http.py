@@ -64,7 +64,9 @@ def fetch_article(url: str) -> str:
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp_html:
         tmp_html_path = tmp_html.name
     # 创建临时Lua filter文件
-    with tempfile.NamedTemporaryFile(suffix=".lua", delete=False, mode='w', encoding='utf-8') as tmp_lua:
+    with tempfile.NamedTemporaryFile(
+        suffix=".lua", delete=False, mode="w", encoding="utf-8"
+    ) as tmp_lua:
         tmp_lua_path = tmp_lua.name
         lua_filter_content = """
 function Table(tbl)
@@ -122,7 +124,7 @@ end
             f.write(str(soup))
 
         # 转换为Markdown
-        if shutil.which('pandoc') is None:
+        if shutil.which("pandoc") is None:
             return "错误：pandoc未安装，请先安装pandoc"
 
         subprocess.run(
@@ -131,7 +133,8 @@ end
                 tmp_html_path,
                 "-o",
                 output_md,
-                "--lua-filter", tmp_lua_path,
+                "--lua-filter",
+                tmp_lua_path,
                 "--to=markdown"
                 "-header_attributes"
                 "-link_attributes"
@@ -143,7 +146,7 @@ end
                 "-fenced_divs"
                 "-native_divs"
                 "-native_spans"
-                "+pipe_tables"
+                "+pipe_tables",
             ],
             check=True,
         )

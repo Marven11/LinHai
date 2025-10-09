@@ -12,9 +12,13 @@ r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr
 
+
 def format_messages_for_assert(messages):
     """格式化消息列表用于断言错误信息"""
-    return f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    return (
+        f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
+    )
+
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import (
@@ -81,6 +85,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # 创建初始消息列表
         from linhai.llm import SystemMessage
+
         init_messages = [SystemMessage("Test system prompt")]
 
         self.agent = Agent(
@@ -105,8 +110,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages), 4,  # System + user + assistant + error
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            4,  # System + user + assistant + error
+            format_messages_for_assert(self.agent.messages),
         )
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
@@ -135,8 +141,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages), 6,  # System + user + assistant + empty user + runtime for tool call + error (tool result not added due to conflict)
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            6,  # System + user + assistant + empty user + runtime for tool call + error (tool result not added due to conflict)
+            format_messages_for_assert(self.agent.messages),
         )
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
@@ -158,8 +165,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if warning message was added
         self.assertEqual(
-            len(self.agent.messages), 4,  # System + user + assistant + warning
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            4,  # System + user + assistant + warning
+            format_messages_for_assert(self.agent.messages),
         )
         warning_msg = self.agent.messages[-1]
         self.assertIsInstance(warning_msg, RuntimeMessage)
@@ -179,8 +187,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 3,  # System + user + assistant
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            3,  # System + user + assistant
+            format_messages_for_assert(self.agent.messages),
         )
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages
@@ -207,8 +216,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 5,  # System + user + assistant + runtime for tool call + tool result
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            5,  # System + user + assistant + runtime for tool call + tool result
+            format_messages_for_assert(self.agent.messages),
         )
         # Verify no error messages related to marker validation
         runtime_msgs = [
@@ -230,8 +240,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages), 3,  # System + user + assistant
-            format_messages_for_assert(self.agent.messages)
+            len(self.agent.messages),
+            3,  # System + user + assistant
+            format_messages_for_assert(self.agent.messages),
         )
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages

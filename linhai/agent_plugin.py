@@ -165,9 +165,7 @@ class MarkdownSyntaxPlugin(Plugin):
         code_block_count = full_response.count("```")
         if code_block_count % 2 != 0:
             agent.messages.append(
-                RuntimeMessage(
-                    "输出markdown语法有误，可能会导致工具调用无效"
-                )
+                RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
             )
 
     def register(self, lifecycle):

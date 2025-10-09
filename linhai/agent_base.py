@@ -2,6 +2,7 @@
 
 from reprlib import Repr
 from pathlib import Path
+import json
 
 from linhai.llm import (
     Message,
@@ -34,18 +35,22 @@ class CompressRangeRequest(Message):
         }
 
     def to_json(self) -> str:
-        import json
+
         data = {
             "messages_summerization": self.messages_summerization,
-            "message_length": self.message_length
+            "message_length": self.message_length,
         }
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str):
-        import json
+
         data = json.loads(json_str)
-        return cls(messages_summerization=data["messages_summerization"], message_length=data["message_length"])
+        return cls(
+            messages_summerization=data["messages_summerization"],
+            message_length=data["message_length"],
+        )
+
 
 class RuntimeMessage(Message):
     """运行时消息，用于向LLM传递运行时信息。"""
@@ -57,16 +62,15 @@ class RuntimeMessage(Message):
 
     def to_llm_message(self) -> LanguageModelMessage:
         return {"role": "user", "content": f"<runtime>{self.message}</runtime>"}
+
     def to_json(self) -> str:
-        import json
-        data = {
-            "message": self.message
-        }
+
+        data = {"message": self.message}
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str):
-        import json
+
         data = json.loads(json_str)
         return cls(message=data["message"])
 
@@ -84,8 +88,9 @@ class DestroyedRuntimeMessage(Message):
             "role": "user",
             "content": "<destroyed><runtime>本条消息已被截断</runtime></destroyed>",
         }
+
     def to_json(self) -> str:
-        import json
+
         return json.dumps({})
 
     @classmethod
@@ -138,16 +143,14 @@ class GlobalMemory:
 文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
 """,
             }
+
     def to_json(self) -> str:
-        import json
-        data = {
-            "filepath": str(self.filepath)
-        }
+
+        data = {"filepath": str(self.filepath)}
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str):
-        import json
-        from pathlib import Path
+
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))

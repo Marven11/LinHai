@@ -55,6 +55,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_async_tool_call(self):
         """测试异步工具调用"""
+
         # 创建一个模拟的异步工具
         async def mock_async_tool(arg1: int, arg2: int) -> int:
             return arg1 + arg2
@@ -64,7 +65,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             "linhai.tool.main.call_tool", return_value=mock_async_tool(2, 3)
         ) as mock_call:
             mock_tool_call = ToolCallMessage(
-                function_name="mock_async_tool", function_arguments={"arg1": 2, "arg2": 3}
+                function_name="mock_async_tool",
+                function_arguments={"arg1": 2, "arg2": 3},
             )
             result = await self.manager.process_tool_call(mock_tool_call)
 
@@ -78,22 +80,18 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_tool_manager_with_config(self):
         """测试ToolManager使用配置的情况"""
         from linhai.config import Config
-        
+
         # 创建带配置的ToolManager
         config: Config = {
             "llm": {
                 "base_url": "https://api.example.com",
                 "api_key": "test_key",
-                "model": "test_model"
+                "model": "test_model",
             },
-            "memory": {
-                "file_path": "./memory.md"
-            },
+            "memory": {"file_path": "./memory.md"},
             "compress_threshold_soft": 0.8,
             "compress_threshold_hard": 0.9,
-            "tool": {
-                "max_output_length": 1000
-            }
+            "tool": {"max_output_length": 1000},
         }
         manager_with_config = ToolManager(config=config)
 
@@ -137,6 +135,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了50000字符限制）
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertIn("已保存到临时文件", getattr(result, "content"))
+
     # 移除manager_run_loop测试，因为ToolManager不再有run方法
 
 
@@ -239,7 +238,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "filepath": "test.txt",
                 "line_number": 2,
                 "content": "inserted line",
-                "expected_line_content": "line2"
+                "expected_line_content": "line2",
             },
         )
 
@@ -264,7 +263,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "filepath": "test.txt",
                 "line_number": 0,
                 "content": "inserted line",
-                "expected_line_content": "dummy"
+                "expected_line_content": "dummy",
             },
         )
         self.assertIn("行号0无效", result)
@@ -276,7 +275,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "filepath": "test.txt",
                 "line_number": 5,
                 "content": "inserted line",
-                "expected_line_content": "dummy"
+                "expected_line_content": "dummy",
             },
         )
         self.assertIn("行号5无效", result)
@@ -309,11 +308,11 @@ class TestInsertAtLineTool(unittest.TestCase):
         result = call_tool(
             "insert_at_line",
             {
-            "filepath": "directory/",
-            "line_number": 1,
-            "content": "inserted line",
-            "expected_line_content": "dummy"
-        },
+                "filepath": "directory/",
+                "line_number": 1,
+                "content": "inserted line",
+                "expected_line_content": "dummy",
+            },
         )
         self.assertIn("不是文件", result)
 
@@ -398,6 +397,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         self.assertIn("预期行内容不匹配", result)
         self.assertIn("文件末尾应无内容", result)
         mock_file.write_text.assert_not_called()
+
 
 class TestFileValidation(unittest.TestCase):
     """Test cases for file validation in file operation tools."""
@@ -624,7 +624,7 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 设置自定义最大长度为1000
         custom_max_length = 1000
-        
+
         # 生成刚好超过自定义限制的内容
         long_content = "A" * 1001  # 1001个字符
         message = ToolResultMessage(long_content, max_output_length=custom_max_length)
@@ -638,6 +638,7 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 使用更健壮的方法提取文件路径
         import re
+
         file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         file_path = file_match.group(1).strip()
@@ -730,9 +731,9 @@ class TestToolResultMessage(unittest.TestCase):
         # 验证返回的消息包含行数信息
         self.assertIn("共", llm_message.get("content", ""))
         self.assertIn("行", llm_message.get("content", ""))
-        
+
         # 计算预期的行数
-        expected_line_count = long_content.count('\n') + 1
+        expected_line_count = long_content.count("\n") + 1
         self.assertIn(str(expected_line_count), llm_message.get("content", ""))
 
         # 验证其他文件信息也存在
@@ -743,13 +744,14 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 提取文件路径并验证临时文件
         import re
+
         file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         file_path = file_match.group(1).strip()
 
         # 验证临时文件存在且内容正确
         self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
-        
+
         with open(file_path, "r", encoding="utf-8") as f:
             file_content = f.read()
         self.assertEqual(file_content, long_content)

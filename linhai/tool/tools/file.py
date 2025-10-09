@@ -3,6 +3,7 @@
 from pathlib import Path
 import difflib
 import json
+import platform
 from linhai.tool.base import register_tool, ToolArgInfo
 import subprocess
 
@@ -344,8 +345,6 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
     Returns:
         成功或错误消息
     """
-    import platform  # 局部导入以检测操作系统
-
     file_path = Path(filepath)
     validation_error = validate_file(file_path)
     if validation_error:

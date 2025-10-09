@@ -50,22 +50,26 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             },
         }
 
-        with patch('linhai.agent.load_config', return_value=mock_config):
-            with patch('linhai.agent.OpenAi') as mock_openai:
+        with patch("linhai.agent.load_config", return_value=mock_config):
+            with patch("linhai.agent.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
-                
+
                 agent, _, _, _, _, _ = create_agent()
-                
+
                 # Check if GlobalMemory is in messages
                 global_memory_found = False
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
                         # Verify the selected file path
-                        self.assertEqual(msg.filepath, Path(self.temp_dir.name) / "LINHAI.md")
+                        self.assertEqual(
+                            msg.filepath, Path(self.temp_dir.name) / "LINHAI.md"
+                        )
                         break
-                
-                self.assertTrue(global_memory_found, "GlobalMemory not found in messages")
+
+                self.assertTrue(
+                    global_memory_found, "GlobalMemory not found in messages"
+                )
 
     def test_agent_md_in_current_directory(self):
         """Test that AGENT.md in current directory is selected when LINHAI.md is missing."""
@@ -92,21 +96,25 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             },
         }
 
-        with patch('linhai.agent.load_config', return_value=mock_config):
-            with patch('linhai.agent.OpenAi') as mock_openai:
+        with patch("linhai.agent.load_config", return_value=mock_config):
+            with patch("linhai.agent.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
-                
+
                 agent, _, _, _, _, _ = create_agent()
-                
+
                 # Check if GlobalMemory is in messages and selected AGENT.md
                 global_memory_found = False
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
-                        self.assertEqual(msg.filepath, Path(self.temp_dir.name) / "AGENT.md")
+                        self.assertEqual(
+                            msg.filepath, Path(self.temp_dir.name) / "AGENT.md"
+                        )
                         break
-                
-                self.assertTrue(global_memory_found, "GlobalMemory not found in messages")
+
+                self.assertTrue(
+                    global_memory_found, "GlobalMemory not found in messages"
+                )
 
     def test_claude_md_in_current_directory(self):
         """Test that CLAUDE.md in current directory is selected when LINHAI.md and AGENT.md are missing."""
@@ -133,21 +141,25 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             },
         }
 
-        with patch('linhai.agent.load_config', return_value=mock_config):
-            with patch('linhai.agent.OpenAi') as mock_openai:
+        with patch("linhai.agent.load_config", return_value=mock_config):
+            with patch("linhai.agent.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
-                
+
                 agent, _, _, _, _, _ = create_agent()
-                
+
                 # Check if GlobalMemory is in messages and selected CLAUDE.md
                 global_memory_found = False
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
-                        self.assertEqual(msg.filepath, Path(self.temp_dir.name) / "CLAUDE.md")
+                        self.assertEqual(
+                            msg.filepath, Path(self.temp_dir.name) / "CLAUDE.md"
+                        )
                         break
-                
-                self.assertTrue(global_memory_found, "GlobalMemory not found in messages")
+
+                self.assertTrue(
+                    global_memory_found, "GlobalMemory not found in messages"
+                )
 
     def test_no_files_in_current_directory(self):
         """Test behavior when no memory files exist in current directory."""
@@ -169,22 +181,26 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             },
         }
 
-        with patch('linhai.agent.load_config', return_value=mock_config):
-            with patch('linhai.agent.OpenAi') as mock_openai:
+        with patch("linhai.agent.load_config", return_value=mock_config):
+            with patch("linhai.agent.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
-                
+
                 agent, _, _, _, _, _ = create_agent()
-                
+
                 # Check if GlobalMemory is still added with default path
                 global_memory_found = False
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
                         # Should use the first path in the list (current directory LINHAI.md)
-                        self.assertEqual(msg.filepath, Path(self.temp_dir.name) / "LINHAI.md")
+                        self.assertEqual(
+                            msg.filepath, Path(self.temp_dir.name) / "LINHAI.md"
+                        )
                         break
-                
-                self.assertTrue(global_memory_found, "GlobalMemory not found in messages")
+
+                self.assertTrue(
+                    global_memory_found, "GlobalMemory not found in messages"
+                )
 
     def test_priority_order(self):
         """Test that file selection follows the correct priority order."""
@@ -214,21 +230,25 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             },
         }
 
-        with patch('linhai.agent.load_config', return_value=mock_config):
-            with patch('linhai.agent.OpenAi') as mock_openai:
+        with patch("linhai.agent.load_config", return_value=mock_config):
+            with patch("linhai.agent.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
-                
+
                 agent, _, _, _, _, _ = create_agent()
-                
+
                 # Should select LINHAI.md as highest priority
                 global_memory_found = False
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
-                        self.assertEqual(msg.filepath, Path(self.temp_dir.name) / "LINHAI.md")
+                        self.assertEqual(
+                            msg.filepath, Path(self.temp_dir.name) / "LINHAI.md"
+                        )
                         break
-                
-                self.assertTrue(global_memory_found, "GlobalMemory not found in messages")
+
+                self.assertTrue(
+                    global_memory_found, "GlobalMemory not found in messages"
+                )
 
 
 if __name__ == "__main__":

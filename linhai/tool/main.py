@@ -37,7 +37,7 @@ class ToolResultMessage(Message):
                 temp_path = temp_file.name
                 file_size = os.path.getsize(temp_path)  # 获取文件大小
             # 计算行数
-            line_count = content_str.count('\n') + 1
+            line_count = content_str.count("\n") + 1
             # 返回文件路径、大小和行数的消息
             message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。"
         else:
@@ -55,13 +55,12 @@ class ToolResultMessage(Message):
                 "content": self.content,
             },
         )
+
     def to_json(self) -> str:
-        import json
         return json.dumps(self.to_llm_message())
 
     @classmethod
     def from_json(cls, json_str: str):
-        import json
         data = json.loads(json_str)
         return cls(content=data["content"])
 
@@ -81,13 +80,12 @@ class ToolErrorMessage(Message):
                 "content": self.content,
             },
         )
+
     def to_json(self) -> str:
-        import json
         return json.dumps(self.to_llm_message())
 
     @classmethod
     def from_json(cls, json_str: str):
-        import json
         data = json.loads(json_str)
         return cls(content=data["content"])
 
@@ -97,7 +95,7 @@ class ToolManager:
 
     def __init__(self, config: Optional[Config] = None):
         """初始化工具管理器
-        
+
         Args:
             config: 可选配置对象
         """
@@ -143,10 +141,16 @@ class ToolManager:
 
             # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
             max_output_length = 50000
-            if self.config and "tool" in self.config and "max_output_length" in self.config["tool"]:
+            if (
+                self.config
+                and "tool" in self.config
+                and "max_output_length" in self.config["tool"]
+            ):
                 max_output_length = self.config["tool"]["max_output_length"]
 
-            return ToolResultMessage(content=result, max_output_length=max_output_length)
+            return ToolResultMessage(
+                content=result, max_output_length=max_output_length
+            )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))
