@@ -356,9 +356,12 @@ class Agent:
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_soft", int(65536 * 0.5)
         ):
+            hard_threshold = self.config.get("compress_threshold_hard", int(65536 * 0.8))
+            percentage = (self.last_token_usage / hard_threshold) * 100
+            remaining = hard_threshold - self.last_token_usage
             self.messages.append(
                 RuntimeMessage(
-                    f"现在的Token用量为{self.last_token_usage}，做完这个步骤就压缩历史吧"
+                    f"当前Token用量为{self.last_token_usage}，已达到软限制。硬限制为{hard_threshold}，当前使用{percentage:.1f}%，还有{remaining} token直到强制压缩。"
                 )
             )
 

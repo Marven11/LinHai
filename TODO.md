@@ -9,7 +9,7 @@
     - 改成append_content
 - [x] 启动linhai测试搜索工具并修复
 - [x] 修改运行命令的工具，在描述处提醒agent当前系统是什么(win/mac/linux/...)，可以执行常见的shell命令，使用时不要损坏用户的电脑
-- [ ] 在compress_threshold_soft触发的时候，用百分比提醒agent还有多少token触发compress_threshold_hard，也就是强制压缩
+- [x] 在compress_threshold_soft触发的时候，用百分比提醒agent还有多少token触发compress_threshold_hard，也就是强制压缩
 - [ ] 参考linhai/tool/tools/command.py将linhai/tool/tools/http.py中涉及requests库的工具使用httpx异步重写成异步工具
 - [ ] 让linhai/tool/tools/file.py中替换文件内容的工具默认只替换一次（在有多处时替换失败），需要替换多处时应该传入相应参数
     - [ ] 编写对应的unittest
