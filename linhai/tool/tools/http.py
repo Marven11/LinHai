@@ -2,6 +2,7 @@
 
 from typing import Optional
 import requests
+import httpx
 
 from linhai.tool.base import register_tool
 
@@ -15,7 +16,7 @@ from selenium import webdriver
 
 @register_tool(
     name="http_request",
-    desc="使用requests库发送HTTP请求并获取响应内容",
+    desc="使用httpx库发送HTTP请求并获取响应内容",
     args={
         "method": {"desc": "HTTP方法，如GET、POST", "type": "str"},
         "url": {"desc": "请求的URL", "type": "str"},
@@ -25,7 +26,7 @@ from selenium import webdriver
     },
     required_args=["method", "url"],
 )
-def http_request(
+async def http_request(
     method: str,
     url: str,
     params: Optional[dict] = None,
@@ -36,16 +37,17 @@ def http_request(
     发送HTTP请求并返回响应内容
     """
     try:
-        response = requests.request(
-            method=method,
-            url=url,
-            params=params,
-            headers=headers,
-            data=data,
-            timeout=10,
-        )
-        return response.text
-    except requests.RequestException as e:
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                method=method,
+                url=url,
+                params=params,
+                headers=headers,
+                data=data,
+                timeout=10.0,
+            )
+            return response.text
+    except httpx.RequestError as e:
         return f"请求失败: {str(e)}"
 
 
@@ -171,7 +173,7 @@ end
     },
     required_args=["query"],
 )
-def search_web(query: str, max_results: int = 5) -> str:
+async def search_web(query: str, max_results: int = 5) -> str:
     """
     搜索DuckDuckGo并返回格式化的搜索结果
     """
@@ -188,63 +190,64 @@ def search_web(query: str, max_results: int = 5) -> str:
     }
     
     try:
-        response = requests.post(url, data=data, headers=headers, timeout=30)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, "html.parser")
-        if not soup:
-            return "解析HTML响应失败"
-        
-        results = []
-        for result in soup.select(".result"):
-            title_elem = result.select_one(".result__title")
-            if not title_elem:
-                continue
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, data=data, headers=headers, timeout=30.0)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            if not soup:
+                return "解析HTML响应失败"
+            
+            results = []
+            for result in soup.select(".result"):
+                title_elem = result.select_one(".result__title")
+                if not title_elem:
+                    continue
+                    
+                link_elem = title_elem.find("a")
+                if not link_elem:
+                    continue
+                    
+                title = link_elem.get_text(strip=True)
+                link = link_elem.get("href", "")
                 
-            link_elem = title_elem.find("a")
-            if not link_elem:
-                continue
+                # 跳过广告结果
+                if "y.js" in link:
+                    continue
+                    
+                # 清理DuckDuckGo重定向URL
+                if link.startswith("//duckduckgo.com/l/?uddg="):
+                    link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
                 
-            title = link_elem.get_text(strip=True)
-            link = link_elem.get("href", "")
-            
-            # 跳过广告结果
-            if "y.js" in link:
-                continue
+                snippet_elem = result.select_one(".result__snippet")
+                snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
                 
-            # 清理DuckDuckGo重定向URL
-            if link.startswith("//duckduckgo.com/l/?uddg="):
-                link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
+                results.append({
+                    "title": title,
+                    "link": link,
+                    "snippet": snippet,
+                    "position": len(results) + 1
+                })
+                
+                if len(results) >= max_results:
+                    break
             
-            snippet_elem = result.select_one(".result__snippet")
-            snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
+            if not results:
+                return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
             
-            results.append({
-                "title": title,
-                "link": link,
-                "snippet": snippet,
-                "position": len(results) + 1
-            })
+            # 格式化结果
+            output = []
+            output.append(f"找到 {len(results)} 个搜索结果：\n")
             
-            if len(results) >= max_results:
-                break
-        
-        if not results:
-            return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
-        
-        # 格式化结果
-        output = []
-        output.append(f"找到 {len(results)} 个搜索结果：\n")
-        
-        for result in results:
-            output.append(f"{result['position']}. {result['title']}")
-            output.append(f"   URL: {result['link']}")
-            output.append(f"   摘要: {result['snippet']}")
-            output.append("")
-        
-        return "\n".join(output)
-        
-    except requests.RequestException as e:
+            for result in results:
+                output.append(f"{result['position']}. {result['title']}")
+                output.append(f"   URL: {result['link']}")
+                output.append(f"   摘要: {result['snippet']}")
+                output.append("")
+            
+            return "\n".join(output)
+            
+    except httpx.RequestError as e:
         return f"搜索请求失败: {str(e)}"
     except Exception as e:
         return f"搜索过程中发生错误: {str(e)}"
