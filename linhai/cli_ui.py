@@ -29,18 +29,13 @@ class MessageWidget(Static):
         self.role = role
         self.content = content
         self.is_reasoning = is_reasoning
-        self.lazy_counter = 0
         if is_reasoning:
             self.role += "-reasoning"
 
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
         self.content += new_content
-        if self.lazy_counter < len(self.content) // 300 and "\n" not in new_content:
-            self.lazy_counter += 1
-        else:
-            self.update_display()
-            self.lazy_counter = 0
+        self.update_display()
 
     def update_display(self) -> None:
         """更新消息显示"""
