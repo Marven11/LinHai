@@ -7,12 +7,14 @@
 - [x] 参考~/duckduckgo-mcp-server/src/duckduckgo_mcp_server/server.py在linhai/tool/tools/http.py实现一个搜索工具
 - [ ] 将linhai/cli_ui.py中的append_content_lazy彻底删除，因为后面“只显示思考内容的最后5行”，我们不需要使用lazy的方式提升性能
     - 改成append_content
+- [x] 启动linhai测试搜索工具并修复
 - [ ] 修改运行命令的工具，在描述处提醒agent当前系统是什么(win/mac/linux/...)，可以执行常见的shell命令，使用时不要损坏用户的电脑
 - [ ] 在compress_threshold_soft触发的时候，用百分比提醒agent还有多少token触发compress_threshold_hard，也就是强制压缩
 - [ ] 使用mypy, black和pylint检查你的代码
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
+注意：运行linhai时，linhai不会使用STDIO输出消息，更不会在结束时自动退出！你应该在message中告诉linhai使用工具写文件并退出！
 
 # 暂时搁置
 

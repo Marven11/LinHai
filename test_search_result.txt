@@ -1,0 +1,21 @@
+Python教程搜索结果：
+
+1. Python 基础教程 | 菜鸟教程
+   URL: https://www.runoob.com/python/python-tutorial.html
+   摘要: 本教程适合想从零开始学习Python编程语言的开发人员，介绍了Python的基本语法、数据类型、函数、模块等内容。注意本教程主要针对Python2.x 版本，如果你使用的是Python3.x 版本请移步至另一个教程。
+
+2. 简介 - Python教程 - 廖雪峰的官方网站
+   URL: https://www.liaoxuefeng.com/wiki/1016959663602400
+   摘要: 这是一本适合小白的Python新手教程，介绍了Python的基本概念，特点，用途和历史。你可以学习Python的语法，编程思想，实例和应用，从编程初学者变成专业的软件架构师。
+
+3. Python 教程 — Python 3.13.7 文档
+   URL: https://docs.python.org/zh-cn/3/tutorial/index.html
+   摘要: 本教程对每一个功能的介绍并不完整，甚至没有涉及全部常用功能，只是介绍了Python中最值得学习的功能，旨在让读者快速感受一下Python的特色。 学完本教程的读者可以阅读和编写Python模块和程序，也可以继续学习Python标准库。 强烈推荐阅读 术语对照表。 1.
+
+4. （2025升级版）零基础学习python指南，从入门到精通，看这一篇就够了! - 知乎
+   URL: https://zhuanlan.zhihu.com/p/1931736137283663594
+   摘要: Python语言教程目录 1-Python_Programming 2-基于Python的Web应用开发实战 3-Python Web开发：测试驱动方法 4-Python编程：从入门到实践 5-Python编程导论 6-Python编程快速上手——让繁琐工作自动化 7-Python测试驱动开发 8-Python机器学习基础教程 9-Python基础教程.第3版 10-Python计算机视觉编程 11-Python深度学习 12-Python数据 ...
+
+5. Python 教程
+   URL: https://www.w3school.com.cn/python/index.asp
+   摘要: 本教程介绍了Python的基本语法、文件处理、数据库操作等内容，并提供了实例、测验和参考手册。您可以使用 w3school 的 TIY 编辑器在线运行Python代码。
