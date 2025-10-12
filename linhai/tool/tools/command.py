@@ -6,6 +6,7 @@ import subprocess
 import re
 from linhai.tool.base import register_tool, ToolArgInfo
 import sys
+import platform
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
@@ -69,7 +70,7 @@ def validate_simple_command(command: str) -> bool:
 
 @register_tool(
     name="run_simple_command",
-    desc="执行简单系统命令（白名单验证），只允许安全命令",
+    desc=f"执行简单系统命令（白名单验证）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时不要损坏用户的电脑。",
     args={
         "command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str"),
         "timeout": ToolArgInfo(desc="超时时间（秒），默认2秒", type="float"),
@@ -97,7 +98,7 @@ async def run_simple_command(command: str, timeout: float = 2.0) -> str:
 
 @register_tool(
     name="run_complex_command",
-    desc="执行复杂系统命令（可能包含危险操作，请谨慎使用）",
+    desc=f"执行复杂系统命令（可能包含危险操作）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时务必谨慎，避免损坏用户电脑。",
     args={
         "command": ToolArgInfo(
             desc="要执行的命令字符串，如 'ls | grep test'", type="str"
