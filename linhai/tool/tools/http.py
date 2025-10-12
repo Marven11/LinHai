@@ -161,3 +161,90 @@ end
             os.unlink(tmp_html_path)
         if os.path.exists(tmp_lua_path):
             os.unlink(tmp_lua_path)
+
+@register_tool(
+    name="search_web",
+    desc="使用DuckDuckGo进行网页搜索并返回格式化结果",
+    args={
+        "query": {"desc": "搜索查询", "type": "str"},
+        "max_results": {"desc": "最大结果数量（默认5）", "type": "int"},
+    },
+    required_args=["query"],
+)
+def search_web(query: str, max_results: int = 5) -> str:
+    """
+    搜索DuckDuckGo并返回格式化的搜索结果
+    """
+    import urllib.parse
+    
+    url = "https://html.duckduckgo.com/html"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    data = {
+        "q": query,
+        "b": "",
+        "kl": "",
+    }
+    
+    try:
+        response = requests.post(url, data=data, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        if not soup:
+            return "解析HTML响应失败"
+        
+        results = []
+        for result in soup.select(".result"):
+            title_elem = result.select_one(".result__title")
+            if not title_elem:
+                continue
+                
+            link_elem = title_elem.find("a")
+            if not link_elem:
+                continue
+                
+            title = link_elem.get_text(strip=True)
+            link = link_elem.get("href", "")
+            
+            # 跳过广告结果
+            if "y.js" in link:
+                continue
+                
+            # 清理DuckDuckGo重定向URL
+            if link.startswith("//duckduckgo.com/l/?uddg="):
+                link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
+            
+            snippet_elem = result.select_one(".result__snippet")
+            snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
+            
+            results.append({
+                "title": title,
+                "link": link,
+                "snippet": snippet,
+                "position": len(results) + 1
+            })
+            
+            if len(results) >= max_results:
+                break
+        
+        if not results:
+            return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
+        
+        # 格式化结果
+        output = []
+        output.append(f"找到 {len(results)} 个搜索结果：\n")
+        
+        for result in results:
+            output.append(f"{result['position']}. {result['title']}")
+            output.append(f"   URL: {result['link']}")
+            output.append(f"   摘要: {result['snippet']}")
+            output.append("")
+        
+        return "\n".join(output)
+        
+    except requests.RequestException as e:
+        return f"搜索请求失败: {str(e)}"
+    except Exception as e:
+        return f"搜索过程中发生错误: {str(e)}"
