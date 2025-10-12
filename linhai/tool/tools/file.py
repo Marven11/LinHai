@@ -192,16 +192,22 @@ def append_file(filepath: str, content: str) -> str:
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "old": ToolArgInfo(desc="要替换的字符串", type="str"),
         "new": ToolArgInfo(desc="新的字符串", type="str"),
+        "replace_all": ToolArgInfo(
+            desc="是否替换所有匹配项，默认为False（只替换第一次出现）", type="bool"
+        ),
     },
     required_args=["filepath", "old", "new"],
 )
-def replace_file_content(filepath: str, old: str, new: str) -> str:
+def replace_file_content(
+    filepath: str, old: str, new: str, replace_all: bool = False
+) -> str:
     """替换文件内容中的指定字符串。
 
     Args:
         filepath: 文件路径
         old: 要替换的字符串
         new: 新的字符串
+        replace_all: 是否替换所有匹配项，默认为False（只替换第一次出现）
 
     Returns:
         成功或错误消息
@@ -220,11 +226,26 @@ def replace_file_content(filepath: str, old: str, new: str) -> str:
                 f"内容{old!r}在文件{file_path.as_posix()!r}中未找到。"
                 f"内容类似的部分如下: {similar_info}"
             )
-        new_content = content.replace(old, new)
+
+        # 检查匹配次数
+        count = content.count(old)
+        if count > 1 and not replace_all:
+            return (
+                f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
+                f"默认只替换第一次出现，如需替换所有请设置replace_all=True。"
+                f"内容类似的部分如下: {similar_info}"
+            )
+
+        # 根据replace_all参数决定替换方式
+        if replace_all:
+            new_content = content.replace(old, new)
+        else:
+            new_content = content.replace(old, new, 1)
+
         file_path.write_text(new_content, encoding="utf-8")
     except OSError as exc:
         return f"替换内容时发生错误: {exc!r}"
-    return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，"
+    return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {count if replace_all else 1}"
 
 
 @register_tool(

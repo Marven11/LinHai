@@ -10,10 +10,10 @@
 - [x] 修改运行命令的工具，在描述处提醒agent当前系统是什么(win/mac/linux/...)，可以执行常见的shell命令，使用时不要损坏用户的电脑
 - [x] 在compress_threshold_soft触发的时候，用百分比提醒agent还有多少token触发compress_threshold_hard，也就是强制压缩
 - [x] 参考linhai/tool/tools/command.py将linhai/tool/tools/http.py中涉及requests库的工具使用httpx异步重写成异步工具（跳过fetch_article）
-- [ ] 让linhai/tool/tools/file.py中替换文件内容的工具默认只替换一次（在有多处时替换失败），需要替换多处时应该传入相应参数
-    - [ ] 编写对应的unittest
-- [ ] 运行修复unittest
-- [ ] 使用mypy, black和pylint检查你的代码
+- [x] 让linhai/tool/tools/file.py中替换文件内容的工具默认只替换一次（在有多处时替换失败），需要替换多处时应该传入相应参数
+    - [x] 编写对应的unittest
+- [x] 运行修复unittest
+- [x] 使用mypy, black和pylint检查你的代码
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
