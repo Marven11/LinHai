@@ -4,12 +4,13 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 修改linhai/tool/tools/http.py，让fetch_article删除URL过长的image元素
-- [x] 编写保存对话历史的功能，在.local/share/linhai目录创建文件夹history，并在里面保存对话历史
-    - 你应该需要修改linhai/agent.py，在每次生成结束后保存历史
-    - 你需要使用linhai/llm.py中Message protocol的to_json
-    - [x] 编写相应的unittest
-- [x] 运行所有unittest并修复
+- [ ] 在linhai/llm.py中记录输入/输出token使用量
+    - 如果可以的话每生成一个token更新一次
+    - [ ] 同时编写getter函数，不支持记录token使用量的返回None
+    - [ ] 编写unittest并运行
+- [ ] 在CLI的输入框下面显示当前的输入/输出token使用量
+    - 在create_agent函数中导出llm实例
+    - 让CLIApp类读取并显示输入/输出token使用量
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
@@ -17,9 +18,4 @@
 
 # 暂时搁置
 
-- [ ] 调整MCP对接命名规范（避免双下划线）
-- [ ] 改进文件编辑tool的安全性处理（允许渗透代码但警告）
-- [ ] 让所有Message都支持序列化和反序列化，方便保存到本地文件中，不要使用pickle而是使用安全的序列化方式
-- [ ] 处理代码中的prompt injection风险
-- [ ] 实现插件系统（运行时启用、修改prompt、处理token限制）
 - [ ] 研究subagent集成
