@@ -5,6 +5,11 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [x] 修改linhai/tool/tools/http.py，让fetch_article删除URL过长的image元素
+- [ ] 编写保存对话历史的功能，在.local/share/linhai目录创建文件夹history，并在里面保存对话历史
+    - 你应该需要修改linhai/agent.py，在每次生成结束后保存历史
+    - 你需要使用linhai/llm.py中Message protocol的to_json
+    - [ ] 编写相应的unittest
+- [ ] 运行所有unittest并修复
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

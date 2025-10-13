@@ -1,5 +1,8 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
+import json
+from pathlib import Path
+import datetime
 from pathlib import Path
 from typing import (
     TypedDict,
@@ -711,8 +714,38 @@ class Agent:
             self, answer, full_response, tool_calls
         )
 
+        # 保存对话历史
+        await self.save_conversation_history()
         return answer
 
+    async def save_conversation_history(self):
+        """保存对话历史到文件。"""
+        history_dir = Path.home() / ".local" / "share" / "linhai" / "history"
+        history_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 使用当前时间戳生成文件名
+        timestamp = datetime.datetime.now().isoformat().replace(":", "-")
+        filename = f"conversation_{timestamp}.json"
+        filepath = history_dir / filename
+        
+        # 将消息列表转换为JSON可序列化的数据
+        history_data = []
+        for msg in self.messages:
+            # 只保存有to_json方法的消息
+            if hasattr(msg, 'to_json'):
+                try:
+                    msg_dict = json.loads(msg.to_json())
+                    history_data.append(msg_dict)
+                except (TypeError, ValueError, AttributeError):
+                    # 如果序列化失败，跳过该消息
+                    continue
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(history_data, f, ensure_ascii=False, indent=2)
+            logger.info("对话历史已保存到: %s", filepath)
+        except (IOError, OSError) as e:
+            logger.error("保存对话历史失败: %s", str(e))
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。
