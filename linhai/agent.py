@@ -734,7 +734,11 @@ class Agent:
             # 只保存有to_json方法的消息
             if hasattr(msg, 'to_json'):
                 try:
-                    msg_dict = json.loads(msg.to_json())
+                    to_json_result = msg.to_json()
+                    # 如果to_json是协程，则await它
+                    if asyncio.iscoroutine(to_json_result):
+                        to_json_result = await to_json_result
+                    msg_dict = json.loads(to_json_result)
                     history_data.append(msg_dict)
                 except (TypeError, ValueError, AttributeError):
                     # 如果序列化失败，跳过该消息
