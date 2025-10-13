@@ -91,7 +91,7 @@ class TestConversationHistory(unittest.TestCase):
         # 检查消息类型
         for msg in history_data:
             self.assertIn("role", msg)
-            self.assertIn("content", msg)
+            self.assertIn("message", msg)
 
     @patch('linhai.agent.Path.home')
     def test_save_conversation_history_with_tool_calls(self, mock_home):
