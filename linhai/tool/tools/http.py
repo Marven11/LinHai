@@ -77,6 +77,11 @@ def fetch_article(url: str) -> str:
                 if a["href"].startswith("javascript:"):  # type: ignore
                     a.decompose()
 
+            # 删除URL过长的image元素
+            for img in soup.find_all('img', src=True):
+                if len(img['src']) > 400:
+                    img.decompose()
+
         with open(tmp_html_path, "w", encoding="utf-8") as f:
             f.write(str(soup))
 
