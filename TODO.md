@@ -4,16 +4,12 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 参考~/duckduckgo-mcp-server/src/duckduckgo_mcp_server/server.py在linhai/tool/tools/http.py实现一个搜索工具
-- [x] 将linhai/cli_ui.py中懒惰append内容的逻辑彻底改掉，因为后面“只显示思考内容的最后5行”，我们不需要使用lazy的方式提升性能
-- [x] 启动linhai测试搜索工具并修复
-- [x] 修改运行命令的工具，在描述处提醒agent当前系统是什么(win/mac/linux/...)，可以执行常见的shell命令，使用时不要损坏用户的电脑
-- [x] 在compress_threshold_soft触发的时候，用百分比提醒agent还有多少token触发compress_threshold_hard，也就是强制压缩
-- [x] 参考linhai/tool/tools/command.py将linhai/tool/tools/http.py中涉及requests库的工具使用httpx异步重写成异步工具（跳过fetch_article）
-- [x] 让linhai/tool/tools/file.py中替换文件内容的工具默认只替换一次（在有多处时替换失败），需要替换多处时应该传入相应参数
-    - [x] 编写对应的unittest
-- [x] 运行修复unittest
-- [x] 使用mypy, black和pylint检查你的代码
+- [x] 我修改了用户初始消息的传递方式，查看当前commit和上一个commit的区别，研究我的实现，然后修复过时的unittest
+- [x] 列出所有实现了to_llm_message的类（使用grep），这些类是实现了Message protocol的类，附带上文件路径和行号输出到ALL_MESSAGE_CLASS.md中
+- [x] 为Message这个protocol实现to_json和from_json方法，支持保存为json字符串，或者从json字符串中读取
+- [x] 为每个实现了Message Protocol的类实现to_json和from_json方法
+    - 每修改一个类，就修改ALL_MESSAGE_CLASS.md标记为已经完成，并且增加对应的unittest
+- [x] 运行所有unittest并修复错误的unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
