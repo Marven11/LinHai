@@ -253,6 +253,9 @@ class Answer(Protocol):
         获取当前累积的回答内容
         """
         raise NotImplementedError
+    def get_token_usage(self) -> dict[str, int] | None:
+        """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
+        raise NotImplementedError
 
 
 class LanguageModel(Protocol):
@@ -284,6 +287,8 @@ class OpenAiAnswer:
         self._stream = stream
         self._interrupted = False
         self.total_tokens = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
         # 生成时会慢慢构造ToolCallMessage的每一个属性，除了argument
         self._tool_call: ToolCallMessage | None = None
         # 函数参数会以token形式一个个传过来
@@ -315,7 +320,10 @@ class OpenAiAnswer:
 
             # 从chunk中提取token计数（如果API返回）
             if hasattr(chunk, "usage") and chunk.usage:
-                self.total_tokens = chunk.usage.total_tokens
+                usage = chunk.usage
+                self.input_tokens = getattr(usage, "prompt_tokens", 0)
+                self.output_tokens = getattr(usage, "completion_tokens", 0)
+                self.total_tokens = getattr(usage, "total_tokens", 0)
 
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
@@ -360,6 +368,15 @@ class OpenAiAnswer:
     def get_token_count(self) -> int:
         """获取当前回答的token总数。"""
         return self.total_tokens
+    def get_token_usage(self) -> dict[str, int] | None:
+        """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
+        if self.total_tokens == 0:
+            return None
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens
+        }
 
 
 class OpenAi:
