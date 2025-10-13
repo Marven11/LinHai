@@ -9,7 +9,7 @@
     - 你应该需要修改linhai/agent.py，在每次生成结束后保存历史
     - 你需要使用linhai/llm.py中Message protocol的to_json
     - [x] 编写相应的unittest
-- [ ] 运行所有unittest并修复
+- [x] 运行所有unittest并修复
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

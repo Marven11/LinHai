@@ -65,7 +65,7 @@ class RuntimeMessage(Message):
 
     def to_json(self) -> str:
 
-        data = {"message": self.message}
+        data = {"role": "user", "message": self.message}
         return json.dumps(data)
 
     @classmethod
