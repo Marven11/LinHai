@@ -8,7 +8,7 @@
     - [x] 如果可以的话每生成一个token更新一次
     - [x] 同时编写getter函数，不支持记录token使用量的返回None
     - [x] 编写unittest并运行
-- [ ] 在CLI的输入框下面显示当前的输入/输出token使用量
+- [x] 在CLI的输入框下面显示当前的输入/输出token使用量
     - 让CLIApp类读取Answer并显示输入/输出token使用量
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO

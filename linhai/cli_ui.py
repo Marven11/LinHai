@@ -80,17 +80,19 @@ class CLIApp(App):
         background: #2E3440;
     }
     #chat-container {
-        height: 80%;
+        min-height: 60%;
         background: #2E3440;
     }
     #input {
-        height: 20%;
-        min-height: 3;
+        height: 3;
         background: #2E3440;
         border: round yellow;
     }
-    MessageWidget Panel {
+    #token-usage {
         width: 100%;
+        height: 1;
+        background: #101520;
+        color: #2E3440;
     }
     """
 
@@ -116,6 +118,7 @@ class CLIApp(App):
         self.agent_task: Optional[asyncio.Task] = None
         self.tool_request_watcher_task: Optional[asyncio.Task] = None
         self.current_tool_request: Optional[ToolCallMessage] = None
+        self.cumulative_token_usage: dict[str, int] | None = None
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -132,6 +135,7 @@ class CLIApp(App):
                 yield MessageWidget(role=llm_message["role"], content=content)
 
         yield Input(placeholder="输入消息...", id="input")
+        yield Static("", id="token-usage")
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理用户输入"""
@@ -235,6 +239,17 @@ class CLIApp(App):
                     tool_message = f"{tool_call.function_name}(...)"
                     msg = ChatMessage(role="assistant", message=tool_message)
                     await self.add_bot_message(msg)
+
+                # 获取并累加token使用量
+                token_usage = output.get_token_usage()
+                if token_usage is not None:
+                    if self.cumulative_token_usage is None:
+                        self.cumulative_token_usage = token_usage.copy()
+                    else:
+                        for key in ["input_tokens", "output_tokens", "total_tokens"]:
+                            self.cumulative_token_usage[key] += token_usage.get(key, 0)
+                    self.update_token_display()
+
                 current_message = None
 
     async def on_mount(self) -> None:
@@ -263,6 +278,15 @@ class CLIApp(App):
             self.output_watcher_task.cancel()
         if self.agent_task:
             self.agent_task.cancel()
+
+    def update_token_display(self) -> None:
+        """更新token使用量显示"""
+        if self.cumulative_token_usage is None:
+            display_text = "Token usage: Not available"
+        else:
+            display_text = f"Token: {self.cumulative_token_usage['input_tokens']:,} in | {self.cumulative_token_usage['output_tokens']:,} out | {self.cumulative_token_usage['total_tokens']:,} total"
+        token_display = self.query_one("#token-usage")
+        token_display.update(display_text)
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
