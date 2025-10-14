@@ -91,7 +91,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             "memory": {"file_path": "./memory.md"},
             "compress_threshold_soft": 0.8,
             "compress_threshold_hard": 0.9,
-            "tool": {"max_output_length": 1000},
+            "tools": {"max_output_length": 1000},
         }
         manager_with_config = ToolManager(config=config)
 

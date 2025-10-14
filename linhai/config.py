@@ -44,7 +44,7 @@ class Config(TypedDict):
     memory: MemoryConfig
     compress_threshold_soft: float
     compress_threshold_hard: float
-    tool: ToolConfig
+    tools: ToolConfig
 
 
 def validate_config(config: Config) -> None:

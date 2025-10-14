@@ -143,10 +143,10 @@ class ToolManager:
             max_output_length = 50000
             if (
                 self.config
-                and "tool" in self.config
-                and "max_output_length" in self.config["tool"]
+                and "tools" in self.config
+                and "max_output_length" in self.config["tools"]
             ):
-                max_output_length = self.config["tool"]["max_output_length"]
+                max_output_length = self.config["tools"]["max_output_length"]
 
             return ToolResultMessage(
                 content=result, max_output_length=max_output_length
