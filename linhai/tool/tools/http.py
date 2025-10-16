@@ -31,7 +31,7 @@ async def http_request(
     url: str,
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
-    data: Optional[str] = None,
+    data: Optional[str | dict] = None,
 ) -> str:
     """
     发送HTTP请求并返回响应内容
@@ -53,7 +53,7 @@ async def http_request(
 
 @register_tool(
     name="fetch_article",
-    desc="抓取网页并转换为Markdown格式",
+    desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
     args={
         "url": {"desc": "目标网页URL", "type": "str"},
     },
@@ -64,7 +64,7 @@ def fetch_article(url: str) -> str:
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
         output_md = file.name
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp_html:
-        tmp_html_path = tmp_html.name
+        output_html = tmp_html.name
     try:
         options = webdriver.FirefoxOptions()
         options.add_argument("--headless")
@@ -77,12 +77,15 @@ def fetch_article(url: str) -> str:
                 if a["href"].startswith("javascript:"):  # type: ignore
                     a.decompose()
 
-            # 删除URL过长的image元素
-            for img in soup.find_all('img', src=True):
-                if len(img['src']) > 400:
+            # 删除无用image元素
+            for img in soup.find_all("img", src=True):
+                if len(img["src"]) > 400:
                     img.decompose()
 
-        with open(tmp_html_path, "w", encoding="utf-8") as f:
+            for svg in soup.find_all("svg"):
+                svg.decompose()
+
+        with open(output_html, "w", encoding="utf-8") as f:
             f.write(str(soup))
 
         # 转换为Markdown
@@ -92,7 +95,7 @@ def fetch_article(url: str) -> str:
         subprocess.run(
             [
                 "pandoc",
-                tmp_html_path,
+                output_html,
                 "-o",
                 output_md,
                 "--to=markdown"
@@ -112,13 +115,18 @@ def fetch_article(url: str) -> str:
         )
 
         with open(output_md, "r", encoding="utf-8") as f:
-            return f.read()
+            content = f.read()
+            return f"""
+文件已经保存在: {output_html=} {output_md=} 用户需要时优先提供markdown
+
+---
+
+{content}
+"""
 
     except Exception as e:
         return f"转换失败: {str(e)}"
-    finally:
-        if os.path.exists(tmp_html_path):
-            os.unlink(tmp_html_path)
+
 
 @register_tool(
     name="search_web",
@@ -134,7 +142,7 @@ async def search_web(query: str, max_results: int = 5) -> str:
     搜索DuckDuckGo并返回格式化的搜索结果
     """
     import urllib.parse
-    
+
     url = "https://html.duckduckgo.com/html"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -144,65 +152,67 @@ async def search_web(query: str, max_results: int = 5) -> str:
         "b": "",
         "kl": "",
     }
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(url, data=data, headers=headers, timeout=30.0)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.text, "html.parser")
             if not soup:
                 return "解析HTML响应失败"
-            
+
             results = []
             for result in soup.select(".result"):
                 title_elem = result.select_one(".result__title")
                 if not title_elem:
                     continue
-                    
+
                 link_elem = title_elem.find("a")
                 if not link_elem:
                     continue
-                    
+
                 title = link_elem.get_text(strip=True)
                 link = link_elem.get("href", "")
-                
+
                 # 跳过广告结果
                 if "y.js" in link:
                     continue
-                    
+
                 # 清理DuckDuckGo重定向URL
                 if link.startswith("//duckduckgo.com/l/?uddg="):
                     link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
-                
+
                 snippet_elem = result.select_one(".result__snippet")
                 snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-                
-                results.append({
-                    "title": title,
-                    "link": link,
-                    "snippet": snippet,
-                    "position": len(results) + 1
-                })
-                
+
+                results.append(
+                    {
+                        "title": title,
+                        "link": link,
+                        "snippet": snippet,
+                        "position": len(results) + 1,
+                    }
+                )
+
                 if len(results) >= max_results:
                     break
-            
+
             if not results:
                 return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
-            
+
             # 格式化结果
             output = []
             output.append(f"找到 {len(results)} 个搜索结果：\n")
-            
+
             for result in results:
                 output.append(f"{result['position']}. {result['title']}")
                 output.append(f"   URL: {result['link']}")
                 output.append(f"   摘要: {result['snippet']}")
                 output.append("")
-            
+
             return "\n".join(output)
-            
+
     except httpx.RequestError as e:
         return f"搜索请求失败: {str(e)}"
     except Exception as e:

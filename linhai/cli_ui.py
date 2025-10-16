@@ -92,7 +92,7 @@ class CLIApp(App):
         width: 100%;
         height: 1;
         background: #101520;
-        color: #2E3440;
+        color: #474e5b;
     }
     """
 

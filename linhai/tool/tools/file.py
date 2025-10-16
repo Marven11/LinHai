@@ -121,25 +121,30 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> str:
 
 @register_tool(
     name="write_file",
-    desc="写入文件内容，如果没有必要则不要使用这个tool，而是优先使用replace_file_content或者append_file修改文件",
+    desc="写入文件内容。"
+    "注意：避免输出大量重复内容！修改文件时优先使用replace_file_content或者append_file，复制文件优先使用shell指令",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "content": ToolArgInfo(desc="要写入的内容", type="str"),
+        "override": ToolArgInfo(desc="是否覆盖已有文件", type="bool"),
     },
     required_args=["filepath", "content"],
 )
-def write_file(filepath: str, content: str) -> str:
+def write_file(filepath: str, content: str, override: bool = False) -> str:
     """写入内容到文件。
 
     Args:
         filepath: 文件路径
         content: 要写入的内容
+        override: 是否覆盖已有文件
 
     Returns:
         成功或错误消息
     """
     file_path = Path(filepath)
     if file_path.exists():
+        if not override:
+            return f"文件{filepath!r}已存在，如果需要覆盖请使用override参数"
         validation_error = validate_file(file_path)
         if validation_error:
             return validation_error
