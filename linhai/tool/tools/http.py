@@ -109,7 +109,8 @@ def fetch_article(url: str) -> str:
                 "-fenced_divs"
                 "-native_divs"
                 "-native_spans"
-                "+pipe_tables",
+                "-simple_tables"
+                "+pipe_tables"
             ],
             check=True,
         )
@@ -118,6 +119,8 @@ def fetch_article(url: str) -> str:
             content = f.read()
             return f"""
 文件已经保存在: {output_html=} {output_md=} 用户需要时优先提供markdown
+
+markdown内容如下
 
 ---
 
