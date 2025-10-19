@@ -40,6 +40,8 @@ class ToolResultMessage(Message):
             line_count = content_str.count("\n") + 1
             # 返回文件路径、大小和行数的消息
             message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。"
+            # 我们指导agent使用合适的大小分块读取，避免每次只读100行
+            message_content += f"尝试分块读取：根据内容长度，你可以一次性读取不超过{max_output_length/len(content_str)*100:.2f}%，如果还是不行就砍半"
         else:
             message_content = content_str
 
