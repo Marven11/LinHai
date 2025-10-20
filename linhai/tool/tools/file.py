@@ -318,7 +318,7 @@ def get_absolute_path(path: str) -> str:
     name="run_sed_expression",
     desc="执行sed表达式并返回输出，不修改文件",
     args={
-        "expression": ToolArgInfo(desc="sed表达式", type="str"),
+        "expression": ToolArgInfo(desc="sed表达式，如: 1,1000p", type="str"),
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
     },
     required_args=["expression", "filepath"],
