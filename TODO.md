@@ -4,12 +4,12 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 在linhai/llm.py中记录输入/输出token使用量
-    - [x] 如果可以的话每生成一个token更新一次
-    - [x] 同时编写getter函数，不支持记录token使用量的返回None
-    - [x] 编写unittest并运行
-- [x] 在CLI的输入框下面显示当前的输入/输出token使用量
-    - 让CLIApp类读取Answer并显示输入/输出token使用量
+- [ ] 为命令行添加-f选项，从文件中读取用户的初始prompt
+    - [ ] 编写并修复对应的unittest
+    - [ ] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果1分钟内没有及时退出则说明选项失败
+- [ ] 将linhai/config.py中的config配置改成使用pydantic，并在linhai/agent.py创建agent时使用pydantic验证配置
+    - [ ] 编写并修复对应的unittest
+- [ ] 运行并修复unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
