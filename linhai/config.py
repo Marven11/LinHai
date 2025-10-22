@@ -1,89 +1,69 @@
 """Configuration module for LinHai agent."""
 
-from typing import TypedDict, cast, Union
+from typing import Optional, Union
 import tomllib
 from pathlib import Path
+from pydantic import BaseModel, Field, validator
 from urllib.parse import urlparse
 
 from .exceptions import ConfigValidationError
 
 
-class CheapLLMConfig(TypedDict):
+class CheapLLMConfig(BaseModel):
     """Configuration for cheap LLM mode."""
 
     base_url: str
-    api_key: str
-    model: str
+    api_key: str = Field(..., min_length=1)
+    model: str = Field(..., min_length=1)
 
 
-class LLMConfig(TypedDict):
+class LLMConfig(BaseModel):
     """LLM配置类型定义。"""
 
     base_url: str
-    api_key: str
-    model: str
-    cheap: CheapLLMConfig
+    api_key: str = Field(..., min_length=1)
+    model: str = Field(..., min_length=1)
+    cheap: Optional[CheapLLMConfig] = None
+
+    @validator("base_url")
+    def validate_base_url(cls, v):
+        """验证base_url格式"""
+        try:
+            result = urlparse(v)
+            if not all([result.scheme, result.netloc]):
+                raise ValueError("base_url must be a valid URL with scheme and netloc")
+        except ValueError as e:
+            raise ConfigValidationError("base_url is not a valid URL") from e
+        return v
 
 
-class MemoryConfig(TypedDict):
+class AgentConfig(BaseModel):
+    """Agent配置类型定义。"""
+
+    compress_threshold_soft: float = Field(default=0.5, ge=0.0, le=1.0)
+    compress_threshold_hard: float = Field(default=0.8, ge=0.0, le=1.0)
+    tool_confirmation: Optional[dict] = None
+
+
+class MemoryConfig(BaseModel):
     """内存配置类型定义。"""
 
     file_path: str
 
 
-class ToolConfig(TypedDict):
+class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
-    max_output_length: int
+    max_output_length: int = Field(default=1000, ge=1)
 
 
-class Config(TypedDict):
+class Config(BaseModel):
     """主配置类型定义。"""
 
     llm: LLMConfig
-    memory: MemoryConfig
-    compress_threshold_soft: float
-    compress_threshold_hard: float
-    tools: ToolConfig
-
-
-def validate_config(config: Config) -> None:
-    """验证配置有效性"""
-    llm_config = config["llm"]
-
-    # 验证memory文件路径（可选）
-    if "memory" in config:
-        memory_config = config["memory"]
-        if not memory_config.get("file_path"):
-            raise ConfigValidationError("memory.file_path cannot be empty")
-
-    # 验证base_url
-    try:
-        result = urlparse(llm_config["base_url"])
-        if not all([result.scheme, result.netloc]):
-            raise ConfigValidationError(
-                "base_url must be a valid URL with scheme and netloc"
-            )
-    except ValueError as e:
-        raise ConfigValidationError("base_url is not a valid URL") from e
-
-    # 验证api_key
-    if not llm_config["api_key"]:
-        raise ConfigValidationError("api_key cannot be empty")
-
-    # 验证model
-    if not llm_config["model"]:
-        raise ConfigValidationError("model cannot be empty")
-
-    # 验证cheap配置（如果存在）
-    if "cheap" in llm_config:
-        cheap_config = llm_config["cheap"]
-        if not cheap_config.get("base_url"):
-            raise ConfigValidationError("cheap.base_url cannot be empty")
-        if not cheap_config.get("api_key"):
-            raise ConfigValidationError("cheap.api_key cannot be empty")
-        if not cheap_config.get("model"):
-            raise ConfigValidationError("cheap.model cannot be empty")
+    agent: Optional[AgentConfig] = None
+    memory: Optional[MemoryConfig] = None
+    tools: Optional[ToolConfig] = None
 
 
 def load_config(config_path: Union[str, Path, None] = None) -> Config:
@@ -95,7 +75,12 @@ def load_config(config_path: Union[str, Path, None] = None) -> Config:
         config_path = Path(__file__).parent / "config.toml"
     elif isinstance(config_path, str):
         config_path = Path(config_path)
+    
     config_data = tomllib.load(config_path.open("rb"))
-    config = cast(Config, config_data)
-    validate_config(config)
+    
+    # 使用pydantic验证配置，捕获ValidationError并转换为ConfigValidationError
+    try:
+        config = Config(**config_data)
+    except Exception as e:
+        raise ConfigValidationError(f"配置验证失败: {str(e)}") from e
     return config

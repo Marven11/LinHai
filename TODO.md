@@ -7,8 +7,9 @@
 - [x] 为命令行添加-f选项，从文件中读取用户的初始prompt
     - [ ] 编写并修复对应的unittest
     - [ ] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果1分钟内没有及时退出则说明选项失败
-- [ ] 将linhai/config.py中的config配置改成使用pydantic，并在linhai/agent.py创建agent时使用pydantic验证配置
+- [x] 将linhai/config.py中的config配置改成使用pydantic，并在linhai/agent.py创建agent时使用pydantic验证配置
     - [ ] 编写并修复对应的unittest
+    - [ ] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果错误则说明有兼容问题
 - [ ] 运行并修复unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO

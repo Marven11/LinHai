@@ -8,6 +8,7 @@ import os
 
 from linhai.agent import create_agent
 from linhai.agent_base import GlobalMemory
+from linhai.config import Config, LLMConfig, AgentConfig
 
 
 class TestGlobalMemoryPathSelection(unittest.TestCase):
@@ -32,23 +33,23 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             f.write(linhai_content)
 
         # Mock config to avoid actual file operations
-        mock_config = {
-            "llm": {
-                "api_key": "test_key",
-                "base_url": "http://test.com",
-                "model": "test_model",
-                "openai_config": {},
-                "chat_completion_kwargs": {},
-            },
-            "agent": {
-                "compress_threshold_hard": 52428,
-                "compress_threshold_soft": 32768,
-                "tool_confirmation": {
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
-            },
-        }
+        mock_llm_config = LLMConfig(
+            api_key="test_key",
+            base_url="http://test.com",
+            model="test_model"
+        )
+        mock_agent_config = AgentConfig(
+            compress_threshold_hard=0.8,
+            compress_threshold_soft=0.5,
+            tool_confirmation={
+                "skip_confirmation": True,
+                "whitelist": [],
+            }
+        )
+        mock_config = Config(
+            llm=mock_llm_config,
+            agent=mock_agent_config
+        )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -78,23 +79,23 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with open("AGENT.md", "w", encoding="utf-8") as f:
             f.write(agent_content)
 
-        mock_config = {
-            "llm": {
-                "api_key": "test_key",
-                "base_url": "http://test.com",
-                "model": "test_model",
-                "openai_config": {},
-                "chat_completion_kwargs": {},
-            },
-            "agent": {
-                "compress_threshold_hard": 52428,
-                "compress_threshold_soft": 32768,
-                "tool_confirmation": {
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
-            },
-        }
+        mock_llm_config = LLMConfig(
+            api_key="test_key",
+            base_url="http://test.com",
+            model="test_model"
+        )
+        mock_agent_config = AgentConfig(
+            compress_threshold_hard=0.8,
+            compress_threshold_soft=0.5,
+            tool_confirmation={
+                "skip_confirmation": True,
+                "whitelist": [],
+            }
+        )
+        mock_config = Config(
+            llm=mock_llm_config,
+            agent=mock_agent_config
+        )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -123,23 +124,14 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with open("CLAUDE.md", "w", encoding="utf-8") as f:
             f.write(claude_content)
 
-        mock_config = {
-            "llm": {
-                "api_key": "test_key",
-                "base_url": "http://test.com",
-                "model": "test_model",
-                "openai_config": {},
-                "chat_completion_kwargs": {},
-            },
-            "agent": {
-                "compress_threshold_hard": 52428,
-                "compress_threshold_soft": 32768,
-                "tool_confirmation": {
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
-            },
-        }
+        mock_llm_config = LLMConfig(
+            api_key="test_key",
+            base_url="http://test.com",
+            model="test_model"
+        )
+        mock_config = Config(
+            llm=mock_llm_config
+        )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -163,23 +155,23 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
 
     def test_no_files_in_current_directory(self):
         """Test behavior when no memory files exist in current directory."""
-        mock_config = {
-            "llm": {
-                "api_key": "test_key",
-                "base_url": "http://test.com",
-                "model": "test_model",
-                "openai_config": {},
-                "chat_completion_kwargs": {},
-            },
-            "agent": {
-                "compress_threshold_hard": 52428,
-                "compress_threshold_soft": 32768,
-                "tool_confirmation": {
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
-            },
-        }
+        mock_llm_config = LLMConfig(
+            api_key="test_key",
+            base_url="http://test.com",
+            model="test_model"
+        )
+        mock_agent_config = AgentConfig(
+            compress_threshold_hard=0.8,
+            compress_threshold_soft=0.5,
+            tool_confirmation={
+                "skip_confirmation": True,
+                "whitelist": [],
+            }
+        )
+        mock_config = Config(
+            llm=mock_llm_config,
+            agent=mock_agent_config
+        )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -212,23 +204,14 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with open("CLAUDE.md", "w", encoding="utf-8") as f:
             f.write("# CLAUDE.md")
 
-        mock_config = {
-            "llm": {
-                "api_key": "test_key",
-                "base_url": "http://test.com",
-                "model": "test_model",
-                "openai_config": {},
-                "chat_completion_kwargs": {},
-            },
-            "agent": {
-                "compress_threshold_hard": 52428,
-                "compress_threshold_soft": 32768,
-                "tool_confirmation": {
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
-            },
-        }
+        mock_llm_config = LLMConfig(
+            api_key="test_key",
+            base_url="http://test.com",
+            model="test_model"
+        )
+        mock_config = Config(
+            llm=mock_llm_config
+        )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:

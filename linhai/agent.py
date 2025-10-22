@@ -804,22 +804,22 @@ def create_agent(
     config = load_config(config_path)
 
     llm = OpenAi(
-        api_key=config["llm"]["api_key"],
-        base_url=config["llm"]["base_url"],
-        model=config["llm"]["model"],
-        openai_config=config["llm"].get("openai_config", {}),
-        chat_completion_kwargs=config["llm"].get("chat_completion_kwargs", {}),
+        api_key=config.llm.api_key,
+        base_url=config.llm.base_url,
+        model=config.llm.model,
+        openai_config=config.llm.model_dump().get("openai_config", {}),
+        chat_completion_kwargs=config.llm.model_dump().get("chat_completion_kwargs", {}),
     )
 
     # 加载廉价LLM配置
     cheap_llm = None
-    if "cheap" in config["llm"]:
+    if config.llm.cheap is not None:
         cheap_llm = OpenAi(
-            api_key=config["llm"]["cheap"]["api_key"],
-            base_url=config["llm"]["cheap"]["base_url"],
-            model=config["llm"]["cheap"]["model"],
-            openai_config=config["llm"]["cheap"].get("openai_config", {}),
-            chat_completion_kwargs=config["llm"]["cheap"].get(
+            api_key=config.llm.cheap.api_key,
+            base_url=config.llm.cheap.base_url,
+            model=config.llm.cheap.model,
+            openai_config=config.llm.cheap.model_dump().get("openai_config", {}),
+            chat_completion_kwargs=config.llm.cheap.model_dump().get(
                 "chat_completion_kwargs", {}
             ),
         )
@@ -829,20 +829,23 @@ def create_agent(
     tool_request_queue: "Queue[ToolCallMessage]" = Queue()
     tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
 
-    # 确保 config 是字典类型
-    config_dict = cast(dict, config)
     # 解析tool_confirmation配置
-    tool_confirmation_config = config_dict.get("agent", {}).get("tool_confirmation", {})
+    tool_confirmation_config = {}
+    if config.agent and config.agent.tool_confirmation:
+        tool_confirmation_config = config.agent.tool_confirmation
+
+    # 设置压缩阈值
+    compress_threshold_hard = int(65536 * 0.8)
+    compress_threshold_soft = int(65536 * 0.5)
+    if config.agent:
+        compress_threshold_hard = int(65536 * config.agent.compress_threshold_hard)
+        compress_threshold_soft = int(65536 * config.agent.compress_threshold_soft)
 
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
         "model": llm,
-        "compress_threshold_hard": int(
-            config_dict.get("agent", {}).get("compress_threshold_hard", 65536 * 0.8)
-        ),
-        "compress_threshold_soft": int(
-            config_dict.get("agent", {}).get("compress_threshold_soft", 65536 * 0.5)
-        ),
+        "compress_threshold_hard": compress_threshold_hard,
+        "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,
     }
     if cheap_llm:
@@ -885,8 +888,8 @@ def create_agent(
     ]
 
     # 如果配置中指定了文件路径，则使用配置的路径（最高优先级）
-    if "file_path" in memory_config:
-        memory_filepaths.insert(0, Path(memory_config["file_path"]).absolute())
+    if config.memory is not None and config.memory.file_path:
+        memory_filepaths.insert(0, Path(config.memory.file_path).absolute())
 
     # 找到第一个存在的文件
     selected_filepath = None
