@@ -23,6 +23,8 @@ def run_tests():
 
 def main():
     """主函数，解析命令行参数并执行相应命令。"""
+    import sys
+    
     parser = argparse.ArgumentParser(description="LinHai 主程序")
     parser.add_argument(
         "--config",
@@ -31,8 +33,21 @@ def main():
         help="配置文件路径",
     )
     parser.add_argument("-m", "--message", type=str, help="初始用户消息")
+    parser.add_argument("-f", "--file", type=Path, help="从文件中读取初始用户消息")
 
     args = parser.parse_args()
+
+    init_message = args.message
+    if args.file:
+        try:
+            with open(args.file, "r", encoding="utf-8") as f:
+                init_message = f.read().strip()
+        except FileNotFoundError:
+            print(f"错误: 文件 {args.file} 未找到")
+            sys.exit(1)
+        except Exception as e:
+            print(f"错误: 读取文件时发生错误: {e}")
+            sys.exit(1)
 
     (
         agent,
@@ -48,7 +63,7 @@ def main():
         output_queue,
         tool_request_queue,
         tool_confirmation_queue,
-        init_message=args.message,
+        init_message=init_message,
     )
     app.run()
 
