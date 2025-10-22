@@ -79,20 +79,22 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_manager_with_config(self):
         """测试ToolManager使用配置的情况"""
-        from linhai.config import Config
+        from linhai.config import Config, LLMConfig, MemoryConfig, AgentConfig, ToolConfig
 
-        # 创建带配置的ToolManager
-        config: Config = {
-            "llm": {
-                "base_url": "https://api.example.com",
-                "api_key": "test_key",
-                "model": "test_model",
-            },
-            "memory": {"file_path": "./memory.md"},
-            "compress_threshold_soft": 0.8,
-            "compress_threshold_hard": 0.9,
-            "tools": {"max_output_length": 1000},
-        }
+        # 创建带配置的ToolManager，使用Pydantic模型
+        config = Config(
+            llm=LLMConfig(
+                base_url="https://api.example.com",
+                api_key="test_key",
+                model="test_model",
+            ),
+            memory=MemoryConfig(file_path="./memory.md"),
+            agent=AgentConfig(
+                compress_threshold_soft=0.8,
+                compress_threshold_hard=0.9,
+            ),
+            tools=ToolConfig(max_output_length=1000),
+        )
         manager_with_config = ToolManager(config=config)
 
         # 模拟工具调用返回长内容
@@ -110,6 +112,44 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             mock_call.assert_called_once_with("test_tool", {})
 
             # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了1000字符限制）
+            self.assertEqual(type(result).__name__, "ToolResultMessage")
+            self.assertIn("已保存到临时文件", getattr(result, "content"))
+
+    async def test_tool_manager_with_config_no_tools(self):
+        """测试ToolManager使用配置但没有tools配置的情况"""
+        from linhai.config import Config, LLMConfig, MemoryConfig, AgentConfig
+
+        # 创建带配置的ToolManager，但没有tools配置
+        config = Config(
+            llm=LLMConfig(
+                base_url="https://api.example.com",
+                api_key="test_key",
+                model="test_model",
+            ),
+            memory=MemoryConfig(file_path="./memory.md"),
+            agent=AgentConfig(
+                compress_threshold_soft=0.8,
+                compress_threshold_hard=0.9,
+            ),
+            # 不设置tools配置
+        )
+        manager_with_config = ToolManager(config=config)
+
+        # 模拟工具调用返回长内容
+        long_content = "A" * 50001  # 超过默认的50000字符限制
+        mock_tool_call = ToolCallMessage(
+            function_name="test_tool", function_arguments={}
+        )
+
+        with unittest.mock.patch(
+            "linhai.tool.main.call_tool", return_value=long_content
+        ) as mock_call:
+            result = await manager_with_config.process_tool_call(mock_tool_call)
+
+            # 验证工具被正确调用
+            mock_call.assert_called_once_with("test_tool", {})
+
+            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了默认50000字符限制）
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertIn("已保存到临时文件", getattr(result, "content"))
 

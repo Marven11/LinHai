@@ -3,7 +3,7 @@
 from typing import Optional, Union
 import tomllib
 from pathlib import Path
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from urllib.parse import urlparse
 
 from .exceptions import ConfigValidationError
@@ -25,7 +25,7 @@ class LLMConfig(BaseModel):
     model: str = Field(..., min_length=1)
     cheap: Optional[CheapLLMConfig] = None
 
-    @validator("base_url")
+    @field_validator("base_url")
     def validate_base_url(cls, v):
         """验证base_url格式"""
         try:

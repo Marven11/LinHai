@@ -5,12 +5,13 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [x] 为命令行添加-f选项，从文件中读取用户的初始prompt
-    - [ ] 编写并修复对应的unittest
-    - [ ] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果1分钟内没有及时退出则说明选项失败
+    - [x] 编写并修复对应的unittest
+    - [x] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果1分钟内没有及时退出则说明选项失败
 - [x] 将linhai/config.py中的config配置改成使用pydantic，并在linhai/agent.py创建agent时使用pydantic验证配置
-    - [ ] 编写并修复对应的unittest
-    - [ ] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果错误则说明有兼容问题
-- [ ] 运行并修复unittest
+    - [x] 编写并修复对应的unittest
+    - [x] 尝试运行linhai测试这个选项，文件里写“调用工具退出...”，如果错误则说明有兼容问题
+    - [x] 修复linhai/tool/main.py 149行 中的逻辑并编写对应的unittest
+- [x] 运行并修复unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
