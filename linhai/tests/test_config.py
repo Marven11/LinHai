@@ -87,8 +87,8 @@ api_key = "test_key"
 model = "test_model"
 
 [agent]
-compress_threshold_soft = 0.3
-compress_threshold_hard = 0.7
+compress_threshold_soft = 30000
+compress_threshold_hard = 60000
 
 [memory]
 file_path = "./test_memory.md"
@@ -104,12 +104,58 @@ max_output_length = 2000
         self.assertIsInstance(config, Config)
         self.assertEqual(config.llm.base_url, "https://api.example.com")
         self.assertIsNotNone(config.agent)
-        self.assertEqual(config.agent.compress_threshold_soft, 0.3)
-        self.assertEqual(config.agent.compress_threshold_hard, 0.7)
+        self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
+        self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
         self.assertIsNotNone(config.memory)
         self.assertEqual(config.memory.file_path, "./test_memory.md")
         self.assertIsNotNone(config.tools)
         self.assertEqual(config.tools.max_output_length, 2000)
+
+    @patch("pathlib.Path.open")
+    def test_load_config_with_int_values(self, mock_open):
+        """Test loading a config with integer values for compress thresholds."""
+        config_content = b"""
+[llm]
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[agent]
+compress_threshold_soft = 30000
+compress_threshold_hard = 60000
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        config = load_config()
+        self.assertIsInstance(config, Config)
+        self.assertIsNotNone(config.agent)
+        self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
+        self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
+
+    @patch("pathlib.Path.open")
+    def test_load_config_with_float_values(self, mock_open):
+        """Test loading a config with float values for compress thresholds."""
+        config_content = b"""
+[llm]
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[agent]
+compress_threshold_soft = 30000.0
+compress_threshold_hard = 60000.0
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        config = load_config()
+        self.assertIsInstance(config, Config)
+        self.assertIsNotNone(config.agent)
+        self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
+        self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
 
     @patch("pathlib.Path.open")
     def test_load_config_with_defaults(self, mock_open):

@@ -40,8 +40,8 @@ class LLMConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
-    compress_threshold_soft: float = Field(default=0.5, ge=0.0, le=1.0)
-    compress_threshold_hard: float = Field(default=0.8, ge=0.0, le=1.0)
+    compress_threshold_soft: float = Field(default=30000.0, ge=1.0)
+    compress_threshold_hard: float = Field(default=60000.0, ge=1.0)
     tool_confirmation: Optional[dict] = None
 
 
