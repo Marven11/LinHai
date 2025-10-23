@@ -359,7 +359,9 @@ class Agent:
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_soft", int(65536 * 0.5)
         ):
-            hard_threshold = self.config.get("compress_threshold_hard", int(65536 * 0.8))
+            hard_threshold = self.config.get(
+                "compress_threshold_hard", int(65536 * 0.8)
+            )
             percentage = (self.last_token_usage / hard_threshold) * 100
             remaining = hard_threshold - self.last_token_usage
             self.messages.append(
@@ -722,17 +724,17 @@ class Agent:
         """保存对话历史到文件。"""
         history_dir = Path.home() / ".local" / "share" / "linhai" / "history"
         history_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # 使用当前时间戳生成文件名
         timestamp = datetime.datetime.now().isoformat().replace(":", "-")
         filename = f"conversation_{timestamp}.json"
         filepath = history_dir / filename
-        
+
         # 将消息列表转换为JSON可序列化的数据
         history_data = []
         for msg in self.messages:
             # 只保存有to_json方法的消息
-            if hasattr(msg, 'to_json'):
+            if hasattr(msg, "to_json"):
                 try:
                     to_json_result = msg.to_json()
                     # 如果to_json是协程，则await它
@@ -743,13 +745,14 @@ class Agent:
                 except (TypeError, ValueError, AttributeError):
                     # 如果序列化失败，跳过该消息
                     continue
-        
+
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)
             logger.info("对话历史已保存到: %s", filepath)
         except (IOError, OSError) as e:
             logger.error("保存对话历史失败: %s", str(e))
+
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。
@@ -808,7 +811,9 @@ def create_agent(
         base_url=config.llm.base_url,
         model=config.llm.model,
         openai_config=config.llm.model_dump().get("openai_config", {}),
-        chat_completion_kwargs=config.llm.model_dump().get("chat_completion_kwargs", {}),
+        chat_completion_kwargs=config.llm.model_dump().get(
+            "chat_completion_kwargs", {}
+        ),
     )
 
     # 加载廉价LLM配置
@@ -847,7 +852,7 @@ def create_agent(
             compress_threshold_hard = config.agent.compress_threshold_hard
         else:
             raise TypeError("compress_threshold_hard must be int or float")
-        
+
         # 处理compress_threshold_soft
         if isinstance(config.agent.compress_threshold_soft, float):
             compress_threshold_soft = int(65536 * config.agent.compress_threshold_soft)
@@ -896,28 +901,23 @@ def create_agent(
 
     # 定义要检查的文件路径列表（按优先级顺序）
     memory_filepaths = [
+        Path("~/.config/linhai/LINHAI.md").expanduser(),
         Path("./LINHAI.md").absolute(),
         Path("./AGENT.md").absolute(),
         Path("./CLAUDE.md").absolute(),
-        Path("~/.config/linhai/LINHAI.md").expanduser(),
     ]
 
     # 如果配置中指定了文件路径，则使用配置的路径（最高优先级）
     if config.memory is not None and config.memory.file_path:
         memory_filepaths.insert(0, Path(config.memory.file_path).absolute())
 
-    # 找到第一个存在的文件
-    selected_filepath = None
+    found = False
     for filepath in memory_filepaths:
         if filepath.exists():
-            selected_filepath = filepath
-            break
-
-    # 如果没有找到存在的文件，使用列表中的第一个路径
-    if selected_filepath is None:
-        selected_filepath = memory_filepaths[0]
-
-    init_messages.append(GlobalMemory(selected_filepath))  # 总是添加，无论文件是否存在
+            found = True
+            init_messages.append(GlobalMemory(filepath))  # 总是添加，无论文件是否存在
+    if not found:
+        init_messages.append(GlobalMemory(memory_filepaths[0]))
 
     # 添加廉价LLM状态消息
     init_messages.append(CheapLlmStatusMessage("cheap_model" in agent_config))
