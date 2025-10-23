@@ -4,9 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 修改compress_threshold_soft/hard，为float时代表距离模型支持token长度的比例，为int时为token量
-    - [ ] 编写对应的unittest
-- [ ] 运行并修复unittest
+- [x] 修改compress_threshold_soft/hard，为float时代表距离模型支持token长度的比例，为int时为token量
+    - [x] 编写对应的unittest
+- [x] 运行并修复unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
