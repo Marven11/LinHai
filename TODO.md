@@ -4,9 +4,12 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 修改compress_threshold_soft/hard，为float时代表距离模型支持token长度的比例，为int时为token量
-    - [x] 编写对应的unittest
-- [x] 运行并修复unittest
+- [ ] 修改linhai/agent_plugin.py如果模型没有输出方框`- [ ]`或者`- [x]`则提醒模型需要进行任务规划
+    - 建议使用正则匹配每一行开头的` *- \[[ x]\]`，没有则提醒使用`- [ ]`或者`- [x]`
+    - 编写unittest
+- [ ] 修改linhai/prompt.py中的示例，修改其中的任务规划格式为markdown分级无序列表+方框
+- [ ] 运行并修复unittest
+- [ ] 看一眼git stash，我刚刚在开发mcp client，帮我git stash pop
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
