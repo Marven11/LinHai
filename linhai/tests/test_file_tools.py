@@ -60,7 +60,7 @@ class TestFileTools(unittest.TestCase):
     def test_write_file(self):
         """测试写入文件"""
         new_content = "新的文件内容"
-        result = write_file(str(self.test_file), new_content)
+        result = write_file(str(self.test_file), new_content, override=True)
         self.assertIn("成功写入文件", result)
         
         # 验证内容确实被写入
