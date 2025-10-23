@@ -185,7 +185,7 @@ agent: 用户需要计算一个算式
 2. 结果简单，直接报告
 
 ```json toolcall
-{"name":"add_numbers","arguments":{"a":2,"b":2}}
+{"name":"safe_calculator","arguments":{"expression":"2+2"}}
 ```
 agent: 工具返回计算结果
 
@@ -204,10 +204,10 @@ agent: 用户希望创建两个测试文件
 3. 分两次调用工具创建文件
 
 ```json toolcall
-{"name":"create_file","arguments":{"path":"file1.txt","content":"测试内容1"}}
+{"name":"write_file","arguments":{"filepath":"file1.txt","content":"测试内容1","override":true}}
 ```
 ```json toolcall
-{"name":"create_file","arguments":{"path":"file2.txt","content":"测试内容2"}}
+{"name":"write_file","arguments":{"filepath":"file2.txt","content":"测试内容2","override":true}}
 ```
 agent: 工具确认文件创建成功
 

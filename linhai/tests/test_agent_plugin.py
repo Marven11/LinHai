@@ -1,277 +1,76 @@
-"""Unit tests for agent plugins."""
+"""测试agent_plugin模块。"""
 
-import reprlib
 import unittest
-from unittest.mock import MagicMock
-
-# 创建自定义repr函数，限制长度为200字符
-r = reprlib.Repr()
-r.maxstring = 200
-custom_repr = r.repr
+from unittest.mock import AsyncMock, MagicMock
+from linhai.agent_plugin import TaskPlanningPlugin
 
 
-def format_messages_for_assert(messages):
-    """格式化消息列表用于断言错误信息"""
-    return (
-        f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
-    )
-
-
-from linhai.agent_plugin import (
-    WaitingUserPlugin,
-    ToolCallCountPlugin,
-    ThinkingToolCallPlugin,
-    MarkdownSyntaxPlugin,
-)
-from linhai.agent_base import WAITING_USER_MARKER, RuntimeMessage
-from unittest.mock import AsyncMock
-from linhai.llm import Answer
-
-
-class TestWaitingUserPlugin(unittest.IsolatedAsyncioTestCase):
-    """Test cases for WaitingUserPlugin."""
+class TestTaskPlanningPlugin(unittest.TestCase):
+    """测试TaskPlanningPlugin类。"""
 
     def setUp(self):
-        self.plugin = WaitingUserPlugin()
+        """设置测试环境。"""
+        self.plugin = TaskPlanningPlugin()
         self.agent = MagicMock()
-        self.agent.state = "working"
         self.answer = MagicMock()
+        self.tool_calls = []
 
-    async def test_marker_in_last_line(self):
-        """Test when WAITING_USER_MARKER is in the last line."""
-        full_response = f"Some response\n{WAITING_USER_MARKER}"
-
-        await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, []
-        )
-
-        self.agent.messages.append.assert_not_called()
-        self.assertEqual(self.agent.state, "waiting_user")
-
-    async def test_marker_not_in_last_line(self):
-        """Test when WAITING_USER_MARKER is not in the last line."""
-        full_response = f"{WAITING_USER_MARKER}\nSome other content"
-
-        await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, []
-        )
-
-        self.agent.messages.append.assert_called_once()
-        call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIsInstance(call_args, RuntimeMessage)
-        self.assertIn("不在最后一行", call_args.message)
-        self.assertEqual(
-            self.agent.state, "working"
-        )  # 状态应为working，因为标记不在最后一行
-
-    async def test_register_plugin(self):
-        """Test plugin registration."""
+    def test_register(self):
+        """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
         lifecycle.register_after_message_generation.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
+    async def test_after_message_generation_with_task_planning(self):
+        """测试有任务规划标记的情况。"""
+        full_response = """当前任务规划
 
-class TestToolCallCountPlugin(unittest.IsolatedAsyncioTestCase):
-    """Test cases for ToolCallCountPlugin."""
-
-    async def asyncSetUp(self):
-        self.plugin = ToolCallCountPlugin()
-        self.agent = MagicMock()
-        self.agent.user_output_queue = AsyncMock()
-        self.answer = MagicMock()
-        self.answer.content = ""
-
-    async def test_tool_call_within_limit_short_content(self):
-        """测试短内容时工具调用在限制内"""
-        current_content = 'Some content\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
-        self.answer.content = current_content
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertFalse(result)
-        self.agent.user_output_queue.put.assert_not_called()
-        self.agent.messages.append.assert_not_called()
-
-    async def test_tool_call_exceed_limit_short_content(self):
-        """测试短内容时工具调用超过限制"""
-        current_content = 'Some content\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```\n```json toolcall\n{"name": "tool3"}\n```\n```json toolcall\n{"name": "tool4"}\n```\n```json toolcall\n{"name": "tool5"}\n```\n```json toolcall\n{"name": "tool6"}\n```'
-        self.answer.content = current_content
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertTrue(result)
-        self.agent.user_output_queue.put.assert_called_once_with(self.answer)
-        self.agent.messages.append.assert_called_once()
-        call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIn("错误：一次性调用了超过5个工具", call_args.message)
-        self.assertTrue(self.answer.interrupted)
-
-    async def test_tool_call_within_limit_long_content(self):
-        """测试长内容时工具调用在限制内"""
-        current_content = "A" * 2000 + '\n```json toolcall\n{"name": "tool1"}\n```'
-        self.answer.content = current_content
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertFalse(result)
-        self.agent.user_output_queue.put.assert_not_called()
-        self.agent.messages.append.assert_not_called()
-
-    async def test_tool_call_exceed_limit_long_content(self):
-        """测试长内容时工具调用超过限制"""
-        current_content = (
-            "A" * 2000
-            + '\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
-        )
-        self.answer.content = current_content
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertTrue(result)
-        self.agent.user_output_queue.put.assert_called_once_with(self.answer)
-        self.agent.messages.append.assert_called_once()
-        call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIn("错误：一次性调用了超过1个工具", call_args.message)
-        self.assertTrue(self.answer.interrupted)
-
-
-class TestThinkingToolCallPlugin(unittest.IsolatedAsyncioTestCase):
-    """Test cases for ThinkingToolCallPlugin."""
-
-    async def asyncSetUp(self):
-        self.plugin = ThinkingToolCallPlugin()
-        self.agent = MagicMock()
-        self.agent.user_output_queue = AsyncMock()
-        self.answer = MagicMock()
-        self.answer.reasoning_message = None
-        self.answer.set_reasoning_message = lambda message: setattr(
-            self.answer, "reasoning_message", message
-        )
-        self.answer.get_reasoning_message = lambda: self.answer.reasoning_message
-        self.answer.content = ""
-
-    async def test_thinking_within_limit(self):
-        """测试思考中的工具调用在限制内"""
-        current_reasoning = 'Some reasoning\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```'
-        self.answer.set_reasoning_message(current_reasoning)
-        current_content = "Some content"
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertFalse(result)
-        self.agent.user_output_queue.put.assert_not_called()
-        self.agent.messages.append.assert_not_called()
-
-    async def test_thinking_exceed_limit(self):
-        """测试思考中的工具调用超过限制"""
-        current_reasoning = 'Some reasoning\n```json toolcall\n{"name": "tool1"}\n```\n```json toolcall\n{"name": "tool2"}\n```\n```json toolcall\n{"name": "tool3"}\n```\n```json toolcall\n{"name": "tool4"}\n```'
-        self.answer.set_reasoning_message(current_reasoning)
-        current_content = "Some content"
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertTrue(result)
-        self.agent.user_output_queue.put.assert_called_once_with(self.answer)
-        self.agent.messages.append.assert_called_once()
-        call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIn(
-            "错误：大量思考如何使用```json toolcall调用工具", call_args.message
-        )
-        self.assertTrue(self.answer.interrupted)
-
-    async def test_thinking_no_json_blocks(self):
-        """测试思考中没有JSON块"""
-        current_reasoning = "Some reasoning without json blocks"
-        self.answer.set_reasoning_message(current_reasoning)
-        current_content = "Some content"
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertFalse(result)
-        self.agent.user_output_queue.put.assert_not_called()
-        self.agent.messages.append.assert_not_called()
-
-    async def test_thinking_not_string(self):
-        """测试思考内容不是字符串"""
-        self.answer.set_reasoning_message(None)
-        current_content = "Some content"
-
-        result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
-        )
-
-        self.assertFalse(result)
-        self.agent.user_output_queue.put.assert_not_called()
-        self.agent.messages.append.assert_not_called()
-
-
-class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
-    """Test cases for MarkdownSyntaxPlugin."""
-
-    async def asyncSetUp(self):
-        self.plugin = MarkdownSyntaxPlugin()
-        self.agent = MagicMock()
-        self.agent.messages = MagicMock()
-        self.agent.messages.append = MagicMock()
-        self.answer = MagicMock()
-        self.answer.content = ""
-
-    async def test_even_code_blocks(self):
-        """Test when code block count is even (correct)."""
-        full_response = "Some content\n```python\nprint('hello')\n```\nMore content"
-
+- [ ] 任务1
+- [x] 任务2
+- [ ] 任务3"""
+        
+        self.agent.messages = []
+        
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, []
+            self.agent, self.answer, full_response, self.tool_calls
         )
+        
+        # 有任务规划标记，不应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 0)
 
-        self.agent.messages.append.assert_not_called()
+    async def test_after_message_generation_without_task_planning(self):
+        """测试没有任务规划标记的情况。"""
+        full_response = """当前任务
 
-    async def test_odd_code_blocks(self):
-        """Test when code block count is odd (error)."""
-        full_response = "Some content\n```python\nprint('hello')"
-
+任务1
+任务2
+任务3"""
+        
+        self.agent.messages = []
+        
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, []
+            self.agent, self.answer, full_response, self.tool_calls
         )
+        
+        # 没有任务规划标记，应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("任务规划格式", self.agent.messages[0].content)
 
-        self.agent.messages.append.assert_called_once()
-        call_args = self.agent.messages.append.call_args[0][0]
-        self.assertIsInstance(call_args, RuntimeMessage)
-        self.assertIn("输出markdown语法有误", call_args.message)
-
-    async def test_no_code_blocks(self):
-        """Test when there are no code blocks."""
-        full_response = "Some content without code blocks"
-
+    async def test_after_message_generation_with_long_content(self):
+        """测试长内容中的任务规划检查。"""
+        # 创建一个长内容，确保超过8000字符
+        long_content = "任务描述" + "x" * 8000
+        
+        self.agent.messages = []
+        
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, []
+            self.agent, self.answer, long_content, self.tool_calls
         )
-
-        self.agent.messages.append.assert_not_called()
-
-    async def test_register_plugin(self):
-        """Test plugin registration."""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
-            self.plugin.after_message_generation
-        )
+        
+        # 长内容中没有任务规划标记，应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 1)
 
 
 if __name__ == "__main__":

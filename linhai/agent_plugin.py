@@ -126,6 +126,7 @@ def register_default_plugins(lifecycle) -> None:
         ToolCallCountPlugin(),
         ExcessiveCheckmarkPlugin(),
         MarkdownSyntaxPlugin(),
+        TaskPlanningPlugin(),
     ]
 
     for plugin in plugins:
@@ -166,6 +167,32 @@ class MarkdownSyntaxPlugin(Plugin):
         if code_block_count % 2 != 0:
             agent.messages.append(
                 RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
+            )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class TaskPlanningPlugin(Plugin):
+    """任务规划格式检查Plugin。"""
+
+    async def after_message_generation(
+        self, agent, answer: Answer, full_response, tool_calls
+    ):
+        """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
+        import re
+        
+        # 使用正则匹配每一行开头的任务规划标记
+        pattern = r'^ *- \[[ x]\]'
+        matches = re.findall(pattern, full_response, re.MULTILINE)
+        
+        # 如果没有找到任何任务规划标记，则提醒
+        if not matches:
+            agent.messages.append(
+                RuntimeMessage(
+                    "模型没有输出任务规划格式，请使用`- [ ]`或`- [x]`进行任务规划"
+                )
             )
 
     def register(self, lifecycle):
