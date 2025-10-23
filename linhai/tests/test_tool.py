@@ -90,8 +90,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
-                compress_threshold_soft=30000.0,
-                compress_threshold_hard=60000.0,
+                compress_threshold_soft=30000,
+                compress_threshold_hard=60000,
             ),
             tools=ToolConfig(max_output_length=1000),
         )
@@ -128,8 +128,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
-                compress_threshold_soft=30000.0,
-                compress_threshold_hard=60000.0,
+                compress_threshold_soft=30000,
+                compress_threshold_hard=60000,
             ),
             # 不设置tools配置
         )

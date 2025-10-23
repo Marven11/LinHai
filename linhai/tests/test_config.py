@@ -131,8 +131,8 @@ compress_threshold_hard = 60000
         config = load_config()
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
-        self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
-        self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
+        self.assertEqual(config.agent.compress_threshold_soft, 30000)
+        self.assertEqual(config.agent.compress_threshold_hard, 60000)
 
     @patch("pathlib.Path.open")
     def test_load_config_with_float_values(self, mock_open):
@@ -144,8 +144,8 @@ api_key = "test_key"
 model = "test_model"
 
 [agent]
-compress_threshold_soft = 30000.0
-compress_threshold_hard = 60000.0
+compress_threshold_soft = 0.5
+compress_threshold_hard = 0.8
 """
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
@@ -154,8 +154,8 @@ compress_threshold_hard = 60000.0
         config = load_config()
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
-        self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
-        self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
+        self.assertEqual(config.agent.compress_threshold_soft, 0.5)
+        self.assertEqual(config.agent.compress_threshold_hard, 0.8)
 
     @patch("pathlib.Path.open")
     def test_load_config_with_defaults(self, mock_open):

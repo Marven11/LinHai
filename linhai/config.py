@@ -40,10 +40,22 @@ class LLMConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
-    compress_threshold_soft: float = Field(default=30000.0, ge=1.0)
-    compress_threshold_hard: float = Field(default=60000.0, ge=1.0)
+    compress_threshold_soft: Union[int, float] = Field(default=0.5, ge=0.0)
+    compress_threshold_hard: Union[int, float] = Field(default=0.8, ge=0.0)
     tool_confirmation: Optional[dict] = None
 
+    @field_validator("compress_threshold_soft", "compress_threshold_hard")
+    def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
+        """验证compress_threshold值：如果是float，应在0.0到1.0之间；如果是int，应大于0。"""
+        if isinstance(v, float):
+            if not 0.0 <= v <= 1.0:
+                raise ValueError("如果为float类型，compress_threshold应在0.0到1.0之间")
+        elif isinstance(v, int):
+            if v <= 0:
+                raise ValueError("如果为int类型，compress_threshold应大于0")
+        else:
+            raise TypeError("compress_threshold必须是int或float类型")
+        return v
 
 class MemoryConfig(BaseModel):
     """内存配置类型定义。"""

@@ -39,8 +39,8 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             model="test_model"
         )
         mock_agent_config = AgentConfig(
-            compress_threshold_hard=60000.0,
-            compress_threshold_soft=30000.0,
+            compress_threshold_hard=60000,
+            compress_threshold_soft=30000,
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],
@@ -85,8 +85,8 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             model="test_model"
         )
         mock_agent_config = AgentConfig(
-            compress_threshold_hard=60000.0,
-            compress_threshold_soft=30000.0,
+            compress_threshold_hard=60000,
+            compress_threshold_soft=30000,
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],
@@ -161,8 +161,8 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             model="test_model"
         )
         mock_agent_config = AgentConfig(
-            compress_threshold_hard=60000.0,
-            compress_threshold_soft=30000.0,
+            compress_threshold_hard=60000,
+            compress_threshold_soft=30000,
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],

@@ -835,11 +835,26 @@ def create_agent(
         tool_confirmation_config = config.agent.tool_confirmation
 
     # 设置压缩阈值
+    # 设置默认阈值（比例0.8和0.5对应的token量）
     compress_threshold_hard = int(65536 * 0.8)
     compress_threshold_soft = int(65536 * 0.5)
+
     if config.agent:
-        compress_threshold_hard = int(65536 * config.agent.compress_threshold_hard)
-        compress_threshold_soft = int(65536 * config.agent.compress_threshold_soft)
+        # 处理compress_threshold_hard
+        if isinstance(config.agent.compress_threshold_hard, float):
+            compress_threshold_hard = int(65536 * config.agent.compress_threshold_hard)
+        elif isinstance(config.agent.compress_threshold_hard, int):
+            compress_threshold_hard = config.agent.compress_threshold_hard
+        else:
+            raise TypeError("compress_threshold_hard must be int or float")
+        
+        # 处理compress_threshold_soft
+        if isinstance(config.agent.compress_threshold_soft, float):
+            compress_threshold_soft = int(65536 * config.agent.compress_threshold_soft)
+        elif isinstance(config.agent.compress_threshold_soft, int):
+            compress_threshold_soft = config.agent.compress_threshold_soft
+        else:
+            raise TypeError("compress_threshold_soft must be int or float")
 
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
