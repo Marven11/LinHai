@@ -11,6 +11,7 @@ from typing import cast, Any, Callable, Awaitable, Coroutine, Optional
 from linhai.llm import Message, ToolCallMessage
 from linhai.type_hints import LanguageModelMessage
 from linhai.tool.base import call_tool, Tool, get_tools_info, global_tools
+from linhai.tool.mcp_connector import MCPConnector
 from linhai.config import Config
 
 
@@ -106,6 +107,7 @@ class ToolManager:
         """
         self.workflows: dict[str, Tool] = {}
         self.config = config
+        self.mcp_connector = MCPConnector()
 
     def register_workflow(
         self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]
@@ -121,6 +123,9 @@ class ToolManager:
         tools = {**global_tools, **self.workflows}
         return get_tools_info(tools)
 
+    def get_mcp_connector(self):
+        return self.mcp_connector
+
     async def process_tool_call(self, tool_call: ToolCallMessage) -> Message:
         """处理单个工具调用请求并返回结果
 
@@ -130,32 +135,27 @@ class ToolManager:
         Returns:
             Message: 工具调用结果消息
         """
-        if not tool_call.function_name:
-            return ToolErrorMessage(content="Invalid tool call: missing function name")
-
+        args = tool_call.function_arguments if tool_call.function_arguments else {}
         try:
-            # function_arguments 现在直接是字典，无需解析
-            args = tool_call.function_arguments if tool_call.function_arguments else {}
             result = call_tool(tool_call.function_name, args)
-            if isinstance(result, Awaitable):
-                result = await result
-
-            # 如果工具返回的是 Message 实例，直接返回
-            if isinstance(result, Message):
-                return result
-
-            # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
-            max_output_length = 50000
-            if (
-                self.config
-                and self.config.tools
-                and self.config.tools.max_output_length is not None
-            ):
-                max_output_length = self.config.tools.max_output_length
-
-            return ToolResultMessage(
-                content=result, max_output_length=max_output_length
-            )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))
+
+        if isinstance(result, Awaitable):
+            result = await result
+
+        # 如果工具返回的是 Message 实例，直接返回
+        if isinstance(result, Message):
+            return result
+
+        # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
+        max_output_length = 50000
+        if (
+            self.config
+            and self.config.tools
+            and self.config.tools.max_output_length is not None
+        ):
+            max_output_length = self.config.tools.max_output_length
+
+        return ToolResultMessage(content=result, max_output_length=max_output_length)

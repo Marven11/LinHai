@@ -6,3 +6,4 @@ mistune
 requests
 textual
 selenium
+mcp
