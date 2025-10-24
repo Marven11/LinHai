@@ -42,7 +42,7 @@ def main():
         try:
             with open(args.file, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-                init_message = f"用户使用-f选项指定了第一条消息，路径为: {args.file!r}, 内容如下:\n" + content
+                init_message = f"用户使用-f选项指定了第一条消息，路径为: {str(args.file)}, 内容如下:\n" + content
         except FileNotFoundError:
             print(f"错误: 文件 {args.file} 未找到")
             sys.exit(1)
