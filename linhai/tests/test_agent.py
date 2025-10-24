@@ -73,14 +73,19 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 "whitelist": ["add_numbers"],  # 将 add_numbers 加入白名单
             },
         }
-        self.user_input_queue: "Queue[ChatMessage]" = Queue()
-        self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
-        self.tool_request_queue: "Queue[ToolCallMessage]" = Queue()
-        self.tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
-        self.tool_manager = MagicMock()
-        self.tool_manager.get_tools_info.return_value = []
-        self.tool_manager.process_tool_call = AsyncMock()
-        self.tool_manager.get_workflow.return_value = None
+        
+        # 使用GroupChat架构
+        from linhai.group_chat import GroupChat
+        self.group_chat = GroupChat()
+        
+        # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_user_output队列用于输出
+        self.group_chat.register_queue("cli_user_output")
+        
+        # 创建真实的ToolManager实例
+        from linhai.tool.main import ToolManager
+        from linhai.tool.base import global_tools
+        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
+        # 不需要手动注册，ToolManager会在初始化时自动注册到group_chat
 
         # 创建初始消息列表
         from linhai.llm import SystemMessage
@@ -89,11 +94,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.agent = Agent(
             config=config,
-            user_input_queue=self.user_input_queue,
-            user_output_queue=self.user_output_queue,
-            tool_request_queue=self.tool_request_queue,
-            tool_confirmation_queue=self.tool_confirmation_queue,
-            tool_manager=self.tool_manager,
+            group_chat=self.group_chat,
             init_messages=init_messages,
         )
 
@@ -118,12 +119,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # Test
         await self.agent.handle_messages([test_msg])
 
-        # 验证 user_output_queue 收到了正确的 tokens 和最终 Answer
+        # 验证 cli_user_output 队列收到了正确的 tokens 和最终 Answer
         tokens = []
         final_answer = None
 
-        while not self.agent.user_output_queue.empty():
-            item = await self.agent.user_output_queue.get()
+        while not self.agent.group_chat.is_empty("cli_user_output"):
+            item = await self.agent.group_chat.receive("cli_user_output")
             if isinstance(item, dict):  # AnswerToken
                 tokens.append(item)
             elif hasattr(item, "get_message"):  # 通过鸭子类型检查 Answer 对象

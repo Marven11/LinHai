@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from linhai.agent_base import RuntimeMessage, WAITING_USER_MARKER
 from linhai.llm import Answer
+import linhai
 
 
 class Plugin(ABC):
@@ -17,7 +18,7 @@ class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
     async def after_message_generation(
-        self, agent, answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
         has_waiting_marker = WAITING_USER_MARKER in full_response
@@ -54,7 +55,7 @@ class WaitingUserPlugin(Plugin):
                 # 所有检查通过，设置等待用户状态
                 agent.state = "waiting_user"
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -62,7 +63,7 @@ class WaitingUserPlugin(Plugin):
 class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
-    async def during_message_generation(self, agent, answer: Answer, current_content):
+    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
         planning_count = current_content.count("\n- [ ]") + current_content.count(
@@ -70,7 +71,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         )
 
         if json_block_count > 1 and planning_count == 0:
-            await agent.user_output_queue.put(answer)
+            await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage("错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！")
             )
@@ -79,7 +80,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -87,7 +88,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
 class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
-    async def during_message_generation(self, agent, answer: Answer, current_content):
+    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
 
@@ -98,7 +99,7 @@ class ToolCallCountPlugin(Plugin):
             max_json_blocks = 1
 
         if json_block_count > max_json_blocks:
-            await agent.user_output_queue.put(answer)
+            await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage(
                     f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
@@ -110,7 +111,7 @@ class ToolCallCountPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -118,7 +119,7 @@ class ToolCallCountPlugin(Plugin):
 class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
-    async def during_message_generation(self, agent, answer: Answer, current_content):
+    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
         """检查工具调用量是否超过限制。"""
         current_reasoning_content = answer.get_reasoning_message()
         if not isinstance(current_reasoning_content, str):
@@ -128,7 +129,7 @@ class ThinkingToolCallPlugin(Plugin):
         max_json_blocks = 2
 
         if json_block_count > max_json_blocks:
-            await agent.user_output_queue.put(answer)
+            await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage(
                     f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall超过{max_json_blocks}次，请避免过度思考如何进行工具调用"
@@ -139,7 +140,7 @@ class ThinkingToolCallPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -148,7 +149,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
     """检查过多完成标记的Plugin。"""
 
     async def after_message_generation(
-        self, agent, answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
     ):
         """检查是否输出了过多的- [x]标记。"""
         count = full_response.count("- [x]")
@@ -161,7 +162,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
                 )
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -170,7 +171,7 @@ class MarkdownSyntaxPlugin(Plugin):
     """Markdown语法检查Plugin。"""
 
     async def after_message_generation(
-        self, agent, answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
     ):
         """检查markdown语法是否正确。"""
         # 计算代码块分隔符的数量
@@ -180,7 +181,7 @@ class MarkdownSyntaxPlugin(Plugin):
                 RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -192,7 +193,7 @@ class TaskPlanningPlugin(Plugin):
         self.no_planning_count = 0
 
     async def after_message_generation(
-        self, agent, answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
         import re
@@ -218,7 +219,7 @@ class TaskPlanningPlugin(Plugin):
         else:
             self.no_planning_count = 0
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 

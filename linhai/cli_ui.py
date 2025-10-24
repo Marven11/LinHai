@@ -19,6 +19,7 @@ from linhai.llm import (
     ToolConfirmationMessage,
 )
 from linhai.agent import Agent
+from linhai.group_chat import GroupChat
 
 
 class MessageWidget(Static):
@@ -101,26 +102,22 @@ class CLIApp(App):
 
     def __init__(
         self,
-        agent: Agent,
-        user_input_queue: "Queue[ChatMessage]",
-        user_output_queue: "Queue[Answer | AnswerToken]",
-        tool_request_queue: "Queue[ToolCallMessage]",
-        tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
+        group_chat: GroupChat,
         init_message: str | None = None,
     ):
         super().__init__()
         self.messages: List[Message] = []
-        self.agent = agent
-        self.user_input_queue = user_input_queue
-        self.user_output_queue = user_output_queue
-        self.tool_request_queue = tool_request_queue
-        self.tool_confirmation_queue = tool_confirmation_queue
+        self.group_chat = group_chat
+        self.group_chat.register_queue("cli_user_output")
+        group_chat.register_member("cli_app", self)
+
         self.init_message = init_message
+
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
         self.agent_task: Optional[asyncio.Task] = None
-        self.tool_request_watcher_task: Optional[asyncio.Task] = None
-        self.current_tool_request: Optional[ToolCallMessage] = None
+        self.current_tool_call: Optional[ToolCallMessage] = None
+        self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
         self.cumulative_token_usage: dict[str, int] | None = None
 
     def compose(self) -> ComposeResult:
@@ -142,7 +139,7 @@ class CLIApp(App):
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理用户输入"""
-        if self.current_tool_request:
+        if self.current_tool_call:
             # 处理工具确认响应
             user_input = event.value.strip().lower()
             if user_input in ["y", "yes", "是"]:
@@ -158,13 +155,12 @@ class CLIApp(App):
                 return
 
             # 发送确认消息
-            confirmation = ToolConfirmationMessage(
-                tool_call=self.current_tool_request, confirmed=confirmed
+            self.current_tool_confirmation = ToolConfirmationMessage(
+                tool_call=self.current_tool_call, confirmed=confirmed
             )
-            await self.tool_confirmation_queue.put(confirmation)
 
             # 重置当前工具请求
-            self.current_tool_request = None
+            self.current_tool_call = None
             event.input.value = ""
             cast(Input, self.query_one("#input")).placeholder = "输入消息..."  # type: ignore
             return
@@ -173,7 +169,7 @@ class CLIApp(App):
             # 添加用户消息
             user_msg = ChatMessage(role="user", message=event.value)
             self.messages.append(user_msg)
-            await self.user_input_queue.put(user_msg)
+            await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message)
@@ -202,7 +198,7 @@ class CLIApp(App):
         """监听输出队列并更新UI"""
         current_message = None
         while True:
-            output = await self.user_output_queue.get()
+            output = await self.group_chat.receive("cli_user_output")
             if isinstance(output, dict):  # AnswerToken
                 if output["reasoning_content"]:
                     is_reasoning = True
@@ -260,16 +256,14 @@ class CLIApp(App):
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
-        self.tool_request_watcher_task = asyncio.create_task(
-            self.watch_tool_request_queue()
-        )
-        self.agent_task = asyncio.create_task(self.agent.run())
+
+        self.agent_task = asyncio.create_task(self.group_chat.get_members("agent", Agent).run())
 
         # 如果有初始消息，自动发送
         if self.init_message:
             user_msg = ChatMessage(role="user", message=self.init_message)
             self.messages.append(user_msg)
-            await self.user_input_queue.put(user_msg)
+            await self.group_chat.send("agent_user_input", user_msg)
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message)
             container = self.query_one("#chat-container")
@@ -291,6 +285,7 @@ class CLIApp(App):
         else:
             display_text = f"Token: {self.cumulative_token_usage['input_tokens']:,} in | {self.cumulative_token_usage['output_tokens']:,} out | {self.cumulative_token_usage['total_tokens']:,} total"
         token_display = self.query_one("#token-usage")
+        assert isinstance(token_display, Static)
         token_display.update(display_text)
 
     def _trim_messages_if_needed(self) -> None:
@@ -302,7 +297,7 @@ class CLIApp(App):
                 # 从self.messages中移除前excess个消息
                 removed_messages = self.messages[:excess]
                 self.messages = self.messages[excess:]
-                
+
                 # 从UI容器中移除对应的MessageWidget
                 container = self.query_one("#chat-container")
                 # 获取所有MessageWidget子组件
@@ -316,13 +311,15 @@ class CLIApp(App):
         if event.key == "ctrl+c":
             self.app.exit()
 
-    async def watch_tool_request_queue(self):
-        """监听工具请求队列并显示确认提示"""
-        while True:
-            tool_request = await self.tool_request_queue.get()
-            self.current_tool_request = tool_request
-            # 显示确认提示
-            self.query_one("#input").placeholder = (  # type: ignore
-                f"确认执行工具 {tool_request.function_name} 吗？(y/n)"
-            )
-            # 等待用户输入（通过 on_input_submitted 处理）
+    async def confirm_tool_request(self, tool_call: ToolCallMessage):
+        """向用户确认是否需要调用工具"""
+        self.current_tool_confirmation = None
+        self.current_tool_call = tool_call
+        # 显示确认提示
+        self.query_one("#input").placeholder = (  # type: ignore
+            f"确认执行工具 {tool_call.function_name} 吗？(y/n)"
+        )
+        # 等待用户输入（通过 on_input_submitted 处理）
+        while self.current_tool_confirmation is None:
+            await asyncio.sleep(0.01)
+        return self.current_tool_confirmation

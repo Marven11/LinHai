@@ -8,6 +8,7 @@
 - [ ] 修改linhai/cli_ui.py，如果MessageWidget数量大于1000则删除前面的以优化性能
 - [ ] 修改linhai/tool/main.py的逻辑，不仅提供行数等信息，还提供内容的预览
     - 使用reprlib压缩到500字符
+- [ ] 修改linhai/prompt.py中的示例，修改其中的任务规划格式为markdown分级无序列表+方框
 - [ ] 运行并修复unittest
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO

@@ -8,8 +8,9 @@ from pathlib import Path
 import argparse
 import unittest
 
-from linhai.agent import create_agent
+from linhai.agent import create_agent, Agent
 from linhai.cli_ui import CLIApp
+from linhai.group_chat import GroupChat
 
 
 def run_tests():
@@ -24,7 +25,7 @@ def run_tests():
 def main():
     """主函数，解析命令行参数并执行相应命令。"""
     import sys
-    
+
     parser = argparse.ArgumentParser(description="LinHai 主程序")
     parser.add_argument(
         "--config",
@@ -42,7 +43,10 @@ def main():
         try:
             with open(args.file, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-                init_message = f"用户使用-f选项指定了第一条消息，路径为: {str(args.file)}, 内容如下:\n" + content
+                init_message = (
+                    f"用户使用-f选项指定了第一条消息，路径为: {str(args.file)}, 内容如下:\n"
+                    + content
+                )
         except FileNotFoundError:
             print(f"错误: 文件 {args.file} 未找到")
             sys.exit(1)
@@ -50,20 +54,11 @@ def main():
             print(f"错误: 读取文件时发生错误: {e}")
             sys.exit(1)
 
-    (
-        agent,
-        input_queue,
-        output_queue,
-        tool_request_queue,
-        tool_confirmation_queue,
-        _,
-    ) = create_agent(args.config.expanduser(), None)
+    group_chat = GroupChat()
+    create_agent(group_chat, args.config.expanduser())
+    _ = group_chat.get_members("agent", Agent)
     app = CLIApp(
-        agent,
-        input_queue,
-        output_queue,
-        tool_request_queue,
-        tool_confirmation_queue,
+        group_chat=group_chat,
         init_message=init_message,
     )
     app.run()

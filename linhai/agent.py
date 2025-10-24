@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 import datetime
-from pathlib import Path
 from typing import (
     TypedDict,
     cast,
@@ -17,9 +16,7 @@ from typing import (
 
 import asyncio
 import logging
-import json
 import traceback
-import datetime
 import random
 from asyncio import Queue, QueueEmpty
 
@@ -42,6 +39,7 @@ from linhai.llm import (
     ToolConfirmationMessage,
     LanguageModelMessage,
 )
+from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.base import global_tools
@@ -269,11 +267,7 @@ class Agent:
     def __init__(
         self,
         config: AgentConfig,
-        user_input_queue: "Queue[ChatMessage]",
-        user_output_queue: "Queue[AnswerToken | Answer]",
-        tool_request_queue: "Queue[ToolCallMessage]",
-        tool_confirmation_queue: "Queue[ToolConfirmationMessage]",
-        tool_manager: ToolManager,
+        group_chat: GroupChat,
         init_messages: Sequence[Message],
     ):
         """
@@ -281,18 +275,13 @@ class Agent:
 
         参数:
             config: Agent配置
-            user_input_queue: 用户输入消息队列
-            user_output_queue: 发送给用户的消息队列
-            tool_request_queue: 工具请求队列
-            tool_confirmation_queue: 工具确认队列
-            tool_manager: 工具管理器实例
+            group_chat: 与其他类进行通信的类
         """
         self.config = config
-        self.user_input_queue = user_input_queue
-        self.user_output_queue = user_output_queue
-        self.tool_request_queue = tool_request_queue
-        self.tool_confirmation_queue = tool_confirmation_queue
-        self.tool_manager = tool_manager
+        self.group_chat = group_chat
+
+        group_chat.register_queue("agent_user_input")
+        group_chat.register_member("agent", self)
 
         self.state: AgentState = "waiting_user"
 
@@ -329,7 +318,7 @@ class Agent:
         """
         logger.info("Agent进入等待用户状态")
         while self.state == "waiting_user":
-            chat_msg = await self.user_input_queue.get()
+            chat_msg = await self.group_chat.receive("agent_user_input")
             if chat_msg is None:
                 break
 
@@ -344,13 +333,13 @@ class Agent:
         """
         logger.info("Agent进入自动运行状态")
         # 直接处理用户输入消息
-        if not self.user_input_queue.empty():
+        if not self.group_chat.is_empty("agent_user_input"):
             try:
-                msg = await self.user_input_queue.get()
+                msg = await self.group_chat.receive("agent_user_input")
                 await self.handle_messages([cast(ChatMessage, msg)])
             except QueueEmpty:
                 logger.info("用户输入队列已关闭")
-            except (QueueEmpty, RuntimeError) as e:
+            except RuntimeError as e:
                 logger.error("处理消息时出错: %s", str(e))
                 self.state = "paused"
                 raise RuntimeError("处理消息时出错") from e
@@ -386,7 +375,7 @@ class Agent:
         """
         logger.info("Agent进入暂停运行状态")
         try:
-            msg = await self.user_input_queue.get()
+            msg = await self.group_chat.receive("agent_user_input")
             self.state = "waiting_user"
             await self.handle_messages([cast(ChatMessage, msg)])
         except QueueEmpty:
@@ -427,7 +416,9 @@ class Agent:
             self.state = "working"
 
         # 检查是否是workflow工具
-        workflow = self.tool_manager.get_workflow(tool_call.function_name)
+        workflow = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        ).get_workflow(tool_call.function_name)
         if workflow:
             workflow_function = workflow["func"]
             return await workflow_function(self)
@@ -522,7 +513,9 @@ class Agent:
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
             try:
-                tool_result = await self.tool_manager.process_tool_call(tool_call)
+                tool_result = await self.group_chat.get_members(
+                    "tool_manager", ToolManager
+                ).process_tool_call(tool_call)
                 # 触发工具调用后的生命周期事件（成功）
                 await self.lifecycle.trigger_after_tool_call(
                     self, tool_call, tool_result, True
@@ -546,24 +539,16 @@ class Agent:
                 return False
 
         # 需要用户确认：发送工具请求到队列
-        await self.tool_request_queue.put(tool_call)
+        from linhai.cli_ui import CLIApp
+
+        confirmation = await self.group_chat.get_members(
+            "cli_app", CLIApp
+        ).confirm_tool_request(tool_call)
         self.messages.append(
             RuntimeMessage(
                 f"已发送工具调用请求: {tool_call.function_name}，等待用户确认..."
             )
         )
-
-        # 使用存储的timeout配置（在初始化时解析）
-        timeout_seconds = self.timeout_seconds
-        try:
-            confirmation = await asyncio.wait_for(
-                self.tool_confirmation_queue.get(), timeout=timeout_seconds
-            )
-        except asyncio.TimeoutError:
-            self.messages.append(
-                RuntimeMessage(f"工具调用确认超时（{timeout_seconds}秒），已取消调用")
-            )
-            return False
 
         # 检查确认消息是否匹配当前工具调用
         if confirmation.tool_call.function_name != tool_call.function_name:
@@ -575,7 +560,9 @@ class Agent:
         # 根据确认状态执行或取消
         if confirmation.confirmed:
             try:
-                tool_result = await self.tool_manager.process_tool_call(tool_call)
+                tool_result = await self.group_chat.get_members(
+                    "tool_manager", ToolManager
+                ).process_tool_call(tool_call)
                 self.messages.append(
                     RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
                 )
@@ -657,7 +644,7 @@ class Agent:
         answer: Answer = await model.answer_stream(self.messages)
 
         async for token in answer:
-            await self.user_output_queue.put(token)
+            await self.group_chat.send("cli_user_output", token)
 
             # 实时检查工具调用量（通过lifecycle回调处理）
             current_content = answer.get_current_content()
@@ -669,16 +656,16 @@ class Agent:
             if should_interrupt:
                 return await self.generate_response()
 
-            if not self.user_input_queue.empty():
-                await self.user_output_queue.put(answer)
+            if not self.group_chat.is_empty("agent_user_input"):
+                await self.group_chat.send("cli_user_output", answer)
                 chat_message = cast(ChatMessage, answer.get_message())
                 self.messages.append(chat_message)
                 self.messages.append(RuntimeMessage("用户打断了你的回答"))
-                self.messages.append(await self.user_input_queue.get())
+                self.messages.append(await self.group_chat.receive("agent_user_input"))
                 answer.interrupt()
                 return await self.generate_response()
 
-        await self.user_output_queue.put(answer)
+        await self.group_chat.send("cli_user_output", answer)
 
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
@@ -789,22 +776,9 @@ class Agent:
 
 
 def create_agent(
+    group_chat: GroupChat,
     config_path: str | Path = "./config.toml",
-    init_messages: Sequence[Message] | None = None,
-) -> tuple[
-    Agent,
-    "Queue[ChatMessage]",
-    "Queue[AnswerToken | Answer]",
-    "Queue[ToolCallMessage]",
-    "Queue[ToolConfirmationMessage]",
-    ToolManager,
-]:
-    """创建并配置Agent实例
-    参数:
-        config_path: 配置文件路径
-    返回:
-        tuple[Agent, 用户输入队列, 用户输出队列, 工具请求队列, 工具确认队列, ToolManager实例]
-    """
+):
     config = load_config(config_path)
 
     llm = OpenAi(
@@ -829,11 +803,6 @@ def create_agent(
                 "chat_completion_kwargs", {}
             ),
         )
-
-    user_input_queue: "Queue[ChatMessage]" = Queue()
-    user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
-    tool_request_queue: "Queue[ToolCallMessage]" = Queue()
-    tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
 
     # 解析tool_confirmation配置
     tool_confirmation_config = {}
@@ -872,7 +841,7 @@ def create_agent(
     if cheap_llm:
         agent_config["cheap_model"] = cheap_llm
 
-    tool_manager = ToolManager(toolsets=[global_tools])
+    tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
@@ -889,16 +858,7 @@ def create_agent(
         )
         .replace("{|CURRENT_TIME|}", current_time)
     )
-    if init_messages is None:
-        init_messages = []
-    else:
-        init_messages = list(init_messages)
-
-    # 在用户消息前插入系统消息
-    init_messages.insert(0, SystemMessage(system_prompt))
-
-    # 加载全局记忆 - 检查多个文件路径
-    memory_config = agent_config.get("memory", {})
+    init_messages: list[Message] = [SystemMessage(system_prompt)]
 
     # 定义要检查的文件路径列表（按优先级顺序）
     memory_filepaths = [
@@ -923,21 +883,10 @@ def create_agent(
     # 添加廉价LLM状态消息
     init_messages.append(CheapLlmStatusMessage("cheap_model" in agent_config))
 
-    agent = Agent(
+    Agent(
         config=agent_config,
-        user_input_queue=user_input_queue,
-        user_output_queue=user_output_queue,
-        tool_request_queue=tool_request_queue,
-        tool_confirmation_queue=tool_confirmation_queue,
-        tool_manager=tool_manager,
+        group_chat=group_chat,
         init_messages=init_messages,
     )
 
-    return (
-        agent,
-        user_input_queue,
-        user_output_queue,
-        tool_request_queue,
-        tool_confirmation_queue,
-        tool_manager,
-    )
+    return group_chat

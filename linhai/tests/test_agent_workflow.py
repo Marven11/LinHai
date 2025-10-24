@@ -46,20 +46,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             },
         }
 
-        self.user_input_queue = asyncio.Queue()
-        self.user_output_queue = asyncio.Queue()
-        self.tool_request_queue = asyncio.Queue()
-        self.tool_confirmation_queue = asyncio.Queue()
-        self.tool_manager = ToolManager(toolsets=[global_tools])
+        from linhai.group_chat import GroupChat
+        self.group_chat = GroupChat()
+        
+        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
 
         self.agent = Agent(
             config=config,
+            group_chat=self.group_chat,
             init_messages=[],
-            user_input_queue=cast(asyncio.Queue, self.user_input_queue),
-            user_output_queue=cast(asyncio.Queue, self.user_output_queue),
-            tool_request_queue=cast(asyncio.Queue, self.tool_request_queue),
-            tool_confirmation_queue=cast(asyncio.Queue, self.tool_confirmation_queue),
-            tool_manager=self.tool_manager,
         )
 
     async def test_workflow_registration(self):

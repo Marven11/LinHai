@@ -13,7 +13,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     """Test cases for the ToolManager class."""
 
     async def asyncSetUp(self):
-        self.manager = ToolManager(toolsets=[global_tools])
+        from linhai.group_chat import GroupChat
+        group_chat = GroupChat()
+        self.manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
 
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
@@ -94,7 +96,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             tools=ToolConfig(max_output_length=1000),
         )
-        manager_with_config = ToolManager(toolsets=[global_tools], config=config)
+        from linhai.group_chat import GroupChat
+        group_chat = GroupChat()
+        manager_with_config = ToolManager(group_chat=group_chat, toolsets=[global_tools], config=config)
 
         # 模拟工具调用返回长内容
         long_content = "A" * 1001  # 超过配置的1000字符限制
@@ -135,7 +139,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             # 不设置tools配置
         )
-        manager_with_config = ToolManager(toolsets=[global_tools], config=config)
+        from linhai.group_chat import GroupChat
+        group_chat = GroupChat()
+        manager_with_config = ToolManager(group_chat=group_chat, toolsets=[global_tools], config=config)
 
         # 模拟工具调用返回长内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
@@ -161,7 +167,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_tool_manager_without_config(self):
         """测试ToolManager不使用配置的情况（使用默认值）"""
         # 使用默认配置的ToolManager
-        manager_without_config = ToolManager(toolsets=[global_tools])
+        from linhai.group_chat import GroupChat
+        group_chat = GroupChat()
+        manager_without_config = ToolManager(group_chat=group_chat, toolsets=[global_tools])
 
         # 模拟工具调用返回刚好超过默认限制的内容
         long_content = "A" * 50001  # 超过默认的50000字符限制

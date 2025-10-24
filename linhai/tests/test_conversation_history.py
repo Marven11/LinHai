@@ -28,12 +28,10 @@ class TestConversationHistory(unittest.TestCase):
             "compress_threshold_hard": 2000,
         }
         
-        # 创建模拟队列
-        self.user_input_queue = Mock()
-        self.user_output_queue = Mock()
-        self.tool_request_queue = Mock()
-        self.tool_confirmation_queue = Mock()
-        self.tool_manager = Mock()
+        # 创建模拟 GroupChat
+        self.group_chat = Mock()
+        self.group_chat.register_queue = Mock()
+        self.group_chat.register_member = Mock()
         
         # 创建初始消息
         self.init_messages = [
@@ -44,11 +42,7 @@ class TestConversationHistory(unittest.TestCase):
         # 创建Agent实例
         self.agent = Agent(
             config=self.config,
-            user_input_queue=self.user_input_queue,
-            user_output_queue=self.user_output_queue,
-            tool_request_queue=self.tool_request_queue,
-            tool_confirmation_queue=self.tool_confirmation_queue,
-            tool_manager=self.tool_manager,
+            group_chat=self.group_chat,
             init_messages=self.init_messages,
         )
 

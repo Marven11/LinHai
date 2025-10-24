@@ -74,14 +74,24 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 "whitelist": ["add_numbers"],
             },
         }
-        self.user_input_queue: "Queue[ChatMessage]" = Queue()
-        self.user_output_queue: "Queue[AnswerToken | Answer]" = Queue()
-        self.tool_request_queue: "Queue[ToolCallMessage]" = Queue()
-        self.tool_confirmation_queue: "Queue[ToolConfirmationMessage]" = Queue()
+        
+        # 创建模拟的 GroupChat
+        self.group_chat = MagicMock()
+        self.group_chat.register_queue = MagicMock()
+        self.group_chat.register_member = MagicMock()
+        self.group_chat.receive = AsyncMock()
+        self.group_chat.send = AsyncMock()
+        self.group_chat.is_empty = MagicMock(return_value=True)
+        self.group_chat.get_members = MagicMock()
+        
+        # 创建模拟的 ToolManager
         self.tool_manager = MagicMock()
         self.tool_manager.get_tools_info.return_value = []
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
+        
+        # 设置 group_chat.get_members 返回 tool_manager
+        self.group_chat.get_members.return_value = self.tool_manager
 
         # 创建初始消息列表
         from linhai.llm import SystemMessage
@@ -90,11 +100,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.agent = Agent(
             config=config,
-            user_input_queue=self.user_input_queue,
-            user_output_queue=self.user_output_queue,
-            tool_request_queue=self.tool_request_queue,
-            tool_confirmation_queue=self.tool_confirmation_queue,
-            tool_manager=self.tool_manager,
+            group_chat=self.group_chat,
             init_messages=init_messages,
         )
 

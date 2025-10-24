@@ -11,8 +11,9 @@ from typing import cast, Any, Callable, Awaitable, Coroutine, Optional
 from collections import Counter
 
 from linhai.llm import Message, ToolCallMessage
+from linhai.group_chat import GroupChat
 from linhai.type_hints import LanguageModelMessage
-from linhai.tool.base import Tool, global_tools, to_tools_info, ToolSet
+from linhai.tool.base import Tool, to_tools_info, ToolSet
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.config import Config
 
@@ -105,12 +106,19 @@ class ToolErrorMessage(Message):
 class ToolManager:
     """工具管理器，负责处理工具调用请求"""
 
-    def __init__(self, toolsets: list[ToolSet], config: Optional[Config] = None):
+    def __init__(
+        self,
+        group_chat: GroupChat,
+        toolsets: list[ToolSet],
+        config: Optional[Config] = None,
+    ):
         """初始化工具管理器
 
         Args:
             config: 可选配置对象
         """
+        group_chat.register_member("tool_manager", self)
+        self.group_chat = group_chat
         self.workflows: dict[str, Tool] = {}
         self.config = config
         self.mcp_connector = MCPConnector()
