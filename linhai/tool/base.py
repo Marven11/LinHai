@@ -3,7 +3,7 @@
 包含工具定义、注册和调用相关的基类和函数。
 """
 
-from typing import TypedDict, Callable, Any, NotRequired
+from typing import TypedDict, Callable, Any
 
 
 class ToolArgInfo(TypedDict):
@@ -23,61 +23,7 @@ class Tool(TypedDict):
     func: Callable  # 工具函数
 
 
-global_tools: dict[str, Tool] = {}
-
-
-def register_tool(
-    name: str, desc: str, args: dict[str, ToolArgInfo], required_args: list[str]
-) -> Callable:
-    """注册工具装饰器
-
-    Args:
-        name: 工具名称
-        desc: 工具描述
-        args: 参数信息字典
-        required_args: 必填参数列表
-
-    Returns:
-        装饰器函数
-    """
-
-    def _wraps(f: Callable) -> Callable:
-        """实际装饰器
-
-        Args:
-            f: 被装饰的工具函数
-
-        Returns:
-            装饰后的函数
-        """
-        global_tools[name] = {
-            "name": name,
-            "func": f,
-            "desc": desc,
-            "args": args,
-            "required": required_args,
-        }
-        return f
-
-    return _wraps
-
-
-def call_tool(name: str, args: dict[str, Any]) -> Any:
-    """调用指定工具
-
-    Args:
-        name: 工具名称
-        args: 工具参数
-
-    Returns:
-        工具执行结果
-    """
-    if name not in global_tools:
-        raise ValueError(f"Tool not found: {name}")
-    return global_tools[name]["func"](**args)
-
-
-def get_tools_info(tools: dict[str, Tool]) -> list[dict]:
+def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
     """获取所有工具的信息列表
 
     返回格式符合OpenAI工具调用规范
@@ -112,3 +58,59 @@ def get_tools_info(tools: dict[str, Tool]) -> list[dict]:
         tool_info_list.append(tool_info)
 
     return tool_info_list
+
+
+class ToolSet:
+    def __init__(self):
+        self.tools: dict[str, Tool] = {}
+
+    def register_tool(
+        self,
+        name: str,
+        desc: str,
+        args: dict[str, ToolArgInfo],
+        required_args: list[str],
+    ):
+
+        def _wraps(f: Callable) -> Callable:
+            """实际装饰器
+
+            Args:
+                f: 被装饰的工具函数
+
+            Returns:
+                装饰后的函数
+            """
+            self.tools[name] = {
+                "name": name,
+                "func": f,
+                "desc": desc,
+                "args": args,
+                "required": required_args,
+            }
+            return f
+
+        return _wraps
+
+    def call_tool(self, name: str, args: dict[str, Any]) -> Any:
+        """调用指定工具
+
+        Args:
+            name: 工具名称
+            args: 工具参数
+
+        Returns:
+            工具执行结果
+        """
+        if name not in self.tools:
+            raise ValueError(f"Tool not found: {name}")
+        return self.tools[name]["func"](**args)
+
+    def get_tools(self):
+        return self.tools
+
+    def has_tool(self, name: str):
+        return name in self.tools
+
+
+global_tools = ToolSet()

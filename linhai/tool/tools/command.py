@@ -4,7 +4,7 @@ import asyncio
 import os
 import subprocess
 import re
-from linhai.tool.base import register_tool, ToolArgInfo
+from linhai.tool.base import global_tools, ToolArgInfo
 import sys
 import platform
 
@@ -68,7 +68,7 @@ def validate_simple_command(command: str) -> bool:
     return VALIDATE_COMMAND_REGEX.fullmatch(command) is not None
 
 
-@register_tool(
+@global_tools.register_tool(
     name="run_simple_command",
     desc=f"执行简单系统命令（白名单验证）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时不要损坏用户的电脑。",
     args={
@@ -96,7 +96,7 @@ async def run_simple_command(command: str, timeout: float = 2.0) -> str:
     return await execute_command(command, timeout)
 
 
-@register_tool(
+@global_tools.register_tool(
     name="run_complex_command",
     desc=f"执行复杂系统命令（可能包含危险操作）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时务必谨慎，避免损坏用户电脑。",
     args={
@@ -120,7 +120,7 @@ async def run_complex_command(command: str, timeout: float = 2.0) -> str:
     return await execute_command(command, timeout)
 
 
-@register_tool(
+@global_tools.register_tool(
     name="change_directory",
     desc="改变当前工作目录",
     args={"directory": ToolArgInfo(desc="目标目录的路径", type="str")},
@@ -142,7 +142,7 @@ def change_directory(directory: str) -> str:
         return f"Error changing directory: {str(e)}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="show_git_changes",
     desc="显示git修改，通过展示git的输出展示文件什么地方被修改",
     args={
@@ -197,7 +197,7 @@ def show_git_changes(filepath: str = "") -> str:
     return output
 
 
-@register_tool(
+@global_tools.register_tool(
     name="exit_agent",
     desc="退出Agent程序，指定返回代码",
     args={

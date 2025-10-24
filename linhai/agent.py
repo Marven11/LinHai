@@ -44,6 +44,7 @@ from linhai.llm import (
 )
 from linhai.type_hints import AgentState
 from linhai.config import load_config
+from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
@@ -871,7 +872,7 @@ def create_agent(
     if cheap_llm:
         agent_config["cheap_model"] = cheap_llm
 
-    tool_manager = ToolManager()
+    tool_manager = ToolManager(toolsets=[global_tools])
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",

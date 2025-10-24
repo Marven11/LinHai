@@ -7,10 +7,11 @@ import json
 import tempfile
 import os
 from typing import cast, Any, Callable, Awaitable, Coroutine, Optional
+from collections import Counter
 
 from linhai.llm import Message, ToolCallMessage
 from linhai.type_hints import LanguageModelMessage
-from linhai.tool.base import call_tool, Tool, get_tools_info, global_tools
+from linhai.tool.base import Tool, global_tools, to_tools_info, ToolSet
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.config import Config
 
@@ -99,7 +100,7 @@ class ToolErrorMessage(Message):
 class ToolManager:
     """工具管理器，负责处理工具调用请求"""
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, toolsets: list[ToolSet], config: Optional[Config] = None):
         """初始化工具管理器
 
         Args:
@@ -108,6 +109,26 @@ class ToolManager:
         self.workflows: dict[str, Tool] = {}
         self.config = config
         self.mcp_connector = MCPConnector()
+
+        names = Counter(
+            [name for toolset in toolsets for name in toolset.get_tools().keys()]
+        )
+        if any(count >= 2 for count in names.values()):
+            raise ValueError(
+                f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
+            )
+        self.toolsets = toolsets
+
+    def add_toolset(self, toolset: ToolSet):
+        existing_names = set(
+            name for toolset in self.toolsets for name in toolset.get_tools().keys()
+        )
+        duplicate_names = [
+            name for name in toolset.get_tools().keys() if name in existing_names
+        ]
+        if duplicate_names:
+            raise ValueError(f"Duplicate names: {duplicate_names}")
+        self.toolsets.append(toolset)
 
     def register_workflow(
         self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]
@@ -120,8 +141,11 @@ class ToolManager:
         return self.workflows.get(name)
 
     def get_tools_info(self) -> list[dict]:
-        tools = {**global_tools, **self.workflows}
-        return get_tools_info(tools)
+        return [
+            info
+            for toolset in self.toolsets
+            for info in to_tools_info(toolset.get_tools())
+        ] + to_tools_info(self.workflows)
 
     def get_mcp_connector(self):
         return self.mcp_connector
@@ -136,8 +160,16 @@ class ToolManager:
             Message: 工具调用结果消息
         """
         args = tool_call.function_arguments if tool_call.function_arguments else {}
+
+        target_toolset = None
+        for toolset in self.toolsets:
+            if toolset.has_tool(tool_call.function_name):
+                target_toolset = toolset
+        if target_toolset is None:
+            return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
+
         try:
-            result = call_tool(tool_call.function_name, args)
+            result = target_toolset.call_tool(tool_call.function_name, args)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))

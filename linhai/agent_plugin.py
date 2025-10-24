@@ -126,6 +126,7 @@ def register_default_plugins(lifecycle) -> None:
         ToolCallCountPlugin(),
         ExcessiveCheckmarkPlugin(),
         MarkdownSyntaxPlugin(),
+        ThinkingToolCallPlugin(),
         TaskPlanningPlugin(),
     ]
 
@@ -177,23 +178,35 @@ class MarkdownSyntaxPlugin(Plugin):
 class TaskPlanningPlugin(Plugin):
     """任务规划格式检查Plugin。"""
 
+    def __init__(self):
+        self.no_planning_count = 0
+
     async def after_message_generation(
         self, agent, answer: Answer, full_response, tool_calls
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
         import re
-        
+
         # 使用正则匹配每一行开头的任务规划标记
-        pattern = r'^ *- \[[ x]\]'
+        pattern = r"^ *- \[[ x]\]"
         matches = re.findall(pattern, full_response, re.MULTILINE)
-        
+
         # 如果没有找到任何任务规划标记，则提醒
         if not matches:
+            self.no_planning_count += 1
             agent.messages.append(
                 RuntimeMessage(
-                    "模型没有输出任务规划格式，请使用`- [ ]`或`- [x]`进行任务规划"
+                    (
+                        "注意：你没有输出任务规划"
+                        if self.no_planning_count == 1
+                        else f"【注意】：你已连续{self.no_planning_count}次没有输出任务规划"
+                    )
+                    + "请使用`- [ ]`或`- [x]`进行任务规划"
+                    + "！" * (self.no_planning_count - 1) * 3
                 )
             )
+        else:
+            self.no_planning_count = 0
 
     def register(self, lifecycle):
         """注册到after_message_generation回调。"""

@@ -1,10 +1,10 @@
 """计算器工具模块，提供安全的数学计算功能。"""
 
 import re
-from linhai.tool.base import register_tool, ToolArgInfo
+from linhai.tool.base import global_tools, ToolArgInfo
 
 
-@register_tool(
+@global_tools.register_tool(
     name="safe_calculator",
     desc="安全计算数学表达式。表达式只能包含数字、加减乘除符号(+ - * /)、乘方(**)、取模(%)、大于小于(> <)和空格。建议在计算任何数字时优先使用此工具。",
     args={

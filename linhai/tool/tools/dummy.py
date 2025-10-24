@@ -3,13 +3,13 @@
 这些工具函数通常由Agent内部处理，不会实际执行外部操作。
 """
 
-from linhai.tool.base import register_tool, ToolArgInfo
+from linhai.tool.base import global_tools, ToolArgInfo
 
 # 调用会被agent拦截的，和agent运行流程相关的tool
 # 具体见agent.py
 
 
-@register_tool(
+@global_tools.register_tool(
     name="get_token_usage",
     desc="获取token使用情况。",
     args={},
@@ -26,7 +26,7 @@ def get_token_usage() -> str:
     return ""
 
 
-@register_tool(
+@global_tools.register_tool(
     name="switch_to_cheap_llm",
     desc="切换到廉价LLM模式，指定接下来要使用的消息数量。",
     args={"message_count": ToolArgInfo(desc="要使用廉价LLM的消息数量", type="int")},
@@ -47,7 +47,7 @@ def switch_to_cheap_llm(message_count: int) -> str:
     return ""
 
 
-@register_tool(
+@global_tools.register_tool(
     name="thanox_history",
     desc="随机删除一半消息（不包括前5条系统消息）。调用这个工具来触发随机删除流程。",
     args={},

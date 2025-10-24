@@ -4,7 +4,7 @@ from pathlib import Path
 import difflib
 import json
 import platform
-from linhai.tool.base import register_tool, ToolArgInfo
+from linhai.tool.base import global_tools, ToolArgInfo
 import subprocess
 
 
@@ -76,7 +76,7 @@ def validate_file(file_path: Path) -> str:
     return ""  # 验证通过
 
 
-@register_tool(
+@global_tools.register_tool(
     name="read_file",
     desc="读取文件",
     args={
@@ -119,7 +119,7 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> str:
 {formatted_content}"""
 
 
-@register_tool(
+@global_tools.register_tool(
     name="write_file",
     desc="写入文件内容。"
     "注意：避免输出大量重复内容！修改文件时优先使用replace_file_content或者append_file，复制文件优先使用shell指令",
@@ -155,7 +155,7 @@ def write_file(filepath: str, content: str, override: bool = False) -> str:
     return f"成功写入文件: {file_path.as_posix()!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="append_file",
     desc="追加文件内容。" "建议：在增加文件内容时优先考虑使用此工具或insert工具",
     args={
@@ -187,7 +187,7 @@ def append_file(filepath: str, content: str) -> str:
     return f"成功写入文件: {file_path.as_posix()!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="replace_file_content",
     desc="替换文件内容中的指定字符串。"
     "建议：在修改文件原有内容时优先使用此工具"
@@ -253,7 +253,7 @@ def replace_file_content(
     return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {count if replace_all else 1}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="list_files",
     desc="列出指定文件夹中的文件(使用./表示当前文件夹)",
     args={
@@ -290,7 +290,7 @@ def list_files(dirpath: str) -> str:
         return f"列出文件时发生错误: {exc!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="get_absolute_path",
     desc="获取路径的绝对路径",
     args={
@@ -314,7 +314,7 @@ def get_absolute_path(path: str) -> str:
         return f"获取绝对路径时发生错误: {exc!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="run_sed_expression",
     desc="执行sed表达式并返回输出，不修改文件",
     args={
@@ -352,7 +352,7 @@ def run_sed_expression(expression: str, filepath: str) -> str:
         return f"运行sed时发生错误: {exc!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="modify_file_with_sed",
     desc="使用sed表达式修改文件，支持mac和linux的区别",
     args={
@@ -390,7 +390,7 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
         return f"运行sed时发生错误: {exc!r}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="insert_at_line",
     desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。"
     "建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。"

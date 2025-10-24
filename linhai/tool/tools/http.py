@@ -4,7 +4,7 @@ from typing import Optional
 import requests
 import httpx
 
-from linhai.tool.base import register_tool
+from linhai.tool.base import global_tools
 
 import os
 import tempfile
@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 
 
-@register_tool(
+@global_tools.register_tool(
     name="http_request",
     desc="使用httpx库发送HTTP请求并获取响应内容",
     args={
@@ -54,7 +54,7 @@ async def http_request(
         return f"请求失败: {str(e)}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="fetch_article",
     desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
     args={
@@ -113,7 +113,7 @@ def fetch_article(url: str) -> str:
                 "-native_divs"
                 "-native_spans"
                 "-simple_tables"
-                "+pipe_tables"
+                "+pipe_tables",
             ],
             check=True,
         )
@@ -134,7 +134,7 @@ markdown内容如下
         return f"转换失败: {str(e)}"
 
 
-@register_tool(
+@global_tools.register_tool(
     name="search_web",
     desc="使用DuckDuckGo进行网页搜索并返回格式化结果",
     args={
