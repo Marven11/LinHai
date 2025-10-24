@@ -117,7 +117,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
-        self.assertIn("任务规划格式", error_msg.message)
+        self.assertIn("你没有输出任务规划", error_msg.message)
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_both_tool_calls_and_marker(self):
@@ -148,7 +148,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         error_msg = self.agent.messages[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
-        self.assertIn("任务规划格式", error_msg.message)
+        self.assertIn("你没有输出任务规划", error_msg.message)
 
     async def test_no_tool_calls_no_marker_in_working_state(self):
         """Test agent adds warning message when no tool calls and no marker in working state."""
@@ -172,7 +172,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         task_planning_msg = self.agent.messages[-1]
         self.assertIsInstance(task_planning_msg, RuntimeMessage)
         assert isinstance(task_planning_msg, RuntimeMessage)
-        self.assertIn("任务规划格式", task_planning_msg.message)
+        self.assertIn("你没有输出任务规划", task_planning_msg.message)
 
     async def test_marker_in_last_line_no_error(self):
         """Test agent does not add error message when WAITING_USER_MARKER is in last line."""

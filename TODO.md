@@ -4,12 +4,11 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 修改linhai/agent_plugin.py如果模型没有输出方框`- [ ]`或者`- [x]`则提醒模型需要进行任务规划
-    - 建议使用正则匹配每一行开头的` *- \[[ x]\]`，没有则提醒使用`- [ ]`或者`- [x]`
-    - 编写unittest
-- [ ] 修改linhai/prompt.py中的示例，修改其中的任务规划格式为markdown分级无序列表+方框
+- [ ] 使用mypy查看cli_ui.py中的类型错误，应该要避免使用self.content
+- [ ] 修改linhai/cli_ui.py，如果MessageWidget数量大于1000则删除前面的以优化性能
+- [ ] 修改linhai/tool/main.py的逻辑，不仅提供行数等信息，还提供内容的预览
+    - 使用reprlib压缩到500字符
 - [ ] 运行并修复unittest
-- [ ] 看一眼git stash，我刚刚在开发mcp client，帮我git stash pop
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）

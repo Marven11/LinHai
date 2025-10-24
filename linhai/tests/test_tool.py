@@ -4,21 +4,16 @@ import unittest
 import unittest.mock
 
 from linhai.llm import ToolCallMessage
-from linhai.tool.base import (
-    ToolArgInfo,
-    call_tool,
-    get_tools_info,
-    register_tool,
-    global_tools,
-)
+from linhai.tool.base import ToolArgInfo, global_tools
 from linhai.tool.main import ToolManager
 
 
+# TestToolManager类已更新使用新API
 class TestToolManager(unittest.IsolatedAsyncioTestCase):
     """Test cases for the ToolManager class."""
 
     async def asyncSetUp(self):
-        self.manager = ToolManager()
+        self.manager = ToolManager(toolsets=[global_tools])
 
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
@@ -26,9 +21,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="add_numbers", function_arguments={"a": 3, "b": 5}
         )
 
-        # 模拟工具调用
-        with unittest.mock.patch(
-            "linhai.tool.main.call_tool", return_value=8
+        # 模拟工具存在和工具调用
+        with unittest.mock.patch.object(
+            global_tools, "has_tool", return_value=True
+        ), unittest.mock.patch(
+            "linhai.tool.base.global_tools.call_tool", return_value=8
         ) as mock_call:
             result = await self.manager.process_tool_call(mock_tool_call)
 
@@ -47,11 +44,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         # 模拟工具抛出异常
         with unittest.mock.patch(
-            "linhai.tool.main.call_tool", side_effect=ValueError("Tool not found")
+            "linhai.tool.base.global_tools.call_tool", side_effect=ValueError("Tool not found")
         ):
             result = await self.manager.process_tool_call(mock_tool_call)
             self.assertEqual(type(result).__name__, "ToolErrorMessage")
-            self.assertEqual(getattr(result, "content"), "Tool not found")
+            self.assertEqual(getattr(result, "content"), "未找到工具: invalid_tool")
 
     async def test_async_tool_call(self):
         """测试异步工具调用"""
@@ -60,9 +57,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         async def mock_async_tool(arg1: int, arg2: int) -> int:
             return arg1 + arg2
 
-        # 模拟工具调用返回一个Awaitable
-        with unittest.mock.patch(
-            "linhai.tool.main.call_tool", return_value=mock_async_tool(2, 3)
+        # 模拟工具存在和工具调用
+        with unittest.mock.patch.object(
+            global_tools, "has_tool", return_value=True
+        ), unittest.mock.patch(
+            "linhai.tool.base.global_tools.call_tool", return_value=mock_async_tool(2, 3)
         ) as mock_call:
             mock_tool_call = ToolCallMessage(
                 function_name="mock_async_tool",
@@ -95,7 +94,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             tools=ToolConfig(max_output_length=1000),
         )
-        manager_with_config = ToolManager(config=config)
+        manager_with_config = ToolManager(toolsets=[global_tools], config=config)
 
         # 模拟工具调用返回长内容
         long_content = "A" * 1001  # 超过配置的1000字符限制
@@ -103,8 +102,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool", function_arguments={}
         )
 
-        with unittest.mock.patch(
-            "linhai.tool.main.call_tool", return_value=long_content
+        # 模拟工具存在和工具调用
+        with unittest.mock.patch.object(
+            global_tools, "has_tool", return_value=True
+        ), unittest.mock.patch(
+            "linhai.tool.base.global_tools.call_tool", return_value=long_content
         ) as mock_call:
             result = await manager_with_config.process_tool_call(mock_tool_call)
 
@@ -133,7 +135,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             # 不设置tools配置
         )
-        manager_with_config = ToolManager(config=config)
+        manager_with_config = ToolManager(toolsets=[global_tools], config=config)
 
         # 模拟工具调用返回长内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
@@ -141,8 +143,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool", function_arguments={}
         )
 
-        with unittest.mock.patch(
-            "linhai.tool.main.call_tool", return_value=long_content
+        # 模拟工具存在和工具调用
+        with unittest.mock.patch.object(
+            global_tools, "has_tool", return_value=True
+        ), unittest.mock.patch(
+            "linhai.tool.base.global_tools.call_tool", return_value=long_content
         ) as mock_call:
             result = await manager_with_config.process_tool_call(mock_tool_call)
 
@@ -156,7 +161,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_tool_manager_without_config(self):
         """测试ToolManager不使用配置的情况（使用默认值）"""
         # 使用默认配置的ToolManager
-        manager_without_config = ToolManager()
+        manager_without_config = ToolManager(toolsets=[global_tools])
 
         # 模拟工具调用返回刚好超过默认限制的内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
@@ -164,8 +169,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="test_tool", function_arguments={}
         )
 
-        with unittest.mock.patch(
-            "linhai.tool.main.call_tool", return_value=long_content
+        # 模拟工具存在和工具调用
+        with unittest.mock.patch.object(
+            global_tools, "has_tool", return_value=True
+        ), unittest.mock.patch(
+            "linhai.tool.base.global_tools.call_tool", return_value=long_content
         ) as mock_call:
             result = await manager_without_config.process_tool_call(mock_tool_call)
 
@@ -179,51 +187,54 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     # 移除manager_run_loop测试，因为ToolManager不再有run方法
 
 
+# TestToolFunctions类已重写以使用新API
 class TestToolFunctions(unittest.TestCase):
     """Test cases for tool functions."""
 
     def setUp(self):
-        # 清空工具注册表
-        global_tools.clear()
+        # 为每个测试创建新的ToolSet实例
+        from linhai.tool.base import ToolSet
+        self.toolset = ToolSet()
 
     def test_register_and_call_tool(self):
         """测试工具注册和调用"""
 
-        # 注册测试工具
-        @register_tool(
+        # 使用正确的register_tool装饰器注册测试工具
+        @self.toolset.register_tool(
             name="add_numbers",
             desc="Add two numbers",
             args={
                 "a": ToolArgInfo(desc="First number", type="int"),
                 "b": ToolArgInfo(desc="Second number", type="int"),
             },
-            required_args=["a", "b"],
+            required_args=["a", "b"]
         )
         def add_numbers(a, b):
             return a + b
 
         # 测试工具调用
-        result = call_tool("add_numbers", {"a": 2, "b": 3})
+        result = self.toolset.call_tool("add_numbers", {"a": 2, "b": 3})
         self.assertEqual(result, 5)
 
     def test_get_tools_info(self):
         """测试获取工具信息"""
 
-        # 注册测试工具
-        @register_tool(
+        # 使用正确的register_tool装饰器注册测试工具
+        @self.toolset.register_tool(
             name="multiply_numbers",
             desc="Multiply two numbers",
             args={
                 "x": ToolArgInfo(desc="First number", type="int"),
                 "y": ToolArgInfo(desc="Second number", type="int"),
             },
-            required_args=["x", "y"],
+            required_args=["x", "y"]
         )
         def multiply(x, y):
             return x * y
 
-        # 获取工具信息
-        tools_info = get_tools_info(global_tools)
+        # 获取工具信息 - 使用to_tools_info函数
+        from linhai.tool.base import to_tools_info
+        tools_info = to_tools_info(self.toolset.get_tools())
         self.assertEqual(len(tools_info), 1)
         self.assertEqual(tools_info[0]["function"]["name"], "multiply_numbers")
         self.assertEqual(
@@ -233,7 +244,7 @@ class TestToolFunctions(unittest.TestCase):
     def test_tool_not_found(self):
         """测试工具不存在的情况"""
         with self.assertRaises(ValueError) as context:
-            call_tool("nonexistent_tool", {})
+            global_tools.call_tool("nonexistent_tool", {})
         self.assertEqual(str(context.exception), "Tool not found: nonexistent_tool")
 
 
@@ -241,26 +252,28 @@ if __name__ == "__main__":
     unittest.main()
 
 
+# TestInsertAtLineTool类已更新使用新API
 class TestInsertAtLineTool(unittest.TestCase):
     """Test cases for the insert_at_line tool."""
 
     def setUp(self):
-        # 清空工具注册表
-        global_tools.clear()
-        # 注册insert_at_line工具
+        # 为每个测试创建新的ToolSet实例
+        from linhai.tool.base import ToolSet
+        self.toolset = ToolSet()
+        # 使用register_tool装饰器注册insert_at_line工具
         from linhai.tool.tools.file import insert_at_line
 
-        global_tools["insert_at_line"] = {
-            "name": "insert_at_line",
-            "func": insert_at_line,
-            "desc": "将内容插入到文件的指定行号位置",
-            "args": {
+        # 直接调用装饰器函数来注册现有工具
+        self.toolset.register_tool(
+            name="insert_at_line",
+            desc="将内容插入到文件的指定行号位置",
+            args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
                 "content": ToolArgInfo(desc="要插入的内容", type="str"),
             },
-            "required": ["filepath", "line_number", "content"],
-        }
+            required_args=["filepath", "line_number", "content"],
+        )(insert_at_line)
 
     @unittest.mock.patch("linhai.tool.tools.file.Path")
     def test_insert_at_line_success(self, mock_path):
@@ -272,7 +285,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
         # 调用工具
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -297,7 +310,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
         # 行号太小
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -309,7 +322,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         self.assertIn("行号0无效", result)
 
         # 行号太大
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -326,7 +339,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file = mock_path.return_value
         mock_file.exists.return_value = False
 
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "nonexistent.txt",
@@ -345,7 +358,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = False
 
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "directory/",
@@ -364,7 +377,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -386,7 +399,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -409,7 +422,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
         # 有效情况：预期内容为空
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -425,7 +438,7 @@ class TestInsertAtLineTool(unittest.TestCase):
 
         # 无效情况：预期内容不为空
         mock_file.write_text.reset_mock()
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "test.txt",
@@ -439,12 +452,14 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.write_text.assert_not_called()
 
 
+# TestFileValidation类已更新使用新API
 class TestFileValidation(unittest.TestCase):
     """Test cases for file validation in file operation tools."""
 
     def setUp(self):
-        # 清空工具注册表
-        global_tools.clear()
+        # 为每个测试创建新的ToolSet实例
+        from linhai.tool.base import ToolSet
+        self.toolset = ToolSet()
         # 注册文件操作工具
         from linhai.tool.tools.file import (
             read_file,
@@ -456,62 +471,79 @@ class TestFileValidation(unittest.TestCase):
             insert_at_line,
         )
 
-        tools_to_register = [
-            ("read_file", read_file, "读取文件"),
-            ("write_file", write_file, "写入文件"),
-            ("append_file", append_file, "追加文件内容"),
-            (
-                "replace_file_content",
-                replace_file_content,
-                "替换文件内容中的指定字符串",
-            ),
-            ("run_sed_expression", run_sed_expression, "执行sed表达式并返回输出"),
-            ("modify_file_with_sed", modify_file_with_sed, "使用sed表达式修改文件"),
-            ("insert_at_line", insert_at_line, "将内容插入到文件的指定行号位置"),
-        ]
-        for name, func, desc in tools_to_register:
-            global_tools[name] = {
-                "name": name,
-                "func": func,
-                "desc": desc,
-                "args": {"filepath": ToolArgInfo(desc="文件路径", type="str")},
-                "required": ["filepath"],
-            }
-        # 为需要额外参数的工具添加参数
-        global_tools["write_file"]["args"]["content"] = ToolArgInfo(
-            desc="要写入的内容", type="str"
-        )
-        global_tools["write_file"]["required"].append("content")
-        global_tools["append_file"]["args"]["content"] = ToolArgInfo(
-            desc="要在文件后追加的内容", type="str"
-        )
-        global_tools["append_file"]["required"].append("content")
-        global_tools["replace_file_content"]["args"]["old"] = ToolArgInfo(
-            desc="要替换的字符串", type="str"
-        )
-        global_tools["replace_file_content"]["args"]["new"] = ToolArgInfo(
-            desc="新的字符串", type="str"
-        )
-        global_tools["replace_file_content"]["required"].extend(["old", "new"])
-        global_tools["run_sed_expression"]["args"]["expression"] = ToolArgInfo(
-            desc="sed表达式", type="str"
-        )
-        global_tools["run_sed_expression"]["required"].append("expression")
-        global_tools["modify_file_with_sed"]["args"]["expression"] = ToolArgInfo(
-            desc="sed表达式", type="str"
-        )
-        global_tools["modify_file_with_sed"]["required"].append("expression")
-        global_tools["insert_at_line"]["args"]["line_number"] = ToolArgInfo(
-            desc="要插入的行号（从1开始）", type="int"
-        )
-        global_tools["insert_at_line"]["args"]["content"] = ToolArgInfo(
-            desc="要插入的内容", type="str"
-        )
-        global_tools["insert_at_line"]["required"].extend(["line_number", "content"])
+        # 使用正确的register_tool装饰器注册工具
+        self.toolset.register_tool(
+            name="read_file",
+            desc="读取文件",
+            args={"filepath": ToolArgInfo(desc="文件路径", type="str")},
+            required_args=["filepath"]
+        )(read_file)
+
+        self.toolset.register_tool(
+            name="write_file",
+            desc="写入文件",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "content": ToolArgInfo(desc="要写入的内容", type="str")
+            },
+            required_args=["filepath", "content"]
+        )(write_file)
+
+        self.toolset.register_tool(
+            name="append_file",
+            desc="追加文件内容",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "content": ToolArgInfo(desc="要在文件后追加的内容", type="str")
+            },
+            required_args=["filepath", "content"]
+        )(append_file)
+
+        self.toolset.register_tool(
+            name="replace_file_content",
+            desc="替换文件内容中的指定字符串",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "old": ToolArgInfo(desc="要替换的字符串", type="str"),
+                "new": ToolArgInfo(desc="新的字符串", type="str")
+            },
+            required_args=["filepath", "old", "new"]
+        )(replace_file_content)
+
+        self.toolset.register_tool(
+            name="run_sed_expression",
+            desc="执行sed表达式并返回输出",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "expression": ToolArgInfo(desc="sed表达式", type="str")
+            },
+            required_args=["filepath", "expression"]
+        )(run_sed_expression)
+
+        self.toolset.register_tool(
+            name="modify_file_with_sed",
+            desc="使用sed表达式修改文件",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "expression": ToolArgInfo(desc="sed表达式", type="str")
+            },
+            required_args=["filepath", "expression"]
+        )(modify_file_with_sed)
+
+        self.toolset.register_tool(
+            name="insert_at_line",
+            desc="将内容插入到文件的指定行号位置",
+            args={
+                "filepath": ToolArgInfo(desc="文件路径", type="str"),
+                "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
+                "content": ToolArgInfo(desc="要插入的内容", type="str")
+            },
+            required_args=["filepath", "line_number", "content"]
+        )(insert_at_line)
 
     def test_read_file_rejects_binary_file(self):
         """测试read_file拒绝二进制文件"""
-        result = call_tool("read_file", {"filepath": "./linhai/tests/test_binary.zip"})
+        result = self.toolset.call_tool("read_file", {"filepath": "./linhai/tests/test_binary.zip"})
         self.assertIn("不是纯文本文件", result)
 
     def test_write_file_rejects_binary_file_for_existing_file(self):
@@ -521,7 +553,7 @@ class TestFileValidation(unittest.TestCase):
             f.write("test content")
         try:
             # 尝试写入二进制文件路径（但write_file只验证现有文件，所以这里应该通过）
-            result = call_tool(
+            result = self.toolset.call_tool(
                 "write_file",
                 {
                     "filepath": "./linhai/tests/test_binary.zip",
@@ -544,7 +576,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_append_file_rejects_binary_file(self):
         """测试append_file拒绝二进制文件"""
-        result = call_tool(
+        result = self.toolset.call_tool(
             "append_file",
             {
                 "filepath": "./linhai/tests/test_binary.zip",
@@ -555,7 +587,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_replace_file_content_rejects_binary_file(self):
         """测试replace_file_content拒绝二进制文件"""
-        result = call_tool(
+        result = self.toolset.call_tool(
             "replace_file_content",
             {
                 "filepath": "./linhai/tests/test_binary.zip",
@@ -567,7 +599,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_run_sed_expression_rejects_binary_file(self):
         """测试run_sed_expression拒绝二进制文件"""
-        result = call_tool(
+        result = self.toolset.call_tool(
             "run_sed_expression",
             {
                 "filepath": "./linhai/tests/test_binary.zip",
@@ -578,7 +610,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_modify_file_with_sed_rejects_binary_file(self):
         """测试modify_file_with_sed拒绝二进制文件"""
-        result = call_tool(
+        result = self.toolset.call_tool(
             "modify_file_with_sed",
             {
                 "filepath": "./linhai/tests/test_binary.zip",
@@ -589,7 +621,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_insert_at_line_rejects_binary_file(self):
         """测试insert_at_line拒绝二进制文件"""
-        result = call_tool(
+        result = self.toolset.call_tool(
             "insert_at_line",
             {
                 "filepath": "./linhai/tests/test_binary.zip",
@@ -601,6 +633,7 @@ class TestFileValidation(unittest.TestCase):
         self.assertIn("不是纯文本文件", result)
 
 
+# TestToolResultMessage类已更新使用新API
 class TestToolResultMessage(unittest.TestCase):
     """Test cases for ToolResultMessage with large content handling."""
 

@@ -24,6 +24,7 @@ from linhai.agent_base import RuntimeMessage
 from linhai.agent_workflow import compress_history_range
 from linhai.llm import ChatMessage
 from linhai.tool.main import ToolManager
+from linhai.tool.base import global_tools
 
 
 class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
@@ -49,7 +50,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.user_output_queue = asyncio.Queue()
         self.tool_request_queue = asyncio.Queue()
         self.tool_confirmation_queue = asyncio.Queue()
-        self.tool_manager = ToolManager()
+        self.tool_manager = ToolManager(toolsets=[global_tools])
 
         self.agent = Agent(
             config=config,
