@@ -27,20 +27,20 @@ class MessageWidget(Static):
     def __init__(self, role: str, content: str, is_reasoning: bool = False):
         super().__init__()
         self.role = role
-        self.content = content
+        self.content_str = content
         self.is_reasoning = is_reasoning
         if is_reasoning:
             self.role += "-reasoning"
 
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
-        self.content += new_content
+        self.content_str += new_content
         self.update_display()
 
     def update_display(self) -> None:
         """更新消息显示"""
         self.remove_children()
-        content_to_display = self.content
+        content_to_display = self.content_str
         if self.is_reasoning:
             # 只显示思考内容的最后5行
             lines = content_to_display.splitlines()
@@ -68,7 +68,7 @@ class MessageWidget(Static):
 
     def to_message(self) -> ChatMessage:
         """转换为ChatMessage"""
-        return ChatMessage(role=self.role, message=self.content)
+        return ChatMessage(role=self.role, message=self.content_str)
 
 
 class CLIApp(App):
@@ -95,6 +95,9 @@ class CLIApp(App):
         color: #474e5b;
     }
     """
+
+    MAX_MESSAGES = 1000
+    TRIM_THRESHOLD = 500
 
     def __init__(
         self,
@@ -193,6 +196,7 @@ class CLIApp(App):
         widget = MessageWidget("agent", content)
         self.query_one("#chat-container").mount(widget)
         self.query_one("#chat-container").scroll_end()
+        self._trim_messages_if_needed()
 
     async def watch_output_queue(self):
         """监听输出队列并更新UI"""
@@ -225,6 +229,7 @@ class CLIApp(App):
                     container.mount(current_message)
                     self.messages.append(current_message.to_message())
                     current_message.update_display()
+                    self._trim_messages_if_needed()
                 else:
                     current_message.append_content_lazy(content)
 
@@ -287,6 +292,24 @@ class CLIApp(App):
             display_text = f"Token: {self.cumulative_token_usage['input_tokens']:,} in | {self.cumulative_token_usage['output_tokens']:,} out | {self.cumulative_token_usage['total_tokens']:,} total"
         token_display = self.query_one("#token-usage")
         token_display.update(display_text)
+
+    def _trim_messages_if_needed(self) -> None:
+        """如果消息数量超过阈值，修剪旧消息"""
+        if len(self.messages) > self.MAX_MESSAGES:
+            # 计算要删除的数量
+            excess = len(self.messages) - self.TRIM_THRESHOLD
+            if excess > 0:
+                # 从self.messages中移除前excess个消息
+                removed_messages = self.messages[:excess]
+                self.messages = self.messages[excess:]
+                
+                # 从UI容器中移除对应的MessageWidget
+                container = self.query_one("#chat-container")
+                # 获取所有MessageWidget子组件
+                message_widgets = container.query(MessageWidget)
+                # 由于顺序一致，移除前excess个
+                for i in range(min(excess, len(message_widgets))):
+                    message_widgets[i].remove()
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
