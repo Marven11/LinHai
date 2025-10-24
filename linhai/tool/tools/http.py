@@ -23,6 +23,7 @@ from selenium import webdriver
         "params": {"desc": "查询参数（字典形式）", "type": "Optional[dict]"},
         "headers": {"desc": "请求头（字典形式）", "type": "Optional[dict]"},
         "data": {"desc": "请求体数据", "type": "Optional[str]"},
+        "follow_redirects": {"desc": "是否跟随重定向，默认True", "type": "bool"},
     },
     required_args=["method", "url"],
 )
@@ -32,6 +33,7 @@ async def http_request(
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
     data: Optional[str | dict] = None,
+    follow_redirects: bool = True,
 ) -> str:
     """
     发送HTTP请求并返回响应内容
@@ -43,6 +45,7 @@ async def http_request(
                 url=url,
                 params=params,
                 headers=headers,
+                follow_redirects=follow_redirects,
                 data=data,
                 timeout=10.0,
             )
