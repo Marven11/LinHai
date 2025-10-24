@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 使用mypy查看cli_ui.py中的类型错误，应该要避免使用self.content
+- [ ] 使用pyright查看cli_ui.py中的类型错误，应该要避免使用self.content
 - [ ] 修改linhai/cli_ui.py，如果MessageWidget数量大于1000则删除前面的以优化性能
 - [ ] 修改linhai/tool/main.py的逻辑，不仅提供行数等信息，还提供内容的预览
     - 使用reprlib压缩到500字符

@@ -18,8 +18,7 @@ setup(
         'dev': [
             'pylint',
             'black',
-            'mypy',
-            'pytest'
+            'pyright',
         ]
     },
     entry_points={
