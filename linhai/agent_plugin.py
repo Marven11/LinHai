@@ -59,6 +59,31 @@ class WaitingUserPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class ToolcallWithoutPlanningPlugin(Plugin):
+    """工具调用量检查Plugin。"""
+
+    async def during_message_generation(self, agent, answer: Answer, current_content):
+        """检查工具调用量是否超过限制。"""
+        json_block_count = current_content.count("\n```json toolcall")
+        planning_count = current_content.count("\n- [ ]") + current_content.count(
+            "\n- [x]"
+        )
+
+        if json_block_count > 1 and planning_count == 0:
+            await agent.user_output_queue.put(answer)
+            agent.messages.append(
+                RuntimeMessage("错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！")
+            )
+            answer.interrupt()
+            return True
+
+        return False
+
+    def register(self, lifecycle):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
+
+
 class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
@@ -68,7 +93,7 @@ class ToolCallCountPlugin(Plugin):
 
         content_length = len(current_content)
         if content_length < 8000:
-            max_json_blocks = 5
+            max_json_blocks = 10
         else:
             max_json_blocks = 1
 
@@ -117,21 +142,6 @@ class ThinkingToolCallPlugin(Plugin):
     def register(self, lifecycle):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
-
-
-def register_default_plugins(lifecycle) -> None:
-    """注册默认的Plugin。"""
-    plugins = [
-        WaitingUserPlugin(),
-        ToolCallCountPlugin(),
-        ExcessiveCheckmarkPlugin(),
-        MarkdownSyntaxPlugin(),
-        ThinkingToolCallPlugin(),
-        TaskPlanningPlugin(),
-    ]
-
-    for plugin in plugins:
-        plugin.register(lifecycle)
 
 
 class ExcessiveCheckmarkPlugin(Plugin):
@@ -211,3 +221,19 @@ class TaskPlanningPlugin(Plugin):
     def register(self, lifecycle):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+def register_default_plugins(lifecycle) -> None:
+    """注册默认的Plugin。"""
+    plugins = [
+        WaitingUserPlugin(),
+        ToolcallWithoutPlanningPlugin(),
+        ToolCallCountPlugin(),
+        ExcessiveCheckmarkPlugin(),
+        MarkdownSyntaxPlugin(),
+        ThinkingToolCallPlugin(),
+        TaskPlanningPlugin(),
+    ]
+
+    for plugin in plugins:
+        plugin.register(lifecycle)
