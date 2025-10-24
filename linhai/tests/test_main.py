@@ -154,10 +154,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证文件被正确打开
         mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")
 
-        # 验证CLIApp被调用时init_message为文件内容（去除前后空白）
+        # 验证CLIApp被调用时init_message为文件内容（包含额外描述信息）
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_message"), "文件中的测试消息")
+        expected_message = f"用户使用-f选项指定了第一条消息，路径为: {str(Path('test_message.txt'))}, 内容如下:\n文件中的测试消息"
+        self.assertEqual(cli_call_args.kwargs.get("init_message"), expected_message)
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -203,10 +204,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证文件被正确打开
         mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")
 
-        # 验证CLIApp被调用时init_message为文件内容（而不是命令行消息）
+        # 验证CLIApp被调用时init_message为文件内容（包含额外描述信息）
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_message"), "文件中的优先消息")
+        expected_message = f"用户使用-f选项指定了第一条消息，路径为: {str(Path('test_message.txt'))}, 内容如下:\n文件中的优先消息"
+        self.assertEqual(cli_call_args.kwargs.get("init_message"), expected_message)
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()

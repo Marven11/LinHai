@@ -62,9 +62,10 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
-                        # Verify the selected file path
+                        # Verify the selected file path (now uses user config directory)
+                        expected_path = Path.home() / ".config" / "linhai" / "LINHAI.md"
                         self.assertEqual(
-                            msg.filepath.resolve(), (Path(self.temp_dir.name) / "LINHAI.md").resolve()
+                            msg.filepath.resolve(), expected_path.resolve()
                         )
                         break
 
@@ -108,8 +109,10 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
+                        # Verify the selected file path (now uses user config directory)
+                        expected_path = Path.home() / ".config" / "linhai" / "LINHAI.md"
                         self.assertEqual(
-                            msg.filepath.resolve(), (Path(self.temp_dir.name) / "AGENT.md").resolve()
+                            msg.filepath.resolve(), expected_path.resolve()
                         )
                         break
 
@@ -144,8 +147,10 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
+                        # Verify the selected file path (now uses user config directory)
+                        expected_path = Path.home() / ".config" / "linhai" / "LINHAI.md"
                         self.assertEqual(
-                            msg.filepath.resolve(), (Path(self.temp_dir.name) / "CLAUDE.md").resolve()
+                            msg.filepath.resolve(), expected_path.resolve()
                         )
                         break
 
@@ -224,8 +229,10 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 for msg in agent.messages:
                     if isinstance(msg, GlobalMemory):
                         global_memory_found = True
+                        # Verify the selected file path (now uses user config directory)
+                        expected_path = Path.home() / ".config" / "linhai" / "LINHAI.md"
                         self.assertEqual(
-                            msg.filepath.resolve(), (Path(self.temp_dir.name) / "LINHAI.md").resolve()
+                            msg.filepath.resolve(), expected_path.resolve()
                         )
                         break
 

@@ -169,7 +169,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_messages([user_msg])
 
         # 验证用户消息被添加到messages中
-        self.assertEqual(len(self.agent.messages), 3)  # 系统消息 + 用户消息 + 回复
+        self.assertEqual(len(self.agent.messages), 4, f"Messages: {[str(msg) for msg in self.agent.messages]}")  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查
         self.assertEqual(
             self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
@@ -188,15 +188,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 5
-        )  # 系统消息 + 用户消息 + 回复 + 工具消息 + 回复
+            len(self.agent.messages), 7, f"Messages: {[str(msg) for msg in self.agent.messages]}"
+        )  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查 + 工具消息 + 回复 + 任务规划格式检查
         # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[3].to_llm_message().get("content"), "result"
+            self.agent.messages[4].to_llm_message().get("content"), "result"
         )
         # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[4].to_llm_message().get("content"), "Tool processed"
+            self.agent.messages[5].to_llm_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):
