@@ -6,6 +6,7 @@
 import json
 import tempfile
 import os
+import reprlib
 from typing import cast, Any, Callable, Awaitable, Coroutine, Optional
 from collections import Counter
 
@@ -40,8 +41,12 @@ class ToolResultMessage(Message):
                 file_size = os.path.getsize(temp_path)  # 获取文件大小
             # 计算行数
             line_count = content_str.count("\n") + 1
-            # 返回文件路径、大小和行数的消息
-            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。"
+            # 生成内容预览
+            r = reprlib.Repr()
+            r.maxstring = 500
+            preview = r.repr(content_str)
+            # 返回文件路径、大小、行数和预览的消息
+            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。\n预览: {preview}"
             # 我们指导agent使用合适的大小分块读取，避免每次只读100行
             limit = max_output_length / len(content_str)
             if limit > 0.5:
