@@ -104,11 +104,14 @@ max_output_length = 2000
         self.assertIsInstance(config, Config)
         self.assertEqual(config.llm.base_url, "https://api.example.com")
         self.assertIsNotNone(config.agent)
+        assert config.agent is not None
         self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
         self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
         self.assertIsNotNone(config.memory)
+        assert config.memory is not None
         self.assertEqual(config.memory.file_path, "./test_memory.md")
         self.assertIsNotNone(config.tools)
+        assert config.tools is not None
         self.assertEqual(config.tools.max_output_length, 2000)
 
     @patch("pathlib.Path.open")
@@ -131,6 +134,7 @@ compress_threshold_hard = 60000
         config = load_config()
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
+        assert config.agent is not None
         self.assertEqual(config.agent.compress_threshold_soft, 30000)
         self.assertEqual(config.agent.compress_threshold_hard, 60000)
 
@@ -154,6 +158,7 @@ compress_threshold_hard = 0.8
         config = load_config()
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
+        assert config.agent is not None
         self.assertEqual(config.agent.compress_threshold_soft, 0.5)
         self.assertEqual(config.agent.compress_threshold_hard, 0.8)
 

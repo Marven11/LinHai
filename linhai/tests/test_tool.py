@@ -670,22 +670,26 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含文件信息
-        self.assertIn("内容过长", llm_message.get("content", ""))
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message.get("content", ""))
-        self.assertIn("字节", llm_message.get("content", ""))
+        content = str(llm_message.get("content", ""))
+        self.assertIn("内容过长", content)
+        self.assertIn("已保存到临时文件", content)
+        self.assertIn("大小", content)
+        self.assertIn("字节", content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
         # 验证返回的消息包含文件信息
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message["content"])
+        content = str(llm_message.get("content", ""))
+        self.assertIsNotNone(content)
+        self.assertIn("已保存到临时文件", content)
+        self.assertIn("大小", content)
 
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        assert file_match is not None
         file_path = file_match.group(1).strip()
 
         # 验证临时文件存在且内容正确
@@ -712,16 +716,18 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含文件信息
-        self.assertIn("内容过长", llm_message.get("content", ""))
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message.get("content", ""))
-        self.assertIn("字节", llm_message.get("content", ""))
+        content = str(llm_message.get("content", ""))
+        self.assertIn("内容过长", content)
+        self.assertIn("已保存到临时文件", content)
+        self.assertIn("大小", content)
+        self.assertIn("字节", content)
 
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        assert file_match is not None
         file_path = file_match.group(1).strip()
 
         # 验证临时文件存在且内容正确
@@ -768,20 +774,24 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含文件信息
-        self.assertIn("内容过长", llm_message.get("content", ""))
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message.get("content", ""))
-        self.assertIn("字节", llm_message.get("content", ""))
+        content = str(llm_message.get("content", ""))
+        self.assertIn("内容过长", content)
+        self.assertIn("已保存到临时文件", content)
+        self.assertIn("大小", content)
+        self.assertIn("字节", content)
 
         # 验证返回的消息包含文件信息
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message["content"])
+        content = str(llm_message.get("content", ""))
+        self.assertIsNotNone(content)
+        self.assertIn("已保存到临时文件", content)
+        self.assertIn("大小", content)
 
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        assert file_match is not None
         file_path = file_match.group(1).strip()
 
         # 验证临时文件存在且内容正确
@@ -810,24 +820,26 @@ class TestToolResultMessage(unittest.TestCase):
         llm_message = message.to_llm_message()
 
         # 验证返回的消息包含行数信息
-        self.assertIn("共", llm_message.get("content", ""))
-        self.assertIn("行", llm_message.get("content", ""))
+        content_str = str(llm_message.get("content", ""))
+        self.assertIn("共", content_str)
+        self.assertIn("行", content_str)
 
         # 计算预期的行数
         expected_line_count = long_content.count("\n") + 1
-        self.assertIn(str(expected_line_count), llm_message.get("content", ""))
+        self.assertIn(str(expected_line_count), content_str)
 
         # 验证其他文件信息也存在
-        self.assertIn("内容过长", llm_message.get("content", ""))
-        self.assertIn("已保存到临时文件", llm_message.get("content", ""))
-        self.assertIn("大小", llm_message.get("content", ""))
-        self.assertIn("字节", llm_message.get("content", ""))
+        self.assertIn("内容过长", content_str)
+        self.assertIn("已保存到临时文件", content_str)
+        self.assertIn("大小", content_str)
+        self.assertIn("字节", content_str)
 
         # 提取文件路径并验证临时文件
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", llm_message["content"])
+        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
+        assert file_match is not None
         file_path = file_match.group(1).strip()
 
         # 验证临时文件存在且内容正确

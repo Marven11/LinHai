@@ -32,7 +32,7 @@ async def http_request(
     url: str,
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
-    data: Optional[str | dict] = None,
+    data: Optional[str] = None,
     follow_redirects: bool = True,
 ) -> str:
     """
@@ -46,7 +46,7 @@ async def http_request(
                 params=params,
                 headers=headers,
                 follow_redirects=follow_redirects,
-                data=data,
+                data=data,  # type: ignore[arg-type]
                 timeout=10.0,
             )
             return response.text
@@ -82,7 +82,8 @@ def fetch_article(url: str) -> str:
 
             # 删除无用image元素
             for img in soup.find_all("img", src=True):
-                if len(img["src"]) > 400:
+                src = img.get("src", "")  # type: ignore
+                if len(str(src)) > 400:
                     img.decompose()
 
             for svg in soup.find_all("svg"):
@@ -178,16 +179,16 @@ async def search_web(query: str, max_results: int = 5) -> str:
                 if not link_elem:
                     continue
 
-                title = link_elem.get_text(strip=True)
-                link = link_elem.get("href", "")
+                title = link_elem.get_text(strip=True)  # type: ignore
+                link = link_elem.get("href", "")  # type: ignore
 
                 # 跳过广告结果
-                if "y.js" in link:
+                if link and "y.js" in link:
                     continue
 
                 # 清理DuckDuckGo重定向URL
-                if link.startswith("//duckduckgo.com/l/?uddg="):
-                    link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
+                if link and str(link).startswith("//duckduckgo.com/l/?uddg="):
+                    link = urllib.parse.unquote(str(link).split("uddg=")[1].split("&")[0])
 
                 snippet_elem = result.select_one(".result__snippet")
                 snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""

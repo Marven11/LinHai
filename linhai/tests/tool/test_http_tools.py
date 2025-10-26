@@ -5,7 +5,7 @@ import unittest.mock
 import tempfile
 import os
 
-from linhai.tool.base import call_tool, global_tools
+from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.http import fetch_article
 
 
@@ -13,18 +13,17 @@ class TestFetchArticleTool(unittest.TestCase):
     """Test cases for the fetch_article tool."""
 
     def setUp(self):
-        # 清空工具注册表
-        global_tools.clear()
-        # 注册fetch_article工具
-        global_tools["fetch_article"] = {
-            "name": "fetch_article",
-            "func": fetch_article,
-            "desc": "抓取网页并转换为Markdown格式",
-            "args": {
-                "url": {"desc": "目标网页URL", "type": "str"},
+        # 创建新的ToolSet实例
+        self.toolset = ToolSet()
+        # 使用register_tool装饰器注册fetch_article工具
+        self.toolset.register_tool(
+            name="fetch_article",
+            desc="抓取网页并转换为Markdown格式",
+            args={
+                "url": ToolArgInfo(desc="目标网页URL", type="str"),
             },
-            "required": ["url"],
-        }
+            required_args=["url"],
+        )(fetch_article)
 
     @unittest.mock.patch("linhai.tool.tools.http.webdriver.Firefox")
     @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
@@ -71,7 +70,7 @@ class TestFetchArticleTool(unittest.TestCase):
                 read_data="# 测试标题\n\n测试段落\n\n<table>\n<tr><th>列1</th><th>列2</th></tr>\n<tr><td>数据1</td><td>数据2</td></tr>\n</table>\n\n![短URL图片](http://example.com/short.jpg)\n"
             ),
         ):
-            result = call_tool("fetch_article", {"url": "http://example.com"})
+            result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
         # 验证结果包含转换后的Markdown
         self.assertIn("测试标题", result)
@@ -95,7 +94,7 @@ class TestFetchArticleTool(unittest.TestCase):
         # 模拟pandoc未安装
         mock_which.return_value = None
 
-        result = call_tool("fetch_article", {"url": "http://example.com"})
+        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
         self.assertEqual(result, "错误：pandoc未安装，请先安装pandoc")
 
@@ -109,7 +108,7 @@ class TestFetchArticleTool(unittest.TestCase):
         # 模拟webdriver抛出异常
         mock_driver.side_effect = Exception("WebDriver错误")
 
-        result = call_tool("fetch_article", {"url": "http://example.com"})
+        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
         self.assertIn("转换失败: WebDriver错误", result)
 
@@ -128,7 +127,7 @@ class TestFetchArticleTool(unittest.TestCase):
         # 模拟pandoc转换失败
         mock_subprocess.side_effect = Exception("Pandoc错误")
 
-        result = call_tool("fetch_article", {"url": "http://example.com"})
+        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
         self.assertIn("转换失败: Pandoc错误", result)
 
@@ -173,7 +172,7 @@ class TestFetchArticleTool(unittest.TestCase):
                 read_data="<table>\n<tr><th>列1</th><th>列2</th></tr>\n<tr><td>数据1</td><td>数据2</td></tr>\n</table>\n"
             ),
         ):
-            result = call_tool("fetch_article", {"url": "http://example.com"})
+            result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
         # 验证表格以HTML形式输出，但不应包含属性
         self.assertIn("<table>", result)
