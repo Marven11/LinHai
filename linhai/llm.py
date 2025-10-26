@@ -337,7 +337,8 @@ class OpenAiAnswer:
                     if self._reasoning_content
                     else reasoning_content
                 )
-
+            # 有时候会出现reasoning_content is None and content == ""的情况
+            # API返回的数据如此，我们应该原样yield
             token = AnswerToken(
                 reasoning_content=reasoning_content,
                 content=content,

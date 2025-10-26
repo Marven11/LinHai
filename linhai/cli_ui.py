@@ -205,6 +205,9 @@ class CLIApp(App):
                 else:
                     is_reasoning = False
                     content = output.content
+                if not content:
+                    continue
+
                 if current_message and current_message.is_reasoning != is_reasoning:
                     current_message = None
 
