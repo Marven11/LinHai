@@ -279,8 +279,8 @@ class CLIApp(App):
         cliapp_tool = ToolSet()
 
         @cliapp_tool.register_tool(
-            name="exit_agent",
-            desc="退出Agent程序，指定返回代码",
+            name="exit_app",
+            desc="退出agent并关闭APP",
             args={
                 "return_code": ToolArgInfo(
                     desc="退出代码，0表示成功，非0表示错误", type="int"
