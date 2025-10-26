@@ -1,6 +1,5 @@
 """Command-line interface for LinHai agent."""
 
-from asyncio import Queue
 from typing import List, Optional, cast
 import asyncio
 
@@ -199,15 +198,13 @@ class CLIApp(App):
         current_message = None
         while True:
             output = await self.group_chat.receive("cli_user_output")
-            if isinstance(output, dict):  # AnswerToken
-                if output["reasoning_content"]:
+            if isinstance(output, AnswerToken):
+                if output.reasoning_content:
                     is_reasoning = True
-                    content = output["reasoning_content"]
-                elif output["content"]:
-                    is_reasoning = False
-                    content = output["content"]
+                    content = output.reasoning_content
                 else:
-                    continue
+                    is_reasoning = False
+                    content = output.content
                 if current_message and current_message.is_reasoning != is_reasoning:
                     current_message = None
 
@@ -231,7 +228,7 @@ class CLIApp(App):
 
                 if should_scroll:
                     container.scroll_end()
-            else:  # Answer
+            elif isinstance(output, Answer):
                 if current_message:
                     current_message.update_display()
                 tool_call = output.get_tool_call()
@@ -252,12 +249,16 @@ class CLIApp(App):
                     self.update_token_display()
 
                 current_message = None
+            else:
+                raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
 
-        self.agent_task = asyncio.create_task(self.group_chat.get_members("agent", Agent).run())
+        self.agent_task = asyncio.create_task(
+            self.group_chat.get_members("agent", Agent).run()
+        )
 
         # 如果有初始消息，自动发送
         if self.init_message:

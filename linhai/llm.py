@@ -1,9 +1,10 @@
 """LLM模块，定义语言模型相关的消息类和协议。"""
 
-from typing import Sequence, Protocol, TypedDict, AsyncIterator, cast, runtime_checkable
+from typing import Sequence, Protocol, AsyncIterator, cast, runtime_checkable
 import asyncio
 import json
 
+from pydantic import BaseModel
 from openai import AsyncOpenAI
 from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
@@ -203,13 +204,14 @@ class ToolConfirmationMessage:
         return cls(tool_call=tool_call, confirmed=data["confirmed"])
 
 
-class AnswerToken(TypedDict):
+class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""
 
-    reasoning_content: str | None
+    reasoning_content: str | None = None
     content: str
 
 
+@runtime_checkable
 class Answer(Protocol):
     """
     LLM的一个回答
@@ -253,6 +255,7 @@ class Answer(Protocol):
         获取当前累积的回答内容
         """
         raise NotImplementedError
+
     def get_token_usage(self) -> dict[str, int] | None:
         """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
         raise NotImplementedError
@@ -327,16 +330,18 @@ class OpenAiAnswer:
 
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
+                assert isinstance(reasoning_content, str)
+            if reasoning_content:
                 self._reasoning_content = (
                     self._reasoning_content + reasoning_content
                     if self._reasoning_content
                     else reasoning_content
                 )
 
-            token: AnswerToken = {
-                "reasoning_content": reasoning_content,
-                "content": content,
-            }
+            token = AnswerToken(
+                reasoning_content=reasoning_content,
+                content=content,
+            )
             return token
         except StopAsyncIteration:
             raise
@@ -368,6 +373,7 @@ class OpenAiAnswer:
     def get_token_count(self) -> int:
         """获取当前回答的token总数。"""
         return self.total_tokens
+
     def get_token_usage(self) -> dict[str, int] | None:
         """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
         if self.total_tokens == 0:
@@ -375,7 +381,7 @@ class OpenAiAnswer:
         return {
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
-            "total_tokens": self.total_tokens
+            "total_tokens": self.total_tokens,
         }
 
 

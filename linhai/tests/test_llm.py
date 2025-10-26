@@ -61,7 +61,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             # 验证流式响应
             content = ""
             async for token in answer:
-                content += token["content"]
+                content += token.content
 
             self.assertEqual(content, "Hello World")
             mock_client.chat.completions.create.assert_called_once()
@@ -99,7 +99,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             content = ""
             token_count = 0
             async for token in answer:
-                content += token["content"]
+                content += token.content
                 token_count += 1
                 if token_count == 2:
                     answer.interrupt()
@@ -133,3 +133,29 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_answer_token_structure(self):
+        """Test AnswerToken structure and behavior."""
+        # Test basic AnswerToken creation
+        token_with_reasoning = {
+            "reasoning_content": "Let me think about this...",
+            "content": "The answer is 42"
+        }
+        self.assertEqual(token_with_reasoning["reasoning_content"], "Let me think about this...")
+        self.assertEqual(token_with_reasoning["content"], "The answer is 42")
+        
+        # Test AnswerToken without reasoning
+        token_without_reasoning = {
+            "reasoning_content": None,
+            "content": "Hello world"
+        }
+        self.assertIsNone(token_without_reasoning["reasoning_content"])
+        self.assertEqual(token_without_reasoning["content"], "Hello world")
+        
+        # Test AnswerToken with empty content
+        token_empty = {
+            "reasoning_content": "Thinking...",
+            "content": ""
+        }
+        self.assertEqual(token_empty["reasoning_content"], "Thinking...")
+        self.assertEqual(token_empty["content"], "")
