@@ -14,21 +14,20 @@
     - [x] 工具调用
         - [x] 弃用OpenAI的残废工具调用，使用markdown json code block的形式让Agent调用工具
         - [x] 添加基础工具（文件/命令/计算）
-        - [ ] 实现lookup_tool_docs功能
-        - [ ] agent调用工具需要获得用户确认
+        - [x] agent调用工具需要获得用户确认
     - [x] 任务规划
     - [x] 用户响应
     - [x] 历史压缩
     - [x] 全局记忆管理
-- [ ] 使用浏览器拉取微信公众号/知乎回答/...等文章并自动转为markdown
+- [x] 使用浏览器拉取微信公众号/知乎回答/...等文章并自动转为markdown
     - 应该有一个全局的功能，给定一个文章的网页，自动爬取HTML并转为markdown
-- [ ] 改进CLI
+- [x] 改进CLI
 - [ ] 编写webui
 
 # 代码风格与规范
 
 - 没有特殊情况，数据传递一般使用TypedDict
-- 多个对象之间的交流使用asyncio.Queue
+- 多个对象之间的交流使用GroupChat，解耦消息发布与函数调用
 - 每个模块都应该有对应的unit test测试其的功能
 - 没有特殊情况，每个新建的变量都要加上类型注释（type hint）
 - 所有函数和方法都需要编写文档注释，写好输入输出的类型注释
@@ -127,23 +126,11 @@ Agent使用Markdown JSON代码块调用工具，格式如下：
 - 成功结果 (ToolResultMessage)
 - 错误信息 (ToolErrorMessage)
 
-除了计算器等常见的工具之外，还有一个特殊的工具`lookup_tool_docs`用于查询工具的使用文档。
-
-`lookup_tool_docs`的输入是工具的名字，输出是对应工具的文档。这样我们就可以把工具的文档放在其他地方，降低prompt的长度
-
 为了让OpenAI库不出错，禁止将role设置为tool
 
 ### 流式传输
 
 Agent回答采用流式传输，工具调用在回答完成后解析
-
-### 文档
-
-> TODO: 这一个功能还没做
-
-为了减少Prompt长度，减少资源占用，同时为每个工具提供详尽的使用方法，工具的使用说明被外置在文档中
-
-Agent在调用工具时，首先会使用`lookup_tool_docs`查阅对应的文档，然后直接调用ToolManager的process_tool_call函数来执行工具
 
 ## 全局记忆
 
