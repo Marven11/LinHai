@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from linhai.agent_base import RuntimeMessage, WAITING_USER_MARKER
 from linhai.llm import Answer
 import linhai
+import re
 
 
 class Plugin(ABC):
@@ -63,7 +64,9 @@ class WaitingUserPlugin(Plugin):
 class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
-    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
+    async def during_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+    ):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
         planning_count = current_content.count("\n- [ ]") + current_content.count(
@@ -73,7 +76,9 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         if json_block_count > 1 and planning_count == 0:
             await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
-                RuntimeMessage("错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！")
+                RuntimeMessage(
+                    "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
+                )
             )
             answer.interrupt()
             return True
@@ -88,7 +93,9 @@ class ToolcallWithoutPlanningPlugin(Plugin):
 class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
-    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
+    async def during_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+    ):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
 
@@ -119,7 +126,9 @@ class ToolCallCountPlugin(Plugin):
 class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
-    async def during_message_generation(self, agent: "linhai.agent.Agent", answer: Answer, current_content):
+    async def during_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+    ):
         """检查工具调用量是否超过限制。"""
         current_reasoning_content = answer.get_reasoning_message()
         if not isinstance(current_reasoning_content, str):
@@ -190,13 +199,37 @@ class TaskPlanningPlugin(Plugin):
     """任务规划格式检查Plugin。"""
 
     def __init__(self):
-        self.no_planning_count = 0
+        self.no_planning_score = 0
+
+    async def during_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+    ):
+        """检查工具调用量是否超过限制。"""
+        if self.no_planning_score <= 3:
+            return
+        current_reasoning_content = answer.get_reasoning_message()
+        if not isinstance(current_reasoning_content, str):
+            return False
+        pattern = r"^ *- \[[ x]\]"
+        matches = re.findall(pattern, current_content, re.MULTILINE)
+        if matches is None:
+            return False
+        json_block_count = current_reasoning_content.count("\n```json toolcall")
+        if json_block_count == 0:
+            return False
+        agent.messages.append(
+            RuntimeMessage(
+                "错误：你已经连续多次忘记任务规划，你的工具调用已经被打断。"
+                "你必须在工具调用前补上任务规划！"
+            )
+        )
+        answer.interrupt()
+        return True
 
     async def after_message_generation(
         self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
-        import re
 
         # 使用正则匹配每一行开头的任务规划标记
         pattern = r"^ *- \[[ x]\]"
@@ -204,20 +237,35 @@ class TaskPlanningPlugin(Plugin):
 
         # 如果没有找到任何任务规划标记，则提醒
         if not matches:
-            self.no_planning_count += 1
+            self.no_planning_score += 1
             agent.messages.append(
                 RuntimeMessage(
                     (
                         "注意：你没有输出任务规划"
-                        if self.no_planning_count == 1
-                        else f"【注意】：你已连续{self.no_planning_count}次没有输出任务规划"
+                        if self.no_planning_score == 1
+                        else f"【注意】：你已累计{self.no_planning_score}次没有输出任务规划，"
+                        "超过3次则会被强制暂停，直到你输出任务规划为止才能继续！"
                     )
                     + "请使用`- [ ]`或`- [x]`进行任务规划"
-                    + "！" * (self.no_planning_count - 1) * 3
+                    + "！" * (self.no_planning_score - 1) * 3
                 )
             )
-        else:
-            self.no_planning_count = 0
+            reasoning_content = answer.get_reasoning_message()
+            if reasoning_content is not None and re.findall(
+                pattern, reasoning_content, re.MULTILINE
+            ):
+                agent.messages.append(
+                    RuntimeMessage(
+                        "注意：你刚刚在思考时输出了任务规划，但是没有在实际的输出中输出！"
+                    )
+                )
+        elif self.no_planning_score > 0:
+            self.no_planning_score -= 1
+            agent.messages.append(
+                RuntimeMessage(
+                    "成功输出任务规划，抵消一次错误输出，之后一定要注意任务规划"
+                )
+            )
 
     def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到after_message_generation回调。"""
