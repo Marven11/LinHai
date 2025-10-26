@@ -18,6 +18,7 @@ from linhai.llm import (
     ToolConfirmationMessage,
 )
 from linhai.agent import Agent
+from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.group_chat import GroupChat
 
 
@@ -274,6 +275,35 @@ class CLIApp(App):
             container.scroll_end()
             container.mount(widget)
             widget.update_display()
+
+        cliapp_tool = ToolSet()
+
+        @cliapp_tool.register_tool(
+            name="exit_agent",
+            desc="退出Agent程序，指定返回代码",
+            args={
+                "return_code": ToolArgInfo(
+                    desc="退出代码，0表示成功，非0表示错误", type="int"
+                ),
+            },
+            required_args=["return_code"],
+        )
+        def _(return_code: int):
+            """退出Agent程序，指定返回代码
+
+            Args:
+                return_code: 退出代码，0表示成功，非0表示错误
+
+            Returns:
+                退出消息（实际上程序会退出，所以不会返回）
+            """
+            self.exit(return_code=return_code)
+
+        from linhai.tool.main import ToolManager
+
+        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
+            cliapp_tool
+        )
 
     async def on_unmount(self) -> None:
         """应用卸载时取消任务"""

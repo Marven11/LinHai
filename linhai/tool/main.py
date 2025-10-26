@@ -73,7 +73,7 @@ class ToolResultMessage(Message):
         return json.dumps(self.to_llm_message())
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
         return cls(content=data["content"])
 
@@ -98,7 +98,7 @@ class ToolErrorMessage(Message):
         return json.dumps(self.to_llm_message())
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
         return cls(content=data["content"])
 

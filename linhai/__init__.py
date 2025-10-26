@@ -1,3 +1,3 @@
 """林海漫游AI Agent包。"""
 
-from linhai import agent, main
+from linhai import agent, main, group_chat

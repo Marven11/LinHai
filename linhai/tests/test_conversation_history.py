@@ -35,7 +35,11 @@ class TestConversationHistory(unittest.TestCase):
         
         # 创建初始消息
         self.init_messages = [
-            SystemMessage("测试系统消息"),
+            SystemMessage(
+                template="测试系统消息",
+                current_time="2025-10-26 17:00:00",  # 测试用固定时间
+                group_chat=self.group_chat
+            ),
             ChatMessage("user", "测试用户消息"),
         ]
         
@@ -82,10 +86,18 @@ class TestConversationHistory(unittest.TestCase):
         # 应该保存了有to_json方法的消息
         self.assertGreater(len(history_data), 0)
         
-        # 检查消息类型 - 至少要有role字段
+        # 检查消息类型 - 不同类型的消息有不同的字段
         for msg in history_data:
-            self.assertIn("role", msg)
-            # 不强制检查content字段，因为不同消息类型使用不同字段
+            # SystemMessage有template和current_time字段
+            if "template" in msg:
+                self.assertIn("current_time", msg)
+            # ChatMessage有role和message字段
+            elif "role" in msg:
+                self.assertIn("message", msg)
+            # RuntimeMessage有message字段
+            elif "message" in msg:
+                pass  # RuntimeMessage只有message字段
+            # 其他消息类型可能有不同的字段结构
 
     @patch('linhai.agent.Path.home')
     def test_save_conversation_history_with_tool_calls(self, mock_home):

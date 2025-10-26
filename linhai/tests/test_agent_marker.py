@@ -96,7 +96,11 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         # 创建初始消息列表
         from linhai.llm import SystemMessage
 
-        init_messages = [SystemMessage("Test system prompt")]
+        init_messages = [SystemMessage(
+            template="Test system prompt",
+            current_time="2025-10-26 17:00:00",  # 测试用固定时间
+            group_chat=self.group_chat
+        )]
 
         self.agent = Agent(
             config=config,

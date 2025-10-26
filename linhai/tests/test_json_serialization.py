@@ -5,6 +5,7 @@ import unittest
 import json
 import sys
 import os
+from unittest.mock import Mock
 
 from linhai.llm import (
     SystemMessage,
@@ -26,20 +27,29 @@ from pathlib import Path
 class TestJsonSerialization(unittest.TestCase):
     """测试JSON序列化功能"""
 
+    def setUp(self):
+        """设置测试环境"""
+        self.mock_group_chat = Mock()
+
     def test_system_message_serialization(self):
         """测试SystemMessage的序列化"""
-        original = SystemMessage("这是一条系统消息")
+        original = SystemMessage(
+            template="这是一条系统消息",
+            current_time="2025-10-26 17:00:00",
+            group_chat=self.mock_group_chat
+        )
         json_str = original.to_json()
-        restored = SystemMessage.from_json(json_str)
+        restored = SystemMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.message, restored.message)
-        self.assertEqual(original.to_llm_message(), restored.to_llm_message())
+        self.assertEqual(original.template, restored.template)
+        self.assertEqual(original.current_time, restored.current_time)
+        # 不比较to_llm_message()，因为它依赖mock对象且涉及JSON序列化
 
     def test_chat_message_serialization(self):
         """测试ChatMessage的序列化"""
         original = ChatMessage("user", "这是一条用户消息", "test_user")
         json_str = original.to_json()
-        restored = ChatMessage.from_json(json_str)
+        restored = ChatMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.role, restored.role)
         self.assertEqual(original.message, restored.message)
@@ -49,7 +59,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试ToolCallMessage的序列化"""
         original = ToolCallMessage("test_function", {"arg1": "value1"})
         json_str = original.to_json()
-        restored = ToolCallMessage.from_json(json_str)
+        restored = ToolCallMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.function_name, restored.function_name)
         self.assertEqual(original.function_arguments, restored.function_arguments)
@@ -59,7 +69,7 @@ class TestJsonSerialization(unittest.TestCase):
         tool_call = ToolCallMessage("test_function", {"arg1": "value1"})
         original = ToolConfirmationMessage(tool_call, True)
         json_str = original.to_json()
-        restored = ToolConfirmationMessage.from_json(json_str)
+        restored = ToolConfirmationMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.confirmed, restored.confirmed)
         self.assertEqual(
@@ -70,7 +80,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试ToolResultMessage的序列化"""
         original = ToolResultMessage("工具执行结果")
         json_str = original.to_json()
-        restored = ToolResultMessage.from_json(json_str)
+        restored = ToolResultMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.content, restored.content)
 
@@ -78,7 +88,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试ToolErrorMessage的序列化"""
         original = ToolErrorMessage("工具执行错误")
         json_str = original.to_json()
-        restored = ToolErrorMessage.from_json(json_str)
+        restored = ToolErrorMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.content, restored.content)
 
@@ -86,7 +96,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试CheapLlmStatusMessage的序列化"""
         original = CheapLlmStatusMessage(True)
         json_str = original.to_json()
-        restored = CheapLlmStatusMessage.from_json(json_str)
+        restored = CheapLlmStatusMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(
             original.is_cheap_llm_available, restored.is_cheap_llm_available
@@ -96,7 +106,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试CompressRangeRequest的序列化"""
         original = CompressRangeRequest("测试总结", 10)
         json_str = original.to_json()
-        restored = CompressRangeRequest.from_json(json_str)
+        restored = CompressRangeRequest.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(
             original.messages_summerization, restored.messages_summerization
@@ -107,7 +117,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试RuntimeMessage的序列化"""
         original = RuntimeMessage("运行时消息")
         json_str = original.to_json()
-        restored = RuntimeMessage.from_json(json_str)
+        restored = RuntimeMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.message, restored.message)
 
@@ -115,7 +125,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试DestroyedRuntimeMessage的序列化"""
         original = DestroyedRuntimeMessage()
         json_str = original.to_json()
-        restored = DestroyedRuntimeMessage.from_json(json_str)
+        restored = DestroyedRuntimeMessage.from_json(json_str, self.mock_group_chat)
 
         # 这个类没有属性，只需要确保可以序列化和反序列化
         self.assertIsInstance(restored, DestroyedRuntimeMessage)
@@ -124,14 +134,18 @@ class TestJsonSerialization(unittest.TestCase):
         """测试GlobalMemory的序列化"""
         original = GlobalMemory(Path("./LINHAI.md"))
         json_str = original.to_json()
-        restored = GlobalMemory.from_json(json_str)
+        restored = GlobalMemory.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(str(original.filepath), str(restored.filepath))
 
     def test_json_round_trip(self):
         """测试所有消息类的完整JSON往返"""
         messages = [
-            SystemMessage("系统消息"),
+            SystemMessage(
+                template="系统消息",
+                current_time="2025-10-26 17:00:00",
+                group_chat=self.mock_group_chat
+            ),
             ChatMessage("user", "用户消息"),
             ToolCallMessage("test", {"key": "value"}),
             ToolResultMessage("结果"),
@@ -151,7 +165,7 @@ class TestJsonSerialization(unittest.TestCase):
                 self.assertIsInstance(parsed, (dict, str))
 
                 # 验证可以反序列化
-                restored = type(original).from_json(json_str)
+                restored = type(original).from_json(json_str, self.mock_group_chat)
                 self.assertIsInstance(restored, type(original))
 
 

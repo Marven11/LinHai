@@ -9,6 +9,7 @@ from openai import AsyncOpenAI
 from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
+import linhai
 
 
 @runtime_checkable
@@ -27,7 +28,9 @@ class Message(Protocol):
         raise NotImplementedError()
 
     @classmethod
-    def from_json(cls, json_str: str) -> "Message":
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ) -> "Message":
         """从JSON字符串创建消息实例。"""
         raise NotImplementedError()
 
@@ -35,27 +38,53 @@ class Message(Protocol):
 class SystemMessage:
     """系统消息类，用于表示系统角色消息。"""
 
-    def __init__(self, message: str):
+    def __init__(
+        self,
+        template: str,
+        current_time: str,
+        group_chat: "linhai.group_chat.GroupChat",
+    ):
         """初始化系统消息。"""
-        self.message = message
+        self.template = template
+        self.current_time = current_time
+        self.group_chat = group_chat
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        return cast(LanguageModelMessage, {"role": "system", "content": self.message})
+        from linhai.tool.main import ToolManager
+
+        system_prompt = self.template.replace(
+            "{|TOOLS|}",
+            json.dumps(
+                self.group_chat.get_members(
+                    "tool_manager", ToolManager
+                ).get_tools_info(),
+                ensure_ascii=False,
+                indent=2,
+            ),
+        ).replace("{|CURRENT_TIME|}", self.current_time)
+        return cast(LanguageModelMessage, {"role": "system", "content": system_prompt})
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
-        return f"SystemMessage(message={self.message!r})"
+        return f"SystemMessage({self.template=})"
 
     def to_json(self) -> str:
 
-        return json.dumps(self.to_llm_message())
+        return json.dumps(
+            {"template": self.template, "current_time": self.current_time}
+        )
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
 
         data = json.loads(json_str)
-        return cls(message=data["content"])
+
+        return cls(
+            template=data["template"],
+            current_time=data["current_time"],
+            group_chat=group_chat,
+        )
 
 
 class ChatMessage:
@@ -95,7 +124,7 @@ class ChatMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
 
         data = json.loads(json_str)
         return cls(role=data["role"], message=data["message"], name=data.get("name"))
@@ -151,7 +180,7 @@ class ToolCallMessage:
         return json.dumps(self.to_llm_message())
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
 
         data = json.loads(json_str)
         # 从tool_calls中提取函数名和参数
@@ -197,10 +226,10 @@ class ToolConfirmationMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
 
         data = json.loads(json_str)
-        tool_call = ToolCallMessage.from_json(data["tool_call"])
+        tool_call = ToolCallMessage.from_json(data["tool_call"], group_chat)
         return cls(tool_call=tool_call, confirmed=data["confirmed"])
 
 

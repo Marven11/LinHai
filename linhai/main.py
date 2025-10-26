@@ -62,6 +62,7 @@ def main():
         init_message=init_message,
     )
     app.run()
+    sys.exit(app.return_code if app.return_code else 0)
 
 
 if __name__ == "__main__":

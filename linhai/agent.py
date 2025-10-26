@@ -18,7 +18,7 @@ import asyncio
 import logging
 import traceback
 import random
-from asyncio import Queue, QueueEmpty
+from asyncio import QueueEmpty
 
 from linhai.agent_base import (
     RuntimeMessage,
@@ -31,12 +31,10 @@ from linhai.llm import (
     ChatMessage,
     SystemMessage,
     LanguageModel,
-    AnswerToken,
     Answer,
     OpenAi,
     OpenAiAnswer,
     ToolCallMessage,
-    ToolConfirmationMessage,
     LanguageModelMessage,
 )
 from linhai.group_chat import GroupChat
@@ -47,6 +45,8 @@ from linhai.tool.main import ToolManager
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
+
+import linhai
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class CheapLlmStatusMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
         return cls(is_cheap_llm_available=data["is_cheap_llm_available"])
 
@@ -848,17 +848,13 @@ def create_agent(
         compress_history_range,
     )
 
-    # 构建初始消息列表
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    system_prompt = (
-        agent_config["system_prompt"]
-        .replace(
-            "{|TOOLS|}",
-            json.dumps(tool_manager.get_tools_info(), ensure_ascii=False, indent=2),
+    init_messages: list[Message] = [
+        SystemMessage(
+            template=agent_config["system_prompt"],
+            current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            group_chat=group_chat,
         )
-        .replace("{|CURRENT_TIME|}", current_time)
-    )
-    init_messages: list[Message] = [SystemMessage(system_prompt)]
+    ]
 
     # 定义要检查的文件路径列表（按优先级顺序）
     memory_filepaths = [
