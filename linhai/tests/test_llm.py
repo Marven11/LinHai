@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from linhai.llm import ChatMessage, OpenAi
+from linhai.llm import AnswerToken, ChatMessage, OpenAi
 
 
 class TestLLM(unittest.IsolatedAsyncioTestCase):
@@ -32,23 +32,36 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
-        # 创建模拟的流响应
-        async def mock_stream():
-            mock_chunk1 = MagicMock()
-            mock_chunk1.choices = [MagicMock()]
-            mock_chunk1.choices[0].delta.content = "Hello"
-            await asyncio.sleep(0)  # 让出控制权
-            yield mock_chunk1
+        # 创建模拟的流响应 - 创建一个真正的异步迭代器
+        class MockStream:
+            def __init__(self):
+                self.chunks = [
+                    self._create_chunk("Hello"),
+                    self._create_chunk(" World"),
+                ]
+                self.index = 0
 
-            mock_chunk2 = MagicMock()
-            mock_chunk2.choices = [MagicMock()]
-            mock_chunk2.choices[0].delta.content = " World"
-            await asyncio.sleep(0)  # 让出控制权
-            yield mock_chunk2
+            def _create_chunk(self, content):
+                chunk = MagicMock()
+                chunk.choices = [MagicMock()]
+                chunk.choices[0].delta.content = content
+                chunk.choices[0].delta.reasoning_content = None
+                return chunk
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self.index >= len(self.chunks):
+                    raise StopAsyncIteration
+                chunk = self.chunks[self.index]
+                self.index += 1
+                # 模拟异步延迟
+                await asyncio.sleep(0.001)
+                return chunk
 
         # 配置mock客户端返回我们的模拟流
-        mock_client.chat.completions.create = AsyncMock()
-        mock_client.chat.completions.create.return_value = mock_stream()
+        mock_client.chat.completions.create = AsyncMock(return_value=MockStream())
 
         # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
@@ -60,8 +73,10 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
             # 验证流式响应
             content = ""
+            tokens = []
             async for token in answer:
                 content += token.content
+                tokens.append(token)
 
             self.assertEqual(content, "Hello World")
             mock_client.chat.completions.create.assert_called_once()
@@ -71,21 +86,36 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
-        # 创建模拟的流响应
-        async def mock_stream():
-            mock_chunk1 = MagicMock()
-            mock_chunk1.choices = [MagicMock()]
-            mock_chunk1.choices[0].delta.content = "Hello"
-            yield mock_chunk1
+        # 创建模拟的流响应 - 创建一个真正的异步迭代器
+        class MockStream:
+            def __init__(self):
+                self.chunks = [
+                    self._create_chunk("Hello"),
+                    self._create_chunk(" World"),
+                ]
+                self.index = 0
 
-            mock_chunk2 = MagicMock()
-            mock_chunk2.choices = [MagicMock()]
-            mock_chunk2.choices[0].delta.content = " World"
-            yield mock_chunk2
+            def _create_chunk(self, content):
+                chunk = MagicMock()
+                chunk.choices = [MagicMock()]
+                chunk.choices[0].delta.content = content
+                chunk.choices[0].delta.reasoning_content = None
+                return chunk
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self.index >= len(self.chunks):
+                    raise StopAsyncIteration
+                chunk = self.chunks[self.index]
+                self.index += 1
+                # 模拟异步延迟
+                await asyncio.sleep(0.001)
+                return chunk
 
         # 配置mock客户端返回我们的模拟流
-        mock_client.chat.completions.create = AsyncMock()
-        mock_client.chat.completions.create.return_value = mock_stream()
+        mock_client.chat.completions.create = AsyncMock(return_value=MockStream())
 
         # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
@@ -101,11 +131,11 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             async for token in answer:
                 content += token.content
                 token_count += 1
-                if token_count == 2:
+                if token_count == 1:
                     answer.interrupt()
                     break
 
-            self.assertEqual(content, "Hello World")
+            self.assertEqual(content, "Hello")
             mock_client.chat.completions.create.assert_called_once()
 
     def test_openai_initialization(self):
@@ -130,32 +160,23 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             async for _ in answer:
                 pass
 
+    def test_answer_token(self):
+        """Test AnswerToken class with pydantic."""
+        # Test AnswerToken with reasoning content
+        token1 = AnswerToken(reasoning_content="Let me think...", content="The answer is 42")
+        self.assertEqual(token1.reasoning_content, "Let me think...")
+        self.assertEqual(token1.content, "The answer is 42")
+        
+        # Test AnswerToken without reasoning content
+        token2 = AnswerToken(content="Hello world")
+        self.assertIsNone(token2.reasoning_content)
+        self.assertEqual(token2.content, "Hello world")
+        
+        # Test AnswerToken with empty content
+        token3 = AnswerToken(reasoning_content="Thinking...", content="")
+        self.assertEqual(token3.reasoning_content, "Thinking...")
+        self.assertEqual(token3.content, "")
 
 if __name__ == "__main__":
     unittest.main()
 
-    def test_answer_token_structure(self):
-        """Test AnswerToken structure and behavior."""
-        # Test basic AnswerToken creation
-        token_with_reasoning = {
-            "reasoning_content": "Let me think about this...",
-            "content": "The answer is 42"
-        }
-        self.assertEqual(token_with_reasoning["reasoning_content"], "Let me think about this...")
-        self.assertEqual(token_with_reasoning["content"], "The answer is 42")
-        
-        # Test AnswerToken without reasoning
-        token_without_reasoning = {
-            "reasoning_content": None,
-            "content": "Hello world"
-        }
-        self.assertIsNone(token_without_reasoning["reasoning_content"])
-        self.assertEqual(token_without_reasoning["content"], "Hello world")
-        
-        # Test AnswerToken with empty content
-        token_empty = {
-            "reasoning_content": "Thinking...",
-            "content": ""
-        }
-        self.assertEqual(token_empty["reasoning_content"], "Thinking...")
-        self.assertEqual(token_empty["content"], "")
