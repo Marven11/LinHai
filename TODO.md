@@ -23,8 +23,8 @@ completion = client.chat.completions.create(
     stream_options={"include_usage": True}
 )
 ```
-- [ ] 运行并修复unittest
-- [ ] 使用pyright检查代码并修复，修复之后运行并修复unittest
+- [x] 运行并修复unittest
+- [x] 使用pyright检查代码并修复，修复之后运行并修复unittest
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
