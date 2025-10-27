@@ -151,6 +151,55 @@ class Agent:
         # 将工具集添加到ToolManager
         self.group_chat.get_members("tool_manager", ToolManager).add_toolset(llm_toolset)
 
+        # 添加虚拟工具集（原dummy.py中的工具）
+        dummy_toolset = ToolSet()
+
+        @dummy_toolset.register_tool(
+            name="get_token_usage",
+            desc="获取token使用情况。",
+            args={},
+            required_args=[],
+        )
+        def get_token_usage() -> str:
+            """获取token使用情况工具函数。
+
+            Returns:
+                str: token使用情况消息
+            """
+            if self.last_token_usage is not None:
+                return f"当前token总用量为: {self.last_token_usage} ({self.last_token_usage/1000:.2f} k)"
+            else:
+                return "暂无token用量信息"
+
+        @dummy_toolset.register_tool(
+            name="thanox_history",
+            desc="随机删除一半消息（不包括前5条系统消息）。调用这个工具来触发随机删除流程。",
+            args={},
+            required_args=[],
+        )
+        def thanox_history() -> str:
+            """随机删除历史消息工具函数。
+
+            Returns:
+                str: 删除结果消息
+            """
+            if len(self.messages) <= 10:
+                return "消息数量不足，无需删除"
+
+            indices_to_delete = random.sample(
+                range(5, len(self.messages)), len(self.messages) // 2
+            )
+
+            self.messages = [
+                msg if idx not in indices_to_delete else DestroyedRuntimeMessage()
+                for idx, msg in enumerate(self.messages)
+            ]
+
+            return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
+
+        # 将虚拟工具集添加到ToolManager
+        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(dummy_toolset)
+
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
         self.skip_confirmation = tool_confirmation_config.get(
@@ -233,23 +282,7 @@ class Agent:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
 
-    async def thanox_history(self):
-        """随机删除一半消息（不包括前5条系统消息）"""
-        if len(self.messages) <= 10:
-            return
 
-        indices_to_delete = random.sample(
-            range(5, len(self.messages)), len(self.messages) // 2
-        )
-
-        self.messages = [
-            msg if idx not in indices_to_delete else DestroyedRuntimeMessage()
-            for idx, msg in enumerate(self.messages)
-        ]
-
-        self.messages.append(
-            RuntimeMessage(f"thanox_history: 随机删除了{len(indices_to_delete)}条消息")
-        )
 
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
@@ -272,20 +305,7 @@ class Agent:
             workflow_function = workflow["func"]
             return await workflow_function(self)
 
-        if tool_call.function_name == "thanox_history":
-            await self.thanox_history()
-            return True
-        if tool_call.function_name == "get_token_usage":
-            if self.last_token_usage is not None:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"当前token总用量为: {self.last_token_usage} "
-                        f"({self.last_token_usage/1000:.2f} k)"
-                    )
-                )
-            else:
-                self.messages.append(RuntimeMessage("暂无token用量信息"))
-            return False
+
 
 
         # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
