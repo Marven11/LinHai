@@ -13,6 +13,7 @@ from linhai.llm import (
     Answer,
     ToolCallMessage,
     ToolConfirmationMessage,
+    SystemMessage,
 )
 from linhai.tool.main import ToolResultMessage
 
@@ -70,6 +71,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         config: AgentConfig = {
             "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],  # 改为列表
+            "llm_names": ["test_llm"],  # 添加llm_names字段
             "current_llm_index": 0,  # 添加当前LLM索引
             "compress_threshold_soft": 500,
             "compress_threshold_hard": 800,
@@ -291,6 +293,45 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证状态转换
         self.assertEqual(self.agent.state, "working")
+
+    async def test_at_system_logic(self):
+        """测试@系统逻辑，从当前消息往回找最近的@消息"""
+        # 设置多个LLM用于测试
+        from linhai.llm import OpenAi
+        mock_llm1 = MagicMock(spec=OpenAi)
+        mock_llm2 = MagicMock(spec=OpenAi)
+        
+        self.agent.config["llms"] = [mock_llm1, mock_llm2]
+        self.agent.config["llm_names"] = ["deepseek-reasoning", "qwen"]
+        self.agent.config["current_llm_index"] = 0  # 默认使用第一个
+        
+        # 测试场景1: 最近的消息有有效的@qwen
+        self.agent.messages.append(ChatMessage(role="user", message="@qwen Hello"))
+        model = await self.agent._select_model()
+        self.assertEqual(model, mock_llm2)  # qwen是第二个LLM
+        
+        # 测试场景2: 最近的消息有无效的@invalid，但之前有有效的@deepseek-reasoning
+        self.agent.messages.append(ChatMessage(role="user", message="@invalid command"))
+        self.agent.messages.append(ChatMessage(role="user", message="@deepseek-reasoning Hi"))
+        model = await self.agent._select_model()
+        self.assertEqual(model, mock_llm1)  # deepseek-reasoning是第一个LLM
+        
+        # 测试场景3: 没有@消息，使用默认索引
+        self.agent.messages.clear()
+        self.agent.messages.extend([
+            SystemMessage(template="Test system prompt", current_time="2025-10-26 17:00:00", group_chat=self.group_chat),
+            ChatMessage(role="user", message="Hello world")
+        ])
+        model = await self.agent._select_model()
+        self.assertEqual(model, mock_llm1)  # 默认索引0
+        
+        # 测试场景4: 多个@消息，应该找到最近的有效@消息
+        self.agent.messages.append(ChatMessage(role="user", message="@invalid first"))
+        self.agent.messages.append(ChatMessage(role="user", message="Normal message"))
+        self.agent.messages.append(ChatMessage(role="user", message="@qwen second"))
+        self.agent.messages.append(ChatMessage(role="user", message="@invalid third"))
+        model = await self.agent._select_model()
+        self.assertEqual(model, mock_llm2)  # 最近的有效的@是@qwen
 
 
 if __name__ == "__main__":

@@ -524,27 +524,19 @@ class Agent:
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        # 查找最后一个用户消息
-        last_user_message = None
+        # 从当前消息往回找，找到最近一个使用了@的消息
         for msg in reversed(self.messages):
-            if isinstance(msg, ChatMessage) and msg.to_llm_message().get("role") == "user":
-                last_user_message = msg
-                break
+            if not isinstance(msg, ChatMessage) or msg.role != "user":
+                continue
+            content = msg.message.strip()
+            if not content.startswith('@'):
+                continue
+            llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
+            if llm_name not in self.config["llm_names"]:
+                continue
+            return self.config["llms"][self.config["llm_names"].index(llm_name)]
         
-        if last_user_message and last_user_message.message.strip().startswith('@'):
-            content = last_user_message.message.strip()
-            # 提取LLM名称
-            parts = content.split(maxsplit=1)
-            llm_name = parts[0][1:]  # 去除@
-            if llm_name in self.config["llm_names"]:
-                index = self.config["llm_names"].index(llm_name)
-                return self.config["llms"][index]
-            else:
-                # 无效LLM名称，使用默认
-                available_llms = ", ".join(self.config["llm_names"])
-                self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"))
-        
-        # 默认使用配置的索引
+        # 没有找到有效的@消息，使用默认索引
         return self.config["llms"][self.config["current_llm_index"]]
 
     async def generate_response(

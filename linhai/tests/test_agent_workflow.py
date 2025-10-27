@@ -38,6 +38,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         config: AgentConfig = {
             "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],
+            "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "compress_threshold_soft": 500,
             "compress_threshold_hard": 800,
