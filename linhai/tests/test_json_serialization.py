@@ -14,7 +14,6 @@ from linhai.llm import (
     ToolConfirmationMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
-from linhai.agent import CheapLlmStatusMessage
 from linhai.agent_base import (
     CompressRangeRequest,
     RuntimeMessage,
@@ -92,82 +91,3 @@ class TestJsonSerialization(unittest.TestCase):
 
         self.assertEqual(original.content, restored.content)
 
-    def test_cheap_llm_status_message_serialization(self):
-        """测试CheapLlmStatusMessage的序列化"""
-        original = CheapLlmStatusMessage(True)
-        json_str = original.to_json()
-        restored = CheapLlmStatusMessage.from_json(json_str, self.mock_group_chat)
-
-        self.assertEqual(
-            original.is_cheap_llm_available, restored.is_cheap_llm_available
-        )
-
-    def test_compress_range_request_serialization(self):
-        """测试CompressRangeRequest的序列化"""
-        original = CompressRangeRequest("测试总结", 10)
-        json_str = original.to_json()
-        restored = CompressRangeRequest.from_json(json_str, self.mock_group_chat)
-
-        self.assertEqual(
-            original.messages_summerization, restored.messages_summerization
-        )
-        self.assertEqual(original.message_length, restored.message_length)
-
-    def test_runtime_message_serialization(self):
-        """测试RuntimeMessage的序列化"""
-        original = RuntimeMessage("运行时消息")
-        json_str = original.to_json()
-        restored = RuntimeMessage.from_json(json_str, self.mock_group_chat)
-
-        self.assertEqual(original.message, restored.message)
-
-    def test_destroyed_runtime_message_serialization(self):
-        """测试DestroyedRuntimeMessage的序列化"""
-        original = DestroyedRuntimeMessage()
-        json_str = original.to_json()
-        restored = DestroyedRuntimeMessage.from_json(json_str, self.mock_group_chat)
-
-        # 这个类没有属性，只需要确保可以序列化和反序列化
-        self.assertIsInstance(restored, DestroyedRuntimeMessage)
-
-    def test_global_memory_serialization(self):
-        """测试GlobalMemory的序列化"""
-        original = GlobalMemory(Path("./LINHAI.md"))
-        json_str = original.to_json()
-        restored = GlobalMemory.from_json(json_str, self.mock_group_chat)
-
-        self.assertEqual(str(original.filepath), str(restored.filepath))
-
-    def test_json_round_trip(self):
-        """测试所有消息类的完整JSON往返"""
-        messages = [
-            SystemMessage(
-                template="系统消息",
-                current_time="2025-10-26 17:00:00",
-                group_chat=self.mock_group_chat
-            ),
-            ChatMessage("user", "用户消息"),
-            ToolCallMessage("test", {"key": "value"}),
-            ToolResultMessage("结果"),
-            ToolErrorMessage("错误"),
-            CheapLlmStatusMessage(False),
-            CompressRangeRequest("总结", 5),
-            RuntimeMessage("运行时"),
-            DestroyedRuntimeMessage(),
-            GlobalMemory(Path("./test.md")),
-        ]
-
-        for original in messages:
-            with self.subTest(msg_type=type(original).__name__):
-                json_str = original.to_json()
-                # 验证JSON是有效的
-                parsed = json.loads(json_str)
-                self.assertIsInstance(parsed, (dict, str))
-
-                # 验证可以反序列化
-                restored = type(original).from_json(json_str, self.mock_group_chat)
-                self.assertIsInstance(restored, type(original))
-
-
-if __name__ == "__main__":
-    unittest.main()

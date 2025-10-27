@@ -61,75 +61,6 @@ class AgentConfig(TypedDict):
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
 
 
-class CheapLlmStatusMessage:
-    """廉价LLM状态消息类，用于显示廉价LLM模式的可用性。"""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, is_cheap_llm_available: bool):
-        self.is_cheap_llm_available = is_cheap_llm_available
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        """
-        将廉价LLM状态转换为LLM消息格式。
-
-        返回:
-            LanguageModelMessage: 包含廉价LLM状态和规则的系统消息
-        """
-        if self.is_cheap_llm_available:
-            status = "廉价LLM模式可用，请积极使用廉价LLM"
-            intro = """
-有时需要探索文件内容时可以使用廉价LLM完成，以减少成本。
-
-因为廉价LLM能力较差，运行时会禁止廉价LLM使用部分工具，因此廉价LLM不能也不应该
-  - 执行命令
-  - 写文件
-  - 调用其他修改当前环境的工具
-"""
-            rules = """
-## ACTION RULES - CHEAP LLM USAGE
-
-- 积极使用廉价LLM模式读取文件、查看代码和获取信息，以节省成本
-- 根据以下规则判断是否需要使用廉价LLM
-  - 多文件读取：如果需要读取多个内容(文件内容/文件夹内容/...)且已知目标位置，则直接调用多个工具，不需要使用廉价LLM
-  - 项目探索：如果需要读取多个内容(文件内容/文件夹内容/...)但目标位置未知，则需要使用廉价LLM
-  - 项目探索：如果需要读取内容，根据内容的结果探索更多内容（如读取文档并根据文档行动），则需要使用廉价LLM
-  - 修改文件：如果需要执行修改文件等会影响当前环境的内容，禁止使用廉价LLM!
-- 避免使用廉价LLM编写代码或进行复杂决策，因为廉价LLM的代码质量可能较差
-- 在调用廉价LLM前，首先在规划中列出当前需要读取的内容，需要探索的目标
-- 廉价LLM最多只能用于5个连续消息，超过后会自动切换回普通LLM
-  - 如果廉价LLM提前完成了任务则需要调用工具切换回普通LLM（将计数器设置为0）
-"""
-            content = f"""
-# 廉价LLM状态
-
-{status}
-
-{intro}
-
-{rules}
-"""
-        else:
-            status = "廉价LLM模式不可用，请勿使用廉价LLM"
-            content = f"""
-# 廉价LLM状态
-
-{status}
-"""
-        return {
-            "role": "system",
-            "content": content,
-        }
-
-    def to_json(self) -> str:
-        data = {"is_cheap_llm_available": self.is_cheap_llm_available}
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
-        data = json.loads(json_str)
-        return cls(is_cheap_llm_available=data["is_cheap_llm_available"])
-
 class Agent:
     """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
 
@@ -160,8 +91,6 @@ class Agent:
         self.current_enable_compress = True
         self.soft_compress_triggered = False  # 软压缩限制触发标志
 
-        # 廉价LLM状态跟踪
-        self.cheap_llm_remaining_messages = 0
 
         # Plugin使用的变量
         self.current_disable_waiting_user_warning = False
@@ -358,74 +287,15 @@ class Agent:
                 self.messages.append(RuntimeMessage("暂无token用量信息"))
             return False
 
-        if tool_call.function_name == "switch_to_cheap_llm":
-            # 检查廉价LLM是否可用
-            if "cheap_model" not in self.config:
-                self.messages.append(
-                    RuntimeMessage("错误：廉价LLM未配置，无法启用廉价LLM模式")
-                )
-                return False
-
-            # 解析参数
-            try:
-                args = tool_call.function_arguments  # 现在直接是字典，无需解析
-                message_count = args.get("message_count", 1)
-
-                if message_count <= 0:
-                    self.messages.append(RuntimeMessage("错误：消息数量必须大于0"))
-                    return False
-
-                # 添加消息数量限制，最多5个消息
-                if message_count > 5:
-                    self.messages.append(
-                        RuntimeMessage("错误：廉价LLM最多只能使用5个消息")
-                    )
-                    return False
-
-                self.cheap_llm_remaining_messages = message_count
-
-                self.messages.append(
-                    RuntimeMessage(
-                        f"已切换到廉价LLM模式，将在接下来的{message_count}条消息中使用廉价LLM。请在规划中列出所有需要读取的文件和列出的文件夹。"
-                    )
-                )
-                # 自动转到自动运行state
-                if self.state == "waiting_user":
-                    self.state = "working"
-                return False
-            except (TypeError, AttributeError):
-                self.messages.append(RuntimeMessage("错误：工具参数格式不正确"))
-                return False
 
         # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
         if (
             tool_call.function_name == "read_file"
-            and self.cheap_llm_remaining_messages == 0
         ):
             self.messages.append(
                 RuntimeMessage("提醒：读取多个文件时建议使用廉价LLM以节省成本。")
             )
 
-        # 廉价LLM模式下限制工具调用：只允许读取相关工具
-        if self.cheap_llm_remaining_messages > 0:
-            allowed_tools = {
-                "read_file",
-                "list_files",
-                "get_absolute_path",
-                "get_token_usage",
-            }
-            if tool_call.function_name not in allowed_tools:
-                # 自动切换回普通LLM
-                self.cheap_llm_remaining_messages = 0
-                self.messages.append(
-                    RuntimeMessage(
-                        f"错误：廉价LLM模式下不允许调用{tool_call.function_name!r}工具。"
-                        "已自动切换回普通LLM模式。廉价LLM只能用于读取文件、"
-                        "查看目录和获取信息。"
-                    )
-                )
-                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
-                return False
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(self, tool_call)
@@ -620,11 +490,6 @@ class Agent:
                 traceback.print_exc()
                 continue
 
-        # 减少廉价LLM剩余消息计数
-        if self.cheap_llm_remaining_messages > 0:
-            self.cheap_llm_remaining_messages -= 1
-            if self.cheap_llm_remaining_messages == 0:
-                self.messages.append(RuntimeMessage("廉价LLM已经结束，现在你是普通LLM"))
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
@@ -809,7 +674,6 @@ def create_agent(
         init_messages.append(GlobalMemory(memory_filepaths[0]))
 
     # 添加廉价LLM状态消息
-    init_messages.append(CheapLlmStatusMessage("cheap_model" in agent_config))
 
     Agent(
         config=agent_config,

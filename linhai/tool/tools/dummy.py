@@ -26,25 +26,6 @@ def get_token_usage() -> str:
     return ""
 
 
-@global_tools.register_tool(
-    name="switch_to_cheap_llm",
-    desc="切换到廉价LLM模式，指定接下来要使用的消息数量。",
-    args={"message_count": ToolArgInfo(desc="要使用廉价LLM的消息数量", type="int")},
-    required_args=["message_count"],
-)
-def switch_to_cheap_llm(message_count: int) -> str:
-    """切换到廉价LLM模式工具函数。
-
-    此函数由Agent内部处理，用于切换LLM模式。
-
-    Args:
-        message_count: 要使用廉价LLM的消息数量。
-
-    Returns:
-        str: 空字符串，实际处理由Agent完成。
-    """
-    _ = message_count  # 避免未使用参数警告
-    return ""
 
 
 @global_tools.register_tool(
