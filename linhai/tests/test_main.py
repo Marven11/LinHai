@@ -122,6 +122,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟CLIApp，让run()方法立即返回
         mock_app = MagicMock()
         mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
         # 模拟文件读取
@@ -177,6 +178,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟CLIApp，让run()方法立即返回
         mock_app = MagicMock()
         mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
         # 模拟文件读取
@@ -271,6 +273,100 @@ class TestMainCommandLine(unittest.TestCase):
 
         # 验证程序以错误代码退出
         mock_exit.assert_called_once_with(1)
+
+    @patch("linhai.main.create_agent")
+    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.GroupChat")
+    def test_agent_command_with_llm_option(self, mock_group_chat, mock_cli_app, mock_create_agent):
+        """测试使用--llm选项时LLM名称被正确传递"""
+        # 模拟 GroupChat 实例
+        mock_group_chat_instance = MagicMock()
+        mock_group_chat.return_value = mock_group_chat_instance
+        
+        # 模拟 create_agent 没有返回值
+        mock_create_agent.return_value = None
+
+        # 模拟CLIApp，让run()方法立即返回
+        mock_app = MagicMock()
+        mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        # 测试命令行参数
+        test_args = ["linhai", "--llm", "test_llm"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
+
+        # 验证 create_agent 被调用，参数为 group_chat, config_path 和 llm_name
+        mock_create_agent.assert_called_once()
+        call_args = mock_create_agent.call_args
+        # 应该被调用为 create_agent(group_chat, config_path, llm_name)
+        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
+
+        # 验证 GroupChat 的 get_members 被调用
+        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
+        # 验证CLIApp被调用时init_message为None
+        mock_cli_app.assert_called_once()
+        cli_call_args = mock_cli_app.call_args
+        self.assertIsNone(cli_call_args.kwargs.get("init_message"))
+        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+
+        # 验证CLIApp.run()被调用
+        mock_app.run.assert_called_once()
+
+    @patch("linhai.main.create_agent")
+    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.GroupChat")
+    def test_agent_command_with_llm_and_message_options(self, mock_group_chat, mock_cli_app, mock_create_agent):
+        """测试同时使用--llm和-m选项"""
+        # 模拟 GroupChat 实例
+        mock_group_chat_instance = MagicMock()
+        mock_group_chat.return_value = mock_group_chat_instance
+        
+        # 模拟 create_agent 没有返回值
+        mock_create_agent.return_value = None
+
+        # 模拟CLIApp，让run()方法立即返回
+        mock_app = MagicMock()
+        mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
+
+        # 测试命令行参数
+        test_args = ["linhai", "--llm", "test_llm", "-m", "测试消息"]
+
+        with patch.object(sys, "argv", test_args):
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
+
+        # 验证 create_agent 被调用，参数为 group_chat, config_path 和 llm_name
+        mock_create_agent.assert_called_once()
+        call_args = mock_create_agent.call_args
+        # 应该被调用为 create_agent(group_chat, config_path, llm_name)
+        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
+
+        # 验证 GroupChat 的 get_members 被调用
+        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
+        # 验证CLIApp被调用时init_message为测试消息
+        mock_cli_app.assert_called_once()
+        cli_call_args = mock_cli_app.call_args
+        self.assertEqual(cli_call_args.kwargs.get("init_message"), "测试消息")
+        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+
+        # 验证CLIApp.run()被调用
+        mock_app.run.assert_called_once()
 
 
 if __name__ == "__main__":

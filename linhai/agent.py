@@ -696,6 +696,7 @@ class Agent:
 def create_agent(
     group_chat: GroupChat,
     config_path: str | Path = "./config.toml",
+    llm_name: str | None = None,
 ):
     config = load_config(config_path)
 
@@ -740,11 +741,21 @@ def create_agent(
         else:
             raise TypeError("compress_threshold_soft must be int or float")
 
+    # 处理llm_name参数
+    llm_names = [llm_config.name for llm_config in config.llm]
+    current_llm_index = 0  # 默认使用第一个LLM
+    if llm_name is not None:
+        if llm_name in llm_names:
+            current_llm_index = llm_names.index(llm_name)
+        else:
+            available_llms = ", ".join(llm_names)
+            raise ValueError(f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}")
+
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
         "llms": llms,
-        "llm_names": [llm_config.name for llm_config in config.llm],  # 提取LLM名称
-        "current_llm_index": 0,  # 默认使用第一个LLM
+        "llm_names": llm_names,
+        "current_llm_index": current_llm_index,
         "compress_threshold_hard": compress_threshold_hard,
         "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,

@@ -11,6 +11,7 @@ import unittest
 from linhai.agent import create_agent, Agent
 from linhai.cli_ui import CLIApp
 from linhai.group_chat import GroupChat
+from linhai.config import load_config
 
 
 def run_tests():
@@ -36,6 +37,7 @@ def main():
     parser.add_argument("-m", "--message", type=str, help="初始用户消息")
     parser.add_argument("-f", "--file", type=Path, help="从文件中读取初始用户消息")
 
+    parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
     args = parser.parse_args()
 
     init_message = args.message
@@ -55,7 +57,7 @@ def main():
             sys.exit(1)
 
     group_chat = GroupChat()
-    create_agent(group_chat, args.config.expanduser())
+    create_agent(group_chat, args.config.expanduser(), args.llm)
     _ = group_chat.get_members("agent", Agent)
     app = CLIApp(
         group_chat=group_chat,
