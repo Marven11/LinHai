@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 from linhai.agent_plugin import TaskPlanningPlugin
 
 
-class TestTaskPlanningPlugin(unittest.TestCase):
+class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
     """测试TaskPlanningPlugin类。"""
 
     def setUp(self):
@@ -13,6 +13,7 @@ class TestTaskPlanningPlugin(unittest.TestCase):
         self.plugin = TaskPlanningPlugin()
         self.agent = MagicMock()
         self.answer = MagicMock()
+        self.answer.get_reasoning_message = MagicMock(return_value=None)
         self.tool_calls = []
 
     def test_register(self):
@@ -56,7 +57,7 @@ class TestTaskPlanningPlugin(unittest.TestCase):
         
         # 没有任务规划标记，应该添加警告消息
         self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("任务规划格式", self.agent.messages[0].content)
+        self.assertIn("你没有输出任务规划", self.agent.messages[0].message)
 
     async def test_after_message_generation_with_long_content(self):
         """测试长内容中的任务规划检查。"""

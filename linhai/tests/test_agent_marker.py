@@ -56,6 +56,9 @@ class MockAnswer:
     def get_current_content(self) -> str:
         return self.content
 
+    def get_reasoning_message(self) -> str | None:
+        return None
+
 
 class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
     """Test cases for agent marker validation."""

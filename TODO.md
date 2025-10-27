@@ -8,7 +8,8 @@
 - [x] 除了主LLM之外，现在配置文件只支持配置一个额外的cheap LLM，将配置格式改成接受多个llm（在配置中是一个列表），每个llm都有自己的名字(name属性)，创建agent时将llm的列表传给agent对象，默认选择第一个llm
     - [x] 编写对应的unittest
 - 做完上一个任务暂停
-- [ ] 我刚刚重构了代码，移动了agent lifecycle的实现，查看上一个git commit，运行unittest和pyright修复因此产生的错误
+- [x] 我刚刚重构了代码，移动了agent lifecycle的实现，查看上一个git commit，运行unittest和pyright修复因此产生的错误
+- [x] 修复运行unittest时打印的协程警告等，让unittest不要打印过多垃圾信息
 - [ ] 仿造cli_ui.py添加exit_app工具的方式，让agent类在启动时添加“切换llm”工具和“当前llm”工具
     - 切换llm工具描述根据当前有的llm自动生成
     - 如果llm名字不存在，则列出所有llm

@@ -46,6 +46,10 @@ class MockAnswer:
         """Get the current accumulated response content."""
         return "".join(token["content"] for token in self.tokens[: self.index])
 
+    def get_reasoning_message(self) -> str | None:
+        """Get the reasoning message from the tokens."""
+        return None
+
 
 class TestLifecycle(unittest.IsolatedAsyncioTestCase):
     """Test cases for the Lifecycle class."""

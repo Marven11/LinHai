@@ -131,7 +131,7 @@ class ThinkingToolCallPlugin(Plugin):
     ):
         """检查工具调用量是否超过限制。"""
         current_reasoning_content = answer.get_reasoning_message()
-        if not isinstance(current_reasoning_content, str):
+        if current_reasoning_content is None:
             return False
         json_block_count = current_reasoning_content.count("\n```json toolcall")
 
@@ -208,7 +208,7 @@ class TaskPlanningPlugin(Plugin):
         if self.no_planning_score <= 3:
             return
         current_reasoning_content = answer.get_reasoning_message()
-        if not isinstance(current_reasoning_content, str):
+        if current_reasoning_content is None:
             return False
         pattern = r"^ *- \[[ x]\]"
         matches = re.findall(pattern, current_content, re.MULTILINE)

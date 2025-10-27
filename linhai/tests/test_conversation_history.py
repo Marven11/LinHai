@@ -23,7 +23,8 @@ class TestConversationHistory(unittest.TestCase):
         # 创建模拟配置
         self.config: AgentConfig = {
             "system_prompt": "测试系统提示",
-            "model": Mock(),
+            "llms": [Mock()],
+            "current_llm_index": 0,
             "compress_threshold_soft": 1000,
             "compress_threshold_hard": 2000,
         }
