@@ -65,12 +65,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         config: AgentConfig = {
             "system_prompt": "Test system prompt",
-            "model": self.mock_llm,
-            "compress_threshold_soft": 500,  # 使用正确的键
-            "compress_threshold_hard": 800,  # 使用正确的键
+            "llms": [self.mock_llm],  # 改为列表
+            "current_llm_index": 0,  # 添加当前LLM索引
+            "compress_threshold_soft": 500,
+            "compress_threshold_hard": 800,
             "tool_confirmation": {
-                "skip_confirmation": True,  # 跳过确认
-                "whitelist": ["add_numbers"],  # 将 add_numbers 加入白名单
+                "skip_confirmation": True,
+                "whitelist": ["add_numbers"],
             },
         }
         

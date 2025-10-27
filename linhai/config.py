@@ -9,21 +9,13 @@ from urllib.parse import urlparse
 from .exceptions import ConfigValidationError
 
 
-class CheapLLMConfig(BaseModel):
-    """Configuration for cheap LLM mode."""
-
-    base_url: str
-    api_key: str = Field(..., min_length=1)
-    model: str = Field(..., min_length=1)
-
-
 class LLMConfig(BaseModel):
-    """LLM配置类型定义。"""
+    """单个LLM配置类型定义。"""
 
+    name: str = Field(..., min_length=1)
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
-    cheap: Optional[CheapLLMConfig] = None
 
     @field_validator("base_url")
     def validate_base_url(cls, v):
@@ -72,7 +64,7 @@ class ToolConfig(BaseModel):
 class Config(BaseModel):
     """主配置类型定义。"""
 
-    llm: LLMConfig
+    llm: list[LLMConfig]
     agent: Optional[AgentConfig] = None
     memory: Optional[MemoryConfig] = None
     tools: Optional[ToolConfig] = None

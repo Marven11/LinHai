@@ -34,6 +34,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
 
         # Mock config to avoid actual file operations
         mock_llm_config = LLMConfig(
+            name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
             model="test_model"
@@ -47,7 +48,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             }
         )
         mock_config = Config(
-            llm=mock_llm_config,
+            llm=[mock_llm_config],
             agent=mock_agent_config
         )
 
@@ -86,6 +87,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             f.write(agent_content)
 
         mock_llm_config = LLMConfig(
+            name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
             model="test_model"
@@ -99,7 +101,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             }
         )
         mock_config = Config(
-            llm=mock_llm_config,
+            llm=[mock_llm_config],
             agent=mock_agent_config
         )
 
@@ -138,12 +140,13 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             f.write(claude_content)
 
         mock_llm_config = LLMConfig(
+            name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
             model="test_model"
         )
         mock_config = Config(
-            llm=mock_llm_config
+            llm=[mock_llm_config]
         )
 
         with patch("linhai.agent.load_config", return_value=mock_config):
@@ -176,6 +179,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
     def test_no_files_in_current_directory(self):
         """Test behavior when no memory files exist in current directory."""
         mock_llm_config = LLMConfig(
+            name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
             model="test_model"
@@ -189,7 +193,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             }
         )
         mock_config = Config(
-            llm=mock_llm_config,
+            llm=[mock_llm_config],
             agent=mock_agent_config
         )
 
@@ -230,12 +234,13 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             f.write("# CLAUDE.md")
 
         mock_llm_config = LLMConfig(
+            name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
             model="test_model"
         )
         mock_config = Config(
-            llm=mock_llm_config
+            llm=[mock_llm_config]
         )
 
         with patch("linhai.agent.load_config", return_value=mock_config):

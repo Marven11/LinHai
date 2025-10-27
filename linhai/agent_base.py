@@ -4,6 +4,7 @@ from reprlib import Repr
 from pathlib import Path
 import json
 
+import linhai
 from linhai.llm import (
     Message,
     LanguageModelMessage,

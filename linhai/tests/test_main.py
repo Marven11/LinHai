@@ -27,13 +27,17 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟CLIApp，让run()方法立即返回
         mock_app = MagicMock()
         mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
         # 测试命令行参数
         test_args = ["linhai", "-m", "测试消息"]
 
         with patch.object(sys, "argv", test_args):
-            main()
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
@@ -71,13 +75,17 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟CLIApp，让run()方法立即返回
         mock_app = MagicMock()
         mock_app.run = MagicMock(return_value=None)
+        mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
         # 测试命令行参数（不使用-m选项）
         test_args = ["linhai"]
 
         with patch.object(sys, "argv", test_args):
-            main()
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
@@ -125,7 +133,10 @@ class TestMainCommandLine(unittest.TestCase):
         test_args = ["linhai", "-f", "test_message.txt"]
 
         with patch.object(sys, "argv", test_args):
-            main()
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证文件被正确打开
         mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")
@@ -177,7 +188,10 @@ class TestMainCommandLine(unittest.TestCase):
         test_args = ["linhai", "-m", "命令行消息", "-f", "test_message.txt"]
 
         with patch.object(sys, "argv", test_args):
-            main()
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            # 由于CLIApp.return_code是MagicMock，我们直接检查SystemExit被调用
+        self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证文件被正确打开
         mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")

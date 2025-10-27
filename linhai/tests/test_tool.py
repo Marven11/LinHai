@@ -84,11 +84,12 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         # 创建带配置的ToolManager，使用Pydantic模型
         config = Config(
-            llm=LLMConfig(
+            llm=[LLMConfig(
+                name="test_llm",
                 base_url="https://api.example.com",
                 api_key="test_key",
                 model="test_model",
-            ),
+            )],
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
                 compress_threshold_soft=30000,
@@ -127,11 +128,12 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         # 创建带配置的ToolManager，但没有tools配置
         config = Config(
-            llm=LLMConfig(
+            llm=[LLMConfig(
+                name="test_llm",
                 base_url="https://api.example.com",
                 api_key="test_key",
                 model="test_model",
-            ),
+            )],
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
                 compress_threshold_soft=30000,
@@ -614,7 +616,7 @@ class TestFileValidation(unittest.TestCase):
                 "expression": "s/test/replacement/",
             },
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
     def test_modify_file_with_sed_rejects_binary_file(self):
         """测试modify_file_with_sed拒绝二进制文件"""

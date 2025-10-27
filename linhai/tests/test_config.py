@@ -14,7 +14,8 @@ class TestConfig(unittest.TestCase):
     def test_load_config_valid(self, mock_open):
         """Test loading a valid config."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "primary"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
@@ -25,15 +26,18 @@ model = "test_model"
 
         config = load_config()
         self.assertIsInstance(config, Config)
-        self.assertEqual(config.llm.base_url, "https://api.example.com")
-        self.assertEqual(config.llm.api_key, "test_key")
-        self.assertEqual(config.llm.model, "test_model")
+        self.assertEqual(len(config.llm), 1)
+        self.assertEqual(config.llm[0].name, "primary")
+        self.assertEqual(config.llm[0].base_url, "https://api.example.com")
+        self.assertEqual(config.llm[0].api_key, "test_key")
+        self.assertEqual(config.llm[0].model, "test_model")
 
     @patch("pathlib.Path.open")
     def test_load_config_invalid_url(self, mock_open):
         """Test loading a config with invalid URL."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "primary"
 base_url = "invalid_url"
 api_key = "test_key"
 model = "test_model"
@@ -49,7 +53,8 @@ model = "test_model"
     def test_load_config_empty_api_key(self, mock_open):
         """Test loading a config with empty API key."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = ""
 model = "test_model"
@@ -65,7 +70,8 @@ model = "test_model"
     def test_load_config_empty_model(self, mock_open):
         """Test loading a config with empty model."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = ""
@@ -81,7 +87,8 @@ model = ""
     def test_load_config_with_optional_fields(self, mock_open):
         """Test loading a config with optional fields."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
@@ -102,7 +109,7 @@ max_output_length = 2000
 
         config = load_config()
         self.assertIsInstance(config, Config)
-        self.assertEqual(config.llm.base_url, "https://api.example.com")
+        self.assertEqual(config.llm[0].base_url, "https://api.example.com")
         self.assertIsNotNone(config.agent)
         assert config.agent is not None
         self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
@@ -118,7 +125,8 @@ max_output_length = 2000
     def test_load_config_with_int_values(self, mock_open):
         """Test loading a config with integer values for compress thresholds."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
@@ -142,7 +150,8 @@ compress_threshold_hard = 60000
     def test_load_config_with_float_values(self, mock_open):
         """Test loading a config with float values for compress thresholds."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
@@ -166,7 +175,8 @@ compress_threshold_hard = 0.8
     def test_load_config_with_defaults(self, mock_open):
         """Test loading a config with default values."""
         config_content = b"""
-[llm]
+[[llm]]
+name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
@@ -181,6 +191,109 @@ model = "test_model"
         self.assertIsNone(config.agent)
         self.assertIsNone(config.memory)
         self.assertIsNone(config.tools)
+
+    @patch("pathlib.Path.open")
+    def test_load_config_multiple_llms(self, mock_open):
+        """Test loading a config with multiple LLMs."""
+        config_content = b"""
+[[llm]]
+name = "primary"
+base_url = "https://api.example.com"
+api_key = "test_key_1"
+model = "test_model_1"
+
+[[llm]]
+name = "secondary"
+base_url = "https://api.example.org"
+api_key = "test_key_2"
+model = "test_model_2"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        config = load_config()
+        self.assertIsInstance(config, Config)
+        self.assertEqual(len(config.llm), 2)
+
+        # 验证第一个LLM
+        self.assertEqual(config.llm[0].name, "primary")
+        self.assertEqual(config.llm[0].base_url, "https://api.example.com")
+        self.assertEqual(config.llm[0].api_key, "test_key_1")
+        self.assertEqual(config.llm[0].model, "test_model_1")
+
+        # 验证第二个LLM
+        self.assertEqual(config.llm[1].name, "secondary")
+        self.assertEqual(config.llm[1].base_url, "https://api.example.org")
+        self.assertEqual(config.llm[1].api_key, "test_key_2")
+        self.assertEqual(config.llm[1].model, "test_model_2")
+
+    @patch("pathlib.Path.open")
+    def test_load_config_multiple_llms_with_optional_fields(self, mock_open):
+        """Test loading a config with multiple LLMs and optional fields."""
+        config_content = b"""
+[[llm]]
+name = "main"
+base_url = "https://api.example.com"
+api_key = "test_key_1"
+model = "test_model_1"
+
+[[llm]]
+name = "backup"
+base_url = "https://api.example.org"
+api_key = "test_key_2"
+model = "test_model_2"
+
+[agent]
+compress_threshold_soft = 0.5
+compress_threshold_hard = 0.8
+
+[memory]
+file_path = "./test_memory.md"
+
+[tools]
+max_output_length = 2000
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        config = load_config()
+        self.assertIsInstance(config, Config)
+        self.assertEqual(len(config.llm), 2)
+
+        # 验证LLMs
+        self.assertEqual(config.llm[0].name, "main")
+        self.assertEqual(config.llm[1].name, "backup")
+
+        # 验证可选字段
+        self.assertIsNotNone(config.agent)
+        assert config.agent is not None
+        self.assertEqual(config.agent.compress_threshold_soft, 0.5)
+        self.assertEqual(config.agent.compress_threshold_hard, 0.8)
+        self.assertIsNotNone(config.memory)
+        assert config.memory is not None
+        self.assertEqual(config.memory.file_path, "./test_memory.md")
+        self.assertIsNotNone(config.tools)
+        assert config.tools is not None
+        self.assertEqual(config.tools.max_output_length, 2000)
+
+    @patch("pathlib.Path.open")
+    def test_load_config_multiple_llms_invalid_name(self, mock_open):
+        """Test loading a config with multiple LLMs with empty name."""
+        config_content = b"""
+[[llm]]
+name = ""
+base_url = "https://api.example.com"
+api_key = "test_key_1"
+model = "test_model_1"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        with self.assertRaises(ConfigValidationError):
+            load_config()
 
 
 if __name__ == "__main__":

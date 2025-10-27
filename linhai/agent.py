@@ -55,12 +55,12 @@ class AgentConfig(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
-    model: LanguageModel
+    llms: list[LanguageModel]  # 多个LLM实例
+    current_llm_index: int  # 当前使用的LLM索引
     compress_threshold_soft: int
     compress_threshold_hard: int
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
-    cheap_model: NotRequired[LanguageModel]  # 可选廉价LLM字段
 
 
 class CheapLlmStatusMessage:
@@ -599,14 +599,12 @@ class Agent:
 
     async def _select_model(self) -> LanguageModel:
         """
-        根据廉价LLM剩余消息计数选择合适的模型。
+        根据当前LLM索引选择合适的模型。
 
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        if self.cheap_llm_remaining_messages > 0 and "cheap_model" in self.config:
-            return self.config["cheap_model"]
-        return self.config["model"]
+        return self.config["llms"][self.config["current_llm_index"]]
 
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
@@ -781,28 +779,19 @@ def create_agent(
 ):
     config = load_config(config_path)
 
-    llm = OpenAi(
-        api_key=config.llm.api_key,
-        base_url=config.llm.base_url,
-        model=config.llm.model,
-        openai_config=config.llm.model_dump().get("openai_config", {}),
-        chat_completion_kwargs=config.llm.model_dump().get(
-            "chat_completion_kwargs", {}
-        ),
-    )
-
-    # 加载廉价LLM配置
-    cheap_llm = None
-    if config.llm.cheap is not None:
-        cheap_llm = OpenAi(
-            api_key=config.llm.cheap.api_key,
-            base_url=config.llm.cheap.base_url,
-            model=config.llm.cheap.model,
-            openai_config=config.llm.cheap.model_dump().get("openai_config", {}),
-            chat_completion_kwargs=config.llm.cheap.model_dump().get(
+    # 创建多个LLM实例
+    llms = []
+    for llm_config in config.llm:
+        llm = OpenAi(
+            api_key=llm_config.api_key,
+            base_url=llm_config.base_url,
+            model=llm_config.model,
+            openai_config=llm_config.model_dump().get("openai_config", {}),
+            chat_completion_kwargs=llm_config.model_dump().get(
                 "chat_completion_kwargs", {}
             ),
         )
+        llms.append(llm)
 
     # 解析tool_confirmation配置
     tool_confirmation_config = {}
@@ -833,13 +822,12 @@ def create_agent(
 
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
-        "model": llm,
+        "llms": llms,
+        "current_llm_index": 0,  # 默认使用第一个LLM
         "compress_threshold_hard": compress_threshold_hard,
         "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,
     }
-    if cheap_llm:
-        agent_config["cheap_model"] = cheap_llm
 
     tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
     tool_manager.register_workflow(

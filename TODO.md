@@ -4,13 +4,16 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 将exit_agent工具改名为exit_app工具，描述改为退出
-- [ ] 除了主LLM之外，现在配置文件只支持配置一个额外的cheap LLM，将配置格式改成接受多个llm（在配置中是一个列表），每个llm都有自己的名字(name属性)，创建agent时将llm的列表传给agent对象，默认选择第一个llm
-    - [ ] 编写对应的unittest
+- [x] 将exit_agent工具改名为exit_app工具，描述改为退出
+- [x] 除了主LLM之外，现在配置文件只支持配置一个额外的cheap LLM，将配置格式改成接受多个llm（在配置中是一个列表），每个llm都有自己的名字(name属性)，创建agent时将llm的列表传给agent对象，默认选择第一个llm
+    - [x] 编写对应的unittest
 - 做完上一个任务暂停
 - [ ] 仿造cli_ui.py添加exit_app工具的方式，让agent类在启动时添加“切换llm”工具和“当前llm”工具
     - 切换llm工具描述根据当前有的llm自动生成
     - 如果llm名字不存在，则列出所有llm
+    - [ ] 编写对应的unittest
+    - [ ] 使用./config.toml启动linhai, 让其测试切换llm, 然后编写报告文档输出到当前目录（这样你就可以查看了）
+- [ ] 运行unittest和pyright检查错误，然后修复
 
 注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
