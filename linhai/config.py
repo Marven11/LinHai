@@ -16,6 +16,8 @@ class LLMConfig(BaseModel):
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
+    client_options: dict = Field(default_factory=dict)
+    completion_options: dict = Field(default_factory=dict)
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument

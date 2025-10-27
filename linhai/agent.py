@@ -719,9 +719,9 @@ def create_agent(
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
             model=llm_config.model,
-            openai_config=llm_config.model_dump().get("openai_config", {}),
+            openai_config=llm_config.model_dump().get("client_options", {}),
             chat_completion_kwargs=llm_config.model_dump().get(
-                "chat_completion_kwargs", {}
+                "completion_options", {}
             ),
         )
         llms.append(llm)

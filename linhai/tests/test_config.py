@@ -294,31 +294,23 @@ model = "test_model_1"
 
         with self.assertRaises(ConfigValidationError):
             load_config()
-
-
-if __name__ == "__main__":
-    unittest.main()
     @patch("pathlib.Path.open")
-    def test_load_config_valid_name(self, mock_open):
-        """Test loading a config with valid LLM names."""
+    def test_load_config_with_openai_kwargs(self, mock_open):
+        """Test loading a config with client_options and completion_options."""
         config_content = b"""
 [[llm]]
-name = "test-llm"
-base_url = "https://api.example.com"
+name = "qwen"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = "test_key"
-model = "test_model"
+model = "qwen-plus"
 
-[[llm]]
-name = "test_llm"
-base_url = "https://api.example.org"
-api_key = "test_key_2"
-model = "test_model_2"
+[llm.client_options]
+timeout = 30
 
-[[llm]]
-name = "test123"
-base_url = "https://api.example.net"
-api_key = "test_key_3"
-model = "test_model_3"
+[llm.completion_options]
+
+[llm.completion_options.stream_options]
+include_usage = true
 """
         mock_open.return_value.__enter__ = mock_open.return_value
         mock_open.return_value.__exit__ = lambda self, *args: None
@@ -326,58 +318,14 @@ model = "test_model_3"
 
         config = load_config()
         self.assertIsInstance(config, Config)
-        self.assertEqual(len(config.llm), 3)
-        self.assertEqual(config.llm[0].name, "test-llm")
-        self.assertEqual(config.llm[1].name, "test_llm")
-        self.assertEqual(config.llm[2].name, "test123")
+        self.assertEqual(len(config.llm), 1)
+        self.assertEqual(config.llm[0].name, "qwen")
+        self.assertEqual(config.llm[0].base_url, "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        self.assertEqual(config.llm[0].api_key, "test_key")
+        self.assertEqual(config.llm[0].model, "qwen-plus")
+        self.assertEqual(config.llm[0].client_options, {"timeout": 30})
+        self.assertEqual(config.llm[0].completion_options, {"stream_options": {"include_usage": True}})
 
-    @patch("pathlib.Path.open")
-    def test_load_config_invalid_name_with_space(self, mock_open):
-        """Test loading a config with invalid LLM name containing space."""
-        config_content = b"""
-[[llm]]
-name = "test llm"
-base_url = "https://api.example.com"
-api_key = "test_key"
-model = "test_model"
-"""
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
 
-        with self.assertRaises(ConfigValidationError):
-            load_config()
-
-    @patch("pathlib.Path.open")
-    def test_load_config_invalid_name_with_special_char(self, mock_open):
-        """Test loading a config with invalid LLM name containing special character."""
-        config_content = b"""
-[[llm]]
-name = "test@llm"
-base_url = "https://api.example.com"
-api_key = "test_key"
-model = "test_model"
-"""
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
-
-        with self.assertRaises(ConfigValidationError):
-            load_config()
-
-    @patch("pathlib.Path.open")
-    def test_load_config_invalid_name_with_dot(self, mock_open):
-        """Test loading a config with invalid LLM name containing dot."""
-        config_content = b"""
-[[llm]]
-name = "test.llm"
-base_url = "https://api.example.com"
-api_key = "test_key"
-model = "test_model"
-"""
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
-
-        with self.assertRaises(ConfigValidationError):
-            load_config()
+if __name__ == "__main__":
+    unittest.main()
