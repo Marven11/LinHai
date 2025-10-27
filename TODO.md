@@ -4,18 +4,27 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 修改配置格式，让llm的名字只能包含[a-zA-Z0-9-_]以方便未来重构
-    - [x] 编写unittest
-- [x] 添加`--llm`参数，在启动时强制指定llm
-    - 也许需要根据--llm参数调整llm列表的排列顺序
-    - [x] 编写unittest
-- [x] 添加`@`系统，用户可以在消息的开头通过@name指定对应的LLM回答
-    - `@`只对当前消息有效
-    - 你可能需要修改agent.py选择model的实现
-    - [x] 编写unittest
-- [x] 修改`@`系统的逻辑：在接收到当前的用户消息，而且用户消息使用了`@`则据此更改llm，否则不修改
-- [x] 运行并修复unittest
-- [x] 使用pyright检查代码并修复，修复之后运行并修复unittest
+- [ ] qwen的百炼API需要传入如下所示参数才能统计token用量，修改config格式，支持在创建OpenAI类时和每次创建completion时传入自定义的**kwargs
+    - [ ] 添加对应的unittest
+    - [ ] 尝试启动linhai，使用`python -m linhai --config ./config.toml -m '@qwen 读取当前token用量输出到usage.txt中，如果无法获得则写入“无法获得token用量”，然后退出'`测试
+```python
+client = OpenAI(
+    api_key=os.environ["DASHSCOPE_API_KEY"],
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+completion = client.chat.completions.create(
+    model="qwen-plus",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "请介绍一下自己"}
+    ],
+    stream=True,
+    stream_options={"include_usage": True}
+)
+```
+- [ ] 运行并修复unittest
+- [ ] 使用pyright检查代码并修复，修复之后运行并修复unittest
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
