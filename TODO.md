@@ -4,8 +4,8 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 删除switch_to_cheap_llm等和cheap llm相关的代码，完全删除功能
-    - [ ] 使用pyright检查新增的代码
+- [x] 删除switch_to_cheap_llm等和cheap llm相关的代码，完全删除功能
+    - [x] 使用pyright检查新增的代码
 - [ ] 仿造切换llm工具的注册方式，修改linhai/tool/tools/dummy.py中工具的实现方式
     - 最终效果是：删除dummy.py，删除在call_tool处拦截对应工具请求的代码
     - [ ] 编写unittest
