@@ -75,8 +75,9 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             content = ""
             tokens = []
             async for token in answer:
-                content += token.content
-                tokens.append(token)
+                if isinstance(token, AnswerToken):
+                    content += token.content
+                    tokens.append(token)
 
             self.assertEqual(content, "Hello World")
             mock_client.chat.completions.create.assert_called_once()
@@ -129,11 +130,12 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             content = ""
             token_count = 0
             async for token in answer:
-                content += token.content
-                token_count += 1
-                if token_count == 1:
-                    answer.interrupt()
-                    break
+                if isinstance(token, AnswerToken):
+                    content += token.content
+                    token_count += 1
+                    if token_count == 1:
+                        answer.interrupt()
+                        break
 
             self.assertEqual(content, "Hello")
             mock_client.chat.completions.create.assert_called_once()

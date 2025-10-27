@@ -4,9 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] qwen的百炼API需要传入如下所示参数才能统计token用量，修改config格式，支持在创建OpenAI类时和每次创建completion时传入自定义的**kwargs
-    - [ ] 添加对应的unittest
-    - [ ] 尝试启动linhai，使用`python -m linhai --config ./config.toml -m '@qwen 读取当前token用量输出到usage.txt中，如果无法获得则写入“无法获得token用量”，然后退出'`测试
+- [x] qwen的百炼API需要传入如下所示参数才能统计token用量，修改config格式，支持在创建OpenAI类时和每次创建completion时传入自定义的**kwargs
+    - [x] 添加对应的unittest
+    - [x] 尝试启动linhai，使用`python -m linhai --config ./config.toml -m '@qwen 读取当前token用量输出到usage.txt中，如果无法获得则写入“无法获得token用量”，然后退出'`测试
 ```python
 client = OpenAI(
     api_key=os.environ["DASHSCOPE_API_KEY"],
