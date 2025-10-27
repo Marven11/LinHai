@@ -141,7 +141,7 @@ class ThinkingToolCallPlugin(Plugin):
             await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage(
-                    f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall超过{max_json_blocks}次，请避免过度思考如何进行工具调用"
+                    f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall超过{max_json_blocks}次，你只能（且应该）在实际输出时调用多个工具！"
                 )
             )
             answer.interrupt()
