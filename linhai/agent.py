@@ -519,11 +519,32 @@ class Agent:
 
     async def _select_model(self) -> LanguageModel:
         """
-        根据当前LLM索引选择合适的模型。
+        根据当前LLM索引或用户@指定选择合适的模型。
 
         返回:
             LanguageModel: 选择的语言模型实例
         """
+        # 查找最后一个用户消息
+        last_user_message = None
+        for msg in reversed(self.messages):
+            if isinstance(msg, ChatMessage) and msg.to_llm_message().get("role") == "user":
+                last_user_message = msg
+                break
+        
+        if last_user_message and last_user_message.message.strip().startswith('@'):
+            content = last_user_message.message.strip()
+            # 提取LLM名称
+            parts = content.split(maxsplit=1)
+            llm_name = parts[0][1:]  # 去除@
+            if llm_name in self.config["llm_names"]:
+                index = self.config["llm_names"].index(llm_name)
+                return self.config["llms"][index]
+            else:
+                # 无效LLM名称，使用默认
+                available_llms = ", ".join(self.config["llm_names"])
+                self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"))
+        
+        # 默认使用配置的索引
         return self.config["llms"][self.config["current_llm_index"]]
 
     async def generate_response(

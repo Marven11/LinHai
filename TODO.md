@@ -9,10 +9,10 @@
 - [x] 添加`--llm`参数，在启动时强制指定llm
     - 也许需要根据--llm参数调整llm列表的排列顺序
     - [x] 编写unittest
-- [ ] 添加`@`系统，用户可以在消息的开头通过@name指定对应的LLM回答
+- [x] 添加`@`系统，用户可以在消息的开头通过@name指定对应的LLM回答
     - `@`只对当前消息有效
     - 你可能需要修改agent.py选择model的实现
-    - [ ] 编写unittest
+    - [x] 编写unittest
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
