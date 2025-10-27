@@ -17,6 +17,14 @@ class LLMConfig(BaseModel):
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
 
+    @field_validator("name")
+    def validate_name(cls, v):  # pylint: disable=no-self-argument
+        """验证name格式：只允许[a-zA-Z0-9-_]字符"""
+        import re
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ConfigValidationError("LLM name can only contain letters, numbers, hyphens, and underscores")
+        return v
+
     @field_validator("base_url")
     def validate_base_url(cls, v):
         """验证base_url格式"""

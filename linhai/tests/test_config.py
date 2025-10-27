@@ -298,3 +298,86 @@ model = "test_model_1"
 
 if __name__ == "__main__":
     unittest.main()
+    @patch("pathlib.Path.open")
+    def test_load_config_valid_name(self, mock_open):
+        """Test loading a config with valid LLM names."""
+        config_content = b"""
+[[llm]]
+name = "test-llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[llm]]
+name = "test_llm"
+base_url = "https://api.example.org"
+api_key = "test_key_2"
+model = "test_model_2"
+
+[[llm]]
+name = "test123"
+base_url = "https://api.example.net"
+api_key = "test_key_3"
+model = "test_model_3"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        config = load_config()
+        self.assertIsInstance(config, Config)
+        self.assertEqual(len(config.llm), 3)
+        self.assertEqual(config.llm[0].name, "test-llm")
+        self.assertEqual(config.llm[1].name, "test_llm")
+        self.assertEqual(config.llm[2].name, "test123")
+
+    @patch("pathlib.Path.open")
+    def test_load_config_invalid_name_with_space(self, mock_open):
+        """Test loading a config with invalid LLM name containing space."""
+        config_content = b"""
+[[llm]]
+name = "test llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        with self.assertRaises(ConfigValidationError):
+            load_config()
+
+    @patch("pathlib.Path.open")
+    def test_load_config_invalid_name_with_special_char(self, mock_open):
+        """Test loading a config with invalid LLM name containing special character."""
+        config_content = b"""
+[[llm]]
+name = "test@llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        with self.assertRaises(ConfigValidationError):
+            load_config()
+
+    @patch("pathlib.Path.open")
+    def test_load_config_invalid_name_with_dot(self, mock_open):
+        """Test loading a config with invalid LLM name containing dot."""
+        config_content = b"""
+[[llm]]
+name = "test.llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+"""
+        mock_open.return_value.__enter__ = mock_open.return_value
+        mock_open.return_value.__exit__ = lambda self, *args: None
+        mock_open.return_value.read.return_value = config_content
+
+        with self.assertRaises(ConfigValidationError):
+            load_config()
