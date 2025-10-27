@@ -4,27 +4,15 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] qwen的百炼API需要传入如下所示参数才能统计token用量，修改config格式，支持在创建OpenAI类时和每次创建completion时传入自定义的**kwargs
-    - [x] 添加对应的unittest
-    - [x] 尝试启动linhai，使用`python -m linhai --config ./config.toml -m '@qwen 读取当前token用量输出到usage.txt中，如果无法获得则写入“无法获得token用量”，然后退出'`测试
-```python
-client = OpenAI(
-    api_key=os.environ["DASHSCOPE_API_KEY"],
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-)
-
-completion = client.chat.completions.create(
-    model="qwen-plus",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "请介绍一下自己"}
-    ],
-    stream=True,
-    stream_options={"include_usage": True}
-)
-```
-- [x] 运行并修复unittest
-- [x] 使用pyright检查代码并修复，修复之后运行并修复unittest
+- [ ] 删除switch_to_cheap_llm等和cheap llm相关的代码，完全删除功能
+    - [ ] 使用pyright检查新增的代码
+- [ ] 仿造切换llm工具的注册方式，修改linhai/tool/tools/dummy.py中工具的实现方式
+    - 最终效果是：删除dummy.py，删除在call_tool处拦截对应工具请求的代码
+    - [ ] 编写unittest
+    - [ ] 使用pyright检查新增的代码
+    - [ ] 运行linhai问问get_token_usage工具是否还存在，不存在就异常退出，存在就正常退出
+- [ ] 运行unittest
+- [ ] 使用pyright检查代码
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
