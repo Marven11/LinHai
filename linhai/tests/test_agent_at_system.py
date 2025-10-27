@@ -19,8 +19,26 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = Mock(return_value=Mock())
         
         # 创建模拟的LLM配置
-        self.mock_llm1 = Mock()
-        self.mock_llm2 = Mock()
+        self.mock_llm1 = AsyncMock()
+        self.mock_llm2 = AsyncMock()
+        
+        # 设置answer_stream返回一个空的异步迭代器
+        async def empty_answer_stream(messages):
+            class EmptyAnswer:
+                def __aiter__(self):
+                    return self
+                async def __anext__(self):
+                    raise StopAsyncIteration
+                def get_message(self):
+                    return ChatMessage(role="assistant", message="")
+                def get_current_content(self):
+                    return ""
+                def get_reasoning_message(self):
+                    return None
+            return EmptyAnswer()
+        
+        self.mock_llm1.answer_stream = empty_answer_stream
+        self.mock_llm2.answer_stream = empty_answer_stream
         
         self.config: AgentConfig = {
             "system_prompt": "测试系统提示",
@@ -43,7 +61,9 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         """测试有效的@系统调用。"""
         # 添加一个@llm2的用户消息
         user_message = ChatMessage(role="user", message="@llm2 你好")
-        self.agent.messages.append(user_message)
+        
+        # 调用handle_messages，这会更新current_llm_index
+        await self.agent.handle_messages([user_message])
         
         # 调用_select_model
         selected_model = await self.agent._select_model()
@@ -55,7 +75,9 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         """测试无效的@系统调用。"""
         # 添加一个@invalid_llm的用户消息
         user_message = ChatMessage(role="user", message="@invalid_llm 你好")
-        self.agent.messages.append(user_message)
+        
+        # 调用handle_messages，这会添加错误消息
+        await self.agent.handle_messages([user_message])
         
         # 调用_select_model
         selected_model = await self.agent._select_model()

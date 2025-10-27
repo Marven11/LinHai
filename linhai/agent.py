@@ -510,6 +510,18 @@ class Agent:
         返回:
             生成的响应
         """
+        # 处理@系统逻辑：在接收到用户消息时更新当前LLM
+        for msg in messages:
+            if isinstance(msg, ChatMessage) and msg.role == "user":
+                content = msg.message.strip()
+                if content.startswith('@'):
+                    llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
+                    if llm_name in self.config["llm_names"]:
+                        self.config["current_llm_index"] = self.config["llm_names"].index(llm_name)
+                    else:
+                        # 添加错误消息
+                        self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在"))
+        
         self.messages += messages
         try:
             return await self.generate_response()
@@ -519,26 +531,11 @@ class Agent:
 
     async def _select_model(self) -> LanguageModel:
         """
-        根据当前LLM索引或用户@指定选择合适的模型。
+        根据当前LLM索引选择合适的模型。
 
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        # 从当前消息往回找，找到最近一个使用了@的消息
-        for msg in reversed(self.messages):
-            if not isinstance(msg, ChatMessage) or msg.role != "user":
-                continue
-            content = msg.message.strip()
-            if not content.startswith('@'):
-                continue
-            llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
-            if llm_name not in self.config["llm_names"]:
-                # 添加错误消息
-                self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在"))
-                continue
-            return self.config["llms"][self.config["llm_names"].index(llm_name)]
-        
-        # 没有找到有效的@消息，使用默认索引
         return self.config["llms"][self.config["current_llm_index"]]
 
     async def generate_response(
