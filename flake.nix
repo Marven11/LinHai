@@ -51,6 +51,7 @@
               requests
               textual
               selenium
+              mcp
             ];
 
             src = ./.;
