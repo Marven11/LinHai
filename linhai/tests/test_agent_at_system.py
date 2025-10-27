@@ -1,6 +1,7 @@
 """测试Agent的@系统功能。"""
 
 import unittest
+import asyncio
 from unittest.mock import Mock, AsyncMock
 from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
@@ -8,7 +9,7 @@ from linhai.llm import ChatMessage
 from linhai.agent_base import RuntimeMessage
 
 
-class TestAgentAtSystem(unittest.TestCase):
+class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     """测试Agent的@系统功能。"""
 
     def setUp(self):

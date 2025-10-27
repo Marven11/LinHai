@@ -533,6 +533,8 @@ class Agent:
                 continue
             llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
             if llm_name not in self.config["llm_names"]:
+                # 添加错误消息
+                self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在"))
                 continue
             return self.config["llms"][self.config["llm_names"].index(llm_name)]
         
