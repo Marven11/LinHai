@@ -4,7 +4,13 @@ from pathlib import Path
 import difflib
 import json
 import platform
-from linhai.tool.base import global_tools, ToolArgInfo
+from linhai.llm import Message
+from linhai.tool.base import (
+    global_tools,
+    ToolArgInfo,
+    ToolResultMessage,
+    ToolErrorMessage,
+)
 import subprocess
 
 
@@ -323,7 +329,7 @@ def get_absolute_path(path: str) -> str:
     },
     required_args=["expression", "filepath"],
 )
-def run_sed_expression(expression: str, filepath: str) -> str:
+def run_sed_expression(expression: str, filepath: str) -> Message:
     """执行sed表达式并返回输出。
 
     Args:
@@ -336,20 +342,23 @@ def run_sed_expression(expression: str, filepath: str) -> str:
     file_path = Path(filepath)
     validation_error = validate_file(file_path)
     if validation_error:
-        return validation_error
+        return ToolErrorMessage(validation_error)
     try:
-        # 运行sed命令，不修改文件
         result = subprocess.run(
             ["sed", "-n", expression, file_path.as_posix()],
             capture_output=True,
             text=True,
             check=True,
         )
-        return result.stdout
+        if expression.startswith("s"):
+            return ToolErrorMessage(
+                f"错误: 表达式以s开头，但此工具不能修改文件!\n{result.stdout=}"
+            )
+        return ToolResultMessage(result.stdout)
     except subprocess.CalledProcessError as exc:
-        return f"sed命令执行错误: {exc.stderr}"
+        return ToolErrorMessage(f"sed命令执行错误: {exc.stderr}")
     except OSError as exc:
-        return f"运行sed时发生错误: {exc!r}"
+        return ToolErrorMessage(f"运行sed时发生错误: {exc!r}")
 
 
 @global_tools.register_tool(
