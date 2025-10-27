@@ -37,7 +37,7 @@ from linhai.llm import (
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
 from linhai.config import load_config
-from linhai.tool.base import global_tools
+from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
@@ -53,6 +53,7 @@ class AgentConfig(TypedDict):
 
     system_prompt: str
     llms: list[LanguageModel]  # 多个LLM实例
+    llm_names: list[str]  # LLM名称列表
     current_llm_index: int  # 当前使用的LLM索引
     compress_threshold_soft: int
     compress_threshold_hard: int
@@ -169,6 +170,57 @@ class Agent:
         self.lifecycle = Lifecycle()
         # 注册默认Plugin
         register_default_plugins(self.lifecycle)
+
+        # 添加LLM切换工具
+        llm_toolset = ToolSet()
+
+        # 处理缺少llm_names的情况
+        llm_names = self.config.get("llm_names", [f"llm{i}" for i in range(len(self.config["llms"]))])
+
+        @llm_toolset.register_tool(
+            name="switch_llm",
+            desc="切换到指定的LLM。可用的LLM包括: " + ", ".join(llm_names),
+            args={
+                "llm_name": ToolArgInfo(
+                    desc="要切换到的LLM名称", type="str"
+                ),
+            },
+            required_args=["llm_name"],
+        )
+        def switch_llm(llm_name: str):
+            """切换到指定的LLM
+
+            Args:
+                llm_name: 要切换到的LLM名称
+
+            Returns:
+                切换结果消息
+            """
+            if llm_name not in llm_names:
+                available_llms = ", ".join(llm_names)
+                return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
+            
+            index = llm_names.index(llm_name)
+            self.config["current_llm_index"] = index
+            return f"已切换到LLM: {llm_name}"
+
+        @llm_toolset.register_tool(
+            name="current_llm",
+            desc="显示当前使用的LLM名称",
+            args={},
+            required_args=[],
+        )
+        def current_llm():
+            """显示当前使用的LLM名称
+
+            Returns:
+                当前LLM名称消息
+            """
+            current_name = llm_names[self.config["current_llm_index"]]
+            return f"当前使用的LLM: {current_name}"
+
+        # 将工具集添加到ToolManager
+        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(llm_toolset)
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -691,6 +743,7 @@ def create_agent(
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
         "llms": llms,
+        "llm_names": [llm_config.name for llm_config in config.llm],  # 提取LLM名称
         "current_llm_index": 0,  # 默认使用第一个LLM
         "compress_threshold_hard": compress_threshold_hard,
         "compress_threshold_soft": compress_threshold_soft,
