@@ -4,20 +4,18 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 将exit_agent工具改名为exit_app工具，描述改为退出
-- [x] 除了主LLM之外，现在配置文件只支持配置一个额外的cheap LLM，将配置格式改成接受多个llm（在配置中是一个列表），每个llm都有自己的名字(name属性)，创建agent时将llm的列表传给agent对象，默认选择第一个llm
-    - [x] 编写对应的unittest
-- 做完上一个任务暂停
-- [x] 我刚刚重构了代码，移动了agent lifecycle的实现，查看上一个git commit，运行unittest和pyright修复因此产生的错误
-- [x] 修复运行unittest时打印的协程警告等，让unittest不要打印过多垃圾信息
-- [x] 仿造cli_ui.py添加exit_app工具的方式，让agent类在启动时添加“切换llm”工具和“当前llm”工具
-    - 切换llm工具描述根据当前有的llm自动生成
-    - 如果llm名字不存在，则列出所有llm
-    - [x] 编写对应的unittest
-    - [x] 使用./config.toml启动linhai, 让其测试切换llm, 然后编写报告文档输出到当前目录（这样你就可以查看了）
-- [x] 运行unittest和pyright检查错误，然后修复
+- [ ] 修改配置格式，让llm的名字只能包含[a-zA-Z0-9-_]以方便未来重构
+    - [ ] 编写unittest
+- [ ] 添加`--llm`参数，在启动时强制指定llm
+    - 也许需要根据--llm参数调整llm列表的排列顺序
+    - [ ] 编写unittest
+- [ ] 添加`@`系统，用户可以在消息的开头通过@name指定对应的LLM回答
+    - `@`只对当前消息有效
+    - 你可能需要修改agent.py选择model的实现
+    - [ ] 编写unittest
 
-注意：一定记得git commit|参考历史commit|历史压缩|勾上TODO
+注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
+    - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：运行linhai时，linhai不会使用STDIO输出消息，更不会在结束时自动退出！你应该在message中告诉linhai使用工具写文件并退出！
 
