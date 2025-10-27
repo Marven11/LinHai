@@ -1,6 +1,12 @@
 """LLM模块，定义语言模型相关的消息类和协议。"""
 
-from typing import Sequence, Protocol, AsyncIterator, cast, runtime_checkable
+from typing import (
+    Sequence,
+    Protocol,
+    AsyncIterator,
+    cast,
+    runtime_checkable,
+)
 import asyncio
 import json
 
@@ -240,6 +246,12 @@ class AnswerToken(BaseModel):
     content: str
 
 
+class AnswerTokenUsage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+
+
 @runtime_checkable
 class Answer(Protocol):
     """
@@ -252,7 +264,7 @@ class Answer(Protocol):
         """
         raise NotImplementedError
 
-    def __aiter__(self) -> AsyncIterator[AnswerToken]:
+    def __aiter__(self) -> AsyncIterator[AnswerToken | AnswerTokenUsage]:
         """
         流式返回LLM的回答
         iterator中的每个item是一个token
@@ -285,7 +297,7 @@ class Answer(Protocol):
         """
         raise NotImplementedError
 
-    def get_token_usage(self) -> dict[str, int] | None:
+    def get_token_usage(self) -> AnswerTokenUsage | None:
         """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
         raise NotImplementedError
 
@@ -325,6 +337,7 @@ class OpenAiAnswer:
         self._tool_call: ToolCallMessage | None = None
         # 函数参数会以token形式一个个传过来
         self._tool_call_argument_json: str = ""
+        self._toyield: list[AnswerToken | AnswerTokenUsage] = []
 
     def get_tool_call(self) -> ToolCallMessage | None:
         """在LLM生成完毕之后读取工具调用。"""
@@ -334,7 +347,7 @@ class OpenAiAnswer:
         """返回异步迭代器。"""
         return self
 
-    async def __anext__(self):
+    async def update_toyield(self):
         """获取下一个token。"""
         if self._interrupted:
             raise StopAsyncIteration
@@ -346,16 +359,23 @@ class OpenAiAnswer:
             if self._interrupted:
                 raise StopAsyncIteration
 
-            delta = chunk.choices[0].delta
-            content = delta.content or ""
-            self._content += content
-
-            # 从chunk中提取token计数（如果API返回）
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = chunk.usage
                 self.input_tokens = getattr(usage, "prompt_tokens", 0)
                 self.output_tokens = getattr(usage, "completion_tokens", 0)
                 self.total_tokens = getattr(usage, "total_tokens", 0)
+                self._toyield.append(
+                    AnswerTokenUsage(
+                        input_tokens=self.input_tokens,
+                        output_tokens=self.output_tokens,
+                        total_tokens=self.total_tokens,
+                    )
+                )
+            if len(chunk.choices) == 0:
+                return
+            delta = chunk.choices[0].delta
+            content = delta.content or ""
+            self._content += content
 
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
@@ -372,7 +392,7 @@ class OpenAiAnswer:
                 reasoning_content=reasoning_content,
                 content=content,
             )
-            return token
+            self._toyield.append(token)
         except StopAsyncIteration:
             raise
         except asyncio.CancelledError as exc:
@@ -381,6 +401,11 @@ class OpenAiAnswer:
         except Exception as exc:
             self._interrupted = True
             raise StopAsyncIteration from exc
+
+    async def __anext__(self) -> AnswerToken | AnswerTokenUsage:
+        if not self._toyield:
+            await self.update_toyield()
+        return self._toyield.pop(0)
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
@@ -404,15 +429,15 @@ class OpenAiAnswer:
         """获取当前回答的token总数。"""
         return self.total_tokens
 
-    def get_token_usage(self) -> dict[str, int] | None:
+    def get_token_usage(self) -> AnswerTokenUsage | None:
         """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
         if self.total_tokens == 0:
             return None
-        return {
-            "input_tokens": self.input_tokens,
-            "output_tokens": self.output_tokens,
-            "total_tokens": self.total_tokens,
-        }
+        return AnswerTokenUsage(
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            total_tokens=self.total_tokens,
+        )
 
 
 class OpenAi:

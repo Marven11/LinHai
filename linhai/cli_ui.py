@@ -13,6 +13,7 @@ from linhai.llm import (
     Message,
     ChatMessage,
     AnswerToken,
+    AnswerTokenUsage,
     Answer,
     ToolCallMessage,
     ToolConfirmationMessage,
@@ -118,6 +119,7 @@ class CLIApp(App):
         self.agent_task: Optional[asyncio.Task] = None
         self.current_tool_call: Optional[ToolCallMessage] = None
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
+        self.current_token_usage: AnswerTokenUsage | None = None
         self.cumulative_token_usage: dict[str, int] | None = None
 
     def compose(self) -> ComposeResult:
@@ -232,6 +234,8 @@ class CLIApp(App):
 
                 if should_scroll:
                     container.scroll_end()
+            elif isinstance(output, AnswerTokenUsage):
+                self.current_token_usage = output
             elif isinstance(output, Answer):
                 if current_message:
                     current_message.update_display()
@@ -246,10 +250,18 @@ class CLIApp(App):
                 token_usage = output.get_token_usage()
                 if token_usage is not None:
                     if self.cumulative_token_usage is None:
-                        self.cumulative_token_usage = token_usage.copy()
+                        self.cumulative_token_usage = token_usage.model_dump()
                     else:
-                        for key in ["input_tokens", "output_tokens", "total_tokens"]:
-                            self.cumulative_token_usage[key] += token_usage.get(key, 0)
+                        self.cumulative_token_usage[
+                            "input_tokens"
+                        ] += token_usage.input_tokens
+                        self.cumulative_token_usage[
+                            "output_tokens"
+                        ] += token_usage.output_tokens
+                        self.cumulative_token_usage[
+                            "total_tokens"
+                        ] += token_usage.total_tokens
+                    self.current_token_usage = None
                     self.update_token_display()
 
                 current_message = None
@@ -317,7 +329,14 @@ class CLIApp(App):
         if self.cumulative_token_usage is None:
             display_text = "Token usage: Not available"
         else:
-            display_text = f"Token: {self.cumulative_token_usage['input_tokens']:,} in | {self.cumulative_token_usage['output_tokens']:,} out | {self.cumulative_token_usage['total_tokens']:,} total"
+            input_tokens = self.cumulative_token_usage["input_tokens"]
+            output_tokens = self.cumulative_token_usage["output_tokens"]
+            total_tokens = self.cumulative_token_usage["total_tokens"]
+            if self.current_token_usage is not None:
+                input_tokens += self.current_token_usage.input_tokens
+                output_tokens += self.current_token_usage.output_tokens
+                total_tokens += self.current_token_usage.total_tokens
+            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
         token_display.update(display_text)
