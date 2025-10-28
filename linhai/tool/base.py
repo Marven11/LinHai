@@ -3,7 +3,7 @@
 包含工具定义、注册和调用相关的基类和函数。
 """
 
-from typing import TypedDict, Callable, Any, cast
+from typing import TypedDict, Callable, Any, cast, Self
 
 import json
 import tempfile
@@ -19,7 +19,7 @@ class ToolArgInfo(TypedDict):
     """工具参数信息"""
 
     desc: str  # 参数描述
-    type: str  # 参数类型字符串
+    type: str | dict[str, Any]  # 参数类型字符串或者JSON Schema
 
 
 class Tool(TypedDict):
@@ -53,7 +53,7 @@ def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
             # 直接使用类型字符串作为OpenAI格式的type字段
             properties[arg_name] = {
                 "description": arg_info["desc"],
-                "type": arg_info["type"],  # 直接使用原始类型字符串
+                "type": arg_info["type"],
             }
 
         tool_info = {

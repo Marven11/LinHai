@@ -655,6 +655,8 @@ def create_agent(
         compress_history_range,
     )
 
+    # TODO: 使用group_chat获得mcp connector实例，然后根据配置连接MCP
+
     init_messages: list[Message] = [
         SystemMessage(
             template=agent_config["system_prompt"],

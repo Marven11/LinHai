@@ -37,7 +37,7 @@ class ToolManager:
         self.group_chat = group_chat
         self.workflows: dict[str, Tool] = {}
         self.config = config
-        self.mcp_connector = MCPConnector()
+        self.mcp_connector = MCPConnector(group_chat)
 
         names = Counter(
             [name for toolset in toolsets for name in toolset.get_tools().keys()]
@@ -46,7 +46,11 @@ class ToolManager:
             raise ValueError(
                 f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
             )
-        self.toolsets = toolsets
+        self._toolsets = toolsets
+
+    @property
+    def toolsets(self):
+        return self._toolsets + self.mcp_connector.get_toolsets()
 
     def add_toolset(self, toolset: ToolSet):
         existing_names = set(
