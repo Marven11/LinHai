@@ -38,10 +38,9 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 注册必要的队列
         self.group_chat.register_queue("cli_user_output")
 
-        # 创建ToolManager实例
+        # 在Agent创建之前先创建ToolManager
         from linhai.tool.main import ToolManager
         from linhai.tool.base import global_tools
-
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, toolsets=[global_tools]
         )
@@ -62,6 +61,8 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             init_messages=init_messages,
         )
+        # 在Agent创建后获取ToolManager
+        self.tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""

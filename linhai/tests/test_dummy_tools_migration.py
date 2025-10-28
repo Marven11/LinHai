@@ -16,6 +16,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
+        # 在Agent创建之前先创建ToolManager
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, toolsets=[ToolSet()]
         )
@@ -38,8 +39,11 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Create agent instance
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Check if get_token_usage tool is registered by calling it
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
 
@@ -64,8 +68,11 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Create agent instance
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Check if thanox_history tool is registered by calling it
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
 
