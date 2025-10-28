@@ -130,7 +130,7 @@ class ChatMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         return cls(role=data["role"], message=data["message"], name=data.get("name"))
@@ -186,7 +186,7 @@ class ToolCallMessage:
         return json.dumps(self.to_llm_message())
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         # 从tool_calls中提取函数名和参数
@@ -232,7 +232,7 @@ class ToolConfirmationMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         tool_call = ToolCallMessage.from_json(data["tool_call"], group_chat)

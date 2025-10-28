@@ -44,7 +44,7 @@ class CompressRangeRequest(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         return cls(
@@ -70,7 +70,7 @@ class RuntimeMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         return cls(message=data["message"])
@@ -95,7 +95,7 @@ class DestroyedRuntimeMessage(Message):
         return json.dumps({})
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
         return cls()
 
 
@@ -156,7 +156,7 @@ class GlobalMemory:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
         """
         从JSON字符串反序列化全局记忆对象。
 

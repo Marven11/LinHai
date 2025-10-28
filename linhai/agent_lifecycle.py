@@ -1,3 +1,5 @@
+"""Agent lifecycle management module for handling callback events during agent execution."""
+
 from typing import (
     Callable,
     Awaitable,
@@ -111,7 +113,7 @@ class Lifecycle:
                 result = await callback(agent, answer, current_content)
                 if result:
                     should_interrupt = True
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("During message generation callback error: %s", e)
         return should_interrupt
 
@@ -125,7 +127,7 @@ class Lifecycle:
         for callback in self._before_message_generation_callbacks:
             try:
                 await callback(agent, enable_compress, disable_waiting_user_warning)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Before message generation callback error: %s", e)
 
     async def trigger_after_message_generation(
@@ -139,7 +141,7 @@ class Lifecycle:
         for callback in self._after_message_generation_callbacks:
             try:
                 await callback(agent, answer, full_response, tool_calls)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("After message generation callback error: %s", e)
 
     async def trigger_before_tool_call(
@@ -149,7 +151,7 @@ class Lifecycle:
         for callback in self._before_tool_call_callbacks:
             try:
                 await callback(agent, tool_call)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Before tool call callback error: %s", e)
 
     async def trigger_after_tool_call(
@@ -163,5 +165,5 @@ class Lifecycle:
         for callback in self._after_tool_call_callbacks:
             try:
                 await callback(agent, tool_call, tool_result, success)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("After tool call callback error: %s", e)
