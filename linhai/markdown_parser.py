@@ -1,9 +1,9 @@
 """Markdown解析模块，用于从Markdown文本中提取JSON代码块和工具调用。"""
 
 import json
+from reprlib import Repr
 from typing import List, Dict, Any, Tuple
 import mistune
-from reprlib import Repr
 
 repr_obj = Repr(maxstring=50)
 

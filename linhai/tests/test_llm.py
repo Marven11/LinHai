@@ -165,20 +165,22 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
     def test_answer_token(self):
         """Test AnswerToken class with pydantic."""
         # Test AnswerToken with reasoning content
-        token1 = AnswerToken(reasoning_content="Let me think...", content="The answer is 42")
+        token1 = AnswerToken(
+            reasoning_content="Let me think...", content="The answer is 42"
+        )
         self.assertEqual(token1.reasoning_content, "Let me think...")
         self.assertEqual(token1.content, "The answer is 42")
-        
+
         # Test AnswerToken without reasoning content
         token2 = AnswerToken(content="Hello world")
         self.assertIsNone(token2.reasoning_content)
         self.assertEqual(token2.content, "Hello world")
-        
+
         # Test AnswerToken with empty content
         token3 = AnswerToken(reasoning_content="Thinking...", content="")
         self.assertEqual(token3.reasoning_content, "Thinking...")
         self.assertEqual(token3.content, "")
 
+
 if __name__ == "__main__":
     unittest.main()
-

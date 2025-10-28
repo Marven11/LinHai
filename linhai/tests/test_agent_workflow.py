@@ -49,9 +49,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         }
 
         from linhai.group_chat import GroupChat
+
         self.group_chat = GroupChat()
-        
-        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
+
+        self.tool_manager = ToolManager(
+            group_chat=self.group_chat, toolsets=[global_tools]
+        )
 
         self.agent = Agent(
             config=config,

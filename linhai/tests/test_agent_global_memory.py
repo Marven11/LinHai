@@ -37,7 +37,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
-            model="test_model"
+            model="test_model",
         )
         mock_agent_config = AgentConfig(
             compress_threshold_hard=60000,
@@ -45,12 +45,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],
-            }
+            },
         )
-        mock_config = Config(
-            llm=[mock_llm_config],
-            agent=mock_agent_config
-        )
+        mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -60,7 +57,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")]
+                agent.messages = [
+                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
+                ]
                 group_chat.get_members.return_value = agent
 
                 # Check if GlobalMemory is in messages
@@ -90,7 +89,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
-            model="test_model"
+            model="test_model",
         )
         mock_agent_config = AgentConfig(
             compress_threshold_hard=60000,
@@ -98,12 +97,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],
-            }
+            },
         )
-        mock_config = Config(
-            llm=[mock_llm_config],
-            agent=mock_agent_config
-        )
+        mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -113,7 +109,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")]
+                agent.messages = [
+                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
+                ]
                 group_chat.get_members.return_value = agent
 
                 # Check if GlobalMemory is in messages and selected AGENT.md
@@ -143,11 +141,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
-            model="test_model"
+            model="test_model",
         )
-        mock_config = Config(
-            llm=[mock_llm_config]
-        )
+        mock_config = Config(llm=[mock_llm_config])
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -157,7 +153,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")]
+                agent.messages = [
+                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
+                ]
                 group_chat.get_members.return_value = agent
 
                 # Check if GlobalMemory is in messages and selected CLAUDE.md
@@ -182,7 +180,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
-            model="test_model"
+            model="test_model",
         )
         mock_agent_config = AgentConfig(
             compress_threshold_hard=60000,
@@ -190,12 +188,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             tool_confirmation={
                 "skip_confirmation": True,
                 "whitelist": [],
-            }
+            },
         )
-        mock_config = Config(
-            llm=[mock_llm_config],
-            agent=mock_agent_config
-        )
+        mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -205,7 +200,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")]
+                agent.messages = [
+                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
+                ]
                 group_chat.get_members.return_value = agent
 
                 # Check if GlobalMemory is still added with default path
@@ -237,11 +234,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             name="test_llm",
             api_key="test_key",
             base_url="http://test.com",
-            model="test_model"
+            model="test_model",
         )
-        mock_config = Config(
-            llm=[mock_llm_config]
-        )
+        mock_config = Config(llm=[mock_llm_config])
 
         with patch("linhai.agent.load_config", return_value=mock_config):
             with patch("linhai.agent.OpenAi") as mock_openai:
@@ -251,7 +246,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")]
+                agent.messages = [
+                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
+                ]
                 group_chat.get_members.return_value = agent
 
                 # Should select LINHAI.md as highest priority

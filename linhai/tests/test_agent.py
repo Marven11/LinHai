@@ -81,28 +81,34 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 "whitelist": ["add_numbers"],
             },
         }
-        
+
         # 使用GroupChat架构
         from linhai.group_chat import GroupChat
+
         self.group_chat = GroupChat()
-        
+
         # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_user_output队列用于输出
         self.group_chat.register_queue("cli_user_output")
-        
+
         # 创建真实的ToolManager实例
         from linhai.tool.main import ToolManager
         from linhai.tool.base import global_tools
-        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
+
+        self.tool_manager = ToolManager(
+            group_chat=self.group_chat, toolsets=[global_tools]
+        )
         # 不需要手动注册，ToolManager会在初始化时自动注册到group_chat
 
         # 创建初始消息列表
         from linhai.llm import SystemMessage
 
-        init_messages = [SystemMessage(
-            template="Test system prompt",
-            current_time="2025-10-26 17:00:00",  # 测试用固定时间
-            group_chat=self.group_chat
-        )]
+        init_messages = [
+            SystemMessage(
+                template="Test system prompt",
+                current_time="2025-10-26 17:00:00",  # 测试用固定时间
+                group_chat=self.group_chat,
+            )
+        ]
 
         self.agent = Agent(
             config=config,
@@ -182,7 +188,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_messages([user_msg])
 
         # 验证用户消息被添加到messages中
-        self.assertEqual(len(self.agent.messages), 4, f"Messages: {[str(msg) for msg in self.agent.messages]}")  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查
+        self.assertEqual(
+            len(self.agent.messages),
+            4,
+            f"Messages: {[str(msg) for msg in self.agent.messages]}",
+        )  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查
         self.assertEqual(
             self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
@@ -201,7 +211,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具消息被添加到messages中
         self.assertEqual(
-            len(self.agent.messages), 7, f"Messages: {[str(msg) for msg in self.agent.messages]}"
+            len(self.agent.messages),
+            7,
+            f"Messages: {[str(msg) for msg in self.agent.messages]}",
         )  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查 + 工具消息 + 回复 + 任务规划格式检查
         # 工具消息被添加到末尾
         self.assertEqual(
@@ -299,62 +311,84 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""
         # 设置多个LLM用于测试
         from linhai.llm import OpenAi
+
         mock_llm1 = MagicMock(spec=OpenAi)
         mock_llm2 = MagicMock(spec=OpenAi)
-        
+
         # 设置answer_stream为AsyncMock，返回一个简单的空响应
         async def empty_answer_stream(messages):
             class EmptyAnswer:
                 def __aiter__(self):
                     return self
+
                 async def __anext__(self):
                     raise StopAsyncIteration
+
                 def get_message(self):
                     return ChatMessage(role="assistant", message="")
+
                 def get_current_content(self):
                     return ""
+
             return EmptyAnswer()
-        
+
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)
         mock_llm2.answer_stream = AsyncMock(side_effect=empty_answer_stream)
-        
+
         self.agent.config["llms"] = [mock_llm1, mock_llm2]
         self.agent.config["llm_names"] = ["deepseek-reasoning", "qwen"]
         self.agent.config["current_llm_index"] = 0  # 默认使用第一个
-        
+
         # 测试场景1: 有效的@qwen消息，应该更新索引到1
-        await self.agent.handle_messages([ChatMessage(role="user", message="@qwen Hello")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="@qwen Hello")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
-        
+
         # 测试场景2: 无效的@invalid消息，索引不应更新，并添加错误消息
         self.agent.config["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_messages([ChatMessage(role="user", message="@invalid command")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="@invalid command")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
         # 验证添加了错误消息
-        self.assertTrue(any(isinstance(msg, RuntimeMessage) and "错误：LLM名称 'invalid' 不存在" in str(msg) 
-                          for msg in self.agent.messages))
-        
+        self.assertTrue(
+            any(
+                isinstance(msg, RuntimeMessage)
+                and "错误：LLM名称 'invalid' 不存在" in str(msg)
+                for msg in self.agent.messages
+            )
+        )
+
         # 测试场景3: 没有@消息，索引不应更新
         self.agent.config["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_messages([ChatMessage(role="user", message="Hello world")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="Hello world")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
-        
+
         # 测试场景4: 多个消息，只有@消息更新索引
         self.agent.config["current_llm_index"] = 0  # 重置索引
         # 先发送一个@qwen消息
-        await self.agent.handle_messages([ChatMessage(role="user", message="@qwen first")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="@qwen first")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
         # 然后发送一个普通消息
-        await self.agent.handle_messages([ChatMessage(role="user", message="Normal message")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="Normal message")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引不变
         # 然后发送一个@deepseek-reasoning消息
-        await self.agent.handle_messages([ChatMessage(role="user", message="@deepseek-reasoning second")])
+        await self.agent.handle_messages(
+            [ChatMessage(role="user", message="@deepseek-reasoning second")]
+        )
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引更新为0
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM

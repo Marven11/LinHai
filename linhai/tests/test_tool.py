@@ -14,6 +14,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         from linhai.group_chat import GroupChat
+
         group_chat = GroupChat()
         self.manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
 
@@ -46,7 +47,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         # 模拟工具抛出异常
         with unittest.mock.patch(
-            "linhai.tool.base.global_tools.call_tool", side_effect=ValueError("Tool not found")
+            "linhai.tool.base.global_tools.call_tool",
+            side_effect=ValueError("Tool not found"),
         ):
             result = await self.manager.process_tool_call(mock_tool_call)
             self.assertEqual(type(result).__name__, "ToolErrorMessage")
@@ -63,7 +65,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
-            "linhai.tool.base.global_tools.call_tool", return_value=mock_async_tool(2, 3)
+            "linhai.tool.base.global_tools.call_tool",
+            return_value=mock_async_tool(2, 3),
         ) as mock_call:
             mock_tool_call = ToolCallMessage(
                 function_name="mock_async_tool",
@@ -80,16 +83,24 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_manager_with_config(self):
         """测试ToolManager使用配置的情况"""
-        from linhai.config import Config, LLMConfig, MemoryConfig, AgentConfig, ToolConfig
+        from linhai.config import (
+            Config,
+            LLMConfig,
+            MemoryConfig,
+            AgentConfig,
+            ToolConfig,
+        )
 
         # 创建带配置的ToolManager，使用Pydantic模型
         config = Config(
-            llm=[LLMConfig(
-                name="test_llm",
-                base_url="https://api.example.com",
-                api_key="test_key",
-                model="test_model",
-            )],
+            llm=[
+                LLMConfig(
+                    name="test_llm",
+                    base_url="https://api.example.com",
+                    api_key="test_key",
+                    model="test_model",
+                )
+            ],
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
                 compress_threshold_soft=30000,
@@ -98,8 +109,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             tools=ToolConfig(max_output_length=1000),
         )
         from linhai.group_chat import GroupChat
+
         group_chat = GroupChat()
-        manager_with_config = ToolManager(group_chat=group_chat, toolsets=[global_tools], config=config)
+        manager_with_config = ToolManager(
+            group_chat=group_chat, toolsets=[global_tools], config=config
+        )
 
         # 模拟工具调用返回长内容
         long_content = "A" * 1001  # 超过配置的1000字符限制
@@ -128,12 +142,14 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         # 创建带配置的ToolManager，但没有tools配置
         config = Config(
-            llm=[LLMConfig(
-                name="test_llm",
-                base_url="https://api.example.com",
-                api_key="test_key",
-                model="test_model",
-            )],
+            llm=[
+                LLMConfig(
+                    name="test_llm",
+                    base_url="https://api.example.com",
+                    api_key="test_key",
+                    model="test_model",
+                )
+            ],
             memory=MemoryConfig(file_path="./memory.md"),
             agent=AgentConfig(
                 compress_threshold_soft=30000,
@@ -142,8 +158,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             # 不设置tools配置
         )
         from linhai.group_chat import GroupChat
+
         group_chat = GroupChat()
-        manager_with_config = ToolManager(group_chat=group_chat, toolsets=[global_tools], config=config)
+        manager_with_config = ToolManager(
+            group_chat=group_chat, toolsets=[global_tools], config=config
+        )
 
         # 模拟工具调用返回长内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
@@ -170,8 +189,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         """测试ToolManager不使用配置的情况（使用默认值）"""
         # 使用默认配置的ToolManager
         from linhai.group_chat import GroupChat
+
         group_chat = GroupChat()
-        manager_without_config = ToolManager(group_chat=group_chat, toolsets=[global_tools])
+        manager_without_config = ToolManager(
+            group_chat=group_chat, toolsets=[global_tools]
+        )
 
         # 模拟工具调用返回刚好超过默认限制的内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
@@ -204,6 +226,7 @@ class TestToolFunctions(unittest.TestCase):
     def setUp(self):
         # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
+
         self.toolset = ToolSet()
 
     def test_register_and_call_tool(self):
@@ -217,7 +240,7 @@ class TestToolFunctions(unittest.TestCase):
                 "a": ToolArgInfo(desc="First number", type="int"),
                 "b": ToolArgInfo(desc="Second number", type="int"),
             },
-            required_args=["a", "b"]
+            required_args=["a", "b"],
         )
         def add_numbers(a, b):
             return a + b
@@ -237,13 +260,14 @@ class TestToolFunctions(unittest.TestCase):
                 "x": ToolArgInfo(desc="First number", type="int"),
                 "y": ToolArgInfo(desc="Second number", type="int"),
             },
-            required_args=["x", "y"]
+            required_args=["x", "y"],
         )
         def multiply(x, y):
             return x * y
 
         # 获取工具信息 - 使用to_tools_info函数
         from linhai.tool.base import to_tools_info
+
         tools_info = to_tools_info(self.toolset.get_tools())
         self.assertEqual(len(tools_info), 1)
         self.assertEqual(tools_info[0]["function"]["name"], "multiply_numbers")
@@ -269,6 +293,7 @@ class TestInsertAtLineTool(unittest.TestCase):
     def setUp(self):
         # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
+
         self.toolset = ToolSet()
         # 使用register_tool装饰器注册insert_at_line工具
         from linhai.tool.tools.file import insert_at_line
@@ -469,6 +494,7 @@ class TestFileValidation(unittest.TestCase):
     def setUp(self):
         # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
+
         self.toolset = ToolSet()
         # 注册文件操作工具
         from linhai.tool.tools.file import (
@@ -486,7 +512,7 @@ class TestFileValidation(unittest.TestCase):
             name="read_file",
             desc="读取文件",
             args={"filepath": ToolArgInfo(desc="文件路径", type="str")},
-            required_args=["filepath"]
+            required_args=["filepath"],
         )(read_file)
 
         self.toolset.register_tool(
@@ -494,9 +520,9 @@ class TestFileValidation(unittest.TestCase):
             desc="写入文件",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "content": ToolArgInfo(desc="要写入的内容", type="str")
+                "content": ToolArgInfo(desc="要写入的内容", type="str"),
             },
-            required_args=["filepath", "content"]
+            required_args=["filepath", "content"],
         )(write_file)
 
         self.toolset.register_tool(
@@ -504,9 +530,9 @@ class TestFileValidation(unittest.TestCase):
             desc="追加文件内容",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "content": ToolArgInfo(desc="要在文件后追加的内容", type="str")
+                "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
             },
-            required_args=["filepath", "content"]
+            required_args=["filepath", "content"],
         )(append_file)
 
         self.toolset.register_tool(
@@ -515,9 +541,9 @@ class TestFileValidation(unittest.TestCase):
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "old": ToolArgInfo(desc="要替换的字符串", type="str"),
-                "new": ToolArgInfo(desc="新的字符串", type="str")
+                "new": ToolArgInfo(desc="新的字符串", type="str"),
             },
-            required_args=["filepath", "old", "new"]
+            required_args=["filepath", "old", "new"],
         )(replace_file_content)
 
         self.toolset.register_tool(
@@ -525,9 +551,9 @@ class TestFileValidation(unittest.TestCase):
             desc="执行sed表达式并返回输出",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "expression": ToolArgInfo(desc="sed表达式", type="str")
+                "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
-            required_args=["filepath", "expression"]
+            required_args=["filepath", "expression"],
         )(run_sed_expression)
 
         self.toolset.register_tool(
@@ -535,9 +561,9 @@ class TestFileValidation(unittest.TestCase):
             desc="使用sed表达式修改文件",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "expression": ToolArgInfo(desc="sed表达式", type="str")
+                "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
-            required_args=["filepath", "expression"]
+            required_args=["filepath", "expression"],
         )(modify_file_with_sed)
 
         self.toolset.register_tool(
@@ -546,14 +572,16 @@ class TestFileValidation(unittest.TestCase):
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
-                "content": ToolArgInfo(desc="要插入的内容", type="str")
+                "content": ToolArgInfo(desc="要插入的内容", type="str"),
             },
-            required_args=["filepath", "line_number", "content"]
+            required_args=["filepath", "line_number", "content"],
         )(insert_at_line)
 
     def test_read_file_rejects_binary_file(self):
         """测试read_file拒绝二进制文件"""
-        result = self.toolset.call_tool("read_file", {"filepath": "./linhai/tests/test_binary.zip"})
+        result = self.toolset.call_tool(
+            "read_file", {"filepath": "./linhai/tests/test_binary.zip"}
+        )
         self.assertIn("不是纯文本文件", result)
 
     def test_write_file_rejects_binary_file_for_existing_file(self):
@@ -689,7 +717,9 @@ class TestToolResultMessage(unittest.TestCase):
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
+        file_match = re.search(
+            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
+        )
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         assert file_match is not None
         file_path = file_match.group(1).strip()
@@ -727,7 +757,9 @@ class TestToolResultMessage(unittest.TestCase):
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
+        file_match = re.search(
+            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
+        )
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         assert file_match is not None
         file_path = file_match.group(1).strip()
@@ -791,7 +823,9 @@ class TestToolResultMessage(unittest.TestCase):
         # 使用更健壮的方法提取文件路径
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
+        file_match = re.search(
+            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
+        )
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         assert file_match is not None
         file_path = file_match.group(1).strip()
@@ -839,7 +873,9 @@ class TestToolResultMessage(unittest.TestCase):
         # 提取文件路径并验证临时文件
         import re
 
-        file_match = re.search(r"已保存到临时文件：([^。]+)", str(llm_message.get("content", "")))
+        file_match = re.search(
+            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
+        )
         self.assertIsNotNone(file_match, "文件路径未在消息中找到")
         assert file_match is not None
         file_path = file_match.group(1).strip()
@@ -861,127 +897,131 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
     def setUp(self):
         # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
+
         self.toolset = ToolSet()
         # 注册modify_file_with_sed工具
         from linhai.tool.tools.file import modify_file_with_sed
+
         self.toolset.register_tool(
             name="modify_file_with_sed",
             desc="使用sed表达式修改文件",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "expression": ToolArgInfo(desc="sed表达式", type="str")
+                "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
-            required_args=["filepath", "expression"]
+            required_args=["filepath", "expression"],
         )(modify_file_with_sed)
 
     @unittest.mock.patch("linhai.tool.tools.file.Path")
     @unittest.mock.patch("linhai.tool.tools.file.platform.system")
     @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
-    def test_modify_file_with_sed_line_number_warning(self, mock_run, mock_system, mock_path):
+    def test_modify_file_with_sed_line_number_warning(
+        self, mock_run, mock_system, mock_path
+    ):
         """测试使用行号表达式时返回警告"""
         # 模拟macOS系统
         mock_system.return_value = "Darwin"
-        
+
         # 模拟文件存在且是文件
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.as_posix.return_value = "test.txt"
-        
+
         # 模拟sed命令成功执行
         mock_run.return_value.returncode = 0
-        
+
         # 使用行号表达式（以数字开头）
         result = self.toolset.call_tool(
             "modify_file_with_sed",
-            {
-                "filepath": "test.txt",
-                "expression": "1s/old/new/"
-            }
+            {"filepath": "test.txt", "expression": "1s/old/new/"},
         )
-        
+
         # 验证返回结果包含警告
         self.assertIn("警告：使用行号匹配并修改文件", result)
         self.assertIn("文件的行号已经变化", result)
         self.assertIn("使用行号匹配是不推荐的行为", result)
-        
+
         # 验证sed命令被正确调用
         mock_run.assert_called_once_with(
             ["sed", "-i", "", "1s/old/new/", "test.txt"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
     @unittest.mock.patch("linhai.tool.tools.file.Path")
     @unittest.mock.patch("linhai.tool.tools.file.platform.system")
     @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
-    def test_modify_file_with_sed_no_line_number_warning(self, mock_run, mock_system, mock_path):
+    def test_modify_file_with_sed_no_line_number_warning(
+        self, mock_run, mock_system, mock_path
+    ):
         """测试使用非行号表达式时不返回警告"""
         # 模拟macOS系统
         mock_system.return_value = "Darwin"
-        
+
         # 模拟文件存在且是文件
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.as_posix.return_value = "test.txt"
-        
+
         # 模拟sed命令成功执行
         mock_run.return_value.returncode = 0
-        
+
         # 使用非行号表达式（不以数字开头）
         result = self.toolset.call_tool(
-            "modify_file_with_sed",
-            {
-                "filepath": "test.txt",
-                "expression": "s/old/new/"
-            }
+            "modify_file_with_sed", {"filepath": "test.txt", "expression": "s/old/new/"}
         )
-        
+
         # 验证返回结果不包含警告
         self.assertNotIn("警告：使用行号匹配并修改文件", result)
         self.assertIn("已使用sed表达式修改", result)
-        
+
         # 验证sed命令被正确调用
         mock_run.assert_called_once_with(
             ["sed", "-i", "", "s/old/new/", "test.txt"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
     @unittest.mock.patch("linhai.tool.tools.file.Path")
     @unittest.mock.patch("linhai.tool.tools.file.platform.system")
     @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
-    def test_modify_file_with_sed_line_range_warning(self, mock_run, mock_system, mock_path):
+    def test_modify_file_with_sed_line_range_warning(
+        self, mock_run, mock_system, mock_path
+    ):
         """测试使用行号范围表达式时返回警告"""
         # 模拟macOS系统
         mock_system.return_value = "Darwin"
-        
+
         # 模拟文件存在且是文件
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.as_posix.return_value = "test.txt"
-        
+
         # 模拟sed命令成功执行
         mock_run.return_value.returncode = 0
-        
+
         # 使用行号范围表达式（以数字开头）
         result = self.toolset.call_tool(
             "modify_file_with_sed",
-            {
-                "filepath": "test.txt",
-                "expression": "1,5s/old/new/"
-            }
+            {"filepath": "test.txt", "expression": "1,5s/old/new/"},
         )
-        
+
         # 验证返回结果包含警告
         self.assertIn("警告：使用行号匹配并修改文件", result)
         self.assertIn("文件的行号已经变化", result)
         self.assertIn("使用行号匹配是不推荐的行为", result)
-        
+
         # 验证sed命令被正确调用
         mock_run.assert_called_once_with(
             ["sed", "-i", "", "1,5s/old/new/", "test.txt"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
     @unittest.mock.patch("linhai.tool.tools.file.Path")
@@ -991,30 +1031,29 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
         """测试在Linux系统上的行为"""
         # 模拟Linux系统
         mock_system.return_value = "Linux"
-        
+
         # 模拟文件存在且是文件
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.as_posix.return_value = "test.txt"
-        
+
         # 模拟sed命令成功执行
         mock_run.return_value.returncode = 0
-        
+
         # 使用行号表达式
         result = self.toolset.call_tool(
             "modify_file_with_sed",
-            {
-                "filepath": "test.txt",
-                "expression": "1s/old/new/"
-            }
+            {"filepath": "test.txt", "expression": "1s/old/new/"},
         )
-        
+
         # 验证返回结果包含警告
         self.assertIn("警告：使用行号匹配并修改文件", result)
-        
+
         # 验证sed命令在Linux系统上被正确调用
         mock_run.assert_called_once_with(
             ["sed", "-i", "1s/old/new/", "test.txt"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )

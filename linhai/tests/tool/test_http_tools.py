@@ -70,7 +70,9 @@ class TestFetchArticleTool(unittest.TestCase):
                 read_data="# 测试标题\n\n测试段落\n\n<table>\n<tr><th>列1</th><th>列2</th></tr>\n<tr><td>数据1</td><td>数据2</td></tr>\n</table>\n\n![短URL图片](http://example.com/short.jpg)\n"
             ),
         ):
-            result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+            result = self.toolset.call_tool(
+                "fetch_article", {"url": "http://example.com"}
+            )
 
         # 验证结果包含转换后的Markdown
         self.assertIn("测试标题", result)
@@ -172,7 +174,9 @@ class TestFetchArticleTool(unittest.TestCase):
                 read_data="<table>\n<tr><th>列1</th><th>列2</th></tr>\n<tr><td>数据1</td><td>数据2</td></tr>\n</table>\n"
             ),
         ):
-            result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+            result = self.toolset.call_tool(
+                "fetch_article", {"url": "http://example.com"}
+            )
 
         # 验证表格以HTML形式输出，但不应包含属性
         self.assertIn("<table>", result)

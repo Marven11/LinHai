@@ -188,7 +188,9 @@ async def search_web(query: str, max_results: int = 5) -> str:
 
                 # 清理DuckDuckGo重定向URL
                 if link and str(link).startswith("//duckduckgo.com/l/?uddg="):
-                    link = urllib.parse.unquote(str(link).split("uddg=")[1].split("&")[0])
+                    link = urllib.parse.unquote(
+                        str(link).split("uddg=")[1].split("&")[0]
+                    )
 
                 snippet_elem = result.select_one(".result__snippet")
                 snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""

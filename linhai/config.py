@@ -23,8 +23,11 @@ class LLMConfig(BaseModel):
     def validate_name(cls, v):  # pylint: disable=no-self-argument
         """验证name格式：只允许[a-zA-Z0-9-_]字符"""
         import re
-        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
-            raise ConfigValidationError("LLM name can only contain letters, numbers, hyphens, and underscores")
+
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ConfigValidationError(
+                "LLM name can only contain letters, numbers, hyphens, and underscores"
+            )
         return v
 
     @field_validator("base_url")
@@ -59,6 +62,7 @@ class AgentConfig(BaseModel):
             raise TypeError("compress_threshold必须是int或float类型")
         return v
 
+
 class MemoryConfig(BaseModel):
     """内存配置类型定义。"""
 
@@ -89,9 +93,9 @@ def load_config(config_path: Union[str, Path, None] = None) -> Config:
         config_path = Path(__file__).parent / "config.toml"
     elif isinstance(config_path, str):
         config_path = Path(config_path)
-    
+
     config_data = tomllib.load(config_path.open("rb"))
-    
+
     # 使用pydantic验证配置，捕获ValidationError并转换为ConfigValidationError
     try:
         config = Config(**config_data)

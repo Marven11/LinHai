@@ -31,13 +31,13 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 - [ ] 任务1
 - [x] 任务2
 - [ ] 任务3"""
-        
+
         self.agent.messages = []
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, full_response, self.tool_calls
         )
-        
+
         # 有任务规划标记，不应该添加警告消息
         self.assertEqual(len(self.agent.messages), 0)
 
@@ -48,13 +48,13 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 任务1
 任务2
 任务3"""
-        
+
         self.agent.messages = []
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, full_response, self.tool_calls
         )
-        
+
         # 没有任务规划标记，应该添加警告消息
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIn("你没有输出任务规划", self.agent.messages[0].message)
@@ -63,13 +63,13 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试长内容中的任务规划检查。"""
         # 创建一个长内容，确保超过8000字符
         long_content = "任务描述" + "x" * 8000
-        
+
         self.agent.messages = []
-        
+
         await self.plugin.after_message_generation(
             self.agent, self.answer, long_content, self.tool_calls
         )
-        
+
         # 长内容中没有任务规划标记，应该添加警告消息
         self.assertEqual(len(self.agent.messages), 1)
 

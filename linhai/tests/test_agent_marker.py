@@ -79,7 +79,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 "whitelist": ["add_numbers"],
             },
         }
-        
+
         # 创建模拟的 GroupChat
         self.group_chat = MagicMock()
         self.group_chat.register_queue = MagicMock()
@@ -88,24 +88,26 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.group_chat.send = AsyncMock()
         self.group_chat.is_empty = MagicMock(return_value=True)
         self.group_chat.get_members = MagicMock()
-        
+
         # 创建模拟的 ToolManager
         self.tool_manager = MagicMock()
         self.tool_manager.get_tools_info.return_value = []
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
-        
+
         # 设置 group_chat.get_members 返回 tool_manager
         self.group_chat.get_members.return_value = self.tool_manager
 
         # 创建初始消息列表
         from linhai.llm import SystemMessage
 
-        init_messages = [SystemMessage(
-            template="Test system prompt",
-            current_time="2025-10-26 17:00:00",  # 测试用固定时间
-            group_chat=self.group_chat
-        )]
+        init_messages = [
+            SystemMessage(
+                template="Test system prompt",
+                current_time="2025-10-26 17:00:00",  # 测试用固定时间
+                group_chat=self.group_chat,
+            )
+        ]
 
         self.agent = Agent(
             config=config,

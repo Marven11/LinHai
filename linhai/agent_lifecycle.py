@@ -21,12 +21,21 @@ logger = logging.getLogger(__name__)
 # 生命周期回调类型定义
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[
-    ["linhai.agent.Agent", bool, bool],  # agent, enable_compress, disable_waiting_user_warning
+    [
+        "linhai.agent.Agent",
+        bool,
+        bool,
+    ],  # agent, enable_compress, disable_waiting_user_warning
     Awaitable[None],
 ]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
-    ["linhai.agent.Agent", Answer, str, list[dict]],  # agent, answer, full_response, tool_calls
+    [
+        "linhai.agent.Agent",
+        Answer,
+        str,
+        list[dict],
+    ],  # agent, answer, full_response, tool_calls
     Awaitable[None],
 ]
 
@@ -35,7 +44,12 @@ BeforeToolCallCallback: TypeAlias = Callable[
 ]
 
 AfterToolCallCallback: TypeAlias = Callable[
-    ["linhai.agent.Agent", ToolCallMessage, Any, bool],  # agent, tool_call, tool_result, success
+    [
+        "linhai.agent.Agent",
+        ToolCallMessage,
+        Any,
+        bool,
+    ],  # agent, tool_call, tool_result, success
     Awaitable[None],
 ]
 
@@ -102,7 +116,10 @@ class Lifecycle:
         return should_interrupt
 
     async def trigger_before_message_generation(
-        self, agent: "linhai.agent.Agent", enable_compress: bool, disable_waiting_user_warning: bool
+        self,
+        agent: "linhai.agent.Agent",
+        enable_compress: bool,
+        disable_waiting_user_warning: bool,
     ):
         """触发消息生成前的事件。"""
         for callback in self._before_message_generation_callbacks:
@@ -112,7 +129,11 @@ class Lifecycle:
                 logger.error("Before message generation callback error: %s", e)
 
     async def trigger_after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls: list[dict]
+        self,
+        agent: "linhai.agent.Agent",
+        answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
     ):
         """触发消息生成后的事件。"""
         for callback in self._after_message_generation_callbacks:

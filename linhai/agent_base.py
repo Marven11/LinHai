@@ -146,12 +146,26 @@ class GlobalMemory:
             }
 
     def to_json(self) -> str:
+        """
+        将全局记忆对象序列化为JSON字符串。
 
+        返回:
+            str: 包含文件路径的JSON字符串
+        """
         data = {"filepath": str(self.filepath)}
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+        """
+        从JSON字符串反序列化全局记忆对象。
 
+        参数:
+            json_str: JSON格式的字符串
+            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
+
+        返回:
+            GlobalMemory: 反序列化的全局记忆对象
+        """
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))

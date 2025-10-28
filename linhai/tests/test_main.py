@@ -15,12 +15,14 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
-    def test_agent_command_with_message_option(self, mock_group_chat, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_message_option(
+        self, mock_group_chat, mock_cli_app, mock_create_agent
+    ):
         """测试使用-m选项时消息被正确传递"""
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -43,7 +45,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
         # 验证 GroupChat 的 get_members 被调用
@@ -53,7 +57,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         self.assertEqual(cli_call_args.kwargs.get("init_message"), "测试消息")
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -68,7 +74,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -91,7 +97,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
         # 验证 GroupChat 的 get_members 被调用
@@ -101,7 +109,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         self.assertIsNone(cli_call_args.kwargs.get("init_message"))
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -110,12 +120,14 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     @patch("builtins.open")
-    def test_agent_command_with_file_option(self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_file_option(
+        self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent
+    ):
         """测试使用-f选项时从文件读取消息"""
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -140,13 +152,17 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证文件被正确打开
-        mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")
+        mock_open.assert_called_once_with(
+            Path("test_message.txt"), "r", encoding="utf-8"
+        )
 
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
         # 验证 GroupChat 的 get_members 被调用
@@ -157,7 +173,9 @@ class TestMainCommandLine(unittest.TestCase):
         cli_call_args = mock_cli_app.call_args
         expected_message = f"用户使用-f选项指定了第一条消息，路径为: {str(Path('test_message.txt'))}, 内容如下:\n文件中的测试消息"
         self.assertEqual(cli_call_args.kwargs.get("init_message"), expected_message)
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -166,12 +184,14 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     @patch("builtins.open")
-    def test_agent_command_with_both_message_and_file_options(self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_both_message_and_file_options(
+        self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent
+    ):
         """测试同时使用-m和-f选项时文件内容优先"""
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -196,13 +216,17 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertIsInstance(cm.exception, SystemExit)
 
         # 验证文件被正确打开
-        mock_open.assert_called_once_with(Path("test_message.txt"), "r", encoding="utf-8")
+        mock_open.assert_called_once_with(
+            Path("test_message.txt"), "r", encoding="utf-8"
+        )
 
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
         # 验证 GroupChat 的 get_members 被调用
@@ -213,7 +237,9 @@ class TestMainCommandLine(unittest.TestCase):
         cli_call_args = mock_cli_app.call_args
         expected_message = f"用户使用-f选项指定了第一条消息，路径为: {str(Path('test_message.txt'))}, 内容如下:\n文件中的优先消息"
         self.assertEqual(cli_call_args.kwargs.get("init_message"), expected_message)
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -221,7 +247,9 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
     @patch("builtins.open")
-    def test_agent_command_with_file_option_file_not_found(self, mock_open, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_file_option_file_not_found(
+        self, mock_open, mock_cli_app, mock_create_agent
+    ):
         """测试使用-f选项时文件不存在的错误处理"""
         # 模拟文件不存在错误
         mock_open.side_effect = FileNotFoundError("文件未找到")
@@ -237,7 +265,9 @@ class TestMainCommandLine(unittest.TestCase):
                     main()
 
         # 验证文件打开尝试
-        mock_open.assert_called_once_with(Path("nonexistent.txt"), "r", encoding="utf-8")
+        mock_open.assert_called_once_with(
+            Path("nonexistent.txt"), "r", encoding="utf-8"
+        )
 
         # 验证create_agent和CLIApp没有被调用
         mock_create_agent.assert_not_called()
@@ -249,7 +279,9 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
     @patch("builtins.open")
-    def test_agent_command_with_file_option_read_error(self, mock_open, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_file_option_read_error(
+        self, mock_open, mock_cli_app, mock_create_agent
+    ):
         """测试使用-f选项时文件读取错误的处理"""
         # 模拟文件读取错误
         mock_open.side_effect = Exception("读取错误")
@@ -277,12 +309,14 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
-    def test_agent_command_with_llm_option(self, mock_group_chat, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_llm_option(
+        self, mock_group_chat, mock_cli_app, mock_create_agent
+    ):
         """测试使用--llm选项时LLM名称被正确传递"""
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -305,7 +339,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path, llm_name)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
@@ -316,7 +352,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         self.assertIsNone(cli_call_args.kwargs.get("init_message"))
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()
@@ -324,12 +362,14 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
-    def test_agent_command_with_llm_and_message_options(self, mock_group_chat, mock_cli_app, mock_create_agent):
+    def test_agent_command_with_llm_and_message_options(
+        self, mock_group_chat, mock_cli_app, mock_create_agent
+    ):
         """测试同时使用--llm和-m选项"""
         # 模拟 GroupChat 实例
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
-        
+
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
@@ -352,7 +392,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         # 应该被调用为 create_agent(group_chat, config_path, llm_name)
-        self.assertEqual(call_args[0][0], mock_group_chat_instance)  # 第一个参数是 group_chat
+        self.assertEqual(
+            call_args[0][0], mock_group_chat_instance
+        )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
@@ -363,7 +405,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         self.assertEqual(cli_call_args.kwargs.get("init_message"), "测试消息")
-        self.assertEqual(cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance)
+        self.assertEqual(
+            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
+        )
 
         # 验证CLIApp.run()被调用
         mock_app.run.assert_called_once()

@@ -294,6 +294,7 @@ model = "test_model_1"
 
         with self.assertRaises(ConfigValidationError):
             load_config()
+
     @patch("pathlib.Path.open")
     def test_load_config_with_openai_kwargs(self, mock_open):
         """Test loading a config with client_options and completion_options."""
@@ -320,11 +321,16 @@ include_usage = true
         self.assertIsInstance(config, Config)
         self.assertEqual(len(config.llm), 1)
         self.assertEqual(config.llm[0].name, "qwen")
-        self.assertEqual(config.llm[0].base_url, "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        self.assertEqual(
+            config.llm[0].base_url, "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        )
         self.assertEqual(config.llm[0].api_key, "test_key")
         self.assertEqual(config.llm[0].model, "qwen-plus")
         self.assertEqual(config.llm[0].client_options, {"timeout": 30})
-        self.assertEqual(config.llm[0].completion_options, {"stream_options": {"include_usage": True}})
+        self.assertEqual(
+            config.llm[0].completion_options,
+            {"stream_options": {"include_usage": True}},
+        )
 
 
 if __name__ == "__main__":

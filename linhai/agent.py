@@ -91,7 +91,6 @@ class Agent:
         self.current_enable_compress = True
         self.soft_compress_triggered = False  # 软压缩限制触发标志
 
-
         # Plugin使用的变量
         self.current_disable_waiting_user_warning = False
 
@@ -104,15 +103,15 @@ class Agent:
         llm_toolset = ToolSet()
 
         # 处理缺少llm_names的情况
-        llm_names = self.config.get("llm_names", [f"llm{i}" for i in range(len(self.config["llms"]))])
+        llm_names = self.config.get(
+            "llm_names", [f"llm{i}" for i in range(len(self.config["llms"]))]
+        )
 
         @llm_toolset.register_tool(
             name="switch_llm",
             desc="切换到指定的LLM。可用的LLM包括: " + ", ".join(llm_names),
             args={
-                "llm_name": ToolArgInfo(
-                    desc="要切换到的LLM名称", type="str"
-                ),
+                "llm_name": ToolArgInfo(desc="要切换到的LLM名称", type="str"),
             },
             required_args=["llm_name"],
         )
@@ -128,7 +127,7 @@ class Agent:
             if llm_name not in llm_names:
                 available_llms = ", ".join(llm_names)
                 return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
-            
+
             index = llm_names.index(llm_name)
             self.config["current_llm_index"] = index
             return f"已切换到LLM: {llm_name}"
@@ -149,7 +148,9 @@ class Agent:
             return f"当前使用的LLM: {current_name}"
 
         # 将工具集添加到ToolManager
-        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(llm_toolset)
+        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
+            llm_toolset
+        )
 
         # 添加虚拟工具集（原dummy.py中的工具）
         dummy_toolset = ToolSet()
@@ -198,7 +199,9 @@ class Agent:
             return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
         # 将虚拟工具集添加到ToolManager
-        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(dummy_toolset)
+        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
+            dummy_toolset
+        )
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -282,8 +285,6 @@ class Agent:
             logger.error("处理消息时出错: %s", str(e))
             raise RuntimeError("处理消息时出错") from e
 
-
-
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
@@ -305,17 +306,11 @@ class Agent:
             workflow_function = workflow["func"]
             return await workflow_function(self)
 
-
-
-
         # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
-        if (
-            tool_call.function_name == "read_file"
-        ):
+        if tool_call.function_name == "read_file":
             self.messages.append(
                 RuntimeMessage("提醒：读取多个文件时建议使用廉价LLM以节省成本。")
             )
-
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(self, tool_call)
@@ -404,14 +399,18 @@ class Agent:
         for msg in messages:
             if isinstance(msg, ChatMessage) and msg.role == "user":
                 content = msg.message.strip()
-                if content.startswith('@'):
+                if content.startswith("@"):
                     llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
                     if llm_name in self.config["llm_names"]:
-                        self.config["current_llm_index"] = self.config["llm_names"].index(llm_name)
+                        self.config["current_llm_index"] = self.config[
+                            "llm_names"
+                        ].index(llm_name)
                     else:
                         # 添加错误消息
-                        self.messages.append(RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在"))
-        
+                        self.messages.append(
+                            RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
+                        )
+
         self.messages += messages
         try:
             return await self.generate_response()
@@ -509,7 +508,6 @@ class Agent:
             except Exception:
                 traceback.print_exc()
                 continue
-
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
@@ -646,7 +644,9 @@ def create_agent(
             current_llm_index = llm_names.index(llm_name)
         else:
             available_llms = ", ".join(llm_names)
-            raise ValueError(f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}")
+            raise ValueError(
+                f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
+            )
 
     agent_config: AgentConfig = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,

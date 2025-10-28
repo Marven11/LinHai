@@ -16,13 +16,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
-        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[ToolSet()])
+        self.tool_manager = ToolManager(
+            group_chat=self.group_chat, toolsets=[ToolSet()]
+        )
 
     async def test_get_token_usage_tool_registered(self):
         """Test that get_token_usage tool is properly registered."""
         # Create a mock agent with the dummy tools
         from linhai.agent import Agent, AgentConfig
-        
+
         # Mock the agent configuration with proper typing
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
@@ -32,15 +34,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         # Create agent instance
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
-        
+
         # Check if get_token_usage tool is registered by calling it
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
-        
+
         # If we get a result (not an error), the tool is registered
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
 
@@ -48,7 +50,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test that thanox_history tool is properly registered."""
         # Create a mock agent with the dummy tools
         from linhai.agent import Agent, AgentConfig
-        
+
         # Mock the agent configuration with proper typing
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
@@ -58,15 +60,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         # Create agent instance
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
-        
+
         # Check if thanox_history tool is registered by calling it
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
-        
+
         # If we get a result (not an error), the tool is registered
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
 
@@ -74,7 +76,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when token usage is available."""
         # Create a mock agent
         from linhai.agent import Agent, AgentConfig
-        
+
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -83,15 +85,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
         agent.last_token_usage = 12345
-        
+
         # Call the get_token_usage tool
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
-        
+
         # Check the result
         self.assertEqual(type(result).__name__, "ToolResultMessage")
         content = getattr(result, "content", "")
@@ -102,7 +104,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when no token usage is available."""
         # Create a mock agent
         from linhai.agent import Agent, AgentConfig
-        
+
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -111,15 +113,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
         agent.last_token_usage = None
-        
+
         # Call the get_token_usage tool
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
-        
+
         # Check the result
         self.assertEqual(type(result).__name__, "ToolResultMessage")
         content = getattr(result, "content", "")
@@ -131,7 +133,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         from linhai.agent import Agent, AgentConfig
         from linhai.llm import SystemMessage, ChatMessage
         from linhai.agent_base import RuntimeMessage
-        
+
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -140,22 +142,29 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         # Create messages (more than 10 to trigger deletion)
         from linhai.llm import Message
+
         init_messages: list[Message] = [
-            SystemMessage(template="test", current_time="2023-01-01 00:00:00", group_chat=self.group_chat)
+            SystemMessage(
+                template="test",
+                current_time="2023-01-01 00:00:00",
+                group_chat=self.group_chat,
+            )
         ]
         for i in range(15):
             init_messages.append(RuntimeMessage(f"Message {i}"))
-        
-        agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=init_messages)
-        
+
+        agent = Agent(
+            config=mock_config, group_chat=self.group_chat, init_messages=init_messages
+        )
+
         # Call the thanox_history tool
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
-        
+
         # Check the result
         self.assertEqual(type(result).__name__, "ToolResultMessage")
         content = getattr(result, "content", "")
@@ -168,7 +177,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         from linhai.agent import Agent, AgentConfig
         from linhai.llm import SystemMessage
         from linhai.agent_base import RuntimeMessage
-        
+
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -177,22 +186,29 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_hard": 60000,
             "compress_threshold_soft": 30000,
         }
-        
+
         # Create only a few messages (less than 10)
         from linhai.llm import Message
+
         init_messages: list[Message] = [
-            SystemMessage(template="test", current_time="2023-01-01 00:00:00", group_chat=self.group_chat)
+            SystemMessage(
+                template="test",
+                current_time="2023-01-01 00:00:00",
+                group_chat=self.group_chat,
+            )
         ]
         for i in range(5):
             init_messages.append(RuntimeMessage(f"Message {i}"))
-        
-        agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=init_messages)
-        
+
+        agent = Agent(
+            config=mock_config, group_chat=self.group_chat, init_messages=init_messages
+        )
+
         # Call the thanox_history tool
         result = await self.tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
-        
+
         # Check the result
         self.assertEqual(type(result).__name__, "ToolResultMessage")
         content = getattr(result, "content", "")
