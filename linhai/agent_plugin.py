@@ -166,7 +166,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
         if count > 10:  # 阈值设为10
             agent.messages.append(
                 RuntimeMessage(
-                    f"警告：你输出了过多`- [x]`标记（{count}个），"
+                    f"警告：你输出了过多`- [x]`标记（{count}个），请使用分级无序列表整理大小任务。"
                     "请注意：如果完成的任务过多，可以不输出完成的小任务，只输出大任务已完成。"
                     "提示：如果完成的任务过多（十几条），在所有小任务都完成时，可以不输出完成的小任务，只输出大任务已完成。因为小任务是过程性的，完成的细节相对于结果来说不重要。"
                 )
@@ -258,6 +258,7 @@ class TaskPlanningPlugin(Plugin):
                 agent.messages.append(
                     RuntimeMessage(
                         "注意：你刚刚在思考时输出了任务规划，但是没有在实际的输出中输出！"
+                        "必须在实际的输出而非只有思考时输出任务规划！"
                     )
                 )
         elif self.no_planning_score > 0:
