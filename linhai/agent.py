@@ -219,11 +219,9 @@ class Agent:
         """
         logger.info("Agent进入等待用户状态")
         while self.state == "waiting_user":
-            chat_msg = await self.group_chat.receive("agent_user_input")
-            if chat_msg is None:
-                break
-
-            await self.handle_messages([chat_msg])
+            msg = await self.group_chat.receive("agent_user_input")
+            assert isinstance(msg, ChatMessage)
+            await self.handle_message(msg)
 
     async def state_working(self):
         """
@@ -237,7 +235,8 @@ class Agent:
         if not self.group_chat.is_empty("agent_user_input"):
             try:
                 msg = await self.group_chat.receive("agent_user_input")
-                await self.handle_messages([cast(ChatMessage, msg)])
+                assert isinstance(msg, ChatMessage)
+                await self.handle_message(msg)
             except QueueEmpty:
                 logger.info("用户输入队列已关闭")
             except RuntimeError as e:
@@ -278,7 +277,8 @@ class Agent:
         try:
             msg = await self.group_chat.receive("agent_user_input")
             self.state = "waiting_user"
-            await self.handle_messages([cast(ChatMessage, msg)])
+            assert isinstance(msg, ChatMessage)
+            await self.handle_message(msg)
         except QueueEmpty:
             logger.info("用户输入队列已关闭")
         except (RuntimeError, asyncio.CancelledError) as e:
@@ -385,33 +385,23 @@ class Agent:
             )
             return False
 
-    async def handle_messages(self, messages: list[Message]):
-        """
-        处理新的消息并将其添加到消息历史中。
-
-        参数:
-            messages: 要处理的消息列表
-
-        返回:
-            生成的响应
-        """
+    async def handle_message(self, msg: Message):
         # 处理@系统逻辑：在接收到用户消息时更新当前LLM
-        for msg in messages:
-            if isinstance(msg, ChatMessage) and msg.role == "user":
-                content = msg.message.strip()
-                if content.startswith("@"):
-                    llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
-                    if llm_name in self.config["llm_names"]:
-                        self.config["current_llm_index"] = self.config[
-                            "llm_names"
-                        ].index(llm_name)
-                    else:
-                        # 添加错误消息
-                        self.messages.append(
-                            RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
-                        )
+        if isinstance(msg, ChatMessage) and msg.role == "user":
+            content = msg.message.strip()
+            if content.startswith("@"):
+                llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
+                if llm_name in self.config["llm_names"]:
+                    self.config["current_llm_index"] = self.config["llm_names"].index(
+                        llm_name
+                    )
+                else:
+                    # 添加错误消息
+                    self.messages.append(
+                        RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
+                    )
 
-        self.messages += messages
+        self.messages.append(msg)
         try:
             return await self.generate_response()
         except Exception:

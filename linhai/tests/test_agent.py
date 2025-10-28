@@ -135,7 +135,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Test
-        await self.agent.handle_messages([test_msg])
+        await self.agent.handle_message(test_msg)
 
         # 验证 cli_user_output 队列收到了正确的 tokens 和最终 Answer
         tokens = []
@@ -185,7 +185,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # 测试用户消息处理
-        await self.agent.handle_messages([user_msg])
+        await self.agent.handle_message(user_msg)
 
         # 验证用户消息被添加到messages中
         self.assertEqual(
@@ -232,7 +232,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # Test and verify exception is raised
         with self.assertRaises(RuntimeError) as cm:
-            await self.agent.handle_messages([test_msg])
+            await self.agent.handle_message(test_msg)
 
         self.assertEqual(str(cm.exception), "Test error")
         self.assertEqual(self.agent.state, "paused")
