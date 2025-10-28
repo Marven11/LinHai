@@ -12,6 +12,7 @@ from linhai.tool.base import (
     ToolErrorMessage,
 )
 import subprocess
+import re
 
 
 def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
@@ -392,7 +393,17 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
         else:  # Linux或其他
             cmd = ["sed", "-i", expression, file_path.as_posix()]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return f"文件{file_path.as_posix()!r}已使用sed表达式修改"
+
+        # 检查表达式是否使用行号匹配
+
+        line_number_pattern = r"^\d+"
+        result_text = f"文件{file_path.as_posix()!r}已使用sed表达式修改"
+        if re.match(line_number_pattern, expression.strip()):
+            result_text += (
+                "警告：使用行号匹配并修改文件，文件的行号已经变化！"
+                "使用行号匹配是不推荐的行为，之后需要按照内容匹配以避免删除错误！"
+            )
+        return result_text
     except subprocess.CalledProcessError as exc:
         return f"sed命令执行错误: {exc.stderr}"
     except OSError as exc:
