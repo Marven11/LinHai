@@ -144,9 +144,13 @@ class WrongEndPlugin(Plugin):
 class BadMultiToolCall(Plugin):
     """检查多工具调用原因"""
 
+    def __init__(self):
+        self.last_message_had_reason = False
+
     async def after_message_generation(
         self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls
     ):
+        # 检查是否有连续工具调用块
         pattern = r"```\n+```json toolcall"
         if re.search(pattern, full_response):
             agent.messages.append(
@@ -154,6 +158,20 @@ class BadMultiToolCall(Plugin):
                     "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？"
                 )
             )
+        
+        # 检查当前消息是否输出了"同时调用的原因"
+        current_has_reason = "同时调用的原因" in full_response
+        
+        # 如果上一条消息没有输出原因，但当前消息输出了，则提醒
+        if not self.last_message_had_reason and current_has_reason:
+            agent.messages.append(
+                RuntimeMessage(
+                    "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"
+                )
+            )
+        
+        # 更新状态
+        self.last_message_had_reason = current_has_reason
 
     def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到during_message_generation回调。"""

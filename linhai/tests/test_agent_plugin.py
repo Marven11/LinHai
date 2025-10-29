@@ -160,3 +160,98 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
         # 只有一个工具调用，不应该添加警告消息
         self.assertEqual(len(self.agent.messages), 0)
+
+    async def test_after_message_generation_with_reason_output_after_no_reason(self):
+        """测试上一条消息没有输出原因，当前消息输出了原因的情况。"""
+        # 第一条消息：没有输出原因
+        full_response1 = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response1, self.tool_calls
+        )
+
+        # 第一条消息没有原因，不应该有提醒
+        self.assertEqual(len(self.agent.messages), 0)
+
+        # 第二条消息：输出了原因
+        full_response2 = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+同时调用的原因：这两个工具没有顺序依赖
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response2, self.tool_calls
+        )
+
+        # 第二条消息输出了原因，且上一条没有，应该添加成功提醒
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("你成功输出了'同时调用的原因'", self.agent.messages[0].message)
+
+    async def test_after_message_generation_with_reason_output_after_reason(self):
+        """测试上一条消息输出了原因，当前消息也输出了原因的情况。"""
+        # 第一条消息：输出了原因
+        full_response1 = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+同时调用的原因：这两个工具没有顺序依赖
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response1, self.tool_calls
+        )
+
+        # 第一条消息有原因，不应该有提醒
+        self.assertEqual(len(self.agent.messages), 0)
+
+        # 第二条消息：也输出了原因
+        full_response2 = """一些内容
+
+```json toolcall
+{"name": "tool3", "arguments": {}}
+```
+
+同时调用的原因：这些工具没有顺序依赖
+
+```json toolcall
+{"name": "tool4", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response2, self.tool_calls
+        )
+
+        # 第二条消息输出了原因，但上一条也有，不应该添加成功提醒
+        self.assertEqual(len(self.agent.messages), 0)
