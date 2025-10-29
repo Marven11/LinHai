@@ -475,13 +475,21 @@ class Agent:
                 return await self.generate_response()
 
             if not self.group_chat.is_empty("agent_user_input"):
-                await self.group_chat.send("cli_user_output", answer)
-                chat_message = cast(ChatMessage, answer.get_message())
-                self.messages.append(chat_message)
-                self.messages.append(RuntimeMessage("用户打断了你的回答"))
                 msg = await self.group_chat.receive("agent_user_input")
-                answer.interrupt()
-                return await self.handle_user_message(msg)
+                assert isinstance(msg, ChatMessage)
+                content = msg.message.strip()
+                if content.startswith("/queue"):
+                    # 以/queue开头，不打断，将消息添加到消息列表，继续生成响应
+                    self.messages.append(msg)
+                    self.messages.append(RuntimeMessage("用户消息已排队，不会打断当前输出"))
+                else:
+                    # 正常打断
+                    await self.group_chat.send("cli_user_output", answer)
+                    chat_message = cast(ChatMessage, answer.get_message())
+                    self.messages.append(chat_message)
+                    self.messages.append(RuntimeMessage("用户打断了你的回答"))
+                    answer.interrupt()
+                    return await self.handle_user_message(msg)
 
         await self.group_chat.send("cli_user_output", answer)
 
