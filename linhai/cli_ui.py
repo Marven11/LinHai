@@ -99,7 +99,6 @@ class CLIApp(App):
     """
 
     MAX_MESSAGES = 1000
-    TRIM_THRESHOLD = 500
 
     def __init__(
         self,
@@ -343,21 +342,12 @@ class CLIApp(App):
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
-        if len(self.messages) > self.MAX_MESSAGES:
-            # 计算要删除的数量
-            excess = len(self.messages) - self.TRIM_THRESHOLD
-            if excess > 0:
-                # 从self.messages中移除前excess个消息
-                removed_messages = self.messages[:excess]
-                self.messages = self.messages[excess:]
 
-                # 从UI容器中移除对应的MessageWidget
-                container = self.query_one("#chat-container")
-                # 获取所有MessageWidget子组件
-                message_widgets = container.query(MessageWidget)
-                # 由于顺序一致，移除前excess个
-                for i in range(min(excess, len(message_widgets))):
-                    message_widgets[i].remove()
+        message_widgets = self.query_one("#chat-container").query(MessageWidget)
+        if len(message_widgets) < self.MAX_MESSAGES:
+            return
+        for i in range(self.MAX_MESSAGES - len(message_widgets)):
+            message_widgets[i].remove()
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""

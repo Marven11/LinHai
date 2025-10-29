@@ -33,7 +33,7 @@ async def run(args, init_message: str):
         init_message=init_message,
     )
     await app.run_async()
-    sys.exit(app.return_code if app.return_code else 0)
+    return app.return_code
 
 
 def main():
@@ -68,8 +68,8 @@ def main():
             print(f"错误: 读取文件时发生错误: {e}")
             sys.exit(1)
 
-    asyncio.run(run(args, init_message))
-
+    return_code = asyncio.run(run(args, init_message))
+    sys.exit(return_code)
 
 if __name__ == "__main__":
     main()
