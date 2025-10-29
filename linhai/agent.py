@@ -589,7 +589,7 @@ class Agent:
 
 async def create_agent(
     group_chat: GroupChat,
-    config_path: str | Path = "./config.toml",
+    config_path: str | Path,
     llm_name: str | None = None,
 ):
     config = load_config(config_path)

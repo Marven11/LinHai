@@ -23,7 +23,7 @@ class TestConfig(unittest.TestCase):
             ]
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertEqual(len(config.llm), 1)
         self.assertEqual(config.llm[0].name, "primary")
@@ -46,7 +46,7 @@ class TestConfig(unittest.TestCase):
         }
 
         with self.assertRaises(ConfigValidationError):
-            load_config()
+            load_config("test_config.toml")
 
     @patch("linhai.config.tomllib.load")
     def test_load_config_empty_api_key(self, mock_tomllib_load):
@@ -63,7 +63,7 @@ class TestConfig(unittest.TestCase):
         }
 
         with self.assertRaises(ConfigValidationError):
-            load_config()
+            load_config("test_config.toml")
 
     @patch("linhai.config.tomllib.load")
     def test_load_config_empty_model(self, mock_tomllib_load):
@@ -80,7 +80,7 @@ class TestConfig(unittest.TestCase):
         }
 
         with self.assertRaises(ConfigValidationError):
-            load_config()
+            load_config("test_config.toml")
 
     @patch("linhai.config.tomllib.load")
     def test_load_config_with_optional_fields(self, mock_tomllib_load):
@@ -106,7 +106,7 @@ class TestConfig(unittest.TestCase):
             }
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertEqual(config.llm[0].base_url, "https://api.example.com")
         self.assertIsNotNone(config.agent)
@@ -138,7 +138,7 @@ class TestConfig(unittest.TestCase):
             }
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
         assert config.agent is not None
@@ -163,7 +163,7 @@ class TestConfig(unittest.TestCase):
             }
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertIsNotNone(config.agent)
         assert config.agent is not None
@@ -184,7 +184,7 @@ class TestConfig(unittest.TestCase):
             ]
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         # 检查默认值
         self.assertIsNone(config.agent)
@@ -211,7 +211,7 @@ class TestConfig(unittest.TestCase):
             ]
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertEqual(len(config.llm), 2)
 
@@ -257,7 +257,7 @@ class TestConfig(unittest.TestCase):
             }
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertEqual(len(config.llm), 2)
 
@@ -292,7 +292,7 @@ class TestConfig(unittest.TestCase):
         }
 
         with self.assertRaises(ConfigValidationError):
-            load_config()
+            load_config("test_config.toml")
 
     @patch("linhai.config.tomllib.load")
     def test_load_config_with_openai_kwargs(self, mock_tomllib_load):
@@ -316,7 +316,7 @@ class TestConfig(unittest.TestCase):
             ]
         }
 
-        config = load_config()
+        config = load_config("test_config.toml")
         self.assertIsInstance(config, Config)
         self.assertEqual(len(config.llm), 1)
         self.assertEqual(config.llm[0].name, "qwen")

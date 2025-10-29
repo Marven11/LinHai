@@ -127,14 +127,12 @@ class Config(BaseModel):
         return f"Config(llms={llm_names}, agent={self.agent is not None}, memory={self.memory is not None}, tools={self.tools is not None})"
 
 
-def load_config(config_path: Union[str, Path, None] = None) -> Config:
+def load_config(config_path: Union[str, Path]) -> Config:
     """从指定路径加载配置并验证
     参数:
-        config_path: 配置文件路径，可以是str或Path对象，默认为linhai/config.toml
+        config_path: 配置文件路径，必须是str或Path对象
     """
-    if config_path is None:
-        config_path = Path(__file__).parent / "config.toml"
-    elif isinstance(config_path, str):
+    if isinstance(config_path, str):
         config_path = Path(config_path)
 
     # 使用上下文管理器确保文件正确关闭

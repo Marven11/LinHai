@@ -55,7 +55,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                asyncio.run(create_agent(group_chat))
+                asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -107,7 +107,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                asyncio.run(create_agent(group_chat))
+                asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -151,7 +151,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                asyncio.run(create_agent(group_chat))
+                asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -198,7 +198,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                asyncio.run(create_agent(group_chat))
+                asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -244,7 +244,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                asyncio.run(create_agent(group_chat))
+                asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
