@@ -100,7 +100,7 @@ class ToolCallCountPlugin(Plugin):
 
         content_length = len(current_content)
         if content_length < 8000:
-            max_json_blocks = 10
+            max_json_blocks = 30
         else:
             max_json_blocks = 1
 
@@ -108,7 +108,8 @@ class ToolCallCountPlugin(Plugin):
             await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage(
-                    f"错误：一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
+                    f"错误：禁止在超长回答中调用巨量工具。"
+                    f"一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
                     f"最多允许{max_json_blocks}个工具调用。请分多次调用。"
                 )
             )
@@ -139,6 +140,25 @@ class WrongEndPlugin(Plugin):
     def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+class BadMultiToolCall(Plugin):
+    """检查多工具调用原因"""
+
+    async def after_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls
+    ):
+        pattern = r"```\n+\n*```json toolcall"
+        if re.search(pattern, full_response):
+            agent.messages.append(
+                RuntimeMessage(
+                    "警告：你是不是忘记在输出多个工具调用的时候输出可以同时调用的原因了？"
+                )
+            )
+
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
 
 class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
@@ -297,6 +317,8 @@ def register_default_plugins(lifecycle) -> None:
         WaitingUserPlugin(),
         ToolcallWithoutPlanningPlugin(),
         ToolCallCountPlugin(),
+        WrongEndPlugin(),
+        BadMultiToolCall(),
         ExcessiveCheckmarkPlugin(),
         MarkdownSyntaxPlugin(),
         ThinkingToolCallPlugin(),
