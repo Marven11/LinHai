@@ -8,10 +8,12 @@
     - 你可能需要参考mcp_server_example.py
 - [x] 对unittest运行pylint，修复错误和警告
 - [x] 运行并修复所有unittest
-- [ ] 支持通过配置添加MCP，可以自定义MCP服务器的名字和路径
+- [x] 支持通过配置添加MCP，可以自定义MCP服务器的名字和路径
     - 路径是相对配置文件而非当前目录的，需要将相对路径根据配置文件路径转换成绝对路径
-        - [ ] 编写这个细节的unittest
-    - [ ] 编写完善的unittest
+        - [x] 编写这个细节的unittest
+    - [x] 编写完善的unittest
+- [ ] unittest会打印一些消息，使用./hypothesis_falsification.txt找出原因并清理
+    - After message generation callback error: 'EmptyAnswer' object has no attribute 'get_reasoning_message'等
 - [ ] 在create_agent函数中根据配置添加MCP
     - 组合优于继承，组合式优于选项式
         - 你应该将MCP connector的创建移动到create_agent函数中
@@ -34,6 +36,19 @@
         - mentioned: 不处于开头的`@`提到的名称，不包含`@`
     - 添加对应的unittest测试
     - 使用这个函数解析用户给agent的消息
+- [ ] 在agent.py中添加一个工具`delete_message_by_uuid`，允许agent在运行时删除某个较大的工具结果消息
+    - 当一个工具返回的内容大于30000字符时
+        - 在agent对象的一个字典中记录
+            - 字典为dict[uuid, 消息的引用]
+                - 这里必须为消息的引用，不能是消息的索引，索引会因为历史压缩等原因变化
+            - 每个较大的工具消息都有一个独立的uuid
+        - 为agent提供一个runtime消息，告诉agent可以通过delete_message_by_uuid删除这个工具结果消息
+    - 当token限制达到软阈值时：
+        - 告诉agent优先通过在工作时顺手调用delete_message_by_uuid删除不需要的大块消息
+            - 强调delete_message_by_uuid不会和其他工具发生冲突，可以同时调用
+    - 编写unittest
+        - 删除不存在的消息
+        - 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

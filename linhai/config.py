@@ -1,5 +1,6 @@
 """Configuration module for LinHai agent."""
 
+import os
 import re
 from typing import Optional, Union
 import tomllib
@@ -45,12 +46,33 @@ class LLMConfig(BaseModel):
         return f"LLMConfig(name={self.name}, model={self.model})"
 
 
+class MCPConfig(BaseModel):
+    """MCP服务器配置类型定义。"""
+
+    name: str = Field(..., min_length=1)
+    server_script_path: str
+
+    @field_validator("name")
+    def validate_name(cls, v):  # pylint: disable=no-self-argument
+        """验证name格式：只允许[a-zA-Z0-9-_]字符"""
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ConfigValidationError(
+                "MCP server name can only contain letters, numbers, hyphens, and underscores"
+            )
+        return v
+
+    def __str__(self) -> str:
+        """返回MCP配置的字符串表示"""
+        return f"MCPConfig(name={self.name}, server_script_path={self.server_script_path})"
+
+
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
     compress_threshold_soft: Union[int, float] = Field(default=0.5, ge=0.0)
     compress_threshold_hard: Union[int, float] = Field(default=0.8, ge=0.0)
     tool_confirmation: Optional[dict] = None
+    mcp: list[MCPConfig] = Field(default_factory=list)
 
     @field_validator("compress_threshold_soft", "compress_threshold_hard")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
@@ -67,7 +89,8 @@ class AgentConfig(BaseModel):
 
     def __str__(self) -> str:
         """返回Agent配置的字符串表示"""
-        return f"AgentConfig(soft_threshold={self.compress_threshold_soft}, hard_threshold={self.compress_threshold_hard})"
+        mcp_names = [mcp.name for mcp in self.mcp]
+        return f"AgentConfig(soft_threshold={self.compress_threshold_soft}, hard_threshold={self.compress_threshold_hard}, mcp={mcp_names})"
 
 
 class MemoryConfig(BaseModel):
@@ -114,11 +137,21 @@ def load_config(config_path: Union[str, Path, None] = None) -> Config:
     elif isinstance(config_path, str):
         config_path = Path(config_path)
 
-    config_data = tomllib.load(config_path.open("rb"))
+    # 使用上下文管理器确保文件正确关闭
+    with config_path.open("rb") as f:
+        config_data = tomllib.load(f)
 
     # 使用pydantic验证配置，捕获ValidationError并转换为ConfigValidationError
     try:
         config = Config(**config_data)
     except Exception as e:
         raise ConfigValidationError(f"配置验证失败: {str(e)}") from e
+
+    # 将MCP服务器的相对路径转换为绝对路径（基于配置文件所在目录）
+    config_dir = config_path.parent
+    if config.agent and config.agent.mcp:
+        for mcp_config in config.agent.mcp:
+            if not os.path.isabs(mcp_config.server_script_path):
+                mcp_config.server_script_path = str(config_dir / mcp_config.server_script_path)
+
     return config

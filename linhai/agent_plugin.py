@@ -129,11 +129,11 @@ class WrongEndPlugin(Plugin):
     async def after_message_generation(
         self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls
     ):
-        regex_result = re.search("<｜end▁of▁[a-z]+｜>$", full_response)
+        regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
             agent.messages.append(
                 RuntimeMessage(
-                    f"错误: 输出了错误的token: {regex_result!r}"
+                    f"警告: 输出了错误的token: {regex_result!r}"
                 )
             )
 
