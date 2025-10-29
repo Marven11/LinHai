@@ -65,13 +65,12 @@ class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
-        planning_count = current_content.count("\n- [ ]") + current_content.count(
-            "\n- [x]"
-        )
+        pattern = r"^ *- \[[ x]\]"
+        planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
         if json_block_count > 1 and planning_count == 0:
             await agent.group_chat.send("cli_user_output", answer)
@@ -94,7 +93,7 @@ class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         json_block_count = current_content.count("\n```json toolcall")
@@ -123,11 +122,29 @@ class ToolCallCountPlugin(Plugin):
         lifecycle.register_during_message_generation(self.during_message_generation)
 
 
+class WrongEndPlugin(Plugin):
+    """禁止输出end of sentence的plugin"""
+
+    async def after_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls
+    ):
+        regex_result = re.search("<｜end▁of▁[a-z]+｜>$", full_response)
+        if regex_result:
+            agent.messages.append(
+                RuntimeMessage(
+                    f"错误: 输出了错误的token: {regex_result!r}"
+                )
+            )
+
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
 class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         current_reasoning_content = answer.get_reasoning_message()
@@ -203,7 +220,7 @@ class TaskPlanningPlugin(Plugin):
         self.no_planning_score = 0
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         if self.no_planning_score <= 3:
@@ -213,7 +230,7 @@ class TaskPlanningPlugin(Plugin):
             return False
         pattern = r"^ *- \[[ x]\]"
         matches = re.findall(pattern, current_content, re.MULTILINE)
-        if matches is None:
+        if not matches:
             return False
         json_block_count = current_reasoning_content.count("\n```json toolcall")
         if json_block_count == 0:
