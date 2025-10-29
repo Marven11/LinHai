@@ -32,7 +32,6 @@ from linhai.llm import (
     OpenAi,
     OpenAiAnswer,
     ToolCallMessage,
-    LanguageModelMessage,
 )
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
@@ -221,7 +220,7 @@ class Agent:
         while self.state == "waiting_user":
             msg = await self.group_chat.receive("agent_user_input")
             assert isinstance(msg, ChatMessage)
-            await self.handle_message(msg)
+            await self.handle_user_message(msg)
 
     async def state_working(self):
         """
@@ -236,7 +235,7 @@ class Agent:
             try:
                 msg = await self.group_chat.receive("agent_user_input")
                 assert isinstance(msg, ChatMessage)
-                await self.handle_message(msg)
+                await self.handle_user_message(msg)
             except QueueEmpty:
                 logger.info("用户输入队列已关闭")
             except RuntimeError as e:
@@ -278,7 +277,7 @@ class Agent:
             msg = await self.group_chat.receive("agent_user_input")
             self.state = "waiting_user"
             assert isinstance(msg, ChatMessage)
-            await self.handle_message(msg)
+            await self.handle_user_message(msg)
         except QueueEmpty:
             logger.info("用户输入队列已关闭")
         except (RuntimeError, asyncio.CancelledError) as e:
@@ -472,7 +471,7 @@ class Agent:
                 self.messages.append(RuntimeMessage("用户打断了你的回答"))
                 self.messages.append(await self.group_chat.receive("agent_user_input"))
                 answer.interrupt()
-                return await self.generate_response()
+                return await self.handle_user_message(msg)
 
         await self.group_chat.send("cli_user_output", answer)
 
