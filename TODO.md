@@ -6,7 +6,7 @@
 
 - [x] 我刚刚重构了代码，添加了对MCP的支持，编写对应的unittest并运行
     - 你可能需要参考mcp_server_example.py
-- [ ] 对unittest运行pylint，修复错误和警告
+- [x] 对unittest运行pylint，修复错误和警告
 - [ ] 运行并修复所有unittest
 - [ ] 支持通过配置添加MCP，可以自定义MCP服务器的名字和路径
     - 路径是相对配置文件而非当前目录的，需要将相对路径根据配置文件路径转换成绝对路径
