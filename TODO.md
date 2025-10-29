@@ -14,10 +14,11 @@
     - [x] 编写完善的unittest
 - [x] unittest会打印一些消息，使用./hypothesis_falsification.txt找出原因并清理
     - After message generation callback error: 'EmptyAnswer' object has no attribute 'get_reasoning_message'等
-- [ ] 在create_agent函数中根据配置添加MCP
+- [x] 在create_agent函数中根据配置添加MCP
     - 组合优于继承，组合式优于选项式
         - 你应该将MCP connector的创建移动到create_agent函数中
         - 然后将创建的connector传给tool manager
+- [ ] 添加上一个任务的unittest
 - [ ] 再次运行并修复所有unittest
 - [ ] 为什么linhai/config.toml文件会被创建？
     - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码

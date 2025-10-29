@@ -38,6 +38,7 @@ from linhai.type_hints import AgentState
 from linhai.config import load_config
 from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
+from linhai.tool.mcp_connector import MCPConnector
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
@@ -586,7 +587,7 @@ class Agent:
             await asyncio.sleep(0)
 
 
-def create_agent(
+async def create_agent(
     group_chat: GroupChat,
     config_path: str | Path = "./config.toml",
     llm_name: str | None = None,
@@ -663,8 +664,6 @@ def create_agent(
         compress_history_range,
     )
 
-    # TODO: 使用group_chat获得mcp connector实例，然后根据配置连接MCP
-
     init_messages: list[Message] = [
         SystemMessage(
             template=agent_config["system_prompt"],
@@ -672,6 +671,14 @@ def create_agent(
             group_chat=group_chat,
         )
     ]
+
+    # 连接配置中的MCP服务器
+    if config.agent and config.agent.mcp:
+        config_dir = Path(config_path).parent
+        connector = MCPConnector(group_chat)
+        for mcp_config in config.agent.mcp:
+            server_script_path = config_dir / mcp_config.server_script_path
+            await connector.connect_stdio(mcp_config.name, server_script_path.absolute().as_posix())
 
     # 定义要检查的文件路径列表（按优先级顺序）
     memory_filepaths = [
@@ -695,10 +702,10 @@ def create_agent(
 
     # 添加廉价LLM状态消息
 
-    Agent(
+    agent = Agent(
         config=agent_config,
         group_chat=group_chat,
         init_messages=init_messages,
     )
 
-    return group_chat
+    return agent

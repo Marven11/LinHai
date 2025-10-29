@@ -5,13 +5,14 @@ LinHai 主程序入口模块。
 """
 
 from pathlib import Path
+import asyncio
 import argparse
 import unittest
+import sys
 
-from linhai.agent import create_agent, Agent
+from linhai.agent import create_agent
 from linhai.cli_ui import CLIApp
 from linhai.group_chat import GroupChat
-from linhai.config import load_config
 
 
 def run_tests():
@@ -23,9 +24,20 @@ def run_tests():
     return result.wasSuccessful()
 
 
+async def run(args, init_message: str):
+
+    group_chat = GroupChat()
+    _agent = await create_agent(group_chat, args.config.expanduser(), args.llm)
+    app = CLIApp(
+        group_chat=group_chat,
+        init_message=init_message,
+    )
+    await app.run_async()
+    sys.exit(app.return_code if app.return_code else 0)
+
+
 def main():
     """主函数，解析命令行参数并执行相应命令。"""
-    import sys
 
     parser = argparse.ArgumentParser(description="LinHai 主程序")
     parser.add_argument(
@@ -56,15 +68,7 @@ def main():
             print(f"错误: 读取文件时发生错误: {e}")
             sys.exit(1)
 
-    group_chat = GroupChat()
-    create_agent(group_chat, args.config.expanduser(), args.llm)
-    _ = group_chat.get_members("agent", Agent)
-    app = CLIApp(
-        group_chat=group_chat,
-        init_message=init_message,
-    )
-    app.run()
-    sys.exit(app.return_code if app.return_code else 0)
+    asyncio.run(run(args, init_message))
 
 
 if __name__ == "__main__":

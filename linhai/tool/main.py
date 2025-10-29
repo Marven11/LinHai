@@ -27,6 +27,7 @@ class ToolManager:
         group_chat: GroupChat,
         toolsets: list[ToolSet],
         config: Optional[Config] = None,
+        mcp_connector: Optional[MCPConnector] = None
     ):
         """初始化工具管理器
 
@@ -37,7 +38,7 @@ class ToolManager:
         self.group_chat = group_chat
         self.workflows: dict[str, Tool] = {}
         self.config = config
-        self.mcp_connector = MCPConnector(group_chat)
+        self.mcp_connector = mcp_connector
 
         names = Counter(
             [name for toolset in toolsets for name in toolset.get_tools().keys()]
@@ -50,7 +51,10 @@ class ToolManager:
 
     @property
     def toolsets(self):
-        return self._toolsets + self.mcp_connector.get_toolsets()
+        toolsets = self._toolsets 
+        if self.mcp_connector:
+            toolsets += self.mcp_connector.get_toolsets()
+        return toolsets
 
     def add_toolset(self, toolset: ToolSet):
         existing_names = set(
