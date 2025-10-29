@@ -163,7 +163,8 @@ class BadMultiToolCall(Plugin):
         current_has_reason = "同时调用的原因" in full_response
         
         # 如果上一条消息没有输出原因，但当前消息输出了，则提醒
-        if not self.last_message_had_reason and current_has_reason:
+        # 注意：只有在有多个工具调用时才需要检查原因
+        if not self.last_message_had_reason and current_has_reason and full_response.count("```json toolcall") > 1:
             agent.messages.append(
                 RuntimeMessage(
                     "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"

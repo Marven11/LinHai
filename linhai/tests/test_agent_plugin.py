@@ -140,7 +140,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
         # 有正常分隔的工具调用块，不应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 0)
+        # 注意：现在由于有多个工具调用且有原因，会添加成功提醒
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("你成功输出了'同时调用的原因'", self.agent.messages[0].message)
 
     async def test_after_message_generation_with_single_tool_call(self):
         """测试只有单个工具调用的情况。"""
