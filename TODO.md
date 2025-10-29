@@ -7,12 +7,33 @@
 - [x] 我刚刚重构了代码，添加了对MCP的支持，编写对应的unittest并运行
     - 你可能需要参考mcp_server_example.py
 - [x] 对unittest运行pylint，修复错误和警告
-- [ ] 运行并修复所有unittest
+- [x] 运行并修复所有unittest
 - [ ] 支持通过配置添加MCP，可以自定义MCP服务器的名字和路径
     - 路径是相对配置文件而非当前目录的，需要将相对路径根据配置文件路径转换成绝对路径
         - [ ] 编写这个细节的unittest
     - [ ] 编写完善的unittest
+- [ ] 在create_agent函数中根据配置添加MCP
+    - 组合优于继承，组合式优于选项式
+        - 你应该将MCP connector的创建移动到create_agent函数中
+        - 然后将创建的connector传给tool manager
 - [ ] 再次运行并修复所有unittest
+- [ ] 为什么linhai/config.toml文件会被创建？
+    - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
+- [ ] 拆分create_agent函数，至少应该拆出这些部分
+    - 创建llm实例
+    - 创建AgentConfig
+    - 创建ToolManager
+    - 创建init message
+- [ ] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
+    - 当前用户的输入总是打断agent输出
+    - 编写unittest: 消息以/queue开头时不会被打断，否则被打断
+- [ ] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
+    - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
+        - switch_model: 用户要求应该切换到哪个llm
+        - command: 命令的名称，不包含`/`
+        - mentioned: 不处于开头的`@`提到的名称，不包含`@`
+    - 添加对应的unittest测试
+    - 使用这个函数解析用户给agent的消息
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
