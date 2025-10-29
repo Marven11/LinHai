@@ -1,6 +1,7 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 import json
+import uuid
 from pathlib import Path
 import datetime
 from typing import (
@@ -91,6 +92,7 @@ class Agent:
         self.current_enable_compress = True
         self.soft_compress_triggered = False  # 软压缩限制触发标志
 
+        self.large_messages: dict[str, Message] = {}  # 存储大消息的UUID映射
         # Plugin使用的变量
         self.current_disable_waiting_user_warning = False
 
@@ -208,6 +210,30 @@ class Agent:
 
             return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
+        @dummy_toolset.register_tool(
+            name="delete_message_by_uuid",
+            desc="删除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具删除不需要的大消息以节省token。",
+            args={
+                "uuid": ToolArgInfo(desc="要删除的消息的UUID", type="str"),
+            },
+            required_args=["uuid"],
+        )
+        def delete_message_by_uuid(uuid: str) -> str:
+            """删除大消息工具函数。
+            
+            Args:
+                uuid: 要删除的消息的UUID
+                
+            Returns:
+                str: 删除结果消息
+            """
+            if uuid not in self.large_messages:
+                return f"错误：UUID '{uuid}' 不存在，无法删除消息"
+            
+            # 从large_messages中移除
+            del self.large_messages[uuid]
+            return f"已成功删除UUID为 '{uuid}' 的大消息"
+
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
 
@@ -265,6 +291,7 @@ class Agent:
             self.messages.append(
                 RuntimeMessage(
                     f"当前Token用量为{self.last_token_usage}，已达到软限制。硬限制为{hard_threshold}，当前使用{percentage:.1f}%，还有{remaining} token直到强制压缩。"
+                    "建议优先使用 delete_message_by_uuid 工具删除不需要的大块消息。delete_message_by_uuid 不会和其他工具发生冲突，可以同时调用。"
                 )
             )
 
@@ -333,6 +360,18 @@ class Agent:
                 await self.lifecycle.trigger_after_tool_call(
                     self, tool_call, tool_result, True
                 )
+
+                # 检查工具结果大小，如果大于30000字符则记录UUID
+                tool_result_content = str(tool_result)
+                if len(tool_result_content) > 30000:
+                    message_uuid = str(uuid.uuid4())
+                    self.large_messages[message_uuid] = tool_result
+                    self.messages.append(
+                        RuntimeMessage(
+                            f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配UUID: {message_uuid}。"
+                            "你可以使用 delete_message_by_uuid 工具删除此消息以节省token。"
+                        )
+                    )
 
                 self.messages.append(
                     RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
