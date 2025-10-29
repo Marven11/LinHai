@@ -34,7 +34,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         config_path.write_text(config_content, encoding="utf-8")
         return config_path
 
-    @patch('linhai.tool.mcp_connector.MCPConnector')
+    @patch('linhai.agent.MCPConnector')
     @patch('os.path.exists')
     def test_create_agent_with_mcp_config(self, mock_exists, mock_mcp_connector_class):
         """测试create_agent函数正确配置MCP服务器"""
@@ -63,9 +63,12 @@ server_script_path = "another_server.py"
 """
         config_path = self.create_test_config(config_content)
         
-        # 模拟MCPConnector实例
+        # 模拟MCPConnector实例，完全mock连接过程
         mock_connector_instance = AsyncMock()
         mock_mcp_connector_class.return_value = mock_connector_instance
+        
+        # Mock connect_stdio方法，避免实际连接
+        mock_connector_instance.connect_stdio = AsyncMock()
         
         # 调用create_agent
         result = asyncio.run(create_agent(self.group_chat, config_path))
@@ -117,7 +120,7 @@ compress_threshold_hard = 80000
         agent = self.group_chat.get_members("agent", Agent)
         self.assertIsNotNone(agent)
 
-    @patch('linhai.tool.mcp_connector.MCPConnector')
+    @patch('linhai.agent.MCPConnector')
     @patch('os.path.exists')
     def test_create_agent_with_mcp_relative_path_conversion(self, mock_exists, mock_mcp_connector_class):
         """测试MCP相对路径转换为绝对路径"""
@@ -142,9 +145,12 @@ server_script_path = "../mcp_server_example.py"
 """
         config_path = self.create_test_config(config_content)
         
-        # 模拟MCPConnector实例
+        # 模拟MCPConnector实例，完全mock连接过程
         mock_connector_instance = AsyncMock()
         mock_mcp_connector_class.return_value = mock_connector_instance
+        
+        # Mock connect_stdio方法，避免实际连接
+        mock_connector_instance.connect_stdio = AsyncMock()
         
         # 调用create_agent
         asyncio.run(create_agent(self.group_chat, config_path))

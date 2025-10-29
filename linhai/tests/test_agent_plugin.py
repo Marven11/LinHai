@@ -97,12 +97,15 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_after_message_generation_with_bad_multi_tool_call(self):
-        """测试有连续工具调用块的情况。"""
+        """测试有多个工具调用但没有输出原因的情况。"""
         full_response = """一些内容
 
-```
 ```json toolcall
 {"name": "tool1", "arguments": {}}
+```
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
 ```
 
 更多内容"""
@@ -113,7 +116,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
             self.agent, self.answer, full_response, self.tool_calls
         )
 
-        # 有连续工具调用块，应该添加警告消息
+        # 有多个工具调用但没有原因，应该添加警告消息
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", self.agent.messages[0].message)
 
@@ -204,9 +207,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
             self.agent, self.answer, full_response2, self.tool_calls
         )
 
-        # 第二条消息输出了原因，且上一条没有，应该添加成功提醒
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("你成功输出了'同时调用的原因'", self.agent.messages[0].message)
+        self.assertEqual(len(self.agent.messages), 0)
 
     async def test_after_message_generation_with_reason_output_after_reason(self):
         """测试上一条消息输出了原因，当前消息也输出了原因的情况。"""
@@ -236,3 +237,53 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
         # 第一条消息有原因，且上一条也有原因，不应该有提醒
         self.assertEqual(len(self.agent.messages), 0)
+    async def test_after_message_generation_with_multiple_tool_calls_no_reason(self):
+        """测试有多个工具调用但没有输出原因的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, self.tool_calls
+        )
+
+        # 有多个工具调用但没有原因，应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", self.agent.messages[0].message)
+
+    async def test_after_message_generation_with_multiple_tool_calls_and_reason(self):
+        """测试有多个工具调用且输出了原因的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+同时调用的原因：这两个工具没有顺序依赖
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, self.tool_calls
+        )
+
+        # 有多个工具调用且有原因，不应该添加警告消息
+        # 注意：由于有多个工具调用且有原因，会添加成功提醒
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("你成功输出了'同时调用的原因'", self.agent.messages[0].message)

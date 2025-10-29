@@ -237,6 +237,14 @@ class Agent:
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
 
+        # 解析tool_confirmation配置并存储
+        tool_confirmation_config = self.config.get("tool_confirmation", {})
+        if not isinstance(tool_confirmation_config, dict):
+            tool_confirmation_config = {}
+        self.skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
+        self.whitelist = tool_confirmation_config.get("whitelist", [])
+        self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
+
     def delete_message_by_uuid(self, uuid: str) -> str:
         """删除大消息方法。
         
@@ -258,14 +266,6 @@ class Agent:
             self.messages.remove(message_to_delete)
             
         return f"已成功删除UUID为 '{uuid}' 的大消息"
-
-        # 解析tool_confirmation配置并存储
-        tool_confirmation_config = self.config.get("tool_confirmation", {})
-        if not isinstance(tool_confirmation_config, dict):
-            tool_confirmation_config = {}
-        self.skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
-        self.whitelist = tool_confirmation_config.get("whitelist", [])
-        self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
     async def state_waiting_user(self):
         """

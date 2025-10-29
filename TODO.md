@@ -18,13 +18,13 @@
     - 组合优于继承，组合式优于选项式
         - 你应该将MCP connector的创建移动到create_agent函数中
         - 然后将创建的connector传给tool manager
-- [ ] 添加上一个任务的unittest
-- [ ] 再次运行并修复所有unittest
-- [ ] BadMultiToolCall插件貌似没有生效
+- [x] 添加上一个任务的unittest
+- [x] 再次运行并修复所有unittest
+- [x] BadMultiToolCall插件貌似没有生效
     - 这个插件用来检测紧邻的两个工具调用code block
     - 编写unittest测试然后修复
-- [ ] 修改BadMultiToolCall插件
-    - 如果上一条消息没有输出“同时调用的原因”，这条消息输出了，则提醒“你成功输出了...以后注意...”
+- [ ] 使用./hypothesis_falsification.txt找出unittest test_agent_plugin失败的原因
+    - 你可以写入临时脚本并运行
 - [ ] 为什么linhai/config.toml文件会被创建？
     - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
 - [ ] 拆分create_agent函数，至少应该拆出这些部分
