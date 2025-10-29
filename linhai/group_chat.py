@@ -16,6 +16,7 @@ class GroupChat:
         self.queues[name] = asyncio.Queue()
 
     def register_member(self, name: LiteralString, obj: Any):
+        # 让各个对象在__init__时注册自己
         if name in self.members:
             raise RuntimeError(f"{name!r} exists")
         self.members[name] = obj

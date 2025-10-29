@@ -657,7 +657,6 @@ def create_agent(
     }
 
     tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
-    group_chat.register_member("tool_manager", tool_manager)
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
