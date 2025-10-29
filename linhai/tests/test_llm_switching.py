@@ -40,10 +40,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 注册必要的队列
         self.group_chat.register_queue("cli_user_output")
 
-        # 在Agent创建之前先创建ToolManager
-        self.tool_manager = ToolManager(
-            group_chat=self.group_chat, toolsets=[global_tools]
-        )
+
 
         # 创建初始消息列表
         init_messages = [
@@ -59,24 +56,24 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             init_messages=init_messages,
         )
-        # 在Agent创建后获取ToolManager
+        # 在Agent创建后获取ToolManager（包含Agent注册的工具）
         self.tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""
-        # 调用current_llm工具
+        # 通过ToolManager调用current_llm工具
         tool_call = ToolCallMessage(function_name="current_llm", function_arguments={})
 
         # 调用工具
-        result = await self.agent.call_tool(tool_call)
+        result = await self.tool_manager.process_tool_call(tool_call)
 
-        # 验证工具调用成功
-        self.assertFalse(result)  # 不需要早期返回
-
-        # 验证消息中包含当前LLM信息
-        self.assertTrue(
-            any("当前使用的LLM: primary" in str(msg) for msg in self.agent.messages)
-        )
+        # 验证工具调用成功并返回ToolResultMessage
+        # 如果返回ToolErrorMessage，检查错误内容
+        if type(result).__name__ == "ToolErrorMessage":
+            self.fail(f"current_llm tool failed: {result.content}")
+        
+        self.assertEqual(type(result).__name__, "ToolResultMessage")
+        self.assertIn("primary", str(result.content))
 
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
@@ -85,19 +82,19 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             function_name="switch_llm", function_arguments={"llm_name": "secondary"}
         )
 
-        # 调用工具
-        result = await self.agent.call_tool(tool_call)
+        # 通过ToolManager调用工具
+        result = await self.tool_manager.process_tool_call(tool_call)
 
-        # 验证工具调用成功
-        self.assertFalse(result)  # 不需要早期返回
+        # 验证工具调用成功并返回ToolResultMessage
+        # 如果返回ToolErrorMessage，检查错误内容
+        if type(result).__name__ == "ToolErrorMessage":
+            self.fail(f"switch_llm tool failed: {result.content}")
+        
+        self.assertEqual(type(result).__name__, "ToolResultMessage")
+        self.assertIn("已切换到LLM: secondary", str(result.content))
 
         # 验证LLM索引已更新
         self.assertEqual(self.agent.config["current_llm_index"], 1)
-
-        # 验证消息中包含切换成功信息
-        self.assertTrue(
-            any("已切换到LLM: secondary" in str(msg) for msg in self.agent.messages)
-        )
 
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
@@ -106,28 +103,20 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             function_name="switch_llm", function_arguments={"llm_name": "nonexistent"}
         )
 
-        # 调用工具
-        result = await self.agent.call_tool(tool_call)
+        # 通过ToolManager调用工具
+        result = await self.tool_manager.process_tool_call(tool_call)
 
-        # 验证工具调用成功（返回False表示不需要早期返回，但有错误消息）
-        self.assertFalse(result)
+        # 验证工具调用成功并返回ToolResultMessage
+        # 如果返回ToolErrorMessage，检查错误内容
+        if type(result).__name__ == "ToolErrorMessage":
+            self.fail(f"switch_llm tool failed: {result.content}")
+        
+        self.assertEqual(type(result).__name__, "ToolResultMessage")
+        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))
+        self.assertIn("可用的LLM包括: primary, secondary", str(result.content))
 
         # 验证LLM索引未改变
         self.assertEqual(self.agent.config["current_llm_index"], 0)
-
-        # 验证消息中包含错误信息
-        self.assertTrue(
-            any(
-                "错误：LLM名称 'nonexistent' 不存在" in str(msg)
-                for msg in self.agent.messages
-            )
-        )
-        self.assertTrue(
-            any(
-                "可用的LLM包括: primary, secondary" in str(msg)
-                for msg in self.agent.messages
-            )
-        )
 
     async def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""

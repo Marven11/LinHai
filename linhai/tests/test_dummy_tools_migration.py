@@ -10,6 +10,7 @@ from linhai.agent_base import RuntimeMessage
 
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
+from linhai.tool.base import global_tools
 
 
 class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):

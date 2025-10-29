@@ -146,10 +146,20 @@ class Agent:
             current_name = llm_names[self.config["current_llm_index"]]
             return f"当前使用的LLM: {current_name}"
 
+        # 确保tool_manager存在
+        try:
+            tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        except RuntimeError:
+            # 如果不存在，创建并注册
+            tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
+            try:
+                self.group_chat.register_member("tool_manager", tool_manager)
+            except RuntimeError:
+                # 如果注册失败（可能其他线程/协程已经注册），重新获取
+                tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        
         # 将工具集添加到ToolManager
-        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
-            llm_toolset
-        )
+        tool_manager.add_toolset(llm_toolset)
 
         # 添加虚拟工具集（原dummy.py中的工具）
         dummy_toolset = ToolSet()
@@ -198,9 +208,7 @@ class Agent:
             return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
         # 将虚拟工具集添加到ToolManager
-        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
-            dummy_toolset
-        )
+        tool_manager.add_toolset(dummy_toolset)
 
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
@@ -649,6 +657,7 @@ def create_agent(
     }
 
     tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
+    group_chat.register_member("tool_manager", tool_manager)
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",

@@ -61,7 +61,7 @@ class ToolManager:
         ]
         if duplicate_names:
             raise ValueError(f"Duplicate names: {duplicate_names}")
-        self.toolsets.append(toolset)
+        self._toolsets.append(toolset)
 
     def register_workflow(
         self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]

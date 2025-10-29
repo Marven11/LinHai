@@ -16,10 +16,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            self.temp_dir = temp_dir
-            self.original_cwd = os.getcwd()
-            os.chdir(self.temp_dir)
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_dir.name)
 
     def tearDown(self):
         """Clean up test environment."""
