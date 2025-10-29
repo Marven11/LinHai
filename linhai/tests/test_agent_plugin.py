@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock
-from linhai.agent_plugin import TaskPlanningPlugin
+from linhai.agent_plugin import TaskPlanningPlugin, BadMultiToolCall
 
 
 class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
@@ -76,3 +76,87 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
+    """测试BadMultiToolCall类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.plugin = BadMultiToolCall()
+        self.agent = MagicMock()
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_after_message_generation_with_bad_multi_tool_call(self):
+        """测试有连续工具调用块的情况。"""
+        full_response = """一些内容
+
+```
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, self.tool_calls
+        )
+
+        # 有连续工具调用块，应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", self.agent.messages[0].message)
+
+    async def test_after_message_generation_with_good_multi_tool_call(self):
+        """测试有正常分隔的工具调用块的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+同时调用的原因：这两个工具没有顺序依赖
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, self.tool_calls
+        )
+
+        # 有正常分隔的工具调用块，不应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 0)
+
+    async def test_after_message_generation_with_single_tool_call(self):
+        """测试只有单个工具调用的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+更多内容"""
+
+        self.agent.messages = []
+
+        await self.plugin.after_message_generation(
+            self.agent, self.answer, full_response, self.tool_calls
+        )
+
+        # 只有一个工具调用，不应该添加警告消息
+        self.assertEqual(len(self.agent.messages), 0)
