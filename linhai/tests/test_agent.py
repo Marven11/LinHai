@@ -335,6 +335,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                     """返回空内容。"""
                     return ""
 
+                def get_reasoning_message(self):
+                    """返回None。"""
+                    return None
             return EmptyAnswer()
 
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)

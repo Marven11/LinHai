@@ -12,7 +12,7 @@
     - 路径是相对配置文件而非当前目录的，需要将相对路径根据配置文件路径转换成绝对路径
         - [x] 编写这个细节的unittest
     - [x] 编写完善的unittest
-- [ ] unittest会打印一些消息，使用./hypothesis_falsification.txt找出原因并清理
+- [x] unittest会打印一些消息，使用./hypothesis_falsification.txt找出原因并清理
     - After message generation callback error: 'EmptyAnswer' object has no attribute 'get_reasoning_message'等
 - [ ] 在create_agent函数中根据配置添加MCP
     - 组合优于继承，组合式优于选项式
