@@ -5,7 +5,8 @@ import uuid
 
 from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
-from linhai.llm import ChatMessage, RuntimeMessage
+from linhai.llm import ChatMessage
+from linhai.agent_base import RuntimeMessage
 from linhai.tool.main import ToolManager
 
 
@@ -48,7 +49,7 @@ class TestDeleteMessageByUUID(unittest.TestCase):
         
         # 调用删除工具
         result = self.agent.delete_message_by_uuid(test_uuid)
-        self.assertIn("已删除", result)
+        self.assertIn("成功删除", result)
         self.assertNotIn(test_uuid, self.agent.large_messages)
         self.assertNotIn(large_message, self.agent.messages)
 
@@ -63,6 +64,6 @@ class TestDeleteMessageByUUID(unittest.TestCase):
         self.agent.messages.remove(large_message)
         # 调用删除，应该从large_messages中删除
         result = self.agent.delete_message_by_uuid(test_uuid)
-        self.assertIn("已删除", result)
+        self.assertIn("成功删除", result)
         self.assertNotIn(test_uuid, self.agent.large_messages)
         self.assertNotIn(large_message, self.agent.messages)
