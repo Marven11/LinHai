@@ -594,7 +594,42 @@ async def create_agent(
 ):
     config = load_config(config_path)
 
-    # 创建多个LLM实例
+    # 创建LLM实例
+    llms = await _create_llm_instances(config)
+
+    # 解析tool_confirmation配置
+    tool_confirmation_config = {}
+    if config.agent and config.agent.tool_confirmation:
+        tool_confirmation_config = config.agent.tool_confirmation
+
+    # 创建AgentConfig
+    agent_config = await _create_agent_config(config, llms, llm_name, tool_confirmation_config)
+
+    # 创建ToolManager
+    tool_manager = await _create_tool_manager(group_chat)
+
+    # 创建初始化消息
+    init_messages = await _create_init_messages(config, group_chat, agent_config["system_prompt"])
+
+    # 连接配置中的MCP服务器
+    if config.agent and config.agent.mcp:
+        config_dir = Path(config_path).parent
+        connector = MCPConnector(group_chat)
+        for mcp_config in config.agent.mcp:
+            server_script_path = config_dir / mcp_config.server_script_path
+            await connector.connect_stdio(mcp_config.name, server_script_path.absolute().as_posix())
+
+    agent = Agent(
+        config=agent_config,
+        group_chat=group_chat,
+        init_messages=init_messages,
+    )
+
+    return agent
+
+
+async def _create_llm_instances(config):
+    """创建LLM实例列表"""
     llms = []
     for llm_config in config.llm:
         llm = OpenAi(
@@ -607,14 +642,12 @@ async def create_agent(
             ),
         )
         llms.append(llm)
+    return llms
 
-    # 解析tool_confirmation配置
-    tool_confirmation_config = {}
-    if config.agent and config.agent.tool_confirmation:
-        tool_confirmation_config = config.agent.tool_confirmation
 
+async def _create_agent_config(config, llms, llm_name, tool_confirmation_config):
+    """创建AgentConfig字典"""
     # 设置压缩阈值
-    # 设置默认阈值（比例0.8和0.5对应的token量）
     compress_threshold_hard = int(65536 * 0.8)
     compress_threshold_soft = int(65536 * 0.5)
 
@@ -656,29 +689,29 @@ async def create_agent(
         "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,
     }
+    return agent_config
 
+
+async def _create_tool_manager(group_chat):
+    """创建ToolManager实例并注册工作流"""
     tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
         compress_history_range,
     )
+    return tool_manager
 
+
+async def _create_init_messages(config, group_chat, system_prompt):
+    """创建初始化消息列表"""
     init_messages: list[Message] = [
         SystemMessage(
-            template=agent_config["system_prompt"],
+            template=system_prompt,
             current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             group_chat=group_chat,
         )
     ]
-
-    # 连接配置中的MCP服务器
-    if config.agent and config.agent.mcp:
-        config_dir = Path(config_path).parent
-        connector = MCPConnector(group_chat)
-        for mcp_config in config.agent.mcp:
-            server_script_path = config_dir / mcp_config.server_script_path
-            await connector.connect_stdio(mcp_config.name, server_script_path.absolute().as_posix())
 
     # 定义要检查的文件路径列表（按优先级顺序）
     memory_filepaths = [
@@ -700,12 +733,4 @@ async def create_agent(
     if not found:
         init_messages.append(GlobalMemory(memory_filepaths[0]))
 
-    # 添加廉价LLM状态消息
-
-    agent = Agent(
-        config=agent_config,
-        group_chat=group_chat,
-        init_messages=init_messages,
-    )
-
-    return agent
+    return init_messages
