@@ -20,6 +20,11 @@
         - 然后将创建的connector传给tool manager
 - [ ] 添加上一个任务的unittest
 - [ ] 再次运行并修复所有unittest
+- [ ] BadMultiToolCall插件貌似没有生效
+    - 这个插件用来检测紧邻的两个工具调用code block
+    - 编写unittest测试然后修复
+- [ ] 修改BadMultiToolCall插件
+    - 如果上一条消息没有输出“同时调用的原因”，这条消息输出了，则提醒“你成功输出了...以后注意...”
 - [ ] 为什么linhai/config.toml文件会被创建？
     - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
 - [ ] 拆分create_agent函数，至少应该拆出这些部分
