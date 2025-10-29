@@ -25,9 +25,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -60,8 +60,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
@@ -77,9 +77,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -112,8 +112,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
@@ -130,9 +130,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -176,8 +176,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
@@ -194,9 +194,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -240,8 +240,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
@@ -319,9 +319,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -355,8 +355,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
     @patch("linhai.main.create_agent")
     @patch("linhai.main.CLIApp")
@@ -372,9 +372,9 @@ class TestMainCommandLine(unittest.TestCase):
         # 模拟 create_agent 没有返回值
         mock_create_agent.return_value = None
 
-        # 模拟CLIApp，让run()方法立即返回
+        # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run = MagicMock(return_value=None)
+        mock_app.run_async = MagicMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -408,8 +408,8 @@ class TestMainCommandLine(unittest.TestCase):
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
 
-        # 验证CLIApp.run()被调用
-        mock_app.run.assert_called_once()
+        # 验证CLIApp.run_async()被调用
+        mock_app.run_async.assert_called_once()
 
 
 if __name__ == "__main__":

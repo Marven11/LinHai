@@ -25,7 +25,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    def test_linhai_md_in_current_directory(self):
+    async def test_linhai_md_in_current_directory(self):
         """Test that LINHAI.md in current directory is selected."""
         # Create LINHAI.md in current directory
         linhai_content = "# Test LINHAI.md\nTest content"
@@ -54,7 +54,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                create_agent(group_chat)
+                await create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -78,7 +78,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     global_memory_found, "GlobalMemory not found in messages"
                 )
 
-    def test_agent_md_in_current_directory(self):
+    async def test_agent_md_in_current_directory(self):
         """Test that AGENT.md in current directory is selected when LINHAI.md is missing."""
         # Create AGENT.md in current directory
         agent_content = "# Test AGENT.md\nTest content"
@@ -106,7 +106,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                create_agent(group_chat)
+                await create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -130,7 +130,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     global_memory_found, "GlobalMemory not found in messages"
                 )
 
-    def test_claude_md_in_current_directory(self):
+    async def test_claude_md_in_current_directory(self):
         """Test CLAUDE.md selection when LINHAI.md and AGENT.md are missing."""
         # Create CLAUDE.md in current directory
         claude_content = "# Test CLAUDE.md\nTest content"
@@ -150,7 +150,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                create_agent(group_chat)
+                await create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -174,7 +174,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     global_memory_found, "GlobalMemory not found in messages"
                 )
 
-    def test_no_files_in_current_directory(self):
+    async def test_no_files_in_current_directory(self):
         """Test behavior when no memory files exist in current directory."""
         mock_llm_config = LLMConfig(
             name="test_llm",
@@ -197,7 +197,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                create_agent(group_chat)
+                await create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
@@ -220,7 +220,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     global_memory_found, "GlobalMemory not found in messages"
                 )
 
-    def test_priority_order(self):
+    async def test_priority_order(self):
         """Test that file selection follows the correct priority order."""
         # Create all three files
         with open("LINHAI.md", "w", encoding="utf-8") as f:
@@ -243,7 +243,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
-                create_agent(group_chat)
+                await create_agent(group_chat)
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
                 agent.messages = [
