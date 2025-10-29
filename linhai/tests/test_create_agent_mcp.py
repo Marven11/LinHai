@@ -35,10 +35,8 @@ class TestCreateAgentMCP(unittest.TestCase):
         return config_path
 
     @patch('linhai.tool.mcp_connector.MCPConnector')
-    @patch('linhai.tool.mcp_connector.stdio_client')
-    @patch('linhai.tool.mcp_connector.ClientSession')
     @patch('os.path.exists')
-    def test_create_agent_with_mcp_config(self, mock_exists, mock_session_class, mock_stdio_client, mock_mcp_connector_class):
+    def test_create_agent_with_mcp_config(self, mock_exists, mock_mcp_connector_class):
         """测试create_agent函数正确配置MCP服务器"""
         # 模拟文件存在
         mock_exists.return_value = True

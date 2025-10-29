@@ -1,7 +1,7 @@
 """测试main.py命令行参数"""
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 from pathlib import Path
 from linhai.main import main
@@ -22,12 +22,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -49,8 +50,7 @@ class TestMainCommandLine(unittest.TestCase):
         )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为测试消息
         mock_cli_app.assert_called_once()
@@ -74,12 +74,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -101,8 +102,7 @@ class TestMainCommandLine(unittest.TestCase):
         )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为None
         mock_cli_app.assert_called_once()
@@ -127,12 +127,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -164,8 +165,7 @@ class TestMainCommandLine(unittest.TestCase):
         )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为文件内容（包含额外描述信息）
         mock_cli_app.assert_called_once()
@@ -191,12 +191,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -228,8 +229,7 @@ class TestMainCommandLine(unittest.TestCase):
         )  # 第一个参数是 group_chat
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为文件内容（包含额外描述信息）
         mock_cli_app.assert_called_once()
@@ -316,12 +316,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -344,8 +345,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为None
         mock_cli_app.assert_called_once()
@@ -369,12 +369,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_group_chat_instance = MagicMock()
         mock_group_chat.return_value = mock_group_chat_instance
 
-        # 模拟 create_agent 没有返回值
-        mock_create_agent.return_value = None
+        # 模拟 create_agent 返回Agent对象
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
 
         # 模拟CLIApp，让run_async()方法立即返回
         mock_app = MagicMock()
-        mock_app.run_async = MagicMock(return_value=None)
+        mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
 
@@ -397,8 +398,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
-        # 验证 GroupChat 的 get_members 被调用
-        mock_group_chat_instance.get_members.assert_called_once_with("agent", Agent)
+
 
         # 验证CLIApp被调用时init_message为测试消息
         mock_cli_app.assert_called_once()
