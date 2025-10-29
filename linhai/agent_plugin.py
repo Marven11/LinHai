@@ -147,11 +147,11 @@ class BadMultiToolCall(Plugin):
     async def after_message_generation(
         self, agent: "linhai.agent.Agent", answer: Answer, full_response: str, tool_calls
     ):
-        pattern = r"```\n+\n*```json toolcall"
+        pattern = r"```\n+```json toolcall"
         if re.search(pattern, full_response):
             agent.messages.append(
                 RuntimeMessage(
-                    "警告：你是不是忘记在输出多个工具调用的时候输出可以同时调用的原因了？"
+                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？"
                 )
             )
 
