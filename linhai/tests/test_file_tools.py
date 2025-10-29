@@ -3,12 +3,8 @@
 import unittest
 import tempfile
 import os
+import shutil
 from pathlib import Path
-
-# 导入要测试的工具
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from linhai.tool.tools.file import (
     read_file,
@@ -42,8 +38,6 @@ class TestFileTools(unittest.TestCase):
 
     def tearDown(self):
         """测试后清理"""
-        import shutil
-
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 

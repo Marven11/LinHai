@@ -34,6 +34,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟的流响应 - 创建一个真正的异步迭代器
         class MockStream:
+            """Mock stream for testing OpenAI answer stream."""
             def __init__(self):
                 self.chunks = [
                     self._create_chunk("Hello"),
@@ -89,6 +90,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟的流响应 - 创建一个真正的异步迭代器
         class MockStream:
+            """Mock stream for testing OpenAI answer stream."""
             def __init__(self):
                 self.chunks = [
                     self._create_chunk("Hello"),

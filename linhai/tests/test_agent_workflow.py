@@ -1,10 +1,17 @@
 """Unit tests for agent workflow functionality."""
 
-import asyncio
+# pylint: disable=import-outside-toplevel
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import cast
+
+from linhai.agent import Agent, AgentConfig
+from linhai.agent_base import RuntimeMessage
+from linhai.agent_workflow import compress_history_range
+from linhai.llm import ChatMessage
+from linhai.tool.main import ToolManager
+from linhai.tool.base import global_tools
+from linhai.group_chat import GroupChat
 
 # 创建自定义repr函数，限制长度为200字符
 r = reprlib.Repr()
@@ -17,14 +24,6 @@ def format_messages_for_assert(messages):
     return (
         f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
     )
-
-
-from linhai.agent import Agent, AgentConfig
-from linhai.agent_base import RuntimeMessage
-from linhai.agent_workflow import compress_history_range
-from linhai.llm import ChatMessage
-from linhai.tool.main import ToolManager
-from linhai.tool.base import global_tools
 
 
 class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
@@ -47,8 +46,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
                 "whitelist": [],
             },
         }
-
-        from linhai.group_chat import GroupChat
 
         self.group_chat = GroupChat()
 

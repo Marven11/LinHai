@@ -1,8 +1,7 @@
 """Unit tests for the config module."""
 
 import unittest
-from unittest.mock import patch, mock_open
-import tomllib
+from unittest.mock import patch
 
 from linhai.config import ConfigValidationError, load_config, Config
 
@@ -11,7 +10,7 @@ class TestConfig(unittest.TestCase):
     """Test cases for the config module."""
 
     @patch("pathlib.Path.open")
-    def test_load_config_valid(self, mock_open):
+    def test_load_config_valid(self, mock_path_open):
         """Test loading a valid config."""
         config_content = b"""
 [[llm]]
@@ -20,9 +19,9 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -33,7 +32,7 @@ model = "test_model"
         self.assertEqual(config.llm[0].model, "test_model")
 
     @patch("pathlib.Path.open")
-    def test_load_config_invalid_url(self, mock_open):
+    def test_load_config_invalid_url(self, mock_path_open):
         """Test loading a config with invalid URL."""
         config_content = b"""
 [[llm]]
@@ -42,15 +41,15 @@ base_url = "invalid_url"
 api_key = "test_key"
 model = "test_model"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         with self.assertRaises(ConfigValidationError):
             load_config()
 
     @patch("pathlib.Path.open")
-    def test_load_config_empty_api_key(self, mock_open):
+    def test_load_config_empty_api_key(self, mock_path_open):
         """Test loading a config with empty API key."""
         config_content = b"""
 [[llm]]
@@ -59,15 +58,15 @@ base_url = "https://api.example.com"
 api_key = ""
 model = "test_model"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         with self.assertRaises(ConfigValidationError):
             load_config()
 
     @patch("pathlib.Path.open")
-    def test_load_config_empty_model(self, mock_open):
+    def test_load_config_empty_model(self, mock_path_open):
         """Test loading a config with empty model."""
         config_content = b"""
 [[llm]]
@@ -76,15 +75,15 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = ""
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         with self.assertRaises(ConfigValidationError):
             load_config()
 
     @patch("pathlib.Path.open")
-    def test_load_config_with_optional_fields(self, mock_open):
+    def test_load_config_with_optional_fields(self, mock_path_open):
         """Test loading a config with optional fields."""
         config_content = b"""
 [[llm]]
@@ -103,9 +102,9 @@ file_path = "./test_memory.md"
 [tools]
 max_output_length = 2000
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -122,7 +121,7 @@ max_output_length = 2000
         self.assertEqual(config.tools.max_output_length, 2000)
 
     @patch("pathlib.Path.open")
-    def test_load_config_with_int_values(self, mock_open):
+    def test_load_config_with_int_values(self, mock_path_open):
         """Test loading a config with integer values for compress thresholds."""
         config_content = b"""
 [[llm]]
@@ -135,9 +134,9 @@ model = "test_model"
 compress_threshold_soft = 30000
 compress_threshold_hard = 60000
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -147,7 +146,7 @@ compress_threshold_hard = 60000
         self.assertEqual(config.agent.compress_threshold_hard, 60000)
 
     @patch("pathlib.Path.open")
-    def test_load_config_with_float_values(self, mock_open):
+    def test_load_config_with_float_values(self, mock_path_open):
         """Test loading a config with float values for compress thresholds."""
         config_content = b"""
 [[llm]]
@@ -160,9 +159,9 @@ model = "test_model"
 compress_threshold_soft = 0.5
 compress_threshold_hard = 0.8
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -172,7 +171,7 @@ compress_threshold_hard = 0.8
         self.assertEqual(config.agent.compress_threshold_hard, 0.8)
 
     @patch("pathlib.Path.open")
-    def test_load_config_with_defaults(self, mock_open):
+    def test_load_config_with_defaults(self, mock_path_open):
         """Test loading a config with default values."""
         config_content = b"""
 [[llm]]
@@ -181,9 +180,9 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -193,7 +192,7 @@ model = "test_model"
         self.assertIsNone(config.tools)
 
     @patch("pathlib.Path.open")
-    def test_load_config_multiple_llms(self, mock_open):
+    def test_load_config_multiple_llms(self, mock_path_open):
         """Test loading a config with multiple LLMs."""
         config_content = b"""
 [[llm]]
@@ -208,9 +207,9 @@ base_url = "https://api.example.org"
 api_key = "test_key_2"
 model = "test_model_2"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -229,7 +228,7 @@ model = "test_model_2"
         self.assertEqual(config.llm[1].model, "test_model_2")
 
     @patch("pathlib.Path.open")
-    def test_load_config_multiple_llms_with_optional_fields(self, mock_open):
+    def test_load_config_multiple_llms_with_optional_fields(self, mock_path_open):
         """Test loading a config with multiple LLMs and optional fields."""
         config_content = b"""
 [[llm]]
@@ -254,9 +253,9 @@ file_path = "./test_memory.md"
 [tools]
 max_output_length = 2000
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)
@@ -279,7 +278,7 @@ max_output_length = 2000
         self.assertEqual(config.tools.max_output_length, 2000)
 
     @patch("pathlib.Path.open")
-    def test_load_config_multiple_llms_invalid_name(self, mock_open):
+    def test_load_config_multiple_llms_invalid_name(self, mock_path_open):
         """Test loading a config with multiple LLMs with empty name."""
         config_content = b"""
 [[llm]]
@@ -288,15 +287,15 @@ base_url = "https://api.example.com"
 api_key = "test_key_1"
 model = "test_model_1"
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         with self.assertRaises(ConfigValidationError):
             load_config()
 
     @patch("pathlib.Path.open")
-    def test_load_config_with_openai_kwargs(self, mock_open):
+    def test_load_config_with_openai_kwargs(self, mock_path_open):
         """Test loading a config with client_options and completion_options."""
         config_content = b"""
 [[llm]]
@@ -313,9 +312,9 @@ timeout = 30
 [llm.completion_options.stream_options]
 include_usage = true
 """
-        mock_open.return_value.__enter__ = mock_open.return_value
-        mock_open.return_value.__exit__ = lambda self, *args: None
-        mock_open.return_value.read.return_value = config_content
+        mock_path_open.return_value.__enter__ = mock_path_open.return_value
+        mock_path_open.return_value.__exit__ = lambda self, *args: None
+        mock_path_open.return_value.read.return_value = config_content
 
         config = load_config()
         self.assertIsInstance(config, Config)

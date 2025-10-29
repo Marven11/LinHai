@@ -1,7 +1,7 @@
 """测试agent_plugin模块。"""
 
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from linhai.agent_plugin import TaskPlanningPlugin
 
 

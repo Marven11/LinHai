@@ -384,21 +384,22 @@ class Agent:
             )
             return False
 
-    async def handle_message(self, msg: Message):
-        # 处理@系统逻辑：在接收到用户消息时更新当前LLM
-        if isinstance(msg, ChatMessage) and msg.role == "user":
-            content = msg.message.strip()
-            if content.startswith("@"):
-                llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
-                if llm_name in self.config["llm_names"]:
-                    self.config["current_llm_index"] = self.config["llm_names"].index(
-                        llm_name
-                    )
-                else:
-                    # 添加错误消息
-                    self.messages.append(
-                        RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
-                    )
+    async def handle_user_message(self, msg: Message):
+
+        assert isinstance(msg, ChatMessage) and msg.role == "user"
+
+        content = msg.message.strip()
+        if content.startswith("@"):
+            llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
+            if llm_name in self.config["llm_names"]:
+                self.config["current_llm_index"] = self.config["llm_names"].index(
+                    llm_name
+                )
+            else:
+                # 添加错误消息
+                self.messages.append(
+                    RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
+                )
 
         self.messages.append(msg)
         try:
@@ -469,7 +470,7 @@ class Agent:
                 chat_message = cast(ChatMessage, answer.get_message())
                 self.messages.append(chat_message)
                 self.messages.append(RuntimeMessage("用户打断了你的回答"))
-                self.messages.append(await self.group_chat.receive("agent_user_input"))
+                msg = await self.group_chat.receive("agent_user_input")
                 answer.interrupt()
                 return await self.handle_user_message(msg)
 

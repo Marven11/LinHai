@@ -2,9 +2,7 @@
 
 import unittest
 import unittest.mock
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-import os
 
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.group_chat import GroupChat
@@ -32,7 +30,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         """测试成功连接MCP服务器。"""
         # 模拟文件存在
         mock_exists.return_value = True
-        
+
         # 模拟stdio_client和ClientSession
         mock_reader = AsyncMock()
         mock_writer = AsyncMock()
@@ -40,7 +38,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
 
         mock_session = AsyncMock()
         mock_session_class.return_value.__aenter__.return_value = mock_session
-        
+
         # 模拟list_tools返回
         mock_tool = MagicMock()
         mock_tool.name = "test_tool"
@@ -49,25 +47,27 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_session.list_tools.return_value.tools = [mock_tool]
 
         # 测试连接
-        result = await self.connector.connect_stdio("test_server", "test_server.py")
+        await self.connector.connect_stdio("test_server", "test_server.py")
 
         # 验证连接成功
         self.assertIn("test_server", self.connector.sessions)
-        session, exit_stack, toolset = self.connector.sessions["test_server"]
+        session, _, toolset = self.connector.sessions["test_server"]
         self.assertEqual(session, mock_session)
         self.assertIsNotNone(toolset)
-        
+
         # 验证工具被正确注册
         self.assertTrue(toolset.has_tool("mcp_test_server_test_tool"))
 
     @patch('linhai.tool.mcp_connector.stdio_client')
     @patch('linhai.tool.mcp_connector.ClientSession')
     @patch('os.path.exists')
-    async def test_connect_stdio_duplicate_name(self, mock_exists, mock_session_class, mock_stdio_client):
+    async def test_connect_stdio_duplicate_name(
+        self, mock_exists, mock_session_class, mock_stdio_client
+    ):
         """测试连接重复名称的MCP服务器。"""
         # 模拟文件存在
         mock_exists.return_value = True
-        
+
         # 第一次连接
         mock_reader = AsyncMock()
         mock_writer = AsyncMock()
@@ -89,7 +89,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         """测试连接不存在的MCP服务器文件。"""
         # 模拟文件不存在
         mock_exists.return_value = False
-        
+
         with self.assertRaises(RuntimeError) as context:
             await self.connector.connect_stdio("test_server", "nonexistent.py")
 
@@ -101,7 +101,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_session = AsyncMock()
         mock_exit_stack = AsyncMock()
         mock_toolset = MagicMock()
-        
+
         self.connector.sessions["test_server"] = (mock_session, mock_exit_stack, mock_toolset)
 
         await self.connector.disconnect("test_server")
@@ -121,7 +121,7 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         # 模拟多个会话
         mock_exit_stack1 = AsyncMock()
         mock_exit_stack2 = AsyncMock()
-        
+
         self.connector.sessions["server1"] = (AsyncMock(), mock_exit_stack1, MagicMock())
         self.connector.sessions["server2"] = (AsyncMock(), mock_exit_stack2, MagicMock())
 
@@ -192,7 +192,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
 
         # 使用工具集调用工具
         result = await self.connector.connector_toolset.call_tool(
-            "connect_stdio", 
+            "connect_stdio",
             {"name": "test_server", "server_script_path": "test.py"}
         )
 
@@ -209,7 +209,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
 
         # 使用工具集调用工具
         result = await self.connector.connector_toolset.call_tool(
-            "connect_stdio", 
+            "connect_stdio",
             {"name": "test_server", "server_script_path": "test.py"}
         )
 

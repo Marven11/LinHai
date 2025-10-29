@@ -1,10 +1,14 @@
 """Unit tests for LLM switching functionality."""
 
+# pylint: disable=protected-access
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
 from linhai.agent import Agent, AgentConfig
-from linhai.llm import ChatMessage
+from linhai.llm import SystemMessage, ToolCallMessage
+from linhai.group_chat import GroupChat
+from linhai.tool.main import ToolManager
+from linhai.tool.base import global_tools
 
 
 class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
@@ -31,23 +35,17 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         }
 
         # 使用GroupChat架构
-        from linhai.group_chat import GroupChat
-
         self.group_chat = GroupChat()
 
         # 注册必要的队列
         self.group_chat.register_queue("cli_user_output")
 
         # 在Agent创建之前先创建ToolManager
-        from linhai.tool.main import ToolManager
-        from linhai.tool.base import global_tools
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, toolsets=[global_tools]
         )
 
         # 创建初始消息列表
-        from linhai.llm import SystemMessage
-
         init_messages = [
             SystemMessage(
                 template="Test system prompt",
@@ -67,8 +65,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""
         # 调用current_llm工具
-        from linhai.llm import ToolCallMessage
-
         tool_call = ToolCallMessage(function_name="current_llm", function_arguments={})
 
         # 调用工具
@@ -85,8 +81,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
         # 调用switch_llm工具切换到secondary
-        from linhai.llm import ToolCallMessage
-
         tool_call = ToolCallMessage(
             function_name="switch_llm", function_arguments={"llm_name": "secondary"}
         )
@@ -108,8 +102,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
         # 调用switch_llm工具切换到不存在的LLM
-        from linhai.llm import ToolCallMessage
-
         tool_call = ToolCallMessage(
             function_name="switch_llm", function_arguments={"llm_name": "nonexistent"}
         )

@@ -2,10 +2,11 @@
 
 import unittest
 import tempfile
-import os
 import json
+import shutil
+import asyncio
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ChatMessage, SystemMessage, ToolCallMessage
@@ -56,8 +57,6 @@ class TestConversationHistory(unittest.TestCase):
 
     def tearDown(self):
         """清理测试环境。"""
-        import shutil
-
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch("linhai.agent.Path.home")
@@ -76,8 +75,6 @@ class TestConversationHistory(unittest.TestCase):
         )
 
         # 调用保存方法
-        import asyncio
-
         asyncio.run(self.agent.save_conversation_history())
 
         # 检查历史目录是否创建
@@ -122,8 +119,6 @@ class TestConversationHistory(unittest.TestCase):
         )
 
         # 调用保存方法
-        import asyncio
-
         asyncio.run(self.agent.save_conversation_history())
 
         # 检查文件是否创建
@@ -146,15 +141,11 @@ class TestConversationHistory(unittest.TestCase):
 
         # 确保目录不存在
         if self.history_dir.exists():
-            import shutil
-
             shutil.rmtree(self.history_dir)
 
         self.assertFalse(self.history_dir.exists())
 
         # 调用保存方法
-        import asyncio
-
         asyncio.run(self.agent.save_conversation_history())
 
         # 检查目录是否创建
@@ -170,8 +161,6 @@ class TestConversationHistory(unittest.TestCase):
         # 模拟文件写入错误
         with patch("builtins.open", side_effect=IOError("模拟IO错误")):
             # 调用保存方法
-            import asyncio
-
             asyncio.run(self.agent.save_conversation_history())
 
             # 检查是否记录了错误

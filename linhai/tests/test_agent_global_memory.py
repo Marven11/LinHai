@@ -16,9 +16,10 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment."""
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.original_cwd = os.getcwd()
-        os.chdir(self.temp_dir.name)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.temp_dir = temp_dir
+            self.original_cwd = os.getcwd()
+            os.chdir(self.temp_dir)
 
     def tearDown(self):
         """Clean up test environment."""
@@ -131,7 +132,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 )
 
     def test_claude_md_in_current_directory(self):
-        """Test that CLAUDE.md in current directory is selected when LINHAI.md and AGENT.md are missing."""
+        """Test CLAUDE.md selection when LINHAI.md and AGENT.md are missing."""
         # Create CLAUDE.md in current directory
         claude_content = "# Test CLAUDE.md\nTest content"
         with open("CLAUDE.md", "w", encoding="utf-8") as f:

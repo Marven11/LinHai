@@ -1,7 +1,7 @@
 """测试Agent的@系统功能。"""
 
+# pylint: disable=protected-access
 import unittest
-import asyncio
 from unittest.mock import Mock, AsyncMock
 from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
@@ -23,21 +23,29 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.mock_llm2 = AsyncMock()
 
         # 设置answer_stream返回一个空的异步迭代器
-        async def empty_answer_stream(messages):
+        async def empty_answer_stream(_):
+            """返回一个空的答案流。"""
             class EmptyAnswer:
+                """空的答案流类。"""
+
                 def __aiter__(self):
+                    """返回迭代器自身。"""
                     return self
 
                 async def __anext__(self):
+                    """引发StopAsyncIteration。"""
                     raise StopAsyncIteration
 
                 def get_message(self):
+                    """返回空消息。"""
                     return ChatMessage(role="assistant", message="")
 
                 def get_current_content(self):
+                    """返回空内容。"""
                     return ""
 
                 def get_reasoning_message(self):
+                    """返回None。"""
                     return None
 
             return EmptyAnswer()
@@ -66,7 +74,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         user_message = ChatMessage(role="user", message="@llm2 你好")
 
         # 调用handle_message，这会更新current_llm_index
-        await self.agent.handle_message(user_message)
+        await self.agent.handle_user_message(user_message)
 
         # 调用_select_model
         selected_model = await self.agent._select_model()
@@ -80,7 +88,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         user_message = ChatMessage(role="user", message="@invalid_llm 你好")
 
         # 调用handle_message，这会添加错误消息
-        await self.agent.handle_message(user_message)
+        await self.agent.handle_user_message(user_message)
 
         # 调用_select_model
         selected_model = await self.agent._select_model()

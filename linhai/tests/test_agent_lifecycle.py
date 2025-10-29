@@ -1,5 +1,6 @@
 """Unit tests for the agent module."""
 
+import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
@@ -146,10 +147,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         """Test that callbacks are triggered in registration order."""
         call_order = []
 
-        async def callback1(agent, enable_compress, disable_waiting_user_warning):
+        async def callback1(_agent, _enable_compress, _disable_waiting_user_warning):
             call_order.append(1)
 
-        async def callback2(agent, enable_compress, disable_waiting_user_warning):
+        async def callback2(_agent, _enable_compress, _disable_waiting_user_warning):
             call_order.append(2)
 
         # 注册回调
@@ -168,12 +169,12 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         """Test that exceptions in callbacks are caught and logged."""
 
         async def failing_callback(
-            agent, enable_compress, disable_waiting_user_warning
+            _agent, _enable_compress, _disable_waiting_user_warning
         ):
             raise RuntimeError("Callback failed")
 
         async def succeeding_callback(
-            agent, enable_compress, disable_waiting_user_warning
+            _agent, _enable_compress, _disable_waiting_user_warning
         ):
             pass
 
@@ -186,7 +187,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_before_message_generation(
                 self.mock_agent, True, False
             )
-        except Exception:
+        except (RuntimeError, asyncio.CancelledError):
             self.fail("Exception from callback should be caught")
 
         # 验证第二个回调仍然被调用
@@ -208,7 +209,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_after_tool_call(
                 self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
             )
-        except Exception:
+        except (RuntimeError, asyncio.CancelledError):
             self.fail("Triggering empty callbacks should not throw exceptions")
 
 

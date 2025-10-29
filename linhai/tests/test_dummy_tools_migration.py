@@ -2,10 +2,12 @@
 
 import unittest
 import unittest.mock
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from linhai.llm import ToolCallMessage
-from linhai.tool.base import ToolSet
+from linhai.agent import Agent, AgentConfig
+from linhai.llm import ToolCallMessage, SystemMessage, Message
+from linhai.agent_base import RuntimeMessage
+
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 
@@ -16,16 +18,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
-        # 在Agent创建之前先创建ToolManager
-        self.tool_manager = ToolManager(
-            group_chat=self.group_chat, toolsets=[ToolSet()]
-        )
 
     async def test_get_token_usage_tool_registered(self):
         """Test that get_token_usage tool is properly registered."""
-        # Create a mock agent with the dummy tools
-        from linhai.agent import Agent, AgentConfig
-
         # Mock the agent configuration with proper typing
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
@@ -37,7 +32,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         }
 
         # Create agent instance
-        agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
+        Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
 
         # Get the ToolManager that Agent registered
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -52,9 +47,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
     async def test_thanox_history_tool_registered(self):
         """Test that thanox_history tool is properly registered."""
-        # Create a mock agent with the dummy tools
-        from linhai.agent import Agent, AgentConfig
-
         # Mock the agent configuration with proper typing
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
@@ -66,7 +58,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         }
 
         # Create agent instance
-        agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
+        Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
 
         # Get the ToolManager that Agent registered
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -81,9 +73,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_token_usage_tool_call_with_token_usage(self):
         """Test get_token_usage tool call when token usage is available."""
-        # Create a mock agent
-        from linhai.agent import Agent, AgentConfig
-
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -96,8 +85,11 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
         agent.last_token_usage = 12345
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Call the get_token_usage tool
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
 
@@ -109,9 +101,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_token_usage_tool_call_without_token_usage(self):
         """Test get_token_usage tool call when no token usage is available."""
-        # Create a mock agent
-        from linhai.agent import Agent, AgentConfig
-
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -124,8 +113,11 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         agent = Agent(config=mock_config, group_chat=self.group_chat, init_messages=[])
         agent.last_token_usage = None
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Call the get_token_usage tool
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="get_token_usage", function_arguments={})
         )
 
@@ -136,11 +128,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
     async def test_thanox_history_tool_call_with_sufficient_messages(self):
         """Test thanox_history tool call when there are sufficient messages."""
-        # Create a mock agent with enough messages
-        from linhai.agent import Agent, AgentConfig
-        from linhai.llm import SystemMessage, ChatMessage
-        from linhai.agent_base import RuntimeMessage
-
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -151,8 +138,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         }
 
         # Create messages (more than 10 to trigger deletion)
-        from linhai.llm import Message
-
         init_messages: list[Message] = [
             SystemMessage(
                 template="test",
@@ -163,12 +148,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         for i in range(15):
             init_messages.append(RuntimeMessage(f"Message {i}"))
 
-        agent = Agent(
+        Agent(
             config=mock_config, group_chat=self.group_chat, init_messages=init_messages
         )
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Call the thanox_history tool
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
 
@@ -180,11 +168,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
     async def test_thanox_history_tool_call_with_insufficient_messages(self):
         """Test thanox_history tool call when there are insufficient messages."""
-        # Create a mock agent with few messages
-        from linhai.agent import Agent, AgentConfig
-        from linhai.llm import SystemMessage
-        from linhai.agent_base import RuntimeMessage
-
         mock_config: AgentConfig = {
             "system_prompt": "test prompt",
             "llms": [MagicMock()],
@@ -195,8 +178,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         }
 
         # Create only a few messages (less than 10)
-        from linhai.llm import Message
-
         init_messages: list[Message] = [
             SystemMessage(
                 template="test",
@@ -207,12 +188,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         for i in range(5):
             init_messages.append(RuntimeMessage(f"Message {i}"))
 
-        agent = Agent(
+        Agent(
             config=mock_config, group_chat=self.group_chat, init_messages=init_messages
         )
 
+        # Get the ToolManager that Agent registered
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
         # Call the thanox_history tool
-        result = await self.tool_manager.process_tool_call(
+        result = await tool_manager.process_tool_call(
             ToolCallMessage(function_name="thanox_history", function_arguments={})
         )
 

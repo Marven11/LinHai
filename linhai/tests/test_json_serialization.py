@@ -2,9 +2,6 @@
 """测试消息类的JSON序列化功能"""
 
 import unittest
-import json
-import sys
-import os
 from unittest.mock import Mock
 
 from linhai.llm import (
@@ -14,13 +11,6 @@ from linhai.llm import (
     ToolConfirmationMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
-from linhai.agent_base import (
-    CompressRangeRequest,
-    RuntimeMessage,
-    DestroyedRuntimeMessage,
-    GlobalMemory,
-)
-from pathlib import Path
 
 
 class TestJsonSerialization(unittest.TestCase):
