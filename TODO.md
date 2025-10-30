@@ -29,7 +29,7 @@
         - mentioned: 不处于开头的`@`提到的名称，不包含`@`
     - 添加对应的unittest测试
     - 使用这个函数解析用户给agent的消息
-- [ ] 在agent.py中添加一个工具`delete_message_by_uuid`，允许agent在运行时删除某个较大的工具结果消息
+- [x] 在agent.py中添加一个工具`delete_message_by_uuid`，允许agent在运行时删除某个较大的工具结果消息
     - 当一个工具返回的内容大于30000字符时
         - 在agent对象的一个字典中记录
             - 字典为dict[uuid, 消息的引用]
@@ -40,18 +40,20 @@
         - 告诉agent优先通过在工作时顺手调用delete_message_by_uuid删除不需要的大块消息
             - 强调delete_message_by_uuid不会和其他工具发生冲突，可以同时调用
     - 编写unittest
-        - [ ] 验证消息确实从self.messages中删除
-        - [ ] 删除不存在的消息
-        - [ ] 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
-- [ ] 添加显示当前token限制百分比的功能
+        - [x] 验证消息确实从self.messages中删除
+        - [x] 删除不存在的消息
+        - [x] 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
+- [x] 添加显示当前token限制百分比的功能
     - 设计意图：展示当前消息长度距离模型token限制有多少，当前只有显示token用量的功能
         - 当前消息的token用量可以通过Answer类获得
-    - [ ] 在配置中配置各个LLM的token上限（可选）
+    - [x] 在配置中配置各个LLM的token上限（可选）
         - 这个上限和压缩token的限制不同（比压缩token限制小），放在各个llm的配置中
-    - [ ] 给Agent类加一个函数，返回当前llm的名字和llm实例
-    - [ ] 给LLM加上一个函数，返回当前的token限制
-    - [ ] cli_ui在每次生成结束后，根据group chat获得agent，根据agent获得llm的名字（和配置中的llm.name一致）和llm的限制，计算出当前距离上限的百分比
-    - [ ] cli_ui将当前token距离上限显示在token总用量旁边
+    - [x] 给Agent类加一个函数，返回当前llm的名字和llm实例
+    - [x] 给LLM加上一个函数，返回当前的token限制
+    - [x] cli_ui在每次生成结束后，根据group chat获得agent，根据agent获得llm的名字（和配置中的llm.name一致）和llm的限制，计算出当前距离上限的百分比
+    - [x] cli_ui将当前token距离上限显示在token总用量旁边
+- [ ] 没有配置token限制的时候不显示百分比
+    - [ ] 相应配置项改为可为None
 - [ ] 修改`-f`的功能：使用-f时输入两条消息，一条包含文件路径，一条包含当前文件内容
     - 当前将文件内容和文件路径混杂在一起，导致llm无法判断文件内容是否过时
     - 提供文件内容时提醒llm文件内容可能过时，在历史压缩后需要重新读取
