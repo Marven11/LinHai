@@ -337,21 +337,11 @@ class CLIApp(App):
                 total_tokens += self.current_token_usage.total_tokens
             
             # 获取当前LLM的token限制
-            try:
-                agent = self.group_chat.get_members("agent", Agent)
-                # 使用getattr避免类型检查错误
-                if hasattr(agent, 'get_current_llm_info'):
-                    llm_name, llm_instance = agent.get_current_llm_info()  # type: ignore
-                else:
-                    raise AttributeError("get_current_llm_info method not found")
-                if hasattr(llm_instance, 'get_token_limit'):
-                    token_limit = llm_instance.get_token_limit()
-                    percentage = (total_tokens / token_limit) * 100 if token_limit > 0 else 0
-                    display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total | {percentage:.1f}% of {token_limit:,}"
-                else:
-                    display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
-            except (RuntimeError, AttributeError):
-                display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+            agent = self.group_chat.get_members("agent", Agent)
+            llm_name, llm_instance = agent.get_current_llm_info()
+            token_limit = llm_instance.get_token_limit()
+            percentage = (total_tokens / token_limit) * 100 if token_limit > 0 else 0
+            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total | {percentage:.1f}% of {token_limit:,}"
         
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)

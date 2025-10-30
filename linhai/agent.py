@@ -217,7 +217,7 @@ class Agent:
             required_args=["uuid"],
         )
         def delete_message_by_uuid(message_uuid: str) -> str:
-            self.delete_message_by_uuid(message_uuid)
+            return self.delete_message_by_uuid(message_uuid)
 
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
@@ -247,8 +247,8 @@ class Agent:
         del self.large_messages[message_uuid]
         
         # 从messages中移除（如果存在）
-        assert message_to_delete in self.messages, "消息已经删除"
-        self.messages.remove(message_to_delete)
+        if message_to_delete in self.messages:
+            self.messages.remove(message_to_delete)
             
         return f"已成功删除UUID为 '{message_uuid}' 的大消息"
 
@@ -583,6 +583,17 @@ class Agent:
         await self.save_conversation_history()
         return answer
 
+    def get_current_llm_info(self) -> tuple[str, LanguageModel]:
+        """获取当前LLM的名称和实例。
+
+        返回:
+            tuple[str, LanguageModel]: (LLM名称, LLM实例)
+        """
+        current_index = self.config["current_llm_index"]
+        llm_name = self.config["llm_names"][current_index]
+        llm_instance = self.config["llms"][current_index]
+        return llm_name, llm_instance
+
     async def save_conversation_history(self):
         """保存对话历史到文件。"""
         history_dir = Path.home() / ".local" / "share" / "linhai" / "history"
@@ -858,13 +869,3 @@ async def _create_init_messages(
         init_messages.append(GlobalMemory(memory_filepaths[0]))
 
     return init_messages
-    def get_current_llm_info(self) -> tuple[str, LanguageModel]:
-        """获取当前LLM的名称和实例。
-
-        返回:
-            tuple[str, LanguageModel]: (LLM名称, LLM实例)
-        """
-        current_index = self.config["current_llm_index"]
-        llm_name = self.config["llm_names"][current_index]
-        llm_instance = self.config["llms"][current_index]
-        return llm_name, llm_instance

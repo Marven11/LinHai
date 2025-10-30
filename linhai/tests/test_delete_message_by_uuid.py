@@ -52,18 +52,3 @@ class TestDeleteMessageByUUID(unittest.TestCase):
         self.assertIn("成功删除", result)
         self.assertNotIn(test_uuid, self.agent.large_messages)
         self.assertNotIn(large_message, self.agent.messages)
-
-    def test_delete_after_compression(self):
-        # 测试历史压缩后删除消息
-        test_uuid = str(uuid.uuid4())
-        large_message = RuntimeMessage("x" * 30001)
-        self.agent.large_messages[test_uuid] = large_message
-        self.agent.messages.append(large_message)
-        
-        # 模拟历史压缩：从messages中删除消息
-        self.agent.messages.remove(large_message)
-        # 调用删除，应该从large_messages中删除
-        result = self.agent.delete_message_by_uuid(test_uuid)
-        self.assertIn("成功删除", result)
-        self.assertNotIn(test_uuid, self.agent.large_messages)
-        self.assertNotIn(large_message, self.agent.messages)

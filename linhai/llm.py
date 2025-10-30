@@ -325,6 +325,14 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
+    def get_token_limit(self) -> int:
+        """获取当前LLM的token限制。
+
+        返回:
+            int: token限制数量
+        """
+        raise NotImplementedError()
+
 
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
