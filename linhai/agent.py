@@ -44,8 +44,6 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
 
-import linhai
-
 logger = logging.getLogger(__name__)
 
 
@@ -218,7 +216,7 @@ class Agent:
             },
             required_args=["uuid"],
         )
-        def delete_message_by_uuid(uuid: str) -> str:
+        def delete_message_by_uuid(message_uuid: str) -> str:
             """删除大消息工具函数。
             
             Args:
@@ -227,13 +225,13 @@ class Agent:
             Returns:
                 str: 删除结果消息
             """
-            if uuid not in self.large_messages:
-                return f"错误：UUID '{uuid}' 不存在，无法删除消息"
+            if message_uuid not in self.large_messages:
+                return f"错误：UUID '{message_uuid}' 不存在，无法删除消息"
             
             # 从large_messages中移除
-            todelete = self.large_messages.pop(uuid)
+            todelete = self.large_messages.pop(message_uuid)
             self.messages = [msg for msg in self.messages if msg is not todelete]
-            return f"已成功删除UUID为 '{uuid}' 的大消息"
+            return f"已成功删除UUID为 '{message_uuid}' 的大消息"
 
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
@@ -246,7 +244,7 @@ class Agent:
         self.whitelist = tool_confirmation_config.get("whitelist", [])
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
-    def delete_message_by_uuid(self, uuid: str) -> str:
+    def delete_message_by_uuid(self, message_uuid: str) -> str:
         """删除大消息方法。
         
         Args:
@@ -255,18 +253,18 @@ class Agent:
         Returns:
             str: 删除结果消息
         """
-        if uuid not in self.large_messages:
-            return f"错误：UUID '{uuid}' 不存在，无法删除消息。"
+        if message_uuid not in self.large_messages:
+            return f"错误：UUID '{message_uuid}' 不存在，无法删除消息。"
         
         # 从large_messages中移除
-        message_to_delete = self.large_messages[uuid]
-        del self.large_messages[uuid]
+        message_to_delete = self.large_messages[message_uuid]
+        del self.large_messages[message_uuid]
         
         # 从messages中移除（如果存在）
         if message_to_delete in self.messages:
             self.messages.remove(message_to_delete)
             
-        return f"已成功删除UUID为 '{uuid}' 的大消息"
+        return f"已成功删除UUID为 '{message_uuid}' 的大消息"
 
     async def state_waiting_user(self):
         """
@@ -466,6 +464,9 @@ class Agent:
                 self.config["current_llm_index"] = self.config["llm_names"].index(
                     llm_name
                 )
+                self.messages.append(
+                    RuntimeMessage(f"用户切换到了llm: '{llm_name}'")
+                )
             else:
                 # 添加错误消息
                 self.messages.append(
@@ -580,7 +581,7 @@ class Agent:
                     early_return = await self.call_tool(tool_call)
                     if early_return:
                         return await self.generate_response()
-            except Exception:
+            except (RuntimeError, ValueError, TypeError):
                 traceback.print_exc()
                 continue
 
@@ -700,7 +701,7 @@ async def create_agent(
     )
 
     # 创建ToolManager
-    tool_manager = await _create_tool_manager(group_chat)
+    await _create_tool_manager(group_chat)
 
     # 创建初始化消息
     memory_file_path = config.memory.file_path if config.memory else None
