@@ -51,6 +51,11 @@
     - [ ] 给LLM加上一个函数，返回当前的token限制
     - [ ] cli_ui在每次生成结束后，根据group chat获得agent，根据agent获得llm的名字（和配置中的llm.name一致）和llm的限制，计算出当前距离上限的百分比
     - [ ] cli_ui将当前token距离上限显示在token总用量旁边
+- [ ] 修改`-f`的功能：使用-f时输入两条消息，一条包含文件路径，一条包含当前文件内容
+    - 当前将文件内容和文件路径混杂在一起，导致llm无法判断文件内容是否过时
+    - 提供文件内容时提醒llm文件内容可能过时，在历史压缩后需要重新读取
+    - [ ] 让cli_ui接收多条init message(list[str])以方便改动
+    - [ ] 修改unittest
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
