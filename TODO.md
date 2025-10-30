@@ -9,14 +9,14 @@
     - 你可以写入临时脚本并运行
 - [x] 为什么linhai/config.toml文件会被创建？
     - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
-- [ ] 拆分create_agent函数，至少应该拆出这些部分
+- [x] 拆分create_agent函数，至少应该拆出这些部分
     - 创建llm实例
     - 创建AgentConfig
     - 创建ToolManager
     - 创建init message
-    - [ ] 修改实现，保证最小原则：每个分函数不应该接受整个config，而是只接受llm config等其需要读取的部分
-    - [ ] 补充输入参数的type hint
-- [ ] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
+    - [x] 修改实现，保证最小原则：每个分函数不应该接受整个config，而是只接受llm config等其需要读取的部分
+    - [x] 补充输入参数的type hint
+- [x] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
     - 当前用户的输入总是打断agent输出
     - 编写unittest: 消息以/queue开头时不会被打断，否则被打断
 - [ ] 修改/queue的实现：收到的/queue消息放在agent输出后面
