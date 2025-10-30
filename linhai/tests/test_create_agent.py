@@ -1,7 +1,7 @@
 """测试create_agent函数的基本功能"""
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 import sys
 import os
 import asyncio
@@ -11,13 +11,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.group_chat import GroupChat
 from linhai.agent import create_agent
+from linhai.tool.main import ToolManager
 
 
 class TestCreateAgent(unittest.TestCase):
     """测试create_agent函数"""
 
-    def test_create_agent_basic_functionality(self):
+    @patch('linhai.agent.MCPConnector')
+    def test_create_agent_basic_functionality(self, mock_mcp_connector):
         """测试create_agent基本功能：创建agent并返回group_chat"""
+        # 模拟MCP连接器
+        mock_mcp_instance = AsyncMock()
+        mock_mcp_instance.get_toolsets.return_value = []
+        mock_mcp_connector.return_value = mock_mcp_instance
+        
         group_chat = GroupChat()
         config_path = "./config.toml"
         
@@ -36,14 +43,19 @@ class TestCreateAgent(unittest.TestCase):
         
         # 检查group_chat中是否注册了tool_manager成员
         try:
-            from linhai.tool.main import ToolManager
             tool_manager = group_chat.get_members("tool_manager", ToolManager)
             self.assertIsNotNone(tool_manager)
         except RuntimeError:
             self.fail("tool_manager成员未在group_chat中注册")
 
-    def test_create_agent_with_llm_name(self):
+    @patch('linhai.agent.MCPConnector')
+    def test_create_agent_with_llm_name(self, mock_mcp_connector):
         """测试使用llm_name参数创建agent"""
+        # 模拟MCP连接器
+        mock_mcp_instance = AsyncMock()
+        mock_mcp_instance.get_toolsets.return_value = []
+        mock_mcp_connector.return_value = mock_mcp_instance
+        
         group_chat = GroupChat()
         config_path = "./config.toml"
         
