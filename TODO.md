@@ -23,7 +23,8 @@
 - [x] BadMultiToolCall插件貌似没有生效
     - 这个插件用来检测紧邻的两个工具调用code block
     - 编写unittest测试然后修复
-- [ ] 使用./hypothesis_falsification.txt找出unittest test_agent_plugin失败的原因
+- [ ] 使用./hypothesis_falsification.txt找出unittest打印这么多垃圾消息的原因
+    - BaseExceptionGroup: unhandled errors in a TaskGroup等
     - 你可以写入临时脚本并运行
 - [ ] 为什么linhai/config.toml文件会被创建？
     - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
