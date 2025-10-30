@@ -3,7 +3,7 @@
 import unittest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
-from linhai.agent import Agent
+from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage, Answer
 from linhai.agent_base import RuntimeMessage
@@ -33,6 +33,10 @@ class MockAnswer:
     def get_message(self):
         return ChatMessage(role="assistant", message=self.message_content)
         
+    def get_reasoning_message(self):
+        """Get reasoning message."""
+        return None
+        
     def interrupt(self):
         pass
 
@@ -48,14 +52,14 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = Mock()
         
         # 创建Agent配置
-        self.config = {
-            "system_prompt": "测试系统提示",
-            "llms": [self.mock_llm],
-            "llm_names": ["test_llm"],
-            "current_llm_index": 0,
-            "compress_threshold_soft": 32768,
-            "compress_threshold_hard": 52428,
-        }
+        self.config = AgentConfig(
+            system_prompt="测试系统提示",
+            llms=[self.mock_llm],
+            llm_names=["test_llm"],
+            current_llm_index=0,
+            compress_threshold_soft=32768,
+            compress_threshold_hard=52428,
+        )
         
         # 初始化消息
         self.init_messages = []
@@ -96,6 +100,9 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             if isinstance(msg, ChatMessage) and msg.role == "assistant":
                 last_assistant_idx = i
         
+        # 确保找到了assistant消息
+        assert last_assistant_idx is not None, "应该至少有一个assistant消息"
+        
         # 验证排队消息在assistant消息之后
         for i, msg in enumerate(self.agent.messages):
             if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
@@ -112,7 +119,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         queue_msg = ChatMessage(role="user", message="/queue 这是一个排队消息")
         
         # 测试以/queue开头的消息
-        content = queue_msg.message.strip()
+        content = queue_msg.message.strip()  # type: ignore
         self.assertTrue(content.startswith("/queue"))
         
         # 模拟处理逻辑 - 更新以匹配新行为
@@ -122,16 +129,19 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 验证消息被正确添加
         self.assertEqual(len(self.agent.messages), 3)
-        self.assertEqual(self.agent.messages[0].message, "Agent响应")
-        self.assertEqual(self.agent.messages[1].message, "用户在你回答的时候输出了以下排队消息，现在请处理：")
-        self.assertEqual(self.agent.messages[2].message, "/queue 这是一个排队消息")
+        self.assertIsInstance(self.agent.messages[0], ChatMessage)
+        self.assertEqual(self.agent.messages[0].message, "Agent响应")  # type: ignore
+        self.assertIsInstance(self.agent.messages[1], RuntimeMessage)
+        self.assertEqual(self.agent.messages[1].message, "用户在你回答的时候输出了以下排队消息，现在请处理：")  # type: ignore
+        self.assertIsInstance(self.agent.messages[2], ChatMessage)
+        self.assertEqual(self.agent.messages[2].message, "/queue 这是一个排队消息")  # type: ignore
 
     def test_normal_message_handling(self):
         """测试普通消息的处理逻辑"""
         normal_msg = ChatMessage(role="user", message="这是一个普通消息")
         
         # 测试不以/queue开头的消息
-        content = normal_msg.message.strip()
+        content = normal_msg.message.strip()  # type: ignore
         self.assertFalse(content.startswith("/queue"))
         
         # 模拟正常打断逻辑

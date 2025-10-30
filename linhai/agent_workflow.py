@@ -48,6 +48,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     chat_message = cast(ChatMessage, answer.get_message())
     full_response = chat_message.message
 
+    json_blocks = []
     try:
         # 解析LLM输出，提取JSON块
         json_blocks = extract_json_blocks(full_response)
@@ -56,6 +57,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         agent.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
         )
+        return True
 
     if len(json_blocks) == 0:
         agent.messages.append(

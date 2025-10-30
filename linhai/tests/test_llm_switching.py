@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import SystemMessage, ToolCallMessage
+from linhai.tool.base import ToolErrorMessage, ToolResultMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -69,11 +70,11 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具调用成功并返回ToolResultMessage
         # 如果返回ToolErrorMessage，检查错误内容
-        if type(result).__name__ == "ToolErrorMessage":
-            self.fail(f"current_llm tool failed: {result.content}")
+        if isinstance(result, ToolErrorMessage):
+            self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
         
-        self.assertEqual(type(result).__name__, "ToolResultMessage")
-        self.assertIn("primary", str(result.content))
+        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIn("primary", str(result.content))  # type: ignore
 
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
@@ -87,11 +88,11 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具调用成功并返回ToolResultMessage
         # 如果返回ToolErrorMessage，检查错误内容
-        if type(result).__name__ == "ToolErrorMessage":
+        if isinstance(result, ToolErrorMessage):
             self.fail(f"switch_llm tool failed: {result.content}")
         
-        self.assertEqual(type(result).__name__, "ToolResultMessage")
-        self.assertIn("已切换到LLM: secondary", str(result.content))
+        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIn("已切换到LLM: secondary", str(result.content))  # type: ignore
 
         # 验证LLM索引已更新
         self.assertEqual(self.agent.config["current_llm_index"], 1)
@@ -108,12 +109,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         # 验证工具调用成功并返回ToolResultMessage
         # 如果返回ToolErrorMessage，检查错误内容
-        if type(result).__name__ == "ToolErrorMessage":
+        if isinstance(result, ToolErrorMessage):
             self.fail(f"switch_llm tool failed: {result.content}")
         
-        self.assertEqual(type(result).__name__, "ToolResultMessage")
-        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))
-        self.assertIn("可用的LLM包括: primary, secondary", str(result.content))
+        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))  # type: ignore
+        self.assertIn("可用的LLM包括: primary, secondary", str(result.content))  # type: ignore
 
         # 验证LLM索引未改变
         self.assertEqual(self.agent.config["current_llm_index"], 0)

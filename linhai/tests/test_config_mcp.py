@@ -53,16 +53,17 @@ server_script_path = "../another_server.py"
         config = load_config(config_path)
         
         # 验证路径转换
-        self.assertIsNotNone(config.agent)
-        self.assertEqual(len(config.agent.mcp), 2)
+        assert config.agent is not None
+        agent = config.agent
+        self.assertEqual(len(agent.mcp), 2)
         
         # 第一个MCP服务器路径应该是绝对路径
-        calculator_path = config.agent.mcp[0].server_script_path
+        calculator_path = agent.mcp[0].server_script_path
         self.assertTrue(os.path.isabs(calculator_path))
         self.assertEqual(calculator_path, str(config_path.parent / "mcp_server_example.py"))
         
         # 第二个MCP服务器路径也应该是绝对路径
-        another_path = config.agent.mcp[1].server_script_path
+        another_path = agent.mcp[1].server_script_path
         self.assertTrue(os.path.isabs(another_path))
         expected_path = os.path.normpath(str(config_path.parent.parent / "another_server.py"))
         self.assertEqual(os.path.normpath(another_path), expected_path)
@@ -91,9 +92,10 @@ server_script_path = "{absolute_path}"
         config = load_config(config_path)
         
         # 验证绝对路径保持不变
-        self.assertIsNotNone(config.agent)
-        self.assertEqual(len(config.agent.mcp), 1)
-        self.assertEqual(config.agent.mcp[0].server_script_path, absolute_path)
+        assert config.agent is not None
+        agent = config.agent
+        self.assertEqual(len(agent.mcp), 1)
+        self.assertEqual(agent.mcp[0].server_script_path, absolute_path)
 
     def test_mcp_config_no_mcp_servers(self):
         """测试没有MCP服务器配置的情况。"""
@@ -114,8 +116,9 @@ compress_threshold_hard = 80000
         config = load_config(config_path)
         
         # 验证没有MCP服务器
-        self.assertIsNotNone(config.agent)
-        self.assertEqual(len(config.agent.mcp), 0)
+        assert config.agent is not None
+        agent = config.agent
+        self.assertEqual(len(agent.mcp), 0)
 
     def test_mcp_config_invalid_name(self):
         """测试无效的MCP服务器名称。"""

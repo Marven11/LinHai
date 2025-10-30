@@ -99,7 +99,7 @@ class ToolCallCountPlugin(Plugin):
         json_block_count = current_content.count("\n```json toolcall")
 
         content_length = len(current_content)
-        if content_length < 8000:
+        if content_length < 30000:
             max_json_blocks = 30
         else:
             max_json_blocks = 1
