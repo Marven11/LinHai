@@ -543,9 +543,8 @@ class Agent:
                 assert isinstance(msg, ChatMessage)
                 content = msg.message.strip()
                 if content.startswith("/queue"):
-                    # 以/queue开头，不打断，将消息添加到消息列表，继续生成响应
+                    # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
                     queued_messages.append(msg)
-                    queued_messages.append(RuntimeMessage("用户在你回答的时候输出了以上消息，现在考虑回答："))
                 else:
                     # 正常打断
                     await self.group_chat.send("cli_user_output", answer)
@@ -561,7 +560,10 @@ class Agent:
         full_response = chat_message.message
         self.messages.append(chat_message)
 
-        self.messages += queued_messages
+        # 将排队消息添加到消息列表，放在agent输出后面
+        if queued_messages:
+            self.messages.append(RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理："))
+            self.messages += queued_messages
 
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
 
