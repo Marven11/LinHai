@@ -231,7 +231,8 @@ class Agent:
                 return f"错误：UUID '{uuid}' 不存在，无法删除消息"
             
             # 从large_messages中移除
-            del self.large_messages[uuid]
+            todelete = self.large_messages.pop(uuid)
+            self.messages = [msg for msg in self.messages if msg is not todelete]
             return f"已成功删除UUID为 '{uuid}' 的大消息"
 
         # 将虚拟工具集添加到ToolManager
