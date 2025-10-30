@@ -523,6 +523,8 @@ class Agent:
 
         answer: Answer = await model.answer_stream(self.messages)
 
+        queued_messages = []
+
         async for token in answer:
             await self.group_chat.send("cli_user_output", token)
 
@@ -542,8 +544,8 @@ class Agent:
                 content = msg.message.strip()
                 if content.startswith("/queue"):
                     # 以/queue开头，不打断，将消息添加到消息列表，继续生成响应
-                    self.messages.append(msg)
-                    self.messages.append(RuntimeMessage("用户消息已排队，不会打断当前输出"))
+                    queued_messages.append(msg)
+                    queued_messages.append(RuntimeMessage("用户在你回答的时候输出了以上消息，现在考虑回答："))
                 else:
                     # 正常打断
                     await self.group_chat.send("cli_user_output", answer)
@@ -558,6 +560,8 @@ class Agent:
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
         self.messages.append(chat_message)
+
+        self.messages += queued_messages
 
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
 
@@ -661,11 +665,21 @@ async def create_agent(
     group_chat: GroupChat,
     config_path: str | Path,
     llm_name: str | None = None,
-):
+) -> Agent:
+    """创建Agent实例
+    
+    Args:
+        group_chat: GroupChat实例
+        config_path: 配置文件路径
+        llm_name: 指定的LLM名称（可选）
+        
+    Returns:
+        Agent实例
+    """
     config = load_config(config_path)
 
     # 创建LLM实例
-    llms = await _create_llm_instances(config)
+    llms = await _create_llm_instances(config.llm)
 
     # 解析tool_confirmation配置
     tool_confirmation_config = {}
@@ -673,13 +687,26 @@ async def create_agent(
         tool_confirmation_config = config.agent.tool_confirmation
 
     # 创建AgentConfig
-    agent_config = await _create_agent_config(config, llms, llm_name, tool_confirmation_config)
+    llm_names = [llm_config.name for llm_config in config.llm]
+    agent_config_part = config.agent.model_dump() if config.agent else None
+    agent_config = await _create_agent_config(
+        llms=llms,
+        llm_names=llm_names,
+        llm_name=llm_name,
+        tool_confirmation_config=tool_confirmation_config,
+        agent_config_part=agent_config_part,
+    )
 
     # 创建ToolManager
     tool_manager = await _create_tool_manager(group_chat)
 
     # 创建初始化消息
-    init_messages = await _create_init_messages(config, group_chat, agent_config["system_prompt"])
+    memory_file_path = config.memory.file_path if config.memory else None
+    init_messages = await _create_init_messages(
+        group_chat=group_chat,
+        system_prompt=agent_config["system_prompt"],
+        memory_file_path=memory_file_path,
+    )
 
     # 连接配置中的MCP服务器
     if config.agent and config.agent.mcp:
@@ -698,10 +725,17 @@ async def create_agent(
     return agent
 
 
-async def _create_llm_instances(config):
-    """创建LLM实例列表"""
+async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
+    """创建LLM实例列表
+    
+    Args:
+        llm_configs: LLM配置列表
+        
+    Returns:
+        LLM实例列表
+    """
     llms = []
-    for llm_config in config.llm:
+    for llm_config in llm_configs:
         llm = OpenAi(
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
@@ -715,31 +749,47 @@ async def _create_llm_instances(config):
     return llms
 
 
-async def _create_agent_config(config, llms, llm_name, tool_confirmation_config):
-    """创建AgentConfig字典"""
+async def _create_agent_config(
+    llms: list[LanguageModel],
+    llm_names: list[str],
+    llm_name: str | None,
+    tool_confirmation_config: dict,
+    agent_config_part: dict | None = None,
+) -> AgentConfig:
+    """创建AgentConfig字典
+    
+    Args:
+        llms: LLM实例列表
+        llm_names: LLM名称列表
+        llm_name: 指定的LLM名称
+        tool_confirmation_config: 工具确认配置
+        agent_config_part: Agent配置部分（可选）
+        
+    Returns:
+        AgentConfig字典
+    """
     # 设置压缩阈值
     compress_threshold_hard = int(65536 * 0.8)
     compress_threshold_soft = int(65536 * 0.5)
 
-    if config.agent:
+    if agent_config_part:
         # 处理compress_threshold_hard
-        if isinstance(config.agent.compress_threshold_hard, float):
-            compress_threshold_hard = int(65536 * config.agent.compress_threshold_hard)
-        elif isinstance(config.agent.compress_threshold_hard, int):
-            compress_threshold_hard = config.agent.compress_threshold_hard
+        if isinstance(agent_config_part.get("compress_threshold_hard"), float):
+            compress_threshold_hard = int(65536 * agent_config_part["compress_threshold_hard"])
+        elif isinstance(agent_config_part.get("compress_threshold_hard"), int):
+            compress_threshold_hard = agent_config_part["compress_threshold_hard"]
         else:
             raise TypeError("compress_threshold_hard must be int or float")
 
         # 处理compress_threshold_soft
-        if isinstance(config.agent.compress_threshold_soft, float):
-            compress_threshold_soft = int(65536 * config.agent.compress_threshold_soft)
-        elif isinstance(config.agent.compress_threshold_soft, int):
-            compress_threshold_soft = config.agent.compress_threshold_soft
+        if isinstance(agent_config_part.get("compress_threshold_soft"), float):
+            compress_threshold_soft = int(65536 * agent_config_part["compress_threshold_soft"])
+        elif isinstance(agent_config_part.get("compress_threshold_soft"), int):
+            compress_threshold_soft = agent_config_part["compress_threshold_soft"]
         else:
             raise TypeError("compress_threshold_soft must be int or float")
 
     # 处理llm_name参数
-    llm_names = [llm_config.name for llm_config in config.llm]
     current_llm_index = 0  # 默认使用第一个LLM
     if llm_name is not None:
         if llm_name in llm_names:
@@ -773,8 +823,21 @@ async def _create_tool_manager(group_chat):
     return tool_manager
 
 
-async def _create_init_messages(config, group_chat, system_prompt):
-    """创建初始化消息列表"""
+async def _create_init_messages(
+    group_chat: GroupChat,
+    system_prompt: str,
+    memory_file_path: str | None = None,
+) -> list[Message]:
+    """创建初始化消息列表
+    
+    Args:
+        group_chat: GroupChat实例
+        system_prompt: 系统提示语
+        memory_file_path: 记忆文件路径（可选）
+        
+    Returns:
+        初始化消息列表
+    """
     init_messages: list[Message] = [
         SystemMessage(
             template=system_prompt,
@@ -791,9 +854,9 @@ async def _create_init_messages(config, group_chat, system_prompt):
         Path("./CLAUDE.md").absolute(),
     ]
 
-    # 如果配置中指定了文件路径，则使用配置的路径（最高优先级）
-    if config.memory is not None and config.memory.file_path:
-        memory_filepaths.insert(0, Path(config.memory.file_path).absolute())
+    # 如果指定了记忆文件路径，则使用该路径（最高优先级）
+    if memory_file_path is not None:
+        memory_filepaths.insert(0, Path(memory_file_path).absolute())
 
     found = False
     for filepath in memory_filepaths:

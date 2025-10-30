@@ -4,25 +4,6 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 我刚刚重构了代码，添加了对MCP的支持，编写对应的unittest并运行
-    - 你可能需要参考mcp_server_example.py
-- [x] 对unittest运行pylint，修复错误和警告
-- [x] 运行并修复所有unittest
-- [x] 支持通过配置添加MCP，可以自定义MCP服务器的名字和路径
-    - 路径是相对配置文件而非当前目录的，需要将相对路径根据配置文件路径转换成绝对路径
-        - [x] 编写这个细节的unittest
-    - [x] 编写完善的unittest
-- [x] unittest会打印一些消息，使用./hypothesis_falsification.txt找出原因并清理
-    - After message generation callback error: 'EmptyAnswer' object has no attribute 'get_reasoning_message'等
-- [x] 在create_agent函数中根据配置添加MCP
-    - 组合优于继承，组合式优于选项式
-        - 你应该将MCP connector的创建移动到create_agent函数中
-        - 然后将创建的connector传给tool manager
-- [x] 添加上一个任务的unittest
-- [x] 再次运行并修复所有unittest
-- [x] BadMultiToolCall插件貌似没有生效
-    - 这个插件用来检测紧邻的两个工具调用code block
-    - 编写unittest测试然后修复
 - [x] 使用./hypothesis_falsification.txt找出unittest打印这么多垃圾消息的原因
     - BaseExceptionGroup: unhandled errors in a TaskGroup等
     - 你可以写入临时脚本并运行
@@ -38,6 +19,8 @@
 - [ ] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
     - 当前用户的输入总是打断agent输出
     - 编写unittest: 消息以/queue开头时不会被打断，否则被打断
+- [ ] 修改/queue的实现：收到的/queue消息放在agent输出后面
+    - [ ] 编写对应的unittest
 - [ ] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
     - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
         - switch_model: 用户要求应该切换到哪个llm
@@ -56,8 +39,18 @@
         - 告诉agent优先通过在工作时顺手调用delete_message_by_uuid删除不需要的大块消息
             - 强调delete_message_by_uuid不会和其他工具发生冲突，可以同时调用
     - 编写unittest
-        - 删除不存在的消息
-        - 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
+        - [ ] 验证消息确实从self.messages中删除
+        - [ ] 删除不存在的消息
+        - [ ] 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
+- [ ] 添加显示当前token限制百分比的功能
+    - 设计意图：展示当前消息长度距离模型token限制有多少，当前只有显示token用量的功能
+        - 当前消息的token用量可以通过Answer类获得
+    - [ ] 在配置中配置各个LLM的token上限（可选）
+        - 这个上限和压缩token的限制不同（比压缩token限制小），放在各个llm的配置中
+    - [ ] 给Agent类加一个函数，返回当前llm的名字和llm实例
+    - [ ] 给LLM加上一个函数，返回当前的token限制
+    - [ ] cli_ui在每次生成结束后，根据group chat获得agent，根据agent获得llm的名字（和配置中的llm.name一致）和llm的限制，计算出当前距离上限的百分比
+    - [ ] cli_ui将当前token距离上限显示在token总用量旁边
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
