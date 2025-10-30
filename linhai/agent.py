@@ -217,21 +217,7 @@ class Agent:
             required_args=["uuid"],
         )
         def delete_message_by_uuid(message_uuid: str) -> str:
-            """删除大消息工具函数。
-            
-            Args:
-                uuid: 要删除的消息的UUID
-                
-            Returns:
-                str: 删除结果消息
-            """
-            if message_uuid not in self.large_messages:
-                return f"错误：UUID '{message_uuid}' 不存在，无法删除消息"
-            
-            # 从large_messages中移除
-            todelete = self.large_messages.pop(message_uuid)
-            self.messages = [msg for msg in self.messages if msg is not todelete]
-            return f"已成功删除UUID为 '{message_uuid}' 的大消息"
+            self.delete_message_by_uuid(message_uuid)
 
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
@@ -261,8 +247,8 @@ class Agent:
         del self.large_messages[message_uuid]
         
         # 从messages中移除（如果存在）
-        if message_to_delete in self.messages:
-            self.messages.remove(message_to_delete)
+        assert message_to_delete in self.messages, "消息已经删除"
+        self.messages.remove(message_to_delete)
             
         return f"已成功删除UUID为 '{message_uuid}' 的大消息"
 
