@@ -261,7 +261,8 @@ class CLIApp(App):
                             "total_tokens"
                         ] += token_usage.total_tokens
                     self.current_token_usage = None
-                    self.update_token_display()
+                    # 传入当前回答的token长度
+                    self.update_token_display(token_usage.total_tokens)
 
                 current_message = None
             else:
@@ -323,7 +324,7 @@ class CLIApp(App):
         if self.agent_task:
             self.agent_task.cancel()
 
-    def update_token_display(self) -> None:
+    def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
         if self.cumulative_token_usage is None:
             display_text = "Token usage: Not available"
@@ -331,6 +332,7 @@ class CLIApp(App):
             input_tokens = self.cumulative_token_usage["input_tokens"]
             output_tokens = self.cumulative_token_usage["output_tokens"]
             total_tokens = self.cumulative_token_usage["total_tokens"]
+            current_token_usage = 0
             if self.current_token_usage is not None:
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
@@ -340,7 +342,7 @@ class CLIApp(App):
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, llm_instance = agent.get_current_llm_info()
             token_limit = llm_instance.get_token_limit()
-            percentage = (total_tokens / token_limit) * 100 if token_limit > 0 else 0
+            percentage = (current_answer_token / token_limit) * 100 if token_limit > 0 else 0
             display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total | {percentage:.1f}% of {token_limit:,}"
         
         token_display = self.query_one("#token-usage")
