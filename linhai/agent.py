@@ -725,14 +725,16 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
     """
     llms = []
     for llm_config in llm_configs:
+        llm_config_dict = llm_config.model_dump()
         llm = OpenAi(
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
             model=llm_config.model,
-            openai_config=llm_config.model_dump().get("client_options", {}),
-            chat_completion_kwargs=llm_config.model_dump().get(
+            openai_config=llm_config_dict.get("client_options", {}),
+            chat_completion_kwargs=llm_config_dict.get(
                 "completion_options", {}
             ),
+            token_limit=llm_config_dict.get("token_limit", 65536),
         )
         llms.append(llm)
     return llms
@@ -856,3 +858,13 @@ async def _create_init_messages(
         init_messages.append(GlobalMemory(memory_filepaths[0]))
 
     return init_messages
+    def get_current_llm_info(self) -> tuple[str, LanguageModel]:
+        """获取当前LLM的名称和实例。
+
+        返回:
+            tuple[str, LanguageModel]: (LLM名称, LLM实例)
+        """
+        current_index = self.config["current_llm_index"]
+        llm_name = self.config["llm_names"][current_index]
+        llm_instance = self.config["llms"][current_index]
+        return llm_name, llm_instance

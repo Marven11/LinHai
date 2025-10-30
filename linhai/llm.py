@@ -458,6 +458,7 @@ class OpenAi:
         openai_config: dict,
         chat_completion_kwargs: dict,
         tools: list[dict] | None = None,
+        token_limit: int = 65536,
     ):
         """初始化OpenAI语言模型。
 
@@ -467,6 +468,7 @@ class OpenAi:
             model: 模型名称
             openai_config: 额外的OpenAI配置
             tools: 可用工具列表
+            token_limit: token限制数量
         """
         self.model = model
         self.openai = AsyncOpenAI(
@@ -474,6 +476,15 @@ class OpenAi:
         )
         self.tools = tools
         self.chat_completion_kwargs = chat_completion_kwargs
+        self.token_limit = token_limit
+
+    def get_token_limit(self) -> int:
+        """获取当前LLM的token限制。
+
+        返回:
+            int: token限制数量
+        """
+        return self.token_limit
 
     async def answer_stream(
         self,

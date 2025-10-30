@@ -324,7 +324,7 @@ class CLIApp(App):
             self.agent_task.cancel()
 
     def update_token_display(self) -> None:
-        """更新token使用量显示"""
+        """更新token使用量显示，包括百分比"""
         if self.cumulative_token_usage is None:
             display_text = "Token usage: Not available"
         else:
@@ -335,7 +335,24 @@ class CLIApp(App):
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
                 total_tokens += self.current_token_usage.total_tokens
-            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+            
+            # 获取当前LLM的token限制
+            try:
+                agent = self.group_chat.get_members("agent", Agent)
+                # 使用getattr避免类型检查错误
+                if hasattr(agent, 'get_current_llm_info'):
+                    llm_name, llm_instance = agent.get_current_llm_info()  # type: ignore
+                else:
+                    raise AttributeError("get_current_llm_info method not found")
+                if hasattr(llm_instance, 'get_token_limit'):
+                    token_limit = llm_instance.get_token_limit()
+                    percentage = (total_tokens / token_limit) * 100 if token_limit > 0 else 0
+                    display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total | {percentage:.1f}% of {token_limit:,}"
+                else:
+                    display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+            except (RuntimeError, AttributeError):
+                display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+        
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
         token_display.update(display_text)
