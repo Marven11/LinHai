@@ -24,13 +24,13 @@ def run_tests():
     return result.wasSuccessful()
 
 
-async def run(args, init_message: str):
+async def run(args, init_messages: list[str] | None):
 
     group_chat = GroupChat()
     _agent = await create_agent(group_chat, args.config.expanduser(), args.llm)
     app = CLIApp(
         group_chat=group_chat,
-        init_message=init_message,
+        init_messages=init_messages,
     )
     await app.run_async()
     return app.return_code
@@ -52,15 +52,15 @@ def main():
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
     args = parser.parse_args()
 
-    init_message = args.message
+    init_messages = [args.message] if args.message else None
     if args.file:
         try:
             with open(args.file, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-                init_message = (
-                    f"用户使用-f选项指定了第一条消息，路径为: {str(args.file)}, 内容如下:\n"
-                    + content
-                )
+                init_messages = [
+                    f"用户使用-f选项指定了文件路径: {str(args.file)}",
+                    f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}"
+                ]
         except FileNotFoundError:
             print(f"错误: 文件 {args.file} 未找到")
             sys.exit(1)
@@ -68,7 +68,7 @@ def main():
             print(f"错误: 读取文件时发生错误: {e}")
             sys.exit(1)
 
-    return_code = asyncio.run(run(args, init_message))
+    return_code = asyncio.run(run(args, init_messages))
     sys.exit(return_code)
 
 if __name__ == "__main__":

@@ -103,7 +103,7 @@ class CLIApp(App):
     def __init__(
         self,
         group_chat: GroupChat,
-        init_message: str | None = None,
+        init_messages: list[str] | None = None,
     ):
         super().__init__()
         self.messages: List[Message] = []
@@ -111,7 +111,7 @@ class CLIApp(App):
         self.group_chat.register_queue("cli_user_output")
         group_chat.register_member("cli_app", self)
 
-        self.init_message = init_message
+        self.init_messages = init_messages
 
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
@@ -277,16 +277,17 @@ class CLIApp(App):
         )
 
         # 如果有初始消息，自动发送
-        if self.init_message:
-            user_msg = ChatMessage(role="user", message=self.init_message)
-            self.messages.append(user_msg)
-            await self.group_chat.send("agent_user_input", user_msg)
-            # 更新UI
-            widget = MessageWidget(user_msg.role, user_msg.message)
-            container = self.query_one("#chat-container")
-            container.scroll_end()
-            container.mount(widget)
-            widget.update_display()
+        if self.init_messages:
+            for init_message in self.init_messages:
+                user_msg = ChatMessage(role="user", message=init_message)
+                self.messages.append(user_msg)
+                await self.group_chat.send("agent_user_input", user_msg)
+                # 更新UI
+                widget = MessageWidget(user_msg.role, user_msg.message)
+                container = self.query_one("#chat-container")
+                container.scroll_end()
+                container.mount(widget)
+                widget.update_display()
 
         cliapp_tool = ToolSet()
 
