@@ -64,7 +64,7 @@ def main():
         except FileNotFoundError:
             print(f"错误: 文件 {args.file} 未找到")
             sys.exit(1)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"错误: 读取文件时发生错误: {e}")
             sys.exit(1)
 

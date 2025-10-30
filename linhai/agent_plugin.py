@@ -19,7 +19,7 @@ class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, tool_calls
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
         has_waiting_marker = WAITING_USER_MARKER in full_response
@@ -129,9 +129,9 @@ class WrongEndPlugin(Plugin):
     async def after_message_generation(
         self,
         agent: "linhai.agent.Agent",
-        answer: Answer,
+        _answer: Answer,
         full_response: str,
-        tool_calls,
+        _tool_calls,
     ):
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
@@ -160,9 +160,9 @@ class BadMultiToolCall(Plugin):
     async def after_message_generation(
         self,
         agent: "linhai.agent.Agent",
-        answer: Answer,
+        _answer: Answer,
         full_response: str,
-        tool_calls,
+        _tool_calls,
     ):
         tool_call_count = full_response.count("```json toolcall")
 
@@ -194,7 +194,7 @@ class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+        self, agent: "linhai.agent.Agent", answer: Answer, _current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         current_reasoning_content = answer.get_reasoning_message()
@@ -226,7 +226,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
     """检查过多完成标记的Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, _tool_calls
     ):
         """检查是否输出了过多的- [x]标记。"""
         count = full_response.count("- [x]")
@@ -248,7 +248,7 @@ class MarkdownSyntaxPlugin(Plugin):
     """Markdown语法检查Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, _tool_calls
     ):
         """检查markdown语法是否正确。"""
         # 计算代码块分隔符的数量
@@ -295,7 +295,7 @@ class TaskPlanningPlugin(Plugin):
         return True
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response, tool_calls
+        self, agent: "linhai.agent.Agent", answer: Answer, full_response, _tool_calls
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
 

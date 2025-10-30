@@ -52,7 +52,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         # 解析LLM输出，提取JSON块
         json_blocks = extract_json_blocks(full_response)
 
-    except Exception as exc:
+    except ValueError as exc:
         agent.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
         )

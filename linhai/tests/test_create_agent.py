@@ -1,7 +1,7 @@
 """测试create_agent函数的基本功能"""
 
 import unittest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch, AsyncMock
 import sys
 import os
 import asyncio
@@ -10,7 +10,7 @@ import asyncio
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.group_chat import GroupChat
-from linhai.agent import create_agent
+from linhai.agent import create_agent, Agent
 from linhai.tool.main import ToolManager
 
 
@@ -30,12 +30,10 @@ class TestCreateAgent(unittest.TestCase):
         
         # 调用create_agent应该成功返回agent
         result = asyncio.run(create_agent(group_chat, config_path))
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 检查group_chat中是否注册了agent成员
         try:
-            from linhai.agent import Agent
             agent = group_chat.get_members("agent", Agent)
             self.assertIsNotNone(agent)
         except RuntimeError:
@@ -61,11 +59,9 @@ class TestCreateAgent(unittest.TestCase):
         
         # 使用llm_name参数
         result = asyncio.run(create_agent(group_chat, config_path, llm_name="deepseek"))
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 检查agent配置中的当前LLM索引
-        from linhai.agent import Agent
         agent = group_chat.get_members("agent", Agent)
         self.assertEqual(agent.config["current_llm_index"], 0)  # 假设deepseek是第一个LLM
 

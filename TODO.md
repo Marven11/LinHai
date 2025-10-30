@@ -19,8 +19,9 @@
 - [x] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
     - 当前用户的输入总是打断agent输出
     - 编写unittest: 消息以/queue开头时不会被打断，否则被打断
-- [ ] 修改/queue的实现：收到的/queue消息放在agent输出后面
-    - [ ] 编写对应的unittest
+- [x] 修改/queue的实现：收到的/queue消息放在agent输出后面
+    - [x] 编写对应的unittest
+- [ ] 修复pylint ./linhai中的所有报告
 - [ ] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
     - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
         - switch_model: 用户要求应该切换到哪个llm
