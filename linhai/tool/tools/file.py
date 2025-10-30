@@ -204,14 +204,14 @@ def append_file(filepath: str, content: str) -> str:
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "old": ToolArgInfo(desc="要替换的字符串", type="str"),
         "new": ToolArgInfo(desc="新的字符串", type="str"),
-        "replace_all": ToolArgInfo(
-            desc="是否替换所有匹配项，默认为False（只替换第一次出现）", type="bool"
+        "replace_times": ToolArgInfo(
+            desc="替换次数，正数代表替换次数，-1代表替换所有，默认不提供时验证旧内容只出现一次", type="int"
         ),
     },
     required_args=["filepath", "old", "new"],
 )
 def replace_file_content(
-    filepath: str, old: str, new: str, replace_all: bool = False
+    filepath: str, old: str, new: str, replace_times: int = None
 ) -> str:
     """替换文件内容中的指定字符串。
 
@@ -219,7 +219,7 @@ def replace_file_content(
         filepath: 文件路径
         old: 要替换的字符串
         new: 新的字符串
-        replace_all: 是否替换所有匹配项，默认为False（只替换第一次出现）
+        replace_times: 替换次数，正数代表替换次数，-1代表替换所有，默认不提供时验证旧内容只出现一次
 
     Returns:
         成功或错误消息
@@ -241,23 +241,50 @@ def replace_file_content(
 
         # 检查匹配次数
         count = content.count(old)
-        if count > 1 and not replace_all:
-            return (
-                f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
-                f"默认只替换第一次出现，如需替换所有请设置replace_all=True。"
-                f"内容类似的部分如下: {similar_info}"
-            )
-
-        # 根据replace_all参数决定替换方式
-        if replace_all:
-            new_content = content.replace(old, new)
+        
+        # 参数验证逻辑
+        if replace_times is None:
+            # 没有提供参数时，验证旧内容只出现一次
+            if count != 1:
+                return (
+                    f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
+                    f"默认只替换一次匹配，但找到多次匹配，请明确指定替换次数。"
+                    f"内容类似的部分如下: {similar_info}"
+                )
+            replace_count = 1
+        elif replace_times > 0:
+            # 提供数字n>0时，验证旧内容出现次数不超过n
+            if count < replace_times:
+                return (
+                    f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
+                    f"但要求替换{replace_times}次。"
+                    f"内容类似的部分如下: {similar_info}"
+                )
+            replace_count = replace_times
+        elif replace_times == -1:
+            # 提供-1时，验证旧内容至少出现2次
+            if count < 2:
+                return (
+                    f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
+                    f"但要求替换所有匹配（至少需要2次匹配）。"
+                    f"内容类似的部分如下: {similar_info}"
+                )
+            replace_count = -1  # 表示替换所有
         else:
-            new_content = content.replace(old, new, 1)
+            return f"无效的replace_times参数值: {replace_times}，应为正数或-1"
+
+        # 根据replace_count决定替换方式
+        if replace_count == -1:
+            new_content = content.replace(old, new)
+            actual_replace_count = count
+        else:
+            new_content = content.replace(old, new, replace_count)
+            actual_replace_count = replace_count
 
         file_path.write_text(new_content, encoding="utf-8")
     except OSError as exc:
         return f"替换内容时发生错误: {exc!r}"
-    return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {count if replace_all else 1}"
+    return f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {actual_replace_count}"
 
 
 @global_tools.register_tool(

@@ -75,13 +75,13 @@ class TestFileTools(unittest.TestCase):
         self.assertTrue(content.endswith("追加的内容"))
 
     def test_replace_file_content_default_behavior(self):
-        """测试替换文件内容默认行为（只替换第一次出现）"""
-        # 测试默认只替换第一次出现
+        """测试替换文件内容默认行为（不提供replace_times时验证只出现一次）"""
+        # 测试默认行为：不提供replace_times时，验证旧内容只出现一次
         result = replace_file_content(str(self.test_file), "重复内容", "替换后的内容")
 
-        # 应该返回错误，因为有多处匹配但未设置replace_all
+        # 应该返回错误，因为有多处匹配但未设置replace_times
         self.assertIn("找到3次匹配", result)
-        self.assertIn("默认只替换第一次出现", result)
+        self.assertIn("默认只替换一次匹配", result)
 
     def test_replace_file_content_single_match(self):
         """测试替换文件内容（单次匹配）"""
@@ -101,7 +101,7 @@ class TestFileTools(unittest.TestCase):
     def test_replace_file_content_replace_all(self):
         """测试替换文件内容（替换所有匹配）"""
         result = replace_file_content(
-            str(self.test_file), "重复内容", "替换后的内容", replace_all=True
+            str(self.test_file), "重复内容", "替换后的内容", replace_times=-1
         )
 
         self.assertIn("已替换", result)
@@ -156,3 +156,51 @@ class TestFileTools(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_replace_file_content_replace_times_positive(self):
+        """测试替换文件内容（指定替换次数）"""
+        result = replace_file_content(
+            str(self.test_file), "重复内容", "替换后的内容", replace_times=2
+        )
+
+        self.assertIn("已替换", result)
+        self.assertIn("替换次数: 2", result)
+
+        # 验证只有前2次匹配被替换
+        content = self.test_file.read_text(encoding="utf-8")
+        self.assertEqual(content.count("替换后的内容"), 2)
+        self.assertEqual(content.count("重复内容"), 1)
+
+    def test_replace_file_content_replace_times_insufficient_matches(self):
+        """测试替换文件内容（要求替换次数超过实际匹配次数）"""
+        # 修改文件内容为只有2次匹配
+        two_matches_content = "第一行\n重复内容\n第三行\n重复内容\n第五行"
+        self.test_file.write_text(two_matches_content, encoding="utf-8")
+
+        result = replace_file_content(
+            str(self.test_file), "重复内容", "替换后的内容", replace_times=3
+        )
+
+        self.assertIn("只找到2次匹配", result)
+        self.assertIn("但要求替换3次", result)
+
+    def test_replace_file_content_replace_all_insufficient_matches(self):
+        """测试替换文件内容（要求替换所有但只有一次匹配）"""
+        # 修改文件内容为只有一次匹配
+        single_match_content = "第一行\n第二行\n第三行\n重复内容\n第五行"
+        self.test_file.write_text(single_match_content, encoding="utf-8")
+
+        result = replace_file_content(
+            str(self.test_file), "重复内容", "替换后的内容", replace_times=-1
+        )
+
+        self.assertIn("只找到1次匹配", result)
+        self.assertIn("但要求替换所有匹配", result)
+
+    def test_replace_file_content_invalid_replace_times(self):
+        """测试替换文件内容（无效的replace_times参数）"""
+        result = replace_file_content(
+            str(self.test_file), "重复内容", "替换后的内容", replace_times=-2
+        )
+
+        self.assertIn("无效的replace_times参数值", result)
