@@ -145,7 +145,14 @@ class WrongEndPlugin(Plugin):
 
 
 class BadMultiToolCall(Plugin):
-    """检查多工具调用原因"""
+    """检查多工具调用原因插件。
+
+    意图：
+    1. 模型输出错误时提醒（多个工具调用块之间没有文字内容）
+    2. 模型修复，接下来正确输出则提醒输出正确（从没有原因到有原因时）
+
+    通过检测工具调用块之间是否有任何文字内容来判断是否有原因，而不是依赖特定关键词。
+    """
 
     def __init__(self):
         self.last_message_had_reason = True
@@ -157,21 +164,25 @@ class BadMultiToolCall(Plugin):
         full_response: str,
         tool_calls,
     ):
-        # 检查是否有连续工具调用块
+        tool_call_count = full_response.count("```json toolcall")
+
         pattern = r"```\n+```json toolcall"
-        if re.search(pattern, full_response) and full_response.count("```json toolcall") > 1:
+        has_no_reason = re.search(pattern, full_response) is not None
+
+        if tool_call_count > 1 and has_no_reason:
             agent.messages.append(
                 RuntimeMessage(
                     "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？"
                 )
             )
             self.last_message_had_reason = False
-        elif not self.last_message_had_reason and full_response.count("```json toolcall") > 1:
-            agent.messages.append(
-                RuntimeMessage(
-                    "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"
+        elif tool_call_count > 1 and not has_no_reason:
+            if not self.last_message_had_reason:
+                agent.messages.append(
+                    RuntimeMessage(
+                        "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"
+                    )
                 )
-            )
             self.last_message_had_reason = True
 
     def register(self, lifecycle: "linhai.agent.Lifecycle"):
