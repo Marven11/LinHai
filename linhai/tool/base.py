@@ -101,6 +101,11 @@ class ToolSet:
 
         return _wraps
 
+    def get_tool(self, name: str) -> Callable:
+        if name not in self.tools:
+            raise ValueError(f"Tool not found: {name}")
+        return self.tools[name]["func"]
+
     def call_tool(self, name: str, args: dict[str, Any]) -> Any:
         """调用指定工具
 
@@ -111,9 +116,7 @@ class ToolSet:
         Returns:
             工具执行结果
         """
-        if name not in self.tools:
-            raise ValueError(f"Tool not found: {name}")
-        return self.tools[name]["func"](**args)
+        return self.get_tool(name)(**args)
 
     def get_tools(self):
         return self.tools

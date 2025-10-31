@@ -17,6 +17,7 @@ from linhai.tool.base import (
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.config import Config
+import asyncio
 
 
 class ToolManager:
@@ -96,7 +97,7 @@ class ToolManager:
         Returns:
             Message: 工具调用结果消息
         """
-        args = tool_call.function_arguments if tool_call.function_arguments else {}
+        kwargs = tool_call.function_arguments if tool_call.function_arguments else {}
 
         target_toolset = None
         for toolset in self.toolsets:
@@ -106,7 +107,15 @@ class ToolManager:
             return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
 
         try:
-            result = target_toolset.call_tool(tool_call.function_name, args)
+
+            func = target_toolset.get_tool(tool_call.function_name)
+
+            if asyncio.iscoroutinefunction(func):
+                result = await func(**kwargs)
+            else:
+                result = await asyncio.to_thread(
+                    func, **kwargs
+                )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(content=str(e))
