@@ -4,24 +4,11 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 使用./hypothesis_falsification.txt找出unittest打印这么多垃圾消息的原因
-    - BaseExceptionGroup: unhandled errors in a TaskGroup等
-    - 你可以写入临时脚本并运行
-- [x] 为什么linhai/config.toml文件会被创建？
-    - 我们不应该在这里写入配置文件，使用./hypothesis_falsification.txt找出原因并修改代码
-- [x] 拆分create_agent函数，至少应该拆出这些部分
-    - 创建llm实例
-    - 创建AgentConfig
-    - 创建ToolManager
-    - 创建init message
-    - [x] 修改实现，保证最小原则：每个分函数不应该接受整个config，而是只接受llm config等其需要读取的部分
-    - [x] 补充输入参数的type hint
-- [x] 修改agent的实现，如果用户的消息以`/queue`开头则不打断agent输出
-    - 当前用户的输入总是打断agent输出
-    - 编写unittest: 消息以/queue开头时不会被打断，否则被打断
-- [x] 修改/queue的实现：收到的/queue消息放在agent输出后面
-    - [x] 编写对应的unittest
-- [ ] 修复pylint ./linhai中的所有报告
+- [ ] 迁移到uv
+    - [ ] 删除setuptools相关文件
+    - [ ] 保证uv run python -m linhai可以正常使用linhai
+    - [ ] 同步修改PROJECT.md和./LINHAI.md
+    - [ ] 同步修改flake.nix保证nix build可以正常工作
 - [ ] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
     - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
         - switch_model: 用户要求应该切换到哪个llm
@@ -43,22 +30,7 @@
         - [x] 验证消息确实从self.messages中删除
         - [x] 删除不存在的消息
         - [x] 进行历史压缩，原消息被删除，索引发生变化之后再删除消息
-- [x] 添加显示当前token限制百分比的功能
-    - 设计意图：展示当前消息长度距离模型token限制有多少，当前只有显示token用量的功能
-        - 当前消息的token用量可以通过Answer类获得
-    - [x] 在配置中配置各个LLM的token上限（可选）
-        - 这个上限和压缩token的限制不同（比压缩token限制小），放在各个llm的配置中
-    - [x] 给Agent类加一个函数，返回当前llm的名字和llm实例
-    - [x] 给LLM加上一个函数，返回当前的token限制
-    - [x] cli_ui在每次生成结束后，根据group chat获得agent，根据agent获得llm的名字（和配置中的llm.name一致）和llm的限制，计算出当前距离上限的百分比
-    - [x] cli_ui将当前token距离上限显示在token总用量旁边
-- [x] 没有配置token限制的时候不显示百分比
-    - [x] 相应配置项改为可为None
-- [ ] 修改`-f`的功能：使用-f时输入两条消息，一条包含文件路径，一条包含当前文件内容
-    - 当前将文件内容和文件路径混杂在一起，导致llm无法判断文件内容是否过时
-    - 提供文件内容时提醒llm文件内容可能过时，在历史压缩后需要重新读取
-    - [ ] 让cli_ui接收多条init message(list[str])以方便改动
-    - [ ] 修改unittest
+
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
