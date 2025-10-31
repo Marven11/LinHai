@@ -202,14 +202,14 @@ class ThinkingToolCallPlugin(Plugin):
             return False
         json_block_count = current_reasoning_content.count("\n```json toolcall")
 
-        max_json_blocks = 2
+        max_json_blocks = 5
 
-        if json_block_count > max_json_blocks:
+        if json_block_count >= max_json_blocks:
             await agent.group_chat.send("cli_user_output", answer)
             agent.messages.append(
                 RuntimeMessage(
-                    f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall超过{max_json_blocks}次"
-                    "，你只能（且应该）在实际输出时调用多个工具！"
+                    f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall达到{max_json_blocks}次"
+                    "，你只能（且应该）在实际输出时调用多个工具！避免过度思考工具调用！"
                 )
             )
             answer.interrupt()
