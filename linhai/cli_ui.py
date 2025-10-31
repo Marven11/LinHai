@@ -346,8 +346,12 @@ class CLIApp(App):
             token_limit = llm_instance.get_token_limit()
             display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
             if token_limit and token_limit > 0:
-                percentage = (current_token_usage / token_limit) * 100
-                display_text += f" | {percentage:.1f}% of {token_limit:,}"
+                percentage = (current_answer_token / token_limit) * 100
+                # 使用进度条样式显示百分比
+                filled_bars = int(percentage / 10)  # 每10%一个实心方块
+                empty_bars = 10 - filled_bars
+                progress_bar = "█" * filled_bars + "▒" * empty_bars
+                display_text += f" | {progress_bar} {percentage:.0f}% of {token_limit:,}"
         
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
