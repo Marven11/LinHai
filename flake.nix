@@ -38,8 +38,7 @@
             nativeBuildInputs = [ pkgs.installShellFiles ];
 
             build-system = [
-              setuptools
-              setuptools-scm
+              hatchling
             ];
 
             dependencies = [
@@ -55,7 +54,7 @@
             ];
 
             src = ./.;
-            version = "0.0.1";
+            version = "0.1.0";
           };
       }
     );
