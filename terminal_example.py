@@ -1,440 +1,85 @@
+import pyte
+import subprocess
+import pty
 import os
 import select
-import termios
-import subprocess
-import fcntl
-import struct
 
 
-class TerminalController:
-    def __init__(self, width=80, height=24):
-        self.width = width
-        self.height = height
-        self.master_fd = None
-        self.slave_fd = None
-        self.process = None
-        self.original_termios = None
+class PyteTerminal:
+    def __init__(self, columns=80, lines=24):
+        self.screen = pyte.Screen(columns, lines)
+        self.stream = pyte.Stream()
+        self.stream.attach(self.screen)
 
-        # 允许的按键名称集合，参考PyAutoGUI的KEYBOARD_KEYS
-        self.allowed_keys = set(
-            [
-                "\t",
-                "\n",
-                "\r",
-                " ",
-                "!",
-                '"',
-                "#",
-                "$",
-                "%",
-                "&",
-                "'",
-                "(",
-                ")",
-                "*",
-                "+",
-                ",",
-                "-",
-                ".",
-                "/",
-                "0",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                ":",
-                ";",
-                "<",
-                "=",
-                ">",
-                "?",
-                "@",
-                "[",
-                "\\",
-                "]",
-                "^",
-                "_",
-                "`",
-                "a",
-                "b",
-                "c",
-                "d",
-                "e",
-                "f",
-                "g",
-                "h",
-                "i",
-                "j",
-                "k",
-                "l",
-                "m",
-                "n",
-                "o",
-                "p",
-                "q",
-                "r",
-                "s",
-                "t",
-                "u",
-                "v",
-                "w",
-                "x",
-                "y",
-                "z",
-                "{",
-                "|",
-                "}",
-                "~",
-                "accept",
-                "add",
-                "alt",
-                "altleft",
-                "altright",
-                "apps",
-                "backspace",
-                "browserback",
-                "browserfavorites",
-                "browserforward",
-                "browserhome",
-                "browserrefresh",
-                "browsersearch",
-                "browserstop",
-                "capslock",
-                "clear",
-                "convert",
-                "ctrl",
-                "ctrlleft",
-                "ctrlright",
-                "decimal",
-                "del",
-                "delete",
-                "divide",
-                "down",
-                "end",
-                "enter",
-                "esc",
-                "escape",
-                "execute",
-                "f1",
-                "f10",
-                "f11",
-                "f12",
-                "f13",
-                "f14",
-                "f15",
-                "f16",
-                "f17",
-                "f18",
-                "f19",
-                "f2",
-                "f20",
-                "f21",
-                "f22",
-                "f23",
-                "f24",
-                "f3",
-                "f4",
-                "f5",
-                "f6",
-                "f7",
-                "f8",
-                "f9",
-                "final",
-                "fn",
-                "hanguel",
-                "hangul",
-                "hanja",
-                "help",
-                "home",
-                "insert",
-                "junja",
-                "kana",
-                "kanji",
-                "launchapp1",
-                "launchapp2",
-                "launchmail",
-                "launchmediaselect",
-                "left",
-                "modechange",
-                "multiply",
-                "nexttrack",
-                "nonconvert",
-                "num0",
-                "num1",
-                "num2",
-                "num3",
-                "num4",
-                "num5",
-                "num6",
-                "num7",
-                "num8",
-                "num9",
-                "numlock",
-                "pagedown",
-                "pageup",
-                "pause",
-                "pgdn",
-                "pgup",
-                "playpause",
-                "prevtrack",
-                "print",
-                "printscreen",
-                "prntscrn",
-                "prtsc",
-                "prtscr",
-                "return",
-                "right",
-                "scrolllock",
-                "select",
-                "separator",
-                "shift",
-                "shiftleft",
-                "shiftright",
-                "sleep",
-                "space",
-                "stop",
-                "subtract",
-                "tab",
-                "up",
-                "volumedown",
-                "volumemute",
-                "volumeup",
-                "win",
-                "winleft",
-                "winright",
-                "yen",
-                "command",
-                "option",
-                "optionleft",
-                "optionright",
-                "ctrl_c",
-                "ctrl_d",
-                "ctrl_z",  # 额外添加用于终端控制
-            ]
+        self.master, self.slave = pty.openpty()
+
+        env = os.environ.copy()
+        env["TERM"] = "vt100"
+        env["COLUMNS"] = str(columns)
+        env["LINES"] = str(lines)
+
+        self.process = subprocess.Popen(
+            ["/usr/bin/env", "bash"],
+            stdin=self.slave,
+            stdout=self.slave,
+            stderr=self.slave,
+            env=env,
+            preexec_fn=os.setsid,
         )
 
-        # 按键映射字典，参考PyAutoGUI的KEYBOARD_KEYS设计
-        self.key_mappings = {
-            "enter": "\n",
-            "tab": "\t",
-            "backspace": "\x08",
-            "escape": "\x1b",
-            "space": " ",
-            "left": "\x1b[D",
-            "right": "\x1b[C",
-            "up": "\x1b[A",
-            "down": "\x1b[B",
-            "home": "\x1b[H",
-            "end": "\x1b[F",
-            "insert": "\x1b[2~",
-            "delete": "\x1b[3~",
-            "pageup": "\x1b[5~",
-            "pagedown": "\x1b[6~",
-            "f1": "\x1bOP",
-            "f2": "\x1bOQ",
-            "f3": "\x1bOR",
-            "f4": "\x1bOS",
-            "f5": "\x1b[15~",
-            "f6": "\x1b[17~",
-            "f7": "\x1b[18~",
-            "f8": "\x1b[19~",
-            "f9": "\x1b[20~",
-            "f10": "\x1b[21~",
-            "f11": "\x1b[23~",
-            "f12": "\x1b[24~",
-            "return": "\r",
-            "esc": "\x1b",
-            "del": "\x1b[3~",
-            "pgup": "\x1b[5~",
-            "pgdn": "\x1b[6~",
-            "ctrl_c": "\x03",
-            "ctrl_d": "\x04",
-            "ctrl_z": "\x1a",
-        }
+    def send(self, data):
+        """发送命令到终端"""
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        os.write(self.master, data)
 
-    def create_terminal(self):
-        """创建伪终端"""
-        try:
-            # 创建伪终端对
-            self.master_fd, self.slave_fd = os.openpty()
+    def update(self):
+        """更新屏幕状态"""
+        while select.select([self.master], [], [], 0.1)[0]:
+            try:
+                data = os.read(self.master, 1024).decode("utf-8", errors="ignore")
+                self.stream.feed(data)
+            except (OSError, UnicodeDecodeError):
+                break
 
-            # 设置终端大小
-            winsize = struct.pack("HHHH", self.height, self.width, 0, 0)
-            fcntl.ioctl(self.slave_fd, termios.TIOCSWINSZ, winsize)
-
-            # 启动shell进程
-            self.process = subprocess.Popen(
-                ["/bin/bash", "--login"],
-                stdin=self.slave_fd,
-                stdout=self.slave_fd,
-                stderr=self.slave_fd,
-                preexec_fn=os.setsid,
-            )
-
-            # 设置非阻塞读取
-            flags = fcntl.fcntl(self.master_fd, fcntl.F_GETFL)
-            fcntl.fcntl(self.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-            print(f"终端已创建: {self.width}x{self.height}")
-            return True
-
-        except Exception as e:
-            print(f"创建终端失败: {e}")
-            return False
-
-    def read_terminal(self, timeout=0.1):
-        """按行读取终端内容"""
-        if not self.master_fd:
-            return []
-
-        lines = []
-        current_line = ""
-
-        try:
-            # 读取所有可用数据
-            while True:
-                ready, _, _ = select.select([self.master_fd], [], [], timeout)
-                if not ready:
-                    break
-
-                data = os.read(self.master_fd, 1024).decode("utf-8", errors="ignore")
-                if not data:
-                    break
-
-                # 处理数据，按行分割
-                for char in data:
-                    if char == "\n" or char == "\r":
-                        if current_line:
-                            lines.append(current_line)
-                            current_line = ""
-                    else:
-                        current_line += char
-
-            # 添加最后一行（如果有）
-            if current_line:
-                lines.append(current_line)
-
-        except (OSError, IOError):
-            pass
-
-        return lines
-
-    def read_terminal_raw(self, max_chars=1024):
-        """读取原始终端输出（不按行分割）"""
-        if not self.master_fd:
-            return ""
-
-        try:
-            output = ""
-            ready, _, _ = select.select([self.master_fd], [], [], 0.1)
-            if ready:
-                data = os.read(self.master_fd, max_chars).decode(
-                    "utf-8", errors="ignore"
-                )
-                output = data
-            return output
-        except (OSError, IOError):
-            return ""
-
-    def send_key(self, key, control_code=None):
-        """发送按键到终端"""
-        if not self.master_fd:
-            return False
-
-        try:
-            if control_code:
-                # 发送控制码
-                os.write(self.master_fd, control_code.encode())
-            else:
-                # 发送普通按键
-                os.write(self.master_fd, key.encode())
-            return True
-        except (OSError, IOError) as e:
-            print(f"发送按键失败: {e}")
-            return False
-
-    def send_keypress(self, key_names: list[str]):
-        """发送按键名称列表到终端，参考PyAutoGUI设计"""
-
-        for key_name in key_names:
-            if key_name not in self.allowed_keys:
-                raise ValueError(f"Invalid key name: {key_name}")
-            if len(key_name) == 1:
-                # 单字符按键直接发送
-                if not self.send_key(key_name):
-                    return False
-            else:
-                # 多字符按键查找映射
-                if key_name in self.key_mappings:
-                    if not self.send_key("", self.key_mappings[key_name]):
-                        return False
-                else:
-                    raise ValueError(f"No mapping for key: {key_name}")
-        return True
-
-    def send_command(self, command):
-        """发送完整命令"""
-        success = True
-        for char in command:
-            if not self.send_key(char):
-                success = False
-        if success:
-            self.send_keypress(["enter"])
-        return success
+    def get_screen(self):
+        """获取当前屏幕内容"""
+        return "\n".join("".join(line) for line in self.screen.display)
 
     def close(self):
-        """关闭终端"""
-        if self.process:
-            self.process.kill()
-            self.process.wait()
-        if self.master_fd:
-            os.close(self.master_fd)
-        if self.slave_fd:
-            os.close(self.slave_fd)
+        self.process.terminate()
+        os.close(self.master)
+        os.close(self.slave)
 
 
-# 使用示例
-def main():
-    # 创建终端控制器
-    terminal = TerminalController(width=80, height=24)
+# 使用示例：使用vim创建并写入文件
+term = PyteTerminal()
+import time
 
-    # 创建终端
-    if terminal.create_terminal():
-        print("终端创建成功！")
+# 启动vim并创建新文件
+term.send("vim example.txt\r")
 
-        # 等待终端初始化
-        import time
+# 进入插入模式并写入内容
+term.send("i")
+term.send("这是使用Vim写入的示例文件内容喵~\n")
+term.send("第二行内容：114514\n")
+term.send("第三行内容：李田所")
 
-        time.sleep(0.5)
+# 退出插入模式并保存文件
+term.send("\x1b")  # ESC键
+term.send(":wq\r")  # 保存并退出
 
-        # 读取初始输出
-        lines = terminal.read_terminal()
-        for line in lines:
-            print(f"终端: {line}")
+# 显示最终屏幕内容
+term.update()
+screen_content = term.get_screen()
+print("屏幕内容:")
+print(screen_content)
 
-        # 发送命令
-        print("发送 'ls' 命令...")
-        terminal.send_command("ls")
+# 验证文件是否创建成功
+term.send("cat example.txt\r")
+term.update()
+file_content = term.get_screen()
+print("\n文件内容:")
+print(file_content)
 
-        # 等待命令执行
-        time.sleep(1)
-
-        # 读取命令输出
-        lines = terminal.read_terminal()
-        for line in lines:
-            print(f"输出: {line}")
-
-        print("发送Ctrl+C...")
-        terminal.send_keypress(["ctrl_c"])
-
-        # 清理
-        terminal.close()
-
-
-if __name__ == "__main__":
-    main()
+term.close()
