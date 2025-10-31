@@ -338,6 +338,7 @@ class CLIApp(App):
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
                 total_tokens += self.current_token_usage.total_tokens
+                current_token_usage = self.current_token_usage.total_tokens
             
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
@@ -345,7 +346,7 @@ class CLIApp(App):
             token_limit = llm_instance.get_token_limit()
             display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
             if token_limit and token_limit > 0:
-                percentage = (total_tokens / token_limit) * 100
+                percentage = (current_token_usage / token_limit) * 100
                 display_text += f" | {percentage:.1f}% of {token_limit:,}"
         
         token_display = self.query_one("#token-usage")
