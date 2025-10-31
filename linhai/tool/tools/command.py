@@ -24,11 +24,17 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
     if timeout > 3600:
         return "Timeout value exceeds maximum limit of 3600 seconds"
     try:
+        # 设置EDITOR环境变量为输出错误并退出
+        env = os.environ.copy()
+        msg = "using env EDITOR failed, please use other tools."
+        env['EDITOR'] = f'sh -c \'echo {msg!r}; exit 1\''
+        
         process = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             shell=True,
+            env=env,
         )
         try:
             stdout, stderr = await asyncio.wait_for(
