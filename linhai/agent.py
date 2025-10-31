@@ -745,7 +745,7 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
             chat_completion_kwargs=llm_config_dict.get(
                 "completion_options", {}
             ),
-            token_limit=llm_config_dict.get("token_limit", 65536),
+            token_limit=llm_config_dict.get("token_limit"),
         )
         llms.append(llm)
     return llms

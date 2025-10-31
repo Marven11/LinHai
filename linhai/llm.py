@@ -325,11 +325,11 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
-    def get_token_limit(self) -> int:
+    def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
 
         返回:
-            int: token限制数量
+            int | None: token限制数量，如果没有配置则返回None
         """
         raise NotImplementedError()
 
@@ -466,7 +466,7 @@ class OpenAi:
         openai_config: dict,
         chat_completion_kwargs: dict,
         tools: list[dict] | None = None,
-        token_limit: int = 65536,
+        token_limit: int | None = None,
     ):
         """初始化OpenAI语言模型。
 
@@ -486,11 +486,11 @@ class OpenAi:
         self.chat_completion_kwargs = chat_completion_kwargs
         self.token_limit = token_limit
 
-    def get_token_limit(self) -> int:
+    def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
 
         返回:
-            int: token限制数量
+            int | None: token限制数量，如果没有配置则返回None
         """
         return self.token_limit
 

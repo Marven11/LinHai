@@ -343,8 +343,10 @@ class CLIApp(App):
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, llm_instance = agent.get_current_llm_info()
             token_limit = llm_instance.get_token_limit()
-            percentage = (current_answer_token / token_limit) * 100 if token_limit > 0 else 0
-            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total | {percentage:.1f}% of {token_limit:,}"
+            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+            if token_limit and token_limit > 0:
+                percentage = (total_tokens / token_limit) * 100
+                display_text += f" | {percentage:.1f}% of {token_limit:,}"
         
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
