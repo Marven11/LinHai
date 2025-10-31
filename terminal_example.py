@@ -3,6 +3,7 @@ import subprocess
 import pty
 import os
 import select
+import json
 
 
 class PyteTerminal:
@@ -27,6 +28,10 @@ class PyteTerminal:
             preexec_fn=os.setsid,
         )
 
+        # 在初始化时读取JSON文件一次
+        with open("key_mappings.json", "r", encoding="utf-8") as f:
+            self.key_mappings = json.load(f)
+
     def send(self, data):
         """发送命令到终端"""
         if isinstance(data, str):
@@ -45,6 +50,14 @@ class PyteTerminal:
     def get_screen(self):
         """获取当前屏幕内容"""
         return "\n".join("".join(line) for line in self.screen.display)
+
+    def send_key(self, key_name):
+        """发送可读的按键名到终端"""
+        # 直接使用存储的映射，有错误直接raise
+        key_data = self.key_mappings[key_name]
+        # 处理转义字符
+        key_data = key_data.encode('utf-8').decode('unicode_escape')
+        self.send(key_data)
 
     def close(self):
         self.process.terminate()
@@ -66,8 +79,9 @@ term.send("第二行内容：114514\n")
 term.send("第三行内容：李田所")
 
 # 退出插入模式并保存文件
-term.send("\x1b")  # ESC键
-term.send(":wq\r")  # 保存并退出
+term.send_key("esc")  # 使用可读按键名发送ESC键
+term.send(":wq")
+term.send_key("enter")  # 使用可读按键名发送回车键
 
 # 显示最终屏幕内容
 term.update()
@@ -82,4 +96,22 @@ file_content = term.get_screen()
 print("\n文件内容:")
 print(file_content)
 
+# 演示更多按键功能
+print("\n演示更多按键功能:")
+term.send("ls")
+term.send_key("tab")  # 自动补全
+term.update()
+time.sleep(0.5)
+term.send_key("enter")  # 执行命令
+term.update()
+time.sleep(0.5)
+
+# 清屏
+term.send("clear\r")
+term.update()
+
 term.close()
+
+print("\n按键映射功能已添加完成！支持以下按键名:")
+print("enter, esc, tab, space, backspace, up, down, left, right")
+print("home, end, insert, delete, pageup, pagedown, f1-f12")
