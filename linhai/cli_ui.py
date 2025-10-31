@@ -333,12 +333,10 @@ class CLIApp(App):
             input_tokens = self.cumulative_token_usage["input_tokens"]
             output_tokens = self.cumulative_token_usage["output_tokens"]
             total_tokens = self.cumulative_token_usage["total_tokens"]
-            current_token_usage = 0
             if self.current_token_usage is not None:
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
                 total_tokens += self.current_token_usage.total_tokens
-                current_token_usage = self.current_token_usage.total_tokens
             
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
