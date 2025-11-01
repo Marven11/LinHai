@@ -51,6 +51,7 @@
               textual
               selenium
               mcp
+              pyte
             ];
 
             src = ./.;
