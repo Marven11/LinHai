@@ -40,6 +40,7 @@ from linhai.config import load_config
 from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.tool.mcp_connector import MCPConnector
+from linhai.tool.tools.terminal import terminal_toolset
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
@@ -150,15 +151,9 @@ class Agent:
         # 确保tool_manager存在
         try:
             tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
-        except RuntimeError:
-            # 如果不存在，创建并注册
-            tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools])
-            try:
-                self.group_chat.register_member("tool_manager", tool_manager)
-            except RuntimeError:
-                # 如果注册失败（可能其他线程/协程已经注册），重新获取
-                tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
-        
+        except RuntimeError as e:
+            raise RuntimeError("Tool manager must be registered!") from e
+
         # 将工具集添加到ToolManager
         tool_manager.add_toolset(llm_toolset)
 
@@ -816,7 +811,7 @@ async def _create_agent_config(
 
 async def _create_tool_manager(group_chat):
     """创建ToolManager实例并注册工作流"""
-    tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
+    tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools, terminal_toolset])
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",

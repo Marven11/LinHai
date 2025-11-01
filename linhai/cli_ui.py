@@ -319,11 +319,15 @@ class CLIApp(App):
         )
 
     async def on_unmount(self) -> None:
-        """应用卸载时取消任务"""
+        """应用卸载时取消任务并关闭所有终端"""
         if self.output_watcher_task:
             self.output_watcher_task.cancel()
         if self.agent_task:
             self.agent_task.cancel()
+        
+        # 关闭所有终端
+        from linhai.tool.tools.terminal import close_all_terminals
+        await close_all_terminals()
 
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
@@ -367,6 +371,9 @@ class CLIApp(App):
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
         if event.key == "ctrl+c":
+            # 先关闭所有终端，然后退出应用
+            from linhai.tool.tools.terminal import close_all_terminals
+            await close_all_terminals()
             self.app.exit()
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
