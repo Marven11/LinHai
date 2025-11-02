@@ -1,11 +1,11 @@
 """命令执行工具模块，提供安全命令执行功能。"""
 
+from datetime import datetime
 import asyncio
 import os
 import subprocess
 import re
 from linhai.tool.base import global_tools, ToolArgInfo
-# import sys  # Unused import
 import platform
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
@@ -27,8 +27,8 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
         # 设置EDITOR环境变量为输出错误并退出
         env = os.environ.copy()
         msg = "using env EDITOR failed, please use other tools."
-        env['EDITOR'] = f'sh -c \'echo {msg!r}; exit 1\''
-        
+        env["EDITOR"] = f"sh -c 'echo {msg!r}; exit 1'"
+
         process = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
@@ -147,3 +147,14 @@ def change_directory(directory: str) -> str:
     except OSError as e:
         return f"Error changing directory: {str(e)}"
 
+
+@global_tools.register_tool(
+    name="sleep",
+    desc="睡眠X秒，返回开始和结束时间",
+    args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
+    required_args=["seconds"],
+)
+async def sleep(seconds: float):
+    start = datetime.now()
+    await asyncio.sleep(seconds)
+    return f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
