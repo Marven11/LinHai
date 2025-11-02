@@ -15,7 +15,7 @@ and `MCP Client` connects LLM to the middle layer.
 """
 
 import asyncio
-import json
+# import json  # Unused import
 import os.path
 from contextlib import AsyncExitStack
 from typing import Any
@@ -127,7 +127,7 @@ class MCPConnector:
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
-            except Exception as e:
+            except (ConnectionError, TimeoutError) as e:
                 return ToolErrorMessage(f"连接{server_script_path!r}失败，错误: {e!r}")
 
         return connector_toolset

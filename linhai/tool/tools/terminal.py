@@ -70,7 +70,7 @@ class PyteTerminal:
             stdout=self.slave,
             stderr=self.slave,
             env=env,
-            preexec_fn=os.setsid,
+            # preexec_fn=os.setsid,  # Unsafe in threads
         )
 
     def send(self, data: str | bytes):
@@ -256,7 +256,7 @@ async def close_all_terminals() -> str:
     Returns:
         关闭结果消息
     """
-    global terminals
+    # global terminals  # No assignment done
     count = len(terminals)
     for terminal_uuid in list(terminals.keys()):
         terminal = terminals[terminal_uuid]

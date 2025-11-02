@@ -5,7 +5,7 @@ import os
 import subprocess
 import re
 from linhai.tool.base import global_tools, ToolArgInfo
-import sys
+# import sys  # Unused import
 import platform
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
@@ -58,7 +58,7 @@ Stdout:
 Stderr:
 {stderr_str}
 """
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         return f"Command failed with error: {str(e)}"
 
 

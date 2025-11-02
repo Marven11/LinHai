@@ -1,12 +1,12 @@
 """HTTP工具模块，提供发送HTTP请求的功能。"""
 
 from typing import Optional
-import requests
+# import requests  # Unused import
 import httpx
 
 from linhai.tool.base import global_tools
 
-import os
+# import os  # Unused import
 import tempfile
 import subprocess
 import shutil
@@ -131,7 +131,7 @@ markdown内容如下
 {content}
 """
 
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         return f"转换失败: {str(e)}"
 
 
@@ -224,5 +224,5 @@ async def search_web(query: str, max_results: int = 5) -> str:
 
     except httpx.RequestError as e:
         return f"搜索请求失败: {str(e)}"
-    except Exception as e:
+    except (ConnectionError, TimeoutError, OSError) as e:
         return f"搜索过程中发生错误: {str(e)}"

@@ -73,7 +73,7 @@ def validate_file(file_path: Path) -> str:
 
     # 检查是否为纯文本：尝试读取文件并检查编码
     try:
-        content = file_path.read_text(encoding="utf-8")
+        _ = file_path.read_text(encoding="utf-8")  # Unused variable content
         # 如果成功读取，则认为是文本文件
     except UnicodeDecodeError:
         return f"文件{file_path.as_posix()!r}不是纯文本文件（UTF-8编码错误）"
@@ -211,7 +211,7 @@ def append_file(filepath: str, content: str) -> str:
     required_args=["filepath", "old", "new"],
 )
 def replace_file_content(
-    filepath: str, old: str, new: str, replace_times: int = None
+    filepath: str, old: str, new: str, replace_times: int | None = None
 ) -> str:
     """替换文件内容中的指定字符串。
 
@@ -419,7 +419,7 @@ def modify_file_with_sed(expression: str, filepath: str) -> str:
             cmd = ["sed", "-i", "", expression, file_path.as_posix()]
         else:  # Linux或其他
             cmd = ["sed", "-i", expression, file_path.as_posix()]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        _ = subprocess.run(cmd, capture_output=True, text=True, check=True)  # Unused variable result
 
         # 检查表达式是否使用行号匹配
 

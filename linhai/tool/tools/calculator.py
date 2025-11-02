@@ -34,7 +34,7 @@ def safe_calculator(expression: str) -> str:
 
     try:
         # 使用eval计算表达式，但捕获异常
-        result = eval(expression, {"__builtins__": {}}, {})  # 限制内置函数和变量
+        result = eval(expression, {"__builtins__": {}}, {})  # pylint: disable=eval-used
         return str(result)
-    except Exception as e:
+    except (ValueError, ZeroDivisionError, SyntaxError) as e:
         return f"错误: 计算失败 - {str(e)}"
