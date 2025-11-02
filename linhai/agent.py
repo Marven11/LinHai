@@ -44,6 +44,7 @@ from linhai.tool.tools.terminal import terminal_toolset
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
+from linhai.input_parser import parse_user_input
 
 logger = logging.getLogger(__name__)
 
@@ -436,10 +437,14 @@ class Agent:
             return False
 
     async def handle_user_message(self, msg: Message):
-
         assert isinstance(msg, ChatMessage) and msg.role == "user"
 
         content = msg.message.strip()
+        
+        # 使用input_parser解析用户输入
+        parsed_input = parse_user_input(content)
+        
+        # 处理以@开头的消息（用于切换LLM）
         if content.startswith("@"):
             llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
             if llm_name in self.config["llm_names"]:
@@ -454,6 +459,13 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
                 )
+        
+        # 处理命令（如果有）
+        if parsed_input.command:
+            # 暂时只是记录，不处理具体命令
+            self.messages.append(
+                RuntimeMessage(f"检测到命令: {parsed_input.command}，但尚未实现处理")
+            )
 
         self.messages.append(msg)
         try:
