@@ -14,7 +14,7 @@ class MockAnswer:
     
     def __init__(self, message_content="Agent响应内容"):
         self.message_content = message_content
-        self.tokens = ["test", " token"]
+        self.tokens = ["test", " token", " more", " tokens", " to", " ensure", " loop", " runs", " long", " enough"]
         self.current_index = 0
         
     def __aiter__(self):
@@ -152,6 +152,81 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 模拟正常打断逻辑
         # 这里我们只验证逻辑，不实际调用interrupt
+
+    async def test_queue_message_preserved_after_interrupt(self):
+        """测试/queue消息在agent生成被打断时不会丢失"""
+        # 创建模拟answer
+        mock_answer = MockAnswer()
+        self.mock_llm.answer_stream = AsyncMock(return_value=mock_answer)
+        
+        # 模拟group_chat行为：在生成响应过程中先有/queue消息，然后有普通打断消息
+        receive_calls = [
+            ChatMessage(role="user", message="/queue 排队消息1"),
+            ChatMessage(role="user", message="/queue 排队消息2"),
+            ChatMessage(role="user", message="普通打断消息")
+        ]
+        
+        # 使用一个计数器来模拟多次检查用户输入
+        is_empty_call_count = 0
+        
+        def is_empty_side_effect(queue_name):
+            nonlocal is_empty_call_count
+            is_empty_call_count += 1
+            # 前几次调用返回False（有用户输入），后面返回True（没有用户输入）
+            # 确保在循环中有机会检查用户输入
+            return is_empty_call_count > 10  # 增加调用次数
+        
+        self.group_chat.is_empty = Mock(side_effect=is_empty_side_effect)
+        self.group_chat.receive = AsyncMock(side_effect=receive_calls)
+        self.group_chat.send = AsyncMock()
+        
+        # 调用generate_response，应该会被打断
+        try:
+            await self.agent.generate_response()
+        except Exception:
+            # 预期会被打断，我们关心的是queued_messages是否被保存
+            pass
+        
+        # 验证queued_messages实例变量中保存了排队消息
+        self.assertTrue(hasattr(self.agent, 'queued_messages'), "agent应该有queued_messages实例变量")
+        self.assertEqual(len(self.agent.queued_messages), 2, "queued_messages应该保存了2条排队消息")
+        
+        # 验证排队消息的内容
+        self.assertEqual(self.agent.queued_messages[0].message, "/queue 排队消息1")
+        self.assertEqual(self.agent.queued_messages[1].message, "/queue 排队消息2")
+        
+        # 验证消息列表中没有排队消息（因为被打断了，排队消息还没被添加到消息列表）
+        queue_messages_in_main = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
+        self.assertEqual(len(queue_messages_in_main), 0, "排队消息不应该出现在主消息列表中（因为被打断了）")
+        
+        # 现在模拟再次调用generate_response（比如用户继续对话）
+        # 重置模拟，这次没有用户输入打断
+        self.group_chat.is_empty = Mock(return_value=True)
+        self.mock_llm.answer_stream = AsyncMock(return_value=MockAnswer("继续响应"))
+        
+        # 调用generate_response
+        await self.agent.generate_response()
+        
+        # 验证排队消息现在被添加到了消息列表中
+        queue_messages_in_main = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
+        self.assertEqual(len(queue_messages_in_main), 2, "排队消息现在应该出现在主消息列表中")
+        
+        # 验证queued_messages被清空
+        self.assertEqual(len(self.agent.queued_messages), 0, "queued_messages应该在处理后清空")
+        
+        # 验证排队消息在assistant消息之后
+        assistant_messages = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "assistant"]
+        self.assertTrue(len(assistant_messages) >= 1, "应该至少有一个assistant消息")
+        
+        last_assistant_idx = None
+        for i, msg in enumerate(self.agent.messages):
+            if isinstance(msg, ChatMessage) and msg.role == "assistant":
+                last_assistant_idx = i
+        
+        # 验证排队消息在assistant消息之后
+        for i, msg in enumerate(self.agent.messages):
+            if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
+                self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
 
 
 if __name__ == "__main__":

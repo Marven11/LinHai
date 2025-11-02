@@ -92,6 +92,7 @@ class Agent:
         self.soft_compress_triggered = False  # 软压缩限制触发标志
 
         self.large_messages: dict[str, Message] = {}  # 存储大消息的UUID映射
+        self.queued_messages: list[Message] = []  # 存储/queue消息
         # Plugin使用的变量
         self.current_disable_waiting_user_warning = False
 
@@ -505,7 +506,9 @@ class Agent:
 
         answer: Answer = await model.answer_stream(self.messages)
 
-        queued_messages = []
+        # 初始化queued_messages实例变量（如果不存在）
+        if not hasattr(self, 'queued_messages'):
+            self.queued_messages = []
 
         async for token in answer:
             await self.group_chat.send("cli_agent_output", token)
@@ -526,7 +529,7 @@ class Agent:
                 content = msg.message.strip()
                 if content.startswith("/queue"):
                     # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
-                    queued_messages.append(msg)
+                    self.queued_messages.append(msg)
                 else:
                     # 正常打断
                     await self.group_chat.send("cli_agent_output", answer)
@@ -543,9 +546,10 @@ class Agent:
         self.messages.append(chat_message)
 
         # 将排队消息添加到消息列表，放在agent输出后面
-        if queued_messages:
+        if self.queued_messages:
             self.messages.append(RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理："))
-            self.messages += queued_messages
+            self.messages += self.queued_messages
+            self.queued_messages = []  # 清空排队消息
 
         tool_calls, errors = extract_tool_calls_with_errors(full_response)
 
