@@ -1,8 +1,8 @@
 """测试agent_plugin模块。"""
 
 import unittest
-from unittest.mock import MagicMock
-from linhai.agent_plugin import TaskPlanningPlugin, BadMultiToolCall
+from unittest.mock import MagicMock, AsyncMock
+from linhai.agent_plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
 
 
 class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
@@ -281,3 +281,97 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(len(self.agent.messages), 0)
+
+
+class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
+    """测试ChineseEndOfSentencePlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.plugin = ChineseEndOfSentencePlugin()
+        self.agent = MagicMock()
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_during_message_generation.assert_called_once_with(
+            self.plugin.during_message_generation
+        )
+
+    async def test_during_message_generation_with_chinese_end_marker(self):
+        """测试有中文句子结束标记的情况。"""
+        current_content = """这是一些内容
+这是一行中文<｜end▁of▁thought｜><｜end▁of▁sentence｜>
+这是另一行内容"""
+
+        self.agent.messages = []
+        self.agent.group_chat = MagicMock()
+        self.agent.group_chat.send = AsyncMock()
+
+        result = await self.plugin.during_message_generation(
+            self.agent, self.answer, current_content
+        )
+
+        # 应该检测到中文句子结束标记并打断输出
+        self.assertTrue(result)
+        self.answer.interrupt.assert_called_once()
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("检测到中文句子结束标记", self.agent.messages[0].message)
+
+    async def test_during_message_generation_without_chinese_end_marker(self):
+        """测试没有中文句子结束标记的情况。"""
+        current_content = """这是一些内容
+这是一行中文<｜end▁of▁sentence｜>
+这是另一行内容"""
+
+        self.agent.messages = []
+        self.agent.group_chat = MagicMock()
+        self.agent.group_chat.send = AsyncMock()
+
+
+        result = await self.plugin.during_message_generation(
+            self.agent, self.answer, current_content
+        )
+
+        self.assertTrue(result)
+
+    async def test_during_message_generation_with_non_chinese_before_marker(self):
+        """测试标记前面有非汉字的情况。"""
+        current_content = """这是一些内容
+这是一行中文abc<｜end▁of▁sentence｜>
+这是另一行内容"""
+
+        self.agent.messages = []
+        self.agent.group_chat = MagicMock()
+        self.agent.group_chat.send = AsyncMock()
+
+        result = await self.plugin.during_message_generation(
+            self.agent, self.answer, current_content
+        )
+
+        # 标记前面有非汉字，不应该打断输出
+        self.assertFalse(result)
+        self.assertEqual(len(self.agent.messages), 0)
+
+    async def test_during_message_generation_with_different_markers(self):
+        """测试不同的结束标记。"""
+        current_content = """这是一些内容
+这是一行中文<｜end▁of▁thought｜>
+这是另一行内容"""
+
+        self.agent.messages = []
+        self.agent.group_chat = MagicMock()
+        self.agent.group_chat.send = AsyncMock()
+
+        result = await self.plugin.during_message_generation(
+            self.agent, self.answer, current_content
+        )
+
+        # 应该检测到中文句子结束标记并打断输出
+        self.assertTrue(result)
+        self.answer.interrupt.assert_called_once()
+        self.assertEqual(len(self.agent.messages), 1)
+        self.assertIn("检测到中文句子结束标记", self.agent.messages[0].message)

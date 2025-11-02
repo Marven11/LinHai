@@ -263,6 +263,34 @@ class MarkdownSyntaxPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class ChineseEndOfSentencePlugin(Plugin):
+    """中文句子结束标记检查Plugin。"""
+
+    async def during_message_generation(
+        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+    ):
+        """检查是否有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字。"""
+        # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
+        pattern = r'[\u4e00-\u9fff]+<｜end▁of▁[a-z]+｜>'
+        
+        # 检查每一行
+        for line in current_content.split('\n'):
+            if re.search(pattern, line):
+                await agent.group_chat.send("cli_agent_output", answer)
+                agent.messages.append(
+                    RuntimeMessage(
+                        "检测到中文句子结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，已打断输出"
+                    )
+                )
+                answer.interrupt()
+                return True
+        return False
+
+    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
+
+
 class TaskPlanningPlugin(Plugin):
     """任务规划格式检查Plugin。"""
 
@@ -348,6 +376,7 @@ def register_default_plugins(lifecycle) -> None:
         ToolcallWithoutPlanningPlugin(),
         ToolCallCountPlugin(),
         WrongEndPlugin(),
+        ChineseEndOfSentencePlugin(),
         BadMultiToolCall(),
         ExcessiveCheckmarkPlugin(),
         MarkdownSyntaxPlugin(),
