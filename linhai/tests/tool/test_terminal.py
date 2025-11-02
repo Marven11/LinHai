@@ -119,7 +119,7 @@ class TestTerminalTools(unittest.TestCase):
             send_keys_func = terminal_toolset.get_tool("send_keys_to_terminal")
             result = await send_keys_func(
                 terminal_uuid,
-                ["up", "down", "left", "right", "tab"],
+                ["up", "down", "left", "right", "tab", "pageup", "pagedown"],
             )
             self.assertIn("已发送按键", result)
 
