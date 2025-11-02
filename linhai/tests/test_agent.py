@@ -125,7 +125,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Test
-        await self.agent.handle_user_message(test_msg)
+        self.agent.handle_user_message(test_msg)
+        await self.agent.generate_response()
 
         # 验证 cli_agent_output 队列收到了正确的 tokens 和最终 Answer
         tokens = []
@@ -175,14 +176,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # 测试用户消息处理
-        await self.agent.handle_user_message(user_msg)
+        self.agent.handle_user_message(user_msg)
+        await self.agent.generate_response()
 
         # 验证用户消息被添加到messages中
         self.assertEqual(
             len(self.agent.messages),
             4,
             f"Messages: {[str(msg) for msg in self.agent.messages]}",
-        )  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查
+        )  # 系统消息 + 用户消息 + 助手回复 + 运行时消息
         self.assertEqual(
             self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
@@ -214,7 +216,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             len(self.agent.messages),
             7,
             f"Messages: {[str(msg) for msg in self.agent.messages]}",
-        )  # 系统消息 + 用户消息 + 回复 + 任务规划格式检查 + 工具消息 + 回复 + 任务规划格式检查
+        )  # 系统消息 + 用户消息 + 助手回复 + 运行时消息 + 工具消息 + 助手回复 + 运行时消息
         # 工具消息被添加到末尾
         self.assertEqual(
             self.agent.messages[4].to_llm_message().get("content"), "result"
@@ -232,10 +234,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # Test and verify exception is raised
         with self.assertRaises(RuntimeError) as cm:
-            await self.agent.handle_user_message(test_msg)
+            self.agent.handle_user_message(test_msg)
+            await self.agent.generate_response()
 
         self.assertEqual(str(cm.exception), "Test error")
-        self.assertEqual(self.agent.state, "paused")
+        self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_run_loop(self):
         """Test agent run loop functionality."""
@@ -294,9 +297,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock()
 
         # 发送用户消息触发处理
-        await self.agent.handle_user_message(
+        self.agent.handle_user_message(
             ChatMessage(role="user", message="Calculate 2+2")
         )
+        await self.agent.generate_response()
 
         # 验证tool_manager.process_tool_call被调用
         self.tool_manager.process_tool_call.assert_called_once()
@@ -348,14 +352,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.config["current_llm_index"] = 0  # 默认使用第一个
 
         # 测试场景1: 有效的@qwen消息，应该更新索引到1
-        await self.agent.handle_user_message(ChatMessage(role="user", message="@qwen Hello"))
+        self.agent.handle_user_message(ChatMessage(role="user", message="@qwen Hello"))
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
 
         # 测试场景2: 无效的@invalid消息，索引不应更新，并添加错误消息
         self.agent.config["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_user_message(
+        self.agent.handle_user_message(
             ChatMessage(role="user", message="@invalid command")
         )
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
@@ -372,7 +376,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 测试场景3: 没有@消息，索引不应更新
         self.agent.config["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Hello world"))
+        self.agent.handle_user_message(ChatMessage(role="user", message="Hello world"))
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
@@ -380,15 +384,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 测试场景4: 多个消息，只有@消息更新索引
         self.agent.config["current_llm_index"] = 0  # 重置索引
         # 先发送一个@qwen消息
-        await self.agent.handle_user_message(ChatMessage(role="user", message="@qwen first"))
+        self.agent.handle_user_message(ChatMessage(role="user", message="@qwen first"))
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
         # 然后发送一个普通消息
-        await self.agent.handle_user_message(
+        self.agent.handle_user_message(
             ChatMessage(role="user", message="Normal message")
         )
         self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引不变
         # 然后发送一个@deepseek-reasoning消息
-        await self.agent.handle_user_message(
+        self.agent.handle_user_message(
             ChatMessage(role="user", message="@deepseek-reasoning second")
         )
         self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引更新为0
