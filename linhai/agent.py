@@ -46,6 +46,7 @@ from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 from linhai.utils import CliRuntimeMessage
+
 logger = logging.getLogger(__name__)
 
 
@@ -216,7 +217,9 @@ class Agent:
         def delete_message_by_uuid(uuids: list[str]) -> str:
             result = ""
             for message_uuid in uuids:
-                result += f"{message_uuid!r}: {self.delete_message_by_uuid(message_uuid)}"
+                result += (
+                    f"{message_uuid!r}: {self.delete_message_by_uuid(message_uuid)}"
+                )
             return result
 
         # 将虚拟工具集添加到ToolManager
@@ -226,30 +229,32 @@ class Agent:
         tool_confirmation_config = self.config.get("tool_confirmation", {})
         if not isinstance(tool_confirmation_config, dict):
             tool_confirmation_config = {}
-        self.skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
+        self.skip_confirmation = tool_confirmation_config.get(
+            "skip_confirmation", False
+        )
         self.whitelist = tool_confirmation_config.get("whitelist", [])
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
     def delete_message_by_uuid(self, message_uuid: str) -> str:
         """删除大消息方法。
-        
+
         Args:
             uuid: 要删除的消息的UUID
-            
+
         Returns:
             str: 删除结果消息
         """
         if message_uuid not in self.large_messages:
             return f"错误：UUID '{message_uuid}' 不存在，无法删除消息。"
-        
+
         # 从large_messages中移除
         message_to_delete = self.large_messages[message_uuid]
         del self.large_messages[message_uuid]
-        
+
         # 从messages中移除（如果存在）
         if message_to_delete in self.messages:
             self.messages.remove(message_to_delete)
-            
+
         return f"已成功删除UUID为 '{message_uuid}' 的大消息"
 
     async def state_waiting_user(self):
@@ -448,20 +453,18 @@ class Agent:
         assert isinstance(msg, ChatMessage) and msg.role == "user"
 
         content = msg.message.strip()
-        
+
         # 使用input_parser解析用户输入
         parsed_input = parse_user_input(content)
-        
+
         # 处理以@开头的消息（用于切换LLM）
-        if content.startswith("@"):
-            llm_name = content.split(maxsplit=1)[0][1:]  # 提取@后的名称
+        if parsed_input.switch_model:
+            llm_name = parsed_input.switch_model
             if llm_name in self.config["llm_names"]:
                 self.config["current_llm_index"] = self.config["llm_names"].index(
                     llm_name
                 )
-                self.messages.append(
-                    RuntimeMessage(f"用户切换到了llm: '{llm_name}'")
-                )
+                self.messages.append(RuntimeMessage(f"用户切换到了llm: '{llm_name}'"))
             else:
                 # 添加错误消息
                 self.messages.append(
@@ -515,7 +518,7 @@ class Agent:
         answer: Answer = await model.answer_stream(self.messages)
 
         # 初始化queued_messages实例变量（如果不存在）
-        if not hasattr(self, 'queued_messages'):
+        if not hasattr(self, "queued_messages"):
             self.queued_messages = []
 
         async for token in answer:
@@ -529,7 +532,9 @@ class Agent:
                 self, answer, current_content
             )
             if should_interrupt:
-                interrupt_msg = CliRuntimeMessage(level = "WARNING", content = "Agent被插件打断")
+                interrupt_msg = CliRuntimeMessage(
+                    level="WARNING", content="Agent被插件打断"
+                )
                 await self.group_chat.send("cli_runtime_output", interrupt_msg)
                 return await self.generate_response()
 
@@ -545,7 +550,9 @@ class Agent:
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
-                    interrupt_msg = CliRuntimeMessage(level = "WARNING", content = "Agent被用户打断")
+                    interrupt_msg = CliRuntimeMessage(
+                        level="WARNING", content="Agent被用户打断"
+                    )
                     await self.group_chat.send("cli_runtime_output", interrupt_msg)
                     answer.interrupt()
                     self.handle_user_message(msg)
@@ -559,7 +566,9 @@ class Agent:
 
         # 将排队消息添加到消息列表，放在agent输出后面
         if self.queued_messages:
-            self.messages.append(RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理："))
+            self.messages.append(
+                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
+            )
             self.messages += self.queued_messages
             self.queued_messages = []  # 清空排队消息
 
@@ -674,12 +683,12 @@ async def create_agent(
     llm_name: str | None = None,
 ) -> Agent:
     """创建Agent实例
-    
+
     Args:
         group_chat: GroupChat实例
         config_path: 配置文件路径
         llm_name: 指定的LLM名称（可选）
-        
+
     Returns:
         Agent实例
     """
@@ -721,7 +730,9 @@ async def create_agent(
         connector = MCPConnector(group_chat)
         for mcp_config in config.agent.mcp:
             server_script_path = config_dir / mcp_config.server_script_path
-            await connector.connect_stdio(mcp_config.name, server_script_path.absolute().as_posix())
+            await connector.connect_stdio(
+                mcp_config.name, server_script_path.absolute().as_posix()
+            )
 
     agent = Agent(
         config=agent_config,
@@ -734,10 +745,10 @@ async def create_agent(
 
 async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
     """创建LLM实例列表
-    
+
     Args:
         llm_configs: LLM配置列表
-        
+
     Returns:
         LLM实例列表
     """
@@ -749,9 +760,7 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
             base_url=llm_config.base_url,
             model=llm_config.model,
             openai_config=llm_config_dict.get("client_options", {}),
-            chat_completion_kwargs=llm_config_dict.get(
-                "completion_options", {}
-            ),
+            chat_completion_kwargs=llm_config_dict.get("completion_options", {}),
             token_limit=llm_config_dict.get("token_limit"),
         )
         llms.append(llm)
@@ -766,14 +775,14 @@ async def _create_agent_config(
     agent_config_part: dict | None = None,
 ) -> AgentConfig:
     """创建AgentConfig字典
-    
+
     Args:
         llms: LLM实例列表
         llm_names: LLM名称列表
         llm_name: 指定的LLM名称
         tool_confirmation_config: 工具确认配置
         agent_config_part: Agent配置部分（可选）
-        
+
     Returns:
         AgentConfig字典
     """
@@ -784,7 +793,9 @@ async def _create_agent_config(
     if agent_config_part:
         # 处理compress_threshold_hard
         if isinstance(agent_config_part.get("compress_threshold_hard"), float):
-            compress_threshold_hard = int(65536 * agent_config_part["compress_threshold_hard"])
+            compress_threshold_hard = int(
+                65536 * agent_config_part["compress_threshold_hard"]
+            )
         elif isinstance(agent_config_part.get("compress_threshold_hard"), int):
             compress_threshold_hard = agent_config_part["compress_threshold_hard"]
         else:
@@ -792,7 +803,9 @@ async def _create_agent_config(
 
         # 处理compress_threshold_soft
         if isinstance(agent_config_part.get("compress_threshold_soft"), float):
-            compress_threshold_soft = int(65536 * agent_config_part["compress_threshold_soft"])
+            compress_threshold_soft = int(
+                65536 * agent_config_part["compress_threshold_soft"]
+            )
         elif isinstance(agent_config_part.get("compress_threshold_soft"), int):
             compress_threshold_soft = agent_config_part["compress_threshold_soft"]
         else:
@@ -823,7 +836,9 @@ async def _create_agent_config(
 
 async def _create_tool_manager(group_chat):
     """创建ToolManager实例并注册工作流"""
-    tool_manager = ToolManager(group_chat=group_chat, toolsets=[global_tools, terminal_toolset])
+    tool_manager = ToolManager(
+        group_chat=group_chat, toolsets=[global_tools, terminal_toolset]
+    )
     tool_manager.register_workflow(
         "compress_history_range",
         "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
@@ -838,12 +853,12 @@ async def _create_init_messages(
     memory_file_path: str | None = None,
 ) -> list[Message]:
     """创建初始化消息列表
-    
+
     Args:
         group_chat: GroupChat实例
         system_prompt: 系统提示语
         memory_file_path: 记忆文件路径（可选）
-        
+
     Returns:
         初始化消息列表
     """
