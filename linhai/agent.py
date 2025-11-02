@@ -508,7 +508,7 @@ class Agent:
         queued_messages = []
 
         async for token in answer:
-            await self.group_chat.send("cli_user_output", token)
+            await self.group_chat.send("cli_agent_output", token)
 
             # 实时检查工具调用量（通过lifecycle回调处理）
             current_content = answer.get_current_content()
@@ -529,14 +529,14 @@ class Agent:
                     queued_messages.append(msg)
                 else:
                     # 正常打断
-                    await self.group_chat.send("cli_user_output", answer)
+                    await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
                     self.messages.append(RuntimeMessage("用户打断了你的回答"))
                     answer.interrupt()
                     return await self.handle_user_message(msg)
 
-        await self.group_chat.send("cli_user_output", answer)
+        await self.group_chat.send("cli_agent_output", answer)
 
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message

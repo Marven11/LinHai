@@ -82,8 +82,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 使用GroupChat架构
         self.group_chat = GroupChat()
 
-        # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_user_output队列用于输出
-        self.group_chat.register_queue("cli_user_output")
+        # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_agent_output队列用于输出
+        self.group_chat.register_queue("cli_agent_output")
 
         # 创建真实的ToolManager实例
         self.tool_manager = ToolManager(
@@ -127,12 +127,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # Test
         await self.agent.handle_user_message(test_msg)
 
-        # 验证 cli_user_output 队列收到了正确的 tokens 和最终 Answer
+        # 验证 cli_agent_output 队列收到了正确的 tokens 和最终 Answer
         tokens = []
         final_answer = None
 
-        while not self.agent.group_chat.is_empty("cli_user_output"):
-            item = await self.agent.group_chat.receive("cli_user_output")
+        while not self.agent.group_chat.is_empty("cli_agent_output"):
+            item = await self.agent.group_chat.receive("cli_agent_output")
             if isinstance(item, dict):  # AnswerToken
                 tokens.append(item)
             elif hasattr(item, "get_message"):  # 通过鸭子类型检查 Answer 对象

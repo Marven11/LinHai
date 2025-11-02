@@ -174,7 +174,7 @@ class CLIApp(App):
         super().__init__()
         self.messages: List[Message] = []
         self.group_chat = group_chat
-        self.group_chat.register_queue("cli_user_output")
+        self.group_chat.register_queue("cli_agent_output")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -265,7 +265,7 @@ class CLIApp(App):
         """监听输出队列并更新UI"""
         current_message = None
         while True:
-            output = await self.group_chat.receive("cli_user_output")
+            output = await self.group_chat.receive("cli_agent_output")
             if isinstance(output, AnswerToken):
                 if output.reasoning_content:
                     is_reasoning = True

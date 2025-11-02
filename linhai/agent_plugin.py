@@ -73,7 +73,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
         if json_block_count > 1 and planning_count == 0:
-            await agent.group_chat.send("cli_user_output", answer)
+            await agent.group_chat.send("cli_agent_output", answer)
             agent.messages.append(
                 RuntimeMessage(
                     "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
@@ -105,7 +105,7 @@ class ToolCallCountPlugin(Plugin):
             max_json_blocks = 1
 
         if json_block_count > max_json_blocks:
-            await agent.group_chat.send("cli_user_output", answer)
+            await agent.group_chat.send("cli_agent_output", answer)
             agent.messages.append(
                 RuntimeMessage(
                     f"错误：禁止在超长回答中调用巨量工具。"
@@ -205,7 +205,7 @@ class ThinkingToolCallPlugin(Plugin):
         max_json_blocks = 5
 
         if json_block_count >= max_json_blocks:
-            await agent.group_chat.send("cli_user_output", answer)
+            await agent.group_chat.send("cli_agent_output", answer)
             agent.messages.append(
                 RuntimeMessage(
                     f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall达到{max_json_blocks}次"
