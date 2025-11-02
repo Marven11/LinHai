@@ -4,10 +4,10 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 用terminal工具打开vim时无法使用pageup/pagedown翻页，使用./hypothesis_falsification.txt找出原因并修复
-    - 你可以新加多个工具解决不支持pageup/pagedown的问题
-    - 你可以编写脚本测试
-    - 需要测试新的代码，可以使用终端运行linhai并让linhai报告是否可用
+- [ ] 改进CLI，在用户没有输入消息时在空白区域中央显示LOGO等欢迎消息
+    - 用ASCII字符画展示LINHAI字样
+    - 在旁边附上当前版本v0.1.0以及当前LLM名字
+    - 运行linhai测试是否成功
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

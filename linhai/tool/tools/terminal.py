@@ -60,7 +60,7 @@ class PyteTerminal:
         self.master, self.slave = pty.openpty()
 
         env = os.environ.copy()
-        env["TERM"] = "vt100"
+        env["TERM"] = "xterm"
         env["COLUMNS"] = str(columns)
         env["LINES"] = str(lines)
 
