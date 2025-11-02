@@ -138,7 +138,7 @@ async def create_terminal(columns: int = 80, lines: int = 24) -> str:
     desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'",
     args={
         "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
-        "keys": ToolArgInfo(desc="按键名称列表", type="list"),
+        "keys": ToolArgInfo(desc="""按键名称列表，如["esc", ":", "q", "enter"]""", type="list"),
     },
     required_args=["terminal_uuid", "keys"],
 )
@@ -175,20 +175,12 @@ async def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
     args={
         "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
         "string": ToolArgInfo(desc="要发送的字符串", type="str"),
+        "wait_seconds": ToolArgInfo(desc="等待一段时间后读取最新画面，默认等待0.3秒", type="float"),
         "with_enter": ToolArgInfo(desc="是否发送enter，默认为True", type="bool"),
     },
     required_args=["terminal_uuid", "string"],
 )
-async def send_string_to_terminal(terminal_uuid: str, string: str, with_enter = True) -> str:
-    """发送命令到终端
-
-    Args:
-        terminal_uuid: 终端uuid
-        string: 要发送的命令
-
-    Returns:
-        执行结果消息
-    """
+async def send_string_to_terminal(terminal_uuid: str, string: str, wait_seconds: float = 0.3, with_enter = True) -> str:
     if terminal_uuid not in terminals:
         return f"错误：未找到终端 {terminal_uuid}"
 
@@ -197,7 +189,7 @@ async def send_string_to_terminal(terminal_uuid: str, string: str, with_enter = 
     if with_enter:
         terminal.send_key("enter")
     terminal.update()
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(wait_seconds)
     terminal.update()
     content = terminal.get_screen()
     return f"已发送: {string}, 当前内容:\n" + content
