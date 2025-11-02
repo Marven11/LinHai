@@ -261,6 +261,12 @@ class CLIApp(App):
             return
 
         if event.value:
+            # 隐藏欢迎消息
+            container = self.query_one("#chat-container")
+            welcome_widgets = container.query(".welcome-message")
+            for widget in welcome_widgets:
+                widget.remove()
+            
             # 添加用户消息
             user_msg = ChatMessage(role="user", message=event.value)
             self.messages.append(user_msg)
@@ -268,7 +274,6 @@ class CLIApp(App):
             event.input.value = ""
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message)
-            container = self.query_one("#chat-container")
             container.scroll_end()
             container.mount(widget)
             widget.update_display()
@@ -413,6 +418,7 @@ class CLIApp(App):
             
             # 创建彩虹ASCII艺术组件
             rainbow_art = RainbowAsciiArt(ASCII_ART)
+            rainbow_art.add_class("welcome-message")
             container = self.query_one("#chat-container")
             container.mount(rainbow_art)
             
