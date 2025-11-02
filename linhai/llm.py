@@ -6,6 +6,7 @@ from typing import (
     AsyncIterator,
     cast,
     runtime_checkable,
+    Literal,
 )
 import asyncio
 import json
@@ -16,6 +17,12 @@ from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 import linhai
+
+
+class RuntimeMessage(BaseModel):
+    """运行时消息数据模型"""
+    level: Literal["INFO", "WARNING", "ERROR"]
+    content: str
 
 
 @runtime_checkable

@@ -6,7 +6,7 @@
 from typing import Any, Callable, Awaitable, Coroutine, Optional
 from collections import Counter
 
-from linhai.llm import Message, ToolCallMessage
+from linhai.llm import Message, ToolCallMessage, RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.base import (
     Tool,
@@ -104,9 +104,19 @@ class ToolManager:
             if toolset.has_tool(tool_call.function_name):
                 target_toolset = toolset
         if target_toolset is None:
+            # 发送错误消息
+            await self.group_chat.send("cli_runtime_output", RuntimeMessage(
+                level="ERROR", 
+                content=f"未找到工具: {tool_call.function_name}"
+            ))
             return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
 
         try:
+            # 发送工具调用开始消息
+            await self.group_chat.send("cli_runtime_output", RuntimeMessage(
+                level="INFO", 
+                content=f"开始执行工具: {tool_call.function_name}"
+            ))
 
             func = target_toolset.get_tool(tool_call.function_name)
 
@@ -117,7 +127,18 @@ class ToolManager:
                     func, **kwargs
                 )
 
+            # 发送工具调用成功消息
+            await self.group_chat.send("cli_runtime_output", RuntimeMessage(
+                level="INFO", 
+                content=f"工具执行成功: {tool_call.function_name}"
+            ))
+
         except Exception as e:  # pylint: disable=broad-exception-caught
+            # 发送工具调用失败消息
+            await self.group_chat.send("cli_runtime_output", RuntimeMessage(
+                level="ERROR", 
+                content=f"工具执行失败: {tool_call.function_name} - {str(e)}"
+            ))
             return ToolErrorMessage(content=str(e))
 
         if isinstance(result, Awaitable):

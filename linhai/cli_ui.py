@@ -11,6 +11,7 @@ from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
+from typing import Literal
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -19,6 +20,7 @@ from linhai.llm import (
     Answer,
     ToolCallMessage,
     ToolConfirmationMessage,
+    RuntimeMessage,
 )
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -82,6 +84,31 @@ class RainbowAsciiArt(Static):
             if row < len(lines) - 1:
                 text.append("\n")
         return text
+
+
+class RuntimeMessageWidget(Static):
+    """运行时消息显示组件"""
+
+    def __init__(self, level: str, content: str):
+        super().__init__()
+        self.level = level
+        self.content = content
+
+    def compose(self) -> ComposeResult:
+        """组合UI组件"""
+        # 设置样式
+        level_style = {
+            "INFO": "grey50",
+            "WARNING": "yellow",
+            "ERROR": "red"
+        }.get(self.level, "grey50")
+        
+        # 创建消息文本
+        message_text = Text()
+        message_text.append(f"[{self.level[0]}]", style=level_style)
+        message_text.append(f" {self.content}")
+        
+        yield Static(message_text)
 
 
 class MessageWidget(Static):
@@ -175,6 +202,7 @@ class CLIApp(App):
         self.messages: List[Message] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("cli_agent_output")
+        self.group_chat.register_queue("cli_runtime_output")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -265,74 +293,97 @@ class CLIApp(App):
         """监听输出队列并更新UI"""
         current_message = None
         while True:
-            output = await self.group_chat.receive("cli_agent_output")
-            if isinstance(output, AnswerToken):
-                if output.reasoning_content:
-                    is_reasoning = True
-                    content = output.reasoning_content
-                else:
-                    is_reasoning = False
-                    content = output.content
-                if not content:
-                    continue
-
-                if current_message and current_message.is_reasoning != is_reasoning:
-                    current_message = None
-
-                container = self.query_one("#chat-container")
-                should_scroll = container.is_vertical_scroll_end or (
-                    container.scroll_offset.y >= container.max_scroll_y - 2
-                )
-
-                if current_message is None:
-
-                    current_message = MessageWidget(
-                        role="assistant", content=content, is_reasoning=is_reasoning
-                    )
-                    await asyncio.sleep(0)
-                    container.mount(current_message)
-                    self.messages.append(current_message.to_message())
-                    current_message.update_display()
-                    self._trim_messages_if_needed()
-                else:
-                    current_message.append_content_lazy(content)
-
-                if should_scroll:
+            # 同时监听两个队列
+            agent_output_task = asyncio.create_task(self.group_chat.receive("cli_agent_output"))
+            runtime_output_task = asyncio.create_task(self.group_chat.receive("cli_runtime_output"))
+            
+            done, pending = await asyncio.wait(
+                [agent_output_task, runtime_output_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            # 取消未完成的任务
+            for task in pending:
+                task.cancel()
+            
+            # 处理完成的任务
+            for task in done:
+                output = task.result()
+                
+                if isinstance(output, RuntimeMessage):
+                    # 处理运行时消息
+                    container = self.query_one("#chat-container")
+                    widget = RuntimeMessageWidget(level=output.level, content=output.content)
+                    container.mount(widget)
                     container.scroll_end()
-            elif isinstance(output, AnswerTokenUsage):
-                self.current_token_usage = output
-            elif isinstance(output, Answer):
-                if current_message:
-                    current_message.update_display()
-                tool_call = output.get_tool_call()
-                if tool_call:
-                    # 处理工具调用
-                    tool_message = f"{tool_call.function_name}(...)"
-                    msg = ChatMessage(role="assistant", message=tool_message)
-                    await self.add_bot_message(msg)
-
-                # 获取并累加token使用量
-                token_usage = output.get_token_usage()
-                if token_usage is not None:
-                    if self.cumulative_token_usage is None:
-                        self.cumulative_token_usage = token_usage.model_dump()
+                    self._trim_messages_if_needed()
+                elif isinstance(output, AnswerToken):
+                    if output.reasoning_content:
+                        is_reasoning = True
+                        content = output.reasoning_content
                     else:
-                        self.cumulative_token_usage[
-                            "input_tokens"
-                        ] += token_usage.input_tokens
-                        self.cumulative_token_usage[
-                            "output_tokens"
-                        ] += token_usage.output_tokens
-                        self.cumulative_token_usage[
-                            "total_tokens"
-                        ] += token_usage.total_tokens
-                    self.current_token_usage = None
-                    # 传入当前回答的token长度
-                    self.update_token_display(token_usage.total_tokens)
+                        is_reasoning = False
+                        content = output.content
+                    if not content:
+                        continue
 
-                current_message = None
-            else:
-                raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
+                    if current_message and current_message.is_reasoning != is_reasoning:
+                        current_message = None
+
+                    container = self.query_one("#chat-container")
+                    should_scroll = container.is_vertical_scroll_end or (
+                        container.scroll_offset.y >= container.max_scroll_y - 2
+                    )
+
+                    if current_message is None:
+
+                        current_message = MessageWidget(
+                            role="assistant", content=content, is_reasoning=is_reasoning
+                        )
+                        await asyncio.sleep(0)
+                        container.mount(current_message)
+                        self.messages.append(current_message.to_message())
+                        current_message.update_display()
+                        self._trim_messages_if_needed()
+                    else:
+                        current_message.append_content_lazy(content)
+
+                    if should_scroll:
+                        container.scroll_end()
+                elif isinstance(output, AnswerTokenUsage):
+                    self.current_token_usage = output
+                elif isinstance(output, Answer):
+                    if current_message:
+                        current_message.update_display()
+                    tool_call = output.get_tool_call()
+                    if tool_call:
+                        # 处理工具调用
+                        tool_message = f"{tool_call.function_name}(...)"
+                        msg = ChatMessage(role="assistant", message=tool_message)
+                        await self.add_bot_message(msg)
+
+                    # 获取并累加token使用量
+                    token_usage = output.get_token_usage()
+                    if token_usage is not None:
+                        if self.cumulative_token_usage is None:
+                            self.cumulative_token_usage = token_usage.model_dump()
+                        else:
+                            self.cumulative_token_usage[
+                                "input_tokens"
+                            ] += token_usage.input_tokens
+                            self.cumulative_token_usage[
+                                "output_tokens"
+                            ] += token_usage.output_tokens
+                            self.cumulative_token_usage[
+                                "total_tokens"
+                            ] += token_usage.total_tokens
+                        self.current_token_usage = None
+                        # 传入当前回答的token长度
+                        self.update_token_display(token_usage.total_tokens)
+
+                    current_message = None
+                else:
+                    raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
