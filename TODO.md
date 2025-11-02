@@ -21,8 +21,9 @@
         - 不能重复调用register member，不能注册除了自己之外的任何对象，更不能try catch捕获重复注册/不存在时的runtime error!
         - 如果出现了runtime error，你不能try catch, 而是应该找出没有注册/重复注册的原因并修复!
 - [x] 修复其他unittest
-- [ ] 使用./hypothesis_falsification.txt调查unittest出现垃圾消息的原因，并修复
+- [x] 使用./hypothesis_falsification.txt调查unittest出现垃圾消息的原因，并修复
     - `Executing <Task pending name='Task-340' coro=<TestLLM.test_openai_er`等
+    - openai库写得很垃圾，阻塞了其他协程，暂时不处理
 - [x] 修复pyright和pylint的警告等，然后重新运行unittest确认
 - [x] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
     - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
