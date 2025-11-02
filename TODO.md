@@ -19,6 +19,8 @@
 - [ ] 让agent.py在解析用户消息时使用input_parser.py
 - [ ] 让agent.py生成消息被插件/用户打断的时候发送一条“Agent被XX打断”runtime message到cli_ui.py
 - [ ] 将CLI的运行时消息内容改成灰色
+- [ ] 运行所有unittest
+- [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
