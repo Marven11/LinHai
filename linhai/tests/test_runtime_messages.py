@@ -89,12 +89,7 @@ class TestRuntimeMessages(unittest.TestCase):
         # 验证发送了正确的运行时消息
         self.assertEqual(len(received_messages), 2)
         
-        # 检查开始执行消息
-        start_msg = received_messages[0]
-        self.assertIsInstance(start_msg, RuntimeMessage)
-        self.assertEqual(start_msg.level, "INFO")
-        self.assertEqual(start_msg.content, "开始执行工具: test_tool")
-        
+
         # 检查执行成功消息
         success_msg = received_messages[1]
         self.assertIsInstance(success_msg, RuntimeMessage)
@@ -134,12 +129,6 @@ class TestRuntimeMessages(unittest.TestCase):
         
         # 验证发送了正确的运行时消息
         self.assertEqual(len(received_messages), 2)
-        
-        # 检查开始执行消息
-        start_msg = received_messages[0]
-        self.assertIsInstance(start_msg, RuntimeMessage)
-        self.assertEqual(start_msg.level, "INFO")
-        self.assertEqual(start_msg.content, "开始执行工具: failing_tool")
         
         # 检查执行失败消息
         failure_msg = received_messages[1]

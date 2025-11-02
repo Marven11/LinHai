@@ -112,11 +112,7 @@ class ToolManager:
             return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
 
         try:
-            # 发送工具调用开始消息
-            await self.group_chat.send("cli_runtime_output", RuntimeMessage(
-                level="INFO", 
-                content=f"开始执行工具: {tool_call.function_name}"
-            ))
+
 
             func = target_toolset.get_tool(tool_call.function_name)
 
