@@ -9,10 +9,10 @@
     - 注意不要自己使用run_complex_command运行这个命令！否则你也会被卡！
 - [x] 使用终端执行`uv run python -m linhai`时会卡住：没有妥善处理进程树
     - 使用linhai/tool/tools/command.py类似的方式创建进程组并在退出终端的时候关闭
-- [ ] 将终端工具改成同步函数
+- [x] 将终端工具改成同步函数
     - PyteTerminal本身是同步的，管理的进程也是同步的，异步是多余的
     - ToolManager会在新线程里运行同步工具
-- [ ] 运行所有unittest并修复
+- [x] 运行所有unittest并修复
 - [ ] 参考WrongEndPlugin添加另一个插件：在agent生成消息时如果有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，则打断输出
 - [ ] 让agent.py在generate response接受到/queue消息时将消息存入self中而非本地变量中，以防消息被打断时用户消息丢失
     - [ ] 编写unittest测试有/queue消息时，agent生成被打断会不会丢失用户消息
