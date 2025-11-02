@@ -90,9 +90,8 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 ## ACTION RULES - HISTORY COMPRESSION
 
-- 优先使用delete_message_by_uuid: 在Token达到软阈值时，一般使用delete_message_by_uuid删除上一个任务的消息
+- 优先使用delete_message_by_uuid: 在Token达到软阈值时，一般使用delete_message_by_uuid删除一些上一个任务的消息
   - delete_message_by_uuid可以和其他工具一起调用，不需要暂停当前任务
-  - 考虑一次性删除多条消息
   - 但是需要确保删除的消息和当前的任务无关！
 - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
 - 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。

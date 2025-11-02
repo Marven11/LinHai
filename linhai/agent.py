@@ -207,14 +207,17 @@ class Agent:
 
         @dummy_toolset.register_tool(
             name="delete_message_by_uuid",
-            desc="删除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具删除不需要的大消息以节省token。",
+            desc="删除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具删除一些不需要的大消息以节省token。",
             args={
-                "message_uuid": ToolArgInfo(desc="要删除的消息的UUID", type="str"),
+                "uuids": ToolArgInfo(desc="要删除的消息的UUID", type="list[str]"),
             },
-            required_args=["message_uuid"],
+            required_args=["uuids"],
         )
-        def delete_message_by_uuid(message_uuid: str) -> str:
-            return self.delete_message_by_uuid(message_uuid)
+        def delete_message_by_uuid(uuids: list[str]) -> str:
+            result = ""
+            for message_uuid in uuids:
+                result += f"{message_uuid!r}: {self.delete_message_by_uuid(message_uuid)}"
+            return result
 
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
