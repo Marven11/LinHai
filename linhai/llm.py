@@ -522,14 +522,13 @@ class OpenAi:
             "messages": messages,
             "stream": True,
             "temperature": 0.1,
+            "timeout": 30,
             **self.chat_completion_kwargs,
         }
 
         if self.tools:
             params["tools"] = self.tools
 
-        # 超时时间（秒）
-        timeout_seconds = 30
         # 重试次数
         max_retries = 3
         retry_delay = 1  # 重试延迟，秒
@@ -537,18 +536,14 @@ class OpenAi:
         answer = None
         for attempt in range(max_retries):
             try:
-                # 使用asyncio.wait_for添加超时
-                stream = await asyncio.wait_for(
-                    self.openai.chat.completions.create(**params),  # type: ignore
-                    timeout=timeout_seconds,
-                )
+                stream = await self.openai.chat.completions.create(**params)
                 answer = OpenAiAnswer(stream)
                 break
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 if attempt == max_retries - 1:
                     raise TimeoutError(
-                        f"Request timed out after {timeout_seconds} seconds"
-                    ) from None
+                        "Request timed out"
+                    ) from e
                 await asyncio.sleep(retry_delay)
             except OpenAIError:
                 if attempt == max_retries - 1:
