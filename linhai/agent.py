@@ -655,9 +655,13 @@ class Agent:
         并处理异常和取消事件。
         """
         logger.info("Agent启动")
+        user_input_found = False
         while not self.group_chat.is_empty("agent_user_input"):
             msg = await self.group_chat.receive("agent_user_input")
             self.handle_user_message(msg)
+            user_input_found = True
+        if user_input_found:
+            await self.generate_response()
 
         while True:
             try:
