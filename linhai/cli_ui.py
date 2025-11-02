@@ -9,6 +9,8 @@ from textual.widgets import Static, Input
 from textual import events
 from rich.syntax import Syntax
 from rich.panel import Panel
+from rich.text import Text
+from rich.style import Style
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -21,6 +23,65 @@ from linhai.llm import (
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.group_chat import GroupChat
+
+ASCII_ART = r"""
+  █████       █████ ██████   █████ █████   █████   █████████   █████
+ ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███ 
+  ▒███        ▒███  ▒███▒███ ▒███  ▒███    ▒███  ▒███    ▒███  ▒███ 
+  ▒███        ▒███  ▒███▒▒███▒███  ▒███████████  ▒███████████  ▒███ 
+  ▒███        ▒███  ▒███ ▒▒██████  ▒███▒▒▒▒▒███  ▒███▒▒▒▒▒███  ▒███ 
+  ▒███      █ ▒███  ▒███  ▒▒█████  ▒███    ▒███  ▒███    ▒███  ▒███ 
+  ███████████ █████ █████  ▒▒█████ █████   █████ █████   █████ █████
+ ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒ 
+"""
+
+class RainbowAsciiArt(Static):
+    """显示斜向彩虹渐变色ASCII艺术的组件"""
+
+    def __init__(self, ascii_art: str):
+        super().__init__()
+        self.ascii_art = ascii_art
+        self.time_index = 0
+        self.rainbow_colors: list[Style] = self._generate_rainbow_colors()
+
+    def _generate_rainbow_colors(self) -> list[Style]:
+        """使用HSL颜色空间生成平滑的彩虹颜色样式列表"""
+        import colorsys
+        num_colors = 144
+        styles = []
+        for i in range(num_colors):
+            # 色相从0到1循环，对应彩虹颜色
+            hue = i / num_colors
+            rgb = colorsys.hls_to_rgb(hue, 0.5, 0.8)
+            # 将RGB值从0-1范围转换为0-255范围
+            r = int(rgb[0] * 255)
+            g = int(rgb[1] * 255)
+            b = int(rgb[2] * 255)
+            styles.append(Style(color=f"rgb({r},{g},{b})"))
+        return styles
+
+    def on_mount(self) -> None:
+        """组件挂载时启动动画"""
+        self.set_interval(0.05, self._update_animation)
+
+    def _update_animation(self) -> None:
+        """更新动画时间索引并重新渲染"""
+        self.time_index += 1
+        self.update(self._render_ascii_art())
+
+    def _render_ascii_art(self) -> Text:
+        """渲染带斜向彩虹渐变色的ASCII艺术"""
+        text = Text()
+        lines = self.ascii_art.splitlines()
+        for row, line in enumerate(lines):
+            for col, char in enumerate(line):
+                # 计算颜色索引：斜向渐变，使用 (row + col + time_index) % len(rainbow_colors)
+                color_index = (row + col + self.time_index) // 2 % len(self.rainbow_colors)
+                style = self.rainbow_colors[color_index]
+                text.append(char, style=style)
+            if row < len(lines) - 1:
+                text.append("\n")
+        return text
 
 
 class MessageWidget(Static):
@@ -95,6 +156,11 @@ class CLIApp(App):
         height: 1;
         background: #101520;
         color: #474e5b;
+    }
+    .welcome-message {
+        width: 100%;
+        text-align: center;
+        content-align: center middle;
     }
     """
 
@@ -288,6 +354,23 @@ class CLIApp(App):
                 container.scroll_end()
                 container.mount(widget)
                 widget.update_display()
+        else:
+            # 显示欢迎消息（如果没有初始消息）
+            agent = self.group_chat.get_members("agent", Agent)
+            llm_name, _llm = agent.get_current_llm_info()
+            version = "v0.1.0"
+            
+            # 创建彩虹ASCII艺术组件
+            rainbow_art = RainbowAsciiArt(ASCII_ART)
+            container = self.query_one("#chat-container")
+            container.mount(rainbow_art)
+            
+            # 显示版本信息
+            version_text = f"版本: {version}\nLLM: {llm_name}"
+            version_widget = Static(version_text)
+            version_widget.add_class("welcome-message")
+            container.mount(version_widget)
+            container.scroll_end()
 
         cliapp_tool = ToolSet()
 
@@ -301,7 +384,7 @@ class CLIApp(App):
             },
             required_args=["return_code"],
         )
-        def _(return_code: int):
+        def _exit_app(return_code: int):
             """退出Agent程序，指定返回代码
 
             Args:
@@ -341,7 +424,7 @@ class CLIApp(App):
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
                 total_tokens += self.current_token_usage.total_tokens
-            
+   
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
             _, llm_instance = agent.get_current_llm_info()  # Unused variable llm_name
@@ -358,6 +441,8 @@ class CLIApp(App):
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
         token_display.update(display_text)
+
+
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
