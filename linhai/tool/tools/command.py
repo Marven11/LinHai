@@ -3,6 +3,7 @@
 from datetime import datetime
 import asyncio
 import os
+import signal
 import subprocess
 import re
 from linhai.tool.base import global_tools, ToolArgInfo
@@ -34,6 +35,7 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             shell=True,
+            start_new_session=True,
             env=env,
         )
         try:
@@ -42,7 +44,10 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
             )
             returncode = process.returncode
         except asyncio.TimeoutError:
-            process.kill()
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass  # 进程已经结束
             await process.wait()
             return f"Command timed out after {timeout} seconds"
 

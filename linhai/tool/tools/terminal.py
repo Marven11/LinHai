@@ -5,6 +5,7 @@ import pyte
 import pty
 import os
 import select
+import signal
 import uuid
 import subprocess
 
@@ -70,7 +71,7 @@ class PyteTerminal:
             stdout=self.slave,
             stderr=self.slave,
             env=env,
-            # preexec_fn=os.setsid,  # Unsafe in threads
+            start_new_session=True,
         )
 
     def send(self, data: str | bytes):
@@ -101,6 +102,17 @@ class PyteTerminal:
 
     def close(self):
         """关闭终端"""
+        try:
+            os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            self.process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            if self.process.poll() is None:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                self.process.wait()
+        except OSError:
+            pass
         try:
             os.close(self.master)
             os.close(self.slave)
@@ -138,7 +150,9 @@ async def create_terminal(columns: int = 80, lines: int = 24) -> str:
     desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'",
     args={
         "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
-        "keys": ToolArgInfo(desc="""按键名称列表，如["esc", ":", "q", "enter"]""", type="list"),
+        "keys": ToolArgInfo(
+            desc="""按键名称列表，如["esc", ":", "q", "enter"]""", type="list"
+        ),
     },
     required_args=["terminal_uuid", "keys"],
 )
@@ -175,12 +189,16 @@ async def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
     args={
         "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
         "string": ToolArgInfo(desc="要发送的字符串", type="str"),
-        "wait_seconds": ToolArgInfo(desc="等待一段时间后读取最新画面，默认等待0.3秒", type="float"),
+        "wait_seconds": ToolArgInfo(
+            desc="等待一段时间后读取最新画面，默认等待0.3秒", type="float"
+        ),
         "with_enter": ToolArgInfo(desc="是否发送enter，默认为True", type="bool"),
     },
     required_args=["terminal_uuid", "string"],
 )
-async def send_string_to_terminal(terminal_uuid: str, string: str, wait_seconds: float = 0.3, with_enter = True) -> str:
+async def send_string_to_terminal(
+    terminal_uuid: str, string: str, wait_seconds: float = 0.3, with_enter=True
+) -> str:
     if terminal_uuid not in terminals:
         return f"错误：未找到终端 {terminal_uuid}"
 
