@@ -84,7 +84,7 @@ class Agent:
         group_chat.register_queue("agent_user_input")
         group_chat.register_member("agent", self)
 
-        self.state: AgentState = "working"
+        self.state: AgentState = "waiting_user"
 
         self.messages: list[Message] = list(init_messages)
 
@@ -298,7 +298,7 @@ class Agent:
                 RuntimeMessage(
                     f"当前Token用量为{self.last_token_usage}，已达到软限制。硬限制为{hard_threshold}，当前使用{percentage:.1f}%，还有{remaining} token直到强制压缩。"
                     f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 delete_message_by_uuid. "
-                    "建议优先使用 delete_message_by_uuid 工具删除不需要的大块消息。delete_message_by_uuid 不会和其他工具发生冲突，可以同时调用。"
+                    "建议优先使用 delete_message_by_uuid 工具删除多条不需要的大块消息。delete_message_by_uuid 不会和其他工具发生冲突，可以同时调用。"
                 )
             )
 
