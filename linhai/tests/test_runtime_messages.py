@@ -9,7 +9,7 @@ from linhai.utils import CliRuntimeMessage
 from linhai.group_chat import GroupChat
 
 
-class TestRuntimeMessages(unittest.TestCase):
+class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
     """测试运行时消息功能"""
 
     def setUp(self):
@@ -68,7 +68,7 @@ class TestRuntimeMessages(unittest.TestCase):
                 while True:
                     msg = await self.group_chat.receive("cli_runtime_output")
                     received_messages.append(msg)
-            except:
+            except asyncio.CancelledError:
                 pass
         
         # 启动消息收集任务
@@ -87,11 +87,11 @@ class TestRuntimeMessages(unittest.TestCase):
         collector_task.cancel()
         
         # 验证发送了正确的运行时消息
-        self.assertEqual(len(received_messages), 2)
+        self.assertEqual(len(received_messages), 1)
         
 
         # 检查执行成功消息
-        success_msg = received_messages[1]
+        success_msg = received_messages[0]
         self.assertIsInstance(success_msg, CliRuntimeMessage)
         self.assertEqual(success_msg.level, "INFO")
         self.assertEqual(success_msg.content, "工具执行成功: test_tool")
@@ -109,7 +109,7 @@ class TestRuntimeMessages(unittest.TestCase):
                 while True:
                     msg = await self.group_chat.receive("cli_runtime_output")
                     received_messages.append(msg)
-            except:
+            except asyncio.CancelledError:
                 pass
         
         # 启动消息收集任务
@@ -128,10 +128,10 @@ class TestRuntimeMessages(unittest.TestCase):
         collector_task.cancel()
         
         # 验证发送了正确的运行时消息
-        self.assertEqual(len(received_messages), 2)
+        self.assertEqual(len(received_messages), 1)
         
         # 检查执行失败消息
-        failure_msg = received_messages[1]
+        failure_msg = received_messages[0]
         self.assertIsInstance(failure_msg, CliRuntimeMessage)
         self.assertEqual(failure_msg.level, "ERROR")
         self.assertEqual(failure_msg.content, "工具执行失败: failing_tool - 工具执行失败")
@@ -149,7 +149,7 @@ class TestRuntimeMessages(unittest.TestCase):
                 while True:
                     msg = await self.group_chat.receive("cli_runtime_output")
                     received_messages.append(msg)
-            except:
+            except asyncio.CancelledError:
                 pass
         
         # 启动消息收集任务

@@ -5,7 +5,6 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 from pathlib import Path
 from linhai.main import main
-from linhai.agent import Agent
 
 
 class TestMainCommandLine(unittest.TestCase):

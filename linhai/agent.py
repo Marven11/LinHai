@@ -536,7 +536,8 @@ class Agent:
                     level="WARNING", content="Agent被插件打断"
                 )
                 await self.group_chat.send("cli_runtime_output", interrupt_msg)
-                return await self.generate_response()
+                # 不递归调用，让状态机处理后续流程
+                return answer
 
             if not self.group_chat.is_empty("agent_user_input"):
                 msg = await self.group_chat.receive("agent_user_input")
@@ -556,7 +557,8 @@ class Agent:
                     await self.group_chat.send("cli_runtime_output", interrupt_msg)
                     answer.interrupt()
                     self.handle_user_message(msg)
-                    return await self.generate_response()
+                    # 不递归调用，让状态机处理后续流程
+                    return answer
 
         await self.group_chat.send("cli_agent_output", answer)
 

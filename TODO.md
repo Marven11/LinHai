@@ -6,7 +6,7 @@
 
 - [x] 我们重构了agent.py，需要据此运行并修复unittest
     - 修改了handle_user_message的定义，现在在handle_user_message之后需要使用generate message函数生成实际的回复
-- [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
+- [x] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

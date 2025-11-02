@@ -1,7 +1,7 @@
 """Unit tests for the input parser module."""
 
 import unittest
-from linhai.input_parser import parse_user_input, ParsedInput
+from linhai.input_parser import parse_user_input
 
 
 class TestInputParser(unittest.TestCase):

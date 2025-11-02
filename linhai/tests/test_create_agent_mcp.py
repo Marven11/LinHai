@@ -1,7 +1,7 @@
 """测试create_agent函数中的MCP配置功能"""
 
 import unittest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch, AsyncMock
 import sys
 import os
 import tempfile

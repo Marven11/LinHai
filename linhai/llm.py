@@ -6,7 +6,6 @@ from typing import (
     AsyncIterator,
     cast,
     runtime_checkable,
-    Literal,
 )
 import asyncio
 import json

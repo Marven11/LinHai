@@ -1,11 +1,10 @@
 """测试队列消息不打断agent输出的功能"""
 
 import unittest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
-from linhai.llm import ChatMessage, Answer
+from linhai.llm import ChatMessage
 from linhai.agent_base import RuntimeMessage
 
 
@@ -184,7 +183,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         # 调用generate_response，应该会被打断
         try:
             await self.agent.generate_response()
-        except Exception:
+        except RuntimeError:
             # 预期会被打断，我们关心的是queued_messages是否被保存
             pass
         

@@ -3,7 +3,6 @@
 import unittest
 import tempfile
 import os
-from unittest.mock import patch
 
 from linhai.config import ConfigValidationError, load_config, Config
 
