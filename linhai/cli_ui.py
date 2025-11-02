@@ -11,7 +11,6 @@ from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
-from typing import Literal
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -20,11 +19,11 @@ from linhai.llm import (
     Answer,
     ToolCallMessage,
     ToolConfirmationMessage,
-    RuntimeMessage,
 )
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.group_chat import GroupChat
+from linhai.utils import CliRuntimeMessage
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
@@ -36,6 +35,7 @@ ASCII_ART = r"""
   ███████████ █████ █████  ▒▒█████ █████   █████ █████   █████ █████
  ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒ 
 """
+
 
 class RainbowAsciiArt(Static):
     """显示斜向彩虹渐变色ASCII艺术的组件"""
@@ -315,7 +315,7 @@ class CLIApp(App):
             for task in done:
                 output = task.result()
                 
-                if isinstance(output, RuntimeMessage):
+                if isinstance(output, CliRuntimeMessage):
                     # 处理运行时消息
                     container = self.query_one("#chat-container")
                     widget = RuntimeMessageWidget(level=output.level, content=output.content)
@@ -467,7 +467,7 @@ class CLIApp(App):
         
         # 关闭所有终端
         from linhai.tool.tools.terminal import close_all_terminals
-        await close_all_terminals()
+        close_all_terminals()
 
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
@@ -515,7 +515,7 @@ class CLIApp(App):
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
-            await close_all_terminals()
+            close_all_terminals()
             self.app.exit()
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):

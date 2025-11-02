@@ -16,10 +16,10 @@
 - [x] 参考WrongEndPlugin添加另一个插件：在agent生成消息时如果有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，则打断输出
 - [x] 让agent.py在generate response接受到/queue消息时将消息存入self中而非本地变量中，以防消息被打断时用户消息丢失
     - [x] 编写unittest测试有/queue消息时，agent生成被打断会不会丢失用户消息
-- [ ] 让agent.py在解析用户消息时使用input_parser.py
-- [ ] 让agent.py生成消息被插件/用户打断的时候发送一条“Agent被XX打断”runtime message到cli_ui.py
-- [ ] 将CLI的运行时消息内容改成灰色
-- [ ] 运行所有unittest
+- [x] 让agent.py在解析用户消息时使用input_parser.py
+- [x] 让agent.py生成消息被插件/用户打断的时候发送一条“Agent被XX打断”runtime message到cli_ui.py
+- [x] 将CLI的运行时消息内容改成灰色
+- [x] 运行所有unittest
 - [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO

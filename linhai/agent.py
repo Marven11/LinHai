@@ -45,7 +45,7 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-
+from linhai.utils import CliRuntimeMessage
 logger = logging.getLogger(__name__)
 
 
@@ -295,6 +295,7 @@ class Agent:
             self.messages.append(
                 RuntimeMessage(
                     f"当前Token用量为{self.last_token_usage}，已达到软限制。硬限制为{hard_threshold}，当前使用{percentage:.1f}%，还有{remaining} token直到强制压缩。"
+                    f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 delete_message_by_uuid. "
                     "建议优先使用 delete_message_by_uuid 工具删除不需要的大块消息。delete_message_by_uuid 不会和其他工具发生冲突，可以同时调用。"
                 )
             )
@@ -365,9 +366,9 @@ class Agent:
                     self, tool_call, tool_result, True
                 )
 
-                # 检查工具结果大小，如果大于30000字符则记录UUID
+                # 检查工具结果大小，如果大于8000字符则记录UUID
                 tool_result_content = str(tool_result)
-                if len(tool_result_content) > 30000:
+                if len(tool_result_content) > 8000:
                     message_uuid = str(uuid.uuid4())
                     self.large_messages[message_uuid] = tool_result
                     self.messages.append(
@@ -533,6 +534,8 @@ class Agent:
                 self, answer, current_content
             )
             if should_interrupt:
+                interrupt_msg = CliRuntimeMessage(level = "WARNING", content = "Agent被插件打断")
+                await self.group_chat.send("cli_runtime_output", interrupt_msg)
                 return await self.generate_response()
 
             if not self.group_chat.is_empty("agent_user_input"):
@@ -547,7 +550,8 @@ class Agent:
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
-                    self.messages.append(RuntimeMessage("用户打断了你的回答"))
+                    interrupt_msg = CliRuntimeMessage(level = "WARNING", content = "Agent被用户打断")
+                    await self.group_chat.send("cli_runtime_output", interrupt_msg)
                     answer.interrupt()
                     return await self.handle_user_message(msg)
 

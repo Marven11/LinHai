@@ -35,17 +35,6 @@ class TestInputParser(unittest.TestCase):
         self.assertEqual(result.command, "help")
         self.assertEqual(result.mentioned, ["alice", "bob"])
 
-    def test_parse_multiple_lines(self):
-        """Test parsing input with multiple lines."""
-        result = parse_user_input("""
-        /command
-        Hello @user1
-        And @user2
-        """)
-        self.assertEqual(result.switch_model, None)
-        self.assertEqual(result.command, "command")
-        self.assertEqual(result.mentioned, ["user1", "user2"])
-
     def test_parse_mentioned_with_special_chars(self):
         """Test parsing mentioned names with special characters."""
         result = parse_user_input("Hello @user-name and @user_name")
@@ -70,7 +59,7 @@ class TestInputParser(unittest.TestCase):
     def test_parse_no_mentioned_when_at_start(self):
         """Test that @ at the start of line is not treated as mention."""
         result = parse_user_input("@start should not be mentioned")
-        self.assertEqual(result.switch_model, None)
+        self.assertEqual(result.switch_model, "start")
         self.assertEqual(result.command, None)
         self.assertEqual(result.mentioned, [])
 

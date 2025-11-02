@@ -2,10 +2,10 @@
 
 import unittest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.llm import ToolCallMessage, RuntimeMessage
+from linhai.llm import ToolCallMessage
+from linhai.utils import CliRuntimeMessage
 from linhai.group_chat import GroupChat
 
 
@@ -46,15 +46,15 @@ class TestRuntimeMessages(unittest.TestCase):
 
     def test_runtime_message_model(self):
         """测试运行时消息数据模型"""
-        message = RuntimeMessage(level="INFO", content="测试消息")
+        message = CliRuntimeMessage(level="INFO", content="测试消息")
         self.assertEqual(message.level, "INFO")
         self.assertEqual(message.content, "测试消息")
         
-        message = RuntimeMessage(level="WARNING", content="警告消息")
+        message = CliRuntimeMessage(level="WARNING", content="警告消息")
         self.assertEqual(message.level, "WARNING")
         self.assertEqual(message.content, "警告消息")
         
-        message = RuntimeMessage(level="ERROR", content="错误消息")
+        message = CliRuntimeMessage(level="ERROR", content="错误消息")
         self.assertEqual(message.level, "ERROR")
         self.assertEqual(message.content, "错误消息")
 
@@ -92,7 +92,7 @@ class TestRuntimeMessages(unittest.TestCase):
 
         # 检查执行成功消息
         success_msg = received_messages[1]
-        self.assertIsInstance(success_msg, RuntimeMessage)
+        self.assertIsInstance(success_msg, CliRuntimeMessage)
         self.assertEqual(success_msg.level, "INFO")
         self.assertEqual(success_msg.content, "工具执行成功: test_tool")
         
@@ -132,7 +132,7 @@ class TestRuntimeMessages(unittest.TestCase):
         
         # 检查执行失败消息
         failure_msg = received_messages[1]
-        self.assertIsInstance(failure_msg, RuntimeMessage)
+        self.assertIsInstance(failure_msg, CliRuntimeMessage)
         self.assertEqual(failure_msg.level, "ERROR")
         self.assertEqual(failure_msg.content, "工具执行失败: failing_tool - 工具执行失败")
         
@@ -172,7 +172,7 @@ class TestRuntimeMessages(unittest.TestCase):
         
         # 检查错误消息
         error_msg = received_messages[0]
-        self.assertIsInstance(error_msg, RuntimeMessage)
+        self.assertIsInstance(error_msg, CliRuntimeMessage)
         self.assertEqual(error_msg.level, "ERROR")
         self.assertEqual(error_msg.content, "未找到工具: nonexistent_tool")
         

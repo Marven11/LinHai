@@ -110,9 +110,10 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         assert last_assistant_idx is not None, "应该至少有一个assistant消息"
         
         # 验证排队消息在assistant消息之后
-        for i, msg in enumerate(self.agent.messages):
-            if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
-                self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
+        if last_assistant_idx is not None:
+            for i, msg in enumerate(self.agent.messages):
+                if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
+                    self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
         
         # 验证运行时消息在assistant消息之后
         for i, msg in enumerate(self.agent.messages):
@@ -224,9 +225,10 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
                 last_assistant_idx = i
         
         # 验证排队消息在assistant消息之后
-        for i, msg in enumerate(self.agent.messages):
-            if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
-                self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
+        if last_assistant_idx is not None:
+            for i, msg in enumerate(self.agent.messages):
+                if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
+                    self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
 
 
 if __name__ == "__main__":

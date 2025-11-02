@@ -18,13 +18,6 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 import linhai
 
-
-class RuntimeMessage(BaseModel):
-    """运行时消息数据模型"""
-    level: Literal["INFO", "WARNING", "ERROR"]
-    content: str
-
-
 @runtime_checkable
 class Message(Protocol):
     """消息协议，定义消息类的接口。"""
@@ -548,9 +541,7 @@ class OpenAi:
                 break
             except asyncio.TimeoutError as e:
                 if attempt == max_retries - 1:
-                    raise TimeoutError(
-                        "Request timed out"
-                    ) from e
+                    raise TimeoutError("Request timed out") from e
                 await asyncio.sleep(retry_delay)
             except OpenAIError:
                 if attempt == max_retries - 1:
