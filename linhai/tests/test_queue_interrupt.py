@@ -48,6 +48,12 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         """设置测试环境"""
         self.group_chat = GroupChat()
         
+        # 创建并注册ToolManager
+        from linhai.tool.main import ToolManager
+        from linhai.tool.base import global_tools
+        from linhai.tool.tools.terminal import terminal_toolset
+        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools, terminal_toolset])
+        
         # 创建模拟LLM
         self.mock_llm = Mock()
         

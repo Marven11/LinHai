@@ -207,9 +207,9 @@ class Agent:
             name="delete_message_by_uuid",
             desc="删除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具删除不需要的大消息以节省token。",
             args={
-                "uuid": ToolArgInfo(desc="要删除的消息的UUID", type="str"),
+                "message_uuid": ToolArgInfo(desc="要删除的消息的UUID", type="str"),
             },
-            required_args=["uuid"],
+            required_args=["message_uuid"],
         )
         def delete_message_by_uuid(message_uuid: str) -> str:
             return self.delete_message_by_uuid(message_uuid)

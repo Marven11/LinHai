@@ -18,6 +18,10 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
+        from linhai.tool.main import ToolManager
+        from linhai.tool.base import global_tools
+        from linhai.tool.tools.terminal import terminal_toolset
+        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools, terminal_toolset])
 
     async def test_get_token_usage_tool_registered(self):
         """Test that get_token_usage tool is properly registered."""

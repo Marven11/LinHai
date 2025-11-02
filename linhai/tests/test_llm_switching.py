@@ -40,6 +40,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         # 注册必要的队列
         self.group_chat.register_queue("cli_user_output")
+        
+        # 创建并注册ToolManager
+        from linhai.tool.tools.terminal import terminal_toolset
+        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools, terminal_toolset])
 
 
 
