@@ -23,8 +23,8 @@
 - [x] 修复其他unittest
 - [ ] 使用./hypothesis_falsification.txt调查unittest出现垃圾消息的原因，并修复
     - `Executing <Task pending name='Task-340' coro=<TestLLM.test_openai_er`等
-- [ ] 修复pyright和pylint的警告等，然后重新运行unittest确认
-- [ ] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
+- [x] 修复pyright和pylint的警告等，然后重新运行unittest确认
+- [x] 在完成上一个commit之后我们发现已经有`@`系统和`/`命令系统了，我们需要一个统一的解析用户输入的方式
     - 在单独的文件中编写一个函数用来解析用户的输入，返回这个pydantic model
         - switch_model: 用户要求应该切换到哪个llm
         - command: 命令的名称，不包含`/`
