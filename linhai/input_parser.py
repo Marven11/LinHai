@@ -31,8 +31,12 @@ def parse_user_input(user_input: str) -> ParsedInput:
         
         # 解析命令（以/开头）
         if line.startswith('/') and not result.command:
-            result.command = line[1:].strip()
-            continue
+            command_part = line[1:].strip()
+            # 只取第一个单词作为命令
+            if ' ' in command_part:
+                result.command = command_part.split(' ')[0]
+            else:
+                result.command = command_part
             
         # 解析@提及（不处于开头的@）
         if '@' in line and not line.startswith('@'):
