@@ -1,6 +1,6 @@
 """终端控制工具模块，提供虚拟终端操作功能。"""
 
-import asyncio
+import time
 import pyte
 import pty
 import os
@@ -129,7 +129,7 @@ class PyteTerminal:
     },
     required_args=[],
 )
-async def create_terminal(columns: int = 80, lines: int = 24) -> str:
+def create_terminal(columns: int = 80, lines: int = 24) -> str:
     """新建虚拟终端
 
     Args:
@@ -156,7 +156,7 @@ async def create_terminal(columns: int = 80, lines: int = 24) -> str:
     },
     required_args=["terminal_uuid", "keys"],
 )
-async def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
+def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
     """发送按键列表到终端
 
     Args:
@@ -196,7 +196,7 @@ async def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
     },
     required_args=["terminal_uuid", "string"],
 )
-async def send_string_to_terminal(
+def send_string_to_terminal(
     terminal_uuid: str, string: str, wait_seconds: float = 0.3, with_enter=True
 ) -> str:
     if terminal_uuid not in terminals:
@@ -207,7 +207,7 @@ async def send_string_to_terminal(
     if with_enter:
         terminal.send_key("enter")
     terminal.update()
-    await asyncio.sleep(wait_seconds)
+    time.sleep(wait_seconds)
     terminal.update()
     content = terminal.get_screen()
     return f"已发送: {string}, 当前内容:\n" + content
@@ -219,7 +219,7 @@ async def send_string_to_terminal(
     args={"terminal_uuid": ToolArgInfo(desc="终端uuid", type="str")},
     required_args=["terminal_uuid"],
 )
-async def read_terminal_screen(terminal_uuid: str) -> str:
+def read_terminal_screen(terminal_uuid: str) -> str:
     """读取终端屏幕内容
 
     Args:
@@ -242,7 +242,7 @@ async def read_terminal_screen(terminal_uuid: str) -> str:
     args={"terminal_uuid": ToolArgInfo(desc="终端uuid", type="str")},
     required_args=["terminal_uuid"],
 )
-async def close_terminal(terminal_uuid: str) -> str:
+def close_terminal(terminal_uuid: str) -> str:
     """关闭终端
 
     Args:
@@ -260,7 +260,7 @@ async def close_terminal(terminal_uuid: str) -> str:
     return f"已关闭终端 {terminal_uuid}"
 
 
-async def close_all_terminals() -> str:
+def close_all_terminals() -> str:
     """关闭所有终端
 
     Returns:

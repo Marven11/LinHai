@@ -18,6 +18,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
+        # Register queues that are normally initialized by CLI
+        self.group_chat.register_queue("cli_agent_output")
+        self.group_chat.register_queue("cli_runtime_output")
         from linhai.tool.main import ToolManager
         from linhai.tool.base import global_tools
         from linhai.tool.tools.terminal import terminal_toolset
