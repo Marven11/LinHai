@@ -4,26 +4,12 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 改进CLI，在用户没有输入消息时在空白区域中央显示LOGO等欢迎消息
-    - 用ASCII字符画展示LINHAI字样
-    - 在旁边附上当前版本v0.1.0以及当前LLM名字
-    - 运行linhai测试是否成功
-- [ ] CLI: 添加一类消息: 运行时消息
-    - 样式
-        - 没有边框，背景相对用户消息的背景略黑
-        - 内容为 `[I] <实际的消息>`
-            - 其中I为INFO的首字母，WARNING类推
-                - 方框和其中的内容字体颜色: `[I]`为灰色，`[W]`为黄色，类推
-    - 输入方法
-        - CLI添加一个queue: cli_runtime_output
-            - 传递内容为一个pydantic数据
-                - level: INFO, WARNING等字符串，标记literal以便类型检查
-                - content: 实际的消息内容
-        - tool manager在调用工具成功/失败后向这个queue发送消息
-    - [ ] 编写unittest并运行
-        - tool manager在运行成功后会向这个queue发送消息
-    - [ ] 运行linhai并测试
-- [ ] CLI: 用户输入消息后隐藏欢迎消息
+- [x] 使用./hypothesis_falsification.txt解决问题: 使用run_complex_command运行uv run python -m linhai会卡住
+    - 初始假设: 运行时产生了没有被catch的Exception
+    - 注意不要自己使用run_complex_command运行这个命令！否则你也会被卡！
+- [ ] 使用终端执行`uv run python -m linhai`时会卡住：没有妥善处理进程树
+    - 使用linhai/tool/tools/command.py类似的方式创建进程组并在退出终端的时候关闭
+- [ ] 将CLI的运行时消息内容改成灰色
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
