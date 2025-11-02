@@ -99,10 +99,10 @@ class ToolCallCountPlugin(Plugin):
         json_block_count = current_content.count("\n```json toolcall")
 
         content_length = len(current_content)
-        if content_length < 30000:
+        if content_length < 10000:
             max_json_blocks = 30
         else:
-            max_json_blocks = 1
+            max_json_blocks = 3
 
         if json_block_count > max_json_blocks:
             await agent.group_chat.send("cli_agent_output", answer)
@@ -110,7 +110,7 @@ class ToolCallCountPlugin(Plugin):
                 RuntimeMessage(
                     f"错误：禁止在超长回答中调用巨量工具。"
                     f"一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
-                    f"最多允许{max_json_blocks}个工具调用。请分多次调用。"
+                    f"工具调用超长时最多允许{max_json_blocks}个工具调用。请分多次调用。"
                 )
             )
             answer.interrupt()
