@@ -394,10 +394,6 @@ class CLIApp(App):
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
 
-        self.agent_task = asyncio.create_task(
-            self.group_chat.get_members("agent", Agent).run()
-        )
-
         # 如果有初始消息，自动发送
         if self.init_messages:
             for init_message in self.init_messages:
@@ -428,6 +424,11 @@ class CLIApp(App):
             version_widget.add_class("welcome-message")
             container.mount(version_widget)
             container.scroll_end()
+
+        self.agent_task = asyncio.create_task(
+            self.group_chat.get_members("agent", Agent).run()
+        )
+
 
         cliapp_tool = ToolSet()
 

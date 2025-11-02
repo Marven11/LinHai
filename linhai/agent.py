@@ -84,7 +84,7 @@ class Agent:
         group_chat.register_queue("agent_user_input")
         group_chat.register_member("agent", self)
 
-        self.state: AgentState = "waiting_user"
+        self.state: AgentState = "working"
 
         self.messages: list[Message] = list(init_messages)
 
@@ -259,7 +259,8 @@ class Agent:
         while self.state == "waiting_user":
             msg = await self.group_chat.receive("agent_user_input")
             assert isinstance(msg, ChatMessage)
-            await self.handle_user_message(msg)
+            self.handle_user_message(msg)
+            await self.generate_response()
 
     async def state_working(self):
         """
@@ -274,7 +275,8 @@ class Agent:
             try:
                 msg = await self.group_chat.receive("agent_user_input")
                 assert isinstance(msg, ChatMessage)
-                await self.handle_user_message(msg)
+                self.handle_user_message(msg)
+                await self.generate_response()
             except QueueEmpty:
                 logger.info("用户输入队列已关闭")
             except RuntimeError as e:
@@ -318,7 +320,8 @@ class Agent:
             msg = await self.group_chat.receive("agent_user_input")
             self.state = "waiting_user"
             assert isinstance(msg, ChatMessage)
-            await self.handle_user_message(msg)
+            self.handle_user_message(msg)
+            await self.generate_response()
         except QueueEmpty:
             logger.info("用户输入队列已关闭")
         except (RuntimeError, asyncio.CancelledError) as e:
@@ -437,7 +440,8 @@ class Agent:
             )
             return False
 
-    async def handle_user_message(self, msg: Message):
+    def handle_user_message(self, msg: Message):
+        """处理并加入用户的消息"""
         assert isinstance(msg, ChatMessage) and msg.role == "user"
 
         content = msg.message.strip()
@@ -460,20 +464,8 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
                 )
-        
-        # 处理命令（如果有）
-        if parsed_input.command:
-            # 暂时只是记录，不处理具体命令
-            self.messages.append(
-                RuntimeMessage(f"检测到命令: {parsed_input.command}，但尚未实现处理")
-            )
 
         self.messages.append(msg)
-        try:
-            return await self.generate_response()
-        except Exception:
-            self.state = "paused"
-            raise
 
     async def _select_model(self) -> LanguageModel:
         """
@@ -553,7 +545,8 @@ class Agent:
                     interrupt_msg = CliRuntimeMessage(level = "WARNING", content = "Agent被用户打断")
                     await self.group_chat.send("cli_runtime_output", interrupt_msg)
                     answer.interrupt()
-                    return await self.handle_user_message(msg)
+                    self.handle_user_message(msg)
+                    return await self.generate_response()
 
         await self.group_chat.send("cli_agent_output", answer)
 
@@ -650,6 +643,10 @@ class Agent:
         并处理异常和取消事件。
         """
         logger.info("Agent启动")
+        while not self.group_chat.is_empty("agent_user_input"):
+            msg = await self.group_chat.receive("agent_user_input")
+            self.handle_user_message(msg)
+
         while True:
             try:
                 if self.state == "waiting_user":
@@ -665,14 +662,6 @@ class Agent:
             except asyncio.CancelledError:
                 logger.info("Agent任务被取消")
                 break
-            # 感觉pause不应该存在，至少不应该这么用
-            # except Exception as e:
-            #     logger.error("Agent运行出错: %s", str(e))
-            #     self.messages.append(
-            #         RuntimeMessage(f"Agent运行出错: {str(e)} {repr(e)}")
-            #     )
-            #     self.state = "paused"
-            #     raise RuntimeError("Agent运行出错") from e
             await asyncio.sleep(0)
 
 
