@@ -369,7 +369,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(
                 isinstance(msg, RuntimeMessage)
-                and "错误：LLM名称 'invalid' 不存在" in str(msg)
+                and "错误：用户指定的LLM名称'invalid'不存在，请向用户报告这一点" in str(msg)
                 for msg in self.agent.messages
             )
         )

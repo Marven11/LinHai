@@ -14,7 +14,7 @@
         - [x] 删除plugin调用callback时传递的agent参数
         - [x] plugin在运行时通过group chat获得agent
     - [x] 运行并修复unittest
-- [ ] 使用./hypothesis_falsification.txt找出原因并修复所有unittest
+- [x] 使用./hypothesis_falsification.txt找出原因并修复所有unittest
     - 可以编写临时脚本测试
 - [ ] 使用./hypothesis_falsification.txt找出unittest出现垃圾信息的原因并删除
     - After message generation callback error: 'agent' not exists等

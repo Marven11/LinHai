@@ -119,6 +119,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.messages = mock_messages
 
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
+
         # Mock generate_response to return a response with JSON block
         mock_response = MagicMock()
         mock_response.get_message.return_value = ChatMessage(
@@ -160,6 +163,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_agent.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
 
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
+
         # Mock response with invalid range (start_id > end_id)
         mock_response = MagicMock()
         mock_response.get_message.return_value = ChatMessage(
@@ -182,6 +188,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test compress_history_range with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_agent.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
+
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
         # Mock response with small range
         mock_response = MagicMock()
@@ -327,6 +336,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             ChatMessage("assistant", "Assistant response x"),
         ]
         mock_agent.messages = mock_messages
+
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
         # Mock generate_response to return a response with JSON block for compression range
         mock_response = MagicMock()

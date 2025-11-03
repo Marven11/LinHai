@@ -92,8 +92,14 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
 
-        # 设置 group_chat.get_members 返回 tool_manager
-        self.group_chat.get_members.return_value = self.tool_manager
+        # 设置 group_chat.get_members 根据参数返回不同的值
+        def get_members_side_effect(member_type, member_class=None):
+            if member_type == "agent":
+                return self.agent
+            else:
+                return self.tool_manager
+
+        self.group_chat.get_members.side_effect = get_members_side_effect
 
         # 创建初始消息列表
         init_messages = [
