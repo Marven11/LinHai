@@ -42,7 +42,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.tools.terminal import terminal_toolset
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
-from linhai.agent_plugin import register_default_plugins
+
 from linhai.agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 from linhai.utils import CliRuntimeNotice
@@ -99,9 +99,7 @@ class Agent:
         self.current_disable_waiting_user_warning = False
 
         # 生命周期回调管理器
-        self.lifecycle = Lifecycle()
-        # 注册默认Plugin
-        register_default_plugins(self.lifecycle)
+        self.lifecycle = Lifecycle(group_chat)
 
         # 添加LLM切换工具
         llm_toolset = ToolSet()
@@ -215,6 +213,13 @@ class Agent:
             required_args=["uuids"],
         )
         def delete_message_by_uuid(uuids: list[str]) -> str:
+            threshold_info = self.get_threshold_info()
+            if threshold_info:
+                soft, _hard, used, _remaining, taken = threshold_info
+                if used < soft:
+                    return "当前token占用没有超过软限制，禁止删除消息"
+                if taken < 0.4:
+                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止删除消息"
             result = ""
             for message_uuid in uuids:
                 result += (
@@ -234,6 +239,32 @@ class Agent:
         )
         self.whitelist = tool_confirmation_config.get("whitelist", [])
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
+
+    def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
+        if not self.last_token_usage:
+            return None
+        compress_threshold_soft = self.config.get(
+            "compress_threshold_soft", int(65536 * 0.5)
+        )
+        compress_threshold_hard = self.config.get(
+            "compress_threshold_hard", int(65536 * 0.5)
+        )
+        taken = (
+            0.0
+            if self.last_token_usage <= compress_threshold_soft
+            else (
+                self.last_token_usage
+                / (compress_threshold_hard - compress_threshold_soft)
+            )
+        )
+        remaining = compress_threshold_hard - self.last_token_usage
+        return (
+            compress_threshold_soft,
+            compress_threshold_hard,
+            self.last_token_usage,
+            remaining,
+            taken,
+        )
 
     def delete_message_by_uuid(self, message_uuid: str) -> str:
         """删除大消息方法。
@@ -300,21 +331,16 @@ class Agent:
         else:
             await self.generate_response()
 
-        if self.last_token_usage and self.last_token_usage > self.config.get(
-            "compress_threshold_soft", int(65536 * 0.5)
-        ):
-            hard_threshold = self.config.get(
-                "compress_threshold_hard", int(65536 * 0.8)
-            )
-            percentage = (self.last_token_usage / hard_threshold) * 100
-            remaining = hard_threshold - self.last_token_usage
-            self.messages.append(
-                RuntimeMessage(
-                    f"当前Token用量为{self.last_token_usage}，已达到软限制。硬限制为{hard_threshold}，当前使用{percentage:.1f}%，还有{remaining} token直到强制压缩。"
-                    f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 delete_message_by_uuid. "
-                    "建议优先使用 delete_message_by_uuid 工具删除多条不需要的大块消息。delete_message_by_uuid 不会和其他工具发生冲突，可以同时调用。"
+        threshold_info = self.get_threshold_info()
+        if threshold_info:
+            soft, hard, used, remaining, taken = threshold_info
+            if used > soft:
+                self.messages.append(
+                    RuntimeMessage(
+                        f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
+                        f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 delete_message_by_uuid. "
+                    )
                 )
-            )
 
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_hard", int(65536 * 0.8)
@@ -363,14 +389,8 @@ class Agent:
             workflow_function = workflow["func"]
             return await workflow_function(self)
 
-        # 检查如果是read_file工具且没有使用廉价LLM，提醒agent
-        if tool_call.function_name == "read_file":
-            self.messages.append(
-                RuntimeMessage("提醒：读取多个文件时建议使用廉价LLM以节省成本。")
-            )
-
         # 触发工具调用前的生命周期事件
-        await self.lifecycle.trigger_before_tool_call(self, tool_call)
+        await self.lifecycle.trigger_before_tool_call(tool_call)
 
         # 使用存储的tool_confirmation配置（在初始化时解析）
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
@@ -380,7 +400,7 @@ class Agent:
                 ).process_tool_call(tool_call)
                 # 触发工具调用后的生命周期事件（成功）
                 await self.lifecycle.trigger_after_tool_call(
-                    self, tool_call, tool_result, True
+                    tool_call, tool_result, True
                 )
 
                 # 检查工具结果大小，如果大于8000字符则记录UUID
@@ -404,7 +424,7 @@ class Agent:
                 return False  # 不需要早期返回
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 # 触发工具调用后的生命周期事件（失败）
-                await self.lifecycle.trigger_after_tool_call(self, tool_call, e, False)
+                await self.lifecycle.trigger_after_tool_call(tool_call, e, False)
 
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
@@ -476,11 +496,15 @@ class Agent:
                 self.config["current_llm_index"] = self.config["llm_names"].index(
                     llm_name
                 )
-                self.messages.append(RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}"))
+                self.messages.append(
+                    RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
+                )
             else:
                 # 添加错误消息
                 self.messages.append(
-                    RuntimeMessage(f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点")
+                    RuntimeMessage(
+                        f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点"
+                    )
                 )
 
         self.messages.append(msg)
@@ -521,7 +545,7 @@ class Agent:
 
         # 触发消息生成前的生命周期事件
         await self.lifecycle.trigger_before_message_generation(
-            self, enable_compress, disable_waiting_user_warning
+            enable_compress, disable_waiting_user_warning
         )
 
         # 选择模型
@@ -541,7 +565,7 @@ class Agent:
 
             # 触发消息生成中的生命周期事件
             should_interrupt = await self.lifecycle.trigger_during_message_generation(
-                self, answer, current_content
+                answer, current_content
             )
             if should_interrupt:
                 interrupt_msg = CliRuntimeNotice(
@@ -608,7 +632,7 @@ class Agent:
 
         # 触发消息生成后的生命周期事件
         await self.lifecycle.trigger_after_message_generation(
-            self, answer, full_response, tool_calls
+            answer, full_response, tool_calls
         )
 
         # 保存对话历史

@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.agent_plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
+from linhai.group_chat import GroupChat
 
 
 class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
@@ -10,8 +11,11 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.plugin = TaskPlanningPlugin()
         self.agent = MagicMock()
+        self.agent.messages = []
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = TaskPlanningPlugin(self.group_chat)
         self.answer = MagicMock()
         self.answer.get_reasoning_message = MagicMock(return_value=None)
         self.tool_calls = []
@@ -35,7 +39,7 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         # 有任务规划标记，不应该添加警告消息
@@ -52,7 +56,7 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         # 没有任务规划标记，应该添加警告消息
@@ -67,7 +71,7 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, long_content, self.tool_calls
+            self.answer, long_content, self.tool_calls
         )
 
         # 长内容中没有任务规划标记，应该添加警告消息
@@ -83,8 +87,11 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.plugin = BadMultiToolCall()
         self.agent = MagicMock()
+        self.agent.messages = []
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = BadMultiToolCall(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -113,7 +120,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         # 有多个工具调用但没有原因，应该添加警告消息
@@ -139,7 +146,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         self.assertEqual(len(self.agent.messages), 0)
@@ -157,7 +164,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         # 只有一个工具调用，不应该添加警告消息
@@ -177,7 +184,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response1, self.tool_calls
+            self.answer, full_response1, self.tool_calls
         )
 
         # 第一条消息没有原因，不应该有提醒
@@ -201,7 +208,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response2, self.tool_calls
+            self.answer, full_response2, self.tool_calls
         )
 
         self.assertEqual(len(self.agent.messages), 0)
@@ -229,7 +236,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response1, self.tool_calls
+            self.answer, full_response1, self.tool_calls
         )
 
         # 第一条消息有原因，且上一条也有原因，不应该有提醒
@@ -251,7 +258,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         # 有多个工具调用但没有原因，应该添加警告消息
@@ -277,7 +284,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
 
         await self.plugin.after_message_generation(
-            self.agent, self.answer, full_response, self.tool_calls
+            self.answer, full_response, self.tool_calls
         )
 
         self.assertEqual(len(self.agent.messages), 0)
@@ -288,8 +295,13 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.plugin = ChineseEndOfSentencePlugin()
         self.agent = MagicMock()
+        self.agent.messages = []
+        self.agent.group_chat = MagicMock()
+        self.agent.group_chat.send = AsyncMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = ChineseEndOfSentencePlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -312,7 +324,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat.send = AsyncMock()
 
         result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
+            self.answer, current_content
         )
 
         # 应该检测到中文句子结束标记并打断输出
@@ -333,7 +345,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
 
         result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
+            self.answer, current_content
         )
 
         self.assertTrue(result)
@@ -349,7 +361,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat.send = AsyncMock()
 
         result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
+            self.answer, current_content
         )
 
         # 标记前面有非汉字，不应该打断输出
@@ -367,7 +379,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat.send = AsyncMock()
 
         result = await self.plugin.during_message_generation(
-            self.agent, self.answer, current_content
+            self.answer, current_content
         )
 
         # 应该检测到中文句子结束标记并打断输出

@@ -22,6 +22,22 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     然后删除指定范围内的消息。
     """
 
+    threshold_info = agent.get_threshold_info()
+    if threshold_info:
+        soft, _hard, used, _remaining, taken = threshold_info
+        if used < soft:
+            agent.messages.append(
+                RuntimeMessage("当前token占用没有超过软限制，禁止删除消息")
+            )
+            return True
+        if taken < 0.4:
+            agent.messages.append(
+                RuntimeMessage(
+                    f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止删除消息"
+                )
+            )
+            return True
+
     agent.messages = [
         (
             RuntimeMessage("已经失效的历史压缩prompt")
@@ -70,9 +86,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     # 提取第一个JSON块
     range_data = json_blocks[0]
     if not isinstance(range_data, dict):
-        agent.messages.append(
-            RuntimeMessage("错误：JSON block 格式不正确，应为字典")
-        )
+        agent.messages.append(RuntimeMessage("错误：JSON block 格式不正确，应为字典"))
         return True
 
     start_id = range_data.get("start_id")
@@ -138,21 +152,15 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
 
     # 直接删除指定范围的消息
     agent.messages[start_id : end_id + 1] = [
-        RuntimeMessage(
-            f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）"
-        ),
+        RuntimeMessage(f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）"),
     ]
 
     # 如果删除了用户消息，添加额外的消息包含被删除的用户消息内容
     if deleted_user_messages:
-        user_messages_summary = "\n".join(
-            f"- {msg}" for msg in deleted_user_messages
-        )
+        user_messages_summary = "\n".join(f"- {msg}" for msg in deleted_user_messages)
         agent.messages.insert(
             start_id + 1,
-            RuntimeMessage(
-                f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
-            ),
+            RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
     agent.messages = [

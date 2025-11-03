@@ -10,6 +10,9 @@ import re
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
+    def __init__(self, group_chat):
+        self.group_chat = group_chat
+
     @abstractmethod
     def register(self, lifecycle) -> None:
         """将Plugin注册到Lifecycle中。"""
@@ -19,9 +22,11 @@ class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, tool_calls
+        self, _answer: Answer, full_response, tool_calls
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
         # 检查是否同时调用工具和等待用户
@@ -65,9 +70,11 @@ class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+        self, answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         json_block_count = current_content.count("\n```json toolcall")
         pattern = r"^ *- \[[ x]\]"
         planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
@@ -94,9 +101,11 @@ class ToolCallCountPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+        self, answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         json_block_count = current_content.count("\n```json toolcall")
 
         content_length = len(current_content)
@@ -130,11 +139,12 @@ class WrongEndPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        agent: "linhai.agent.Agent",
         _answer: Answer,
         full_response: str,
         _tool_calls,
     ):
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
             agent.messages.append(
@@ -156,16 +166,18 @@ class BadMultiToolCall(Plugin):
     通过检测工具调用块之间是否有任何文字内容来判断是否有原因，而不是依赖特定关键词。
     """
 
-    def __init__(self):
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
         self.last_message_had_reason = True
 
     async def after_message_generation(
         self,
-        agent: "linhai.agent.Agent",
         _answer: Answer,
         full_response: str,
         _tool_calls,
     ):
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         tool_call_count = full_response.count("```json toolcall")
 
         pattern = r"```\n+```json toolcall"
@@ -196,9 +208,11 @@ class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, _current_content: str
+        self, answer: Answer, _current_content: str
     ):
         """检查工具调用量是否超过限制。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         current_reasoning_content = answer.get_reasoning_message()
         if current_reasoning_content is None:
             return False
@@ -229,9 +243,11 @@ class ExcessiveCheckmarkPlugin(Plugin):
     """检查过多完成标记的Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, _tool_calls
+        self, _answer: Answer, full_response, _tool_calls
     ):
         """检查是否输出了过多的- [x]标记。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         count = full_response.count("- [x]")
         if count > 10:  # 阈值设为10
             agent.messages.append(
@@ -251,9 +267,11 @@ class MarkdownSyntaxPlugin(Plugin):
     """Markdown语法检查Plugin。"""
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", _answer: Answer, full_response, _tool_calls
+        self, _answer: Answer, full_response, _tool_calls
     ):
         """检查markdown语法是否正确。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         # 计算代码块分隔符的数量
         code_block_count = full_response.count("```")
         if code_block_count % 2 != 0:
@@ -270,9 +288,11 @@ class ChineseEndOfSentencePlugin(Plugin):
     """中文句子结束标记检查Plugin。"""
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+        self, answer: Answer, current_content: str
     ):
         """检查是否有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
         pattern = r'[\u4e00-\u9fff]+<｜end▁of▁[a-z]+｜>'
         
@@ -297,13 +317,16 @@ class ChineseEndOfSentencePlugin(Plugin):
 class TaskPlanningPlugin(Plugin):
     """任务规划格式检查Plugin。"""
 
-    def __init__(self):
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
         self.no_planning_score = 0
 
     async def during_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, current_content: str
+        self, answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
         if self.no_planning_score <= 3:
             return
         current_reasoning_content = answer.get_reasoning_message()
@@ -327,9 +350,11 @@ class TaskPlanningPlugin(Plugin):
         return True
 
     async def after_message_generation(
-        self, agent: "linhai.agent.Agent", answer: Answer, full_response, _tool_calls
+        self, answer: Answer, full_response, _tool_calls
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
 
         # 使用正则匹配每一行开头的任务规划标记
         pattern = r"^ *- \[[ x]\]"
@@ -373,20 +398,4 @@ class TaskPlanningPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-def register_default_plugins(lifecycle) -> None:
-    """注册默认的Plugin。"""
-    plugins = [
-        WaitingUserPlugin(),
-        ToolcallWithoutPlanningPlugin(),
-        ToolCallCountPlugin(),
-        WrongEndPlugin(),
-        ChineseEndOfSentencePlugin(),
-        BadMultiToolCall(),
-        ExcessiveCheckmarkPlugin(),
-        MarkdownSyntaxPlugin(),
-        ThinkingToolCallPlugin(),
-        TaskPlanningPlugin(),
-    ]
 
-    for plugin in plugins:
-        plugin.register(lifecycle)
