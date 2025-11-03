@@ -476,11 +476,11 @@ class Agent:
                 self.config["current_llm_index"] = self.config["llm_names"].index(
                     llm_name
                 )
-                self.messages.append(RuntimeMessage(f"用户切换到了llm: '{llm_name}'"))
+                self.messages.append(RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}"))
             else:
                 # 添加错误消息
                 self.messages.append(
-                    RuntimeMessage(f"错误：LLM名称 '{llm_name}' 不存在")
+                    RuntimeMessage(f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点")
                 )
 
         self.messages.append(msg)
