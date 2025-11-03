@@ -45,7 +45,7 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.agent_plugin import register_default_plugins
 from linhai.agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-from linhai.utils import CliRuntimeMessage
+from linhai.utils import CliRuntimeNotice
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +265,7 @@ class Agent:
         """
         logger.info("Agent进入等待用户状态")
         while self.state == "waiting_user":
-            interrupt_msg = CliRuntimeMessage(
+            interrupt_msg = CliRuntimeNotice(
                 level="INFO", content="Agent正在等待用户"
             )
             await self.group_chat.send("cli_runtime_output", interrupt_msg)
@@ -536,7 +536,7 @@ class Agent:
                 self, answer, current_content
             )
             if should_interrupt:
-                interrupt_msg = CliRuntimeMessage(
+                interrupt_msg = CliRuntimeNotice(
                     level="WARNING", content="Agent被插件打断"
                 )
                 await self.group_chat.send("cli_runtime_output", interrupt_msg)
@@ -555,7 +555,7 @@ class Agent:
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
-                    interrupt_msg = CliRuntimeMessage(
+                    interrupt_msg = CliRuntimeNotice(
                         level="WARNING", content="Agent被用户打断"
                     )
                     await self.group_chat.send("cli_runtime_output", interrupt_msg)

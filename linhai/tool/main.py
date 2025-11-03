@@ -17,7 +17,7 @@ from linhai.tool.base import (
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.config import Config
-from linhai.utils import CliRuntimeMessage
+from linhai.utils import CliRuntimeNotice
 import asyncio
 
 
@@ -106,7 +106,7 @@ class ToolManager:
                 target_toolset = toolset
         if target_toolset is None:
             # 发送错误消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeMessage(
+            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
                 level="ERROR", 
                 content=f"未找到工具: {tool_call.function_name}"
             ))
@@ -125,14 +125,14 @@ class ToolManager:
                 )
 
             # 发送工具调用成功消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeMessage(
+            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
                 level="INFO", 
                 content=f"工具执行成功: {tool_call.function_name}"
             ))
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             # 发送工具调用失败消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeMessage(
+            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
                 level="ERROR", 
                 content=f"工具执行失败: {tool_call.function_name} - {str(e)}"
             ))

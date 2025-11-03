@@ -23,7 +23,7 @@ from linhai.llm import (
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.group_chat import GroupChat
-from linhai.utils import CliRuntimeMessage
+from linhai.utils import CliRuntimeNotice
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
@@ -315,7 +315,7 @@ class CLIApp(App):
             for task in done:
                 output = task.result()
                 
-                if isinstance(output, CliRuntimeMessage):
+                if isinstance(output, CliRuntimeNotice):
                     # 处理运行时消息
                     container = self.query_one("#chat-container")
                     widget = RuntimeMessageWidget(level=output.level, content=output.content)
