@@ -19,7 +19,7 @@
 - [x] 使用./hypothesis_falsification.txt找出unittest出现垃圾信息的原因并删除
     - After message generation callback error: 'agent' not exists等
 - [x] 修复所有pylint+pyright警报
-- [ ] 将delete_message_by_uuid改为erase_message_by_uuid
+- [x] 将delete_message_by_uuid改为erase_message_by_uuid
     - 逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除
     - 改完用rg看一下有没有其他提到delete_message_by_uuid的地方，一起改了
     - 运行unittest并修复

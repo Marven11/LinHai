@@ -9,7 +9,7 @@ from linhai.agent_base import RuntimeMessage
 from linhai.tool.main import ToolManager
 
 
-class TestDeleteMessageByUUID(unittest.TestCase):
+class TestEraseMessageByUUID(unittest.TestCase):
     def setUp(self):
         # 创建模拟group_chat和config
         self.group_chat = Mock(spec=GroupChat)
@@ -35,9 +35,9 @@ class TestDeleteMessageByUUID(unittest.TestCase):
 
     def test_delete_nonexistent_message(self):
         # 测试删除不存在的UUID
-        result = self.agent.delete_message_by_uuid("nonexistent-uuid")
+        result = self.agent.erase_message_by_uuid("nonexistent-uuid")
         self.assertIn("错误", result)
-        self.assertEqual(result, "错误：UUID 'nonexistent-uuid' 不存在，无法删除消息。")
+        self.assertEqual(result, "错误：UUID 'nonexistent-uuid' 不存在，无法擦除消息。")
 
     def test_delete_existing_message(self):
         # 测试删除存在的消息
@@ -47,7 +47,7 @@ class TestDeleteMessageByUUID(unittest.TestCase):
         self.agent.messages.append(large_message)
         
         # 调用删除工具
-        result = self.agent.delete_message_by_uuid(test_uuid)
-        self.assertIn("成功删除", result)
+        result = self.agent.erase_message_by_uuid(test_uuid)
+        self.assertIn("成功擦除", result)
         self.assertNotIn(test_uuid, self.agent.large_messages)
         self.assertNotIn(large_message, self.agent.messages)

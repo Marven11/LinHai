@@ -205,25 +205,25 @@ class Agent:
             return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
         @dummy_toolset.register_tool(
-            name="delete_message_by_uuid",
-            desc="删除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具删除一些不需要的大消息以节省token。",
+            name="erase_message_by_uuid",
+            desc="擦除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除",
             args={
-                "uuids": ToolArgInfo(desc="要删除的消息的UUID", type="list[str]"),
+                "uuids": ToolArgInfo(desc="要擦除的消息的UUID", type="list[str]"),
             },
             required_args=["uuids"],
         )
-        def delete_message_by_uuid(uuids: list[str]) -> str:
+        def erase_message_by_uuid(uuids: list[str]) -> str:
             threshold_info = self.get_threshold_info()
             if threshold_info:
                 soft, _hard, used, _remaining, taken = threshold_info
                 if used < soft:
-                    return "当前token占用没有超过软限制，禁止删除消息"
+                    return "当前token占用没有超过软限制，禁止擦除消息"
                 if taken < 0.4:
-                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止删除消息"
+                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
             result = ""
             for message_uuid in uuids:
                 result += (
-                    f"{message_uuid!r}: {self.delete_message_by_uuid(message_uuid)}"
+                    f"{message_uuid!r}: {self.erase_message_by_uuid(message_uuid)}"
                 )
             return result
 
@@ -266,27 +266,28 @@ class Agent:
             taken,
         )
 
-    def delete_message_by_uuid(self, message_uuid: str) -> str:
-        """删除大消息方法。
+    def erase_message_by_uuid(self, message_uuid: str) -> str:
+        """擦除大消息方法。
 
         Args:
-            uuid: 要删除的消息的UUID
+            uuid: 要擦除的消息的UUID
 
         Returns:
-            str: 删除结果消息
+            str: 擦除结果消息
         """
         if message_uuid not in self.large_messages:
-            return f"错误：UUID '{message_uuid}' 不存在，无法删除消息。"
+            return f"错误：UUID '{message_uuid}' 不存在，无法擦除消息。"
 
         # 从large_messages中移除
         message_to_delete = self.large_messages[message_uuid]
         del self.large_messages[message_uuid]
 
-        # 从messages中移除（如果存在）
+        # 在原位置插入runtime message而不是直接删除
         if message_to_delete in self.messages:
-            self.messages.remove(message_to_delete)
+            index = self.messages.index(message_to_delete)
+            self.messages[index] = RuntimeMessage(f"本条UUID为{message_uuid}的消息已被擦除")
 
-        return f"已成功删除UUID为 '{message_uuid}' 的大消息"
+        return f"已成功擦除UUID为 '{message_uuid}' 的大消息"
 
     async def state_waiting_user(self):
         """
@@ -338,7 +339,7 @@ class Agent:
                 self.messages.append(
                     RuntimeMessage(
                         f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                        f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 delete_message_by_uuid. "
+                        f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
                     )
                 )
 
@@ -411,7 +412,7 @@ class Agent:
                     self.messages.append(
                         RuntimeMessage(
                             f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配UUID: {message_uuid}。"
-                            "你可以使用 delete_message_by_uuid 工具删除此消息以节省token。"
+                            "你可以使用 erase_message_by_uuid 工具删除此消息以节省token。"
                         )
                     )
 
