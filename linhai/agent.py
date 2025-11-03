@@ -264,15 +264,17 @@ class Agent:
         在这个状态下，Agent会等待用户输入消息，然后处理这些消息。
         """
         logger.info("Agent进入等待用户状态")
-        while self.state == "waiting_user":
-            interrupt_msg = CliRuntimeNotice(
-                level="INFO", content="Agent正在等待用户"
+
+        if not self.is_last_message_user():
+            await self.group_chat.send(
+                "cli_runtime_output",
+                CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
             )
-            await self.group_chat.send("cli_runtime_output", interrupt_msg)
             msg = await self.group_chat.receive("agent_user_input")
             assert isinstance(msg, ChatMessage)
             self.handle_user_message(msg)
-            await self.generate_response()
+
+        await self.generate_response()
 
     async def state_working(self):
         """
@@ -452,6 +454,12 @@ class Agent:
             )
             return False
 
+    def is_last_message_user(self) -> bool:
+        if not self.messages:
+            return False
+        msg = self.messages[-1]
+        return isinstance(msg, ChatMessage) and msg.role == "user"
+
     def handle_user_message(self, msg: Message):
         """处理并加入用户的消息"""
         assert isinstance(msg, ChatMessage) and msg.role == "user"
@@ -540,7 +548,6 @@ class Agent:
                     level="WARNING", content="Agent被插件打断"
                 )
                 await self.group_chat.send("cli_runtime_output", interrupt_msg)
-                # 不递归调用，让状态机处理后续流程
                 return answer
 
             if not self.group_chat.is_empty("agent_user_input"):
@@ -561,7 +568,6 @@ class Agent:
                     await self.group_chat.send("cli_runtime_output", interrupt_msg)
                     answer.interrupt()
                     self.handle_user_message(msg)
-                    # 不递归调用，让状态机处理后续流程
                     return answer
 
         await self.group_chat.send("cli_agent_output", answer)
