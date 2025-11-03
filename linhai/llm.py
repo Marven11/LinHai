@@ -143,10 +143,11 @@ class ToolCallMessage:
     def __init__(
         self,
         function_name: str = "",
-        function_arguments: str | dict = "",
+        function_arguments: str | dict = "", assert_success: bool = True,
     ):
         """初始化工具调用消息。"""
         self.function_name = function_name
+        self.assert_success = assert_success
         if isinstance(function_arguments, dict):
             self.function_arguments = function_arguments
         else:
@@ -161,6 +162,11 @@ class ToolCallMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
+        # 将assert_success添加到函数参数中
+        function_arguments = self.function_arguments.copy()
+        if not self.assert_success:
+            function_arguments["__assert_success"] = False
+        
         msg = {
             "role": "assistant",
             "content": "",
@@ -168,7 +174,7 @@ class ToolCallMessage:
                 {
                     "function": {
                         "name": self.function_name,
-                        "arguments": self.function_arguments,
+                        "arguments": function_arguments,
                     },
                 }
             ],
@@ -179,7 +185,8 @@ class ToolCallMessage:
         """返回消息的字符串表示。"""
         return (
             f"ToolCallMessage(function_name={self.function_name!r}, "
-            f"function_arguments={self.function_arguments!r})"
+            f"function_arguments={self.function_arguments!r}, "
+            f"assert_success={self.assert_success!r})"
         )
 
     def to_json(self) -> str:
@@ -196,7 +203,16 @@ class ToolCallMessage:
         tool_call = data["tool_calls"][0]
         function_name = tool_call["function"]["name"]
         function_arguments = tool_call["function"]["arguments"]
-        return cls(function_name=function_name, function_arguments=function_arguments)
+        
+        # 从函数参数中解析assert_success，默认为True
+        assert_success = True
+        if isinstance(function_arguments, dict) and "__assert_success" in function_arguments:
+            assert_success = function_arguments["__assert_success"]
+            # 移除特殊参数，避免传递给实际工具
+            function_arguments = function_arguments.copy()
+            del function_arguments["__assert_success"]
+        
+        return cls(function_name=function_name, function_arguments=function_arguments, assert_success=assert_success)
 
 
 class ToolConfirmationMessage:

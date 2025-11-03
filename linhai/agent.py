@@ -399,6 +399,20 @@ class Agent:
                 tool_result = await self.group_chat.get_members(
                     "tool_manager", ToolManager
                 ).process_tool_call(tool_call)
+                
+                # 检查工具结果，如果是ToolErrorMessage且assert_success为True，则中止
+                from linhai.tool.base import ToolErrorMessage
+                if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
+                    # 触发工具调用后的生命周期事件（失败）
+                    await self.lifecycle.trigger_after_tool_call(
+                        tool_call, tool_result, False
+                    )
+                    msg = f"工具调用失败: {tool_result.content}"
+                    logger.error(msg)
+                    self.messages.append(RuntimeMessage(msg))
+                    self.state = "paused"
+                    return True  # 需要早期返回，中止其他工具调用
+                
                 # 触发工具调用后的生命周期事件（成功）
                 await self.lifecycle.trigger_after_tool_call(
                     tool_call, tool_result, True

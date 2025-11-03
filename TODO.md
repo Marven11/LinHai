@@ -23,9 +23,9 @@
     - 逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除
     - 改完用rg看一下有没有其他提到delete_message_by_uuid的地方，一起改了
     - 运行unittest并修复
-- [ ] 现在工具返回了tool error message时ToolManager也会发送“工具调用成功”的消息，应该发送“工具调用失败”的消息
+- [x] 现在工具返回了tool error message时ToolManager也会发送“工具调用成功”的消息，应该发送“工具调用失败”的消息
     - 编写unittest
-- [ ] 给ToolCallMessage加上一个assert_success参数
+- [x] 给ToolCallMessage加上一个assert_success参数
     - 默认为True
     - 注释：假设工具调用成功，在工具调用失败时中止当前消息的其他工具调用
     - 修改agent.py
@@ -33,7 +33,7 @@
             - tool result是ToolErrorMessage
             - 出现Exception
     - 编写unittest
-        - [ ] 从llm输出中解析assert_success参数，没有时为True
+        - [x] 从llm输出中解析assert_success参数，没有时为True
 - [ ] 修改agent.py，在state_working中如果generate_response调用了和历史压缩/消息删除相关的工具，就不要提醒“已达到软限制”
 - [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
