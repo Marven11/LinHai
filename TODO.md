@@ -14,6 +14,8 @@
         - [ ] 删除plugin调用callback时传递的agent参数
         - [ ] plugin在运行时通过group chat获得agent
     - [ ] 运行并修复unittest
+- [ ] 将delete_message_by_uuid改为erase_message_by_uuid
+    - 逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除
 - [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
