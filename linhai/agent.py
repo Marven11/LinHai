@@ -265,6 +265,10 @@ class Agent:
         """
         logger.info("Agent进入等待用户状态")
         while self.state == "waiting_user":
+            interrupt_msg = CliRuntimeMessage(
+                level="INFO", content="Agent正在等待用户"
+            )
+            await self.group_chat.send("cli_runtime_output", interrupt_msg)
             msg = await self.group_chat.receive("agent_user_input")
             assert isinstance(msg, ChatMessage)
             self.handle_user_message(msg)
