@@ -96,6 +96,7 @@ class Agent:
         self.large_messages: dict[str, Message] = {}  # 存储大消息的UUID映射
         self.queued_messages: list[Message] = []  # 存储/queue消息
         # Plugin使用的变量
+        self.compress_tool_called_in_last_response = False  # 记录是否在最近响应中调用了压缩工具
         self.current_disable_waiting_user_warning = False
 
         # 生命周期回调管理器
