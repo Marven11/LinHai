@@ -124,11 +124,19 @@ class ToolManager:
                     func, **kwargs
                 )
 
-            # 发送工具调用成功消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
-                level="INFO", 
-                content=f"工具执行成功: {tool_call.function_name}"
-            ))
+            # 检查工具返回结果，如果是ToolErrorMessage则发送失败通知
+            if isinstance(result, ToolErrorMessage):
+                # 发送工具调用失败消息
+                await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
+                    level="ERROR", 
+                    content=f"工具执行失败: {tool_call.function_name}"
+                ))
+            else:
+                # 发送工具调用成功消息
+                await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
+                    level="INFO", 
+                    content=f"工具执行成功: {tool_call.function_name}"
+                ))
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             # 发送工具调用失败消息

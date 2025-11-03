@@ -180,5 +180,58 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.content, "未找到工具: nonexistent_tool")  # type: ignore
 
 
+    async def test_tool_error_message_sends_failure_notification(self):
+        """测试工具返回ToolErrorMessage时发送失败通知"""
+        # 监听运行时消息队列
+        received_messages = []
+        
+        async def collect_messages():
+            try:
+                while True:
+                    msg = await self.group_chat.receive("cli_runtime_output")
+                    received_messages.append(msg)
+            except asyncio.CancelledError:
+                pass
+        
+        # 启动消息收集任务
+        collector_task = asyncio.create_task(collect_messages())
+        
+        # 添加一个返回ToolErrorMessage的工具
+        from linhai.tool.base import ToolErrorMessage
+        
+        @self.toolset.register_tool(
+            name="error_tool",
+            desc="返回错误消息的工具",
+            args={},
+            required_args=[],
+        )
+        def error_tool():
+            """返回错误消息的工具"""
+            return ToolErrorMessage("工具内部错误")
+        
+        # 执行工具调用
+        tool_call = ToolCallMessage(
+            function_name="error_tool",
+            function_arguments={}
+        )
+        
+        result = await self.tool_manager.process_tool_call(tool_call)
+        
+        # 等待消息处理完成
+        await asyncio.sleep(0.1)
+        collector_task.cancel()
+        
+        # 验证发送了正确的运行时消息
+        self.assertEqual(len(received_messages), 1)
+        
+        # 检查执行失败消息
+        failure_msg = received_messages[0]
+        self.assertIsInstance(failure_msg, CliRuntimeNotice)
+        self.assertEqual(failure_msg.level, "ERROR")
+        self.assertEqual(failure_msg.content, "工具执行失败: error_tool")
+        
+        # 验证工具执行结果
+        self.assertEqual(result.content, "工具内部错误")  # type: ignore
+
 if __name__ == "__main__":
     unittest.main()
