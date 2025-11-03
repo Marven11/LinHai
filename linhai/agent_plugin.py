@@ -79,6 +79,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
                     "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
                 )
             )
+            agent.state = "working"
             answer.interrupt()
             return True
 
@@ -113,6 +114,7 @@ class ToolCallCountPlugin(Plugin):
                     f"工具调用超长时最多允许{max_json_blocks}个工具调用。请分多次调用。"
                 )
             )
+            agent.state = "working"
             answer.interrupt()
             return True
 
@@ -212,6 +214,7 @@ class ThinkingToolCallPlugin(Plugin):
                     "，你只能（且应该）在实际输出时调用多个工具！避免过度思考工具调用！"
                 )
             )
+            agent.state = "working"
             answer.interrupt()
             return True
 
@@ -319,6 +322,7 @@ class TaskPlanningPlugin(Plugin):
                 "你必须在工具调用前补上任务规划！"
             )
         )
+        agent.state = "working"
         answer.interrupt()
         return True
 
