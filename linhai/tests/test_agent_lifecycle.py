@@ -61,9 +61,14 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.lifecycle = Lifecycle(self.group_chat)
         self.mock_agent = MagicMock()
         self.mock_agent.state = "waiting_user"
+        self.mock_agent.messages = []
         self.mock_answer = MagicMock()
+        self.mock_answer.get_reasoning_message.return_value = None
         self.mock_tool_call = MagicMock()
         self.mock_tool_result = MagicMock()
+        
+        # 模拟group_chat.get_members返回有效的agent
+        self.group_chat.get_members = MagicMock(return_value=self.mock_agent)
 
     async def test_register_and_trigger_before_message_generation(self):
         """Test registering and triggering before message generation callbacks."""
@@ -203,7 +208,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
                 True, False
             )
             await self.lifecycle.trigger_after_message_generation(
-                self.mock_answer, "test", []
+                self.mock_answer, "test response", []
             )
             await self.lifecycle.trigger_before_tool_call(
                 self.mock_tool_call

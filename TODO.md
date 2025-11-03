@@ -16,7 +16,7 @@
     - [x] 运行并修复unittest
 - [x] 使用./hypothesis_falsification.txt找出原因并修复所有unittest
     - 可以编写临时脚本测试
-- [ ] 使用./hypothesis_falsification.txt找出unittest出现垃圾信息的原因并删除
+- [x] 使用./hypothesis_falsification.txt找出unittest出现垃圾信息的原因并删除
     - After message generation callback error: 'agent' not exists等
 - [ ] 修复所有pylint+pyright警报
 - [ ] 将delete_message_by_uuid改为erase_message_by_uuid
