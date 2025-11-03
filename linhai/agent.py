@@ -332,16 +332,21 @@ class Agent:
         else:
             await self.generate_response()
 
-        threshold_info = self.get_threshold_info()
-        if threshold_info:
-            soft, hard, used, remaining, taken = threshold_info
-            if used > soft:
-                self.messages.append(
-                    RuntimeMessage(
-                        f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                        f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
+        # 如果最近没有调用压缩工具，才检查软限制并提醒
+        if not self.compress_tool_called_in_last_response:
+            threshold_info = self.get_threshold_info()
+            if threshold_info:
+                soft, hard, used, remaining, taken = threshold_info
+                if used > soft:
+                    self.messages.append(
+                        RuntimeMessage(
+                            f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
+                            f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
+                        )
                     )
-                )
+        else:
+            # 重置标志
+            self.compress_tool_called_in_last_response = False
 
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_hard", int(65536 * 0.8)
@@ -387,8 +392,17 @@ class Agent:
             "tool_manager", ToolManager
         ).get_workflow(tool_call.function_name)
         if workflow:
+            # 检查是否是压缩/消息删除相关工具
+            compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
+            if tool_call.function_name in compress_tools:
+                self.compress_tool_called_in_last_response = True
             workflow_function = workflow["func"]
             return await workflow_function(self)
+
+        # 检查是否是压缩/消息删除相关工具
+        compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
+        if tool_call.function_name in compress_tools:
+            self.compress_tool_called_in_last_response = True
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(tool_call)
