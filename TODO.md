@@ -35,7 +35,7 @@
     - 编写unittest
         - [x] 从llm输出中解析assert_success参数，没有时为True
 - [ ] 修改agent.py，在state_working中如果generate_response调用了和历史压缩/消息删除相关的工具，就不要提醒“已达到软限制”
-- [ ] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
+- [x] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
