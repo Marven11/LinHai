@@ -93,7 +93,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.get_workflow.return_value = None
 
         # 设置 group_chat.get_members 根据参数返回不同的值
-        def get_members_side_effect(member_type, member_class=None):
+        def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
             else:

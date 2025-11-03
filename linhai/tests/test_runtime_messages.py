@@ -97,7 +97,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(success_msg.content, "工具执行成功: test_tool")
         
         # 验证工具执行结果
-        self.assertEqual(result.content, "测试结果: test_value")
+        self.assertEqual(result.content, "测试结果: test_value")  # type: ignore
 
     async def test_tool_failure_sends_runtime_messages(self):
         """测试工具执行失败时发送运行时消息"""
@@ -137,7 +137,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(failure_msg.content, "工具执行失败: failing_tool - 工具执行失败")
         
         # 验证工具执行结果
-        self.assertEqual(result.content, "工具执行失败")
+        self.assertEqual(result.content, "工具执行失败")  # type: ignore
 
     async def test_tool_not_found_sends_runtime_message(self):
         """测试工具未找到时发送运行时消息"""
@@ -177,7 +177,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error_msg.content, "未找到工具: nonexistent_tool")
         
         # 验证工具执行结果
-        self.assertEqual(result.content, "未找到工具: nonexistent_tool")
+        self.assertEqual(result.content, "未找到工具: nonexistent_tool")  # type: ignore
 
 
 if __name__ == "__main__":

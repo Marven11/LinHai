@@ -169,7 +169,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         # 使用一个计数器来模拟多次检查用户输入
         is_empty_call_count = 0
         
-        def is_empty_side_effect(queue_name):
+        def is_empty_side_effect(_queue_name):
             nonlocal is_empty_call_count
             is_empty_call_count += 1
             # 前几次调用返回False（有用户输入），后面返回True（没有用户输入）
@@ -192,8 +192,8 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.agent.queued_messages), 2, "queued_messages应该保存了2条排队消息")
         
         # 验证排队消息的内容
-        self.assertEqual(self.agent.queued_messages[0].message, "/queue 排队消息1")
-        self.assertEqual(self.agent.queued_messages[1].message, "/queue 排队消息2")
+        self.assertEqual(self.agent.queued_messages[0].message, "/queue 排队消息1")  # type: ignore
+        self.assertEqual(self.agent.queued_messages[1].message, "/queue 排队消息2")  # type: ignore
         
         # 验证消息列表中没有排队消息（因为被打断了，排队消息还没被添加到消息列表）
         queue_messages_in_main = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]

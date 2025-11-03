@@ -170,8 +170,8 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         expected_messages = [
-            f"用户使用-f选项指定了文件路径: {str(Path('test_message.txt'))}",
-            f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n文件中的测试消息"
+            "用户使用-f选项指定了文件路径: " + str(Path('test_message.txt')),
+            "文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n文件中的测试消息"
         ]
         self.assertEqual(cli_call_args.kwargs.get("init_messages"), expected_messages)
         self.assertEqual(
@@ -237,8 +237,8 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         expected_messages = [
-            f"用户使用-f选项指定了文件路径: {str(Path('test_message.txt'))}",
-            f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n文件中的优先消息"
+            "用户使用-f选项指定了文件路径: " + str(Path('test_message.txt')),
+            "文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n文件中的优先消息"
         ]
         self.assertEqual(cli_call_args.kwargs.get("init_messages"), expected_messages)
         self.assertEqual(

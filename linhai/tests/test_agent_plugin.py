@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.agent_plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
-from linhai.group_chat import GroupChat
+
 
 
 class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):

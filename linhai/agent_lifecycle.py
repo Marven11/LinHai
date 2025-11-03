@@ -15,7 +15,7 @@ from linhai.llm import (
 )
 
 
-import linhai
+
 
 logger = logging.getLogger(__name__)
 
