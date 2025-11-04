@@ -30,7 +30,8 @@
     - 记得修改工具的描述：如果需要发送ctrl+c等对应的控制字符，请传入...
 - [ ] 重构MessageWidget，让其在左上角显示当前llm的名字，而非assistant-reasoning等
     - 但是边框颜色还是根据role来计算
-
+- [ ] 运行并修复所有unittest
+- [ ] 运行并修复所有pylint/pyright警告
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
