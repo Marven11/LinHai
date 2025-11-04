@@ -215,6 +215,7 @@ class CLIApp(App):
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
         self.current_token_usage: AnswerTokenUsage | None = None
         self.cumulative_token_usage: dict[str, int] | None = None
+        self.last_user_scroll_time: float | None = None  # 记录用户上次滚动时间
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -346,9 +347,10 @@ class CLIApp(App):
                         current_message = None
 
                     container = self.query_one("#chat-container")
-                    should_scroll = container.is_vertical_scroll_end or (
+                    should_scroll = (
+                        container.is_vertical_scroll_end or
                         container.scroll_offset.y >= container.max_scroll_y - 5
-                    )
+                    ) and not self.is_user_recently_scrolled()
 
                     if current_message is None:
 
@@ -533,6 +535,19 @@ class CLIApp(App):
             from linhai.tool.tools.terminal import close_all_terminals
             close_all_terminals()
             self.app.exit()
+
+    async def on_scroll(self, event: events.Scroll) -> None:
+        """监听滚动事件，记录用户滚动时间"""
+        import time
+        self.last_user_scroll_time = time.time()
+        
+    def is_user_recently_scrolled(self) -> bool:
+        """检查用户是否在最近3秒内滚动了"""
+        if self.last_user_scroll_time is None:
+            return False
+        import time
+        current_time = time.time()
+        return (current_time - self.last_user_scroll_time) < 3.0
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
         """向用户确认是否需要调用工具"""
