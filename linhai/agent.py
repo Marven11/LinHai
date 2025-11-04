@@ -388,22 +388,17 @@ class Agent:
         if self.state == "waiting_user":
             self.state = "working"
 
+        # 统一设置compress_tool_called_in_last_response
+        compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
+        self.compress_tool_called_in_last_response = tool_call.function_name in compress_tools
+
         # 检查是否是workflow工具
         workflow = self.group_chat.get_members(
             "tool_manager", ToolManager
         ).get_workflow(tool_call.function_name)
         if workflow:
-            # 检查是否是压缩/消息删除相关工具
-            compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
-            if tool_call.function_name in compress_tools:
-                self.compress_tool_called_in_last_response = True
             workflow_function = workflow["func"]
             return await workflow_function(self)
-
-        # 检查是否是压缩/消息删除相关工具
-        compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
-        if tool_call.function_name in compress_tools:
-            self.compress_tool_called_in_last_response = True
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(tool_call)
