@@ -117,7 +117,7 @@ class GlobalMemory:
         try:
             content = self.filepath.read_text()
             return {
-                "role": "system",
+                "role": "user",
                 "content": f"""
 # 全局记忆
 
@@ -128,7 +128,7 @@ class GlobalMemory:
             }
         except FileNotFoundError:
             return {
-                "role": "system",
+                "role": "user",
                 "content": f"""
 # 全局记忆
 
@@ -137,7 +137,7 @@ class GlobalMemory:
             }
         except (IOError, OSError) as e:
             return {
-                "role": "system",
+                "role": "user",
                 "content": f"""
 # 全局记忆
 
