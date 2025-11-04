@@ -4,38 +4,33 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 重构agent_plugin.py为主的agent plugin系统和lifecycle系统
-    - [x] lifecycle类初始化时
-        - 获得group chat并注册自己
-        - 初始化各个默认插件（列表）并保存在self中
-    - [x] plugin在初始化时获得group chat类
-    - [x] agent在传递给plugin时不再通过lifecycle的参数传递
-        - [x] 删除lifecycle调用callback时传递的agent参数
-        - [x] 删除plugin调用callback时传递的agent参数
-        - [x] plugin在运行时通过group chat获得agent
-    - [x] 运行并修复unittest
-- [x] 使用./hypothesis_falsification.txt找出原因并修复所有unittest
-    - 可以编写临时脚本测试
-- [x] 使用./hypothesis_falsification.txt找出unittest出现垃圾信息的原因并删除
-    - After message generation callback error: 'agent' not exists等
-- [x] 修复所有pylint+pyright警报
-- [x] 将delete_message_by_uuid改为erase_message_by_uuid
-    - 逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除
-    - 改完用rg看一下有没有其他提到delete_message_by_uuid的地方，一起改了
-    - 运行unittest并修复
-- [x] 现在工具返回了tool error message时ToolManager也会发送“工具调用成功”的消息，应该发送“工具调用失败”的消息
-    - 编写unittest
-- [x] 给ToolCallMessage加上一个assert_success参数
-    - 默认为True
-    - 注释：假设工具调用成功，在工具调用失败时中止当前消息的其他工具调用
-    - 修改agent.py
-        - 在call_tool中如果需要中止则返回False
-            - tool result是ToolErrorMessage
-            - 出现Exception
-    - 编写unittest
-        - [x] 从llm输出中解析assert_success参数，没有时为True
-- [x] 修改agent.py，在state_working中如果generate_response调用了和历史压缩/消息删除相关的工具，就不要提醒“已达到软限制”
-- [x] 修复pylint, pyright的警告，每修复一个文件就重新运行unittest保证没有修坏
+- [ ] 添加命令`/quit`和`/exit`，用户使用这个命令时退出
+    - 你需要参考一下`/queue`的实现
+- [ ] 你在e5c2b8cddbba584bda32a7703dd1934179d6fa65添加了assert_success参数但是没有在prompt.py中提及如何使用
+    - 修改prompt.py
+        - 介绍这个参数以及工具按顺序运行的逻辑
+        - 修改示例，对“失败了也不会影响其他工具调用”的工具调用加上assert_success为False
+- [ ] 简化617aa9a03b7b9029b6f5759ba0aebb3f156aa501中添加的有关self.compress_tool_called_in_last_response的逻辑
+    - 在call_tool中设置self.compress_tool_called_in_last_response的值
+    - 在state_working中读取
+- [ ] 重构自动滚动
+    - 当前cli_ui.py自动滚动（计算should_scroll）功能仅仅基于当前的屏幕滚动位置
+    - 需要同时根据上一次用户滚动时间判断：如果用户上一次滚动在3秒内则不开启自动滚动
+- [ ] 重构ID系统
+    - 现在的terminal和agent.py中的大消息都使用uuid作为ID，重构
+    - [ ] 在utils.py中写一个工具函数，生成这样的ID
+        - `<prefix>_<bytes>`
+        - prefix是`terminal`, `largemessage`这样的字符串
+        - bytes是12位hex，如, 5486529a0022
+    - [ ] 让terminal和大消息都使用这种ID
+    - [ ] 编写unittest
+    - [ ] 运行所有unittest
+    - [ ] 在终端中启动`python -m linhai -m '@nothink 计算114+514并退出'`以测试有没有改坏
+- [ ] 让终端工具支持ctrl+c等组合键的控制字符
+    - 记得修改工具的描述：如果需要发送ctrl+c等对应的控制字符，请传入...
+- [ ] 重构MessageWidget，让其在左上角显示当前llm的名字，而非assistant-reasoning等
+    - 但是边框颜色还是根据role来计算
+
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
