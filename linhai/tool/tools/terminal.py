@@ -48,6 +48,16 @@ KEY_MAPPINGS = {
     "f10": "\x1b[21~",
     "f11": "\x1b[23~",
     "f12": "\x1b[24~",
+    # 控制字符
+    "ctrl+c": "\x03",
+    "ctrl+d": "\x04",
+    "ctrl+z": "\x1a",
+    "ctrl+a": "\x01",
+    "ctrl+e": "\x05",
+    "ctrl+u": "\x15",
+    "ctrl+k": "\x0b",
+    "ctrl+l": "\x0c",
+    "ctrl+r": "\x12",
 }
 
 
@@ -148,7 +158,7 @@ def create_terminal(columns: int = 80, lines: int = 24) -> str:
 
 @terminal_toolset.register_tool(
     name="send_keys_to_terminal",
-    desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'",
+    desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'。如果需要发送ctrl+c等控制字符，请传入对应的控制键名称，如'ctrl+c'、'ctrl+d'等。",
     args={
         "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
         "keys": ToolArgInfo(
