@@ -114,13 +114,22 @@ class RuntimeMessageWidget(Static):
 class MessageWidget(Static):
     """单条消息显示组件"""
 
-    def __init__(self, role: str, content: str, is_reasoning: bool = False):
+    def __init__(self, role: str, content: str, is_reasoning: bool = False, llm_name: str | None = None):
         super().__init__()
         self.role = role
         self.content_str = content
         self.is_reasoning = is_reasoning
+        self.llm_name = llm_name
         if is_reasoning:
-            self.role += "-reasoning"
+            if llm_name:
+                self.display_name = f"{llm_name}-reasoning"
+            else:
+                self.display_name = "assistant-reasoning"
+        else:
+            if llm_name:
+                self.display_name = llm_name
+            else:
+                self.display_name = role
 
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
@@ -149,7 +158,7 @@ class MessageWidget(Static):
                 "assistant": "green",
                 "assistant-reasoning": "grey50",
             }.get(self.role, "grey50"),
-            title=self.role,
+            title=self.display_name,
             title_align="left",
             expand=True,
             style="on #2E3440",
@@ -229,7 +238,13 @@ class CLIApp(App):
                     content = f"{llm_message['function_call']}(...)"
                 else:
                     content = f"<Unknown {llm_message!r}>"
-                yield MessageWidget(role=llm_message["role"], content=content)
+                # 获取当前LLM名字
+                try:
+                    agent = self.group_chat.get_members("agent", Agent)
+                    llm_name, _llm = agent.get_current_llm_info()
+                except RuntimeError:
+                    llm_name = None
+                yield MessageWidget(role=llm_message["role"], content=content, llm_name=llm_name)
 
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
@@ -275,7 +290,12 @@ class CLIApp(App):
             await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
-            widget = MessageWidget(user_msg.role, user_msg.message)
+            try:
+                agent = self.group_chat.get_members("agent", Agent)
+                llm_name, _llm = agent.get_current_llm_info()
+            except RuntimeError:
+                llm_name = None
+            widget = MessageWidget(user_msg.role, user_msg.message, llm_name=llm_name)
             container.scroll_end()
             container.mount(widget)
             widget.update_display()
@@ -291,7 +311,13 @@ class CLIApp(App):
             content = f"{llm_message['function_call']}(...)"
         else:
             content = f"<Unknown {llm_message!r}>"
-        widget = MessageWidget("agent", content)
+        # 获取当前LLM名字
+        try:
+            agent = self.group_chat.get_members("agent", Agent)
+            llm_name, _llm = agent.get_current_llm_info()
+        except RuntimeError:
+            llm_name = None
+        widget = MessageWidget("agent", content, llm_name=llm_name)
         self.query_one("#chat-container").mount(widget)
         self.query_one("#chat-container").scroll_end()
         self._trim_messages_if_needed()
@@ -354,8 +380,14 @@ class CLIApp(App):
 
                     if current_message is None:
 
+                        # 获取当前LLM名字
+                        try:
+                            agent = self.group_chat.get_members("agent", Agent)
+                            llm_name, _llm = agent.get_current_llm_info()
+                        except RuntimeError:
+                            llm_name = None
                         current_message = MessageWidget(
-                            role="assistant", content=content, is_reasoning=is_reasoning
+                            role="assistant", content=content, is_reasoning=is_reasoning, llm_name=llm_name
                         )
                         await asyncio.sleep(0)
                         container.mount(current_message)
@@ -418,7 +450,12 @@ class CLIApp(App):
                 self.messages.append(user_msg)
                 await self.group_chat.send("agent_user_input", user_msg)
                 # 更新UI
-                widget = MessageWidget(user_msg.role, user_msg.message)
+                try:
+                    agent = self.group_chat.get_members("agent", Agent)
+                    llm_name, _llm = agent.get_current_llm_info()
+                except RuntimeError:
+                    llm_name = None
+                widget = MessageWidget(user_msg.role, user_msg.message, llm_name=llm_name)
                 container = self.query_one("#chat-container")
                 container.scroll_end()
                 container.mount(widget)
