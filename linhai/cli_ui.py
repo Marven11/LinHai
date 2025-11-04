@@ -337,7 +337,7 @@ class CLIApp(App):
 
                     container = self.query_one("#chat-container")
                     should_scroll = container.is_vertical_scroll_end or (
-                        container.scroll_offset.y >= container.max_scroll_y - 2
+                        container.scroll_offset.y >= container.max_scroll_y - 5
                     )
 
                     if current_message is None:
