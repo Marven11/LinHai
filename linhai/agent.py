@@ -611,6 +611,16 @@ class Agent:
                 if content.startswith("/queue"):
                     # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
                     self.queued_messages.append(msg)
+                elif content.startswith(("/quit", "/exit")):
+                    # 以/quit或/exit开头，直接退出程序
+                    await self.group_chat.send("cli_agent_output", answer)
+                    chat_message = cast(ChatMessage, answer.get_message())
+                    self.messages.append(chat_message)
+                    # 发送退出信号给CLIApp
+                    from linhai.cli_ui import CLIApp
+                    await self.group_chat.send("cli_exit", {"return_code": 0})
+                    answer.interrupt()
+                    return answer
                 else:
                     # 正常打断
                     await self.group_chat.send("cli_agent_output", answer)

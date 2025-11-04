@@ -203,6 +203,7 @@ class CLIApp(App):
         self.group_chat = group_chat
         self.group_chat.register_queue("cli_agent_output")
         self.group_chat.register_queue("cli_runtime_output")
+        self.group_chat.register_queue("cli_exit")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -298,12 +299,13 @@ class CLIApp(App):
         """监听输出队列并更新UI"""
         current_message = None
         while True:
-            # 同时监听两个队列
+            # 同时监听三个队列
             agent_output_task = asyncio.create_task(self.group_chat.receive("cli_agent_output"))
             runtime_output_task = asyncio.create_task(self.group_chat.receive("cli_runtime_output"))
+            exit_task = asyncio.create_task(self.group_chat.receive("cli_exit"))
             
             done, pending = await asyncio.wait(
-                [agent_output_task, runtime_output_task],
+                [agent_output_task, runtime_output_task, exit_task],
                 return_when=asyncio.FIRST_COMPLETED
             )
             
@@ -314,6 +316,14 @@ class CLIApp(App):
             # 处理完成的任务
             for task in done:
                 output = task.result()
+                
+                # 检查是否是退出任务
+                if task == exit_task:
+                    if isinstance(output, dict) and "return_code" in output:
+                        return_code = output["return_code"]
+                        self.exit(return_code=return_code)
+                        return  # 立即返回，不再处理其他消息
+                    continue  # 跳过其他处理
                 
                 if isinstance(output, CliRuntimeNotice):
                     # 处理运行时消息
@@ -357,6 +367,11 @@ class CLIApp(App):
                         container.scroll_end()
                 elif isinstance(output, AnswerTokenUsage):
                     self.current_token_usage = output
+                elif isinstance(output, dict) and "return_code" in output:
+                    # 处理退出信号
+                    return_code = output["return_code"]
+                    self.exit(return_code=return_code)
+                    return  # 立即返回，不再处理其他消息
                 elif isinstance(output, Answer):
                     if current_message:
                         current_message.update_display()
