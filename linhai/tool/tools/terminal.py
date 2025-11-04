@@ -11,6 +11,7 @@ import subprocess
 
 from typing import List
 from linhai.tool.base import ToolSet, ToolArgInfo
+from linhai.utils import generate_id
 
 # 创建新的工具集，不注册到global tools
 terminal_toolset = ToolSet()
@@ -139,7 +140,7 @@ def create_terminal(columns: int = 80, lines: int = 24) -> str:
     Returns:
         终端对应的uuid
     """
-    term_uuid = str(uuid.uuid4())
+    term_uuid = generate_id("terminal")
     terminal = PyteTerminal(columns=columns, lines=lines)
     terminals[term_uuid] = terminal
     return term_uuid

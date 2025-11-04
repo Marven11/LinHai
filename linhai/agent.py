@@ -45,7 +45,7 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 
 from linhai.agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import CliRuntimeNotice, generate_id
 
 logger = logging.getLogger(__name__)
 
@@ -431,7 +431,7 @@ class Agent:
                 # 检查工具结果大小，如果大于8000字符则记录UUID
                 tool_result_content = str(tool_result)
                 if len(tool_result_content) > 8000:
-                    message_uuid = str(uuid.uuid4())
+                    message_uuid = generate_id("largemessage")
                     self.large_messages[message_uuid] = tool_result
                     self.messages.append(
                         RuntimeMessage(
