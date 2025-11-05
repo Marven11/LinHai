@@ -179,7 +179,7 @@ class CLIApp(App):
     #input {
         height: 3;
         background: #2E3440;
-        border: round yellow;
+        border: solid yellow;
     }
     #token-usage {
         width: 100%;
@@ -510,17 +510,15 @@ class CLIApp(App):
         else:
             input_tokens = self.cumulative_token_usage["input_tokens"]
             output_tokens = self.cumulative_token_usage["output_tokens"]
-            total_tokens = self.cumulative_token_usage["total_tokens"]
             if self.current_token_usage is not None:
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
-                total_tokens += self.current_token_usage.total_tokens
    
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
             _, llm_instance = agent.get_current_llm_info()  # Unused variable llm_name
             token_limit = llm_instance.get_token_limit()
-            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out | {total_tokens:,} total"
+            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out"
             if token_limit and token_limit > 0:
                 percentage = (current_answer_token / token_limit) * 100
                 # 使用进度条样式显示百分比
