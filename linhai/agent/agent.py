@@ -16,12 +16,12 @@ import traceback
 import random
 from asyncio import QueueEmpty
 
-from linhai.agent_base import (
+from .agent_base import (
     RuntimeMessage,
     DestroyedRuntimeMessage,
     GlobalMemory,
 )
-from linhai.agent_lifecycle import Lifecycle
+from .agent_lifecycle import Lifecycle
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import (
     Message,
@@ -42,7 +42,7 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.tools.terminal import terminal_toolset
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 
-from linhai.agent_workflow import compress_history_range
+from .agent_workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 from linhai.utils import CliRuntimeNotice, generate_id
 
@@ -101,7 +101,7 @@ class Agent:
         self.current_disable_waiting_user_warning = False
 
         # 生命周期回调管理器
-        self.lifecycle = Lifecycle(group_chat)
+        self.lifecycle = Lifecycle(self.group_chat)
 
         # 添加LLM切换工具
         llm_toolset = ToolSet()

@@ -10,7 +10,7 @@ import argparse
 import unittest
 import sys
 
-from linhai.agent import create_agent
+from linhai.agent.agent import create_agent
 from linhai.cli_ui import CLIApp
 from linhai.group_chat import GroupChat
 

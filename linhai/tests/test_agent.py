@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
-from linhai.agent_base import RuntimeMessage
+from linhai.agent.agent_base import RuntimeMessage
 from linhai.llm import ChatMessage
 from linhai.tool.main import ToolResultMessage
 from linhai.group_chat import GroupChat
@@ -160,7 +160,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.state = "working"
         self.assertEqual(self.agent.state, "working")
 
-        self.agent.state = "paused"
+        self.agent.state = "working"
         self.assertEqual(self.agent.state, "paused")
 
     async def test_message_processing(self):
@@ -245,7 +245,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # Setup
         self.agent.state_waiting_user = AsyncMock()
         self.agent.state_working = AsyncMock()
-        self.agent.state_paused = AsyncMock()
+        # self.agent.state_paused = AsyncMock()  # 这个属性不存在，注释掉
 
         # 创建任务引用
         task_ref = None

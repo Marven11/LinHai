@@ -1,9 +1,9 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
-from linhai.agent_base import RuntimeMessage, WAITING_USER_MARKER
+from .agent_base import RuntimeMessage, WAITING_USER_MARKER
 from linhai.llm import Answer
-import linhai
+import linhai.agent as linhai_agent
 import re
 
 
@@ -61,7 +61,7 @@ class WaitingUserPlugin(Plugin):
                 # 所有检查通过，设置等待用户状态
                 agent.state = "waiting_user"
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -92,7 +92,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -129,7 +129,7 @@ class ToolCallCountPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -151,7 +151,7 @@ class WrongEndPlugin(Plugin):
                 RuntimeMessage(f"警告: 输出了错误的token: {regex_result!r}")
             )
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -199,7 +199,7 @@ class BadMultiToolCall(Plugin):
                 )
             self.last_message_had_reason = True
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -234,7 +234,7 @@ class ThinkingToolCallPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -258,7 +258,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
                 )
             )
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -279,7 +279,7 @@ class MarkdownSyntaxPlugin(Plugin):
                 RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
             )
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -309,7 +309,7 @@ class ChineseEndOfSentencePlugin(Plugin):
                 return True
         return False
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
@@ -393,7 +393,7 @@ class TaskPlanningPlugin(Plugin):
                 )
             )
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 

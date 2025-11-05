@@ -8,7 +8,7 @@ import os
 import asyncio
 
 from linhai.agent import create_agent
-from linhai.agent_base import GlobalMemory
+from linhai.agent.agent_base import GlobalMemory
 from linhai.config import Config, LLMConfig, AgentConfig
 
 

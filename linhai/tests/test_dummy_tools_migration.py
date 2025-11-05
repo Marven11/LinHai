@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ToolCallMessage, SystemMessage, Message
-from linhai.agent_base import RuntimeMessage
+from linhai.agent.agent_base import RuntimeMessage
 
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager

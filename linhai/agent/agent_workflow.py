@@ -4,7 +4,7 @@ from typing import cast
 from reprlib import Repr
 
 import linhai
-from linhai.agent_base import RuntimeMessage, CompressRangeRequest, GlobalMemory
+from .agent_base import RuntimeMessage, CompressRangeRequest, GlobalMemory
 from linhai.markdown_parser import extract_json_blocks
 from linhai.llm import (
     ChatMessage,

@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 from linhai.agent import Agent, AgentConfig
 from linhai.llm import ChatMessage, SystemMessage, ToolCallMessage
-from linhai.agent_base import RuntimeMessage
+from linhai.agent.agent_base import RuntimeMessage
 
 
 class TestConversationHistory(unittest.TestCase):
