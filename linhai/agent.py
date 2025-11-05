@@ -602,11 +602,11 @@ class Agent:
             if not self.group_chat.is_empty("agent_user_input"):
                 msg = await self.group_chat.receive("agent_user_input")
                 assert isinstance(msg, ChatMessage)
-                content = msg.message.strip()
-                if content.startswith("/queue"):
+                parsed_input = parse_user_input(msg.message.strip())
+                if parsed_input.command == "queue":
                     # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
                     self.queued_messages.append(msg)
-                elif content.startswith(("/quit", "/exit")):
+                elif parsed_input.command in ["quit", "exit"]:
                     # 以/quit或/exit开头，直接退出程序
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
