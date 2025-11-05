@@ -116,13 +116,14 @@ class MessageWidget(Static):
 
     def __init__(self, role: str, content: str, sender_name: str, is_reasoning: bool = False):
         super().__init__()
-        self.role = role
         self.content_str = content
         self.is_reasoning = is_reasoning
         if is_reasoning:
             self.display_name = f"{sender_name} (reasoning)"
+            self.role = f"{role}-reasoning"
         else:
             self.display_name = sender_name
+            self.role = role
 
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
@@ -232,12 +233,11 @@ class CLIApp(App):
                 else:
                     content = f"<Unknown {llm_message!r}>"
                 # 获取当前LLM名字
-                try:
+                name = llm_message["role"]
+                if llm_message["role"] == "assistant":
                     agent = self.group_chat.get_members("agent", Agent)
-                    llm_name, _llm = agent.get_current_llm_info()
-                except RuntimeError:
-                    llm_name = "unknown assistant"
-                yield MessageWidget(role=llm_message["role"], content=content, sender_name=llm_name)
+                    name, _llm = agent.get_current_llm_info()
+                yield MessageWidget(role=llm_message["role"], content=content, sender_name=name)
 
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
@@ -284,8 +284,7 @@ class CLIApp(App):
             event.input.value = ""
             # 更新UI
             agent = self.group_chat.get_members("agent", Agent)
-            llm_name, _llm = agent.get_current_llm_info()
-            widget = MessageWidget(user_msg.role, user_msg.message, sender_name=llm_name)
+            widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.scroll_end()
             container.mount(widget)
             widget.update_display()
@@ -362,7 +361,7 @@ class CLIApp(App):
                     container = self.query_one("#chat-container")
                     should_scroll = (
                         container.is_vertical_scroll_end or
-                        container.scroll_offset.y >= container.max_scroll_y - 5
+                        container.scroll_offset.y >= container.max_scroll_y - 10
                     ) and not self.is_user_recently_scrolled()
 
                     if current_message is None:
