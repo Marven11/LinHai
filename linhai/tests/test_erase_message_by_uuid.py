@@ -5,7 +5,7 @@ import uuid
 from linhai.agent import Agent, AgentConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
-from linhai.agent.agent_base import RuntimeMessage
+from linhai.agent.base import RuntimeMessage
 from linhai.tool.main import ToolManager
 
 

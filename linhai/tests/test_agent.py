@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Agent, AgentConfig
-from linhai.agent.agent_base import RuntimeMessage
+from linhai.agent.base import RuntimeMessage
 from linhai.llm import ChatMessage
 from linhai.tool.main import ToolResultMessage
 from linhai.group_chat import GroupChat

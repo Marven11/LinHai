@@ -6,8 +6,8 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.agent import Agent, AgentConfig
-from linhai.agent.agent_base import RuntimeMessage
-from linhai.agent.agent_workflow import compress_history_range
+from linhai.agent.base import RuntimeMessage
+from linhai.agent.workflow import compress_history_range
 from linhai.llm import ChatMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools

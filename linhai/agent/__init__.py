@@ -1,9 +1,9 @@
 """Agent module for LinHai."""
 
-from .agent import Agent
-from .agent_lifecycle import Lifecycle
-from .agent import Agent, create_agent, AgentConfig
-from .agent_workflow import compress_history_range
+from .main import Agent
+from .lifecycle import Lifecycle
+from .main import Agent, create_agent, AgentConfig
+from .workflow import compress_history_range
 
 __all__ = [
     "Agent",

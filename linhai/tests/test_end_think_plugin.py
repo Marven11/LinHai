@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 
-from linhai.agent.agent_plugin import EndThinkPlugin
+from linhai.agent.plugin import EndThinkPlugin
 from linhai.llm import Answer
 
 

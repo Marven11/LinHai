@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent import Agent, AgentConfig
-from linhai.agent.agent_base import WAITING_USER_MARKER, RuntimeMessage
+from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
 from linhai.llm import ChatMessage, SystemMessage
 from linhai.tool.main import ToolResultMessage
 

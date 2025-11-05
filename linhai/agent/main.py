@@ -16,12 +16,12 @@ import traceback
 import random
 from asyncio import QueueEmpty
 
-from .agent_base import (
+from .base import (
     RuntimeMessage,
     DestroyedRuntimeMessage,
     GlobalMemory,
 )
-from .agent_lifecycle import Lifecycle
+from .lifecycle import Lifecycle
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import (
     Message,
@@ -42,7 +42,7 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.tools.terminal import terminal_toolset
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 
-from .agent_workflow import compress_history_range
+from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 from linhai.utils import CliRuntimeNotice, generate_id
 

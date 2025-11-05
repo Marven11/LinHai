@@ -1,7 +1,7 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
-from .agent_base import RuntimeMessage, WAITING_USER_MARKER
+from .base import RuntimeMessage, WAITING_USER_MARKER
 from linhai.llm import Answer
 import linhai.agent as linhai_agent
 import re

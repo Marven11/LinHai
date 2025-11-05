@@ -77,7 +77,7 @@ class Lifecycle:
 
     def _register_default_plugins(self):
         """注册默认的Plugin。"""
-        from .agent_plugin import (
+        from .plugin import (
             WaitingUserPlugin,
             ToolcallWithoutPlanningPlugin,
             WrongEndPlugin,

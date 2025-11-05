@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.agent_plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
+from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
 
 
 
