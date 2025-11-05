@@ -273,7 +273,7 @@ class Agent:
             0.0
             if self.last_token_usage <= compress_threshold_soft
             else (
-                self.last_token_usage
+                (self.last_token_usage - compress_threshold_soft)
                 / (compress_threshold_hard - compress_threshold_soft)
             )
         )
