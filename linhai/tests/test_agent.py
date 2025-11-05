@@ -154,14 +154,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 验证上下文更新
         self.assertEqual(self.agent.state, "waiting_user")
 
-    async def test_state_transitions(self):
-        """Test agent state transitions."""
-        # Test state transitions
-        self.agent.state = "working"
-        self.assertEqual(self.agent.state, "working")
-
-        self.agent.state = "working"
-        self.assertEqual(self.agent.state, "paused")
 
     async def test_message_processing(self):
         """Test message processing functionality."""

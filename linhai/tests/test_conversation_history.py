@@ -59,7 +59,7 @@ class TestConversationHistory(unittest.TestCase):
         """清理测试环境。"""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("linhai.agent.Path.home")
+    @patch("pathlib.Path.home")
     def test_save_conversation_history(self, mock_home):
         """测试保存对话历史。"""
         # 模拟home目录为临时目录
@@ -104,7 +104,7 @@ class TestConversationHistory(unittest.TestCase):
                 pass  # RuntimeMessage只有message字段
             # 其他消息类型可能有不同的字段结构
 
-    @patch("linhai.agent.Path.home")
+    @patch("pathlib.Path.home")
     def test_save_conversation_history_with_tool_calls(self, mock_home):
         """测试保存包含工具调用的对话历史。"""
         # 模拟home目录为临时目录
@@ -133,7 +133,7 @@ class TestConversationHistory(unittest.TestCase):
         tool_call_found = any("tool_calls" in msg for msg in history_data)
         self.assertTrue(tool_call_found)
 
-    @patch("linhai.agent.Path.home")
+    @patch("pathlib.Path.home")
     def test_save_conversation_history_directory_creation(self, mock_home):
         """测试历史目录的创建。"""
         # 模拟home目录为临时目录
@@ -151,8 +151,8 @@ class TestConversationHistory(unittest.TestCase):
         # 检查目录是否创建
         self.assertTrue(self.history_dir.exists())
 
-    @patch("linhai.agent.Path.home")
-    @patch("linhai.agent.logger")
+    @patch("pathlib.Path.home")
+    @patch("linhai.agent.main.logger")
     def test_save_conversation_history_error_handling(self, mock_logger, mock_home):
         """测试保存对话历史的错误处理。"""
         # 模拟home目录为临时目录

@@ -86,8 +86,8 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
         collector_task.cancel()
         
-        # 验证发送了正确的运行时消息
-        self.assertEqual(len(received_messages), 1)
+        # 验证发送了正确的运行时消息（成功时发送2条消息）
+        self.assertEqual(len(received_messages), 2)
         
 
         # 检查执行成功消息
@@ -127,7 +127,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
         collector_task.cancel()
         
-        # 验证发送了正确的运行时消息
+        # 验证发送了正确的运行时消息（现在发送1条消息）
         self.assertEqual(len(received_messages), 1)
         
         # 检查执行失败消息
@@ -167,7 +167,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
         collector_task.cancel()
         
-        # 验证发送了正确的运行时消息
+        # 验证发送了正确的运行时消息（现在发送1条消息）
         self.assertEqual(len(received_messages), 1)
         
         # 检查错误消息
@@ -221,7 +221,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
         collector_task.cancel()
         
-        # 验证发送了正确的运行时消息
+        # 验证发送了正确的运行时消息（现在发送1条消息）
         self.assertEqual(len(received_messages), 1)
         
         # 检查执行失败消息

@@ -33,7 +33,25 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with open("LINHAI.md", "w", encoding="utf-8") as f:
             f.write(linhai_content)
 
-        # Mock config to avoid actual file operations
+        # Create a temporary config file
+        config_content = """
+[[llm]]
+name = "test_llm"
+api_key = "test_key"
+base_url = "http://test.com"
+model = "test_model"
+
+[agent]
+compress_threshold_hard = 60000
+compress_threshold_soft = 30000
+
+[tool_confirmation]
+skip_confirmation = true
+whitelist = []
+"""
+        with open("test_config.toml", "w", encoding="utf-8") as f:
+            f.write(config_content)
+
         mock_llm_config = LLMConfig(
             name="test_llm",
             api_key="test_key",
@@ -50,18 +68,16 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         )
         mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
-        with patch("linhai.agent.load_config", return_value=mock_config):
-            with patch("linhai.agent.OpenAi") as mock_openai:
+        with patch("linhai.config.load_config", return_value=mock_config):
+            with patch("linhai.llm.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
                 asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [
-                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
-                ]
-                group_chat.get_members.return_value = agent
+                agent.messages = []
+                group_chat.get_members.return_value = [agent]
 
                 # Check if GlobalMemory is in messages
                 global_memory_found = False
@@ -86,6 +102,25 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with open("AGENT.md", "w", encoding="utf-8") as f:
             f.write(agent_content)
 
+        # Create a temporary config file
+        config_content = """
+[[llm]]
+name = "test_llm"
+api_key = "test_key"
+base_url = "http://test.com"
+model = "test_model"
+
+[agent]
+compress_threshold_hard = 60000
+compress_threshold_soft = 30000
+
+[tool_confirmation]
+skip_confirmation = true
+whitelist = []
+"""
+        with open("test_config.toml", "w", encoding="utf-8") as f:
+            f.write(config_content)
+
         mock_llm_config = LLMConfig(
             name="test_llm",
             api_key="test_key",
@@ -102,18 +137,16 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         )
         mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
-        with patch("linhai.agent.load_config", return_value=mock_config):
-            with patch("linhai.agent.OpenAi") as mock_openai:
+        with patch("linhai.config.load_config", return_value=mock_config):
+            with patch("linhai.llm.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
                 asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [
-                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
-                ]
-                group_chat.get_members.return_value = agent
+                agent.messages = []
+                group_chat.get_members.return_value = [agent]
 
                 # Check if GlobalMemory is in messages and selected AGENT.md
                 global_memory_found = False
@@ -146,18 +179,16 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         )
         mock_config = Config(llm=[mock_llm_config])
 
-        with patch("linhai.agent.load_config", return_value=mock_config):
-            with patch("linhai.agent.OpenAi") as mock_openai:
+        with patch("linhai.config.load_config", return_value=mock_config):
+            with patch("linhai.llm.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
                 asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [
-                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
-                ]
-                group_chat.get_members.return_value = agent
+                agent.messages = []
+                group_chat.get_members.return_value = [agent]
 
                 # Check if GlobalMemory is in messages and selected CLAUDE.md
                 global_memory_found = False
@@ -193,18 +224,16 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         )
         mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
-        with patch("linhai.agent.load_config", return_value=mock_config):
-            with patch("linhai.agent.OpenAi") as mock_openai:
+        with patch("linhai.config.load_config", return_value=mock_config):
+            with patch("linhai.llm.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
                 asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [
-                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
-                ]
-                group_chat.get_members.return_value = agent
+                agent.messages = []
+                group_chat.get_members.return_value = [agent]
 
                 # Check if GlobalMemory is still added with default path
                 global_memory_found = False
@@ -239,18 +268,16 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         )
         mock_config = Config(llm=[mock_llm_config])
 
-        with patch("linhai.agent.load_config", return_value=mock_config):
-            with patch("linhai.agent.OpenAi") as mock_openai:
+        with patch("linhai.config.load_config", return_value=mock_config):
+            with patch("linhai.llm.OpenAi") as mock_openai:
                 mock_openai.return_value = MagicMock()
 
                 group_chat = MagicMock()
                 asyncio.run(create_agent(group_chat, "test_config.toml"))
                 # 从 group_chat 获取 agent 实例
                 agent = MagicMock()
-                agent.messages = [
-                    GlobalMemory(Path.home() / ".config" / "linhai" / "LINHAI.md")
-                ]
-                group_chat.get_members.return_value = agent
+                agent.messages = []
+                group_chat.get_members.return_value = [agent]
 
                 # Should select LINHAI.md as highest priority
                 global_memory_found = False

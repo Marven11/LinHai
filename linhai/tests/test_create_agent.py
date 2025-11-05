@@ -17,7 +17,7 @@ from linhai.tool.main import ToolManager
 class TestCreateAgent(unittest.TestCase):
     """测试create_agent函数"""
 
-    @patch('linhai.agent.MCPConnector')
+    @patch('linhai.tool.mcp_connector.MCPConnector')
     def test_create_agent_basic_functionality(self, mock_mcp_connector):
         """测试create_agent基本功能：创建agent并返回group_chat"""
         # 模拟MCP连接器
@@ -46,7 +46,7 @@ class TestCreateAgent(unittest.TestCase):
         except RuntimeError:
             self.fail("tool_manager成员未在group_chat中注册")
 
-    @patch('linhai.agent.MCPConnector')
+    @patch('linhai.tool.mcp_connector.MCPConnector')
     def test_create_agent_with_llm_name(self, mock_mcp_connector):
         """测试使用llm_name参数创建agent"""
         # 模拟MCP连接器
