@@ -14,9 +14,6 @@ from linhai.llm import (
     ToolCallMessage,
 )
 
-
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +71,7 @@ class Lifecycle:
         self._during_message_generation_callbacks: list[
             DuringMessageGenerationCallback
         ] = []
-        
+
         # 初始化默认插件
         self._plugins = self._register_default_plugins()
 
@@ -83,7 +80,6 @@ class Lifecycle:
         from .agent_plugin import (
             WaitingUserPlugin,
             ToolcallWithoutPlanningPlugin,
-            ToolCallCountPlugin,
             WrongEndPlugin,
             ChineseEndOfSentencePlugin,
             BadMultiToolCall,
@@ -93,11 +89,10 @@ class Lifecycle:
             TaskPlanningPlugin,
             EndThinkPlugin,
         )
-        
+
         plugins = [
             WaitingUserPlugin(self.group_chat),
             ToolcallWithoutPlanningPlugin(self.group_chat),
-            ToolCallCountPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
             ChineseEndOfSentencePlugin(self.group_chat),
             BadMultiToolCall(self.group_chat),
@@ -110,7 +105,7 @@ class Lifecycle:
 
         for plugin in plugins:
             plugin.register(self)
-        
+
         return plugins
 
     def register_before_message_generation(
@@ -178,9 +173,7 @@ class Lifecycle:
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("After message generation callback error: %s", e)
 
-    async def trigger_before_tool_call(
-        self, tool_call: ToolCallMessage
-    ):
+    async def trigger_before_tool_call(self, tool_call: ToolCallMessage):
         """触发工具调用前的事件。"""
         for callback in self._before_tool_call_callbacks:
             try:

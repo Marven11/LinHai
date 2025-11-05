@@ -96,44 +96,6 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
 
-
-class ToolCallCountPlugin(Plugin):
-    """工具调用量检查Plugin。"""
-
-    async def during_message_generation(
-        self, answer: Answer, current_content: str
-    ):
-        """检查工具调用量是否超过限制。"""
-        from linhai.agent import Agent
-        agent = self.group_chat.get_members("agent", Agent)
-        json_block_count = current_content.count("\n```json toolcall")
-
-        content_length = len(current_content)
-        if content_length < 10000:
-            max_json_blocks = 30
-        else:
-            max_json_blocks = 3
-
-        if json_block_count > max_json_blocks:
-            await agent.group_chat.send("cli_agent_output", answer)
-            agent.messages.append(
-                RuntimeMessage(
-                    f"错误：禁止在超长回答中调用巨量工具。"
-                    f"一次性调用了超过{max_json_blocks}个工具，当前回答长度{content_length}字符，"
-                    f"工具调用超长时最多允许{max_json_blocks}个工具调用。请分多次调用。"
-                )
-            )
-            agent.state = "working"
-            answer.interrupt()
-            return True
-
-        return False
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
-
-
 class WrongEndPlugin(Plugin):
     """禁止输出end of sentence的plugin"""
 
