@@ -230,6 +230,26 @@ class Agent:
         # 将虚拟工具集添加到ToolManager
         tool_manager.add_toolset(dummy_toolset)
 
+        # 添加workflow工具集（像switch_llm一样）
+        workflow_toolset = ToolSet()
+
+        @workflow_toolset.register_tool(
+            name="compress_history_range",
+            desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
+            args={},
+            required_args=[],
+        )
+        async def compress_history_range_tool() -> bool:
+            """压缩历史消息工具函数。
+
+            Returns:
+                bool: 是否成功执行压缩
+            """
+            return await compress_history_range(self)
+
+        # 将workflow工具集添加到ToolManager
+        tool_manager.add_toolset(workflow_toolset)
+
         # 解析tool_confirmation配置并存储
         tool_confirmation_config = self.config.get("tool_confirmation", {})
         if not isinstance(tool_confirmation_config, dict):
@@ -387,14 +407,6 @@ class Agent:
         # 统一设置compress_tool_called_in_last_response
         compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
         self.compress_tool_called_in_last_response = tool_call.function_name in compress_tools
-
-        # 检查是否是workflow工具
-        workflow = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        ).get_workflow(tool_call.function_name)
-        if workflow:
-            workflow_function = workflow["func"]
-            return await workflow_function(self)
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(tool_call)
@@ -906,14 +918,9 @@ async def _create_agent_config(
 
 
 async def _create_tool_manager(group_chat):
-    """创建ToolManager实例并注册工作流"""
+    """创建ToolManager实例"""
     tool_manager = ToolManager(
         group_chat=group_chat, toolsets=[global_tools, terminal_toolset]
-    )
-    tool_manager.register_workflow(
-        "compress_history_range",
-        "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
-        compress_history_range,
     )
     return tool_manager
 

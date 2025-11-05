@@ -59,44 +59,32 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             init_messages=[],
         )
 
-    async def test_workflow_registration(self):
-        """Test that compress_history_range workflow is properly registered."""
-        # Register the workflow
-        self.tool_manager.register_workflow(
-            "compress_history_range",
-            "压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
-            compress_history_range,
-        )
+    async def test_workflow_as_regular_tool(self):
+        """Test that compress_history_range is now a regular tool, not a workflow."""
+        # Get tools info - should include compress_history_range as a regular tool
+        tools_info = self.tool_manager.get_tools_info()
+        tool_names = [tool["function"]["name"] for tool in tools_info]
+        
+        # Check that compress_history_range is now a regular tool
+        self.assertIn("compress_history_range", tool_names)
 
-        # Check if workflow is registered
-        workflow = self.tool_manager.get_workflow("compress_history_range")
-        self.assertIsNotNone(workflow)
-        assert workflow is not None  # 确保类型检查器知道workflow不是None
-        self.assertEqual(workflow["func"], compress_history_range)
-        self.assertIn("压缩指定范围的历史消息", workflow["desc"])
-
-    async def test_workflow_call_via_tool(self):
-        """Test calling workflow through tool call mechanism."""
-        # Create a mock workflow function
-        mock_workflow = AsyncMock(return_value=True)
-
-        # Register the workflow with the mock function
-        self.tool_manager.register_workflow(
-            "compress_history_range",
-            "Test workflow",
-            mock_workflow,
-        )
-
+    async def test_compress_history_range_as_tool(self):
+        """Test calling compress_history_range as a regular tool."""
         # Mock the tool call
         mock_tool_call = MagicMock()
         mock_tool_call.function_name = "compress_history_range"
+        mock_tool_call.function_arguments = {}
+        
+        # Mock the compress_history_range function
+        with patch(
+            "linhai.agent.compress_history_range", AsyncMock(return_value=True)
+        ) as mock_compress:
+            # Call the tool
+            result = await self.agent.call_tool(mock_tool_call)
 
-        # Call the tool
-        result = await self.agent.call_tool(mock_tool_call)
-
-        # Verify workflow was called
-        mock_workflow.assert_called_once_with(self.agent)
-        self.assertTrue(result)
+            # Verify the function was called
+            mock_compress.assert_called_once()
+            self.assertFalse(result)  # Should return False for normal tool calls
 
     async def test_compress_history_range_functionality(self):
         """Test the compress_history_range function with mock data."""
@@ -210,92 +198,66 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Should return True but not modify messages due to validation error
         self.assertTrue(result)
 
-    async def test_tool_manager_workflow_registration(self):
-        """Test ToolManager workflow registration functionality."""
-        # Test registering a workflow
-        mock_workflow = AsyncMock(return_value=True)
+    async def test_tool_manager_has_no_workflow_methods(self):
+        """Test that ToolManager no longer has workflow-specific methods."""
+        # Verify that get_workflow method doesn't exist
+        self.assertFalse(hasattr(self.tool_manager, "get_workflow"))
+        
+        # Verify that register_workflow method doesn't exist  
+        self.assertFalse(hasattr(self.tool_manager, "register_workflow"))
+        
+        # Verify that workflows attribute doesn't exist
+        self.assertFalse(hasattr(self.tool_manager, "workflows"))
 
-        self.tool_manager.register_workflow(
-            "test_workflow", "A test workflow", mock_workflow
-        )
-
-        # Verify workflow is registered
-        workflow = self.tool_manager.get_workflow("test_workflow")
-        self.assertIsNotNone(workflow)
-        assert workflow is not None
-        self.assertEqual(workflow["func"], mock_workflow)
-        self.assertEqual(workflow["desc"], "A test workflow")
-
-        # Test getting non-existent workflow
-        self.assertIsNone(self.tool_manager.get_workflow("non_existent_workflow"))
-
-    async def test_tool_manager_get_tools_info_includes_workflows(self):
-        """Test that get_tools_info includes both global tools and workflows."""
-        # Register a workflow
-        mock_workflow = AsyncMock(return_value=True)
-        self.tool_manager.register_workflow(
-            "test_workflow", "A test workflow", mock_workflow
-        )
-
+    async def test_tools_info_includes_compress_history_range(self):
+        """Test that get_tools_info includes compress_history_range as a regular tool."""
         # Get tools info
         tools_info = self.tool_manager.get_tools_info()
 
-        # Should include both global tools and workflows
+        # Check that compress_history_range is included as a regular tool
         workflow_names = [tool["function"]["name"] for tool in tools_info]
-
-        # Check that our workflow is included
-        self.assertIn("test_workflow", workflow_names)
+        self.assertIn("compress_history_range", workflow_names)
 
         # Also check that some global tools are present
         self.assertTrue(any("safe_calculator" in name for name in workflow_names))
 
-    async def test_workflow_priority_over_global_tool(self):
-        """Test that workflow takes priority over global tool with same name."""
-        # Register a workflow with a name that might conflict with global tools
-        mock_workflow = AsyncMock(return_value=True)
-        self.tool_manager.register_workflow(
-            "add_numbers",  # This name exists in global tools
-            "Workflow version of add_numbers",
-            mock_workflow,
-        )
-
-        # Get the workflow (should get the workflow, not the global tool)
-        workflow = self.tool_manager.get_workflow("add_numbers")
-        self.assertIsNotNone(workflow)
-        assert workflow is not None
-        self.assertEqual(workflow["func"], mock_workflow)
-        self.assertEqual(workflow["desc"], "Workflow version of add_numbers")
-
-    async def test_workflow_in_tools_info_has_correct_structure(self):
-        """Test that workflows in tools info have correct OpenAI tool structure."""
-        # Register a workflow
-        mock_workflow = AsyncMock(return_value=True)
-        self.tool_manager.register_workflow(
-            "test_workflow", "A test workflow description", mock_workflow
-        )
-
+    async def test_compress_history_range_tool_structure(self):
+        """Test that compress_history_range tool has correct structure."""
         # Get tools info
         tools_info = self.tool_manager.get_tools_info()
 
-        # Find our workflow
-        workflow_info = None
+        # Find compress_history_range tool
+        compress_tool = None
         for tool in tools_info:
-            if tool["function"]["name"] == "test_workflow":
-                workflow_info = tool
+            if tool["function"]["name"] == "compress_history_range":
+                compress_tool = tool
                 break
 
-        self.assertIsNotNone(workflow_info)
-        assert workflow_info is not None
-
+        self.assertIsNotNone(compress_tool)
+        
         # Check structure
-        self.assertEqual(workflow_info["type"], "function")
-        self.assertEqual(workflow_info["function"]["name"], "test_workflow")
-        self.assertEqual(
-            workflow_info["function"]["description"], "A test workflow description"
+        self.assertEqual(compress_tool["type"], "function")
+        self.assertEqual(compress_tool["function"]["name"], "compress_history_range")
+        self.assertIn("压缩指定范围的历史消息", compress_tool["function"]["description"])
+
+    async def test_compress_history_range_integration(self):
+        """Test that compress_history_range integrates properly with agent."""
+        # Test that compress_history_range can be called as a regular tool
+        # through the normal tool calling mechanism
+        
+        # Verify that the tool is available in tools_info
+        tools_info = self.tool_manager.get_tools_info()
+        tool_names = [tool["function"]["name"] for tool in tools_info]
+        self.assertIn("compress_history_range", tool_names)
+        
+        # Verify it's a proper tool, not a workflow
+        compress_tool = next(
+            (tool for tool in tools_info if tool["function"]["name"] == "compress_history_range"),
+            None
         )
-        self.assertEqual(workflow_info["function"]["parameters"]["type"], "object")
-        self.assertEqual(workflow_info["function"]["parameters"]["properties"], {})
-        self.assertEqual(workflow_info["function"]["parameters"]["required"], [])
+        self.assertIsNotNone(compress_tool)
+        self.assertEqual(compress_tool["type"], "function")
+        self.assertEqual(compress_tool["function"]["name"], "compress_history_range")
 
     async def test_compress_history_range_user_message_protection(self):
         """Test that user messages are protected during history compression."""

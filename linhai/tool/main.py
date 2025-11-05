@@ -38,7 +38,6 @@ class ToolManager:
         """
         group_chat.register_member("tool_manager", self)
         self.group_chat = group_chat
-        self.workflows: dict[str, Tool] = {}
         self.config = config
         self.mcp_connector = mcp_connector
 
@@ -69,22 +68,12 @@ class ToolManager:
             raise ValueError(f"Duplicate names: {duplicate_names}")
         self._toolsets.append(toolset)
 
-    def register_workflow(
-        self, name: str, desc: str, func: Callable[[Any], Coroutine[None, None, bool]]
-    ):
-        self.workflows[name] = Tool(
-            name=name, desc=desc, args={}, required=[], func=func
-        )
-
-    def get_workflow(self, name: str):
-        return self.workflows.get(name)
-
     def get_tools_info(self) -> list[dict]:
         return [
             info
             for toolset in self.toolsets
             for info in to_tools_info(toolset.get_tools())
-        ] + to_tools_info(self.workflows)
+        ]
 
     def get_mcp_connector(self):
         return self.mcp_connector

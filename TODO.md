@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 重构workflow
+- [x] 重构workflow
     - 现状
         - 现在workflow在_create_tool_manager中被注册，注册方式和其他工具调用都不同
         - 但是实际上workflow本质上也是一种工具，也在call_tool中被调用
