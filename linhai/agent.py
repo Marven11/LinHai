@@ -1,7 +1,6 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 import json
-import uuid
 from pathlib import Path
 import datetime
 from typing import (
@@ -608,8 +607,7 @@ class Agent:
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
-                    # 发送退出信号给CLIApp
-                    from linhai.cli_ui import CLIApp
+                    # 发送退出信号
                     await self.group_chat.send("cli_exit", {"return_code": 0})
                     answer.interrupt()
                     return answer

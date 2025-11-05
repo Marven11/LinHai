@@ -554,7 +554,7 @@ class CLIApp(App):
             close_all_terminals()
             self.app.exit()
 
-    def on_scroll(self, event) -> None:
+    def on_scroll(self, _event) -> None:
         """监听滚动事件，记录用户滚动时间"""
         import time
         self.last_user_scroll_time = time.time()

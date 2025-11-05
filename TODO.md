@@ -14,8 +14,8 @@
     - 当compatibility为minimax时使用这个方式传入参数，解析思维内容
     - 参考./minimax_example.py，minimax解析思考内容的方式和OpenAi的方式不同
     - 使用终端打开linhai并让其"计算114+514"，查看是否生成了有关reasoning的消息block
-- [ ] 运行并修复所有unittest
-- [ ] 运行并修复所有pylint/pyright警告
+- [x] 运行并修复所有unittest
+- [x] 运行并修复所有pylint/pyright警告
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

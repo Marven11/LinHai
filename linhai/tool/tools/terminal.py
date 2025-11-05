@@ -6,7 +6,6 @@ import pty
 import os
 import select
 import signal
-import uuid
 import subprocess
 
 from typing import List
