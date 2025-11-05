@@ -359,10 +359,10 @@ class CLIApp(App):
                         current_message = None
 
                     container = self.query_one("#chat-container")
-                    should_scroll = (
-                        container.is_vertical_scroll_end or
-                        container.scroll_offset.y >= container.max_scroll_y - 10
-                    ) and not self.is_user_recently_scrolled()
+                    if self.is_user_recently_scrolled():
+                        should_scroll = container.is_vertical_scroll_end
+                    else:
+                        should_scroll = container.scroll_offset.y >= container.max_scroll_y - 10
 
                     if current_message is None:
 
@@ -434,8 +434,7 @@ class CLIApp(App):
                 await self.group_chat.send("agent_user_input", user_msg)
                 # 更新UI
                 agent = self.group_chat.get_members("agent", Agent)
-                llm_name, _llm = agent.get_current_llm_info()
-                widget = MessageWidget(user_msg.role, user_msg.message, sender_name=llm_name)
+                widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
                 container = self.query_one("#chat-container")
                 container.scroll_end()
                 container.mount(widget)
@@ -556,14 +555,14 @@ class CLIApp(App):
     def on_scroll(self, _event) -> None:
         """监听滚动事件，记录用户滚动时间"""
         import time
-        self.last_user_scroll_time = time.time()
-        
+        self.last_user_scroll_time = time.perf_counter()
+
     def is_user_recently_scrolled(self) -> bool:
         """检查用户是否在最近3秒内滚动了"""
         if self.last_user_scroll_time is None:
             return False
         import time
-        current_time = time.time()
+        current_time = time.perf_counter()
         return (current_time - self.last_user_scroll_time) < 3.0
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
