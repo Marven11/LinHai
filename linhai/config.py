@@ -109,7 +109,7 @@ class MemoryConfig(BaseModel):
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
-    max_output_length: int = Field(default=1000, ge=1)
+    max_output_length: int = Field(default=50000, ge=1)
 
     def __str__(self) -> str:
         """返回工具配置的字符串表示"""

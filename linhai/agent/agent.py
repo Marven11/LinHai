@@ -35,7 +35,7 @@ from linhai.llm import (
 )
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
-from linhai.config import load_config
+from linhai.config import load_config, ToolConfig
 from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.tool.mcp_connector import MCPConnector
@@ -780,7 +780,7 @@ async def create_agent(
     )
 
     # 创建ToolManager
-    await _create_tool_manager(group_chat)
+    await _create_tool_manager(group_chat, config.tools)
 
     # 创建初始化消息
     memory_file_path = config.memory.file_path if config.memory else None
@@ -901,10 +901,10 @@ async def _create_agent_config(
     return agent_config
 
 
-async def _create_tool_manager(group_chat):
+async def _create_tool_manager(group_chat, config: ToolConfig | None):
     """创建ToolManager实例"""
     tool_manager = ToolManager(
-        group_chat=group_chat, toolsets=[global_tools, terminal_toolset]
+        group_chat=group_chat, toolsets=[global_tools, terminal_toolset], config = config
     )
     return tool_manager
 

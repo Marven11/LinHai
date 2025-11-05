@@ -3,20 +3,19 @@
 包含工具消息类和管理器，用于处理工具调用请求和返回结果。
 """
 
-from typing import Any, Callable, Awaitable, Coroutine, Optional
+from typing import Awaitable, Optional
 from collections import Counter
 
 from linhai.llm import Message, ToolCallMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.base import (
-    Tool,
     to_tools_info,
     ToolSet,
     ToolResultMessage,
     ToolErrorMessage,
 )
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.config import Config
+from linhai.config import ToolConfig
 from linhai.utils import CliRuntimeNotice
 import asyncio
 
@@ -28,8 +27,8 @@ class ToolManager:
         self,
         group_chat: GroupChat,
         toolsets: list[ToolSet],
-        config: Optional[Config] = None,
-        mcp_connector: Optional[MCPConnector] = None
+        config: Optional[ToolConfig] = None,
+        mcp_connector: Optional[MCPConnector] = None,
     ):
         """初始化工具管理器
 
@@ -52,7 +51,7 @@ class ToolManager:
 
     @property
     def toolsets(self):
-        toolsets = self._toolsets 
+        toolsets = self._toolsets
         if self.mcp_connector:
             toolsets += self.mcp_connector.get_toolsets()
         return toolsets
@@ -95,44 +94,51 @@ class ToolManager:
                 target_toolset = toolset
         if target_toolset is None:
             # 发送错误消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
-                level="ERROR", 
-                content=f"未找到工具: {tool_call.function_name}"
-            ))
+            await self.group_chat.send(
+                "cli_runtime_output",
+                CliRuntimeNotice(
+                    level="ERROR", content=f"未找到工具: {tool_call.function_name}"
+                ),
+            )
             return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
 
         try:
-
 
             func = target_toolset.get_tool(tool_call.function_name)
 
             if asyncio.iscoroutinefunction(func):
                 result = await func(**kwargs)
             else:
-                result = await asyncio.to_thread(
-                    func, **kwargs
-                )
+                result = await asyncio.to_thread(func, **kwargs)
 
             # 检查工具返回结果，如果是ToolErrorMessage则发送失败通知
             if isinstance(result, ToolErrorMessage):
                 # 发送工具调用失败消息
-                await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
-                    level="ERROR", 
-                    content=f"工具执行失败: {tool_call.function_name}"
-                ))
+                await self.group_chat.send(
+                    "cli_runtime_output",
+                    CliRuntimeNotice(
+                        level="ERROR",
+                        content=f"工具执行失败: {tool_call.function_name}",
+                    ),
+                )
             else:
                 # 发送工具调用成功消息
-                await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
-                    level="INFO", 
-                    content=f"工具执行成功: {tool_call.function_name}"
-                ))
+                await self.group_chat.send(
+                    "cli_runtime_output",
+                    CliRuntimeNotice(
+                        level="INFO", content=f"工具执行成功: {tool_call.function_name}"
+                    ),
+                )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             # 发送工具调用失败消息
-            await self.group_chat.send("cli_runtime_output", CliRuntimeNotice(
-                level="ERROR", 
-                content=f"工具执行失败: {tool_call.function_name} - {str(e)}"
-            ))
+            await self.group_chat.send(
+                "cli_runtime_output",
+                CliRuntimeNotice(
+                    level="ERROR",
+                    content=f"工具执行失败: {tool_call.function_name} - {str(e)}",
+                ),
+            )
             return ToolErrorMessage(content=str(e))
 
         if isinstance(result, Awaitable):
@@ -143,12 +149,13 @@ class ToolManager:
             return result
 
         # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
-        max_output_length = 50000
-        if (
-            self.config
-            and self.config.tools
-            and self.config.tools.max_output_length is not None
-        ):
-            max_output_length = self.config.tools.max_output_length
+        if self.config and self.config and self.config.max_output_length is not None:
+            max_output_length = self.config.max_output_length
+        else:
+            await self.group_chat.send(
+                "cli_runtime_output",
+                CliRuntimeNotice(level="INFO", content="使用默认输出长度限制: 50000"),
+            )
+            max_output_length = 50000
 
         return ToolResultMessage(content=result, max_output_length=max_output_length)
