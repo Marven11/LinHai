@@ -7,6 +7,7 @@ from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, Input
 from textual import events
+from rich import box
 from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.text import Text
@@ -49,6 +50,7 @@ class RainbowAsciiArt(Static):
     def _generate_rainbow_colors(self) -> list[Style]:
         """使用HSL颜色空间生成平滑的彩虹颜色样式列表"""
         import colorsys
+
         num_colors = 144
         styles = []
         for i in range(num_colors):
@@ -78,7 +80,9 @@ class RainbowAsciiArt(Static):
         for row, line in enumerate(lines):
             for col, char in enumerate(line):
                 # 计算颜色索引：斜向渐变，使用 (row + col + time_index) % len(rainbow_colors)
-                color_index = (row + col + self.time_index) // 2 % len(self.rainbow_colors)
+                color_index = (
+                    (row + col + self.time_index) // 2 % len(self.rainbow_colors)
+                )
                 style = self.rainbow_colors[color_index]
                 text.append(char, style=style)
             if row < len(lines) - 1:
@@ -97,24 +101,24 @@ class RuntimeMessageWidget(Static):
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         # 设置样式
-        level_style = {
-            "INFO": "grey50",
-            "WARNING": "yellow",
-            "ERROR": "red"
-        }.get(self.level, "grey50")
-        
+        level_style = {"INFO": "grey50", "WARNING": "yellow", "ERROR": "red"}.get(
+            self.level, "grey50"
+        )
+
         # 创建消息文本
         message_text = Text()
         message_text.append(f"[{self.level[0]}]", style=level_style)
         message_text.append(f" {self.content}")
-        
+
         yield Static(message_text)
 
 
 class MessageWidget(Static):
     """单条消息显示组件"""
 
-    def __init__(self, role: str, content: str, sender_name: str, is_reasoning: bool = False):
+    def __init__(
+        self, role: str, content: str, sender_name: str, is_reasoning: bool = False
+    ):
         super().__init__()
         self.content_str = content
         self.is_reasoning = is_reasoning
@@ -139,6 +143,11 @@ class MessageWidget(Static):
             lines = content_to_display.splitlines()
             if len(lines) > 5:
                 content_to_display = "\n".join(lines[-5:])
+        border_color = {
+            "user": "yellow",
+            "assistant": "green",
+            "assistant-reasoning": "grey50",
+        }.get(self.role, "grey50")
         panel = Panel(
             Syntax(
                 content_to_display,
@@ -147,11 +156,8 @@ class MessageWidget(Static):
                 background_color="#2E3440",
                 word_wrap=True,
             ),
-            border_style={
-                "user": "yellow",
-                "assistant": "green",
-                "assistant-reasoning": "grey50",
-            }.get(self.role, "grey50"),
+            box=box.SQUARE,
+            border_style=border_color,
             title=self.display_name,
             title_align="left",
             expand=True,
@@ -237,7 +243,9 @@ class CLIApp(App):
                 if llm_message["role"] == "assistant":
                     agent = self.group_chat.get_members("agent", Agent)
                     name, _llm = agent.get_current_llm_info()
-                yield MessageWidget(role=llm_message["role"], content=content, sender_name=name)
+                yield MessageWidget(
+                    role=llm_message["role"], content=content, sender_name=name
+                )
 
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
@@ -276,7 +284,7 @@ class CLIApp(App):
             welcome_widgets = container.query(".welcome-message")
             for widget in welcome_widgets:
                 widget.remove()
-            
+
             # 添加用户消息
             user_msg = ChatMessage(role="user", message=event.value)
             self.messages.append(user_msg)
@@ -313,23 +321,27 @@ class CLIApp(App):
         current_message = None
         while True:
             # 同时监听三个队列
-            agent_output_task = asyncio.create_task(self.group_chat.receive("cli_agent_output"))
-            runtime_output_task = asyncio.create_task(self.group_chat.receive("cli_runtime_output"))
+            agent_output_task = asyncio.create_task(
+                self.group_chat.receive("cli_agent_output")
+            )
+            runtime_output_task = asyncio.create_task(
+                self.group_chat.receive("cli_runtime_output")
+            )
             exit_task = asyncio.create_task(self.group_chat.receive("cli_exit"))
-            
+
             done, pending = await asyncio.wait(
                 [agent_output_task, runtime_output_task, exit_task],
-                return_when=asyncio.FIRST_COMPLETED
+                return_when=asyncio.FIRST_COMPLETED,
             )
-            
+
             # 取消未完成的任务
             for task in pending:
                 task.cancel()
-            
+
             # 处理完成的任务
             for task in done:
                 output = task.result()
-                
+
                 # 检查是否是退出任务
                 if task == exit_task:
                     if isinstance(output, dict) and "return_code" in output:
@@ -337,11 +349,13 @@ class CLIApp(App):
                         self.exit(return_code=return_code)
                         return  # 立即返回，不再处理其他消息
                     continue  # 跳过其他处理
-                
+
                 if isinstance(output, CliRuntimeNotice):
                     # 处理运行时消息
                     container = self.query_one("#chat-container")
-                    widget = RuntimeMessageWidget(level=output.level, content=output.content)
+                    widget = RuntimeMessageWidget(
+                        level=output.level, content=output.content
+                    )
                     container.mount(widget)
                     container.scroll_end()
                     self._trim_messages_if_needed()
@@ -362,7 +376,9 @@ class CLIApp(App):
                     if self.is_user_recently_scrolled():
                         should_scroll = container.is_vertical_scroll_end
                     else:
-                        should_scroll = container.scroll_offset.y >= container.max_scroll_y - 10
+                        should_scroll = (
+                            container.scroll_offset.y >= container.max_scroll_y - 10
+                        )
 
                     if current_message is None:
 
@@ -370,7 +386,10 @@ class CLIApp(App):
                         agent = self.group_chat.get_members("agent", Agent)
                         llm_name, _llm = agent.get_current_llm_info()
                         current_message = MessageWidget(
-                            role="assistant", content=content, is_reasoning=is_reasoning, sender_name=llm_name
+                            role="assistant",
+                            content=content,
+                            is_reasoning=is_reasoning,
+                            sender_name=llm_name,
                         )
                         await asyncio.sleep(0)
                         container.mount(current_message)
@@ -434,7 +453,9 @@ class CLIApp(App):
                 await self.group_chat.send("agent_user_input", user_msg)
                 # 更新UI
                 agent = self.group_chat.get_members("agent", Agent)
-                widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
+                widget = MessageWidget(
+                    user_msg.role, user_msg.message, sender_name="user"
+                )
                 container = self.query_one("#chat-container")
                 container.scroll_end()
                 container.mount(widget)
@@ -444,13 +465,13 @@ class CLIApp(App):
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
-            
+
             # 创建彩虹ASCII艺术组件
             rainbow_art = RainbowAsciiArt(ASCII_ART)
             rainbow_art.add_class("welcome-message")
             container = self.query_one("#chat-container")
             container.mount(rainbow_art)
-            
+
             # 显示版本信息
             version_text = f"版本: {version}\nLLM: {llm_name}"
             version_widget = Static(version_text)
@@ -461,7 +482,6 @@ class CLIApp(App):
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
         )
-
 
         cliapp_tool = ToolSet()
 
@@ -498,9 +518,10 @@ class CLIApp(App):
             self.output_watcher_task.cancel()
         if self.agent_task:
             self.agent_task.cancel()
-        
+
         # 关闭所有终端
         from linhai.tool.tools.terminal import close_all_terminals
+
         close_all_terminals()
 
     def update_token_display(self, current_answer_token: int) -> None:
@@ -513,7 +534,7 @@ class CLIApp(App):
             if self.current_token_usage is not None:
                 input_tokens += self.current_token_usage.input_tokens
                 output_tokens += self.current_token_usage.output_tokens
-   
+
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
             _, llm_instance = agent.get_current_llm_info()  # Unused variable llm_name
@@ -525,13 +546,13 @@ class CLIApp(App):
                 filled_bars = int(percentage / 10)  # 每10%一个实心方块
                 empty_bars = 10 - filled_bars
                 progress_bar = "█" * filled_bars + "▒" * empty_bars
-                display_text += f" | {progress_bar} {percentage:.0f}% of {token_limit:,}"
-        
+                display_text += (
+                    f" | {progress_bar} {percentage:.0f}% of {token_limit:,}"
+                )
+
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
         token_display.update(display_text)
-
-
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
@@ -547,12 +568,14 @@ class CLIApp(App):
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
+
             close_all_terminals()
             self.app.exit()
 
     def on_scroll(self, _event) -> None:
         """监听滚动事件，记录用户滚动时间"""
         import time
+
         self.last_user_scroll_time = time.perf_counter()
 
     def is_user_recently_scrolled(self) -> bool:
@@ -560,6 +583,7 @@ class CLIApp(App):
         if self.last_user_scroll_time is None:
             return False
         import time
+
         current_time = time.perf_counter()
         return (current_time - self.last_user_scroll_time) < 3.0
 
