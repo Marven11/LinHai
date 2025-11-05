@@ -95,7 +95,9 @@ class Agent:
         self.large_messages: dict[str, Message] = {}  # 存储大消息的ID映射
         self.queued_messages: list[Message] = []  # 存储/queue消息
         # Plugin使用的变量
-        self.compress_tool_called_in_last_response = False  # 记录是否在最近响应中调用了压缩工具
+        self.compress_tool_called_in_last_response = (
+            False  # 记录是否在最近响应中调用了压缩工具
+        )
         self.current_disable_waiting_user_warning = False
 
         # 生命周期回调管理器
@@ -222,9 +224,7 @@ class Agent:
                     return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
             result = ""
             for message_id in uuids:
-                result += (
-                    f"{message_id!r}: {self.erase_message_by_uuid(message_id)}"
-                )
+                result += f"{message_id!r}: {self.erase_message_by_uuid(message_id)}"
             return result
 
         # 将虚拟工具集添加到ToolManager
@@ -347,7 +347,6 @@ class Agent:
                 logger.info("用户输入队列已关闭")
             except RuntimeError as e:
                 logger.error("处理消息时出错: %s", str(e))
-                self.state = "paused"
                 raise RuntimeError("处理消息时出错") from e
         else:
             await self.generate_response()
@@ -371,26 +370,6 @@ class Agent:
             # await self.compress()
             await compress_history_range(self)
 
-    async def state_paused(self):
-        """
-        处理暂停运行状态。
-
-        在这个状态下，Agent会等待用户输入来恢复运行，
-        通常用于处理错误或异常情况后的恢复。
-        """
-        logger.info("Agent进入暂停运行状态")
-        try:
-            msg = await self.group_chat.receive("agent_user_input")
-            self.state = "waiting_user"
-            assert isinstance(msg, ChatMessage)
-            self.handle_user_message(msg)
-            await self.generate_response()
-        except QueueEmpty:
-            logger.info("用户输入队列已关闭")
-        except (RuntimeError, asyncio.CancelledError) as e:
-            logger.error("处理消息时出错: %s", str(e))
-            raise RuntimeError("处理消息时出错") from e
-
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         直接调用工具并处理结果。
@@ -405,8 +384,14 @@ class Agent:
             self.state = "working"
 
         # 统一设置compress_tool_called_in_last_response
-        compress_tools = ["compress_history_range", "erase_message_by_uuid", "thanox_history"]
-        self.compress_tool_called_in_last_response = tool_call.function_name in compress_tools
+        compress_tools = [
+            "compress_history_range",
+            "erase_message_by_uuid",
+            "thanox_history",
+        ]
+        self.compress_tool_called_in_last_response = (
+            tool_call.function_name in compress_tools
+        )
 
         # 触发工具调用前的生命周期事件
         await self.lifecycle.trigger_before_tool_call(tool_call)
@@ -417,10 +402,14 @@ class Agent:
                 tool_result = await self.group_chat.get_members(
                     "tool_manager", ToolManager
                 ).process_tool_call(tool_call)
-                
+
                 # 检查工具结果，如果是ToolErrorMessage且assert_success为True，则中止
                 from linhai.tool.base import ToolErrorMessage
-                if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
+
+                if (
+                    isinstance(tool_result, ToolErrorMessage)
+                    and tool_call.assert_success
+                ):
                     # 触发工具调用后的生命周期事件（失败）
                     await self.lifecycle.trigger_after_tool_call(
                         tool_call, tool_result, False
@@ -428,9 +417,8 @@ class Agent:
                     msg = f"工具调用失败: {tool_result.content}"
                     logger.error(msg)
                     self.messages.append(RuntimeMessage(msg))
-                    self.state = "paused"
                     return True  # 需要早期返回，中止其他工具调用
-                
+
                 # 触发工具调用后的生命周期事件（成功）
                 await self.lifecycle.trigger_after_tool_call(
                     tool_call, tool_result, True
@@ -462,7 +450,6 @@ class Agent:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))
-                self.state = "paused"
                 return False
 
         # 需要用户确认：发送工具请求到队列
@@ -499,7 +486,6 @@ class Agent:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
                 self.messages.append(RuntimeMessage(msg))
-                self.state = "paused"
                 return False
         else:
             self.messages.append(
@@ -747,8 +733,6 @@ class Agent:
                     await self.state_waiting_user()
                 elif self.state == "working":
                     await self.state_working()
-                elif self.state == "paused":
-                    await self.state_paused()
                 else:
                     logger.error("遇到未知状态: %s，退出运行循环", self.state)
                     break

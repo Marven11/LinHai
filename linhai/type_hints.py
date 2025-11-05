@@ -5,7 +5,7 @@ from typing import Union, Optional, Iterable, TypedDict, Literal
 from typing_extensions import Required, TypeAlias
 
 # Agent状态类型
-AgentState = Literal["waiting_user", "working", "paused"]
+AgentState = Literal["waiting_user", "working"]
 
 
 class ChatCompletionContentPartTextParam(TypedDict):
