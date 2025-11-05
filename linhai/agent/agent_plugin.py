@@ -418,7 +418,7 @@ class EndThinkPlugin(Plugin):
                 await agent.group_chat.send("cli_agent_output", answer)
                 agent.messages.append(
                     RuntimeMessage(
-                        "检测到只有'</think>'的行，已打断agent输出"
+                        "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！"
                     )
                 )
                 answer.interrupt()
