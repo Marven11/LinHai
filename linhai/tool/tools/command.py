@@ -6,13 +6,13 @@ import os
 import signal
 import subprocess
 import re
-from linhai.tool.base import global_tools, ToolArgInfo
+from linhai.tool.base import global_tools, ToolArgInfo, ToolResultMessage, ToolErrorMessage
 import platform
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
 
-async def execute_command(command: str, timeout: float = 2.0) -> str:
+async def execute_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
     """执行系统命令并返回输出（内部函数）
 
     Args:
@@ -23,7 +23,7 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
         命令执行的输出结果，包含returncode、stdout和stderr
     """
     if timeout > 3600:
-        return "Timeout value exceeds maximum limit of 3600 seconds"
+        return ToolErrorMessage("Timeout value exceeds maximum limit of 3600 seconds")
     try:
         # 设置EDITOR环境变量为输出错误并退出
         env = os.environ.copy()
@@ -49,12 +49,12 @@ async def execute_command(command: str, timeout: float = 2.0) -> str:
             except ProcessLookupError:
                 pass  # 进程已经结束
             await process.wait()
-            return f"Command timed out after {timeout} seconds"
+            return ToolErrorMessage(f"Command timed out after {timeout} seconds")
 
         stdout_str = stdout.decode("utf-8") if stdout else ""
         stderr_str = stderr.decode("utf-8") if stderr else ""
 
-        return f"""
+        output = f"""
 Return code: {returncode}
 
 Stdout:
@@ -63,8 +63,9 @@ Stdout:
 Stderr:
 {stderr_str}
 """
+        return ToolResultMessage(output)
     except (OSError, subprocess.SubprocessError) as e:
-        return f"Command failed with error: {str(e)}"
+        return ToolErrorMessage(f"Command failed with error: {str(e)}")
 
 
 def validate_simple_command(command: str) -> bool:
@@ -88,7 +89,7 @@ def validate_simple_command(command: str) -> bool:
     },
     required_args=["command"],
 )
-async def run_simple_command(command: str, timeout: float = 2.0) -> str:
+async def run_simple_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
     """执行简单系统命令（白名单验证），只允许安全命令
 
     Args:
@@ -99,7 +100,7 @@ async def run_simple_command(command: str, timeout: float = 2.0) -> str:
         命令执行的输出结果或错误信息
     """
     if not validate_simple_command(command):
-        return (
+        return ToolErrorMessage(
             f"错误：命令包含不允许的字符，应符合这个正则{VALIDATE_COMMAND_REGEX.pattern}"
             "如果需要使用其他字符，请使用run_complex_command工具。"
         )
@@ -118,7 +119,7 @@ async def run_simple_command(command: str, timeout: float = 2.0) -> str:
     },
     required_args=["command"],
 )
-async def run_complex_command(command: str, timeout: float = 2.0) -> str:
+async def run_complex_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
     """执行复杂系统命令（可能包含危险操作，请谨慎使用）
 
     Args:
@@ -137,7 +138,7 @@ async def run_complex_command(command: str, timeout: float = 2.0) -> str:
     args={"directory": ToolArgInfo(desc="目标目录的路径", type="str")},
     required_args=["directory"],
 )
-def change_directory(directory: str) -> str:
+def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
     """改变当前工作目录
 
     Args:
@@ -148,9 +149,9 @@ def change_directory(directory: str) -> str:
     """
     try:
         os.chdir(directory)
-        return f"Changed directory to: {directory}"
+        return ToolResultMessage(f"Changed directory to: {directory}")
     except OSError as e:
-        return f"Error changing directory: {str(e)}"
+        return ToolErrorMessage(f"Error changing directory: {str(e)}")
 
 
 @global_tools.register_tool(
@@ -159,7 +160,7 @@ def change_directory(directory: str) -> str:
     args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
     required_args=["seconds"],
 )
-async def sleep(seconds: float):
+async def sleep_tool(seconds: float) -> ToolResultMessage:
     start = datetime.now()
     await asyncio.sleep(seconds)
-    return f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    return ToolResultMessage(f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
