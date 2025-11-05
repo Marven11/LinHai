@@ -568,7 +568,7 @@ class OpenAi:
 
         # 重试次数
         max_retries = 3
-        retry_delay = 1  # 重试延迟，秒
+        retry_delay = 20  # 重试延迟，秒
 
         answer = None
         for attempt in range(max_retries):
