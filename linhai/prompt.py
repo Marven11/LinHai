@@ -129,12 +129,12 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 - 为了和普通的JSON数据做区分，代码块的语言标记为`json toolcall`，普通的JSON代码块使用`json`
 
 ```json toolcall
-{"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2", "__assert_success": false}}
+{"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2", "assert_success": false}}
 ```
 
-其中`__assert_success`参数控制工具调用失败时的行为：
-- `__assert_success: true`（默认）：工具调用失败时会中断后续流程
-- `__assert_success: false`：工具调用失败时不影响后续工具调用
+其中`assert_success`参数控制工具调用失败时的行为：
+- `assert_success: true`（默认）：工具调用失败时会中断后续流程
+- `assert_success: false`：工具调用失败时不影响后续工具调用
 
 你可以同时调用多个工具，只需要顺序输出多个代码块即可。但是是否应该同时调用也是有条件的：两个工具没有“顺序依赖”关系
 
@@ -214,7 +214,7 @@ agent: 用户需要计算多个算式，可能是需要测试工具调用是否�
 然后是114*514，计算这个算式不需要等待114+514的结果，设置assert_success=false以避免第一个工具失败时影响第二个工具的调用
 
 ```json toolcall
-{"name":"safe_calculator","arguments":{"expression":"114*514", "__assert_success": false}}
+{"name":"safe_calculator","arguments":{"expression":"114*514", "assert_success": false}}
 ```
 
 我们需要等待这两个算式的结果

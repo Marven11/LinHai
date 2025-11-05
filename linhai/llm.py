@@ -165,7 +165,7 @@ class ToolCallMessage:
         # 将assert_success添加到函数参数中
         function_arguments = self.function_arguments.copy()
         if not self.assert_success:
-            function_arguments["__assert_success"] = False
+            function_arguments["assert_success"] = False
         
         msg = {
             "role": "assistant",
@@ -206,11 +206,11 @@ class ToolCallMessage:
         
         # 从函数参数中解析assert_success，默认为True
         assert_success = True
-        if isinstance(function_arguments, dict) and "__assert_success" in function_arguments:
-            assert_success = function_arguments["__assert_success"]
+        if isinstance(function_arguments, dict) and "assert_success" in function_arguments:
+            assert_success = function_arguments["assert_success"]
             # 移除特殊参数，避免传递给实际工具
             function_arguments = function_arguments.copy()
-            del function_arguments["__assert_success"]
+            del function_arguments["assert_success"]
         
         return cls(function_name=function_name, function_arguments=function_arguments, assert_success=assert_success)
 

@@ -37,7 +37,7 @@ class TestEraseMessageByUUID(unittest.TestCase):
         # 测试删除不存在的UUID
         result = self.agent.erase_message_by_uuid("nonexistent-uuid")
         self.assertIn("错误", result)
-        self.assertEqual(result, "错误：UUID 'nonexistent-uuid' 不存在，无法擦除消息。")
+        self.assertEqual(result, "错误：ID 'nonexistent-uuid' 不存在，无法擦除消息。")
 
     def test_delete_existing_message(self):
         # 测试删除存在的消息

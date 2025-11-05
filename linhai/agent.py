@@ -93,7 +93,7 @@ class Agent:
         self.current_enable_compress = True
         self.soft_compress_triggered = False  # 软压缩限制触发标志
 
-        self.large_messages: dict[str, Message] = {}  # 存储大消息的UUID映射
+        self.large_messages: dict[str, Message] = {}  # 存储大消息的ID映射
         self.queued_messages: list[Message] = []  # 存储/queue消息
         # Plugin使用的变量
         self.compress_tool_called_in_last_response = False  # 记录是否在最近响应中调用了压缩工具
@@ -207,9 +207,9 @@ class Agent:
 
         @dummy_toolset.register_tool(
             name="erase_message_by_uuid",
-            desc="擦除通过UUID标识的大消息。当工具返回内容过大时，系统会分配UUID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条UUID为{UUID}的消息已被擦除",
+            desc="擦除通过ID标识的大消息。当工具返回内容过大时，系统会分配ID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条ID为{ID}的消息已被擦除",
             args={
-                "uuids": ToolArgInfo(desc="要擦除的消息的UUID", type="list[str]"),
+                "uuids": ToolArgInfo(desc="要擦除的消息的ID", type="list[str]"),
             },
             required_args=["uuids"],
         )
@@ -222,9 +222,9 @@ class Agent:
                 if taken < 0.4:
                     return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
             result = ""
-            for message_uuid in uuids:
+            for message_id in uuids:
                 result += (
-                    f"{message_uuid!r}: {self.erase_message_by_uuid(message_uuid)}"
+                    f"{message_id!r}: {self.erase_message_by_uuid(message_id)}"
                 )
             return result
 
@@ -267,28 +267,28 @@ class Agent:
             taken,
         )
 
-    def erase_message_by_uuid(self, message_uuid: str) -> str:
+    def erase_message_by_uuid(self, message_id: str) -> str:
         """擦除大消息方法。
 
         Args:
-            uuid: 要擦除的消息的UUID
+            uuid: 要擦除的消息的ID
 
         Returns:
             str: 擦除结果消息
         """
-        if message_uuid not in self.large_messages:
-            return f"错误：UUID '{message_uuid}' 不存在，无法擦除消息。"
+        if message_id not in self.large_messages:
+            return f"错误：ID '{message_id}' 不存在，无法擦除消息。"
 
         # 从large_messages中移除
-        message_to_delete = self.large_messages[message_uuid]
-        del self.large_messages[message_uuid]
+        message_to_delete = self.large_messages[message_id]
+        del self.large_messages[message_id]
 
         # 在原位置插入runtime message而不是直接删除
         if message_to_delete in self.messages:
             index = self.messages.index(message_to_delete)
-            self.messages[index] = RuntimeMessage(f"本条UUID为{message_uuid}的消息已被擦除")
+            self.messages[index] = RuntimeMessage(f"本条ID为{message_id}的消息已被擦除")
 
-        return f"已成功擦除UUID为 '{message_uuid}' 的大消息"
+        return f"已成功擦除ID为 '{message_id}' 的大消息"
 
     async def state_waiting_user(self):
         """
@@ -345,9 +345,6 @@ class Agent:
                             f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
                         )
                     )
-        else:
-            # 重置标志
-            self.compress_tool_called_in_last_response = False
 
         if self.last_token_usage and self.last_token_usage > self.config.get(
             "compress_threshold_hard", int(65536 * 0.8)
@@ -428,14 +425,14 @@ class Agent:
                     tool_call, tool_result, True
                 )
 
-                # 检查工具结果大小，如果大于8000字符则记录UUID
+                # 检查工具结果大小，如果大于8000字符则记录ID
                 tool_result_content = str(tool_result)
                 if len(tool_result_content) > 8000:
-                    message_uuid = generate_id("largemessage")
-                    self.large_messages[message_uuid] = tool_result
+                    message_id = generate_id("largemessage")
+                    self.large_messages[message_id] = tool_result
                     self.messages.append(
                         RuntimeMessage(
-                            f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配UUID: {message_uuid}。"
+                            f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配ID: {message_id}。"
                             "你可以使用 erase_message_by_uuid 工具删除此消息以节省token。"
                         )
                     )

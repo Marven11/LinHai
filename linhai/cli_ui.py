@@ -114,22 +114,15 @@ class RuntimeMessageWidget(Static):
 class MessageWidget(Static):
     """单条消息显示组件"""
 
-    def __init__(self, role: str, content: str, is_reasoning: bool = False, llm_name: str | None = None):
+    def __init__(self, role: str, content: str, sender_name: str, is_reasoning: bool = False):
         super().__init__()
         self.role = role
         self.content_str = content
         self.is_reasoning = is_reasoning
-        self.llm_name = llm_name
         if is_reasoning:
-            if llm_name:
-                self.display_name = f"{llm_name}-reasoning"
-            else:
-                self.display_name = "assistant-reasoning"
+            self.display_name = f"{sender_name} (reasoning)"
         else:
-            if llm_name:
-                self.display_name = llm_name
-            else:
-                self.display_name = role
+            self.display_name = sender_name
 
     def append_content_lazy(self, new_content: str) -> None:
         """追加内容到消息"""
@@ -243,8 +236,8 @@ class CLIApp(App):
                     agent = self.group_chat.get_members("agent", Agent)
                     llm_name, _llm = agent.get_current_llm_info()
                 except RuntimeError:
-                    llm_name = None
-                yield MessageWidget(role=llm_message["role"], content=content, llm_name=llm_name)
+                    llm_name = "unknown assistant"
+                yield MessageWidget(role=llm_message["role"], content=content, sender_name=llm_name)
 
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
@@ -290,12 +283,9 @@ class CLIApp(App):
             await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
-            try:
-                agent = self.group_chat.get_members("agent", Agent)
-                llm_name, _llm = agent.get_current_llm_info()
-            except RuntimeError:
-                llm_name = None
-            widget = MessageWidget(user_msg.role, user_msg.message, llm_name=llm_name)
+            agent = self.group_chat.get_members("agent", Agent)
+            llm_name, _llm = agent.get_current_llm_info()
+            widget = MessageWidget(user_msg.role, user_msg.message, sender_name=llm_name)
             container.scroll_end()
             container.mount(widget)
             widget.update_display()
@@ -312,12 +302,9 @@ class CLIApp(App):
         else:
             content = f"<Unknown {llm_message!r}>"
         # 获取当前LLM名字
-        try:
-            agent = self.group_chat.get_members("agent", Agent)
-            llm_name, _llm = agent.get_current_llm_info()
-        except RuntimeError:
-            llm_name = None
-        widget = MessageWidget("agent", content, llm_name=llm_name)
+        agent = self.group_chat.get_members("agent", Agent)
+        llm_name, _llm = agent.get_current_llm_info()
+        widget = MessageWidget("agent", content, sender_name=llm_name)
         self.query_one("#chat-container").mount(widget)
         self.query_one("#chat-container").scroll_end()
         self._trim_messages_if_needed()
@@ -381,13 +368,10 @@ class CLIApp(App):
                     if current_message is None:
 
                         # 获取当前LLM名字
-                        try:
-                            agent = self.group_chat.get_members("agent", Agent)
-                            llm_name, _llm = agent.get_current_llm_info()
-                        except RuntimeError:
-                            llm_name = None
+                        agent = self.group_chat.get_members("agent", Agent)
+                        llm_name, _llm = agent.get_current_llm_info()
                         current_message = MessageWidget(
-                            role="assistant", content=content, is_reasoning=is_reasoning, llm_name=llm_name
+                            role="assistant", content=content, is_reasoning=is_reasoning, sender_name=llm_name
                         )
                         await asyncio.sleep(0)
                         container.mount(current_message)
@@ -450,12 +434,9 @@ class CLIApp(App):
                 self.messages.append(user_msg)
                 await self.group_chat.send("agent_user_input", user_msg)
                 # 更新UI
-                try:
-                    agent = self.group_chat.get_members("agent", Agent)
-                    llm_name, _llm = agent.get_current_llm_info()
-                except RuntimeError:
-                    llm_name = None
-                widget = MessageWidget(user_msg.role, user_msg.message, llm_name=llm_name)
+                agent = self.group_chat.get_members("agent", Agent)
+                llm_name, _llm = agent.get_current_llm_info()
+                widget = MessageWidget(user_msg.role, user_msg.message, sender_name=llm_name)
                 container = self.query_one("#chat-container")
                 container.scroll_end()
                 container.mount(widget)
@@ -573,7 +554,7 @@ class CLIApp(App):
             close_all_terminals()
             self.app.exit()
 
-    async def on_scroll(self, event: events.Scroll) -> None:
+    def on_scroll(self, event) -> None:
         """监听滚动事件，记录用户滚动时间"""
         import time
         self.last_user_scroll_time = time.time()
