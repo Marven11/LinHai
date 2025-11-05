@@ -10,7 +10,7 @@
         - 当前发现minimax, ollama等所谓"openai兼容"的API定义不完全相同，通过这个配置更改使用API的方式
         - 默认为None
     - 编写unittest并运行
-- [ ] 添加对minimax思考格式的支持
+- [x] 添加对minimax思考格式的支持
     - 当compatibility为minimax时使用这个方式传入参数，解析思维内容
     - 参考./minimax_example.py，minimax解析思考内容的方式和OpenAi的方式不同
     - 使用终端打开linhai并让其"计算114+514"，查看是否生成了有关reasoning的消息block

@@ -406,19 +406,34 @@ class OpenAiAnswer:
             content = delta.content or ""
             self._content += content
 
+            # 处理OpenAI格式的reasoning_content
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
-            if reasoning_content:
                 self._reasoning_content = (
                     self._reasoning_content + reasoning_content
                     if self._reasoning_content
                     else reasoning_content
                 )
+            
+            # 处理minimax格式的reasoning_details
+            reasoning_details = getattr(delta, "reasoning_details", None)
+            if reasoning_details and isinstance(reasoning_details, list):
+                for detail in reasoning_details:
+                    if "text" in detail and isinstance(detail["text"], str):
+                        detail_text = detail["text"]
+                        if self._reasoning_content is None:
+                            self._reasoning_content = detail_text
+                        else:
+                            # 只添加新的内容，避免重复
+                            new_text = detail_text[len(self._reasoning_content):]
+                            if new_text:
+                                self._reasoning_content += new_text
+            
             # 有时候会出现reasoning_content is None and content == ""的情况
             # API返回的数据如此，我们应该原样yield
             token = AnswerToken(
-                reasoning_content=reasoning_content,
+                reasoning_content=reasoning_content or (self._reasoning_content if reasoning_details else None),
                 content=content,
             )
             self._toyield.append(token)
@@ -482,6 +497,7 @@ class OpenAi:
         chat_completion_kwargs: dict,
         tools: list[dict] | None = None,
         token_limit: int | None = None,
+        compatibility: str | None = None,
     ):
         """初始化OpenAI语言模型。
 
@@ -492,6 +508,7 @@ class OpenAi:
             openai_config: 额外的OpenAI配置
             tools: 可用工具列表
             token_limit: token限制数量
+            compatibility: API兼容性模式，支持minimax等
         """
         self.model = model
         self.openai = AsyncOpenAI(
@@ -500,6 +517,7 @@ class OpenAi:
         self.tools = tools
         self.chat_completion_kwargs = chat_completion_kwargs
         self.token_limit = token_limit
+        self.compatibility = compatibility
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -540,6 +558,10 @@ class OpenAi:
             "timeout": 30,
             **self.chat_completion_kwargs,
         }
+
+        # 为minimax兼容性添加extra_body参数
+        if self.compatibility == "minimax":
+            params["extra_body"] = {"reasoning_split": True}
 
         if self.tools:
             params["tools"] = self.tools

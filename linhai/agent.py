@@ -834,6 +834,7 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
             openai_config=llm_config_dict.get("client_options", {}),
             chat_completion_kwargs=llm_config_dict.get("completion_options", {}),
             token_limit=llm_config_dict.get("token_limit"),
+            compatibility=llm_config_dict.get("compatibility"),
         )
         llms.append(llm)
     return llms
