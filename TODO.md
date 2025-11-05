@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 重构配置格式：
+- [x] 重构配置格式：
     - 修改LLMConfig添加type选项，当前只能为openai
     - 修改LLMConfig添加compatibility选项
         - 当前发现minimax, ollama等所谓"openai兼容"的API定义不完全相同，通过这个配置更改使用API的方式

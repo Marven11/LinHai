@@ -317,6 +317,64 @@ include_usage = true
         finally:
             os.unlink(temp_file)
 
+    def test_load_config_with_type_and_compatibility(self):
+        """Test loading a config with type and compatibility fields."""
+        config_content = '''[[llm]]
+name = "minimax"
+type = "openai"
+compatibility = "minimax"
+base_url = "https://api.minimaxi.com/v1"
+api_key = "test_key"
+model = "MiniMax-M2"
+
+[[llm]]
+name = "openai"
+type = "openai"
+base_url = "https://api.openai.com"
+api_key = "test_key_2"
+model = "gpt-4"
+'''
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsInstance(config, Config)
+            self.assertEqual(len(config.llm), 2)
+            
+            # 验证第一个LLM (minimax)
+            self.assertEqual(config.llm[0].name, "minimax")
+            self.assertEqual(config.llm[0].type, "openai")
+            self.assertEqual(config.llm[0].compatibility, "minimax")
+            self.assertEqual(config.llm[0].base_url, "https://api.minimaxi.com/v1")
+            self.assertEqual(config.llm[0].model, "MiniMax-M2")
+            
+            # 验证第二个LLM (openai)
+            self.assertEqual(config.llm[1].name, "openai")
+            self.assertEqual(config.llm[1].type, "openai")
+            self.assertIsNone(config.llm[1].compatibility)
+            self.assertEqual(config.llm[1].base_url, "https://api.openai.com")
+            self.assertEqual(config.llm[1].model, "gpt-4")
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_default_type_and_compatibility(self):
+        """Test loading a config with default values for type and compatibility."""
+        config_content = '''[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+'''
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsInstance(config, Config)
+            self.assertEqual(len(config.llm), 1)
+            # 检查默认值
+            self.assertEqual(config.llm[0].type, "openai")
+            self.assertIsNone(config.llm[0].compatibility)
+        finally:
+            os.unlink(temp_file)
+
 
 if __name__ == "__main__":
     unittest.main()

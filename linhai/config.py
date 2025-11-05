@@ -15,6 +15,8 @@ class LLMConfig(BaseModel):
     """单个LLM配置类型定义。"""
 
     name: str = Field(..., min_length=1)
+    type: str = Field(default="openai")
+    compatibility: Optional[str] = Field(default=None)
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
