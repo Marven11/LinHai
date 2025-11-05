@@ -91,6 +91,7 @@ class Lifecycle:
             MarkdownSyntaxPlugin,
             ThinkingToolCallPlugin,
             TaskPlanningPlugin,
+            EndThinkPlugin,
         )
         
         plugins = [
@@ -104,6 +105,7 @@ class Lifecycle:
             MarkdownSyntaxPlugin(self.group_chat),
             ThinkingToolCallPlugin(self.group_chat),
             TaskPlanningPlugin(self.group_chat),
+            EndThinkPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

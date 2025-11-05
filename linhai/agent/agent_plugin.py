@@ -399,3 +399,32 @@ class TaskPlanningPlugin(Plugin):
 
 
 
+
+
+class EndThinkPlugin(Plugin):
+    """检查输出中是否有只有'</think>'的行并打断agent。"""
+
+    async def during_message_generation(
+        self, answer: Answer, current_content: str
+    ):
+        """检查是否有一行只有'</think>'。"""
+        from linhai.agent import Agent
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        # 检查每一行是否只有'</think>'
+        lines = current_content.split('\n')
+        for line in lines:
+            if line.strip() == '</think>':
+                await agent.group_chat.send("cli_agent_output", answer)
+                agent.messages.append(
+                    RuntimeMessage(
+                        "检测到只有'</think>'的行，已打断agent输出"
+                    )
+                )
+                answer.interrupt()
+                return True
+        return False
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
