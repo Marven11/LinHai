@@ -22,6 +22,13 @@ class TestCreateAgentMCP(unittest.TestCase):
         """设置测试fixtures"""
         self.temp_dir = tempfile.mkdtemp()
         self.group_chat = GroupChat()
+        
+        # Copy real_mcp_server.py to temp directory for MCP tests
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        source_file = os.path.join(project_root, "linhai", "tests", "real_mcp_server.py")
+        dest_file = os.path.join(self.temp_dir, "real_mcp_server.py")
+        import shutil
+        shutil.copy2(source_file, dest_file)
 
     def tearDown(self):
         """清理测试fixtures"""
@@ -37,7 +44,8 @@ class TestCreateAgentMCP(unittest.TestCase):
     def test_create_agent_with_real_mcp_server(self):
         """测试create_agent函数与真实MCP服务器的集成"""
         # 创建包含真实MCP服务器配置的测试配置文件
-        config_content = """
+        server_script_path = os.path.join(self.temp_dir, "real_mcp_server.py")
+        config_content = f"""
 [[llm]]
 name = "test"
 base_url = "https://example.com"
@@ -50,7 +58,7 @@ compress_threshold_hard = 80000
 
 [[agent.mcp]]
 name = "calculator"
-server_script_path = "./linhai/tests/real_mcp_server.py"
+server_script_path = "{server_script_path}"
 """
         config_path = self.create_test_config(config_content)
         
