@@ -1,7 +1,7 @@
 """Test markdown_parser module."""
 
 import unittest
-from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
+from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors, ParseError
 
 
 class TestMarkdownParser(unittest.TestCase):
@@ -29,10 +29,10 @@ class TestMarkdownParser(unittest.TestCase):
 invalid json
 ```
 """
-        tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
-        self.assertEqual(len(tool_calls), 1)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("解析JSON出错", errors[0])
+        # 根据重构，函数现在会抛出ParseError而不是收集错误
+        with self.assertRaises(ParseError) as cm:
+            extract_tool_calls_with_errors(markdown_text)
+        self.assertIn("解析JSON出错", str(cm.exception))
 
 
 if __name__ == "__main__":

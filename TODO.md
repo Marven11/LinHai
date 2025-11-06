@@ -5,7 +5,7 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [x] 我重构了agent.py，查看上一个commit的内容，然后使用pyright检查unittest并运行unittest,最后修复
-- [ ] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
+- [x] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
     - Before message generation callback error: Callback failed等
 - [ ] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警

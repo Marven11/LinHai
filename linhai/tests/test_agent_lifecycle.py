@@ -173,7 +173,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_order, [1, 2])
 
     async def test_callback_exception_handling(self):
-        """Test that exceptions in callbacks are caught and logged."""
+        """Test that exceptions in callbacks are propagated."""
 
         async def failing_callback(
             _enable_compress, _disable_waiting_user_warning
@@ -189,13 +189,12 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.lifecycle.register_before_message_generation(failing_callback)
         self.lifecycle.register_before_message_generation(succeeding_callback)
 
-        # 触发回调 - 应该不会抛出异常
-        try:
+        # 触发回调 - 根据重构，异常应该被传播
+        with self.assertRaises(RuntimeError) as cm:
             await self.lifecycle.trigger_before_message_generation(
                 True, False
             )
-        except (RuntimeError, asyncio.CancelledError):
-            self.fail("Exception from callback should be caught")
+        self.assertEqual(str(cm.exception), "Callback failed")
 
         # 验证第二个回调仍然被调用
         # 由于是mock测试，我们主要验证没有异常抛出
