@@ -7,6 +7,7 @@
 - [x] 我重构了agent.py，查看上一个commit的内容，然后使用pyright检查unittest并运行unittest,最后修复
 - [x] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
     - Before message generation callback error: Callback failed等
+- [ ] 让agent.py在提醒软阈值的时候同时提醒现在有哪些大消息（按照插入顺序提醒前3个）
 - [ ] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
