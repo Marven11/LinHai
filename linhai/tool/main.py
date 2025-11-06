@@ -28,7 +28,6 @@ class ToolManager:
         group_chat: GroupChat,
         toolsets: list[ToolSet],
         config: Optional[ToolConfig] = None,
-        mcp_connector: Optional[MCPConnector] = None,
     ):
         """初始化工具管理器
 
@@ -38,7 +37,7 @@ class ToolManager:
         group_chat.register_member("tool_manager", self)
         self.group_chat = group_chat
         self.config = config
-        self.mcp_connector = mcp_connector
+        self.mcp_connector: MCPConnector | None = None
 
         names = Counter(
             [name for toolset in toolsets for name in toolset.get_tools().keys()]
@@ -48,6 +47,10 @@ class ToolManager:
                 f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
             )
         self._toolsets = toolsets
+
+    def set_mcp_connector(self, mcp_connector: MCPConnector):
+        assert self.mcp_connector is None, "We already have mcp connector!"
+        self.mcp_connector = mcp_connector
 
     @property
     def toolsets(self):

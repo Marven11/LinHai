@@ -94,7 +94,7 @@ class Agent:
             False  # 记录是否在最近响应中调用了压缩工具
         )
         self.current_disable_waiting_user_warning = False
-        
+
         # 当前Answer实例，用于plugin打断
         self.current_answer: Answer | None = None
 
@@ -309,7 +309,7 @@ class Agent:
     def interrupt(self, custom_message: str | None = None):
         """
         打断当前Answer并添加自定义消息。
-        
+
         参数:
             custom_message: 自定义消息内容，如果为None则使用默认消息
         """
@@ -580,7 +580,7 @@ class Agent:
         model = await self._select_model()
 
         answer: Answer = await model.answer_stream(self.messages)
-        
+
         # 设置当前Answer用于plugin打断
         self.current_answer = answer
 
@@ -681,7 +681,7 @@ class Agent:
 
         # 保存对话历史
         await self.save_conversation_history()
-        
+
         # 清除当前Answer引用
         self.current_answer = None
         return answer
@@ -738,14 +738,19 @@ class Agent:
         并处理异常和取消事件。
         """
 
-        # 连接配置中的MCP服务器
+        # MCP Connector只能在同一个async Task中关闭
+        # 只能在这里连接
         self.mcp_connector = MCPConnector(self.group_chat)
         for mcp_config in self.context["mcp"]:
-            server_script_path = self.context["config_basedir"] / mcp_config.server_script_path
+            server_script_path = (
+                self.context["config_basedir"] / mcp_config.server_script_path
+            )
             await self.mcp_connector.connect_stdio(
                 mcp_config.name, server_script_path.absolute().as_posix()
             )
-
+        self.group_chat.get_members("tool_manager", ToolManager).set_mcp_connector(
+            self.mcp_connector
+        )
         logger.info("Agent启动")
         user_input_found = False
         while not self.group_chat.is_empty("agent_user_input"):
@@ -804,7 +809,7 @@ async def create_agent(
         llm_name=llm_name,
         tool_confirmation_config=tool_confirmation_config,
         agent_config=agent_config,
-        mcp_connector_basedir = Path(config_path).parent,
+        mcp_connector_basedir=Path(config_path).parent,
     )
 
     # 创建ToolManager
@@ -820,7 +825,6 @@ async def create_agent(
 
     agent = Agent(
         context=agent_config,
-        
         group_chat=group_chat,
         init_messages=init_messages,
     )
@@ -880,9 +884,7 @@ async def _create_agent_config(
     if agent_config:
         # 处理compress_threshold_hard
         if isinstance(agent_config.compress_threshold_hard, float):
-            compress_threshold_hard = int(
-                65536 * agent_config.compress_threshold_hard
-            )
+            compress_threshold_hard = int(65536 * agent_config.compress_threshold_hard)
         elif isinstance(agent_config.compress_threshold_hard, int):
             compress_threshold_hard = agent_config.compress_threshold_hard
         else:
@@ -890,9 +892,7 @@ async def _create_agent_config(
 
         # 处理compress_threshold_soft
         if isinstance(agent_config.compress_threshold_soft, float):
-            compress_threshold_soft = int(
-                65536 * agent_config.compress_threshold_soft
-            )
+            compress_threshold_soft = int(65536 * agent_config.compress_threshold_soft)
         elif isinstance(agent_config.compress_threshold_soft, int):
             compress_threshold_soft = agent_config.compress_threshold_soft
         else:
