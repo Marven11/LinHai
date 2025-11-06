@@ -364,10 +364,16 @@ class Agent:
             if threshold_info:
                 soft, hard, used, remaining, taken = threshold_info
                 if used > soft:
+                    # 获取前3个大消息（按照插入顺序）
+                    large_messages_info = ""
+                    if self.large_messages:
+                        large_message_ids = list(self.large_messages.keys())[:3]
+                        large_messages_info = f"当前已有{len(self.large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
+                    
                     self.messages.append(
                         RuntimeMessage(
                             f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                            f"当前已有{len(self.messages)}条消息。建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
+                            f"当前已有{len(self.messages)}条消息。{large_messages_info}建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
                         )
                     )
 
