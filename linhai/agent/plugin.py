@@ -26,6 +26,7 @@ class WaitingUserPlugin(Plugin):
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
@@ -74,13 +75,16 @@ class ToolcallWithoutPlanningPlugin(Plugin):
     ):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         json_block_count = current_content.count("\n```json toolcall")
         pattern = r"^ *- \[[ x]\]"
         planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
         if json_block_count > 1 and planning_count == 0:
-            agent.interrupt("错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！")
+            agent.interrupt(
+                "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
+            )
             return True
 
         return False
@@ -88,6 +92,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+
 
 class WrongEndPlugin(Plugin):
     """禁止输出end of sentence的plugin"""
@@ -99,6 +104,7 @@ class WrongEndPlugin(Plugin):
         _tool_calls,
     ):
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
@@ -132,6 +138,7 @@ class BadMultiToolCall(Plugin):
         _tool_calls,
     ):
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         tool_call_count = full_response.count("```json toolcall")
 
@@ -162,11 +169,10 @@ class BadMultiToolCall(Plugin):
 class ThinkingToolCallPlugin(Plugin):
     """禁止过度思考工具调用plugin"""
 
-    async def during_message_generation(
-        self, answer: Answer, _current_content: str
-    ):
+    async def during_message_generation(self, answer: Answer, _current_content: str):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         current_reasoning_content = answer.get_reasoning_message()
         if current_reasoning_content is None:
@@ -197,6 +203,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
     ):
         """检查是否输出了过多的- [x]标记。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         count = full_response.count("- [x]")
         if count > 10:  # 阈值设为10
@@ -221,6 +228,7 @@ class MarkdownSyntaxPlugin(Plugin):
     ):
         """检查markdown语法是否正确。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         # 计算代码块分隔符的数量
         code_block_count = full_response.count("```")
@@ -242,14 +250,17 @@ class ChineseEndOfSentencePlugin(Plugin):
     ):
         """检查是否有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
-        pattern = r'[\u4e00-\u9fff]+<｜end▁of▁[a-z]+｜>'
-        
+        pattern = r"[\u4e00-\u9fffa-zA-Z0-9\s\p{P}]+<｜end▁of▁[a-z]+｜>"
+
         # 检查每一行
-        for line in current_content.split('\n'):
+        for line in current_content.split("\n"):
             if re.search(pattern, line):
-                agent.interrupt("检测到中文句子结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，已打断输出")
+                agent.interrupt(
+                    "检测到中文句子结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，已打断输出"
+                )
                 return True
         return False
 
@@ -270,6 +281,7 @@ class TaskPlanningPlugin(Plugin):
     ):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         if self.no_planning_score <= 3:
             return
@@ -294,6 +306,7 @@ class TaskPlanningPlugin(Plugin):
     ):
         """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
 
         # 使用正则匹配每一行开头的任务规划标记
@@ -338,24 +351,22 @@ class TaskPlanningPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-
-
-
 class EndThinkPlugin(Plugin):
     """检查输出中是否有只有'</think>'的行并打断agent。"""
 
-    async def during_message_generation(
-        self, answer: Answer, current_content: str
-    ):
+    async def during_message_generation(self, answer: Answer, current_content: str):
         """检查是否有一行只有'</think>'。"""
         from linhai.agent import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
-        
+
         # 检查每一行是否只有'</think>'
-        lines = current_content.split('\n')
+        lines = current_content.split("\n")
         for line in lines:
-            if line.strip() == '</think>':
-                agent.interrupt("错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！")
+            if line.strip() == "</think>":
+                agent.interrupt(
+                    "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！"
+                )
                 return True
         return False
 
