@@ -5,6 +5,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
+from pathlib import Path
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
@@ -68,6 +69,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm],  # 改为列表
             "llm_names": ["test_llm"],  # 添加llm_names字段
             "current_llm_index": 0,  # 添加当前LLM索引

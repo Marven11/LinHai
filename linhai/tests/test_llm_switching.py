@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 
 from linhai.agent import Agent, AgentContext
+from pathlib import Path
 from linhai.llm import SystemMessage, ToolCallMessage
 from linhai.tool.base import ToolErrorMessage, ToolResultMessage
 from linhai.group_chat import GroupChat
@@ -24,6 +25,8 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,

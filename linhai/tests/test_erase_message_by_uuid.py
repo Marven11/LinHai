@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import uuid
 
 from linhai.agent import Agent, AgentContext
+from pathlib import Path
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.agent.base import RuntimeMessage
@@ -19,6 +20,8 @@ class TestEraseMessageByUUID(unittest.TestCase):
         
         self.config: AgentContext = {
             "system_prompt": "Test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [],
             "llm_names": [],
             "current_llm_index": 0,

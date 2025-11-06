@@ -4,6 +4,7 @@ import json
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
@@ -66,6 +67,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,

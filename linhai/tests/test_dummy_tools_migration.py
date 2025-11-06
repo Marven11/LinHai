@@ -3,6 +3,7 @@
 import unittest
 import unittest.mock
 from unittest.mock import MagicMock
+from pathlib import Path
 
 from linhai.agent import Agent, AgentContext
 from linhai.llm import ToolCallMessage, SystemMessage, Message
@@ -30,6 +31,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Mock the agent configuration with proper typing
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -56,6 +59,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Mock the agent configuration with proper typing
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -81,6 +86,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when token usage is available."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -109,6 +116,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when no token usage is available."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -136,6 +145,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test thanox_history tool call when there are sufficient messages."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -176,6 +187,8 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test thanox_history tool call when there are insufficient messages."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
+            "mcp": [],  # 添加mcp字段
+            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
