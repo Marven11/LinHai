@@ -130,4 +130,50 @@ class MCPConnector:
             except (ConnectionError, TimeoutError) as e:
                 return ToolErrorMessage(f"连接{server_script_path!r}失败，错误: {e!r}")
 
+        @connector_toolset.register_tool(
+            name="disconnect",
+            desc="断开一个已连接的MCP服务器",
+            args={
+                "name": ToolArgInfo(
+                    desc="要断开的MCP服务器名字", type="str"
+                ),
+            },
+            required_args=["name"],
+        )
+        async def disconnect_server(name: str):
+            try:
+                await self.disconnect(name)
+                return ToolResultMessage(f"成功断开MCP服务器: {name!r}")
+            except RuntimeError as e:
+                return ToolErrorMessage(f"断开失败: {e!r}")
+
+        @connector_toolset.register_tool(
+            name="disconnect_all",
+            desc="断开所有已连接的MCP服务器",
+            args={},
+            required_args=[],
+        )
+        async def disconnect_all():
+            try:
+                await self.disconnect_all()
+                return ToolResultMessage("成功断开所有MCP服务器")
+            except Exception as e:
+                return ToolErrorMessage(f"断开所有服务器失败: {e!r}")
+
+        @connector_toolset.register_tool(
+            name="list_mcp_servers",
+            desc="列出所有已连接的MCP服务器",
+            args={},
+            required_args=[],
+        )
+        async def list_mcp_servers():
+            if not self.sessions:
+                return ToolResultMessage("当前没有已连接的MCP服务器")
+            
+            server_names = list(self.sessions.keys())
+            return ToolResultMessage(
+                f"已连接的MCP服务器 ({len(server_names)}个):\n" + 
+                "\n".join(f"- {name}" for name in server_names)
+            )
+
         return connector_toolset
