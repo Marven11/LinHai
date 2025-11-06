@@ -25,8 +25,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
-            "mcp": [],  # 添加mcp字段
-            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,
@@ -47,7 +45,14 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         
         # 创建并注册ToolManager
         from linhai.tool.tools.terminal import terminal_toolset
-        self.tool_manager = ToolManager(group_chat=self.group_chat, toolsets=[global_tools, terminal_toolset])
+        from linhai.config import ToolConfig, MCPConfig
+        self.tool_manager = ToolManager(
+            group_chat=self.group_chat, 
+            toolsets=[global_tools, terminal_toolset],
+            config=ToolConfig(),
+            mcp_config=[],
+            mcp_basedir=Path("/tmp")
+        )
 
 
 

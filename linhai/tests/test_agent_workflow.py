@@ -37,8 +37,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
-            "mcp": [],  # 添加mcp字段
-            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -52,8 +50,13 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat = GroupChat()
 
+        from linhai.config import ToolConfig, MCPConfig
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat, toolsets=[global_tools]
+            group_chat=self.group_chat, 
+            toolsets=[global_tools],
+            config=ToolConfig(),
+            mcp_config=[],
+            mcp_basedir=Path("/tmp")
         )
 
         self.agent = Agent(

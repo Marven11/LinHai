@@ -42,15 +42,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
             """会失败的测试工具"""
             raise ValueError("工具执行失败")
         
-        from linhai.config import ToolConfig, MCPConfig
-        from pathlib import Path
-        self.tool_manager = ToolManager(
-            group_chat=self.group_chat, 
-            toolsets=[self.toolset],
-            config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp")
-        )
+        self.tool_manager = ToolManager(self.group_chat, [self.toolset])
 
     def test_runtime_message_model(self):
         """测试运行时消息数据模型"""
@@ -94,8 +86,8 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
         collector_task.cancel()
         
-        # 验证发送了正确的运行时消息（成功时发送1条消息）
-        self.assertEqual(len(received_messages), 1)
+        # 验证发送了正确的运行时消息（成功时发送2条消息）
+        self.assertEqual(len(received_messages), 2)
         
 
         # 检查执行成功消息

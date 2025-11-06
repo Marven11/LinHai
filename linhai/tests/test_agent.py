@@ -69,8 +69,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         config: AgentContext = {
             "system_prompt": "Test system prompt",
-            "mcp": [],  # 添加mcp字段
-            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm],  # 改为列表
             "llm_names": ["test_llm"],  # 添加llm_names字段
             "current_llm_index": 0,  # 添加当前LLM索引
@@ -89,8 +87,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("cli_agent_output")
 
         # 创建真实的ToolManager实例
+        from linhai.config import ToolConfig, MCPConfig
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat, toolsets=[global_tools]
+            group_chat=self.group_chat, 
+            toolsets=[global_tools],
+            config=ToolConfig(),
+            mcp_config=[],
+            mcp_basedir=Path("/tmp")
         )
         # 不需要手动注册，ToolManager会在初始化时自动注册到group_chat
 

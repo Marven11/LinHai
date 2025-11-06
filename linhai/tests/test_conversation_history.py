@@ -26,8 +26,6 @@ class TestConversationHistory(unittest.TestCase):
         # 创建模拟配置
         self.config: AgentContext = {
             "system_prompt": "测试系统提示",
-            "mcp": [],  # 添加mcp字段
-            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [Mock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,

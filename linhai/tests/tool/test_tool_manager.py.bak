@@ -2,13 +2,11 @@
 
 import unittest
 import unittest.mock
-from pathlib import Path
 
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolArgInfo, global_tools
 from linhai.tool.main import ToolManager
 from linhai.group_chat import GroupChat
-from linhai.config import ToolConfig, MCPConfig
 
 
 class TestToolManager(unittest.IsolatedAsyncioTestCase):
@@ -17,7 +15,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
 
         group_chat = GroupChat()
-        self.manager = ToolManager(group_chat=group_chat, toolsets=[global_tools], config=ToolConfig(), mcp_config=[], mcp_basedir=Path("/tmp"))
+        self.manager = ToolManager(group_chat=group_chat, toolsets=[global_tools])
 
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
@@ -113,11 +111,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         group_chat = GroupChat()
         manager_with_config = ToolManager(
-            group_chat=group_chat, 
-            toolsets=[global_tools], 
-            config=config.tools if config.tools else ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            group_chat=group_chat, toolsets=[global_tools], config=config.tools
         )
 
         # 模拟工具调用返回长内容
@@ -166,11 +160,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         group_chat = GroupChat()
         manager_with_config = ToolManager(
-            group_chat=group_chat, 
-            toolsets=[global_tools], 
-            config=config.tools if config.tools else ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            group_chat=group_chat, toolsets=[global_tools], config=config.tools
         )
 
         # 模拟工具调用返回长内容
@@ -201,11 +191,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         group_chat = GroupChat()
         manager_without_config = ToolManager(
-            group_chat=group_chat, 
-            toolsets=[global_tools],
-            config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            group_chat=group_chat, toolsets=[global_tools]
         )
 
         # 模拟工具调用返回刚好超过默认限制的内容

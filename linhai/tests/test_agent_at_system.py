@@ -56,8 +56,6 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
         self.config: AgentContext = {
             "system_prompt": "测试系统提示",
-            "mcp": [],  # 添加mcp字段
-            "config_basedir": Path("/tmp"),  # 添加config_basedir字段
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["llm1", "llm2"],
             "current_llm_index": 0,
