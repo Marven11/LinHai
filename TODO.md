@@ -4,8 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 修复失败的MCP unittest: 严格按照./hypothesis_falsification.txt找出失败原因并修复
+- [ ] 重写MCP unittest: 使用真实的MCP服务器
     - 参考 https://modelcontextprotocol.io/docs/develop/build-server 编写MCP服务器测试
+- [ ] 修复失败的MCP unittest: 严格按照./hypothesis_falsification.txt找出失败原因并修复
     - 禁止跳过unittest！每个功能都必须获得良好的测试！
 - [ ] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
     - Before message generation callback error: Callback failed等
