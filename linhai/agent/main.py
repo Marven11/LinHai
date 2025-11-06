@@ -12,9 +12,7 @@ from typing import (
 
 import asyncio
 import logging
-import traceback
 import random
-from asyncio import QueueEmpty
 
 from .base import (
     RuntimeMessage,

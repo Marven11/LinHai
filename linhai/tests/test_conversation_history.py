@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.agent import Agent, AgentContext
-from pathlib import Path
 from linhai.llm import ChatMessage, SystemMessage, ToolCallMessage
 from linhai.agent.base import RuntimeMessage
 

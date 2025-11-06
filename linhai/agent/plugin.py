@@ -357,7 +357,7 @@ class TaskPlanningPlugin(Plugin):
 class EndThinkPlugin(Plugin):
     """检查输出中是否有只有'</think>'的行并打断agent。"""
 
-    async def during_message_generation(self, answer: Answer, current_content: str):
+    async def during_message_generation(self, _answer: Answer, current_content: str):
         """检查是否有一行只有'</think>'。"""
         from linhai.agent import Agent
 

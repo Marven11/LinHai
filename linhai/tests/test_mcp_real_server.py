@@ -1,13 +1,11 @@
 """Unit tests for MCP with real server integration."""
 
-import asyncio
 import tempfile
 import unittest
 from pathlib import Path
 
-from linhai.agent import create_agent
+from linhai.agent import create_agent, Agent
 from linhai.group_chat import GroupChat
-from linhai.tool.mcp_connector import MCPConnector
 
 
 class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
@@ -56,15 +54,12 @@ server_script_path = "{server_path}"
         agent = await create_agent(self.group_chat, config_path)
         
         # Verify agent was created successfully
-        from linhai.agent import Agent
         self.assertIsInstance(agent, Agent)
         
         # Verify agent was created successfully with MCP configuration
-        from linhai.agent import Agent
         self.assertIsInstance(agent, Agent)
         
         # Check if agent was created successfully with MCP configuration
-        from linhai.agent import Agent
         self.assertIsInstance(agent, Agent)
         
         # For integration tests, we verify agent creation

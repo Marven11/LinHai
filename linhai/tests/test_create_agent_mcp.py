@@ -1,7 +1,6 @@
 """测试create_agent函数中的MCP配置功能"""
 
 import unittest
-from unittest.mock import patch, AsyncMock
 import sys
 import os
 import tempfile
@@ -12,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.group_chat import GroupChat
-from linhai.agent import create_agent
+from linhai.agent import create_agent, Agent
 
 
 class TestCreateAgentMCP(unittest.TestCase):
@@ -66,16 +65,13 @@ server_script_path = "{server_script_path}"
         result = asyncio.run(create_agent(self.group_chat, config_path))
         
         # 验证结果 - create_agent返回的是Agent对象
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 验证agent已创建并配置了MCP
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 检查agent是否配置了MCP工具
         # 根据重构，我们验证agent已创建成功
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 对于MCP集成测试，我们只验证agent创建成功
@@ -102,7 +98,6 @@ compress_threshold_hard = 80000
         result = asyncio.run(create_agent(self.group_chat, config_path))
         
         # 验证结果 - create_agent返回的是Agent对象
-        from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
         # 检查group_chat中是否注册了agent成员
