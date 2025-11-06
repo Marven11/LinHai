@@ -143,24 +143,14 @@ class ToolCallMessage:
 
     def __init__(
         self,
-        function_name: str = "",
-        function_arguments: str | dict = "",
+        function_name: str,
+        function_arguments: dict,
         assert_success: bool = True,
     ):
         """初始化工具调用消息。"""
         self.function_name = function_name
         self.assert_success = assert_success
-        if isinstance(function_arguments, dict):
-            self.function_arguments = function_arguments
-        else:
-            # 如果是字符串，尝试解析为字典
-            try:
-                self.function_arguments = (
-                    json.loads(function_arguments) if function_arguments else {}
-                )
-            except json.JSONDecodeError:
-                # 解析失败时设置为空字典
-                self.function_arguments = {}
+        self.function_arguments = function_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""

@@ -22,7 +22,7 @@ from .base import (
     GlobalMemory,
 )
 from .lifecycle import Lifecycle
-from linhai.markdown_parser import extract_tool_calls_with_errors
+from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
     Message,
     ChatMessage,
@@ -151,7 +151,6 @@ class Agent:
             current_name = llm_names[self.context["current_llm_index"]]
             return f"当前使用的LLM: {current_name}"
 
-        # 确保tool_manager存在
         try:
             tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         except RuntimeError as e:
@@ -358,10 +357,7 @@ class Agent:
                 assert isinstance(msg, ChatMessage)
                 self.handle_user_message(msg)
                 await self.generate_response()
-            except QueueEmpty:
-                logger.info("用户输入队列已关闭")
             except RuntimeError as e:
-                logger.error("处理消息时出错: %s", str(e))
                 raise RuntimeError("处理消息时出错") from e
         else:
             await self.generate_response()
@@ -654,24 +650,28 @@ class Agent:
             self.messages += self.queued_messages
             self.queued_messages = []  # 清空排队消息
 
-        tool_calls, errors = extract_tool_calls_with_errors(full_response)
+        try:
+            tool_calls, errors = extract_tool_calls_with_errors(full_response)
+        except ParseError:
+            # 正常打断
+            interrupt_msg = CliRuntimeNotice(
+                level="WARNING", content="工具调用格式出错"
+            )
+            await self.group_chat.send("cli_runtime_output", interrupt_msg)
+            return answer
 
         for error in errors:
             self.messages.append(RuntimeMessage(error))
 
         for call in tool_calls:
-            try:
-                if "name" in call and "arguments" in call:
-                    tool_call = ToolCallMessage(
-                        function_name=call["name"],
-                        function_arguments=call["arguments"],
-                    )
-                    early_return = await self.call_tool(tool_call)
-                    if early_return:
-                        return await self.generate_response()
-            except (RuntimeError, ValueError, TypeError):
-                traceback.print_exc()
-                continue
+            if "name" in call and "arguments" in call:
+                tool_call = ToolCallMessage(
+                    function_name=call["name"],
+                    function_arguments=call["arguments"],
+                )
+                early_return = await self.call_tool(tool_call)
+                if early_return:
+                    return await self.generate_response()
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
@@ -768,8 +768,7 @@ class Agent:
                     break
 
             except asyncio.CancelledError:
-                logger.info("Agent任务被取消")
-                break
+                return
             await asyncio.sleep(0)
 
 

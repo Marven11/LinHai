@@ -1,8 +1,9 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
-import asyncio
 from typing import cast
 from reprlib import Repr
+import asyncio
+import json
 
 import linhai
 from .base import RuntimeMessage, CompressRangeRequest, GlobalMemory
@@ -81,7 +82,11 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     try:
         # 解析LLM输出，提取JSON块
         json_blocks = extract_json_blocks(full_response)
-
+    except json.JSONDecodeError as exc:
+        agent.messages.append(
+            RuntimeMessage(f"错误：非法JSON: {str(exc)}")
+        )
+        return True
     except ValueError as exc:
         agent.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")

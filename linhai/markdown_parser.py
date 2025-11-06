@@ -7,6 +7,9 @@ import mistune
 
 repr_obj = Repr(maxstring=50)
 
+class ParseError(Exception):
+    ...
+
 
 class CodeBlockRenderer(mistune.HTMLRenderer):
     """自定义渲染器用于提取JSON工具调用的代码块"""
@@ -39,11 +42,8 @@ def extract_json_blocks(markdown_text: str) -> List[Any]:
     json_blocks = []
     for block in renderer.code_blocks:
         if block["language"].lower() == "json":
-            try:
-                data = json.loads(block["content"])
-                json_blocks.append(data)
-            except json.JSONDecodeError:
-                continue
+            data = json.loads(block["content"])
+            json_blocks.append(data)
     return json_blocks
 
 
@@ -87,13 +87,13 @@ def extract_tool_calls_with_errors(
                 if isinstance(data, dict) and "name" in data and "arguments" in data:
                     tool_calls.append(data)
                 else:
-                    errors.append(
+                    raise ParseError(
                         f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}不是合法的工具调用"
                         "，可能为其他json数据，已忽略"
                     )
-            except json.JSONDecodeError:
-                errors.append(
+            except json.JSONDecodeError as e:
+                raise ParseError(
                     f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}解析JSON出错，已忽略"
-                )
+                ) from e
 
     return tool_calls, errors

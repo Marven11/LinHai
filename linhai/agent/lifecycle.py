@@ -140,12 +140,11 @@ class Lifecycle:
         """触发消息生成中的事件。"""
         should_interrupt = False
         for callback in self._during_message_generation_callbacks:
-            try:
-                result = await callback(answer, current_content)
-                if result:
-                    should_interrupt = True
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("During message generation callback error: %s", e)
+            result = await callback(answer, current_content)
+            if result:
+                should_interrupt = True
+                break
+
         return should_interrupt
 
     async def trigger_before_message_generation(
@@ -155,10 +154,7 @@ class Lifecycle:
     ):
         """触发消息生成前的事件。"""
         for callback in self._before_message_generation_callbacks:
-            try:
-                await callback(enable_compress, disable_waiting_user_warning)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.debug("Before message generation callback error: %s", e)
+            await callback(enable_compress, disable_waiting_user_warning)
 
     async def trigger_after_message_generation(
         self,
@@ -168,18 +164,12 @@ class Lifecycle:
     ):
         """触发消息生成后的事件。"""
         for callback in self._after_message_generation_callbacks:
-            try:
-                await callback(answer, full_response, tool_calls)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("After message generation callback error: %s", e)
+            await callback(answer, full_response, tool_calls)
 
     async def trigger_before_tool_call(self, tool_call: ToolCallMessage):
         """触发工具调用前的事件。"""
         for callback in self._before_tool_call_callbacks:
-            try:
-                await callback(tool_call)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("Before tool call callback error: %s", e)
+            await callback(tool_call)
 
     async def trigger_after_tool_call(
         self,
@@ -189,7 +179,4 @@ class Lifecycle:
     ):
         """触发工具调用后的事件。"""
         for callback in self._after_tool_call_callbacks:
-            try:
-                await callback(tool_call, tool_result, success)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("After tool call callback error: %s", e)
+            await callback(tool_call, tool_result, success)
