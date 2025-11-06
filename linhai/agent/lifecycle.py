@@ -158,7 +158,7 @@ class Lifecycle:
             try:
                 await callback(enable_compress, disable_waiting_user_warning)
             except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("Before message generation callback error: %s", e)
+                logger.debug("Before message generation callback error: %s", e)
 
     async def trigger_after_message_generation(
         self,
