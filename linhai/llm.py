@@ -17,6 +17,7 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 import linhai
 
+
 @runtime_checkable
 class Message(Protocol):
     """消息协议，定义消息类的接口。"""
@@ -143,7 +144,8 @@ class ToolCallMessage:
     def __init__(
         self,
         function_name: str = "",
-        function_arguments: str | dict = "", assert_success: bool = True,
+        function_arguments: str | dict = "",
+        assert_success: bool = True,
     ):
         """初始化工具调用消息。"""
         self.function_name = function_name
@@ -166,7 +168,7 @@ class ToolCallMessage:
         function_arguments = self.function_arguments.copy()
         if not self.assert_success:
             function_arguments["assert_success"] = False
-        
+
         msg = {
             "role": "assistant",
             "content": "",
@@ -203,16 +205,23 @@ class ToolCallMessage:
         tool_call = data["tool_calls"][0]
         function_name = tool_call["function"]["name"]
         function_arguments = tool_call["function"]["arguments"]
-        
+
         # 从函数参数中解析assert_success，默认为True
         assert_success = True
-        if isinstance(function_arguments, dict) and "assert_success" in function_arguments:
+        if (
+            isinstance(function_arguments, dict)
+            and "assert_success" in function_arguments
+        ):
             assert_success = function_arguments["assert_success"]
             # 移除特殊参数，避免传递给实际工具
             function_arguments = function_arguments.copy()
             del function_arguments["assert_success"]
-        
-        return cls(function_name=function_name, function_arguments=function_arguments, assert_success=assert_success)
+
+        return cls(
+            function_name=function_name,
+            function_arguments=function_arguments,
+            assert_success=assert_success,
+        )
 
 
 class ToolConfirmationMessage:
@@ -415,25 +424,25 @@ class OpenAiAnswer:
                     if self._reasoning_content
                     else reasoning_content
                 )
-            
+
             # 处理minimax格式的reasoning_details
+            # https://platform.minimaxi.com/docs/api-reference/text-openai-api
             reasoning_details = getattr(delta, "reasoning_details", None)
             if reasoning_details and isinstance(reasoning_details, list):
                 for detail in reasoning_details:
                     if "text" in detail and isinstance(detail["text"], str):
-                        detail_text = detail["text"]
-                        if self._reasoning_content is None:
-                            self._reasoning_content = detail_text
-                        else:
-                            # 只添加新的内容，避免重复
-                            new_text = detail_text[len(self._reasoning_content):]
-                            if new_text:
-                                self._reasoning_content += new_text
-            
+                        reasoning_content = detail["text"]
+                        self._reasoning_content = (
+                            reasoning_content
+                            if self._reasoning_content is None
+                            else self._reasoning_content + reasoning_content
+                        )
+
             # 有时候会出现reasoning_content is None and content == ""的情况
             # API返回的数据如此，我们应该原样yield
             token = AnswerToken(
-                reasoning_content=reasoning_content or (self._reasoning_content if reasoning_details else None),
+                reasoning_content=reasoning_content
+                or (self._reasoning_content if reasoning_details else None),
                 content=content,
             )
             self._toyield.append(token)
