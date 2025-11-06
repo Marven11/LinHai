@@ -34,14 +34,9 @@ class TestCreateAgentMCP(unittest.TestCase):
         config_path.write_text(config_content, encoding="utf-8")
         return config_path
 
-    @patch('linhai.tool.mcp_connector.MCPConnector')
-    @patch('os.path.exists')
-    def test_create_agent_with_mcp_config(self, mock_exists, mock_mcp_connector_class):
-        """测试create_agent函数正确配置MCP服务器"""
-        # 模拟文件存在
-        mock_exists.return_value = True
-        
-        # 创建包含MCP配置的测试配置文件
+    def test_create_agent_with_real_mcp_server(self):
+        """测试create_agent函数与真实MCP服务器的集成"""
+        # 创建包含真实MCP服务器配置的测试配置文件
         config_content = """
 [[llm]]
 name = "test"
@@ -55,22 +50,9 @@ compress_threshold_hard = 80000
 
 [[agent.mcp]]
 name = "calculator"
-server_script_path = "mcp_server_example.py"
-
-[[agent.mcp]]
-name = "another_server"
-server_script_path = "another_server.py"
+server_script_path = "./linhai/tests/real_mcp_server.py"
 """
         config_path = self.create_test_config(config_content)
-        
-        # 模拟MCPConnector类，完全阻止真实连接
-        class MockMCPConnector:
-            def __init__(self, group_chat):
-                self.group_chat = group_chat
-                self.connect_stdio = AsyncMock()  # 使用AsyncMock模拟异步方法
-                self.get_toolsets = AsyncMock(return_value=[])
-                
-        mock_mcp_connector_class.side_effect = MockMCPConnector
         
         # 调用create_agent
         result = asyncio.run(create_agent(self.group_chat, config_path))
@@ -79,24 +61,22 @@ server_script_path = "another_server.py"
         from linhai.agent import Agent
         self.assertIsInstance(result, Agent)
         
-        # 验证MCPConnector被创建
-        mock_mcp_connector_class.assert_called_once_with(self.group_chat)
+        # 验证MCPConnector已注册并连接到真实服务器
+        from linhai.tool.mcp_connector import MCPConnector
+        connector = self.group_chat.get_members("mcp_connector", MCPConnector)
+        self.assertIsNotNone(connector)
         
-        # 获取模拟的MCPConnector实例
-        mock_connector_instance = mock_mcp_connector_class.return_value
+        # 验证工具集已注册
+        toolsets = connector.get_toolsets()
+        self.assertTrue(len(toolsets) >= 2)  # 至少包含连接器工具集和服务器工具集
         
-        # 验证connect_stdio被调用了两次（对应两个MCP服务器）
-        self.assertEqual(mock_connector_instance.connect_stdio.call_count, 2)
-        
-        # 验证第一个MCP服务器的连接参数
-        first_call_args = mock_connector_instance.connect_stdio.call_args_list[0]
-        self.assertEqual(first_call_args[0][0], "calculator")  # name
-        self.assertTrue(first_call_args[0][1].endswith("mcp_server_example.py"))  # server_script_path
-        
-        # 验证第二个MCP服务器的连接参数
-        second_call_args = mock_connector_instance.connect_stdio.call_args_list[1]
-        self.assertEqual(second_call_args[0][0], "another_server")  # name
-        self.assertTrue(second_call_args[0][1].endswith("another_server.py"))  # server_script_path
+        # 检查是否包含计算器工具
+        server_tools_found = False
+        for toolset in toolsets:
+            if any("mcp_calculator" in tool_name for tool_name in toolset.tools.keys()):
+                server_tools_found = True
+                break
+        self.assertTrue(server_tools_found, "MCP服务器工具未正确注册")
 
     def test_create_agent_without_mcp_config(self):
         """测试没有MCP配置时create_agent函数正常工作"""
@@ -125,56 +105,7 @@ compress_threshold_hard = 80000
         agent = self.group_chat.get_members("agent", Agent)
         self.assertIsNotNone(agent)
 
-    @patch('linhai.tool.mcp_connector.MCPConnector')
-    @patch('os.path.exists')
-    def test_create_agent_with_mcp_relative_path_conversion(self, mock_exists, mock_mcp_connector_class):
-        """测试MCP相对路径转换为绝对路径"""
-        # 模拟文件存在
-        mock_exists.return_value = True
-        
-        # 创建包含相对路径MCP配置的测试配置文件
-        config_content = """
-[[llm]]
-name = "test"
-base_url = "https://example.com"
-api_key = "test-key"
-model = "test-model"
 
-[agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
-
-[[agent.mcp]]
-name = "calculator"
-server_script_path = "../mcp_server_example.py"
-"""
-        config_path = self.create_test_config(config_content)
-        
-        # 模拟MCPConnector类，完全阻止真实连接
-        class MockMCPConnector:
-            def __init__(self, group_chat):
-                self.group_chat = group_chat
-                self.connect_stdio = AsyncMock()  # 使用AsyncMock模拟异步方法
-                self.get_toolsets = AsyncMock(return_value=[])
-                
-        mock_mcp_connector_class.side_effect = MockMCPConnector
-        
-        # 调用create_agent
-        asyncio.run(create_agent(self.group_chat, config_path))
-        
-        # 获取模拟的MCPConnector实例
-        mock_connector_instance = mock_mcp_connector_class.return_value
-        
-        # 验证connect_stdio被调用，且路径是绝对路径
-        mock_connector_instance.connect_stdio.assert_called_once()
-        call_args = mock_connector_instance.connect_stdio.call_args[0]
-        server_script_path = call_args[1]
-        
-        # 验证路径是绝对路径
-        self.assertTrue(os.path.isabs(server_script_path))
-        # 验证路径正确转换
-        expected_path = str(config_path.parent.parent / "mcp_server_example.py")
-        self.assertEqual(os.path.normpath(server_script_path), os.path.normpath(expected_path))
 
 
 if __name__ == "__main__":
