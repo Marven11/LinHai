@@ -44,20 +44,20 @@ class TestFileTools(unittest.TestCase):
     def test_read_file(self):
         """测试读取文件"""
         result = read_file(str(self.test_file))
-        self.assertIn("文件路径为:", result)
-        self.assertIn("第一行内容", result)
+        self.assertIn("文件路径为:", result.content)
+        self.assertIn("第一行内容", result.content)
 
     def test_read_file_with_line_numbers(self):
         """测试带行号的读取文件"""
         result = read_file(str(self.test_file), show_line_numbers=True)
-        self.assertIn("1: 第一行内容", result)
-        self.assertIn("2: 第二行内容", result)
+        self.assertIn("1: 第一行内容", result.content)
+        self.assertIn("2: 第二行内容", result.content)
 
     def test_write_file(self):
         """测试写入文件"""
         new_content = "新的文件内容"
         result = write_file(str(self.test_file), new_content, override=True)
-        self.assertIn("成功写入文件", result)
+        self.assertIn("成功写入文件", result.content)
 
         # 验证内容确实被写入
         content = self.test_file.read_text(encoding="utf-8")
@@ -67,7 +67,7 @@ class TestFileTools(unittest.TestCase):
         """测试追加文件"""
         append_content = "\n追加的内容"
         result = append_file(str(self.test_file), append_content)
-        self.assertIn("成功写入文件", result)
+        self.assertIn("成功写入文件", result.content)
 
         # 验证内容被追加
         content = self.test_file.read_text(encoding="utf-8")
@@ -80,8 +80,8 @@ class TestFileTools(unittest.TestCase):
         result = replace_file_content(str(self.test_file), "重复内容", "替换后的内容")
 
         # 应该返回错误，因为有多处匹配但未设置replace_times
-        self.assertIn("找到3次匹配", result)
-        self.assertIn("默认只替换一次匹配", result)
+        self.assertIn("找到3次匹配", result.content)
+        self.assertIn("默认只替换一次匹配", result.content)
 
     def test_replace_file_content_single_match(self):
         """测试替换文件内容（单次匹配）"""
@@ -91,7 +91,7 @@ class TestFileTools(unittest.TestCase):
 
         result = replace_file_content(str(self.test_file), "重复内容", "替换后的内容")
 
-        self.assertIn("已替换", result)
+        self.assertIn("已替换", result.content)
 
         # 验证内容被替换
         content = self.test_file.read_text(encoding="utf-8")
@@ -104,8 +104,8 @@ class TestFileTools(unittest.TestCase):
             str(self.test_file), "重复内容", "替换后的内容", replace_times=-1
         )
 
-        self.assertIn("已替换", result)
-        self.assertIn("替换次数: 3", result)
+        self.assertIn("已替换", result.content)
+        self.assertIn("替换次数: 3", result.content)
 
         # 验证所有匹配都被替换
         content = self.test_file.read_text(encoding="utf-8")
@@ -116,7 +116,7 @@ class TestFileTools(unittest.TestCase):
         """测试替换不存在的文件内容"""
         result = replace_file_content(str(self.test_file), "不存在的字符串", "新内容")
 
-        self.assertIn("未找到", result)
+        self.assertIn("未找到", result.content)
 
     def test_list_files(self):
         """测试列出文件"""
@@ -126,15 +126,15 @@ class TestFileTools(unittest.TestCase):
         (Path(self.temp_dir) / "subdir").mkdir()
 
         result = list_files(self.temp_dir)
-        self.assertIn("test1.txt", result)
-        self.assertIn("test2.txt", result)
-        self.assertIn("subdir", result)
+        self.assertIn("test1.txt", result.content)
+        self.assertIn("test2.txt", result.content)
+        self.assertIn("subdir", result.content)
 
     def test_get_absolute_path(self):
         """测试获取绝对路径"""
         result = get_absolute_path(".")
-        self.assertIn("绝对路径:", result)
-        self.assertIn(os.path.abspath("."), result)
+        self.assertIn("绝对路径:", result.content)
+        self.assertIn(os.path.abspath("."), result.content)
 
     def test_insert_at_line(self):
         """测试在指定行插入内容"""
@@ -145,7 +145,7 @@ class TestFileTools(unittest.TestCase):
             expected_line_content="第三行内容",
         )
 
-        self.assertIn("成功在文件", result)
+        self.assertIn("成功在文件", result.content)
 
         # 验证内容被正确插入
         content = self.test_file.read_text(encoding="utf-8")
@@ -163,8 +163,8 @@ if __name__ == "__main__":
             str(self.test_file), "重复内容", "替换后的内容", replace_times=2
         )
 
-        self.assertIn("已替换", result)
-        self.assertIn("替换次数: 2", result)
+        self.assertIn("已替换", result.content)
+        self.assertIn("替换次数: 2", result.content)
 
         # 验证只有前2次匹配被替换
         content = self.test_file.read_text(encoding="utf-8")
@@ -181,8 +181,8 @@ if __name__ == "__main__":
             str(self.test_file), "重复内容", "替换后的内容", replace_times=3
         )
 
-        self.assertIn("只找到2次匹配", result)
-        self.assertIn("但要求替换3次", result)
+        self.assertIn("只找到2次匹配", result.content)
+        self.assertIn("但要求替换3次", result.content)
 
     def test_replace_file_content_replace_all_insufficient_matches(self):
         """测试替换文件内容（要求替换所有但只有一次匹配）"""
@@ -194,8 +194,8 @@ if __name__ == "__main__":
             str(self.test_file), "重复内容", "替换后的内容", replace_times=-1
         )
 
-        self.assertIn("只找到1次匹配", result)
-        self.assertIn("但要求替换所有匹配", result)
+        self.assertIn("只找到1次匹配", result.content)
+        self.assertIn("但要求替换所有匹配", result.content)
 
     def test_replace_file_content_invalid_replace_times(self):
         """测试替换文件内容（无效的replace_times参数）"""
@@ -203,4 +203,4 @@ if __name__ == "__main__":
             str(self.test_file), "重复内容", "替换后的内容", replace_times=-2
         )
 
-        self.assertIn("无效的replace_times参数值", result)
+        self.assertIn("无效的replace_times参数值", result.content)

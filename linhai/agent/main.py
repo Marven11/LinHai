@@ -51,8 +51,6 @@ class AgentContext(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
-    mcp: list[MCPConfig]
-    config_basedir: Path
     llms: list[LanguageModel]  # 多个LLM实例
     llm_names: list[str]  # LLM名称列表
     current_llm_index: int  # 当前使用的LLM索引
@@ -738,19 +736,6 @@ class Agent:
         并处理异常和取消事件。
         """
 
-        # MCP Connector只能在同一个async Task中关闭
-        # 只能在这里连接
-        self.mcp_connector = MCPConnector(self.group_chat)
-        for mcp_config in self.context["mcp"]:
-            server_script_path = (
-                self.context["config_basedir"] / mcp_config.server_script_path
-            )
-            await self.mcp_connector.connect_stdio(
-                mcp_config.name, server_script_path.absolute().as_posix()
-            )
-        self.group_chat.get_members("tool_manager", ToolManager).set_mcp_connector(
-            self.mcp_connector
-        )
         logger.info("Agent启动")
         user_input_found = False
         while not self.group_chat.is_empty("agent_user_input"):
@@ -803,28 +788,28 @@ async def create_agent(
     # 创建AgentConfig
     llm_names = [llm_config.name for llm_config in config.llm]
     agent_config = config.agent if config.agent else AgentConfig()
-    agent_config = await _create_agent_config(
+    agent_context = await _create_agent_context(
         llms=llms,
         llm_names=llm_names,
         llm_name=llm_name,
         tool_confirmation_config=tool_confirmation_config,
         agent_config=agent_config,
-        mcp_connector_basedir=Path(config_path).parent,
     )
 
     # 创建ToolManager
-    await _create_tool_manager(group_chat, config.tools)
+    tool_config = config.tools if config.tools else ToolConfig()
+    await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=Path(config_path).parent)
 
     # 创建初始化消息
     memory_file_path = config.memory.file_path if config.memory else None
     init_messages = await _create_init_messages(
         group_chat=group_chat,
-        system_prompt=agent_config["system_prompt"],
+        system_prompt=agent_context["system_prompt"],
         memory_file_path=memory_file_path,
     )
 
     agent = Agent(
-        context=agent_config,
+        context=agent_context,
         group_chat=group_chat,
         init_messages=init_messages,
     )
@@ -857,13 +842,12 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
     return llms
 
 
-async def _create_agent_config(
+async def _create_agent_context(
     llms: list[LanguageModel],
     llm_names: list[str],
     llm_name: str | None,
     tool_confirmation_config: dict,
     agent_config: AgentConfig,
-    mcp_connector_basedir: Path,
 ) -> AgentContext:
     """创建AgentConfig字典
 
@@ -911,8 +895,6 @@ async def _create_agent_config(
 
     agent_context: AgentContext = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
-        "mcp": agent_config.mcp,
-        "config_basedir": mcp_connector_basedir,
         "llms": llms,
         "llm_names": llm_names,
         "current_llm_index": current_llm_index,
@@ -923,10 +905,10 @@ async def _create_agent_config(
     return agent_context
 
 
-async def _create_tool_manager(group_chat, config: ToolConfig | None):
+async def _create_tool_manager(group_chat, config: ToolConfig, mcp_config: list[MCPConfig], mcp_basedir: Path):
     """创建ToolManager实例"""
     tool_manager = ToolManager(
-        group_chat=group_chat, toolsets=[global_tools, terminal_toolset], config=config
+        group_chat=group_chat, toolsets=[global_tools, terminal_toolset], config=config, mcp_config =mcp_config, mcp_basedir=mcp_basedir
     )
     return tool_manager
 

@@ -5,6 +5,7 @@
 
 from typing import Awaitable, Optional
 from collections import Counter
+from pathlib import Path
 
 from linhai.llm import Message, ToolCallMessage
 from linhai.group_chat import GroupChat
@@ -15,7 +16,7 @@ from linhai.tool.base import (
     ToolErrorMessage,
 )
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.config import ToolConfig
+from linhai.config import ToolConfig, MCPConfig
 from linhai.utils import CliRuntimeNotice
 import asyncio
 
@@ -27,7 +28,9 @@ class ToolManager:
         self,
         group_chat: GroupChat,
         toolsets: list[ToolSet],
-        config: Optional[ToolConfig] = None,
+        config: ToolConfig,
+        mcp_config: list[MCPConfig],
+        mcp_basedir: Path
     ):
         """初始化工具管理器
 
@@ -38,6 +41,8 @@ class ToolManager:
         self.group_chat = group_chat
         self.config = config
         self.mcp_connector: MCPConnector | None = None
+        self.mcp_config = mcp_config
+        self.mcp_basedir = mcp_basedir
 
         names = Counter(
             [name for toolset in toolsets for name in toolset.get_tools().keys()]
@@ -47,6 +52,22 @@ class ToolManager:
                 f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
             )
         self._toolsets = toolsets
+
+    async def ensure_mcp_connector(self):
+
+        # MCP Connector只能在同一个async Task中关闭
+        # 只能在这里连接
+        self.mcp_connector = MCPConnector(self.group_chat)
+        for mcp_config in self.mcp_config:
+            server_script_path = (
+                self.mcp_basedir / mcp_config.server_script_path
+            )
+            await self.mcp_connector.connect_stdio(
+                mcp_config.name, server_script_path.absolute().as_posix()
+            )
+        self.group_chat.get_members("tool_manager", ToolManager).set_mcp_connector(
+            self.mcp_connector
+        )
 
     def set_mcp_connector(self, mcp_connector: MCPConnector):
         assert self.mcp_connector is None, "We already have mcp connector!"
