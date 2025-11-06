@@ -242,8 +242,8 @@ class MarkdownSyntaxPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class ChineseEndOfSentencePlugin(Plugin):
-    """中文句子结束标记检查Plugin。"""
+class WeirdEndOfSentencePlugin(Plugin):
+    """错误结束标记检查Plugin。"""
 
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
@@ -253,13 +253,16 @@ class ChineseEndOfSentencePlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
         # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
-        pattern = r"[\u4e00-\u9fffa-zA-Z0-9\s\p{P}]+<｜end▁of▁[a-z]+｜>"
+        pattern = (
+            r'[\u4e00-\u9fffa-zA-Z0-9\s\.,!?;:，。！？；："'
+            '《》（）【】、……～@#$%^&*()+=\\-\\[\\]{}|\\<>/?]+<｜end▁of▁[a-z]+｜>'
+        )
 
         # 检查每一行
         for line in current_content.split("\n"):
             if re.search(pattern, line):
                 agent.interrupt(
-                    "检测到中文句子结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是汉字，已打断输出"
+                    "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已打断输出"
                 )
                 return True
         return False

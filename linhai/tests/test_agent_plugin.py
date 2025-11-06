@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
+from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, WeirdEndOfSentencePlugin
 from linhai.agent.base import RuntimeMessage
 
 
@@ -291,8 +291,8 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.agent.messages), 0)
 
 
-class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
-    """测试ChineseEndOfSentencePlugin类。"""
+class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
+    """测试WeirdEndOfSentencePlugin类。"""
 
     def setUp(self):
         """设置测试环境。"""
@@ -303,7 +303,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt = MagicMock(side_effect=lambda msg=None: self.agent.messages.append(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
-        self.plugin = ChineseEndOfSentencePlugin(self.group_chat)
+        self.plugin = WeirdEndOfSentencePlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
 
