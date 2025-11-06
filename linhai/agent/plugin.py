@@ -70,7 +70,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
     async def during_message_generation(
-        self, answer: Answer, current_content: str
+        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent
@@ -238,7 +238,7 @@ class ChineseEndOfSentencePlugin(Plugin):
     """中文句子结束标记检查Plugin。"""
 
     async def during_message_generation(
-        self, answer: Answer, current_content: str
+        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查是否有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字。"""
         from linhai.agent import Agent
@@ -266,7 +266,7 @@ class TaskPlanningPlugin(Plugin):
         self.no_planning_score = 0
 
     async def during_message_generation(
-        self, answer: Answer, current_content: str
+        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent

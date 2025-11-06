@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch
 import tempfile
 import os
+
+from linhai.agent.base import GlobalMemory
 from linhai.config import Config, LLMConfig, AgentConfig
 
 
