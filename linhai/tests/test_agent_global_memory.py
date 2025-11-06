@@ -1,14 +1,9 @@
 """Unit tests for global memory file path selection."""
 
 import unittest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+from unittest.mock import patch
 import tempfile
 import os
-import asyncio
-
-from linhai.agent import create_agent
-from linhai.agent.base import GlobalMemory
 from linhai.config import Config, LLMConfig, AgentConfig
 
 
@@ -35,9 +30,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test LINHAI.md\nTest content"
 
                 # 直接测试GlobalMemory逻辑，不依赖agent创建
-                from linhai.agent.base import GlobalMemory
-                from pathlib import Path
-                global_memory = GlobalMemory(Path("LINHAI.md"))
+                global_memory = GlobalMemory("LINHAI.md")
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
 
@@ -50,9 +43,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test AGENT.md\nTest content"
 
                 # 直接测试GlobalMemory逻辑，不依赖agent创建
-                from linhai.agent.base import GlobalMemory
-                from pathlib import Path
-                global_memory = GlobalMemory(Path("AGENT.md"))
+                global_memory = GlobalMemory("AGENT.md")
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("AGENT.md"))
 
@@ -77,10 +68,8 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
 
             # 直接测试GlobalMemory逻辑，不依赖agent创建
-            from linhai.agent.base import GlobalMemory
-            from pathlib import Path
             # 测试默认行为
-            global_memory = GlobalMemory(Path("LINHAI.md"))
+            global_memory = GlobalMemory("LINHAI.md")
             self.assertIsInstance(global_memory, GlobalMemory)
             self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
 

@@ -291,7 +291,7 @@ class CLIApp(App):
             await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
-            agent = self.group_chat.get_members("agent", Agent)
+            _ = self.group_chat.get_members("agent", Agent)  # pylint: disable=unused-variable
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.scroll_end()
             container.mount(widget)

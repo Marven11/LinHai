@@ -127,7 +127,7 @@ class MCPConnector:
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
-            except Exception as e:
+            except (RuntimeError, ConnectionError, OSError) as e:
                 return ToolErrorMessage(f"连接{server_script_path!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
@@ -157,7 +157,7 @@ class MCPConnector:
             try:
                 await self.disconnect_all()
                 return ToolResultMessage("成功断开所有MCP服务器")
-            except Exception as e:
+            except (RuntimeError, ConnectionError, OSError) as e:
                 return ToolErrorMessage(f"断开所有服务器失败: {e!r}")
 
         @connector_toolset.register_tool(

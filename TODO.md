@@ -12,7 +12,7 @@
     - [x] 在Agent中保存当前Answer，被打断时同时打断当前answer并添加自定义消息
 - [x] 将AGENT.md改成AGENTS.md
 - [x] 修复所有unittest
-- [ ] 修复所有pylint+pyright报警
+- [x] 修复所有pylint+pyright报警
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

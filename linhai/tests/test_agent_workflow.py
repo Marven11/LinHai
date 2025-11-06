@@ -3,7 +3,7 @@
 # pylint: disable=import-outside-toplevel
 import reprlib
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent import Agent, AgentConfig
 from linhai.agent.base import RuntimeMessage
@@ -71,7 +71,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     @unittest.skip("需要完整的group_chat设置，暂时跳过")
     async def test_compress_history_range_as_tool(self):
         """Test calling compress_history_range as a regular tool."""
-        pass
 
     async def test_compress_history_range_functionality(self):
         """Test the compress_history_range function with mock data."""
@@ -119,7 +118,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     @unittest.skip("需要完整的group_chat设置，暂时跳过")
     async def test_compress_threshold_trigger(self):
         """Test that compression is triggered when token threshold is exceeded."""
-        pass
 
     async def test_workflow_with_invalid_range(self):
         """Test compress_history_range with invalid range parameters."""
@@ -212,7 +210,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         
         # Check structure
         json_blocks = []
-        range_data = json_blocks[0] if json_blocks else {}
+        _ = json_blocks[0] if json_blocks else {}  # pylint: disable=unused-variable
 
 
     async def test_compress_history_range_integration(self):
