@@ -127,7 +127,7 @@ class MCPConnector:
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
-            except (ConnectionError, TimeoutError) as e:
+            except Exception as e:
                 return ToolErrorMessage(f"连接{server_script_path!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
