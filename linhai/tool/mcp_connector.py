@@ -15,7 +15,7 @@ and `MCP Client` connects LLM to the middle layer.
 """
 
 import asyncio
-# import json  # Unused import
+import shlex
 import os.path
 from contextlib import AsyncExitStack
 from typing import Any
@@ -37,15 +37,14 @@ class MCPConnector:
     def get_toolsets(self) -> list[ToolSet]:
         return [toolset for _, _, toolset in self.sessions.values()] + [self.connector_toolset]
 
-    async def connect_stdio(self, name: str, server_script_path: str):
+    async def connect_stdio(self, name: str, command: str):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
-        if not os.path.exists(server_script_path):
-            raise RuntimeError(f"Not exists: {server_script_path!r}")
 
-        command = "python" if server_script_path.endswith(".py") else "node"
+        command_lst = shlex.split(command)
+
         server_params = StdioServerParameters(
-            command=command, args=[server_script_path], env=None
+            command=command_lst[0], args=command_lst[1:], env=None
         )
         exit_stack = AsyncExitStack()
 
@@ -112,23 +111,23 @@ class MCPConnector:
                 "name": ToolArgInfo(
                     desc="MCP服务器的名字，为这个MCP服务器命名", type="str"
                 ),
-                "server_script_path": ToolArgInfo(
-                    desc="MCP服务器的文件路径，以.js或.py结尾", type="str"
+                "command": ToolArgInfo(
+                    desc="MCP服务器的连接路径，如python xxx", type="str"
                 ),
             },
-            required_args=["name", "server_script_path"],
+            required_args=["name", "command"],
         )
-        async def connect_stdio(name: str, server_script_path: str):
+        async def connect_stdio(name: str, command: str):
             try:
-                _, _, toolset = await self.connect_stdio(name, server_script_path)
+                _, _, toolset = await self.connect_stdio(name, command)
                 return ToolResultMessage(
-                    f"连接{server_script_path!r}成功，名字为{name!r}，添加了以下工具: "
+                    f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
                     + ", ".join(name for name in toolset.tools.keys())
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
             except (RuntimeError, ConnectionError, OSError) as e:
-                return ToolErrorMessage(f"连接{server_script_path!r}失败，错误: {e!r}")
+                return ToolErrorMessage(f"连接{command!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
             name="disconnect",

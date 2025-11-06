@@ -57,6 +57,8 @@ class ToolManager:
 
         # MCP Connector只能在同一个async Task中关闭
         # 只能在这里连接
+        if self.mcp_connector is not None:
+            return
         self.mcp_connector = MCPConnector(self.group_chat)
         for mcp_config in self.mcp_config:
             server_script_path = (
@@ -65,13 +67,6 @@ class ToolManager:
             await self.mcp_connector.connect_stdio(
                 mcp_config.name, server_script_path.absolute().as_posix()
             )
-        self.group_chat.get_members("tool_manager", ToolManager).set_mcp_connector(
-            self.mcp_connector
-        )
-
-    def set_mcp_connector(self, mcp_connector: MCPConnector):
-        assert self.mcp_connector is None, "We already have mcp connector!"
-        self.mcp_connector = mcp_connector
 
     @property
     def toolsets(self):
@@ -110,6 +105,8 @@ class ToolManager:
         Returns:
             Message: 工具调用结果消息
         """
+        await self.ensure_mcp_connector() 
+
         kwargs = tool_call.function_arguments if tool_call.function_arguments else {}
 
         target_toolset = None
