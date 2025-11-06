@@ -6,6 +6,7 @@
 
 - [ ] 修复失败的MCP unittest: 严格按照./hypothesis_falsification.txt找出失败原因并修复
     - 参考 https://modelcontextprotocol.io/docs/develop/build-server 编写MCP服务器测试
+    - 禁止跳过unittest！每个功能都必须获得良好的测试！
 - [ ] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
     - Before message generation callback error: Callback failed等
 - [ ] 修复所有unittest
