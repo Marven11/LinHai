@@ -34,7 +34,6 @@ class TestCreateAgentMCP(unittest.TestCase):
         config_path.write_text(config_content, encoding="utf-8")
         return config_path
 
-    @unittest.skip("需要实际的MCP服务器脚本，暂时跳过")
     @patch('linhai.tool.mcp_connector.MCPConnector')
     @patch('os.path.exists')
     def test_create_agent_with_mcp_config(self, mock_exists, mock_mcp_connector_class):
@@ -126,7 +125,6 @@ compress_threshold_hard = 80000
         agent = self.group_chat.get_members("agent", Agent)
         self.assertIsNotNone(agent)
 
-    @unittest.skip("需要实际的MCP服务器脚本，暂时跳过")
     @patch('linhai.tool.mcp_connector.MCPConnector')
     @patch('os.path.exists')
     def test_create_agent_with_mcp_relative_path_conversion(self, mock_exists, mock_mcp_connector_class):
