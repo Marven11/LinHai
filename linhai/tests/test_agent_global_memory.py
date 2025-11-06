@@ -2,6 +2,7 @@
 
 import unittest
 from unittest.mock import patch
+from pathlib import Path
 import tempfile
 import os
 
@@ -32,7 +33,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test LINHAI.md\nTest content"
 
                 # 直接测试GlobalMemory逻辑，不依赖agent创建
-                global_memory = GlobalMemory("LINHAI.md")
+                global_memory = GlobalMemory(Path("LINHAI.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
 
@@ -45,7 +46,7 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test AGENT.md\nTest content"
 
                 # 直接测试GlobalMemory逻辑，不依赖agent创建
-                global_memory = GlobalMemory("AGENT.md")
+                global_memory = GlobalMemory(Path("AGENT.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("AGENT.md"))
 
@@ -67,11 +68,11 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     "whitelist": [],
                 },
             )
-            mock_config = Config(llm=[mock_llm_config], agent=mock_agent_config)
+            _ = Config(llm=[mock_llm_config], agent=mock_agent_config)  # pylint: disable=unused-variable
 
             # 直接测试GlobalMemory逻辑，不依赖agent创建
             # 测试默认行为
-            global_memory = GlobalMemory("LINHAI.md")
+            global_memory = GlobalMemory(Path("LINHAI.md"))
             self.assertIsInstance(global_memory, GlobalMemory)
             self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
 

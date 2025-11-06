@@ -111,7 +111,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         group_chat = GroupChat()
         manager_with_config = ToolManager(
-            group_chat=group_chat, toolsets=[global_tools], config=config
+            group_chat=group_chat, toolsets=[global_tools], config=config.tools
         )
 
         # 模拟工具调用返回长内容
@@ -160,7 +160,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         group_chat = GroupChat()
         manager_with_config = ToolManager(
-            group_chat=group_chat, toolsets=[global_tools], config=config
+            group_chat=group_chat, toolsets=[global_tools], config=config.tools
         )
 
         # 模拟工具调用返回长内容
