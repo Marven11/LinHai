@@ -68,7 +68,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Check that compress_history_range is now a regular tool
         self.assertIn("compress_history_range", tool_names)
 
-    @unittest.skip("需要完整的group_chat设置，暂时跳过")
     async def test_compress_history_range_as_tool(self):
         """Test calling compress_history_range as a regular tool."""
 
@@ -115,7 +114,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Verify the function completed successfully
         self.assertTrue(result)
 
-    @unittest.skip("需要完整的group_chat设置，暂时跳过")
     async def test_compress_threshold_trigger(self):
         """Test that compression is triggered when token threshold is exceeded."""
 
