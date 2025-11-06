@@ -6,6 +6,15 @@
 
 - [x] 我重构了agent.py，查看上一个commit的内容，然后使用pyright检查unittest并运行unittest,最后修复
 - [x] 让agent.py在提醒软阈值的时候同时提醒现在有哪些大消息（按照插入顺序提醒前3个）
+- [ ] 添加新的插件：检测到当前目录更改时，检测新的目录是否有LINHAI.md, AGENTS.md或者CLAUDE.md，如果有则添加新的message到agent.messages中
+    - 定义一个新的Message类PathMemory，参考GlobalMemory
+    - 消息内容要包含文件绝对路径和当前最新文件内容
+    - 如果当前的agent.messages中有相同路径的GlobalMemory或者PathMemory则不添加
+- [ ] 支持配置开关上面的功能，上面的功能默认关闭，需要在agent配置中打开
+    - agent plugin可以通过group chat获得agent，然后获得agent的配置
+        - 你需要修改agent context的定义，然后将这个选项的值从配置中读取进去
+    - 编写unittest测试开启和关闭的行为
+    - 顺带修改README
 - [ ] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
