@@ -63,7 +63,10 @@ Stdout:
 Stderr:
 {stderr_str}
 """
-        return ToolResultMessage(output)
+        if returncode == 0:
+            return ToolResultMessage(output)
+        else:
+            return ToolErrorMessage(output)
     except (OSError, subprocess.SubprocessError) as e:
         return ToolErrorMessage(f"Command failed with error: {str(e)}")
 
