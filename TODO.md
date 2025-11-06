@@ -4,15 +4,12 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 添加断开MCP的工具
-    - [x] 添加对应的unittest
-- [x] 重构agent plugin
-    - [x] 现在打断agent是通过调用answer.interrupt并添加自定义消息实现的
-    - [x] 实现一个Agent.interrupt，然后让plugin调用这个函数传递自定义消息实现interrupt
-    - [x] 在Agent中保存当前Answer，被打断时同时打断当前answer并添加自定义消息
-- [x] 将AGENT.md改成AGENTS.md
-- [x] 修复所有unittest
-- [x] 修复所有pylint+pyright报警
+- [ ] 修复失败的MCP unittest: 严格按照./hypothesis_falsification.txt找出失败原因并修复
+    - 参考 https://modelcontextprotocol.io/docs/develop/build-server 编写MCP服务器测试
+- [ ] 去除运行unittest时的垃圾消息: 严格按照./hypothesis_falsification.txt找出原因并修复
+    - Before message generation callback error: Callback failed等
+- [ ] 修复所有unittest
+- [ ] 修复所有pylint+pyright报警
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
