@@ -1,5 +1,6 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
+import asyncio
 from typing import cast
 from reprlib import Repr
 
@@ -62,7 +63,19 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         enable_compress=False, disable_waiting_user_warning=True
     )
     chat_message = cast(ChatMessage, answer.get_message())
-    full_response = chat_message.message
+    # 确保chat_message不是协程
+    if asyncio.iscoroutine(chat_message):
+        chat_message = await chat_message
+    # 确保message不是协程
+    message_content = chat_message.message
+    if asyncio.iscoroutine(message_content):
+        message_content = await message_content
+    # 确保最终响应是字符串
+    if isinstance(message_content, str):
+        full_response = message_content
+    else:
+        # 如果是Mock对象或其他类型，转换为字符串
+        full_response = str(message_content)
 
     json_blocks = []
     try:

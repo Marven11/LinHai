@@ -99,6 +99,9 @@ class Agent:
             False  # 记录是否在最近响应中调用了压缩工具
         )
         self.current_disable_waiting_user_warning = False
+        
+        # 当前Answer实例，用于plugin打断
+        self.current_answer: Answer | None = None
 
         # 生命周期回调管理器
         self.lifecycle = Lifecycle(self.group_chat)
@@ -308,6 +311,21 @@ class Agent:
             self.messages[index] = RuntimeMessage(f"本条ID为{message_id}的消息已被擦除")
 
         return f"已成功擦除ID为 '{message_id}' 的大消息"
+
+    def interrupt(self, custom_message: str | None = None):
+        """
+        打断当前Answer并添加自定义消息。
+        
+        参数:
+            custom_message: 自定义消息内容，如果为None则使用默认消息
+        """
+        if self.current_answer:
+            self.current_answer.interrupt()
+            if custom_message:
+                self.messages.append(RuntimeMessage(custom_message))
+            else:
+                self.messages.append(RuntimeMessage("Agent被插件打断"))
+            self.state = "working"
 
     async def state_waiting_user(self):
         """
@@ -571,6 +589,9 @@ class Agent:
         model = await self._select_model()
 
         answer: Answer = await model.answer_stream(self.messages)
+        
+        # 设置当前Answer用于plugin打断
+        self.current_answer = answer
 
         # 初始化queued_messages实例变量（如果不存在）
         if not hasattr(self, "queued_messages"):
@@ -665,6 +686,9 @@ class Agent:
 
         # 保存对话历史
         await self.save_conversation_history()
+        
+        # 清除当前Answer引用
+        self.current_answer = None
         return answer
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:

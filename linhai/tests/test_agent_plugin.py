@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, ChineseEndOfSentencePlugin
+from linhai.agent.base import RuntimeMessage
 
 
 
@@ -299,6 +300,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
+        self.agent.interrupt = MagicMock(side_effect=lambda msg=None: self.agent.messages.append(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = ChineseEndOfSentencePlugin(self.group_chat)
@@ -329,7 +331,7 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
         # 应该检测到中文句子结束标记并打断输出
         self.assertTrue(result)
-        self.answer.interrupt.assert_called_once()
+        self.agent.interrupt.assert_called_once()
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIn("检测到中文句子结束标记", self.agent.messages[0].message)
 
@@ -384,6 +386,6 @@ class TestChineseEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
         # 应该检测到中文句子结束标记并打断输出
         self.assertTrue(result)
-        self.answer.interrupt.assert_called_once()
+        self.agent.interrupt.assert_called_once()
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIn("检测到中文句子结束标记", self.agent.messages[0].message)

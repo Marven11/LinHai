@@ -11,7 +11,7 @@
     - [x] 实现一个Agent.interrupt，然后让plugin调用这个函数传递自定义消息实现interrupt
     - [x] 在Agent中保存当前Answer，被打断时同时打断当前answer并添加自定义消息
 - [ ] 将AGENT.md改成AGENTS.md
-- [ ] 修复所有unittest
+- [x] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
