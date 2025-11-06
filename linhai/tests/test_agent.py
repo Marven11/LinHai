@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import ChatMessage
 from linhai.tool.main import ToolResultMessage
@@ -66,7 +66,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
-        config: AgentConfig = {
+        config: AgentContext = {
             "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],  # 改为列表
             "llm_names": ["test_llm"],  # 添加llm_names字段
@@ -101,7 +101,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         ]
 
         self.agent = Agent(
-            config=config,
+            context=config,
             group_chat=self.group_chat,
             init_messages=init_messages,
         )
@@ -339,22 +339,22 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)
         mock_llm2.answer_stream = AsyncMock(side_effect=empty_answer_stream)
 
-        self.agent.config["llms"] = [mock_llm1, mock_llm2]
-        self.agent.config["llm_names"] = ["deepseek-reasoning", "qwen"]
-        self.agent.config["current_llm_index"] = 0  # 默认使用第一个
+        self.agent.context["llms"] = [mock_llm1, mock_llm2]
+        self.agent.context["llm_names"] = ["deepseek-reasoning", "qwen"]
+        self.agent.context["current_llm_index"] = 0  # 默认使用第一个
 
         # 测试场景1: 有效的@qwen消息，应该更新索引到1
         self.agent.handle_user_message(ChatMessage(role="user", message="@qwen Hello"))
-        self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
+        self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
 
         # 测试场景2: 无效的@invalid消息，索引不应更新，并添加错误消息
-        self.agent.config["current_llm_index"] = 0  # 重置索引
+        self.agent.context["current_llm_index"] = 0  # 重置索引
         self.agent.handle_user_message(
             ChatMessage(role="user", message="@invalid command")
         )
-        self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
+        self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
         # 验证添加了错误消息
@@ -367,27 +367,27 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
 
         # 测试场景3: 没有@消息，索引不应更新
-        self.agent.config["current_llm_index"] = 0  # 重置索引
+        self.agent.context["current_llm_index"] = 0  # 重置索引
         self.agent.handle_user_message(ChatMessage(role="user", message="Hello world"))
-        self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引不变
+        self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
 
         # 测试场景4: 多个消息，只有@消息更新索引
-        self.agent.config["current_llm_index"] = 0  # 重置索引
+        self.agent.context["current_llm_index"] = 0  # 重置索引
         # 先发送一个@qwen消息
         self.agent.handle_user_message(ChatMessage(role="user", message="@qwen first"))
-        self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引更新为1
+        self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
         # 然后发送一个普通消息
         self.agent.handle_user_message(
             ChatMessage(role="user", message="Normal message")
         )
-        self.assertEqual(self.agent.config["current_llm_index"], 1)  # 索引不变
+        self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引不变
         # 然后发送一个@deepseek-reasoning消息
         self.agent.handle_user_message(
             ChatMessage(role="user", message="@deepseek-reasoning second")
         )
-        self.assertEqual(self.agent.config["current_llm_index"], 0)  # 索引更新为0
+        self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引更新为0
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
 

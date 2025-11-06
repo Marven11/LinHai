@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock
 import uuid
 
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.agent.base import RuntimeMessage
@@ -17,7 +17,7 @@ class TestEraseMessageByUUID(unittest.TestCase):
         self.group_chat.register_member = Mock()
         self.group_chat.get_members = Mock(return_value=Mock(spec=ToolManager))
         
-        self.config: AgentConfig = {
+        self.config: AgentContext = {
             "system_prompt": "Test prompt",
             "llms": [],
             "llm_names": [],
@@ -28,7 +28,7 @@ class TestEraseMessageByUUID(unittest.TestCase):
         self.init_messages = [ChatMessage(role="user", message="Test")]
         
         self.agent = Agent(
-            config=self.config,
+            context=self.config,
             group_chat=self.group_chat,
             init_messages=self.init_messages,
         )

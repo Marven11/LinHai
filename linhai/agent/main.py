@@ -35,7 +35,7 @@ from linhai.llm import (
 )
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
-from linhai.config import load_config, ToolConfig
+from linhai.config import load_config, ToolConfig, MCPConfig, AgentConfig
 from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.tool.mcp_connector import MCPConnector
@@ -49,10 +49,12 @@ from linhai.utils import CliRuntimeNotice, generate_id
 logger = logging.getLogger(__name__)
 
 
-class AgentConfig(TypedDict):
+class AgentContext(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
+    mcp: list[MCPConfig]
+    config_basedir: Path
     llms: list[LanguageModel]  # 多个LLM实例
     llm_names: list[str]  # LLM名称列表
     current_llm_index: int  # 当前使用的LLM索引
@@ -67,22 +69,17 @@ class Agent:
 
     def __init__(
         self,
-        config: AgentConfig,
+        context: AgentContext,
         group_chat: GroupChat,
         init_messages: Sequence[Message],
     ):
-        """
-        初始化Agent
-
-        参数:
-            config: Agent配置
-            group_chat: 与其他类进行通信的类
-        """
-        self.config = config
+        self.context = context
         self.group_chat = group_chat
 
         group_chat.register_queue("agent_user_input")
         group_chat.register_member("agent", self)
+
+        self.mcp_connector: MCPConnector | None = None
 
         self.state: AgentState = "waiting_user"
 
@@ -110,8 +107,8 @@ class Agent:
         llm_toolset = ToolSet()
 
         # 处理缺少llm_names的情况
-        llm_names = self.config.get(
-            "llm_names", [f"llm{i}" for i in range(len(self.config["llms"]))]
+        llm_names = self.context.get(
+            "llm_names", [f"llm{i}" for i in range(len(self.context["llms"]))]
         )
 
         @llm_toolset.register_tool(
@@ -136,7 +133,7 @@ class Agent:
                 return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
 
             index = llm_names.index(llm_name)
-            self.config["current_llm_index"] = index
+            self.context["current_llm_index"] = index
             return f"已切换到LLM: {llm_name}"
 
         @llm_toolset.register_tool(
@@ -151,7 +148,7 @@ class Agent:
             Returns:
                 当前LLM名称消息
             """
-            current_name = llm_names[self.config["current_llm_index"]]
+            current_name = llm_names[self.context["current_llm_index"]]
             return f"当前使用的LLM: {current_name}"
 
         # 确保tool_manager存在
@@ -254,7 +251,7 @@ class Agent:
         tool_manager.add_toolset(workflow_toolset)
 
         # 解析tool_confirmation配置并存储
-        tool_confirmation_config = self.config.get("tool_confirmation", {})
+        tool_confirmation_config = self.context.get("tool_confirmation", {})
         if not isinstance(tool_confirmation_config, dict):
             tool_confirmation_config = {}
         self.skip_confirmation = tool_confirmation_config.get(
@@ -266,10 +263,10 @@ class Agent:
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
             return None
-        compress_threshold_soft = self.config.get(
+        compress_threshold_soft = self.context.get(
             "compress_threshold_soft", int(65536 * 0.5)
         )
-        compress_threshold_hard = self.config.get(
+        compress_threshold_hard = self.context.get(
             "compress_threshold_hard", int(65536 * 0.5)
         )
         taken = (
@@ -382,7 +379,7 @@ class Agent:
                         )
                     )
 
-        if self.last_token_usage and self.last_token_usage > self.config.get(
+        if self.last_token_usage and self.last_token_usage > self.context.get(
             "compress_threshold_hard", int(65536 * 0.8)
         ):
             # await self.compress()
@@ -529,8 +526,8 @@ class Agent:
         # 处理以@开头的消息（用于切换LLM）
         if parsed_input.switch_model:
             llm_name = parsed_input.switch_model
-            if llm_name in self.config["llm_names"]:
-                self.config["current_llm_index"] = self.config["llm_names"].index(
+            if llm_name in self.context["llm_names"]:
+                self.context["current_llm_index"] = self.context["llm_names"].index(
                     llm_name
                 )
                 self.messages.append(
@@ -553,7 +550,7 @@ class Agent:
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        return self.config["llms"][self.config["current_llm_index"]]
+        return self.context["llms"][self.context["current_llm_index"]]
 
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
@@ -697,9 +694,9 @@ class Agent:
         返回:
             tuple[str, LanguageModel]: (LLM名称, LLM实例)
         """
-        current_index = self.config["current_llm_index"]
-        llm_name = self.config["llm_names"][current_index]
-        llm_instance = self.config["llms"][current_index]
+        current_index = self.context["current_llm_index"]
+        llm_name = self.context["llm_names"][current_index]
+        llm_instance = self.context["llms"][current_index]
         return llm_name, llm_instance
 
     async def save_conversation_history(self):
@@ -742,6 +739,15 @@ class Agent:
         根据当前状态调用相应的状态处理函数，
         并处理异常和取消事件。
         """
+
+        # 连接配置中的MCP服务器
+        self.mcp_connector = MCPConnector(self.group_chat)
+        for mcp_config in self.context["mcp"]:
+            server_script_path = self.context["config_basedir"] / mcp_config.server_script_path
+            await self.mcp_connector.connect_stdio(
+                mcp_config.name, server_script_path.absolute().as_posix()
+            )
+
         logger.info("Agent启动")
         user_input_found = False
         while not self.group_chat.is_empty("agent_user_input"):
@@ -794,13 +800,14 @@ async def create_agent(
 
     # 创建AgentConfig
     llm_names = [llm_config.name for llm_config in config.llm]
-    agent_config_part = config.agent.model_dump() if config.agent else None
+    agent_config = config.agent if config.agent else AgentConfig()
     agent_config = await _create_agent_config(
         llms=llms,
         llm_names=llm_names,
         llm_name=llm_name,
         tool_confirmation_config=tool_confirmation_config,
-        agent_config_part=agent_config_part,
+        agent_config=agent_config,
+        mcp_connector_basedir = Path(config_path).parent,
     )
 
     # 创建ToolManager
@@ -814,18 +821,9 @@ async def create_agent(
         memory_file_path=memory_file_path,
     )
 
-    # 连接配置中的MCP服务器
-    if config.agent and config.agent.mcp:
-        config_dir = Path(config_path).parent
-        connector = MCPConnector(group_chat)
-        for mcp_config in config.agent.mcp:
-            server_script_path = config_dir / mcp_config.server_script_path
-            await connector.connect_stdio(
-                mcp_config.name, server_script_path.absolute().as_posix()
-            )
-
     agent = Agent(
-        config=agent_config,
+        context=agent_config,
+        
         group_chat=group_chat,
         init_messages=init_messages,
     )
@@ -863,8 +861,9 @@ async def _create_agent_config(
     llm_names: list[str],
     llm_name: str | None,
     tool_confirmation_config: dict,
-    agent_config_part: dict | None = None,
-) -> AgentConfig:
+    agent_config: AgentConfig,
+    mcp_connector_basedir: Path,
+) -> AgentContext:
     """创建AgentConfig字典
 
     Args:
@@ -872,7 +871,7 @@ async def _create_agent_config(
         llm_names: LLM名称列表
         llm_name: 指定的LLM名称
         tool_confirmation_config: 工具确认配置
-        agent_config_part: Agent配置部分（可选）
+        agent_config: Agent配置部分（可选）
 
     Returns:
         AgentConfig字典
@@ -881,24 +880,24 @@ async def _create_agent_config(
     compress_threshold_hard = int(65536 * 0.8)
     compress_threshold_soft = int(65536 * 0.5)
 
-    if agent_config_part:
+    if agent_config:
         # 处理compress_threshold_hard
-        if isinstance(agent_config_part.get("compress_threshold_hard"), float):
+        if isinstance(agent_config.compress_threshold_hard, float):
             compress_threshold_hard = int(
-                65536 * agent_config_part["compress_threshold_hard"]
+                65536 * agent_config.compress_threshold_hard
             )
-        elif isinstance(agent_config_part.get("compress_threshold_hard"), int):
-            compress_threshold_hard = agent_config_part["compress_threshold_hard"]
+        elif isinstance(agent_config.compress_threshold_hard, int):
+            compress_threshold_hard = agent_config.compress_threshold_hard
         else:
             raise TypeError("compress_threshold_hard must be int or float")
 
         # 处理compress_threshold_soft
-        if isinstance(agent_config_part.get("compress_threshold_soft"), float):
+        if isinstance(agent_config.compress_threshold_soft, float):
             compress_threshold_soft = int(
-                65536 * agent_config_part["compress_threshold_soft"]
+                65536 * agent_config.compress_threshold_soft
             )
-        elif isinstance(agent_config_part.get("compress_threshold_soft"), int):
-            compress_threshold_soft = agent_config_part["compress_threshold_soft"]
+        elif isinstance(agent_config.compress_threshold_soft, int):
+            compress_threshold_soft = agent_config.compress_threshold_soft
         else:
             raise TypeError("compress_threshold_soft must be int or float")
 
@@ -913,8 +912,10 @@ async def _create_agent_config(
                 f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
             )
 
-    agent_config: AgentConfig = {
+    agent_context: AgentContext = {
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
+        "mcp": agent_config.mcp,
+        "config_basedir": mcp_connector_basedir,
         "llms": llms,
         "llm_names": llm_names,
         "current_llm_index": current_llm_index,
@@ -922,7 +923,7 @@ async def _create_agent_config(
         "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,
     }
-    return agent_config
+    return agent_context
 
 
 async def _create_tool_manager(group_chat, config: ToolConfig | None):

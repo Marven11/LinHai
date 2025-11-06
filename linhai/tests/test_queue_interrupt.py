@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import Mock, AsyncMock
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.agent.base import RuntimeMessage
@@ -57,7 +57,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = Mock()
         
         # 创建Agent配置
-        self.config = AgentConfig(
+        self.config = AgentContext(
             system_prompt="测试系统提示",
             llms=[self.mock_llm],
             llm_names=["test_llm"],
@@ -71,7 +71,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 创建Agent实例
         self.agent = Agent(
-            config=self.config,
+            context=self.config,
             group_chat=self.group_chat,
             init_messages=self.init_messages,
         )

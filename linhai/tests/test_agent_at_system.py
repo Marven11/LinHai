@@ -3,7 +3,7 @@
 # pylint: disable=protected-access
 import unittest
 from unittest.mock import Mock, AsyncMock
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.agent.base import RuntimeMessage
@@ -53,7 +53,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.mock_llm1.answer_stream = empty_answer_stream
         self.mock_llm2.answer_stream = empty_answer_stream
 
-        self.config: AgentConfig = {
+        self.config: AgentContext = {
             "system_prompt": "测试系统提示",
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["llm1", "llm2"],
@@ -65,7 +65,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
         # 创建Agent实例
         self.agent = Agent(
-            config=self.config, group_chat=self.group_chat, init_messages=[]
+            context=self.config, group_chat=self.group_chat, init_messages=[]
         )
 
     async def test_select_model_with_at_system_valid(self):

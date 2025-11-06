@@ -5,7 +5,7 @@ import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
 from linhai.llm import ChatMessage, SystemMessage
 from linhai.tool.main import ToolResultMessage
@@ -64,7 +64,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock()
 
-        config: AgentConfig = {
+        config: AgentContext = {
             "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
@@ -111,7 +111,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         ]
 
         self.agent = Agent(
-            config=config,
+            context=config,
             group_chat=self.group_chat,
             init_messages=init_messages,
         )

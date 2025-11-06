@@ -63,7 +63,7 @@ class TestCreateAgent(unittest.TestCase):
         
         # 检查agent配置中的当前LLM索引
         agent = group_chat.get_members("agent", Agent)
-        self.assertEqual(agent.config["current_llm_index"], 0)  # 假设deepseek是第一个LLM
+        self.assertEqual(agent.context["current_llm_index"], 0)  # 假设deepseek是第一个LLM
 
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""

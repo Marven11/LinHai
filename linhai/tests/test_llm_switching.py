@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.llm import SystemMessage, ToolCallMessage
 from linhai.tool.base import ToolErrorMessage, ToolResultMessage
 from linhai.group_chat import GroupChat
@@ -22,7 +22,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.mock_llm2 = MagicMock()
         self.mock_llm2.answer_stream = AsyncMock(return_value=AsyncMock())
 
-        config: AgentConfig = {
+        config: AgentContext = {
             "system_prompt": "Test system prompt",
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["primary", "secondary"],
@@ -58,7 +58,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         ]
 
         self.agent = Agent(
-            config=config,
+            context=config,
             group_chat=self.group_chat,
             init_messages=init_messages,
         )
@@ -100,7 +100,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIn("已切换到LLM: secondary", str(result.content))  # type: ignore
 
         # 验证LLM索引已更新
-        self.assertEqual(self.agent.config["current_llm_index"], 1)
+        self.assertEqual(self.agent.context["current_llm_index"], 1)
 
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
@@ -122,7 +122,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIn("可用的LLM包括: primary, secondary", str(result.content))  # type: ignore
 
         # 验证LLM索引未改变
-        self.assertEqual(self.agent.config["current_llm_index"], 0)
+        self.assertEqual(self.agent.context["current_llm_index"], 0)
 
     async def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""
@@ -131,7 +131,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(selected_llm, self.mock_llm1)
 
         # 切换到第二个LLM
-        self.agent.config["current_llm_index"] = 1
+        self.agent.context["current_llm_index"] = 1
         selected_llm = await self.agent._select_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 

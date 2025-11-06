@@ -8,7 +8,7 @@ import asyncio
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from linhai.agent import Agent, AgentConfig
+from linhai.agent import Agent, AgentContext
 from linhai.llm import ChatMessage, SystemMessage, ToolCallMessage
 from linhai.agent.base import RuntimeMessage
 
@@ -24,7 +24,7 @@ class TestConversationHistory(unittest.TestCase):
         )
 
         # 创建模拟配置
-        self.config: AgentConfig = {
+        self.config: AgentContext = {
             "system_prompt": "测试系统提示",
             "llms": [Mock()],
             "llm_names": ["test_llm"],
@@ -50,7 +50,7 @@ class TestConversationHistory(unittest.TestCase):
 
         # 创建Agent实例
         self.agent = Agent(
-            config=self.config,
+            context=self.config,
             group_chat=self.group_chat,
             init_messages=self.init_messages,
         )
