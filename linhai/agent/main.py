@@ -904,7 +904,7 @@ async def _create_agent_config(
 async def _create_tool_manager(group_chat, config: ToolConfig | None):
     """创建ToolManager实例"""
     tool_manager = ToolManager(
-        group_chat=group_chat, toolsets=[global_tools, terminal_toolset], config = config
+        group_chat=group_chat, toolsets=[global_tools, terminal_toolset], config=config
     )
     return tool_manager
 
@@ -932,24 +932,19 @@ async def _create_init_messages(
         )
     ]
 
-    # 定义要检查的文件路径列表（按优先级顺序）
-    memory_filepaths = [
-        Path("~/.config/linhai/LINHAI.md").expanduser(),
+    user_global_memory = Path("~/.config/linhai/LINHAI.md").expanduser()
+    if memory_file_path:
+        user_global_memory = Path(memory_file_path)
+    init_messages.append(GlobalMemory(user_global_memory))
+
+    project_memory_filepaths = [
         Path("./LINHAI.md").absolute(),
         Path("./AGENT.md").absolute(),
         Path("./CLAUDE.md").absolute(),
     ]
 
-    # 如果指定了记忆文件路径，则使用该路径（最高优先级）
-    if memory_file_path is not None:
-        memory_filepaths.insert(0, Path(memory_file_path).absolute())
-
-    found = False
-    for filepath in memory_filepaths:
+    for filepath in project_memory_filepaths:
         if filepath.exists():
-            found = True
-            init_messages.append(GlobalMemory(filepath))  # 总是添加，无论文件是否存在
-    if not found:
-        init_messages.append(GlobalMemory(memory_filepaths[0]))
+            init_messages.append(GlobalMemory(filepath))
 
     return init_messages
