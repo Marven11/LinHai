@@ -76,6 +76,7 @@ class AgentConfig(BaseModel):
     compress_threshold_hard: Union[int, float] = Field(default=0.8, ge=0.0)
     tool_confirmation: Optional[dict] = None
     mcp: list[MCPConfig] = Field(default_factory=list)
+    enable_directory_change_detection: bool = Field(default=False)
 
     @field_validator("compress_threshold_soft", "compress_threshold_hard")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument

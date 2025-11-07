@@ -42,7 +42,7 @@ class TestRuntimeMessages(unittest.IsolatedAsyncioTestCase):
             """会失败的测试工具"""
             raise ValueError("工具执行失败")
         
-        from linhai.config import ToolConfig, MCPConfig
+        from linhai.config import ToolConfig
         from pathlib import Path
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, 

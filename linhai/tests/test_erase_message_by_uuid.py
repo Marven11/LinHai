@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import uuid
 
 from linhai.agent import Agent, AgentContext
-from pathlib import Path
+
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.agent.base import RuntimeMessage

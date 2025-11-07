@@ -376,3 +376,56 @@ class EndThinkPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+
+
+class DirectoryChangePlugin(Plugin):
+    """目录更改检测插件，检测当前目录更改并检查特定文件。"""
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.last_directory = None
+
+    async def before_message_generation(
+        self, _enable_compress: bool, _disable_waiting_user_warning: bool
+    ):
+        """在消息生成前检查目录是否更改。"""
+        from linhai.agent import Agent
+        from linhai.agent.base import GlobalMemory, PathMemory
+        from pathlib import Path
+
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        # 检查是否启用了目录更改检测
+        enable_directory_change_detection = agent.context.get("enable_directory_change_detection", False)
+        if not enable_directory_change_detection:
+            return
+
+        current_directory = Path.cwd()
+
+        # 如果目录没有变化，直接返回
+        if self.last_directory == current_directory:
+            return
+
+        # 更新目录记录
+        self.last_directory = current_directory
+
+        # 检查特定文件
+        target_files = ["LINHAI.md", "AGENTS.md", "CLAUDE.md"]
+        for filename in target_files:
+            filepath = current_directory / filename
+            if filepath.exists():
+                # 检查是否已经存在相同路径的GlobalMemory或PathMemory
+                has_duplicate = False
+                for message in agent.messages:
+                    if isinstance(message, (GlobalMemory, PathMemory)):
+                        if hasattr(message, 'filepath') and message.filepath == filepath:
+                            has_duplicate = True
+                            break
+                
+                # 如果没有重复，添加PathMemory消息
+                if not has_duplicate:
+                    agent.messages.append(PathMemory(filepath))
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到before_message_generation回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)

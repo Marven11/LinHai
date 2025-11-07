@@ -3,7 +3,7 @@
 # pylint: disable=protected-access
 import unittest
 from unittest.mock import Mock, AsyncMock
-from pathlib import Path
+
 from linhai.agent import Agent, AgentContext
 from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage

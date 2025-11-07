@@ -87,7 +87,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("cli_agent_output")
 
         # 创建真实的ToolManager实例
-        from linhai.config import ToolConfig, MCPConfig
+        from linhai.config import ToolConfig
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, 
             toolsets=[global_tools],

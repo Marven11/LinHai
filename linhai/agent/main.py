@@ -58,6 +58,7 @@ class AgentContext(TypedDict):
     compress_threshold_hard: int
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
+    enable_directory_change_detection: NotRequired[bool]  # 是否启用目录更改检测
 
 
 class Agent:
@@ -907,6 +908,7 @@ async def _create_agent_context(
         "compress_threshold_hard": compress_threshold_hard,
         "compress_threshold_soft": compress_threshold_soft,
         "tool_confirmation": tool_confirmation_config,
+        "enable_directory_change_detection": agent_config.enable_directory_change_detection if agent_config else False,
     }
     return agent_context
 

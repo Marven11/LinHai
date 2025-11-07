@@ -1,0 +1,159 @@
+"""测试目录更改检测插件。"""
+
+import unittest
+import tempfile
+import os
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+from linhai.agent.plugin import DirectoryChangePlugin
+from linhai.agent.base import PathMemory, GlobalMemory
+from linhai.group_chat import GroupChat
+
+
+class TestDirectoryChangePlugin(unittest.TestCase):
+    """测试目录更改检测插件。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.group_chat = GroupChat()
+        self.plugin = DirectoryChangePlugin(self.group_chat)
+        
+        # 创建临时目录用于测试
+        self.temp_dir = tempfile.mkdtemp()
+        self.original_cwd = os.getcwd()
+        
+        # 创建模拟的Agent
+        self.mock_agent = Mock()
+        self.mock_agent.context = {"enable_directory_change_detection": False}
+        self.mock_agent.messages = []
+        
+        # 将模拟Agent注册到group_chat
+        self.group_chat.register_member("agent", self.mock_agent)
+
+    def tearDown(self):
+        """清理测试环境。"""
+        os.chdir(self.original_cwd)
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_plugin_disabled_by_default(self):
+        """测试插件默认禁用。"""
+        # 插件禁用时不应检测目录更改
+        self.mock_agent.context["enable_directory_change_detection"] = False
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证没有添加任何消息
+        self.assertEqual(len(self.mock_agent.messages), 0)
+
+    def test_plugin_enabled_no_directory_change(self):
+        """测试插件启用但目录未更改。"""
+        self.mock_agent.context["enable_directory_change_detection"] = True
+        
+        # 设置初始目录
+        self.plugin.last_directory = Path.cwd()
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证没有添加任何消息
+        self.assertEqual(len(self.mock_agent.messages), 0)
+
+    def test_plugin_enabled_with_directory_change(self):
+        """测试插件启用且目录更改。"""
+        self.mock_agent.context["enable_directory_change_detection"] = True
+        
+        # 更改目录
+        os.chdir(self.temp_dir)
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证记录了新目录
+        self.assertEqual(self.plugin.last_directory, Path(self.temp_dir))
+
+    def test_plugin_detects_target_files(self):
+        """测试插件检测目标文件。"""
+        self.mock_agent.context["enable_directory_change_detection"] = True
+        
+        # 在临时目录中创建目标文件
+        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file.write_text("# Test Memory\n\nTest content")
+        
+        # 更改目录
+        os.chdir(self.temp_dir)
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证添加了PathMemory消息
+        self.assertEqual(len(self.mock_agent.messages), 1)
+        self.assertIsInstance(self.mock_agent.messages[0], PathMemory)
+        self.assertEqual(self.mock_agent.messages[0].filepath, test_file)
+
+    def test_plugin_avoids_duplicates(self):
+        """测试插件避免重复添加相同路径的消息。"""
+        self.mock_agent.context["enable_directory_change_detection"] = True
+        
+        # 在临时目录中创建目标文件
+        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file.write_text("# Test Memory\n\nTest content")
+        
+        # 更改目录
+        os.chdir(self.temp_dir)
+        
+        # 先添加一个PathMemory消息
+        existing_memory = PathMemory(test_file)
+        self.mock_agent.messages.append(existing_memory)
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证没有重复添加消息
+        self.assertEqual(len(self.mock_agent.messages), 1)
+
+    def test_plugin_handles_global_memory_duplicates(self):
+        """测试插件避免与GlobalMemory重复。"""
+        self.mock_agent.context["enable_directory_change_detection"] = True
+        
+        # 在临时目录中创建目标文件
+        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file.write_text("# Test Memory\n\nTest content")
+        
+        # 更改目录
+        os.chdir(self.temp_dir)
+        
+        # 先添加一个GlobalMemory消息
+        existing_memory = GlobalMemory(test_file)
+        self.mock_agent.messages.append(existing_memory)
+        
+        # 调用before_message_generation
+        import asyncio
+        asyncio.run(self.plugin.before_message_generation(True, False))
+        
+        # 验证没有重复添加消息
+        self.assertEqual(len(self.mock_agent.messages), 1)
+
+    def test_plugin_registers_correctly(self):
+        """测试插件正确注册到生命周期。"""
+        # 创建模拟的生命周期
+        mock_lifecycle = Mock()
+        
+        # 注册插件
+        self.plugin.register(mock_lifecycle)
+        
+        # 验证注册了正确的回调
+        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+            self.plugin.before_message_generation
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

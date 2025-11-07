@@ -169,3 +169,75 @@ class GlobalMemory:
         """
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))
+
+
+class PathMemory:
+    """路径记忆类，用于检测和呈现特定路径的文件内容。"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, filepath: Path):
+        self.filepath = filepath
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """
+        将路径记忆转换为LLM消息格式。
+
+        返回:
+            LanguageModelMessage: 包含路径记忆内容的系统消息
+        """
+        try:
+            content = self.filepath.read_text()
+            return {
+                "role": "user",
+                "content": f"""
+# 路径记忆
+
+文件位于{self.filepath.as_posix()!r}，内容如下
+
+{content}
+""",
+            }
+        except FileNotFoundError:
+            return {
+                "role": "user",
+                "content": f"""
+# 路径记忆
+
+文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
+""",
+            }
+        except (IOError, OSError) as e:
+            return {
+                "role": "user",
+                "content": f"""
+# 路径记忆
+
+文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
+""",
+            }
+
+    def to_json(self) -> str:
+        """
+        将路径记忆对象序列化为JSON字符串。
+
+        返回:
+            str: 包含文件路径的JSON字符串
+        """
+        data = {"filepath": str(self.filepath)}
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+        """
+        从JSON字符串反序列化路径记忆对象。
+
+        参数:
+            json_str: JSON格式的字符串
+            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
+
+        返回:
+            PathMemory: 反序列化的路径记忆对象
+        """
+        data = json.loads(json_str)
+        return cls(filepath=Path(data["filepath"]))

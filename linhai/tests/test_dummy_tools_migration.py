@@ -24,7 +24,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("cli_runtime_output")
         from linhai.tool.base import global_tools
         from linhai.tool.tools.terminal import terminal_toolset
-        from linhai.config import ToolConfig, MCPConfig
+        from linhai.config import ToolConfig
         self.tool_manager = ToolManager(
             group_chat=self.group_chat, 
             toolsets=[global_tools, terminal_toolset],

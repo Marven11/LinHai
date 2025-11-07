@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, WeirdEndOfSentencePlugin
+from linhai.agent.plugin import TaskPlanningPlugin, BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin
 from linhai.agent.base import RuntimeMessage
 
 
@@ -334,6 +334,89 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt.assert_called_once()
         self.assertEqual(len(self.agent.messages), 1)
         self.assertIn("结束标记", self.agent.messages[0].message)
+
+
+class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
+    """测试DirectoryChangePlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.messages = []
+        self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = DirectoryChangePlugin(self.group_chat)
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_before_message_generation.assert_called_once_with(
+            self.plugin.before_message_generation
+        )
+
+    async def test_before_message_generation_disabled(self):
+        """测试目录更改检测关闭的情况。"""
+        # 设置插件状态，模拟目录已经更改
+        self.plugin.last_directory = "/old/path"
+        
+        await self.plugin.before_message_generation(True, False)
+        
+        # 由于功能关闭，不应该处理目录更改
+        # 这里主要验证没有异常抛出
+        self.assertIsNotNone(self.plugin.last_directory)
+
+    async def test_before_message_generation_enabled_no_change(self):
+        """测试目录更改检测开启但目录未更改的情况。"""
+        # 启用功能
+        self.agent.context["enable_directory_change_detection"] = True
+        
+        # 模拟目录未更改
+        import pathlib
+        current_dir = pathlib.Path.cwd()
+        self.plugin.last_directory = current_dir
+        
+        await self.plugin.before_message_generation(True, False)
+        
+        # 目录未更改，不应该添加任何消息
+        self.assertEqual(len(self.agent.messages), 0)
+
+    async def test_before_message_generation_enabled_with_change(self):
+        """测试目录更改检测开启且目录更改的情况。"""
+        # 启用功能
+        self.agent.context["enable_directory_change_detection"] = True
+        
+        # 模拟目录更改
+        self.plugin.last_directory = "/old/path"
+        
+        # 模拟当前目录
+        import pathlib
+        current_dir = pathlib.Path.cwd()
+        
+        await self.plugin.before_message_generation(True, False)
+        
+        # 目录已更改，应该更新last_directory
+        self.assertEqual(self.plugin.last_directory, current_dir)
+
+    async def test_before_message_generation_no_duplicate_pathmemory(self):
+        """测试避免重复添加相同路径的PathMemory。"""
+        # 启用功能
+        self.agent.context["enable_directory_change_detection"] = True
+        
+        # 模拟目录更改
+        self.plugin.last_directory = "/old/path"
+        
+        # 模拟已经存在相同路径的PathMemory
+        from linhai.agent.base import PathMemory
+        existing_pathmemory = PathMemory(pathlib.Path.cwd() / "LINHAI.md")
+        self.agent.messages = [existing_pathmemory]
+        
+        await self.plugin.before_message_generation(True, False)
+        
+        # 由于已经存在相同路径的PathMemory，不应该添加新的
+        # 这里我们主要验证没有异常，实际重复检测逻辑在插件中实现
+        self.assertEqual(len(self.agent.messages), 1)
 
     async def test_during_message_generation_without_chinese_end_marker(self):
         """测试没有中文句子结束标记的情况。"""

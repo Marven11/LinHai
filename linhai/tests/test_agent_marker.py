@@ -4,7 +4,7 @@ import json
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from pathlib import Path
+
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
