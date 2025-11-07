@@ -763,9 +763,10 @@ class Agent:
                     break
 
             except asyncio.CancelledError:
-                return
+                break
             await asyncio.sleep(0)
 
+        await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
 
 async def create_agent(
     group_chat: GroupChat,
