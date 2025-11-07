@@ -7,9 +7,15 @@
 - [ ] 在CLI中的welcome信息中修改当前的LLM提示和版本提示，添加动画
     - 首先显示每日一言，金黄色加粗，持续0.2秒
         - 当前的每日一言只有`/time set 0`，MC中设置时间的命令
-    - 然后从左到右变成乱码动画，黄色逐渐减淡，持续1秒
+    - 然后全部字符变成乱码，变成稍灰一点的黄色，持续1秒
+        - 注意乱码字符的长度要长于每日一言和版本号信息
     - 最后变成当前版本号和LLM: 如`v0.0.1 | LLM: deepseek`，灰色加粗
+    - 不要删掉彩虹色的标题！
 - [ ] 在CLI的底部状态栏Token左边添加当前LLM，类似`deepseek | in xxx | out xxx`
+- [ ] 现在没有使用MCP就Ctrl+C退出会导致RuntimeError
+    - 使用终端运行linhai确认行为
+    - 在group_chat中添加函数，返回member是否存在
+    - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all
 - [ ] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
