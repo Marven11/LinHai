@@ -278,12 +278,6 @@ class Answer(Protocol):
     LLM的一个回答
     """
 
-    def get_tool_call(self) -> ToolCallMessage | None:
-        """
-        在LLM生成完毕之后读取工具调用
-        """
-        raise NotImplementedError
-
     def __aiter__(self) -> AsyncIterator[AnswerToken | AnswerTokenUsage]:
         """
         流式返回LLM的回答
@@ -361,15 +355,7 @@ class OpenAiAnswer:
         self.total_tokens = 0
         self.input_tokens = 0
         self.output_tokens = 0
-        # 生成时会慢慢构造ToolCallMessage的每一个属性，除了argument
-        self._tool_call: ToolCallMessage | None = None
-        # 函数参数会以token形式一个个传过来
-        self._tool_call_argument_json: str = ""
         self._toyield: list[AnswerToken | AnswerTokenUsage] = []
-
-    def get_tool_call(self) -> ToolCallMessage | None:
-        """在LLM生成完毕之后读取工具调用。"""
-        return self._tool_call
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -452,8 +438,6 @@ class OpenAiAnswer:
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
-        if self._tool_call:
-            return self._tool_call
         return ChatMessage(role="assistant", message=self._content)
 
     def get_reasoning_message(self) -> str | None:

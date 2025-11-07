@@ -128,14 +128,18 @@ class MessageWidget(Static):
         else:
             self.display_name = sender_name
             self.role = role
+        self.lazy_counter = 0
 
-    def append_content_lazy(self, new_content: str) -> None:
+    def append_content_lazy(self, new_content: str, lazy_score: int) -> None:
         """追加内容到消息"""
         self.content_str += new_content
-        self.update_display()
+        self.lazy_counter += 1
+        if self.lazy_counter % lazy_score == 0:
+            self.update_display()
 
     def update_display(self) -> None:
         """更新消息显示"""
+        self.lazy_counter = 0
         self.remove_children()
         content_to_display = self.content_str
         if self.is_reasoning:
@@ -297,25 +301,6 @@ class CLIApp(App):
             container.mount(widget)
             widget.update_display()
 
-    async def add_bot_message(self, message: Message) -> None:
-        """添加机器人消息"""
-        llm_message = message.to_llm_message()
-        self.messages.append(message)
-        content = None
-        if "content" in llm_message:
-            content = str(llm_message["content"])
-        elif "function_call" in llm_message:
-            content = f"{llm_message['function_call']}(...)"
-        else:
-            content = f"<Unknown {llm_message!r}>"
-        # 获取当前LLM名字
-        agent = self.group_chat.get_members("agent", Agent)
-        llm_name, _llm = agent.get_current_llm_info()
-        widget = MessageWidget("agent", content, sender_name=llm_name)
-        self.query_one("#chat-container").mount(widget)
-        self.query_one("#chat-container").scroll_end()
-        self._trim_messages_if_needed()
-
     async def watch_output_queue(self):
         """监听输出队列并更新UI"""
         current_message = None
@@ -397,7 +382,7 @@ class CLIApp(App):
                         current_message.update_display()
                         self._trim_messages_if_needed()
                     else:
-                        current_message.append_content_lazy(content)
+                        current_message.append_content_lazy(content, lazy_score=int(len(content) ** 0.5) + 1)
 
                     if should_scroll:
                         container.scroll_end()
@@ -407,16 +392,10 @@ class CLIApp(App):
                     # 处理退出信号
                     return_code = output["return_code"]
                     self.exit(return_code=return_code)
-                    return  # 立即返回，不再处理其他消息
+                    return
                 elif isinstance(output, Answer):
                     if current_message:
                         current_message.update_display()
-                    tool_call = output.get_tool_call()
-                    if tool_call:
-                        # 处理工具调用
-                        tool_message = f"{tool_call.function_name}(...)"
-                        msg = ChatMessage(role="assistant", message=tool_message)
-                        await self.add_bot_message(msg)
 
                     # 获取并累加token使用量
                     token_usage = output.get_token_usage()
