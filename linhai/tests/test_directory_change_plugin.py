@@ -39,12 +39,6 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         self.get_members_patch.stop()
 
-    def tearDown(self):
-        """清理测试环境。"""
-        os.chdir(self.original_cwd)
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
     def test_plugin_disabled_by_default(self):
         """测试插件默认禁用。"""
         # 插件禁用时不应检测目录更改
