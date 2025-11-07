@@ -70,24 +70,24 @@ def fetch_article(url: str) -> str:
         output_html = tmp_html.name
     try:
         options = webdriver.FirefoxOptions()
-        options.add_argument("--headless")
+
         with webdriver.Firefox(options=options) as driver:
             driver.get(url)
 
             # 删除javascript:链接
             soup = BeautifulSoup(driver.page_source, "html.parser")
-            for a in soup.find_all("a", href=True):
-                if a["href"].startswith("javascript:"):  # type: ignore
-                    a.decompose()
+        for a in soup.find_all("a", href=True):
+            if a["href"].startswith("javascript:"):  # type: ignore
+                a.decompose()
 
-            # 删除无用image元素
-            for img in soup.find_all("img", src=True):
-                src = img.get("src", "")  # type: ignore
-                if len(str(src)) > 400:
-                    img.decompose()
+        # 删除无用image元素
+        for img in soup.find_all("img", src=True):
+            src = img.get("src", "")  # type: ignore
+            if len(str(src)) > 400:
+                img.decompose()
 
-            for svg in soup.find_all("svg"):
-                svg.decompose()
+        for svg in soup.find_all("svg"):
+            svg.decompose()
 
         with open(output_html, "w", encoding="utf-8") as f:
             f.write(str(soup))
