@@ -254,8 +254,7 @@ class WeirdEndOfSentencePlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
         pattern = (
-            r'[\u4e00-\u9fffa-zA-Z0-9\s\.,!?;:，。！？；："'
-            '《》（）【】、……～@#$%^&*()+=\\-\\[\\]{}|\\<>/?]+<｜end▁of▁[a-z]+｜>'
+            r'^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>'
         )
 
         # 检查每一行
@@ -394,13 +393,15 @@ class DirectoryChangePlugin(Plugin):
         from pathlib import Path
 
         agent = self.group_chat.get_members("agent", Agent)
-        
+
         # 检查是否启用了目录更改检测
-        enable_directory_change_detection = agent.context.get("enable_directory_change_detection", False)
+        enable_directory_change_detection = agent.context.get(
+            "enable_directory_change_detection", False
+        )
         if not enable_directory_change_detection:
             return
 
-        current_directory = Path.cwd()
+        current_directory = Path.cwd().resolve()
 
         # 如果目录没有变化，直接返回
         if self.last_directory == current_directory:
@@ -415,14 +416,11 @@ class DirectoryChangePlugin(Plugin):
             filepath = current_directory / filename
             if filepath.exists():
                 # 检查是否已经存在相同路径的GlobalMemory或PathMemory
-                has_duplicate = False
-                for message in agent.messages:
-                    if isinstance(message, (GlobalMemory, PathMemory)):
-                        if hasattr(message, 'filepath') and message.filepath == filepath:
-                            has_duplicate = True
-                            break
-                
-                # 如果没有重复，添加PathMemory消息
+                has_duplicate = any(
+                    message.filepath.resolve() == filepath.resolve()
+                    for message in agent.messages
+                    if isinstance(message, (GlobalMemory, PathMemory))
+                )
                 if not has_duplicate:
                     agent.messages.append(PathMemory(filepath))
 
