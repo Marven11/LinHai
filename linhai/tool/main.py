@@ -3,7 +3,7 @@
 包含工具消息类和管理器，用于处理工具调用请求和返回结果。
 """
 
-from typing import Awaitable, Optional
+from typing import Awaitable
 from collections import Counter
 from pathlib import Path
 
@@ -170,7 +170,7 @@ class ToolManager:
             return result
 
         # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
-        if self.config and self.config and self.config.max_output_length is not None:
+        if self.config and self.config.max_output_length is not None:
             max_output_length = self.config.max_output_length
         else:
             await self.group_chat.send(

@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 from linhai.agent.plugin import DirectoryChangePlugin
 from linhai.agent.base import PathMemory, GlobalMemory
@@ -23,13 +23,21 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.original_cwd = os.getcwd()
         
-        # 创建模拟的Agent
-        self.mock_agent = Mock()
+        # 创建模拟的Agent，使用MagicMock以支持属性访问
+        self.mock_agent = MagicMock()
         self.mock_agent.context = {"enable_directory_change_detection": False}
         self.mock_agent.messages = []
         
-        # 将模拟Agent注册到group_chat
-        self.group_chat.register_member("agent", self.mock_agent)
+        # 使用patch模拟get_members方法以返回mock_agent
+        self.get_members_patch = patch.object(self.group_chat, 'get_members', return_value=self.mock_agent)
+        self.mock_get_members = self.get_members_patch.start()
+
+    def tearDown(self):
+        """清理测试环境。"""
+        os.chdir(self.original_cwd)
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        self.get_members_patch.stop()
 
     def tearDown(self):
         """清理测试环境。"""
@@ -75,7 +83,9 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
         
         # 验证记录了新目录
-        self.assertEqual(self.plugin.last_directory, Path(self.temp_dir))
+        self.assertIsNotNone(self.plugin.last_directory)
+        if self.plugin.last_directory is not None:
+            self.assertEqual(self.plugin.last_directory.resolve(), Path(self.temp_dir).resolve())
 
     def test_plugin_detects_target_files(self):
         """测试插件检测目标文件。"""
@@ -95,7 +105,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         # 验证添加了PathMemory消息
         self.assertEqual(len(self.mock_agent.messages), 1)
         self.assertIsInstance(self.mock_agent.messages[0], PathMemory)
-        self.assertEqual(self.mock_agent.messages[0].filepath, test_file)
+        self.assertEqual(self.mock_agent.messages[0].filepath.resolve(), test_file.resolve())
 
     def test_plugin_avoids_duplicates(self):
         """测试插件避免重复添加相同路径的消息。"""

@@ -388,7 +388,7 @@ class DirectoryChangePlugin(Plugin):
         self, _enable_compress: bool, _disable_waiting_user_warning: bool
     ):
         """在消息生成前检查目录是否更改。"""
-        from linhai.agent import Agent
+        from linhai.agent.main import Agent
         from linhai.agent.base import GlobalMemory, PathMemory
         from pathlib import Path
 

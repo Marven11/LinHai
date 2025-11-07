@@ -16,7 +16,6 @@ and `MCP Client` connects LLM to the middle layer.
 
 import asyncio
 import shlex
-import os.path
 from contextlib import AsyncExitStack
 from typing import Any
 from functools import partial
