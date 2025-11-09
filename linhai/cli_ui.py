@@ -130,12 +130,14 @@ class MessageWidget(Static):
             self.role = role
         self.lazy_counter = 0
 
-    def append_content_lazy(self, new_content: str, lazy_score: int) -> None:
+    def append_content_lazy(self, new_content: str, lazy_score: int) -> bool:
         """追加内容到消息"""
         self.content_str += new_content
         self.lazy_counter += 1
         if self.lazy_counter % lazy_score == 0:
             self.update_display()
+            return True
+        return False
 
     def update_display(self) -> None:
         """更新消息显示"""
@@ -295,7 +297,9 @@ class CLIApp(App):
             await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
-            _ = self.group_chat.get_members("agent", Agent)  # pylint: disable=unused-variable
+            _ = self.group_chat.get_members(
+                "agent", Agent
+            )  # pylint: disable=unused-variable
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.scroll_end()
             container.mount(widget)
@@ -382,7 +386,11 @@ class CLIApp(App):
                         current_message.update_display()
                         self._trim_messages_if_needed()
                     else:
-                        current_message.append_content_lazy(content, lazy_score=int(len(content) ** 0.5) + 1)
+                        updated = current_message.append_content_lazy(
+                            content,
+                            lazy_score=int(len(current_message.content_str) ** 0.5) + 1,
+                        )
+                        should_scroll = should_scroll and updated
 
                     if should_scroll:
                         container.scroll_end()
