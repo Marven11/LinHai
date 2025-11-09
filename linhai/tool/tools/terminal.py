@@ -132,7 +132,7 @@ class PyteTerminal:
 
 @terminal_toolset.register_tool(
     name="create_terminal",
-    desc="新建虚拟终端，返回终端对应的uuid，需要等待并拿到UUID后才可操控终端",
+    desc="新建虚拟终端，返回终端对应的ID，调用这个工具后需要**立即等待**才能调用其他终端工具操控终端！",
     args={
         "columns": ToolArgInfo(desc="终端列数，默认80", type="int"),
         "lines": ToolArgInfo(desc="终端行数，默认24", type="int"),

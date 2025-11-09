@@ -55,7 +55,7 @@ class RainbowAsciiArt(Static):
         """使用HSL颜色空间生成平滑的彩虹颜色样式列表"""
         import colorsys
 
-        num_colors = 144
+        num_colors = 256
         styles = []
         for i in range(num_colors):
             # 色相从0到1循环，对应彩虹颜色
@@ -66,25 +66,27 @@ class RainbowAsciiArt(Static):
             g = int(rgb[1] * 255)
             b = int(rgb[2] * 255)
             styles.append(Style(color=f"rgb({r},{g},{b})"))
+        mid = len(styles) // 2
+        styles = styles[mid:] + styles[:mid]
         return styles
 
     def on_mount(self) -> None:
         """组件挂载时启动动画"""
-        self.set_interval(0.05, self._update_animation)
+        self.set_interval(0.1, self._update_animation)
 
     def _update_animation(self) -> None:
         """更新动画时间索引并重新渲染"""
         self.time_index += 1
 
         # if it is slow for whatever reason, stop
-        if time.perf_counter() - self.last_call_time > 0.05 * 1.2:
+        if time.perf_counter() - self.last_call_time > 0.2:
             self.slow_counter += 1
-        elif self.slow_counter > 0:
-            self.slow_counter -= 1
 
         self.last_call_time = time.perf_counter()
-        if self.slow_counter > 10:
+        if self.slow_counter > 3:
             return
+        elif self.slow_counter > 0:
+            self.slow_counter -= 1
 
         self.update(self._render_ascii_art())
 
@@ -539,11 +541,13 @@ class CLIApp(App):
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
 
+            container = self.query_one("#chat-container")
+
             # 创建彩虹ASCII艺术组件
             rainbow_art = RainbowAsciiArt(ASCII_ART)
             rainbow_art.add_class("welcome-message")
-            container = self.query_one("#chat-container")
             container.mount(rainbow_art)
+
 
             # 显示动画欢迎信息
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
@@ -646,15 +650,12 @@ class CLIApp(App):
 
     def on_scroll(self, _event) -> None:
         """监听滚动事件，记录用户滚动时间"""
-        import time
-
         self.last_user_scroll_time = time.perf_counter()
 
     def is_user_recently_scrolled(self) -> bool:
         """检查用户是否在最近3秒内滚动了"""
         if self.last_user_scroll_time is None:
             return False
-        import time
 
         current_time = time.perf_counter()
         return (current_time - self.last_user_scroll_time) < 3.0
