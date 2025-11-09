@@ -203,14 +203,14 @@ class Agent:
             return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
         @dummy_toolset.register_tool(
-            name="erase_message_by_uuid",
+            name="erase_message_by_id",
             desc="擦除通过ID标识的大消息。当工具返回内容过大时，系统会分配ID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条ID为{ID}的消息已被擦除",
             args={
-                "uuids": ToolArgInfo(desc="要擦除的消息的ID", type="list[str]"),
+                "ids": ToolArgInfo(desc="要擦除的消息的ID", type="list[str]"),
             },
-            required_args=["uuids"],
+            required_args=["ids"],
         )
-        def erase_message_by_uuid(uuids: list[str]) -> str:
+        def erase_message_by_id(ids: list[str]) -> str:
             threshold_info = self.get_threshold_info()
             if threshold_info:
                 soft, _hard, used, _remaining, taken = threshold_info
@@ -219,8 +219,8 @@ class Agent:
                 if taken < 0.4:
                     return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
             result = ""
-            for message_id in uuids:
-                result += f"{message_id!r}: {self.erase_message_by_uuid(message_id)}"
+            for message_id in ids:
+                result += f"{message_id!r}: {self.erase_message_by_id(message_id)}"
             return result
 
         # 将虚拟工具集添加到ToolManager
@@ -282,11 +282,11 @@ class Agent:
             taken,
         )
 
-    def erase_message_by_uuid(self, message_id: str) -> str:
+    def erase_message_by_id(self, message_id: str) -> str:
         """擦除大消息方法。
 
         Args:
-            uuid: 要擦除的消息的ID
+            message_id: 要擦除的消息的ID
 
         Returns:
             str: 擦除结果消息
@@ -376,7 +376,7 @@ class Agent:
                     self.messages.append(
                         RuntimeMessage(
                             f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                            f"当前已有{len(self.messages)}条消息。{large_messages_info}建议在消息条数少于200条时优先使用 erase_message_by_uuid. "
+                            f"当前已有{len(self.messages)}条消息。{large_messages_info}建议在消息条数少于200条时优先使用 erase_message_by_id. "
                         )
                     )
 
@@ -402,7 +402,7 @@ class Agent:
         # 统一设置compress_tool_called_in_last_response
         compress_tools = [
             "compress_history_range",
-            "erase_message_by_uuid",
+            "erase_message_by_id",
             "thanox_history",
         ]
         self.compress_tool_called_in_last_response = (
@@ -448,7 +448,7 @@ class Agent:
                     self.messages.append(
                         RuntimeMessage(
                             f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配ID: {message_id}。"
-                            "你可以使用 erase_message_by_uuid 工具删除此消息以节省token。"
+                            "你可以使用 erase_message_by_id 工具删除此消息以节省token。"
                         )
                     )
 

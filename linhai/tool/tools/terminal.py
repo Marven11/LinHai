@@ -147,39 +147,39 @@ def create_terminal(columns: int = 80, lines: int = 24) -> str:
         lines: 终端行数
 
     Returns:
-        终端对应的uuid
+        终端对应的ID
     """
-    term_uuid = generate_id("terminal")
+    term_id = generate_id("terminal")
     terminal = PyteTerminal(columns=columns, lines=lines)
-    terminals[term_uuid] = terminal
-    return term_uuid
+    terminals[term_id] = terminal
+    return term_id
 
 
 @terminal_toolset.register_tool(
     name="send_keys_to_terminal",
     desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'。如果需要发送ctrl+c等控制字符，请传入对应的控制键名称，如'ctrl+c'、'ctrl+d'等。",
     args={
-        "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
+        "terminal_id": ToolArgInfo(desc="终端ID", type="str"),
         "keys": ToolArgInfo(
             desc="""按键名称列表，如["esc", ":", "q", "enter"]""", type="list"
         ),
     },
-    required_args=["terminal_uuid", "keys"],
+    required_args=["terminal_id", "keys"],
 )
-def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
+def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
     """发送按键列表到终端
 
     Args:
-        terminal_uuid: 终端uuid
+        terminal_id: 终端ID
         keys: 按键名称列表
 
     Returns:
         执行结果消息
     """
-    if terminal_uuid not in terminals:
-        return f"错误：未找到终端 {terminal_uuid}"
+    if terminal_id not in terminals:
+        return f"错误：未找到终端 {terminal_id}"
 
-    terminal = terminals[terminal_uuid]
+    terminal = terminals[terminal_id]
 
     for key in keys:
         if key in KEY_MAPPINGS:
@@ -197,22 +197,22 @@ def send_keys_to_terminal(terminal_uuid: str, keys: List[str]) -> str:
     name="send_string_to_terminal",
     desc="发送命令等字符串到终端",
     args={
-        "terminal_uuid": ToolArgInfo(desc="终端uuid", type="str"),
+        "terminal_id": ToolArgInfo(desc="终端ID", type="str"),
         "string": ToolArgInfo(desc="要发送的字符串", type="str"),
         "wait_seconds": ToolArgInfo(
             desc="等待一段时间后读取最新画面，默认等待0.3秒", type="float"
         ),
         "with_enter": ToolArgInfo(desc="是否发送enter，默认为True", type="bool"),
     },
-    required_args=["terminal_uuid", "string"],
+    required_args=["terminal_id", "string"],
 )
 def send_string_to_terminal(
-    terminal_uuid: str, string: str, wait_seconds: float = 0.3, with_enter=True
+    terminal_id: str, string: str, wait_seconds: float = 0.3, with_enter=True
 ) -> str:
-    if terminal_uuid not in terminals:
-        return f"错误：未找到终端 {terminal_uuid}"
+    if terminal_id not in terminals:
+        return f"错误：未找到终端 {terminal_id}"
 
-    terminal = terminals[terminal_uuid]
+    terminal = terminals[terminal_id]
     terminal.send(string)
     if with_enter:
         terminal.send_key("enter")
@@ -226,22 +226,22 @@ def send_string_to_terminal(
 @terminal_toolset.register_tool(
     name="read_terminal_screen",
     desc="读取当前终端的屏幕内容",
-    args={"terminal_uuid": ToolArgInfo(desc="终端uuid", type="str")},
-    required_args=["terminal_uuid"],
+    args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
+    required_args=["terminal_id"],
 )
-def read_terminal_screen(terminal_uuid: str) -> str:
+def read_terminal_screen(terminal_id: str) -> str:
     """读取终端屏幕内容
 
     Args:
-        terminal_uuid: 终端uuid
+        terminal_id: 终端ID
 
     Returns:
         屏幕内容
     """
-    if terminal_uuid not in terminals:
-        return f"错误：未找到终端 {terminal_uuid}"
+    if terminal_id not in terminals:
+        return f"错误：未找到终端 {terminal_id}"
 
-    terminal = terminals[terminal_uuid]
+    terminal = terminals[terminal_id]
     terminal.update()
     return terminal.get_screen()
 
@@ -249,25 +249,25 @@ def read_terminal_screen(terminal_uuid: str) -> str:
 @terminal_toolset.register_tool(
     name="close_terminal",
     desc="关闭终端",
-    args={"terminal_uuid": ToolArgInfo(desc="终端uuid", type="str")},
-    required_args=["terminal_uuid"],
+    args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
+    required_args=["terminal_id"],
 )
-def close_terminal(terminal_uuid: str) -> str:
+def close_terminal(terminal_id: str) -> str:
     """关闭终端
 
     Args:
-        terminal_uuid: 终端uuid
+        terminal_id: 终端ID
 
     Returns:
         关闭结果消息
     """
-    if terminal_uuid not in terminals:
-        return f"错误：未找到终端 {terminal_uuid}"
+    if terminal_id not in terminals:
+        return f"错误：未找到终端 {terminal_id}"
 
-    terminal = terminals[terminal_uuid]
+    terminal = terminals[terminal_id]
     terminal.close()
-    del terminals[terminal_uuid]
-    return f"已关闭终端 {terminal_uuid}"
+    del terminals[terminal_id]
+    return f"已关闭终端 {terminal_id}"
 
 
 def close_all_terminals() -> str:
@@ -278,8 +278,8 @@ def close_all_terminals() -> str:
     """
     # global terminals  # No assignment done
     count = len(terminals)
-    for terminal_uuid in list(terminals.keys()):
-        terminal = terminals[terminal_uuid]
+    for terminal_id in list(terminals.keys()):
+        terminal = terminals[terminal_id]
         terminal.close()
-        del terminals[terminal_uuid]
+        del terminals[terminal_id]
     return f"已关闭所有终端，共{count}个"
