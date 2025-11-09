@@ -357,7 +357,11 @@ class OpenAiAnswer:
         self.input_tokens = 0
         self.output_tokens = 0
         self._toyield: list[AnswerToken | AnswerTokenUsage] = []
-        self._estimated_usage = estimated_usage
+        if estimated_usage:
+            self._toyield.append(estimated_usage)
+            self.input_tokens = estimated_usage.input_tokens
+            self.output_tokens = estimated_usage.output_tokens
+            self.total_tokens = estimated_usage.total_tokens
 
     def __aiter__(self):
         """返回异步迭代器。"""
