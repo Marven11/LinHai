@@ -2,6 +2,7 @@
 
 from typing import List, Optional, cast
 import asyncio
+import time
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -46,6 +47,8 @@ class RainbowAsciiArt(Static):
         super().__init__()
         self.ascii_art = ascii_art
         self.time_index = 0
+        self.last_call_time = time.perf_counter()
+        self.slow_counter = 0
         self.rainbow_colors: list[Style] = self._generate_rainbow_colors()
 
     def _generate_rainbow_colors(self) -> list[Style]:
@@ -72,6 +75,17 @@ class RainbowAsciiArt(Static):
     def _update_animation(self) -> None:
         """更新动画时间索引并重新渲染"""
         self.time_index += 1
+
+        # if it is slow for whatever reason, stop
+        if time.perf_counter() - self.last_call_time > 0.05 * 1.2:
+            self.slow_counter += 1
+        elif self.slow_counter > 0:
+            self.slow_counter -= 1
+
+        self.last_call_time = time.perf_counter()
+        if self.slow_counter > 10:
+            return
+
         self.update(self._render_ascii_art())
 
     def _render_ascii_art(self) -> Text:
