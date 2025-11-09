@@ -216,20 +216,19 @@ class MessageWidget(Static):
         else:
             self.display_name = sender_name
             self.role = role
-        self.lazy_counter = 0
+        self.last_update_time = time.perf_counter()
 
-    def append_content_lazy(self, new_content: str, lazy_score: int) -> bool:
+    def append_content_lazy(self, new_content: str) -> bool:
         """追加内容到消息"""
         self.content_str += new_content
-        self.lazy_counter += 1
-        if self.lazy_counter % lazy_score == 0:
+        if time.perf_counter() - self.last_update_time > 0.1:
+            self.last_update_time = time.perf_counter()
             self.update_display()
             return True
         return False
 
     def update_display(self) -> None:
         """更新消息显示"""
-        self.lazy_counter = 0
         self.remove_children()
         content_to_display = self.content_str
         if self.is_reasoning:
@@ -447,6 +446,7 @@ class CLIApp(App):
                         continue
 
                     if current_message and current_message.is_reasoning != is_reasoning:
+                        current_message.update_display()
                         current_message = None
 
                     container = self.query_one("#chat-container")
@@ -474,10 +474,7 @@ class CLIApp(App):
                         current_message.update_display()
                         self._trim_messages_if_needed()
                     else:
-                        updated = current_message.append_content_lazy(
-                            content,
-                            lazy_score=int(len(current_message.content_str) ** 0.5) + 1,
-                        )
+                        updated = current_message.append_content_lazy(content)
                         should_scroll = should_scroll and updated
 
                     if should_scroll:
@@ -512,6 +509,7 @@ class CLIApp(App):
                         # 传入当前回答的token长度
                         self.update_token_display(token_usage.total_tokens)
 
+                    current_message.update_display()
                     current_message = None
                 else:
                     raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
@@ -547,7 +545,6 @@ class CLIApp(App):
             rainbow_art = RainbowAsciiArt(ASCII_ART)
             rainbow_art.add_class("welcome-message")
             container.mount(rainbow_art)
-
 
             # 显示动画欢迎信息
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
