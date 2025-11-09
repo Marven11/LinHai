@@ -7,6 +7,7 @@ from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, Input
 from textual import events
+from textual.timer import Timer
 from rich import box
 from rich.syntax import Syntax
 from rich.panel import Panel
@@ -87,6 +88,77 @@ class RainbowAsciiArt(Static):
                 text.append(char, style=style)
             if row < len(lines) - 1:
                 text.append("\n")
+        return text
+
+
+class AnimatedWelcomeWidget(Static):
+    """动画欢迎信息组件"""
+
+    def __init__(self, version: str, llm_name: str):
+        super().__init__()
+        self.version = version
+        self.llm_name = llm_name
+        self.animation_stage = 0  # 0: 每日一言, 1: 乱码, 2: 版本信息
+        self.elapsed_time = 0.0
+        self.daily_quote = "/time set 0"
+        self.version_info = f"{self.version} | LLM: {self.llm_name}"
+        self.timer: Timer | None = None
+
+    def on_mount(self) -> None:
+        """组件挂载时启动动画"""
+        self.timer = self.set_interval(0.05, self._update_animation)
+
+    def _update_animation(self) -> None:
+        """更新动画"""
+        self.elapsed_time += 0.05
+        if self.elapsed_time >= 0.2:
+            self.animation_stage = 1
+        if self.elapsed_time >= 1.0:
+            self.animation_stage = 2
+        if self.animation_stage == 0:  # 每日一言阶段
+
+            self.update(self._render_daily_quote())
+        elif self.animation_stage == 1:  # 乱码阶段
+            self.update(self._render_glitch())
+        else:  # 版本信息阶段
+            self.update(self._render_version_info())
+            if self.timer:
+                self.timer.stop()
+
+    def _render_daily_quote(self) -> Text:
+        """渲染每日一言"""
+        text = Text()
+        text.append(self.daily_quote, style=Style(color="rgb(255, 215, 0)", bold=True))
+        return text
+
+    def _render_glitch(self) -> Text:
+        """渲染乱码效果，颜色从黄色渐变到灰色"""
+        import random
+        import colorsys
+
+        text = Text()
+        glitch_text = "".join(
+            random.choice("!@#$%^&*()_+-=[]{}|;:,.<>?/~`")
+            for _ in range(max(len(self.daily_quote), len(self.version_info)))
+        )
+        # 从0.2 ~ 1.2秒
+        saturation = max(0, 1.2 - self.elapsed_time)
+        lightness = 0.5
+        hue = 50.59 / 360
+
+        # 将HSL转换为RGB
+        rgb = colorsys.hls_to_rgb(hue, lightness, saturation)
+        r = int(rgb[0] * 255)
+        g = int(rgb[1] * 255)
+        b = int(rgb[2] * 255)
+
+        text.append(glitch_text, style=Style(color=f"rgb({r},{g},{b})", bold=True))
+        return text
+
+    def _render_version_info(self) -> Text:
+        """渲染版本信息"""
+        text = Text()
+        text.append(self.version_info, style=Style(color="rgb(127,127,127)", bold=True))
         return text
 
 
@@ -459,11 +531,10 @@ class CLIApp(App):
             container = self.query_one("#chat-container")
             container.mount(rainbow_art)
 
-            # 显示版本信息
-            version_text = f"版本: {version}\nLLM: {llm_name}"
-            version_widget = Static(version_text)
-            version_widget.add_class("welcome-message")
-            container.mount(version_widget)
+            # 显示动画欢迎信息
+            animated_welcome = AnimatedWelcomeWidget(version, llm_name)
+            animated_welcome.add_class("welcome-message")
+            container.mount(animated_welcome)
             container.scroll_end()
 
         self.agent_task = asyncio.create_task(
