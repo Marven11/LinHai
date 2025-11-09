@@ -82,7 +82,7 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
         if json_block_count > 1 and planning_count == 0:
-            agent.interrupt(
+            await agent.interrupt(
                 "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
             )
             return True
@@ -182,7 +182,7 @@ class ThinkingToolCallPlugin(Plugin):
         max_json_blocks = 5
 
         if json_block_count >= max_json_blocks:
-            agent.interrupt(
+            await agent.interrupt(
                 f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall达到{max_json_blocks}次"
                 "，你只能（且应该）在实际输出时调用多个工具！避免过度思考工具调用！"
             )
@@ -260,7 +260,7 @@ class WeirdEndOfSentencePlugin(Plugin):
         # 检查每一行
         for line in current_content.split("\n"):
             if re.search(pattern, line):
-                agent.interrupt(
+                await agent.interrupt(
                     "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已打断输出"
                 )
                 return True
@@ -297,7 +297,7 @@ class TaskPlanningPlugin(Plugin):
         json_block_count = current_reasoning_content.count("\n```json toolcall")
         if json_block_count == 0:
             return False
-        agent.interrupt(
+        await agent.interrupt(
             "错误：你已经连续多次忘记任务规划，你的工具调用已经被打断。"
             "你必须在工具调用前补上任务规划！"
         )
@@ -366,7 +366,7 @@ class EndThinkPlugin(Plugin):
         lines = current_content.split("\n")
         for line in lines:
             if line.strip() == "</think>":
-                agent.interrupt(
+                await agent.interrupt(
                     "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！"
                 )
                 return True

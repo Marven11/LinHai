@@ -305,7 +305,7 @@ class Agent:
 
         return f"已成功擦除ID为 '{message_id}' 的大消息"
 
-    def interrupt(self, custom_message: str | None = None):
+    async def interrupt(self, custom_message: str | None = None):
         """
         打断当前Answer并添加自定义消息。
 
@@ -314,6 +314,8 @@ class Agent:
         """
         if self.current_answer:
             self.current_answer.interrupt()
+            await self.group_chat.send("cli_agent_output", self.current_answer)
+            self.current_answer = None
             if custom_message:
                 self.messages.append(RuntimeMessage(custom_message))
             else:
