@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from linhai.llm import AnswerToken, ChatMessage, OpenAi
+from linhai.llm import AnswerToken, AnswerTokenUsage, ChatMessage, OpenAi
 
 
 class TestLLM(unittest.IsolatedAsyncioTestCase):
@@ -182,6 +182,68 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         token3 = AnswerToken(reasoning_content="Thinking...", content="")
         self.assertEqual(token3.reasoning_content, "Thinking...")
         self.assertEqual(token3.content, "")
+
+    async def test_kimi_token_estimation(self):
+        """Test Kimi token estimation functionality."""
+        # 创建支持Kimi兼容性的OpenAi实例
+        kimi_llm = OpenAi(
+            api_key="kimi_test_key",
+            base_url="https://api.moonshot.cn/v1",
+            model="kimi-k2-turbo-preview",
+            openai_config={},
+            chat_completion_kwargs={},
+            compatibility="kimi",
+        )
+
+        # Mock httpx client for token estimation
+        with patch("linhai.llm.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"data": {"total_tokens": 100}}
+            mock_response.raise_for_status = MagicMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            history = [ChatMessage(role="user", message="Hello")]
+            result = await kimi_llm.estimate_token_count(history)
+
+            self.assertIsNotNone(result)
+            self.assertEqual(result.total_tokens, 100)
+            self.assertEqual(result.input_tokens, 100)
+            self.assertEqual(result.output_tokens, 0)
+
+    async def test_non_kimi_token_estimation(self):
+        """Test that non-Kimi LLMs return None for token estimation."""
+        history = [ChatMessage(role="user", message="Hello")]
+        result = await self.llm.estimate_token_count(history)
+        self.assertIsNone(result)
+
+    async def test_kimi_token_estimation_error_handling(self):
+        """Test Kimi token estimation error handling."""
+        kimi_llm = OpenAi(
+            api_key="kimi_test_key",
+            base_url="https://api.moonshot.cn/v1",
+            model="kimi-k2-turbo-preview",
+            openai_config={},
+            chat_completion_kwargs={},
+            compatibility="kimi",
+        )
+
+        # Mock httpx client to raise an exception
+        with patch("linhai.llm.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(side_effect=Exception("Network error"))
+            mock_client_class.return_value = mock_client
+
+            history = [ChatMessage(role="user", message="Hello")]
+            result = await kimi_llm.estimate_token_count(history)
+
+            # Should return None on error
+            self.assertIsNone(result)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,14 @@ base_url = "https://api.deepseek.com/v1"
 api_key = "sk-xxx"
 model = "deepseek-reasoner"
 
+[[llm]]
+
+name = "kimi"
+base_url = "https://api.moonshot.cn/v1"
+api_key = "sk-xxx"
+model = "kimi-k2-turbo-preview"
+compatibility = "kimi"
+
 [agent]
 compress_threshold_soft = 40000
 compress_threshold_hard = 80000

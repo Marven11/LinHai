@@ -16,6 +16,7 @@ from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 import linhai
+import httpx
 
 
 @runtime_checkable
@@ -345,7 +346,7 @@ class LanguageModel(Protocol):
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
 
-    def __init__(self, stream):
+    def __init__(self, stream, estimated_usage: AnswerTokenUsage | None = None):
         """初始化OpenAI回答。"""
         self._tokens = []
         self._reasoning_content = None
@@ -356,6 +357,7 @@ class OpenAiAnswer:
         self.input_tokens = 0
         self.output_tokens = 0
         self._toyield: list[AnswerToken | AnswerTokenUsage] = []
+        self._estimated_usage = estimated_usage
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -491,7 +493,7 @@ class OpenAi:
             openai_config: 额外的OpenAI配置
             tools: 可用工具列表
             token_limit: token限制数量
-            compatibility: API兼容性模式，支持minimax等
+            compatibility: API兼容性模式，支持minimax、kimi等
         """
         self.model = model
         self.openai = AsyncOpenAI(
@@ -509,6 +511,54 @@ class OpenAi:
             int | None: token限制数量，如果没有配置则返回None
         """
         return self.token_limit
+
+    async def estimate_token_count(
+        self, history: Sequence[Message]
+    ) -> AnswerTokenUsage | None:
+        """估算token数量，用于Kimi API的token估算。
+
+        参数:
+            history: 消息历史序列
+
+        返回:
+            AnswerTokenUsage | None: token使用情况，如果估算失败则返回None
+        """
+        messages = [
+            cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
+        ]
+
+        estimation_data = {
+            "model": self.model,
+            "messages": messages,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.openai.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.moonshot.cn/v1/tokenizers/estimate-token-count",
+                    json=estimation_data,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                if "data" in result and "total_tokens" in result["data"]:
+                    total_tokens = result["data"]["total_tokens"]
+                    return AnswerTokenUsage(
+                        input_tokens=total_tokens,
+                        output_tokens=0,
+                        total_tokens=total_tokens,
+                    )
+        except Exception:
+            # 如果估算失败，返回None，不影响主流程
+            pass
+
+        return None
 
     async def answer_stream(
         self,
@@ -553,11 +603,16 @@ class OpenAi:
         max_retries = 3
         retry_delay = 20  # 重试延迟，秒
 
+        # 估算token用量（仅在Kimi兼容模式下）
+        estimated_usage = None
+        if self.compatibility == "kimi":
+            estimated_usage = await self.estimate_token_count(history)
+
         answer = None
         for attempt in range(max_retries):
             try:
                 stream = await self.openai.chat.completions.create(**params)
-                answer = OpenAiAnswer(stream)
+                answer = OpenAiAnswer(stream, estimated_usage)
                 break
             except asyncio.TimeoutError as e:
                 if attempt == max_retries - 1:
