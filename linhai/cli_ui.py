@@ -595,9 +595,9 @@ class CLIApp(App):
 
             # 获取当前LLM的token限制
             agent = self.group_chat.get_members("agent", Agent)
-            _, llm_instance = agent.get_current_llm_info()  # Unused variable llm_name
+            llm_name, llm_instance = agent.get_current_llm_info()
             token_limit = llm_instance.get_token_limit()
-            display_text = f"Token: {input_tokens:,} in | {output_tokens:,} out"
+            display_text = f"{llm_name} | in {input_tokens:,} | out {output_tokens:,}"
             if token_limit and token_limit > 0:
                 percentage = (current_answer_token / token_limit) * 100
                 # 使用进度条样式显示百分比

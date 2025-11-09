@@ -11,11 +11,12 @@
         - 注意乱码字符的长度要长于每日一言和版本号信息
     - 最后变成当前版本号和LLM: 如`v0.0.1 | LLM: deepseek`，灰色加粗
     - 不要删掉彩虹色的标题！
-- [ ] 在CLI的底部状态栏Token左边添加当前LLM，类似`deepseek | in xxx | out xxx`
+- [x] 在CLI的底部状态栏Token左边添加当前LLM，类似`deepseek | in xxx | out xxx`
 - [ ] 现在没有使用MCP就Ctrl+C退出会导致RuntimeError
     - 使用终端运行linhai确认行为
     - 在group_chat中添加函数，返回member是否存在
     - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all
+- [ ] 把使用CliRuntimeNotice发送Agent被插件打断的逻辑从generate_response移动到interrupt函数中，而且将消息的内容改为插件提供的custom message
 - [ ] 修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
