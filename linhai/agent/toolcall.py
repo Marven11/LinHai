@@ -7,6 +7,7 @@ from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
 from linhai.group_chat import GroupChat
+from .base import RuntimeMessage
 
 if TYPE_CHECKING:
     from .main import Agent

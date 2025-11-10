@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock
+from typing import Sequence
 import uuid
 
 from linhai.agent import Agent, AgentContext

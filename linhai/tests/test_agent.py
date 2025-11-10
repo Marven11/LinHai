@@ -4,7 +4,7 @@
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from typing import TypedDict, Any
+from typing import TypedDict, Any, Sequence
 from pathlib import Path
 
 from linhai.agent import Agent, AgentContext

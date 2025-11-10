@@ -2,6 +2,7 @@
 
 import unittest
 from unittest.mock import Mock, patch
+from typing import Sequence
 from pathlib import Path
 import tempfile
 import json
@@ -9,7 +10,6 @@ import json
 from linhai.agent.message import AgentMessage
 from linhai.llm import ChatMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage, DestroyedRuntimeMessage
-from unittest.mock import Mock
 
 
 class TestAgentMessage(unittest.TestCase):
@@ -114,7 +114,7 @@ class TestAgentMessage(unittest.TestCase):
         
         self.assertEqual(len(self.message_processor.queued_messages), 0)
         self.assertEqual(len(self.message_processor.messages), 4)  # 初始2条 + 1条排队消息 + 1条排队通知
-        self.assertIn("排队消息", self.message_processor.messages[-2].message)
+        self.assertIn("排队消息", str(self.message_processor.messages[-2]))
         self.assertEqual(self.message_processor.messages[-1], queued_msg)
 
     def test_thanox_history(self):
@@ -142,7 +142,7 @@ class TestAgentMessage(unittest.TestCase):
         self.message_processor.add_soft_threshold_notification(threshold_info, large_messages, False)
         
         self.assertEqual(len(self.message_processor.messages), 3)
-        self.assertIn("Token用量", self.message_processor.messages[-1].message)
+        self.assertIn("Token用量", str(self.message_processor.messages[-1]))
 
     def test_add_soft_threshold_notification_with_compress_tool(self):
         """测试压缩工具调用后不添加通知。"""
@@ -165,7 +165,7 @@ class TestAgentMessage(unittest.TestCase):
         
         # 模拟文件操作
         mock_file = Mock()
-        mock_open = unittest.mock.mock_open()
+        mock_open = Mock()
         
         with patch('builtins.open', mock_open):
             await self.message_processor.save_conversation_history()

@@ -70,7 +70,7 @@ class Agent:
         self,
         context: AgentContext,
         group_chat: GroupChat,
-        init_messages: list[Message],
+        init_messages: Sequence[Message],
     ):
         self.context = context
         self.group_chat = group_chat
@@ -85,6 +85,37 @@ class Agent:
         # 使用AgentMessage类管理消息
         self.message_processor = AgentMessage(init_messages)
         self.toolcall_processor = AgentToolcall(self)
+
+        self.last_token_usage = None
+        self.current_enable_compress = True
+        self.soft_compress_triggered = False  # 软压缩限制触发标志
+        self.large_messages = {}  # 大消息存储
+
+        # Plugin使用的变量
+        self.compress_tool_called_in_last_response = (
+            False  # 记录是否在最近响应中调用了压缩工具
+        )
+        self.current_disable_waiting_user_warning = False
+
+        # 当前Answer实例，用于plugin打断
+        self.current_answer: Answer | None = None
+
+        # 生命周期回调管理器
+        self.lifecycle = Lifecycle(self.group_chat)
+
+        # 为兼容性添加messages属性，代理到message_processor
+        self.messages = self.message_processor.get_messages()
+
+    def erase_message_by_id(self, message_id: str) -> str:
+        """擦除大消息。
+        
+        Args:
+            message_id: 要擦除的消息ID
+            
+        Returns:
+             擦除结果消息
+        """
+        return self.message_processor.erase_message_by_id(message_id)
 
         self.last_token_usage = None
         self.current_enable_compress = True

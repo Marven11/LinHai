@@ -1,7 +1,7 @@
 """消息处理模块，负责管理Agent的消息队列和处理逻辑。"""
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from pathlib import Path
 import json
 import datetime
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class AgentMessage:
     """消息处理器，负责管理消息队列和相关操作。"""
 
-    def __init__(self, init_messages: List[Message] = None):
+    def __init__(self, init_messages: Optional[Sequence[Message]] = None):
         """初始化消息处理器。
         
         Args:

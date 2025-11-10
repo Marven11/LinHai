@@ -4,6 +4,7 @@ import json
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
+from typing import Sequence
 
 
 from linhai.agent import Agent, AgentContext
