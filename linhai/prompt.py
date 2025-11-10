@@ -127,6 +127,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 使用Markdown JSON代码块调用工具：
 - 为了和普通的JSON数据做区分，代码块的语言标记为`json toolcall`，普通的JSON代码块使用`json`
+- 一个JSON代码块中只能有一个JSON对象，不兼容JSON line!
 
 ```json toolcall
 {"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2", "assert_success": false}}

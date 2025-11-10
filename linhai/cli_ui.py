@@ -639,6 +639,13 @@ class CLIApp(App):
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
+        if self.output_watcher_task and self.output_watcher_task.done():
+            await self.output_watcher_task
+            raise RuntimeError("Output watcher task is dead!")
+        if self.agent_task and self.agent_task.done():
+            await self.agent_task
+            raise RuntimeError("Agent task is dead!")
+        
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
