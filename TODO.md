@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 参考./ANALYSIS_AGENT.md重构linhai/agent/main.py
+- [x] 参考./ANALYSIS_AGENT.md重构linhai/agent/main.py
     - 抽象message处理逻辑
         - 首先把处理messages的逻辑抽象为AgentMessage类，保存在message.py中，让agent通过合理的接口调用
         - 编写并运行unittest
@@ -17,7 +17,7 @@
 - [ ] 升级list_files，使其显示每个文件/文件夹的类型等，格式类似gnu的ls -lah
 - [ ] 修改现在的软阈值消息提示：
     - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯
-    - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒
+    - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒，如果由其他状态转为绿灯则提醒
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
