@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 import asyncio
 
-from linhai.agent.main import _create_init_messages
+from linhai.agent.create import _create_init_messages
 from linhai.group_chat import GroupChat
 from linhai.agent.base import GlobalMemory
 

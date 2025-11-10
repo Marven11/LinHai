@@ -242,3 +242,20 @@ class PathMemory:
         """
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))
+
+
+from typing import TypedDict, NotRequired
+
+
+class AgentContext(TypedDict):
+    """Agent配置参数"""
+
+    system_prompt: str
+    llms: list  # 多个LLM实例
+    llm_names: list[str]  # LLM名称列表
+    current_llm_index: int  # 当前使用的LLM索引
+    compress_threshold_soft: int | float
+    compress_threshold_hard: int | float
+    memory: NotRequired[dict]  # 可选 memory 字段
+    tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
+    enable_directory_change_detection: NotRequired[bool]  # 是否启用目录更改检测
