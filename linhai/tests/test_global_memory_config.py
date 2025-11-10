@@ -2,6 +2,7 @@
 
 import tempfile
 import shutil
+import os
 from pathlib import Path
 import unittest
 import asyncio
@@ -22,11 +23,17 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         self.working_dir = Path(self.temp_dir) / "working"
         self.working_dir.mkdir()
         
+        # 保存原始工作目录并切换到临时目录
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_dir)
+        
         # 创建测试用的group_chat
         self.group_chat = GroupChat()
 
     def tearDown(self):
         """测试后清理"""
+        # 恢复原始工作目录
+        os.chdir(self.original_cwd)
         shutil.rmtree(self.temp_dir)
 
     def test_memory_file_path_absolute(self):
