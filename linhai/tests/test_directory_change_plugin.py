@@ -28,6 +28,17 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         self.mock_agent.context = {"enable_directory_change_detection": False}
         self.mock_agent.messages = []
         
+        # 设置mock_agent的message_processor
+        from linhai.agent.message import AgentMessage
+        from linhai.llm import ChatMessage, SystemMessage
+        
+        mock_group_chat = Mock()
+        init_messages = [
+            SystemMessage(template="System message", current_time="2025-10-26 17:00:00", group_chat=mock_group_chat),
+            ChatMessage(role="user", message="Initial message")
+        ]
+        self.mock_agent.message_processor = AgentMessage(init_messages)
+        
         # 使用patch模拟get_members方法以返回mock_agent
         self.get_members_patch = patch.object(self.group_chat, 'get_members', return_value=self.mock_agent)
         self.mock_get_members = self.get_members_patch.start()
@@ -96,10 +107,11 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         import asyncio
         asyncio.run(self.plugin.before_message_generation(True, False))
         
-        # 验证添加了PathMemory消息
-        self.assertEqual(len(self.mock_agent.messages), 1)
-        self.assertIsInstance(self.mock_agent.messages[0], PathMemory)
-        self.assertEqual(self.mock_agent.messages[0].filepath.resolve(), test_file.resolve())
+        # 验证添加了PathMemory消息（原有2条 + 新增1条PathMemory = 3条）
+        messages = self.mock_agent.message_processor.get_messages()
+        self.assertEqual(len(messages), 3)
+        self.assertIsInstance(messages[-1], PathMemory)
+        self.assertEqual(messages[-1].filepath.resolve(), test_file.resolve())
 
     def test_plugin_avoids_duplicates(self):
         """测试插件避免重复添加相同路径的消息。"""

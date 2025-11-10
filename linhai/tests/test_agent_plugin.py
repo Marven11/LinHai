@@ -14,7 +14,9 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = TaskPlanningPlugin(self.group_chat)
@@ -38,7 +40,9 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 - [x] 任务2
 - [ ] 任务3"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -55,29 +59,37 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
 任务2
 任务3"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
         )
 
         # 没有任务规划标记，应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("你没有输出任务规划", self.agent.messages[0].message)
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("你没有输出任务规划", args[0].message)
 
     async def test_after_message_generation_with_long_content(self):
         """测试长内容中的任务规划检查。"""
         # 创建一个长内容，确保超过8000字符
         long_content = "任务描述" + "x" * 8000
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, long_content, self.tool_calls
         )
 
         # 长内容中没有任务规划标记，应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 1)
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
 
 
 if __name__ == "__main__":
@@ -90,7 +102,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = BadMultiToolCall(self.group_chat)
@@ -119,15 +133,19 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
         )
 
         # 有多个工具调用但没有原因，应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", self.agent.messages[0].message)
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", args[0].message)
 
     async def test_after_message_generation_with_good_multi_tool_call(self):
         """测试有正常分隔的工具调用块的情况。"""
@@ -145,7 +163,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -163,7 +183,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -183,7 +205,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response1, self.tool_calls
@@ -207,7 +231,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response2, self.tool_calls
@@ -235,7 +261,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response1, self.tool_calls
@@ -257,15 +285,19 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
         )
 
         # 有多个工具调用但没有原因，应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", self.agent.messages[0].message)
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", args[0].message)
 
     async def test_after_message_generation_with_multiple_tool_calls_and_reason(self):
         """测试有多个工具调用且输出了原因的情况。"""
@@ -283,7 +315,9 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
 更多内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -298,10 +332,12 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
-        self.agent.interrupt = AsyncMock(side_effect=lambda msg=None: self.agent.messages.append(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
+        self.agent.interrupt = AsyncMock(side_effect=lambda msg=None: self.agent.message_processor.append_message(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = WeirdEndOfSentencePlugin(self.group_chat)
@@ -322,7 +358,9 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 这是一行中文<｜end▁of▁thought｜><｜end▁of▁sentence｜>
 这是另一行内容"""
 
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
 
@@ -333,8 +371,11 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         # 应该检测到中文句子结束标记并打断输出
         self.assertTrue(result)
         self.agent.interrupt.assert_called_once()
-        self.assertEqual(len(self.agent.messages), 1)
-        self.assertIn("结束标记", self.agent.messages[0].message)
+        # 验证RuntimeMessage被添加到消息中
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("结束标记", call_args[0].message)
 
 
 class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
@@ -343,7 +384,9 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.messages = []
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
         self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)

@@ -20,6 +20,8 @@ from .base import (
     GlobalMemory,
 )
 from .lifecycle import Lifecycle
+from .message import AgentMessage
+from .toolcall import AgentToolcall
 from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
     Message,
@@ -68,7 +70,7 @@ class Agent:
         self,
         context: AgentContext,
         group_chat: GroupChat,
-        init_messages: Sequence[Message],
+        init_messages: list[Message],
     ):
         self.context = context
         self.group_chat = group_chat
@@ -80,14 +82,15 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
-        self.messages: list[Message] = list(init_messages)
+        # 使用AgentMessage类管理消息
+        self.message_processor = AgentMessage(init_messages)
+        self.toolcall_processor = AgentToolcall(self)
 
         self.last_token_usage = None
         self.current_enable_compress = True
         self.soft_compress_triggered = False  # 软压缩限制触发标志
+        self.large_messages = {}  # 大消息存储
 
-        self.large_messages: dict[str, Message] = {}  # 存储大消息的ID映射
-        self.queued_messages: list[Message] = []  # 存储/queue消息
         # Plugin使用的变量
         self.compress_tool_called_in_last_response = (
             False  # 记录是否在最近响应中调用了压缩工具
@@ -99,162 +102,6 @@ class Agent:
 
         # 生命周期回调管理器
         self.lifecycle = Lifecycle(self.group_chat)
-
-        # 添加LLM切换工具
-        llm_toolset = ToolSet()
-
-        # 处理缺少llm_names的情况
-        llm_names = self.context.get(
-            "llm_names", [f"llm{i}" for i in range(len(self.context["llms"]))]
-        )
-
-        @llm_toolset.register_tool(
-            name="switch_llm",
-            desc="切换到指定的LLM。可用的LLM包括: " + ", ".join(llm_names),
-            args={
-                "llm_name": ToolArgInfo(desc="要切换到的LLM名称", type="str"),
-            },
-            required_args=["llm_name"],
-        )
-        def switch_llm(llm_name: str):
-            """切换到指定的LLM
-
-            Args:
-                llm_name: 要切换到的LLM名称
-
-            Returns:
-                切换结果消息
-            """
-            if llm_name not in llm_names:
-                available_llms = ", ".join(llm_names)
-                return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
-
-            index = llm_names.index(llm_name)
-            self.context["current_llm_index"] = index
-            return f"已切换到LLM: {llm_name}"
-
-        @llm_toolset.register_tool(
-            name="current_llm",
-            desc="显示当前使用的LLM名称",
-            args={},
-            required_args=[],
-        )
-        def current_llm():
-            """显示当前使用的LLM名称
-
-            Returns:
-                当前LLM名称消息
-            """
-            current_name = llm_names[self.context["current_llm_index"]]
-            return f"当前使用的LLM: {current_name}"
-
-        try:
-            tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
-        except RuntimeError as e:
-            raise RuntimeError("Tool manager must be registered!") from e
-
-        # 将工具集添加到ToolManager
-        tool_manager.add_toolset(llm_toolset)
-
-        # 添加虚拟工具集（原dummy.py中的工具）
-        dummy_toolset = ToolSet()
-
-        @dummy_toolset.register_tool(
-            name="get_token_usage",
-            desc="获取token使用情况。",
-            args={},
-            required_args=[],
-        )
-        def get_token_usage() -> str:
-            """获取token使用情况工具函数。
-
-            Returns:
-                str: token使用情况消息
-            """
-            if self.last_token_usage is not None:
-                return f"当前token总用量为: {self.last_token_usage} ({self.last_token_usage/1000:.2f} k)"
-            else:
-                return "暂无token用量信息"
-
-        @dummy_toolset.register_tool(
-            name="thanox_history",
-            desc="随机删除一半消息（不包括前5条系统消息）。调用这个工具来触发随机删除流程。",
-            args={},
-            required_args=[],
-        )
-        def thanox_history() -> str:
-            """随机删除历史消息工具函数。
-
-            Returns:
-                str: 删除结果消息
-            """
-            if len(self.messages) <= 10:
-                return "消息数量不足，无需删除"
-
-            indices_to_delete = random.sample(
-                range(5, len(self.messages)), len(self.messages) // 2
-            )
-
-            self.messages = [
-                msg if idx not in indices_to_delete else DestroyedRuntimeMessage()
-                for idx, msg in enumerate(self.messages)
-            ]
-
-            return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
-
-        @dummy_toolset.register_tool(
-            name="erase_message_by_id",
-            desc="擦除通过ID标识的大消息。当工具返回内容过大时，系统会分配ID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条ID为{ID}的消息已被擦除",
-            args={
-                "ids": ToolArgInfo(desc="要擦除的消息的ID", type="list[str]"),
-            },
-            required_args=["ids"],
-        )
-        def erase_message_by_id(ids: list[str]) -> str:
-            threshold_info = self.get_threshold_info()
-            if threshold_info:
-                soft, _hard, used, _remaining, taken = threshold_info
-                if used < soft:
-                    return "当前token占用没有超过软限制，禁止擦除消息"
-                if taken < 0.4:
-                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
-            result = ""
-            for message_id in ids:
-                result += f"{message_id!r}: {self.erase_message_by_id(message_id)}"
-            return result
-
-        # 将虚拟工具集添加到ToolManager
-        tool_manager.add_toolset(dummy_toolset)
-
-        # 添加workflow工具集（像switch_llm一样）
-        workflow_toolset = ToolSet()
-
-        @workflow_toolset.register_tool(
-            name="compress_history_range",
-            desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
-            args={},
-            required_args=[],
-        )
-        async def compress_history_range_tool() -> bool:
-            """压缩历史消息工具函数。
-
-            Returns:
-                bool: 是否成功执行压缩
-            """
-            return await compress_history_range(self)
-
-        # 将workflow工具集添加到ToolManager
-        tool_manager.add_toolset(workflow_toolset)
-
-        # 解析tool_confirmation配置并存储
-        tool_confirmation_config = self.context.get("tool_confirmation", {})
-        if not isinstance(tool_confirmation_config, dict):
-            tool_confirmation_config = {}
-        self.skip_confirmation = tool_confirmation_config.get(
-            "skip_confirmation", False
-        )
-        self.whitelist = tool_confirmation_config.get("whitelist", [])
-        self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
@@ -288,28 +135,7 @@ class Agent:
             taken,
         )
 
-    def erase_message_by_id(self, message_id: str) -> str:
-        """擦除大消息方法。
 
-        Args:
-            message_id: 要擦除的消息的ID
-
-        Returns:
-            str: 擦除结果消息
-        """
-        if message_id not in self.large_messages:
-            return f"错误：ID '{message_id}' 不存在，无法擦除消息。"
-
-        # 从large_messages中移除
-        message_to_delete = self.large_messages[message_id]
-        del self.large_messages[message_id]
-
-        # 在原位置插入runtime message而不是直接删除
-        if message_to_delete in self.messages:
-            index = self.messages.index(message_to_delete)
-            self.messages[index] = RuntimeMessage(f"本条ID为{message_id}的消息已被擦除")
-
-        return f"已成功擦除ID为 '{message_id}' 的大消息"
 
     async def interrupt(self, custom_message: str | None = None):
         """
@@ -328,12 +154,12 @@ class Agent:
                 interrupt_msg = CliRuntimeNotice(
                     level="WARNING", content=custom_message
                 )
-                self.messages.append(RuntimeMessage(custom_message))
+                self.message_processor.append_message(RuntimeMessage(custom_message))
             else:
                 interrupt_msg = CliRuntimeNotice(
                     level="WARNING", content="Agent被打断"
                 )
-                self.messages.append(RuntimeMessage("Agent被打断"))
+                self.message_processor.append_message(RuntimeMessage("Agent被打断"))
             
             await self.group_chat.send("cli_runtime_output", interrupt_msg)
             self.state = "working"
@@ -381,20 +207,9 @@ class Agent:
         if not self.compress_tool_called_in_last_response:
             threshold_info = self.get_threshold_info()
             if threshold_info:
-                soft, hard, used, remaining, taken = threshold_info
-                if used > soft:
-                    # 获取前3个大消息（按照插入顺序）
-                    large_messages_info = ""
-                    if self.large_messages:
-                        large_message_ids = list(self.large_messages.keys())[:3]
-                        large_messages_info = f"当前已有{len(self.large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
-                    
-                    self.messages.append(
-                        RuntimeMessage(
-                            f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                            f"当前已有{len(self.messages)}条消息。{large_messages_info}建议在消息条数少于200条时优先使用 erase_message_by_id. "
-                        )
-                    )
+                self.message_processor.add_soft_threshold_notification(
+                    threshold_info, self.large_messages, self.compress_tool_called_in_last_response
+                )
 
         if self.last_token_usage and self.last_token_usage > self.context.get(
             "compress_threshold_hard", int(65536 * 0.8)
@@ -402,133 +217,12 @@ class Agent:
             # await self.compress()
             await compress_history_range(self)
 
-    async def call_tool(self, tool_call: ToolCallMessage) -> bool:
-        """
-        直接调用工具并处理结果。
 
-        参数:
-            tool_call: 工具调用消息
-
-        返回:
-            bool: 是否需要进行早期返回
-        """
-        if self.state == "waiting_user":
-            self.state = "working"
-
-        # 统一设置compress_tool_called_in_last_response
-        compress_tools = [
-            "compress_history_range",
-            "erase_message_by_id",
-            "thanox_history",
-        ]
-        self.compress_tool_called_in_last_response = (
-            tool_call.function_name in compress_tools
-        )
-
-        # 触发工具调用前的生命周期事件
-        await self.lifecycle.trigger_before_tool_call(tool_call)
-
-        # 使用存储的tool_confirmation配置（在初始化时解析）
-        if self.skip_confirmation or tool_call.function_name in self.whitelist:
-            try:
-                tool_result = await self.group_chat.get_members(
-                    "tool_manager", ToolManager
-                ).process_tool_call(tool_call)
-
-                # 检查工具结果，如果是ToolErrorMessage且assert_success为True，则中止
-                from linhai.tool.base import ToolErrorMessage
-
-                if (
-                    isinstance(tool_result, ToolErrorMessage)
-                    and tool_call.assert_success
-                ):
-                    # 触发工具调用后的生命周期事件（失败）
-                    await self.lifecycle.trigger_after_tool_call(
-                        tool_call, tool_result, False
-                    )
-                    msg = f"工具调用失败: {tool_result.content}"
-                    logger.error(msg)
-                    self.messages.append(RuntimeMessage(msg))
-                    return True  # 需要早期返回，中止其他工具调用
-
-                # 触发工具调用后的生命周期事件（成功）
-                await self.lifecycle.trigger_after_tool_call(
-                    tool_call, tool_result, True
-                )
-
-                # 检查工具结果大小，如果大于8000字符则记录ID
-                tool_result_content = str(tool_result)
-                if len(tool_result_content) > 8000:
-                    message_id = generate_id("largemessage")
-                    self.large_messages[message_id] = tool_result
-                    self.messages.append(
-                        RuntimeMessage(
-                            f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配ID: {message_id}。"
-                            "你可以使用 erase_message_by_id 工具删除此消息以节省token。"
-                        )
-                    )
-
-                self.messages.append(
-                    RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
-                )
-                self.messages.append(tool_result)
-                if self.state == "waiting_user":
-                    self.state = "working"
-                return False  # 不需要早期返回
-            except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-                # 触发工具调用后的生命周期事件（失败）
-                await self.lifecycle.trigger_after_tool_call(tool_call, e, False)
-
-                msg = f"工具调用失败: {str(e)} {repr(e)}"
-                logger.error(msg)
-                self.messages.append(RuntimeMessage(msg))
-                return False
-
-        # 需要用户确认：发送工具请求到队列
-        from linhai.cli_ui import CLIApp
-
-        confirmation = await self.group_chat.get_members(
-            "cli_app", CLIApp
-        ).confirm_tool_request(tool_call)
-        self.messages.append(
-            RuntimeMessage(
-                f"已发送工具调用请求: {tool_call.function_name}，等待用户确认..."
-            )
-        )
-
-        # 检查确认消息是否匹配当前工具调用
-        if confirmation.tool_call.function_name != tool_call.function_name:
-            self.messages.append(
-                RuntimeMessage("错误：收到的确认消息不匹配当前工具调用")
-            )
-            return False
-
-        # 根据确认状态执行或取消
-        if confirmation.confirmed:
-            try:
-                tool_result = await self.group_chat.get_members(
-                    "tool_manager", ToolManager
-                ).process_tool_call(tool_call)
-                self.messages.append(
-                    RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
-                )
-                self.messages.append(tool_result)
-                return False  # 不需要早期返回
-            except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-                msg = f"工具调用失败: {str(e)} {repr(e)}"
-                logger.error(msg)
-                self.messages.append(RuntimeMessage(msg))
-                return False
-        else:
-            self.messages.append(
-                RuntimeMessage(f"用户取消了工具调用: {tool_call.function_name}")
-            )
-            return False
 
     def is_last_message_user(self) -> bool:
-        if not self.messages:
+        if not self.message_processor.get_messages():
             return False
-        msg = self.messages[-1]
+        msg = self.message_processor.get_messages()[-1]
         return isinstance(msg, ChatMessage) and msg.role == "user"
 
     def handle_user_message(self, msg: Message):
@@ -547,18 +241,18 @@ class Agent:
                 self.context["current_llm_index"] = self.context["llm_names"].index(
                     llm_name
                 )
-                self.messages.append(
+                self.message_processor.append_message(
                     RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
                 )
             else:
                 # 添加错误消息
-                self.messages.append(
+                self.message_processor.append_message(
                     RuntimeMessage(
                         f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点"
                     )
                 )
 
-        self.messages.append(msg)
+        self.message_processor.append_message(msg)
 
     async def _select_model(self) -> LanguageModel:
         """
@@ -583,13 +277,13 @@ class Agent:
             Answer: 生成的回答对象
         """
         # Check if the last message is from assistant, add empty user message if so
-        if len(self.messages) > 0:
-            last_msg = self.messages[-1]
+        if self.message_processor.get_message_count() > 0:
+            last_msg = self.message_processor.get_messages()[-1]
             if isinstance(last_msg, ChatMessage):
                 llm_msg = last_msg.to_llm_message()
                 if llm_msg.get("role") == "assistant":
                     empty_user_msg = RuntimeMessage("继续")
-                    self.messages.append(empty_user_msg)
+                    self.message_processor.append_message(empty_user_msg)
 
         self.current_enable_compress = enable_compress
         self.current_disable_waiting_user_warning = disable_waiting_user_warning
@@ -602,7 +296,7 @@ class Agent:
         # 选择模型
         model = await self._select_model()
 
-        answer: Answer = await model.answer_stream(self.messages)
+        answer: Answer = await model.answer_stream(self.message_processor.get_messages())
 
         # 设置当前Answer用于plugin打断
         self.current_answer = answer
@@ -635,7 +329,7 @@ class Agent:
                     # 以/quit或/exit开头，直接退出程序
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
-                    self.messages.append(chat_message)
+                    self.message_processor.append_message(chat_message)
                     # 发送退出信号
                     await self.group_chat.send("cli_exit", {"return_code": 0})
                     answer.interrupt()
@@ -644,7 +338,7 @@ class Agent:
                     # 正常打断
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
-                    self.messages.append(chat_message)
+                    self.message_processor.append_message(chat_message)
                     await self.interrupt("Agent被用户打断")
                     self.handle_user_message(msg)
                     return answer
@@ -653,14 +347,14 @@ class Agent:
 
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
-        self.messages.append(chat_message)
+        self.message_processor.append_message(chat_message)
 
         # 将排队消息添加到消息列表，放在agent输出后面
         if self.queued_messages:
-            self.messages.append(
+            self.message_processor.append_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
-            self.messages += self.queued_messages
+            self.message_processor.get_messages().extend(self.queued_messages)
             self.queued_messages = []  # 清空排队消息
 
         try:
@@ -674,7 +368,7 @@ class Agent:
             return answer
 
         for error in errors:
-            self.messages.append(RuntimeMessage(error))
+            self.message_processor.append_message(RuntimeMessage(error))
 
         for call in tool_calls:
             if "name" in call and "arguments" in call:
@@ -701,6 +395,17 @@ class Agent:
         self.current_answer = None
         return answer
 
+    async def call_tool(self, tool_call):
+        """调用工具，委托给toolcall_processor处理。
+        
+        Args:
+            tool_call: 工具调用消息
+            
+        Returns:
+            bool: 是否需要进行早期返回
+        """
+        return await self.toolcall_processor.call_tool(tool_call)
+
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
         """获取当前LLM的名称和实例。
 
@@ -724,7 +429,7 @@ class Agent:
 
         # 将消息列表转换为JSON可序列化的数据
         history_data = []
-        for msg in self.messages:
+        for msg in self.message_processor.get_messages():
             # 只保存有to_json方法的消息
             if hasattr(msg, "to_json"):
                 try:

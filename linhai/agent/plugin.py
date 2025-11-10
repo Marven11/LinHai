@@ -33,7 +33,7 @@ class WaitingUserPlugin(Plugin):
         # 检查是否同时调用工具和等待用户
         if not agent.current_disable_waiting_user_warning:
             if tool_calls and has_waiting_marker:
-                agent.messages.append(
+                agent.message_processor.append_message(
                     RuntimeMessage(
                         f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
                         f"工具调用和等待用户是互斥的，请只选择其中一种方式"
@@ -41,7 +41,7 @@ class WaitingUserPlugin(Plugin):
                 )
                 return
             if agent.state == "working" and not tool_calls and not has_waiting_marker:
-                agent.messages.append(
+                agent.message_processor.append_message(
                     RuntimeMessage(
                         f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
                         f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
@@ -53,7 +53,7 @@ class WaitingUserPlugin(Plugin):
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
-                agent.messages.append(
+                agent.message_processor.append_message(
                     RuntimeMessage(
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
@@ -108,7 +108,7 @@ class WrongEndPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage(f"警告: 输出了错误的token: {regex_result!r}")
             )
 
@@ -146,7 +146,7 @@ class BadMultiToolCall(Plugin):
         has_no_reason = re.search(pattern, full_response) is not None
 
         if tool_call_count > 1 and has_no_reason:
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage(
                     "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？"
                 )
@@ -154,7 +154,7 @@ class BadMultiToolCall(Plugin):
             self.last_message_had_reason = False
         elif tool_call_count > 1 and not has_no_reason:
             if not self.last_message_had_reason:
-                agent.messages.append(
+                agent.message_processor.append_message(
                     RuntimeMessage(
                         "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"
                     )
@@ -207,7 +207,7 @@ class ExcessiveCheckmarkPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         count = full_response.count("- [x]")
         if count > 10:  # 阈值设为10
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage(
                     f"警告：你输出了过多`- [x]`标记（{count}个），请使用分级无序列表整理大小任务。"
                     "请注意：如果完成的任务过多，可以不输出完成的小任务，只输出大任务已完成。"
@@ -233,7 +233,7 @@ class MarkdownSyntaxPlugin(Plugin):
         # 计算代码块分隔符的数量
         code_block_count = full_response.count("```")
         if code_block_count % 2 != 0:
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
             )
 
@@ -318,7 +318,7 @@ class TaskPlanningPlugin(Plugin):
         # 如果没有找到任何任务规划标记，则提醒
         if not matches:
             self.no_planning_score += 1
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage(
                     (
                         "注意：你没有输出任务规划"
@@ -334,7 +334,7 @@ class TaskPlanningPlugin(Plugin):
             if reasoning_content is not None and re.findall(
                 pattern, reasoning_content, re.MULTILINE
             ):
-                agent.messages.append(
+                agent.message_processor.append_message(
                     RuntimeMessage(
                         "注意：你刚刚在思考时输出了任务规划，但是没有在实际的输出中输出！"
                         "必须在实际的输出而非只有思考时输出任务规划！"
@@ -342,7 +342,7 @@ class TaskPlanningPlugin(Plugin):
                 )
         elif self.no_planning_score > 0:
             self.no_planning_score -= 1
-            agent.messages.append(
+            agent.message_processor.append_message(
                 RuntimeMessage(
                     "成功输出任务规划，抵消一次错误输出，之后一定要注意任务规划"
                 )
@@ -418,11 +418,11 @@ class DirectoryChangePlugin(Plugin):
                 # 检查是否已经存在相同路径的GlobalMemory或PathMemory
                 has_duplicate = any(
                     message.filepath.resolve() == filepath.resolve()
-                    for message in agent.messages
+                    for message in agent.message_processor.get_messages()
                     if isinstance(message, (GlobalMemory, PathMemory))
                 )
                 if not has_duplicate:
-                    agent.messages.append(PathMemory(filepath))
+                    agent.message_processor.append_message(PathMemory(filepath))
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到before_message_generation回调。"""

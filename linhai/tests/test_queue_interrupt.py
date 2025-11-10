@@ -102,10 +102,13 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         # 调用generate_response
         await self.agent.generate_response()
         
+        # 获取agent的消息列表
+        agent_messages = self.agent.message_processor.get_messages()
+        
         # 找到agent输出和排队消息的位置
-        assistant_messages = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "assistant"]
-        queue_messages = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
-        runtime_messages = [msg for msg in self.agent.messages if isinstance(msg, RuntimeMessage)]
+        assistant_messages = [msg for msg in agent_messages if isinstance(msg, ChatMessage) and msg.role == "assistant"]
+        queue_messages = [msg for msg in agent_messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
+        runtime_messages = [msg for msg in agent_messages if isinstance(msg, RuntimeMessage)]
         
         self.assertTrue(len(assistant_messages) >= 1, "应该至少有一个assistant消息")
         self.assertTrue(len(queue_messages) >= 1, "应该至少有一个/queue消息")
@@ -113,7 +116,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 找到最后一个assistant消息的索引
         last_assistant_idx = None
-        for i, msg in enumerate(self.agent.messages):
+        for i, msg in enumerate(agent_messages):
             if isinstance(msg, ChatMessage) and msg.role == "assistant":
                 last_assistant_idx = i
         
@@ -122,12 +125,12 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 验证排队消息在assistant消息之后
         if last_assistant_idx is not None:
-            for i, msg in enumerate(self.agent.messages):
+            for i, msg in enumerate(agent_messages):
                 if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
                     self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
         
         # 验证运行时消息在assistant消息之后
-        for i, msg in enumerate(self.agent.messages):
+        for i, msg in enumerate(agent_messages):
             if isinstance(msg, RuntimeMessage) and "排队消息" in msg.message:
                 self.assertGreater(i, last_assistant_idx, "运行时消息应该在agent输出之后")
 
@@ -141,18 +144,19 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(content.startswith("/queue"))
         
         # 模拟处理逻辑 - 更新以匹配新行为
-        self.agent.messages.append(ChatMessage(role="assistant", message="Agent响应"))
-        self.agent.messages.append(RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理："))
-        self.agent.messages.append(queue_msg)
+        self.agent.message_processor.append_message(ChatMessage(role="assistant", message="Agent响应"))
+        self.agent.message_processor.append_message(RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理："))
+        self.agent.message_processor.append_message(queue_msg)
         
         # 验证消息被正确添加
-        self.assertEqual(len(self.agent.messages), 3)
-        self.assertIsInstance(self.agent.messages[0], ChatMessage)
-        self.assertEqual(self.agent.messages[0].message, "Agent响应")  # type: ignore
-        self.assertIsInstance(self.agent.messages[1], RuntimeMessage)
-        self.assertEqual(self.agent.messages[1].message, "用户在你回答的时候输出了以下排队消息，现在请处理：")  # type: ignore
-        self.assertIsInstance(self.agent.messages[2], ChatMessage)
-        self.assertEqual(self.agent.messages[2].message, "/queue 这是一个排队消息")  # type: ignore
+        agent_messages = self.agent.message_processor.get_messages()
+        self.assertEqual(len(agent_messages), 3)
+        self.assertIsInstance(agent_messages[0], ChatMessage)
+        self.assertEqual(agent_messages[0].message, "Agent响应")  # type: ignore
+        self.assertIsInstance(agent_messages[1], RuntimeMessage)
+        self.assertEqual(agent_messages[1].message, "用户在你回答的时候输出了以下排队消息，现在请处理：")  # type: ignore
+        self.assertIsInstance(agent_messages[2], ChatMessage)
+        self.assertEqual(agent_messages[2].message, "/queue 这是一个排队消息")  # type: ignore
 
     def test_normal_message_handling(self):
         """测试普通消息的处理逻辑"""
@@ -208,7 +212,8 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.queued_messages[1].message, "/queue 排队消息2")  # type: ignore
         
         # 验证消息列表中没有排队消息（因为被打断了，排队消息还没被添加到消息列表）
-        queue_messages_in_main = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
+        agent_messages = self.agent.message_processor.get_messages()
+        queue_messages_in_main = [msg for msg in agent_messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
         self.assertEqual(len(queue_messages_in_main), 0, "排队消息不应该出现在主消息列表中（因为被打断了）")
         
         # 现在模拟再次调用generate_response（比如用户继续对话）
@@ -220,24 +225,25 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
         
         # 验证排队消息现在被添加到了消息列表中
-        queue_messages_in_main = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
+        agent_messages = self.agent.message_processor.get_messages()
+        queue_messages_in_main = [msg for msg in agent_messages if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue")]
         self.assertEqual(len(queue_messages_in_main), 2, "排队消息现在应该出现在主消息列表中")
         
         # 验证queued_messages被清空
         self.assertEqual(len(self.agent.queued_messages), 0, "queued_messages应该在处理后清空")
         
         # 验证排队消息在assistant消息之后
-        assistant_messages = [msg for msg in self.agent.messages if isinstance(msg, ChatMessage) and msg.role == "assistant"]
+        assistant_messages = [msg for msg in agent_messages if isinstance(msg, ChatMessage) and msg.role == "assistant"]
         self.assertTrue(len(assistant_messages) >= 1, "应该至少有一个assistant消息")
         
         last_assistant_idx = None
-        for i, msg in enumerate(self.agent.messages):
+        for i, msg in enumerate(agent_messages):
             if isinstance(msg, ChatMessage) and msg.role == "assistant":
                 last_assistant_idx = i
         
         # 验证排队消息在assistant消息之后
         if last_assistant_idx is not None:
-            for i, msg in enumerate(self.agent.messages):
+            for i, msg in enumerate(agent_messages):
                 if isinstance(msg, ChatMessage) and msg.role == "user" and msg.message.startswith("/queue"):
                     self.assertGreater(i, last_assistant_idx, "/queue消息应该在agent输出之后")
 

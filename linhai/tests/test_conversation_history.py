@@ -66,13 +66,9 @@ class TestConversationHistory(unittest.TestCase):
         mock_home.return_value = Path(self.temp_dir)
 
         # 添加一些测试消息
-        self.agent.messages.extend(
-            [
-                ChatMessage("user", "你好"),
-                ChatMessage("assistant", "你好！有什么可以帮助你的？"),
-                RuntimeMessage("测试运行时消息"),
-            ]
-        )
+        self.agent.message_processor.append_message(ChatMessage("user", "你好"))
+        self.agent.message_processor.append_message(ChatMessage("assistant", "你好！有什么可以帮助你的？"))
+        self.agent.message_processor.append_message(RuntimeMessage("测试运行时消息"))
 
         # 调用保存方法
         asyncio.run(self.agent.save_conversation_history())
@@ -111,12 +107,8 @@ class TestConversationHistory(unittest.TestCase):
         mock_home.return_value = Path(self.temp_dir)
 
         # 添加包含工具调用的消息
-        self.agent.messages.extend(
-            [
-                ChatMessage("user", "请调用一个工具"),
-                ToolCallMessage("test_tool", {"param": "value"}),
-            ]
-        )
+        self.agent.message_processor.append_message(ChatMessage("user", "请调用一个工具"))
+        self.agent.message_processor.append_message(ToolCallMessage("test_tool", {"param": "value"}))
 
         # 调用保存方法
         asyncio.run(self.agent.save_conversation_history())

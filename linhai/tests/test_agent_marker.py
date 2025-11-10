@@ -130,11 +130,11 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             5,  # System + user + assistant + task planning check + error
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
-        error_msg = self.agent.messages[-1]
+        error_msg = self.agent.message_processor.get_messages()[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
         self.assertIn("你没有输出任务规划", error_msg.message)
@@ -165,12 +165,12 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if error message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             7,  # System + user + assistant + task planning check + empty user
              # + runtime for tool call + error (tool result not added due to conflict)
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
-        error_msg = self.agent.messages[-1]
+        error_msg = self.agent.message_processor.get_messages()[-1]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
         self.assertIn("你没有输出任务规划", error_msg.message)
@@ -191,11 +191,11 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if task planning format message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             5,  # System + user + assistant + task planning check + task planning format message
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
-        task_planning_msg = self.agent.messages[-1]
+        task_planning_msg = self.agent.message_processor.get_messages()[-1]
         self.assertIsInstance(task_planning_msg, RuntimeMessage)
         assert isinstance(task_planning_msg, RuntimeMessage)
         self.assertIn("你没有输出任务规划", task_planning_msg.message)
@@ -213,15 +213,15 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             4,  # System + user + assistant + task planning check
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages related to marker validation
         runtime_msgs = [
             msg
-            for msg in self.agent.messages
+            for msg in self.agent.message_processor.get_messages()
             if isinstance(msg, RuntimeMessage) and "既调用了工具又使用了" in msg.message
         ]
         self.assertEqual(len(runtime_msgs), 0)
@@ -245,15 +245,15 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             6,  # System + user + assistant + task planning check
              # + runtime for tool call + tool result
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         # Verify no error messages related to marker validation
         runtime_msgs = [
             msg
-            for msg in self.agent.messages
+            for msg in self.agent.message_processor.get_messages()
             if isinstance(msg, RuntimeMessage) and "既调用了工具又使用了" in msg.message
         ]
         self.assertEqual(len(runtime_msgs), 0)
@@ -271,15 +271,15 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         # Check if no error message was added
         self.assertEqual(
-            len(self.agent.messages),
+            len(self.agent.message_processor.get_messages()),
             4,  # System + user + assistant + task planning check
-            format_messages_for_assert(self.agent.messages),
+            format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         self.assertEqual(self.agent.state, "waiting_user")
         # Verify no error messages related to marker validation
         runtime_msgs = [
             msg
-            for msg in self.agent.messages
+            for msg in self.agent.message_processor.get_messages()
             if isinstance(msg, RuntimeMessage) and "既调用了工具又使用了" in msg.message
         ]
         self.assertEqual(len(runtime_msgs), 0)

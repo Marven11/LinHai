@@ -98,11 +98,12 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(selected_model, self.mock_llm1)
 
         # 验证添加了错误消息
+        messages = self.agent.message_processor.get_messages()
         self.assertTrue(
             any(
                 isinstance(msg, RuntimeMessage)
                 and "错误：用户指定的LLM名称'invalid_llm'不存在，请向用户报告这一点" in str(msg)
-                for msg in self.agent.messages
+                for msg in messages
             )
         )
 
@@ -110,7 +111,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         """测试没有@系统的默认行为。"""
         # 添加一个普通用户消息
         user_message = ChatMessage(role="user", message="你好")
-        self.agent.messages.append(user_message)
+        self.agent.message_processor.append_message(user_message)
 
         # 调用_select_model
         selected_model = await self.agent._select_model()
@@ -122,7 +123,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         """测试消息中间包含@的情况。"""
         # 添加一个消息中间包含@的用户消息
         user_message = ChatMessage(role="user", message="请@llm2回答这个问题")
-        self.agent.messages.append(user_message)
+        self.agent.message_processor.append_message(user_message)
 
         # 调用_select_model
         selected_model = await self.agent._select_model()
@@ -134,7 +135,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         """测试只有@的情况。"""
         # 添加一个只有@的用户消息
         user_message = ChatMessage(role="user", message="@")
-        self.agent.messages.append(user_message)
+        self.agent.message_processor.append_message(user_message)
 
         # 调用_select_model
         selected_model = await self.agent._select_model()

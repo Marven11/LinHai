@@ -178,16 +178,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         # 验证用户消息被添加到messages中
+        messages = self.agent.message_processor.get_messages()
         self.assertEqual(
-            len(self.agent.messages),
+            len(messages),
             4,
-            f"Messages: {[str(msg) for msg in self.agent.messages]}",
+            f"Messages: {[str(msg) for msg in messages]}",
         )  # 系统消息 + 用户消息 + 助手回复 + 运行时消息
         self.assertEqual(
-            self.agent.messages[1].to_llm_message().get("content"), "<user>Hi</user>"
+            messages[1].to_llm_message().get("content"), "<user>Hi</user>"
         )
         self.assertEqual(
-            self.agent.messages[2].to_llm_message().get("content"), "Processing..."
+            messages[2].to_llm_message().get("content"), "Processing..."
         )
 
         # 重置mock以便测试工具消息
@@ -197,8 +198,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer2
 
         # 测试工具消息处理 - 工具消息应该通过其他方式处理，不是通过handle_user_message
-        # 这里我们模拟工具消息的处理：直接将工具消息添加到messages中
-        self.agent.messages.append(tool_msg)
+        # 这里我们模拟工具消息的处理：使用message_processor添加工具消息
+        self.agent.message_processor.append_message(tool_msg)
         
         # 然后模拟LLM处理工具结果
         mock_answer2 = MockAnswer(
@@ -210,18 +211,19 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         # 验证工具消息被添加到messages中
+        messages = self.agent.message_processor.get_messages()
         self.assertEqual(
-            len(self.agent.messages),
+            len(messages),
             7,
-            f"Messages: {[str(msg) for msg in self.agent.messages]}",
+            f"Messages: {[str(msg) for msg in messages]}",
         )  # 系统消息 + 用户消息 + 助手回复 + 运行时消息 + 工具消息 + 助手回复 + 运行时消息
         # 工具消息被添加到末尾
         self.assertEqual(
-            self.agent.messages[4].to_llm_message().get("content"), "result"
+            messages[4].to_llm_message().get("content"), "result"
         )
         # 验证工具处理后的回复
         self.assertEqual(
-            self.agent.messages[5].to_llm_message().get("content"), "Tool processed"
+            messages[5].to_llm_message().get("content"), "Tool processed"
         )
 
     async def test_error_handling(self):
@@ -364,11 +366,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         model = await self.agent._select_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
         # 验证添加了错误消息
+        messages = self.agent.message_processor.get_messages()
         self.assertTrue(
             any(
                 isinstance(msg, RuntimeMessage)
                 and "错误：用户指定的LLM名称'invalid'不存在，请向用户报告这一点" in str(msg)
-                for msg in self.agent.messages
+                for msg in messages
             )
         )
 
