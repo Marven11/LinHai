@@ -4,26 +4,13 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 在CLI中的welcome信息中修改当前的LLM提示和版本提示，添加动画
-    - 首先显示每日一言，金黄色加粗，持续0.2秒
-        - 当前的每日一言只有`/time set 0`，MC中设置时间的命令
-    - 然后全部字符变成乱码，变成稍灰一点的黄色，持续1秒
-        - 注意乱码字符的长度要长于每日一言和版本号信息
-    - 最后变成当前版本号和LLM: 如`v0.0.1 | LLM: deepseek`，灰色加粗
-    - 不要删掉彩虹色的标题！
-- [x] 在CLI的底部状态栏Token左边添加当前LLM，类似`deepseek | in xxx | out xxx`
-- [x] 修复所有unittest
-- [x] 之前将标记长消息/终端使用的UUID改为utils.py中的ID时没有同步修改prompt和注释等
-    - 现在长消息和终端使用了这个ID格式，找到对应的源码
-    - 你需要使用rg搜索不区分大小写的`UUID`，修改使得所有有关长消息/终端的ID名字都是`ID`而非`UUID`
-- [x] 现在没有使用MCP就Ctrl+C退出会导致RuntimeError
-    - 使用终端运行linhai确认行为
-    - 在group_chat中添加函数，返回member是否存在
-    - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all
-- [x] 把使用CliRuntimeNotice发送Agent被插件打断的逻辑从generate_response移动到interrupt函数中，而且将消息的内容改为插件提供的custom message，比如“agent被插件打断：不要...”
-- [x] config中配置的LINHAI.md全局记忆貌似没有生效，编写unittest测试这个逻辑，尤其是config.toml和当前路径不是同一个文件夹时
-- [x] 再次修复所有unittest
-- [x] 修复所有pylint+pyright报警
+- [ ] unittest会删除当前文件夹的LINHAI.md，使用./hypothesis_falsification.txt找出原因并修复
+    - 随时可以用git restore恢复LINHAI.md
+- [ ] 现在compress_threshold_soft/hard的值是在初始化时就确定的，需要改成根据当前llm动态计算
+    - 具体来说，我们需要实现这个效果：对于不同的LLM根据配置动态计算要不要添加软阈值提示
+    - 编写unittest，测试切换llm之后会不会出现新的软阈值提示
+- [ ] 再次修复所有unittest
+- [ ] 修复所有pylint+pyright报警
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
