@@ -778,7 +778,7 @@ class Agent:
 
 async def create_agent(
     group_chat: GroupChat,
-    config_path: str | Path,
+    config_path: Path,
     llm_name: str | None = None,
 ) -> Agent:
     """创建Agent实例
@@ -814,10 +814,10 @@ async def create_agent(
 
     # 创建ToolManager
     tool_config = config.tools if config.tools else ToolConfig()
-    await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=Path(config_path).parent)
+    await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=config_path.parent)
 
     # 创建初始化消息
-    memory_file_path = config.memory.file_path if config.memory else None
+    memory_file_path = (config_path.parent / config.memory.file_path) if config.memory else None
     init_messages = await _create_init_messages(
         group_chat=group_chat,
         system_prompt=agent_context["system_prompt"],
@@ -933,7 +933,7 @@ async def _create_tool_manager(group_chat, config: ToolConfig, mcp_config: list[
 async def _create_init_messages(
     group_chat: GroupChat,
     system_prompt: str,
-    memory_file_path: str | None = None,
+    memory_file_path: Path | None = None,
 ) -> list[Message]:
     """创建初始化消息列表
 
@@ -953,9 +953,7 @@ async def _create_init_messages(
         )
     ]
 
-    user_global_memory = Path("~/.config/linhai/LINHAI.md").expanduser()
-    if memory_file_path:
-        user_global_memory = Path(memory_file_path)
+    user_global_memory = memory_file_path.absolute() if memory_file_path else Path("~/.config/linhai/LINHAI.md").expanduser()
     init_messages.append(GlobalMemory(user_global_memory))
 
     project_memory_filepaths = [
