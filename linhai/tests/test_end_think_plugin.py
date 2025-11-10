@@ -24,6 +24,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = Mock()
         self.agent.group_chat.send = AsyncMock()
         
+        # 模拟agent的interrupt方法
+        self.agent.interrupt = AsyncMock()
+        
         # 模拟agent的messages列表
         self.agent.messages = []
 

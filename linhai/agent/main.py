@@ -316,10 +316,20 @@ class Agent:
             self.current_answer.interrupt()
             await self.group_chat.send("cli_agent_output", self.current_answer)
             self.current_answer = None
+            
+            # 发送插件打断消息到运行时输出
             if custom_message:
+                interrupt_msg = CliRuntimeNotice(
+                    level="WARNING", content=f"Agent被插件打断：{custom_message}"
+                )
                 self.messages.append(RuntimeMessage(custom_message))
             else:
+                interrupt_msg = CliRuntimeNotice(
+                    level="WARNING", content="Agent被插件打断"
+                )
                 self.messages.append(RuntimeMessage("Agent被插件打断"))
+            
+            await self.group_chat.send("cli_runtime_output", interrupt_msg)
             self.state = "working"
 
     async def state_waiting_user(self):
@@ -606,10 +616,7 @@ class Agent:
                 answer, current_content
             )
             if should_interrupt:
-                interrupt_msg = CliRuntimeNotice(
-                    level="WARNING", content="Agent被插件打断"
-                )
-                await self.group_chat.send("cli_runtime_output", interrupt_msg)
+                # 打断逻辑现在在interrupt方法中统一处理
                 return answer
 
             if not self.group_chat.is_empty("agent_user_input"):
@@ -768,7 +775,9 @@ class Agent:
                 break
             await asyncio.sleep(0)
 
-        await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
+        # 只有在MCP连接器存在时才断开连接
+        if self.group_chat.has_member("mcp_connector"):
+            await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
 
 async def create_agent(
     group_chat: GroupChat,

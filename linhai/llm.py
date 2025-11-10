@@ -558,7 +558,7 @@ class OpenAi:
                         output_tokens=0,
                         total_tokens=total_tokens,
                     )
-        except Exception:
+        except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException):
             # 如果估算失败，返回None，不影响主流程
             pass
 

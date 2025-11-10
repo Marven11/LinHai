@@ -12,11 +12,11 @@
     - 最后变成当前版本号和LLM: 如`v0.0.1 | LLM: deepseek`，灰色加粗
     - 不要删掉彩虹色的标题！
 - [x] 在CLI的底部状态栏Token左边添加当前LLM，类似`deepseek | in xxx | out xxx`
-- [ ] 修复所有unittest
-- [ ] 之前将标记长消息/终端使用的UUID改为utils.py中的ID时没有同步修改prompt和注释等
+- [x] 修复所有unittest
+- [x] 之前将标记长消息/终端使用的UUID改为utils.py中的ID时没有同步修改prompt和注释等
     - 现在长消息和终端使用了这个ID格式，找到对应的源码
     - 你需要使用rg搜索不区分大小写的`UUID`，修改使得所有有关长消息/终端的ID名字都是`ID`而非`UUID`
-- [ ] 现在没有使用MCP就Ctrl+C退出会导致RuntimeError
+- [x] 现在没有使用MCP就Ctrl+C退出会导致RuntimeError
     - 使用终端运行linhai确认行为
     - 在group_chat中添加函数，返回member是否存在
     - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all

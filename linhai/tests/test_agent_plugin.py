@@ -301,7 +301,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.messages = []
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
-        self.agent.interrupt = MagicMock(side_effect=lambda msg=None: self.agent.messages.append(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
+        self.agent.interrupt = AsyncMock(side_effect=lambda msg=None: self.agent.messages.append(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = WeirdEndOfSentencePlugin(self.group_chat)

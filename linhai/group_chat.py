@@ -47,6 +47,10 @@ class GroupChat:
             raise RuntimeError(f"{name!r} is not {t}")
         return self.members[name]
 
+    def has_member(self, name: LiteralString) -> bool:
+        """检查指定的成员是否存在"""
+        return name in self.members
+
     async def send(self, name: LiteralString, message: Any):
         if name not in self.queues:
             raise RuntimeError(f"{name!r} not exists")

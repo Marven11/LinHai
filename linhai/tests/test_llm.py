@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from linhai.llm import AnswerToken, AnswerTokenUsage, ChatMessage, OpenAi
+from linhai.llm import AnswerToken, ChatMessage, OpenAi
 
 
 class TestLLM(unittest.IsolatedAsyncioTestCase):
@@ -210,9 +210,10 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             result = await kimi_llm.estimate_token_count(history)
 
             self.assertIsNotNone(result)
-            self.assertEqual(result.total_tokens, 100)
-            self.assertEqual(result.input_tokens, 100)
-            self.assertEqual(result.output_tokens, 0)
+            if result:
+                self.assertEqual(result.total_tokens, 100)
+                self.assertEqual(result.input_tokens, 100)
+                self.assertEqual(result.output_tokens, 0)
 
     async def test_non_kimi_token_estimation(self):
         """Test that non-Kimi LLMs return None for token estimation."""

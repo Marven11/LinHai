@@ -509,7 +509,8 @@ class CLIApp(App):
                         # 传入当前回答的token长度
                         self.update_token_display(token_usage.total_tokens)
 
-                    current_message.update_display()
+                    if current_message:
+                        current_message.update_display()
                     current_message = None
                 else:
                     raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
