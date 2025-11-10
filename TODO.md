@@ -22,8 +22,8 @@
     - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all
 - [x] 把使用CliRuntimeNotice发送Agent被插件打断的逻辑从generate_response移动到interrupt函数中，而且将消息的内容改为插件提供的custom message，比如“agent被插件打断：不要...”
 - [x] config中配置的LINHAI.md全局记忆貌似没有生效，编写unittest测试这个逻辑，尤其是config.toml和当前路径不是同一个文件夹时
-- [ ] 再次修复所有unittest
-- [ ] 修复所有pylint+pyright报警
+- [x] 再次修复所有unittest
+- [x] 修复所有pylint+pyright报警
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO

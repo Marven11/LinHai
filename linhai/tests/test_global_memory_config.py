@@ -1,6 +1,5 @@
 """测试全局记忆配置功能"""
 
-import os
 import tempfile
 import shutil
 from pathlib import Path
@@ -9,6 +8,7 @@ import asyncio
 
 from linhai.agent.main import _create_init_messages
 from linhai.group_chat import GroupChat
+from linhai.agent.base import GlobalMemory
 
 
 class TestGlobalMemoryConfig(unittest.TestCase):
@@ -49,13 +49,13 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             )
             
             # 检查是否包含自定义全局记忆
-            memory_messages = [msg for msg in init_messages if hasattr(msg, 'filepath')]
+            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
             self.assertGreater(len(memory_messages), 0)
             
             # 检查文件路径是否正确
             custom_memory_found = False
             for msg in memory_messages:
-                if hasattr(msg, 'filepath') and msg.filepath == memory_file:
+                if isinstance(msg, GlobalMemory) and msg.filepath == memory_file:
                     custom_memory_found = True
                     break
             
@@ -84,13 +84,13 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             )
             
             # 检查是否包含相对路径全局记忆
-            memory_messages = [msg for msg in init_messages if hasattr(msg, 'filepath')]
+            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
             self.assertGreater(len(memory_messages), 0)
             
             # 检查文件路径是否正确
             relative_memory_found = False
             for msg in memory_messages:
-                if hasattr(msg, 'filepath') and msg.filepath.name == "test_relative_memory.md":
+                if isinstance(msg, GlobalMemory) and msg.filepath.name == "test_relative_memory.md":
                     relative_memory_found = True
                     # 检查文件是否存在
                     self.assertTrue(msg.filepath.exists(), "相对路径文件不存在")
@@ -120,14 +120,14 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             )
             
             # 检查是否包含默认全局记忆
-            memory_messages = [msg for msg in init_messages if hasattr(msg, 'filepath')]
+            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
             self.assertGreater(len(memory_messages), 0)
             
             # 检查是否包含默认路径
             default_memory_found = False
             default_path = Path("~/.config/linhai/LINHAI.md").expanduser()
             for msg in memory_messages:
-                if hasattr(msg, 'filepath') and str(msg.filepath) == str(default_path):
+                if isinstance(msg, GlobalMemory) and msg.filepath == default_path:
                     default_memory_found = True
                     break
             
@@ -162,13 +162,13 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 )
                 
                 # 检查是否包含项目记忆文件
-                memory_messages = [msg for msg in init_messages if hasattr(msg, 'filepath')]
+                memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
                 
                 # 检查每个项目文件是否都被加载
                 for filename in project_files:
                     file_found = False
                     for msg in memory_messages:
-                        if hasattr(msg, 'filepath') and msg.filepath.name == filename:
+                        if isinstance(msg, GlobalMemory) and msg.filepath.name == filename:
                             file_found = True
                             break
                     self.assertTrue(file_found, f"未找到项目记忆文件: {filename}")
