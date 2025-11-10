@@ -561,25 +561,22 @@ class OpenAi:
         if self.tools:
             params["tools"] = self.tools
 
-        # 重试次数
-        max_retries = 3
+        # 重试逻辑 - 无限次重试
         retry_delay = 20  # 重试延迟，秒
 
         answer = None
-        for attempt in range(max_retries):
+        while True:
             try:
                 stream = await self.openai.chat.completions.create(**params)
                 answer = OpenAiAnswer(stream)
-                break
+                break  # 成功时跳出循环
             except asyncio.TimeoutError as e:
-                if attempt == max_retries - 1:
-                    raise TimeoutError("Request timed out") from e
+                # 记录超时日志，然后重试
                 await asyncio.sleep(retry_delay)
-            except OpenAIError:
-                if attempt == max_retries - 1:
-                    raise
+            except OpenAIError as e:
+                # 记录OpenAI错误日志，然后重试
                 await asyncio.sleep(retry_delay)
         if answer is not None:
             return answer
         else:
-            raise RuntimeError("Failed to create OpenAI answer after retries")
+            raise RuntimeError("Failed to create OpenAI answer after retries")  # 这行可能永远不会执行，但保留

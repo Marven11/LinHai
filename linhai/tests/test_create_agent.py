@@ -59,12 +59,12 @@ class TestCreateAgent(unittest.TestCase):
         config_path = "./config.toml"
         
         # 使用llm_name参数
-        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="deepseek"))
+        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="deepseek-v3-2-reasoning"))
         self.assertIsInstance(result, Agent)
         
         # 检查agent配置中的当前LLM索引
         agent = group_chat.get_members("agent", Agent)
-        self.assertEqual(agent.context["current_llm_index"], 0)  # 假设deepseek是第一个LLM
+        self.assertEqual(agent.context["current_llm_index"], 0)  # 假设deepseek-v3-2-reasoning是第一个LLM
 
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""

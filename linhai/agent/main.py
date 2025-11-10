@@ -97,6 +97,8 @@ class Agent:
         )
         self.current_disable_waiting_user_warning = False
 
+        self.last_threshold_state = None  # 用于跟踪上次的阈值状态
+
         # 当前Answer实例，用于plugin打断
         self.current_answer: Answer | None = None
 
@@ -165,6 +167,7 @@ class Agent:
             remaining,
             taken,
         )
+
 
 
 
