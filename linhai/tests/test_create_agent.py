@@ -5,6 +5,7 @@ from unittest.mock import patch, AsyncMock
 import sys
 import os
 import asyncio
+from pathlib import Path
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,7 +30,7 @@ class TestCreateAgent(unittest.TestCase):
         config_path = "./config.toml"
         
         # 调用create_agent应该成功返回agent
-        result = asyncio.run(create_agent(group_chat, config_path))
+        result = asyncio.run(create_agent(group_chat, Path(config_path)))
         self.assertIsInstance(result, Agent)
         
         # 检查group_chat中是否注册了agent成员
@@ -58,7 +59,7 @@ class TestCreateAgent(unittest.TestCase):
         config_path = "./config.toml"
         
         # 使用llm_name参数
-        result = asyncio.run(create_agent(group_chat, config_path, llm_name="deepseek"))
+        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="deepseek"))
         self.assertIsInstance(result, Agent)
         
         # 检查agent配置中的当前LLM索引
@@ -72,7 +73,7 @@ class TestCreateAgent(unittest.TestCase):
         
         # 使用无效的llm_name应该抛出ValueError
         with self.assertRaises(ValueError) as context:
-            asyncio.run(create_agent(group_chat, config_path, llm_name="invalid_llm"))
+            asyncio.run(create_agent(group_chat, Path(config_path), llm_name="invalid_llm"))
         
         self.assertIn("LLM名称 'invalid_llm' 不存在", str(context.exception))
 

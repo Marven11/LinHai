@@ -348,7 +348,7 @@ if __name__ == "__main__":
         
         threshold_info = self.agent.get_threshold_info()
         self.assertIsNotNone(threshold_info)
-        soft, hard, used, remaining, taken = threshold_info
+        soft, hard, _, _, _ = threshold_info
         
         # Should be 50% and 80% of 32000
         self.assertEqual(soft, 16000)  # 32000 * 0.5
@@ -358,7 +358,7 @@ if __name__ == "__main__":
         self.agent.context["current_llm_index"] = 1
         threshold_info = self.agent.get_threshold_info()
         self.assertIsNotNone(threshold_info)
-        soft, hard, used, remaining, taken = threshold_info
+        soft, hard, _, _, _ = threshold_info
         
         # Should be 50% and 80% of 128000
         self.assertEqual(soft, 64000)  # 128000 * 0.5
@@ -370,7 +370,7 @@ if __name__ == "__main__":
         
         threshold_info = self.agent.get_threshold_info()
         self.assertIsNotNone(threshold_info)
-        soft, hard, used, remaining, taken = threshold_info
+        soft, hard, _, _, _ = threshold_info
         
         # Should use integer values directly
         self.assertEqual(soft, 30000)

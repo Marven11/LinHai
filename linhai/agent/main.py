@@ -54,8 +54,8 @@ class AgentContext(TypedDict):
     llms: list[LanguageModel]  # 多个LLM实例
     llm_names: list[str]  # LLM名称列表
     current_llm_index: int  # 当前使用的LLM索引
-    compress_threshold_soft: int
-    compress_threshold_hard: int
+    compress_threshold_soft: int | float
+    compress_threshold_hard: int | float
     memory: NotRequired[dict]  # 可选 memory 字段
     tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
     enable_directory_change_detection: NotRequired[bool]  # 是否启用目录更改检测
@@ -331,9 +331,9 @@ class Agent:
                 self.messages.append(RuntimeMessage(custom_message))
             else:
                 interrupt_msg = CliRuntimeNotice(
-                    level="WARNING", content="Agent被插件打断"
+                    level="WARNING", content="Agent被打断"
                 )
-                self.messages.append(RuntimeMessage("Agent被插件打断"))
+                self.messages.append(RuntimeMessage("Agent被打断"))
             
             await self.group_chat.send("cli_runtime_output", interrupt_msg)
             self.state = "working"
@@ -618,12 +618,10 @@ class Agent:
             current_content = answer.get_current_content()
 
             # 触发消息生成中的生命周期事件
-            should_interrupt = await self.lifecycle.trigger_during_message_generation(
+            interrupted = await self.lifecycle.trigger_during_message_generation(
                 answer, current_content
             )
-            if should_interrupt:
-                # 打断逻辑现在在interrupt方法中统一处理
-                await self.interrupt("Agent被插件打断")
+            if interrupted:
                 return answer
 
             if not self.group_chat.is_empty("agent_user_input"):
@@ -884,8 +882,8 @@ async def _create_agent_context(
         AgentConfig字典
     """
     # 设置压缩阈值（存储原始配置值，将在运行时根据当前LLM动态计算）
-    compress_threshold_hard = 0.8  # 默认硬阈值比例
-    compress_threshold_soft = 0.5  # 默认软阈值比例
+    compress_threshold_hard: int | float = 0.8  # 默认硬阈值比例
+    compress_threshold_soft: int | float = 0.5  # 默认软阈值比例
 
     if agent_config:
         # 存储原始配置值，不转换为绝对token数

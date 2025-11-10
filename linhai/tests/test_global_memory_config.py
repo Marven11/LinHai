@@ -51,7 +51,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 _create_init_messages(
                     group_chat=self.group_chat,
                     system_prompt="测试系统提示",
-                    memory_file_path=str(memory_file)
+                    memory_file_path=memory_file
                 )
             )
             
@@ -86,7 +86,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 _create_init_messages(
                     group_chat=self.group_chat,
                     system_prompt="测试系统提示",
-                    memory_file_path="test_relative_memory.md"
+                    memory_file_path=Path("test_relative_memory.md")
                 )
             )
             

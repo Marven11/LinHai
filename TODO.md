@@ -9,6 +9,11 @@
 - [ ] 现在compress_threshold_soft/hard的值是在初始化时就确定的，需要改成根据当前llm动态计算
     - 具体来说，我们需要实现这个效果：对于不同的LLM根据配置动态计算要不要添加软阈值提示
     - 编写unittest，测试切换llm之后会不会出现新的软阈值提示
+- [ ] 修改现在kimi获得token用量的方式
+    - 参考https://platform.moonshot.cn/docs/guide/migrating-from-openai-to-kimi#temperature-%E5%92%8C-n-%E5%80%BC
+    - 探索文档中"在每个 choice 的结束数据块中放置 usage 信息..."是怎么回事：
+        - 编写示例脚本，从当前配置中读取kimi的api key并使用这个api，打印每个choice的usage
+    - 彻底删除现在需要额外发送请求才能获得usage的模式
 - [ ] 再次修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 
