@@ -4,6 +4,9 @@ from pathlib import Path
 import difflib
 import json
 import platform
+import os
+import stat
+import time
 from linhai.llm import Message
 from linhai.tool.base import (
     global_tools,
@@ -287,6 +290,54 @@ def replace_file_content(
     return ToolResultMessage(f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {actual_replace_count}")
 
 
+def format_permissions(mode: int) -> str:
+    """格式化文件权限字符串。"""
+    permissions = [
+        'r' if mode & stat.S_IRUSR else '-',
+        'w' if mode & stat.S_IWUSR else '-',
+        'x' if mode & stat.S_IXUSR else '-',
+        'r' if mode & stat.S_IRGRP else '-',
+        'w' if mode & stat.S_IWGRP else '-',
+        'x' if mode & stat.S_IXGRP else '-',
+        'r' if mode & stat.S_IROTH else '-',
+        'w' if mode & stat.S_IWOTH else '-',
+        'x' if mode & stat.S_IXOTH else '-',
+    ]
+    return ''.join(permissions)
+
+def format_file_size(size: int) -> str:
+    """格式化文件大小为人类可读格式。"""
+    size_units = ['B', 'K', 'M', 'G', 'T']
+    current_size = size
+    for i, unit in enumerate(size_units):
+        if current_size < 1024.0 or i == len(size_units) - 1:
+            size_str = f"{current_size:.1f}{unit}" if i > 0 else f"{current_size}B"
+            return size_str
+        current_size /= 1024.0
+    return f"{size}B"  # 备用
+
+def get_file_info(file_path: Path) -> str:
+    """获取文件的详细信息，类似ls -lah格式"""
+    try:
+        stat_info = file_path.stat()
+        
+        # 文件类型和权限
+        mode = stat_info.st_mode
+        file_type = 'd' if file_path.is_dir() else '-'
+        permissions = format_permissions(mode)
+        
+        # 文件大小（人类可读格式）
+        size_str = format_file_size(stat_info.st_size)
+        
+        # 修改时间
+        mtime = time.strftime('%b %d %H:%M', time.localtime(stat_info.st_mtime))
+        
+        return f"{file_type}{permissions} {stat_info.st_nlink:>2} {stat_info.st_uid:>4} {stat_info.st_gid:>4} {size_str:>8} {mtime} {file_path.name}"
+    except OSError:
+        # 如果无法获取详细信息，返回基本名称
+        file_type = 'd' if file_path.is_dir() else '-'
+        return f"{file_type}?????????  ?    ?    ?         ? ??? ?? ???? {file_path.name}"
+
 @global_tools.register_tool(
     name="list_files",
     desc="列出指定文件夹中的文件(使用./表示当前文件夹)",
@@ -304,22 +355,25 @@ def list_files(dirpath: str) -> ToolResultMessage | ToolErrorMessage:
     Returns:
         包含文件列表和子目录列表的字符串
     """
-    if dirpath == "./":
-        dirpath = "."
     dir_path = Path(dirpath)
     if not dir_path.exists():
         return ToolErrorMessage(f"文件夹路径{dir_path.as_posix()!r}不存在")
     if not dir_path.is_dir():
         return ToolErrorMessage(f"路径{dir_path.as_posix()!r}不是文件夹")
     try:
-        files = [f.name for f in dir_path.iterdir() if f.is_file()]
-        dirs = [d.name for d in dir_path.iterdir() if d.is_dir()]
+        # 获取所有文件和文件夹的详细信息
+        items = []
+        for item in dir_path.iterdir():
+            items.append(get_file_info(item))
+        
+        # 按名称排序
+        items.sort()
+        
+        items_str = "\n".join(items)
         return ToolResultMessage(f"""\
 文件夹路径: {dir_path.as_posix()}
-文件列表:
-{"\n".join(files)}
-子目录列表:
-{"\n".join(dirs)}""")
+总用量 {len(items)}
+{items_str}""")
     except OSError as exc:
         return ToolErrorMessage(f"列出文件时发生错误: {exc!r}")
 

@@ -5,7 +5,8 @@ from reprlib import Repr
 from typing import List, Dict, Any, Tuple
 import mistune
 
-repr_obj = Repr(maxstring=50)
+repr_obj = Repr()
+repr_obj.maxstring = 50
 
 class ParseError(Exception):
     ...
@@ -88,12 +89,12 @@ def extract_tool_calls_with_errors(
                     tool_calls.append(data)
                 else:
                     raise ParseError(
-                        f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}不是合法的工具调用"
+                        f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block['content'])}不是合法的工具调用"
                         "，可能为其他json数据，已忽略"
                     )
             except json.JSONDecodeError as e:
                 raise ParseError(
-                    f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block["content"])}解析JSON出错，已忽略"
+                    f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block['content'])}解析JSON出错，已忽略"
                 ) from e
 
     return tool_calls, errors

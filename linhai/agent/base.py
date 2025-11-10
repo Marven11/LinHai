@@ -12,7 +12,8 @@ from linhai.llm import (
 
 from linhai.prompt import COMPRESS_RANGE_PROMPT
 
-repr_obj = Repr(maxstring=100)
+repr_obj = Repr()
+repr_obj.maxstring = 100
 
 
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"

@@ -13,7 +13,8 @@ from linhai.llm import (
     SystemMessage,
 )
 
-repr_obj = Repr(maxstring=100)
+repr_obj = Repr()
+repr_obj.maxstring = 100
 
 
 async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
@@ -51,7 +52,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
 
     messages = [msg.to_llm_message() for msg in agent.messages]
     messages_summerization = "\n".join(
-        f"- id: {i} role: {msg["role"]!r} content: {repr_obj.repr(msg.get('content', None))}"
+        f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}"
         for i, msg in enumerate(messages)
     )
 
