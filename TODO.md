@@ -4,18 +4,20 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] unittest会删除当前文件夹的LINHAI.md，使用./hypothesis_falsification.txt找出原因并修复
-    - 随时可以用git restore恢复LINHAI.md
-- [x] 现在compress_threshold_soft/hard的值是在初始化时就确定的，需要改成根据当前llm动态计算
-    - 具体来说，我们需要实现这个效果：对于不同的LLM根据配置动态计算要不要添加软阈值提示
-    - 编写unittest，测试切换llm之后会不会出现新的软阈值提示
-- [x] 修改现在kimi获得token用量的方式
-    - 参考https://platform.moonshot.cn/docs/guide/migrating-from-openai-to-kimi#temperature-%E5%92%8C-n-%E5%80%BC
-    - 探索文档中"在每个 choice 的结束数据块中放置 usage 信息..."是怎么回事：
-        - 编写示例脚本，从当前配置中读取kimi的api key并使用这个api，打印每个choice的usage
-    - 彻底删除现在需要额外发送请求才能获得usage的模式
-- [x] 再次修复所有unittest
-- [x] 修复所有pylint+pyright报警
+- [ ] 参考./ANALYSIS_AGENT.md重构linhai/agent/main.py
+    - 抽象message处理逻辑
+        - 首先把处理messages的逻辑抽象为AgentMessage类，保存在message.py中，让agent通过合理的接口调用
+        - 编写并运行unittest
+        - 运行所有unittest以确认没有破坏性更改
+    - 抽象工具调用逻辑
+        - 把处理工具调用的逻辑抽象为AgentToolcall类，保存在toolcall.py中，让agent通过合理的接口调用
+        - 编写并运行unittest
+        - 运行所有unittest以确认没有破坏性更改
+- [ ] 修改llm.py的重试逻辑，让其无限次重试
+- [ ] 升级list_files，使其显示每个文件/文件夹的类型等，格式类似gnu的ls -lah
+- [ ] 修改现在的软阈值消息提示：
+    - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯
+    - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒
 
 注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
