@@ -29,7 +29,7 @@ class CompressRangeRequest(Message):
 
         prompt = COMPRESS_RANGE_PROMPT.replace(
             "{|SUMMERIZATION|}", self.messages_summerization
-        ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.8)))
+        ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5)))
         return {
             "role": "user",
             "content": f"<runtime>{prompt}</runtime>",

@@ -32,10 +32,10 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                 RuntimeMessage("当前token占用没有超过软限制，禁止删除消息")
             )
             return True
-        if taken < 0.4:
+        if taken < 0.2:
             agent.messages.append(
                 RuntimeMessage(
-                    f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止删除消息"
+                    f"当前token占用小于20%，仅为{taken*100:.2f}%，禁止删除消息"
                 )
             )
             return True
