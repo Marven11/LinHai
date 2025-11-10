@@ -20,7 +20,8 @@
     - 使用终端运行linhai确认行为
     - 在group_chat中添加函数，返回member是否存在
     - 在agent中使用这个函数，只有在mcp connector存在时才调用disconnect all
-- [ ] 把使用CliRuntimeNotice发送Agent被插件打断的逻辑从generate_response移动到interrupt函数中，而且将消息的内容改为插件提供的custom message，比如“agent被插件打断：不要...”
+- [x] 把使用CliRuntimeNotice发送Agent被插件打断的逻辑从generate_response移动到interrupt函数中，而且将消息的内容改为插件提供的custom message，比如“agent被插件打断：不要...”
+- [x] config中配置的LINHAI.md全局记忆貌似没有生效，编写unittest测试这个逻辑，尤其是config.toml和当前路径不是同一个文件夹时
 - [ ] 再次修复所有unittest
 - [ ] 修复所有pylint+pyright报警
 

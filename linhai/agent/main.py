@@ -320,7 +320,7 @@ class Agent:
             # 发送插件打断消息到运行时输出
             if custom_message:
                 interrupt_msg = CliRuntimeNotice(
-                    level="WARNING", content=f"Agent被插件打断：{custom_message}"
+                    level="WARNING", content=custom_message
                 )
                 self.messages.append(RuntimeMessage(custom_message))
             else:
@@ -617,6 +617,7 @@ class Agent:
             )
             if should_interrupt:
                 # 打断逻辑现在在interrupt方法中统一处理
+                await self.interrupt("Agent被插件打断")
                 return answer
 
             if not self.group_chat.is_empty("agent_user_input"):
@@ -640,11 +641,7 @@ class Agent:
                     await self.group_chat.send("cli_agent_output", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.messages.append(chat_message)
-                    interrupt_msg = CliRuntimeNotice(
-                        level="WARNING", content="Agent被用户打断"
-                    )
-                    await self.group_chat.send("cli_runtime_output", interrupt_msg)
-                    answer.interrupt()
+                    await self.interrupt("Agent被用户打断")
                     self.handle_user_message(msg)
                     return answer
 
