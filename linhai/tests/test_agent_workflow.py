@@ -324,3 +324,54 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    async def test_dynamic_threshold_calculation(self):
+        """Test that compress thresholds are dynamically calculated based on current LLM."""
+        # Create mock LLMs with different token limits
+        mock_llm1 = MagicMock()
+        mock_llm1.token_limit = 32000
+        mock_llm1.answer_stream = AsyncMock()
+        
+        mock_llm2 = MagicMock()
+        mock_llm2.token_limit = 128000
+        mock_llm2.answer_stream = AsyncMock()
+        
+        # Update agent context with two LLMs and float thresholds
+        self.agent.context["llms"] = [mock_llm1, mock_llm2]
+        self.agent.context["llm_names"] = ["llm1", "llm2"]
+        self.agent.context["compress_threshold_soft"] = 0.5  # 50% as float
+        self.agent.context["compress_threshold_hard"] = 0.8  # 80% as float
+        
+        # Test with first LLM (32k token limit)
+        self.agent.context["current_llm_index"] = 0
+        self.agent.last_token_usage = 10000
+        
+        threshold_info = self.agent.get_threshold_info()
+        self.assertIsNotNone(threshold_info)
+        soft, hard, used, remaining, taken = threshold_info
+        
+        # Should be 50% and 80% of 32000
+        self.assertEqual(soft, 16000)  # 32000 * 0.5
+        self.assertEqual(hard, 25600)  # 32000 * 0.8
+        
+        # Test with second LLM (128k token limit)
+        self.agent.context["current_llm_index"] = 1
+        threshold_info = self.agent.get_threshold_info()
+        self.assertIsNotNone(threshold_info)
+        soft, hard, used, remaining, taken = threshold_info
+        
+        # Should be 50% and 80% of 128000
+        self.assertEqual(soft, 64000)  # 128000 * 0.5
+        self.assertEqual(hard, 102400)  # 128000 * 0.8
+        
+        # Test with integer thresholds (backward compatibility)
+        self.agent.context["compress_threshold_soft"] = 30000
+        self.agent.context["compress_threshold_hard"] = 50000
+        
+        threshold_info = self.agent.get_threshold_info()
+        self.assertIsNotNone(threshold_info)
+        soft, hard, used, remaining, taken = threshold_info
+        
+        # Should use integer values directly
+        self.assertEqual(soft, 30000)
+        self.assertEqual(hard, 50000)

@@ -259,12 +259,18 @@ class Agent:
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
             return None
-        compress_threshold_soft = self.context.get(
-            "compress_threshold_soft", int(65536 * 0.5)
-        )
-        compress_threshold_hard = self.context.get(
-            "compress_threshold_hard", int(65536 * 0.5)
-        )
+        
+        # 获取当前LLM的token_limit
+        current_llm = self.context["llms"][self.context["current_llm_index"]]
+        token_limit = getattr(current_llm, 'token_limit', 65536)
+        
+        # 动态计算阈值：如果是float则乘以token_limit，如果是int则直接使用
+        soft_config = self.context.get("compress_threshold_soft", 0.5)
+        hard_config = self.context.get("compress_threshold_hard", 0.8)
+        
+        compress_threshold_soft = int(soft_config * token_limit) if isinstance(soft_config, float) else soft_config
+        compress_threshold_hard = int(hard_config * token_limit) if isinstance(hard_config, float) else hard_config
+        
         taken = (
             0.0
             if self.last_token_usage <= compress_threshold_soft
@@ -877,26 +883,14 @@ async def _create_agent_context(
     Returns:
         AgentConfig字典
     """
-    # 设置压缩阈值
-    compress_threshold_hard = int(65536 * 0.8)
-    compress_threshold_soft = int(65536 * 0.5)
+    # 设置压缩阈值（存储原始配置值，将在运行时根据当前LLM动态计算）
+    compress_threshold_hard = 0.8  # 默认硬阈值比例
+    compress_threshold_soft = 0.5  # 默认软阈值比例
 
     if agent_config:
-        # 处理compress_threshold_hard
-        if isinstance(agent_config.compress_threshold_hard, float):
-            compress_threshold_hard = int(65536 * agent_config.compress_threshold_hard)
-        elif isinstance(agent_config.compress_threshold_hard, int):
-            compress_threshold_hard = agent_config.compress_threshold_hard
-        else:
-            raise TypeError("compress_threshold_hard must be int or float")
-
-        # 处理compress_threshold_soft
-        if isinstance(agent_config.compress_threshold_soft, float):
-            compress_threshold_soft = int(65536 * agent_config.compress_threshold_soft)
-        elif isinstance(agent_config.compress_threshold_soft, int):
-            compress_threshold_soft = agent_config.compress_threshold_soft
-        else:
-            raise TypeError("compress_threshold_soft must be int or float")
+        # 存储原始配置值，不转换为绝对token数
+        compress_threshold_hard = agent_config.compress_threshold_hard
+        compress_threshold_soft = agent_config.compress_threshold_soft
 
     # 处理llm_name参数
     current_llm_index = 0  # 默认使用第一个LLM
