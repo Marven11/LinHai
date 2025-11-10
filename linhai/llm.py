@@ -516,53 +516,7 @@ class OpenAi:
         """
         return self.token_limit
 
-    async def estimate_token_count(
-        self, history: Sequence[Message]
-    ) -> AnswerTokenUsage | None:
-        """估算token数量，用于Kimi API的token估算。
 
-        参数:
-            history: 消息历史序列
-
-        返回:
-            AnswerTokenUsage | None: token使用情况，如果估算失败则返回None
-        """
-        messages = [
-            cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
-        ]
-
-        estimation_data = {
-            "model": self.model,
-            "messages": messages,
-        }
-
-        headers = {
-            "Authorization": f"Bearer {self.openai.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(
-                    "https://api.moonshot.cn/v1/tokenizers/estimate-token-count",
-                    json=estimation_data,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                result = response.json()
-
-                if "data" in result and "total_tokens" in result["data"]:
-                    total_tokens = result["data"]["total_tokens"]
-                    return AnswerTokenUsage(
-                        input_tokens=total_tokens,
-                        output_tokens=0,
-                        total_tokens=total_tokens,
-                    )
-        except Exception:  # pylint: disable=broad-exception-caught
-            # 如果估算失败，返回None，不影响主流程
-            pass
-
-        return None
 
     async def answer_stream(
         self,
@@ -600,6 +554,10 @@ class OpenAi:
         if self.compatibility == "minimax":
             params["extra_body"] = {"reasoning_split": True}
 
+        # 为Kimi兼容性添加stream_options参数
+        if self.compatibility == "kimi":
+            params["stream_options"] = {"include_usage": True}
+
         if self.tools:
             params["tools"] = self.tools
 
@@ -607,16 +565,11 @@ class OpenAi:
         max_retries = 3
         retry_delay = 20  # 重试延迟，秒
 
-        # 估算token用量（仅在Kimi兼容模式下）
-        estimated_usage = None
-        if self.compatibility == "kimi":
-            estimated_usage = await self.estimate_token_count(history)
-
         answer = None
         for attempt in range(max_retries):
             try:
                 stream = await self.openai.chat.completions.create(**params)
-                answer = OpenAiAnswer(stream, estimated_usage)
+                answer = OpenAiAnswer(stream)
                 break
             except asyncio.TimeoutError as e:
                 if attempt == max_retries - 1:
