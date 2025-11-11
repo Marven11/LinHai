@@ -4,7 +4,6 @@ from pathlib import Path
 import difflib
 import json
 import platform
-import os
 import stat
 import time
 from linhai.llm import Message

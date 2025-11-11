@@ -81,9 +81,9 @@ class ToolcallWithoutPlanningPlugin(Plugin):
         pattern = r"^ *- \[[ x]\]"
         planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
-        if json_block_count > 1 and planning_count == 0:
+        if json_block_count > 3 and planning_count == 0:
             await agent.interrupt(
-                "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了多个工具，检查你的行为！"
+                "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了大量工具，必须先输出计划再调用多个工具！"
             )
             return True
 

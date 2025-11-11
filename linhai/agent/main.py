@@ -4,20 +4,15 @@ import json
 from pathlib import Path
 import datetime
 from typing import (
-    TypedDict,
     cast,
-    NotRequired,
     Sequence,
 )
 
 import asyncio
 import logging
-import random
 
 from .base import (
     RuntimeMessage,
-    DestroyedRuntimeMessage,
-    GlobalMemory,
     AgentContext,
 )
 from .lifecycle import Lifecycle
@@ -27,26 +22,21 @@ from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
     Message,
     ChatMessage,
-    SystemMessage,
     LanguageModel,
     Answer,
-    OpenAi,
     OpenAiAnswer,
     ToolCallMessage,
 )
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
-from linhai.config import load_config, ToolConfig, MCPConfig, AgentConfig
-from linhai.tool.base import global_tools, ToolSet, ToolArgInfo
-from linhai.tool.main import ToolManager
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.tool.tools.terminal import terminal_toolset
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT
+
+# 导入create_agent函数， suppressed pylint warning for unused-import since it's used dynamically
+from .create import create_agent  # pylint: disable=unused-import
 
 from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-from linhai.utils import CliRuntimeNotice, generate_id
-from .create import create_agent
+from linhai.utils import CliRuntimeNotice
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +89,9 @@ class Agent:
         # 为兼容性添加messages属性，代理到message_processor
         self.messages = self.message_processor.get_messages()
 
+        # 初始化queued_messages实例变量（如果不存在）
+        self.queued_messages: list = []
+
     def erase_message_by_id(self, message_id: str) -> str:
         """擦除大消息。
         
@@ -109,23 +102,6 @@ class Agent:
              擦除结果消息
         """
         return self.message_processor.erase_message_by_id(message_id)
-
-        self.last_token_usage = None
-        self.current_enable_compress = True
-        self.soft_compress_triggered = False  # 软压缩限制触发标志
-        self.large_messages = {}  # 大消息存储
-
-        # Plugin使用的变量
-        self.compress_tool_called_in_last_response = (
-            False  # 记录是否在最近响应中调用了压缩工具
-        )
-        self.current_disable_waiting_user_warning = False
-
-        # 当前Answer实例，用于plugin打断
-        self.current_answer: Answer | None = None
-
-        # 生命周期回调管理器
-        self.lifecycle = Lifecycle(self.group_chat)
 
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
@@ -326,10 +302,6 @@ class Agent:
         # 设置当前Answer用于plugin打断
         self.current_answer = answer
 
-        # 初始化queued_messages实例变量（如果不存在）
-        if not hasattr(self, "queued_messages"):
-            self.queued_messages = []
-
         async for token in answer:
             await self.group_chat.send("cli_agent_output", token)
 
@@ -375,7 +347,7 @@ class Agent:
         self.message_processor.append_message(chat_message)
 
         # 将排队消息添加到消息列表，放在agent输出后面
-        if self.queued_messages:
+        if hasattr(self, 'queued_messages') and self.queued_messages:
             self.message_processor.append_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )

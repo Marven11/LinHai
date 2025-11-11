@@ -16,7 +16,6 @@ from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage, ToolMessage
 import linhai
-import httpx
 
 
 @runtime_checkable
@@ -570,11 +569,8 @@ class OpenAi:
                 stream = await self.openai.chat.completions.create(**params)
                 answer = OpenAiAnswer(stream)
                 break  # 成功时跳出循环
-            except asyncio.TimeoutError as e:
-                # 记录超时日志，然后重试
-                await asyncio.sleep(retry_delay)
-            except OpenAIError as e:
-                # 记录OpenAI错误日志，然后重试
+            except (asyncio.TimeoutError, OpenAIError):
+                # 记录错误日志，然后重试
                 await asyncio.sleep(retry_delay)
         if answer is not None:
             return answer

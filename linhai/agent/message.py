@@ -7,7 +7,7 @@ import json
 import datetime
 import random
 
-from .base import Message, RuntimeMessage, DestroyedRuntimeMessage
+from .base import Message, RuntimeMessage
 from linhai.llm import ChatMessage
 from linhai.input_parser import parse_user_input
 from linhai.utils import generate_id
@@ -103,7 +103,7 @@ class AgentMessage:
 
         return f"已成功擦除ID为 '{message_id}' 的大消息"
 
-    def record_large_message(self, message: Message, content: str) -> str:
+    def record_large_message(self, message: Message, _: str) -> str:
         """记录大消息并返回ID。
         
         Args:

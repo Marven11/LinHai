@@ -8,7 +8,6 @@ from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
 from linhai.utils import generate_id
 from .base import RuntimeMessage
-from .base import RuntimeMessage
 
 if TYPE_CHECKING:
     from .main import Agent

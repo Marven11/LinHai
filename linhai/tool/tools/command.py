@@ -12,12 +12,12 @@ import platform
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
 
-async def execute_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
+async def execute_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
     """执行系统命令并返回输出（内部函数）
 
     Args:
         command: 要执行的命令字符串
-        timeout: 超时时间（秒），默认2秒
+        timeout: 超时时间（秒），默认30秒
 
     Returns:
         命令执行的输出结果，包含returncode、stdout和stderr
@@ -88,16 +88,16 @@ def validate_simple_command(command: str) -> bool:
     desc=f"执行简单系统命令（白名单验证）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时不要损坏用户的电脑。",
     args={
         "command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str"),
-        "timeout": ToolArgInfo(desc="超时时间（秒），默认2秒", type="float"),
+        "timeout": ToolArgInfo(desc="超时时间（秒），默认30秒", type="float"),
     },
     required_args=["command"],
 )
-async def run_simple_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
+async def run_simple_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
     """执行简单系统命令（白名单验证），只允许安全命令
 
     Args:
         command: 要执行的命令字符串，如 "ls -l"
-        timeout: 超时时间（秒），默认2秒
+        timeout: 超时时间（秒），默认30秒
 
     Returns:
         命令执行的输出结果或错误信息
@@ -118,16 +118,16 @@ async def run_simple_command(command: str, timeout: float = 2.0) -> ToolResultMe
         "command": ToolArgInfo(
             desc="要执行的命令字符串，如 'ls | grep test'", type="str"
         ),
-        "timeout": ToolArgInfo(desc="超时时间（秒），默认2秒", type="float"),
+        "timeout": ToolArgInfo(desc="超时时间（秒），默认30秒", type="float"),
     },
     required_args=["command"],
 )
-async def run_complex_command(command: str, timeout: float = 2.0) -> ToolResultMessage | ToolErrorMessage:
+async def run_complex_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
     """执行复杂系统命令（可能包含危险操作，请谨慎使用）
 
     Args:
         command: 要执行的命令字符串，如 "ls | grep test"
-        timeout: 超时时间（秒），默认2秒
+        timeout: 超时时间（秒），默认30秒
 
     Returns:
         命令执行的输出结果

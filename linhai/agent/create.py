@@ -1,15 +1,12 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
-import json
 from pathlib import Path
 import datetime
-from typing import Sequence
 
 from linhai.group_chat import GroupChat
 from linhai.llm import Message, SystemMessage, LanguageModel, OpenAi
 from linhai.config import load_config, ToolConfig, MCPConfig, AgentConfig
 from linhai.tool.main import ToolManager
-from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.tools.terminal import terminal_toolset
 from linhai.tool.base import global_tools
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
