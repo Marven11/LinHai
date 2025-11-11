@@ -142,6 +142,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.message_processor.add_soft_threshold_notification(threshold_info, large_messages, False)
         
         self.assertEqual(len(self.message_processor.messages), 3)
+        self.assertIn("黄灯状态", str(self.message_processor.messages[-1]))
         self.assertIn("Token用量", str(self.message_processor.messages[-1]))
 
     def test_add_soft_threshold_notification_with_compress_tool(self):

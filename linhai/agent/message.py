@@ -251,7 +251,7 @@ class AgentMessage:
             if taken < 0.4:
                 current_state = "绿灯"
             elif taken < 0.6:
-                current_state = "绿闪"
+                current_state = "绿灯闪烁"
             elif taken < 0.8:
                 current_state = "黄灯"
             else:
@@ -266,8 +266,8 @@ class AgentMessage:
             # 构建状态提示消息
             if current_state == "绿灯":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯状态）。当前已有{len(self.messages)}条消息。无需担心token限制，可以继续工作。"
-            elif current_state == "绿闪":
-                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿闪状态）。当前已有{len(self.messages)}条消息。可以顺手删除一些实在和当前任务无关的消息，但是为了尽量减少删除次数，至少删除3条消息。"
+            elif current_state == "绿灯闪烁":
+                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯闪烁状态）。当前已有{len(self.messages)}条消息。可以顺手删除一些实在和当前任务无关的消息，但是为了尽量减少删除次数，至少删除3条消息。"
             elif current_state == "黄灯":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（黄灯状态）。当前已有{len(self.messages)}条消息。积极考虑删除和当前任务无关的消息，也可以使用历史压缩删除之前任务的消息。"
             else:  # 红灯
