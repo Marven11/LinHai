@@ -28,6 +28,7 @@ class AgentMessage:
         self.large_messages: dict[str, Message] = {}
         self.queued_messages: List[Message] = []
         self.garbage_message_ids: set[str] = set()  # 存储被标记为垃圾的消息ID
+        self.last_threshold_state: Optional[str] = None  # 跟踪上一次的阈值状态
 
     def handle_user_message(self, msg: ChatMessage) -> None:
         """处理用户消息。
@@ -244,19 +245,48 @@ class AgentMessage:
 
         if threshold_info:
             soft, hard, used, remaining, taken = threshold_info
-            if used > soft:
-                # 获取前3个大消息（按照插入顺序）
+            
+            # 确定当前状态
+            current_state = None
+            if taken < 0.4:
+                current_state = "绿灯"
+            elif taken < 0.6:
+                current_state = "绿闪"
+            elif taken < 0.8:
+                current_state = "黄灯"
+            else:
+                current_state = "红灯"
+            
+            # 不重复提醒绿灯状态
+            if current_state == "绿灯" and self.last_threshold_state == "绿灯":
+                return
+            
+            self.last_threshold_state = current_state
+            
+            # 构建状态提示消息
+            if current_state == "绿灯":
+                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯状态）。当前已有{len(self.messages)}条消息。无需担心token限制，可以继续工作。"
+            elif current_state == "绿闪":
+                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿闪状态）。当前已有{len(self.messages)}条消息。可以顺手删除一些实在和当前任务无关的消息，但是为了尽量减少删除次数，至少删除3条消息。"
+            elif current_state == "黄灯":
+                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（黄灯状态）。当前已有{len(self.messages)}条消息。积极考虑删除和当前任务无关的消息，也可以使用历史压缩删除之前任务的消息。"
+            else:  # 红灯
+                # 获取大消息信息
                 large_messages_info = ""
                 if large_messages:
                     large_message_ids = list(large_messages.keys())[:3]
                     large_messages_info = f"当前已有{len(large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
-
-                self.messages.append(
-                    RuntimeMessage(
-                        f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
-                        f"当前已有{len(self.messages)}条消息。{large_messages_info}建议在消息条数少于200条时优先使用 mark_messages_as_garbage. "
-                    )
-                )
+                
+                # 检查垃圾消息数量
+                garbage_count = len(self.garbage_message_ids)
+                if garbage_count >= 10:
+                    action_guide = "当前有至少10条垃圾消息，建议调用message_garbage_clean清理垃圾消息。"
+                else:
+                    action_guide = "建议调用compress_history_range删除大约一半消息！"
+                
+                message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（红灯状态）。当前已有{len(self.messages)}条消息。{large_messages_info}{action_guide}"
+            
+            self.append_message(RuntimeMessage(message_content))
 
     async def save_conversation_history(self, save_dir: Optional[Path] = None) -> None:
         """保存对话历史到文件。
