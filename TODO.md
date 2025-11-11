@@ -18,7 +18,7 @@
     - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒，如果由其他状态转为绿灯则提醒
     - 在红灯时：如果有至少10条垃圾消息则引导agent调用message_garbage_clean，否则引导调用compress_history_range
 - [x] 在工具调用格式出错时不仅仅发送CLI通知，还添加RuntimeMessage
-- [ ] 修改ToolcallWithoutPlanningPlugin插件
+- [x] 修改ToolcallWithoutPlanningPlugin插件
     - 现在如果agent没有输出计划就调用了多个工具，在少于3个工具的时候不会有任何提醒的
         - 相比起调用了两个工具就立马打断agent，这给agent慢慢修正自己的空间
     - 我们需要在生成答案完毕之后再次检查，如果确实没有输出计划就调用了多个工具则提醒agent应该先输出计划再调用工具
