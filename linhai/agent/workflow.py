@@ -138,6 +138,17 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
         agent.message_processor.append_message(RuntimeMessage("错误：压缩范围至少需要10条消息"))
         return "历史压缩失败：压缩范围至少需要10条消息"
 
+    # 检查删除比例是否小于总消息数量的30%
+    total_messages = len(agent.message_processor.messages)
+    delete_ratio = range_size / total_messages
+    if delete_ratio < 0.3:
+        agent.message_processor.append_message(
+            RuntimeMessage(
+                f"警告：你删除的消息数量（{range_size}条）小于总消息数量的30%（{total_messages}条），"
+                f"删除比例仅为{delete_ratio*100:.1f}%。建议删除更多消息。"
+            )
+        )
+
     # 检查范围是否有效
     if end_id >= len(agent.message_processor.messages):
         agent.message_processor.append_message(RuntimeMessage("错误：结束ID超出消息范围"))

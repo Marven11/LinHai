@@ -623,6 +623,11 @@ class CLIApp(App):
                 display_text += (
                     f" | {progress_bar} {percentage:.0f}% of {token_limit:,}"
                 )
+            
+            # 显示当前消息数量
+            agent = self.group_chat.get_members("agent", Agent)
+            message_count = len(agent.message_processor.messages)
+            display_text += f" | msgs {message_count}"
 
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)

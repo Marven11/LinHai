@@ -70,18 +70,24 @@ class WaitingUserPlugin(Plugin):
 class ToolcallWithoutPlanningPlugin(Plugin):
     """工具调用量检查Plugin。"""
 
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.json_block_count = 0
+        self.planning_count = 0
+
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
-        """检查工具调用量是否超过限制。"""
+        """在生成过程中记录工具调用和计划数量。"""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
-        json_block_count = current_content.count("\n```json toolcall")
+        self.json_block_count = current_content.count("\n```json toolcall")
         pattern = r"^ *- \[[ x]\]"
-        planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
+        self.planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
 
-        if json_block_count > 3 and planning_count == 0:
+        # 只有在超过3个工具且没有计划时才立即打断
+        if self.json_block_count > 3 and self.planning_count == 0:
             await agent.interrupt(
                 "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了大量工具，必须先输出计划再调用多个工具！"
             )
@@ -89,9 +95,28 @@ class ToolcallWithoutPlanningPlugin(Plugin):
 
         return False
 
+    async def after_message_generation(
+        self, _answer: Answer, full_response: str, _tool_calls
+    ):
+        """在生成完毕后检查是否没有计划就调用了多个工具。"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 如果在生成过程中已经检查过，这里不再重复检查
+        # 只有在1-3个工具且没有计划时提醒（不打断）
+        if 1 <= self.json_block_count <= 3 and self.planning_count == 0:
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    "注意：你调用了多个工具但没有输出任务规划。"
+                    "请先使用`- [ ]`和`- [x]`进行任务规划，再调用工具。"
+                )
+            )
+
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
+        """注册到during和after_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class WrongEndPlugin(Plugin):
@@ -146,9 +171,21 @@ class BadMultiToolCall(Plugin):
         has_no_reason = re.search(pattern, full_response) is not None
 
         if tool_call_count > 1 and has_no_reason:
+            example = """例如，当你需要同时调用多个工具时，应该这样输出：
+
+我将同时调用这两个工具，因为它们都是只读操作，没有顺序依赖：
+
+```json toolcall
+{"name": "list_files", "arguments": {"dirpath": "."}}
+```
+
+```json toolcall
+{"name": "read_file", "arguments": {"filepath": "./example.txt"}}
+```"""
             agent.message_processor.append_message(
                 RuntimeMessage(
-                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？"
+                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n\n"
+                    + example
                 )
             )
             self.last_message_had_reason = False

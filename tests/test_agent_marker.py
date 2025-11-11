@@ -167,8 +167,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         # Check if error message was added
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            7,  # System + user + assistant + task planning check + empty user
-             # + runtime for tool call + error (tool result not added due to conflict)
+            8,  # System + user + assistant + task planning check + empty user
+             # + runtime for tool call + runtime for no planning + error (tool result not added due to conflict)
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         error_msg = self.agent.message_processor.get_messages()[-1]
@@ -247,8 +247,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         # Check if no error message was added
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            6,  # System + user + assistant + task planning check
-             # + runtime for tool call + tool result
+            7,  # System + user + assistant + task planning check
+             # + runtime for tool call + runtime for no planning + tool result
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         # Verify no error messages related to marker validation

@@ -11,7 +11,7 @@
         - message_garbage_clean: 清理垃圾消息
         - 修改prompt.py和agent/main.py添加指导:
             - 在绿灯、绿闪、黄灯时：优先使用mark_messages_as_garbage标记消息
-    - [ ] 修改对应的unittest
+    - [x] 修改对应的unittest
 - [x] linhai/agent/workflow.py直接操作messages数组，很丑，修改AgentMessage添加对应的函数优化
 - [x] 修改现在的软阈值消息提示：
     - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯，以及每种状态对应的操作
