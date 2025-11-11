@@ -27,7 +27,7 @@
 - [x] 在compress_history_range删除的message数量小于总消息数量的30%时提醒agent删除过少
 - [x] 把assert_success移动到arguments外
     - 将assert_success和普通参数混合在一起是不好的时间，它和函数名一样是指导“如何调用函数”的信息
-- [ ] 修改prompt.py，使其的示例更加贴近实际
+- [x] 修改prompt.py，使其的示例更加贴近实际
     - 现在的示例省略了大量内容，应该使用横杠隔开每条消息，注明每条消息的来源角色
 - [ ] 在CLI底栏消息长度百分比旁边显示当前的message数量
     - [ ] 改到进度条左边，而且格式改为`xxx msgs`
