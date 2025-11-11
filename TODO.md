@@ -15,6 +15,10 @@
         - 运行所有unittest以确认没有破坏性更改
     - [x] 抽象创建Agent逻辑
         - 将初始化agent等的逻辑都移动到create.py中
+- [ ] linhai/agent/workflow.py没有使用linhai/agent/message.py中定义的message处理方式，导致无法正确删除消息
+    - 先编写unittest测试workflow是否按照linhai/agent/main.py的方式正确处理message
+        - 这个unittest会失败，因为workflow.py没有正确删除消息
+    - 根据linhai/agent/main.py修改workflow.py
 - [ ] 使用pyright扫描整个项目并修复
 - [ ] 运行所有unittest并修复
 - [ ] 消除unittest中的警告消息
