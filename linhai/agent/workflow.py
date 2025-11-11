@@ -17,7 +17,7 @@ repr_obj = Repr()
 repr_obj.maxstring = 100
 
 
-async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
+async def compress_history_range(agent: "linhai.agent.Agent") -> str:
     """
     压缩指定范围的历史消息以减少上下文长度。
 
@@ -32,14 +32,14 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
             agent.message_processor.messages.append(
                 RuntimeMessage("当前token占用没有超过软限制，禁止删除消息")
             )
-            return True
+            return "历史压缩未执行：token占用未超过软限制"
         if taken < 0.2:
             agent.message_processor.messages.append(
                 RuntimeMessage(
                     f"当前token占用小于20%，仅为{taken*100:.2f}%，禁止删除消息"
                 )
             )
-            return True
+            return f"历史压缩未执行：token占用仅为{taken*100:.2f}%"
 
     agent.message_processor.messages = [
         (
@@ -87,12 +87,12 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         agent.message_processor.messages.append(
             RuntimeMessage(f"错误：非法JSON: {str(exc)}")
         )
-        return True
+        return "历史压缩失败：JSON格式错误"
     except ValueError as exc:
         agent.message_processor.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
         )
-        return True
+        return "历史压缩失败：处理异常"
 
     if len(json_blocks) == 0:
         agent.message_processor.messages.append(
@@ -100,13 +100,13 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
                 "错误：没有检测到JSON block，请确保输出包含正确的JSON格式范围数据"
             )
         )
-        return True
+        return "历史压缩失败：未检测到JSON块"
 
     # 提取第一个JSON块
     range_data = json_blocks[0]
     if not isinstance(range_data, dict):
         agent.message_processor.messages.append(RuntimeMessage("错误：JSON block 格式不正确，应为字典"))
-        return True
+        return "历史压缩失败：JSON格式不正确"
 
     start_id = range_data.get("start_id")
     end_id = range_data.get("end_id")
@@ -115,12 +115,12 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         agent.message_processor.messages.append(
             RuntimeMessage("错误：JSON block 必须包含 start_id 和 end_id 字段")
         )
-        return True
+        return "历史压缩失败：缺少start_id或end_id字段"
 
     # 验证参数类型
     if not isinstance(start_id, int) or not isinstance(end_id, int):
         agent.message_processor.messages.append(RuntimeMessage("错误：start_id 和 end_id 必须为整数"))
-        return True
+        return "历史压缩失败：start_id和end_id必须为整数"
 
     # 通过检查消息类来确定最小安全ID，保护系统消息
     max_system_index = -1
@@ -144,22 +144,22 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     # 参数验证
     if start_id < 0 or end_id < 0:
         agent.message_processor.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
-        return True
+        return "历史压缩失败：消息ID不能为负数"
 
     if start_id > end_id:
         agent.message_processor.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
-        return True
+        return "历史压缩失败：起始ID不能大于结束ID"
 
     # 检查范围大小，至少10条消息
     range_size = end_id - start_id + 1
     if range_size < 10:
         agent.message_processor.messages.append(RuntimeMessage("错误：压缩范围至少需要10条消息"))
-        return True
+        return "历史压缩失败：压缩范围至少需要10条消息"
 
     # 检查范围是否有效
     if end_id >= len(agent.message_processor.messages):
         agent.message_processor.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
-        return True
+        return "历史压缩失败：结束ID超出消息范围"
 
     # 收集被删除的用户消息内容
     deleted_user_messages = []
@@ -185,4 +185,4 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     agent.message_processor.messages = [
         msg for msg in agent.message_processor.messages if not isinstance(msg, CompressRangeRequest)
     ]
-    return True
+    return "历史压缩成功完成，现在请继续工作！"

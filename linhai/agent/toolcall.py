@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
-from linhai.group_chat import GroupChat
+from linhai.utils import generate_id
+from .base import RuntimeMessage
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -135,7 +136,7 @@ class AgentToolcall:
             args={},
             required_args=[],
         )
-        async def compress_history_range_tool() -> bool:
+        async def compress_history_range_tool() -> str:
             from .workflow import compress_history_range
             return await compress_history_range(self.agent)
 
@@ -247,8 +248,6 @@ class AgentToolcall:
 
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""
-        from linhai.utils import generate_id
-        from .base import RuntimeMessage
 
         # 检查工具结果大小，如果大于8000字符则记录ID
         tool_result_content = str(tool_result)
