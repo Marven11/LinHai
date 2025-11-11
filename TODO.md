@@ -12,7 +12,7 @@
         - 修改prompt.py和agent/main.py添加指导:
             - 在绿灯、绿闪、黄灯时：优先使用mark_messages_as_garbage标记消息
     - [ ] 修改对应的unittest
-- [ ] linhai/agent/workflow.py直接操作messages数组，很丑，修改AgentMessage添加对应的函数优化
+- [x] linhai/agent/workflow.py直接操作messages数组，很丑，修改AgentMessage添加对应的函数优化
 - [ ] 修改现在的软阈值消息提示：
     - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯，以及每种状态对应的操作
     - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒，如果由其他状态转为绿灯则提醒
@@ -25,10 +25,12 @@
 - [ ] 修改BadMultiToolCall插件
     - 在检测到缺少原因时提醒“为了机械式检查你的输出，你需要...”并带上一个例子演示调用多个工具时应该如何输出“同时调用的原因”
 - [ ] 在compress_history_range删除的message数量小于总消息数量的30%时提醒agent删除过少
-- [ ] 运行所有unittest并修复，确认没有破坏性修改
+- [ ] 在CLI底栏消息长度百分比旁边显示当前的message数量
+    - 在终端中运行linhai，让其计算114*514，验证计算完毕后是否在底栏显示message数量
+- [ ] 再次运行所有unittest并修复，确认没有破坏性修改
 
-注意：一定记得参考历史commit|git commit|历史压缩|勾上TODO
-    - 一定在你的任务规划中显式规划读取历史commit|git commit|历史压缩|勾上TODO
+注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
+    - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：运行linhai时，使用terminal运行linhai，因为linhai是TUI软件，并且需要至少给定30秒的等待时间
 

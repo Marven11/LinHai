@@ -3,7 +3,7 @@
 - 回答时避免使用markdown bullet point分小点回答，使用简洁有力的文风，不要大量使用专有名词
 - 不要使用pytest，使用Python的unittest模块来运行测试
 - 在测试代码实现时，可以使用命令：`python -m linhai --config ./config.toml -m '<message>'`，将测试结果输出到xxx.txt中并终止进程，有任何问题直接输出并终止，不要使用LINHAI_WAITING_USER等待。`但记得给足agent思考时间和运行时间，一定手动指定config目录，一定让agent输出并终止自己，否则agent会无限等待
-- unittest一定要放在`linhai/tests`文件夹
+- unittest一定要放在`tests`文件夹
 - 禁止跳过unittest！每个功能都必须获得良好的测试！
 - 当用户要求为某个项目编写代码时，建议跳转到项目根目录(包含pyproject.toml等文件)，以确保后续操作在正确的项目上下文中进行。
 - 运行python命令前使用uv管理环境：使用`uv run python`或检查Python解释器路径
