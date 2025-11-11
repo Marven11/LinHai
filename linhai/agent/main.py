@@ -351,6 +351,8 @@ class Agent:
                 level="WARNING", content="工具调用格式出错"
             )
             await self.group_chat.send("cli_runtime_output", interrupt_msg)
+            # 添加RuntimeMessage到消息队列
+            self.message_processor.append_message(RuntimeMessage("工具调用格式出错"))
             return answer
 
         for error in errors:
