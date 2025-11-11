@@ -3,7 +3,7 @@
 # pylint: disable=protected-access
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from typing import Sequence
+
 
 from linhai.agent import Agent, AgentContext
 from pathlib import Path

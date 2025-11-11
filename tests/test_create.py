@@ -1,9 +1,9 @@
 """测试Agent创建模块"""
 
 import unittest
-import asyncio
+
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 
 from linhai.agent.create import (
     create_agent,

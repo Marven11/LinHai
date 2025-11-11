@@ -2,14 +2,14 @@
 
 import unittest
 from unittest.mock import Mock, patch
-from typing import Sequence
-from pathlib import Path
-import tempfile
-import json
+
+
+
+
 
 from linhai.agent.message import AgentMessage
 from linhai.llm import ChatMessage, SystemMessage
-from linhai.agent.base import RuntimeMessage, DestroyedRuntimeMessage
+from linhai.agent.base import RuntimeMessage
 
 
 class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
@@ -156,7 +156,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     @patch('linhai.agent.message.Path')
     @patch('linhai.agent.message.json')
-    async def test_save_conversation_history(self, mock_json, mock_path):
+    async def test_save_conversation_history(self, _mock_json, mock_path):
         """测试保存对话历史。"""
         # 设置mock
         mock_home = Mock()

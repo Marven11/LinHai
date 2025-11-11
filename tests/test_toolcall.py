@@ -1,7 +1,7 @@
 """AgentToolcall类的单元测试。"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock
 from linhai.agent.toolcall import AgentToolcall
 from linhai.llm import ToolCallMessage
 
