@@ -171,20 +171,24 @@ class BadMultiToolCall(Plugin):
         has_no_reason = re.search(pattern, full_response) is not None
 
         if tool_call_count > 1 and has_no_reason:
-            example = """例如，当你需要同时调用多个工具时，应该这样输出：
+            example = """
+例如，当你需要同时调用多个工具时，应该这样输出（用箭头标记了你应该输出的部分）：
 
-我将同时调用这两个工具，因为它们都是只读操作，没有顺序依赖：
+我将开始探索当前代码仓库，首先是列出当前文件夹
 
 ```json toolcall
 {"name": "list_files", "arguments": {"dirpath": "."}}
 ```
+
+同时调用：然后读取example.txt # <--- 这是你漏掉的“同时调用的原因”
 
 ```json toolcall
 {"name": "read_file", "arguments": {"filepath": "./example.txt"}}
 ```"""
             agent.message_processor.append_message(
                 RuntimeMessage(
-                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n\n"
+                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
+                    "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
                     + example
                 )
             )
@@ -290,9 +294,7 @@ class WeirdEndOfSentencePlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
         # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
-        pattern = (
-            r'^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>'
-        )
+        pattern = r"^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>"
 
         # 检查每一行
         for line in current_content.split("\n"):
