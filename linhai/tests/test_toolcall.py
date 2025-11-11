@@ -6,7 +6,7 @@ from linhai.agent.toolcall import AgentToolcall
 from linhai.llm import ToolCallMessage
 
 
-class TestAgentToolcall(unittest.TestCase):
+class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     """AgentToolcall类的测试用例。"""
 
     def setUp(self):

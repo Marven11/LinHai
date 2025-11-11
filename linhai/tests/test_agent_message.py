@@ -12,7 +12,7 @@ from linhai.llm import ChatMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage, DestroyedRuntimeMessage
 
 
-class TestAgentMessage(unittest.TestCase):
+class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
     """AgentMessage类的测试用例。"""
 
     def setUp(self):
@@ -159,19 +159,24 @@ class TestAgentMessage(unittest.TestCase):
     async def test_save_conversation_history(self, mock_json, mock_path):
         """测试保存对话历史。"""
         # 设置mock
-        mock_save_dir = Mock()
-        mock_path.return_value = mock_save_dir
-        mock_save_dir.mkdir.return_value = None
+        mock_home = Mock()
+        mock_home.__truediv__ = Mock(return_value=mock_home)  # 链式调用返回自己
+        mock_path.home.return_value = mock_home
+        mock_home.mkdir.return_value = None
         
-        # 模拟文件操作
+        # 创建支持上下文管理器的mock
         mock_file = Mock()
-        mock_open = Mock()
+        mock_file.__enter__ = Mock(return_value=mock_file)
+        mock_file.__exit__ = Mock(return_value=None)
+        mock_file.write = Mock()
+        
+        mock_open = Mock(return_value=mock_file)
         
         with patch('builtins.open', mock_open):
             await self.message_processor.save_conversation_history()
         
         # 验证目录创建和文件写入被调用
-        mock_save_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        mock_home.mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_open.assert_called_once()
 
 
