@@ -10,7 +10,7 @@ from linhai.llm import OpenAi, Answer, ChatMessage
 from linhai.agent.base import RuntimeMessage
 
 
-class MockAnswer(Answer):
+class MockAnswer:
     """模拟Answer类"""
     
     def __init__(self, message_content="测试回复"):
@@ -34,6 +34,12 @@ class MockAnswer(Answer):
     
     def get_message(self):
         return ChatMessage(role="assistant", message=self._message_content)
+    
+    def get_reasoning_message(self) -> str | None:
+        return None
+    
+    def get_token_usage(self):
+        return None
     
     def interrupt(self):
         self._interrupted = True
@@ -107,20 +113,21 @@ class TestThresholdState(unittest.TestCase):
                     if current_state == "green":
                         if self.agent.last_threshold_state != "green":
                             # 发送绿灯消息
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                     else:
                         # 对于非绿灯状态，状态改变时总是提醒
-                        state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                        state_message = self.agent._get_state_message  # type: ignore(current_state, used, hard, taken, remaining)
                         self.agent.messages.append(RuntimeMessage(state_message))
                     
-                    # 更新状态
-                    self.agent.last_threshold_state = current_state
+                    # 更新状态 - 注意：实际Agent类中last_threshold_state可能为None
+                    # 这里仅用于测试状态转换逻辑
+                    self.agent.last_threshold_state = current_state  # type: ignore
             
             # 检查是否添加了绿灯消息
             self.assertEqual(len(self.agent.messages), 1)
             self.assertIsInstance(self.agent.messages[0], RuntimeMessage)
-            self.assertIn("绿灯", self.agent.messages[0].message)
+            self.assertIn("绿灯", self.agent.messages[0].message)  # type: ignore
             self.assertEqual(self.agent.last_threshold_state, "green")
         
         # 第二次状态检查，同样处于绿灯状态
@@ -151,15 +158,16 @@ class TestThresholdState(unittest.TestCase):
                     if current_state == "green":
                         if self.agent.last_threshold_state != "green":
                             # 发送绿灯消息
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                     else:
                         # 对于非绿灯状态，状态改变时总是提醒
-                        state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                        state_message = self.agent._get_state_message  # type: ignore(current_state, used, hard, taken, remaining)
                         self.agent.messages.append(RuntimeMessage(state_message))
                     
-                    # 更新状态
-                    self.agent.last_threshold_state = current_state
+                    # 更新状态 - 注意：实际Agent类中last_threshold_state可能为None
+                    # 这里仅用于测试状态转换逻辑
+                    self.agent.last_threshold_state = current_state  # type: ignore
             
             # 检查没有添加新消息（状态未改变）
             self.assertEqual(len(self.agent.messages), original_message_count)
@@ -197,19 +205,20 @@ class TestThresholdState(unittest.TestCase):
                     if current_state == "green":
                         if self.agent.last_threshold_state != "green":
                             # 发送绿灯消息
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                     else:
                         # 对于非绿灯状态，状态改变时总是提醒
-                        state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                        state_message = self.agent._get_state_message  # type: ignore(current_state, used, hard, taken, remaining)
                         self.agent.messages.append(RuntimeMessage(state_message))
                     
-                    # 更新状态
-                    self.agent.last_threshold_state = current_state
+                    # 更新状态 - 注意：实际Agent类中last_threshold_state可能为None
+                    # 这里仅用于测试状态转换逻辑
+                    self.agent.last_threshold_state = current_state  # type: ignore
             
             # 检查绿灯消息
             self.assertEqual(len(self.agent.messages), 1)
-            self.assertIn("绿灯", self.agent.messages[0].message)
+            self.assertIn("绿灯", self.agent.messages[0].message)  # type: ignore
             self.assertEqual(self.agent.last_threshold_state, "green")
         
         # 第二次：黄灯状态（从绿变黄）
@@ -239,19 +248,20 @@ class TestThresholdState(unittest.TestCase):
                     if current_state == "green":
                         if self.agent.last_threshold_state != "green":
                             # 发送绿灯消息
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                     else:
                         # 对于非绿灯状态，状态改变时总是提醒
-                        state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                        state_message = self.agent._get_state_message  # type: ignore(current_state, used, hard, taken, remaining)
                         self.agent.messages.append(RuntimeMessage(state_message))
                     
-                    # 更新状态
-                    self.agent.last_threshold_state = current_state
+                    # 更新状态 - 注意：实际Agent类中last_threshold_state可能为None
+                    # 这里仅用于测试状态转换逻辑
+                    self.agent.last_threshold_state = current_state  # type: ignore
             
             # 检查添加了黄灯消息
             self.assertEqual(len(self.agent.messages), original_message_count + 1)
-            self.assertIn("黄灯", self.agent.messages[-1].message)
+            self.assertIn("黄灯", self.agent.messages[-1].message)  # type: ignore
             self.assertEqual(self.agent.last_threshold_state, "yellow")
         
         # 第三次：回到绿灯状态（从黄变绿）
@@ -281,19 +291,20 @@ class TestThresholdState(unittest.TestCase):
                     if current_state == "green":
                         if self.agent.last_threshold_state != "green":
                             # 发送绿灯消息
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                     else:
                         # 对于非绿灯状态，状态改变时总是提醒
-                        state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                        state_message = self.agent._get_state_message  # type: ignore(current_state, used, hard, taken, remaining)
                         self.agent.messages.append(RuntimeMessage(state_message))
                     
-                    # 更新状态
-                    self.agent.last_threshold_state = current_state
+                    # 更新状态 - 注意：实际Agent类中last_threshold_state可能为None
+                    # 这里仅用于测试状态转换逻辑
+                    self.agent.last_threshold_state = current_state  # type: ignore
             
             # 检查添加了绿灯消息（状态改变）
             self.assertEqual(len(self.agent.messages), original_message_count + 1)
-            self.assertIn("绿灯", self.agent.messages[-1].message)
+            self.assertIn("绿灯", self.agent.messages[-1].message)  # type: ignore
             self.assertEqual(self.agent.last_threshold_state, "green")
 
     @unittest.skip("需要实现_get_state_message方法")
@@ -342,15 +353,15 @@ class TestThresholdState(unittest.TestCase):
                         if current_state == "green":
                             if self.agent.last_threshold_state != "green":
                                 # 发送绿灯消息
-                                state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                                state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                                 self.agent.messages.append(RuntimeMessage(state_message))
                         else:
                             # 对于非绿灯状态，状态改变时总是提醒
-                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)
+                            state_message = self.agent._get_state_message(current_state, used, hard, taken, remaining)  # type: ignore
                             self.agent.messages.append(RuntimeMessage(state_message))
                         
                         # 更新状态
-                        self.agent.last_threshold_state = current_state
+                        self.agent.last_threshold_state = current_state  # type: ignore
                 
                 # 检查状态更新
                 self.assertEqual(self.agent.last_threshold_state, expected_state)
@@ -360,13 +371,13 @@ class TestThresholdState(unittest.TestCase):
                     self.assertEqual(len(self.agent.messages), original_message_count + 1)
                     # 根据预期状态检查对应的消息内容
                     if expected_state == "green":
-                        self.assertIn("当前处于绿灯状态", self.agent.messages[-1].message)
+                        self.assertIn("当前处于绿灯状态", self.agent.messages[-1].message)  # type: ignore
                     elif expected_state == "green_blink":
-                        self.assertIn("当前处于绿灯闪烁状态", self.agent.messages[-1].message)
+                        self.assertIn("当前处于绿灯闪烁状态", self.agent.messages[-1].message)  # type: ignore
                     elif expected_state == "yellow":
-                        self.assertIn("当前处于黄灯状态", self.agent.messages[-1].message)
+                        self.assertIn("当前处于黄灯状态", self.agent.messages[-1].message)  # type: ignore
                     elif expected_state == "red":
-                        self.assertIn("当前处于红灯状态", self.agent.messages[-1].message)
+                        self.assertIn("当前处于红灯状态", self.agent.messages[-1].message)  # type: ignore
 
 
 if __name__ == "__main__":

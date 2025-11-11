@@ -44,7 +44,12 @@ class TestCreateAgent(unittest.TestCase):
         mock_load_config.return_value = mock_config
 
         # 模拟返回值
-        mock_llm_instances.return_value = [Mock()]
+        from linhai.llm import OpenAi
+        mock_llm = Mock(spec=OpenAi)
+        mock_llm.model = 'test-model'
+        mock_llm.token_limit = 1000
+        mock_llm.compatibility = 'openai'
+        mock_llm_instances.return_value = [mock_llm]  # type: ignore
         mock_agent_context.return_value = {
             'system_prompt': 'test_prompt',
             'llms': [Mock()],
@@ -91,7 +96,12 @@ class TestCreateAgent(unittest.TestCase):
              patch('linhai.agent.create._create_init_messages') as mock_init_messages, \
              patch('linhai.agent.main.Agent') as mock_agent:
 
-            mock_llm_instances.return_value = [Mock(), Mock()]
+            from linhai.llm import OpenAi
+            mock_llm = Mock(spec=OpenAi)
+            mock_llm.model = 'test-model'
+            mock_llm.token_limit = 1000
+            mock_llm.compatibility = 'openai'
+            mock_llm_instances.return_value = [mock_llm, mock_llm]  # type: ignore
             mock_agent_context.return_value = {
                 'system_prompt': 'test_prompt',
                 'llms': [Mock(), Mock()],
@@ -139,9 +149,10 @@ class TestCreateLLMInstances(unittest.TestCase):
 
         self.assertEqual(len(result), 1)
         llm = result[0]
-        self.assertEqual(llm.model, 'test-model')
-        self.assertEqual(llm.token_limit, 1000)
-        self.assertEqual(llm.compatibility, 'openai')
+        # 检查OpenAI实例的属性
+        self.assertEqual(llm.model, 'test-model')  # type: ignore
+        self.assertEqual(llm.token_limit, 1000)  # type: ignore
+        self.assertEqual(llm.compatibility, 'openai')  # type: ignore
 
 
 class TestCreateAgentContext(unittest.TestCase):
@@ -156,7 +167,7 @@ class TestCreateAgentContext(unittest.TestCase):
 
         import asyncio
         result = asyncio.run(_create_agent_context(
-            llms=llms,
+            llms=llms,  # type: ignore
             llm_names=llm_names,
             llm_name=None,
             tool_confirmation_config=tool_confirmation_config,
@@ -166,7 +177,8 @@ class TestCreateAgentContext(unittest.TestCase):
         self.assertEqual(result['llms'], llms)
         self.assertEqual(result['llm_names'], llm_names)
         self.assertEqual(result['current_llm_index'], 0)
-        self.assertEqual(result['tool_confirmation'], tool_confirmation_config)
+        # 检查tool_confirmation配置
+        self.assertEqual(result.get('tool_confirmation'), tool_confirmation_config)
         self.assertEqual(result['compress_threshold_hard'], 0.8)
         self.assertEqual(result['compress_threshold_soft'], 0.5)
 
@@ -179,7 +191,7 @@ class TestCreateAgentContext(unittest.TestCase):
 
         import asyncio
         result = asyncio.run(_create_agent_context(
-            llms=llms,
+            llms=llms,  # type: ignore
             llm_names=llm_names,
             llm_name='llm2',
             tool_confirmation_config=tool_confirmation_config,
@@ -198,7 +210,7 @@ class TestCreateAgentContext(unittest.TestCase):
         import asyncio
         with self.assertRaises(ValueError):
             asyncio.run(_create_agent_context(
-                llms=llms,
+                llms=llms,  # type: ignore
                 llm_names=llm_names,
                 llm_name='invalid_llm',
                 tool_confirmation_config=tool_confirmation_config,

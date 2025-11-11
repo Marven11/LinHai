@@ -13,7 +13,7 @@
         - 把处理工具调用的逻辑抽象为AgentToolcall类，保存在toolcall.py中，让agent通过合理的接口调用
         - 编写并运行unittest
         - 运行所有unittest以确认没有破坏性更改
-    - [ ] 抽象创建Agent逻辑
+    - [x] 抽象创建Agent逻辑
         - 将初始化agent等的逻辑都移动到create.py中
 - [ ] 使用pyright扫描整个项目并修复
 - [ ] 运行所有unittest并修复
