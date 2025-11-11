@@ -103,25 +103,32 @@ class AgentToolcall:
             return self.agent.message_processor.thanox_history()
 
         @dummy_toolset.register_tool(
-            name="erase_message_by_id",
-            desc="擦除通过ID标识的大消息。当工具返回内容过大时，系统会分配ID，你可以调用此工具擦除一些不需要的大消息以节省token。逻辑由从直接删除改为在原位置插入一条runtime message: 本条ID为{ID}的消息已被擦除",
+            name="mark_messages_as_garbage",
+            desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。",
             args={
-                "ids": ToolArgInfo(desc="要擦除的消息的ID", type="list[str]"),
+                "ids": ToolArgInfo(desc="要标记为垃圾的消息的ID", type="list[str]"),
             },
             required_args=["ids"],
         )
-        def erase_message_by_id(ids: list[str]) -> str:
+        def mark_messages_as_garbage(ids: list[str]) -> str:
             threshold_info = self.agent.get_threshold_info()
             if threshold_info:
                 soft, _hard, used, _remaining, taken = threshold_info
                 if used < soft:
-                    return "当前token占用没有超过软限制，禁止擦除消息"
+                    return "当前token占用没有超过软限制，禁止标记垃圾消息"
                 if taken < 0.4:
-                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止擦除消息"
-            result = ""
-            for message_id in ids:
-                result += f"{message_id!r}: {self.agent.erase_message_by_id(message_id)}"
+                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止标记垃圾消息"
+            result = self.agent.message_processor.mark_messages_as_garbage(ids)
             return result
+
+        @dummy_toolset.register_tool(
+            name="message_garbage_clean",
+            desc="清理垃圾消息。在红灯时：如果有至少10条垃圾消息则引导agent调用此工具，否则引导调用compress_history_range",
+            args={},
+            required_args=[],
+        )
+        def message_garbage_clean() -> str:
+            return self.agent.message_processor.message_garbage_clean()
 
         self.tool_manager.add_toolset(dummy_toolset)
 
@@ -157,7 +164,8 @@ class AgentToolcall:
         # 统一设置compress_tool_called_in_last_response
         compress_tools = [
             "compress_history_range",
-            "erase_message_by_id",
+            "mark_messages_as_garbage",
+            "message_garbage_clean",
             "thanox_history",
         ]
         self.agent.compress_tool_called_in_last_response = (
@@ -256,7 +264,7 @@ class AgentToolcall:
             self.agent.message_processor.get_messages().append(
                 RuntimeMessage(
                     f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配ID: {message_id}。"
-                    "你可以使用 erase_message_by_id 工具删除此消息以节省token。"
+                    "你可以使用 mark_messages_as_garbage 工具标记此消息为垃圾以节省token。"
                 )
             )
 

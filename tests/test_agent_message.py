@@ -70,24 +70,25 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.message_processor.append_message(assistant_msg)
         self.assertFalse(self.message_processor.is_last_message_user())
 
-    def test_erase_message_by_id(self):
-        """测试擦除大消息。"""
+    def test_mark_messages_as_garbage(self):
+        """测试标记消息为垃圾。"""
         # 记录一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         message_id = self.message_processor.record_large_message(large_msg, "large content")
+        self.message_processor.append_message(large_msg)
         
-        # 擦除消息
-        result = self.message_processor.erase_message_by_id(message_id)
+        # 标记消息为垃圾
+        result = self.message_processor.mark_messages_as_garbage([message_id])
         
-        self.assertIn("已成功擦除", result)
-        self.assertNotIn(message_id, self.message_processor.large_messages)
+        self.assertIn("成功标记 1 条消息", result)
+        # 消息应该被替换为RuntimeMessage，标记为垃圾
+        self.assertTrue(any(isinstance(msg, RuntimeMessage) and f"本条ID为{message_id}的消息已被标记为垃圾" in msg.message for msg in self.message_processor.messages))
 
-    def test_erase_message_by_id_not_found(self):
-        """测试擦除不存在的消息。"""
-        result = self.message_processor.erase_message_by_id("nonexistent_id")
+    def test_mark_messages_as_garbage_not_found(self):
+        """测试标记不存在的消息为垃圾。"""
+        result = self.message_processor.mark_messages_as_garbage(["nonexistent_id"])
         
-        self.assertIn("错误：ID", result)
-        self.assertIn("不存在", result)
+        self.assertIn("以下ID不存在: nonexistent_id", result)
 
     def test_record_large_message(self):
         """测试记录大消息。"""

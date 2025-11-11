@@ -92,16 +92,24 @@ class Agent:
         # 初始化queued_messages实例变量（如果不存在）
         self.queued_messages: list = []
 
-    def erase_message_by_id(self, message_id: str) -> str:
-        """擦除大消息。
+    def mark_messages_as_garbage(self, message_ids: list[str]) -> str:
+        """将多个消息标记为垃圾消息。
         
         Args:
-            message_id: 要擦除的消息ID
+            message_ids: 要标记为垃圾的消息ID列表
             
         Returns:
-             擦除结果消息
+            标记结果消息
         """
-        return self.message_processor.erase_message_by_id(message_id)
+        return self.message_processor.mark_messages_as_garbage(message_ids)
+
+    def message_garbage_clean(self) -> str:
+        """清理所有已标记为垃圾的消息。
+        
+        Returns:
+            清理结果消息
+        """
+        return self.message_processor.message_garbage_clean()
 
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:

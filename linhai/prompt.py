@@ -97,10 +97,11 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
   - 60% ~ 80% - 黄灯：积极考虑删除**和当前任务无关**的消息，也可以使用历史压缩删除**之前任务**的消息
   - 80 ~ 100% - 红灯：优先考虑token限制问题，此时应该放下手中的任何任务，直接使用compress_history_range删除一半消息！
     - 此时消息非常多，erase_message_by_id不能有效清理消息，应该使用compress_history_range删除大约一半消息！
-- 优先使用erase_message_by_id: 在Token达到软阈值时，一般使用erase_message_by_id删除一些上一个任务的消息
-  - erase_message_by_id可以和其他工具一起调用，不需要暂停当前任务
-  - 但是需要确保删除的消息和当前的任务无关！
+- 优先使用mark_messages_as_garbage: 在Token达到软阈值时，一般使用mark_messages_as_garbage标记一些上一个任务的消息为垃圾
+  - mark_messages_as_garbage可以和其他工具一起调用，不需要暂停当前任务
+  - 但是需要确保标记的消息和当前的任务无关！
   - 历史信息限制在0% ~ 40%时不需要使用
+- 在红灯时：如果有至少10条垃圾消息则引导agent调用message_garbage_clean，否则引导调用compress_history_range
 - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
 - 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。
 - 历史压缩用于删除**上一个任务、上一个步骤**的消息，除非没有任何明显的上一步，否则禁止删除当前步骤的消息
