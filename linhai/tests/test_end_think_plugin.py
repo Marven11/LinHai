@@ -27,8 +27,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟agent的interrupt方法
         self.agent.interrupt = AsyncMock()
         
-        # 模拟agent的messages列表
-        self.agent.messages = []
+        # 模拟agent的message_processor
+        self.agent.message_processor = Mock()
+        self.agent.message_processor.get_messages.return_value = []
 
     async def test_detect_end_think_alone(self):
         """测试检测到单独一行的</think>。"""
@@ -71,7 +72,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_no_end_think(self):
         """测试没有</think>的情况。"""
@@ -86,7 +87,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     def test_register(self):
         """测试插件注册。"""

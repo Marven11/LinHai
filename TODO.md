@@ -22,7 +22,7 @@
 - [x] compress_history_range会将一个True加入到消息中
     - [x] 现在compress_history_range返回bool但是workflow的返回值会被直接加入到消息列表中
     - [x] 应该修改compress_history_range的实现以及添加/修改对应的unittest，确保奇怪的True不会被加入
-- [ ] 我看到`rg '(self|agent)\.messages\b' .`仍然有很多代码使用了不存在的Agent.message属性，改正
+- [x] 我看到`rg '(self|agent)\.messages\b' .`仍然有很多代码使用了不存在的Agent.message属性，改正
 - [ ] 使用pyright扫描整个项目并修复
 - [ ] 运行所有unittest并修复
 - [ ] 消除unittest中的警告消息

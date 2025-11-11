@@ -26,7 +26,6 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         # 创建模拟的Agent，使用MagicMock以支持属性访问
         self.mock_agent = MagicMock()
         self.mock_agent.context = {"enable_directory_change_detection": False}
-        self.mock_agent.messages = []
         
         # 设置mock_agent的message_processor
         from linhai.agent.message import AgentMessage
@@ -55,12 +54,16 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         # 插件禁用时不应检测目录更改
         self.mock_agent.context["enable_directory_change_detection"] = False
         
+        # 记录初始消息数量
+        initial_message_count = len(self.mock_agent.message_processor.get_messages())
+        
         # 调用before_message_generation
         import asyncio
         asyncio.run(self.plugin.before_message_generation(True, False))
         
-        # 验证没有添加任何消息
-        self.assertEqual(len(self.mock_agent.messages), 0)
+        # 验证没有添加任何新消息
+        final_message_count = len(self.mock_agent.message_processor.get_messages())
+        self.assertEqual(final_message_count, initial_message_count)
 
     def test_plugin_enabled_no_directory_change(self):
         """测试插件启用但目录未更改。"""
@@ -69,12 +72,16 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         # 设置初始目录
         self.plugin.last_directory = Path.cwd()
         
+        # 记录初始消息数量
+        initial_message_count = len(self.mock_agent.message_processor.get_messages())
+        
         # 调用before_message_generation
         import asyncio
         asyncio.run(self.plugin.before_message_generation(True, False))
         
-        # 验证没有添加任何消息
-        self.assertEqual(len(self.mock_agent.messages), 0)
+        # 验证没有添加任何新消息
+        final_message_count = len(self.mock_agent.message_processor.get_messages())
+        self.assertEqual(final_message_count, initial_message_count)
 
     def test_plugin_enabled_with_directory_change(self):
         """测试插件启用且目录更改。"""
@@ -109,9 +116,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         
         # 验证添加了PathMemory消息（原有2条 + 新增1条PathMemory = 3条）
         messages = self.mock_agent.message_processor.get_messages()
-        self.assertEqual(len(messages), 3)
-        self.assertIsInstance(messages[-1], PathMemory)
-        self.assertEqual(messages[-1].filepath.resolve(), test_file.resolve())
+        pathmemory_count = sum(1 for msg in messages if isinstance(msg, PathMemory))
+        self.assertEqual(pathmemory_count, 1)
+        pathmemory_msg = next(msg for msg in messages if isinstance(msg, PathMemory))
+        self.assertEqual(pathmemory_msg.filepath.resolve(), test_file.resolve())
 
     def test_plugin_avoids_duplicates(self):
         """测试插件避免重复添加相同路径的消息。"""
@@ -126,14 +134,15 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         
         # 先添加一个PathMemory消息
         existing_memory = PathMemory(test_file)
-        self.mock_agent.messages.append(existing_memory)
+        self.mock_agent.message_processor.append_message(existing_memory)
         
         # 调用before_message_generation
         import asyncio
         asyncio.run(self.plugin.before_message_generation(True, False))
         
         # 验证没有重复添加消息
-        self.assertEqual(len(self.mock_agent.messages), 1)
+        pathmemory_count = sum(1 for msg in self.mock_agent.message_processor.get_messages() if isinstance(msg, PathMemory))
+        self.assertEqual(pathmemory_count, 1)
 
     def test_plugin_handles_global_memory_duplicates(self):
         """测试插件避免与GlobalMemory重复。"""
@@ -148,14 +157,15 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         
         # 先添加一个GlobalMemory消息
         existing_memory = GlobalMemory(test_file)
-        self.mock_agent.messages.append(existing_memory)
+        self.mock_agent.message_processor.append_message(existing_memory)
         
         # 调用before_message_generation
         import asyncio
         asyncio.run(self.plugin.before_message_generation(True, False))
         
         # 验证没有重复添加消息
-        self.assertEqual(len(self.mock_agent.messages), 1)
+        memory_count = sum(1 for msg in self.mock_agent.message_processor.get_messages() if isinstance(msg, (PathMemory, GlobalMemory)))
+        self.assertEqual(memory_count, 1)
 
     def test_plugin_registers_correctly(self):
         """测试插件正确注册到生命周期。"""

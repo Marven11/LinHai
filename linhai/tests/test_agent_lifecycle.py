@@ -61,7 +61,8 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.lifecycle = Lifecycle(self.group_chat)
         self.mock_agent = MagicMock()
         self.mock_agent.state = "waiting_user"
-        self.mock_agent.messages = []
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_answer = MagicMock()
         self.mock_answer.get_reasoning_message.return_value = None
         self.mock_tool_call = MagicMock()

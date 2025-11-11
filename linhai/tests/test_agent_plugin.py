@@ -49,7 +49,7 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         # 有任务规划标记，不应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_after_message_generation_without_task_planning(self):
         """测试没有任务规划标记的情况。"""
@@ -72,6 +72,8 @@ class TestTaskPlanningPlugin(unittest.IsolatedAsyncioTestCase):
         args = self.agent.message_processor.append_message.call_args[0]
         self.assertIsInstance(args[0], RuntimeMessage)
         self.assertIn("你没有输出任务规划", args[0].message)
+        
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_after_message_generation_with_long_content(self):
         """测试长内容中的任务规划检查。"""
@@ -171,7 +173,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response, self.tool_calls
         )
 
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_after_message_generation_with_single_tool_call(self):
         """测试只有单个工具调用的情况。"""
@@ -192,7 +194,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
         # 只有一个工具调用，不应该添加警告消息
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_after_message_generation_with_reason_output_after_no_reason(self):
         """测试上一条消息没有输出原因，当前消息输出了原因的情况。"""
@@ -214,7 +216,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
         # 第一条消息没有原因，不应该有提醒
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
         # 第二条消息：输出了原因
         full_response2 = """一些内容
@@ -239,7 +241,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response2, self.tool_calls
         )
 
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_after_message_generation_with_reason_output_after_reason(self):
         """测试上一条消息输出了原因，当前消息也输出了原因的情况。"""
@@ -270,7 +272,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
         )
 
         # 第一条消息有原因，且上一条也有原因，不应该有提醒
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
     async def test_after_message_generation_with_multiple_tool_calls_no_reason(self):
         """测试有多个工具调用但没有输出原因的情况。"""
         full_response = """一些内容
@@ -323,7 +325,7 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response, self.tool_calls
         )
 
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
 
 class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
@@ -423,7 +425,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         await self.plugin.before_message_generation(True, False)
         
         # 目录未更改，不应该添加任何消息
-        self.assertEqual(len(self.agent.messages), 0)
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
     async def test_before_message_generation_enabled_with_change(self):
         """测试目录更改检测开启且目录更改的情况。"""
@@ -452,7 +454,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         # 模拟已经存在相同路径的PathMemory
         from linhai.agent.base import PathMemory
         existing_pathmemory = PathMemory(pathlib.Path.cwd() / "LINHAI.md")
-        self.agent.messages = [existing_pathmemory]
+        self.agent.message_processor.get_messages.return_value = [existing_pathmemory]
         
         await self.plugin.before_message_generation(True, False)
         
