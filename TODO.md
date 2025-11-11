@@ -24,7 +24,7 @@
     - 我们需要在生成答案完毕之后再次检查，如果确实没有输出计划就调用了多个工具则提醒agent应该先输出计划再调用工具
 - [x] 修改BadMultiToolCall插件
     - 在检测到缺少原因时提醒“为了机械式检查你的输出，你需要...”并带上一个例子演示调用多个工具时应该如何输出“同时调用的原因”
-- [ ] 在compress_history_range删除的message数量小于总消息数量的30%时提醒agent删除过少
+- [x] 在compress_history_range删除的message数量小于总消息数量的30%时提醒agent删除过少
 - [ ] 把assert_success移动到arguments外
     - 将assert_success和普通参数混合在一起是不好的时间，它和函数名一样是指导“如何调用函数”的信息
 - [ ] 修改prompt.py，使其的示例更加贴近实际

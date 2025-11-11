@@ -333,6 +333,69 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         summary_message = runtime_messages[0].message
         self.assertIn("Complete TODO.md tasks", summary_message)
         self.assertIn("Important user input", summary_message)
+    async def test_compress_history_range_small_delete_ratio(self):
+        """Test compress_history_range with delete ratio less than 30%."""
+        mock_agent = MagicMock()
+        # Create 36 messages to test delete ratio (10/36 = 27.8% < 30%)
+        mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(36)]
+
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
+
+        # Mock response with range of 10 messages out of 36 = 27.8% < 30%
+        mock_response = MagicMock()
+        mock_response.get_message.return_value = ChatMessage(
+            role="assistant",
+            message="""```json
+{"start_id": 10, "end_id": 19}
+```""",
+        )
+        mock_agent.generate_response = AsyncMock(return_value=mock_response)
+
+        # Mock delete_message_range
+        def delete_message_range_side_effect(start, end):
+            deleted = mock_agent.message_processor.messages[start:end + 1]
+            del mock_agent.message_processor.messages[start:end + 1]
+            return deleted
+        
+        # Mock filter_messages to actually filter the list
+        def filter_messages_side_effect(filter_func):
+            mock_agent.message_processor.messages[:] = [msg for msg in mock_agent.message_processor.messages if filter_func(msg)]
+        
+        # Mock append_message to actually add messages to the list
+        def append_message_side_effect(message):
+            mock_agent.message_processor.messages.append(message)
+        
+        mock_agent.message_processor.delete_message_range = MagicMock(side_effect=delete_message_range_side_effect)
+        mock_agent.message_processor.insert_message = MagicMock()
+        mock_agent.message_processor.filter_messages = MagicMock(side_effect=filter_messages_side_effect)
+        mock_agent.message_processor.append_message = MagicMock(side_effect=append_message_side_effect)
+
+        # Call the function
+        result = await compress_history_range(mock_agent)
+
+        # Verify the function completed successfully
+        self.assertTrue(result)
+        
+        # Verify that a warning message was added about small delete ratio
+        warning_messages = [
+            msg
+            for msg in mock_agent.message_processor.messages
+            if isinstance(msg, RuntimeMessage)
+            and "小于总消息数量的30%" in getattr(msg, 'message', '')
+        ]
+        self.assertGreater(
+            len(warning_messages),
+            0,
+            f"No warning message about small delete ratio was found in {len(mock_agent.message_processor.messages)} messages",
+        )
+
+        # Verify the warning contains correct ratio information
+        warning_message = warning_messages[0].message
+        self.assertIn("27.0%", warning_message)  # 10/37 = 27.0% (37 includes CompressRangeRequest)
+        self.assertIn("30%", warning_message)
+        self.assertIn("建议删除更多消息", warning_message)
+
 
 
 if __name__ == "__main__":
