@@ -96,7 +96,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage("User message 9"),
             RuntimeMessage("User message 10"),
         ]
-        mock_agent.messages = mock_messages
+        mock_agent.message_processor.messages = mock_messages
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -126,7 +126,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_workflow_with_invalid_range(self):
         """Test compress_history_range with invalid range parameters."""
         mock_agent = MagicMock()
-        mock_agent.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
+        mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -152,7 +152,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_workflow_with_small_range(self):
         """Test compress_history_range with range smaller than minimum."""
         mock_agent = MagicMock()
-        mock_agent.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
+        mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -273,7 +273,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage("<runtime>Another tool output</runtime>"),
             ChatMessage("assistant", "Assistant response x"),
         ]
-        mock_agent.messages = mock_messages
+        mock_agent.message_processor.messages = mock_messages
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -305,7 +305,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         # Check that the runtime message contains a summary of user inputs
         runtime_messages = [
             msg
-            for msg in mock_agent.messages
+            for msg in mock_agent.message_processor.messages
             if isinstance(msg, RuntimeMessage)
             and "历史压缩已删除以下用户消息" in msg.message
         ]
@@ -313,7 +313,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             len(runtime_messages),
             0,
             "No runtime message summarizing user messages was found in: "
-            + repr(mock_agent.messages),
+            + repr(mock_agent.message_processor.messages),
         )
 
         # Verify the summary contains key user inputs

@@ -29,35 +29,35 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     if threshold_info:
         soft, _hard, used, _remaining, taken = threshold_info
         if used < soft:
-            agent.messages.append(
+            agent.message_processor.messages.append(
                 RuntimeMessage("当前token占用没有超过软限制，禁止删除消息")
             )
             return True
         if taken < 0.2:
-            agent.messages.append(
+            agent.message_processor.messages.append(
                 RuntimeMessage(
                     f"当前token占用小于20%，仅为{taken*100:.2f}%，禁止删除消息"
                 )
             )
             return True
 
-    agent.messages = [
+    agent.message_processor.messages = [
         (
             RuntimeMessage("已经失效的历史压缩prompt")
             if isinstance(msg, CompressRangeRequest)
             else msg
         )
-        for msg in agent.messages
+        for msg in agent.message_processor.messages
     ]
 
-    messages = [msg.to_llm_message() for msg in agent.messages]
+    messages = [msg.to_llm_message() for msg in agent.message_processor.messages]
     messages_summerization = "\n".join(
         f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}"
         for i, msg in enumerate(messages)
     )
 
-    agent.messages.append(
-        CompressRangeRequest(messages_summerization, len(agent.messages))
+    agent.message_processor.messages.append(
+        CompressRangeRequest(messages_summerization, len(agent.message_processor.messages))
     )
 
     # 生成响应，让LLM输出范围
@@ -84,18 +84,18 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         # 解析LLM输出，提取JSON块
         json_blocks = extract_json_blocks(full_response)
     except json.JSONDecodeError as exc:
-        agent.messages.append(
+        agent.message_processor.messages.append(
             RuntimeMessage(f"错误：非法JSON: {str(exc)}")
         )
         return True
     except ValueError as exc:
-        agent.messages.append(
+        agent.message_processor.messages.append(
             RuntimeMessage(f"错误：处理压缩范围时发生异常: {str(exc)}")
         )
         return True
 
     if len(json_blocks) == 0:
-        agent.messages.append(
+        agent.message_processor.messages.append(
             RuntimeMessage(
                 "错误：没有检测到JSON block，请确保输出包含正确的JSON格式范围数据"
             )
@@ -105,26 +105,26 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
     # 提取第一个JSON块
     range_data = json_blocks[0]
     if not isinstance(range_data, dict):
-        agent.messages.append(RuntimeMessage("错误：JSON block 格式不正确，应为字典"))
+        agent.message_processor.messages.append(RuntimeMessage("错误：JSON block 格式不正确，应为字典"))
         return True
 
     start_id = range_data.get("start_id")
     end_id = range_data.get("end_id")
 
     if start_id is None or end_id is None:
-        agent.messages.append(
+        agent.message_processor.messages.append(
             RuntimeMessage("错误：JSON block 必须包含 start_id 和 end_id 字段")
         )
         return True
 
     # 验证参数类型
     if not isinstance(start_id, int) or not isinstance(end_id, int):
-        agent.messages.append(RuntimeMessage("错误：start_id 和 end_id 必须为整数"))
+        agent.message_processor.messages.append(RuntimeMessage("错误：start_id 和 end_id 必须为整数"))
         return True
 
     # 通过检查消息类来确定最小安全ID，保护系统消息
     max_system_index = -1
-    for i, msg in enumerate(agent.messages):
+    for i, msg in enumerate(agent.message_processor.messages):
         if isinstance(msg, (SystemMessage, GlobalMemory)):
             max_system_index = i
 
@@ -134,7 +134,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
         min_safe_id = max_system_index + 1
 
     if start_id < min_safe_id:
-        agent.messages.append(
+        agent.message_processor.messages.append(
             RuntimeMessage(
                 f"错误：start_id不能小于{min_safe_id},已经更正为{min_safe_id}"
             )
@@ -143,46 +143,46 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> bool:
 
     # 参数验证
     if start_id < 0 or end_id < 0:
-        agent.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
+        agent.message_processor.messages.append(RuntimeMessage("错误：消息ID不能为负数"))
         return True
 
     if start_id > end_id:
-        agent.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
+        agent.message_processor.messages.append(RuntimeMessage("错误：起始ID不能大于结束ID"))
         return True
 
     # 检查范围大小，至少10条消息
     range_size = end_id - start_id + 1
     if range_size < 10:
-        agent.messages.append(RuntimeMessage("错误：压缩范围至少需要10条消息"))
+        agent.message_processor.messages.append(RuntimeMessage("错误：压缩范围至少需要10条消息"))
         return True
 
     # 检查范围是否有效
-    if end_id >= len(agent.messages):
-        agent.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
+    if end_id >= len(agent.message_processor.messages):
+        agent.message_processor.messages.append(RuntimeMessage("错误：结束ID超出消息范围"))
         return True
 
     # 收集被删除的用户消息内容
     deleted_user_messages = []
-    for msg in agent.messages[start_id : end_id + 1]:
+    for msg in agent.message_processor.messages[start_id : end_id + 1]:
         if isinstance(msg, ChatMessage) and msg.role == "user":
             content = msg.message
             if content:
                 deleted_user_messages.append(content)
 
-    # 直接删除指定范围的消息
-    agent.messages[start_id : end_id + 1] = [
+    # 使用 message_processor 删除指定范围的消息
+    agent.message_processor.messages[start_id : end_id + 1] = [
         RuntimeMessage(f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）"),
     ]
 
     # 如果删除了用户消息，添加额外的消息包含被删除的用户消息内容
     if deleted_user_messages:
         user_messages_summary = "\n".join(f"- {msg}" for msg in deleted_user_messages)
-        agent.messages.insert(
+        agent.message_processor.messages.insert(
             start_id + 1,
             RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
-    agent.messages = [
-        msg for msg in agent.messages if not isinstance(msg, CompressRangeRequest)
+    agent.message_processor.messages = [
+        msg for msg in agent.message_processor.messages if not isinstance(msg, CompressRangeRequest)
     ]
     return True
