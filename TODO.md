@@ -4,35 +4,21 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 将erase_message_by_id改成mark_messages_as_garbage和message_garbage_clean以避免多次删除
-    - 我们的动机：每次删除前面的message都会导致缓存重新计算，导致LLM费用消耗剧增
-    - 设计：
-        - mark_messages_as_garbage: 将多个消息标记为不需要的垃圾消息
-        - message_garbage_clean: 清理垃圾消息
-        - 修改prompt.py和agent/main.py添加指导:
-            - 在绿灯、绿闪、黄灯时：优先使用mark_messages_as_garbage标记消息
-    - [x] 修改对应的unittest
-- [x] linhai/agent/workflow.py直接操作messages数组，很丑，修改AgentMessage添加对应的函数优化
-- [x] 修改现在的软阈值消息提示：
-    - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯，以及每种状态对应的操作
-    - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒，如果由其他状态转为绿灯则提醒
-    - 在红灯时：如果有至少10条垃圾消息则引导agent调用message_garbage_clean，否则引导调用compress_history_range
-- [x] 在工具调用格式出错时不仅仅发送CLI通知，还添加RuntimeMessage
-- [x] 修改ToolcallWithoutPlanningPlugin插件
-    - 现在如果agent没有输出计划就调用了多个工具，在少于3个工具的时候不会有任何提醒的
-        - 相比起调用了两个工具就立马打断agent，这给agent慢慢修正自己的空间
-    - 我们需要在生成答案完毕之后再次检查，如果确实没有输出计划就调用了多个工具则提醒agent应该先输出计划再调用工具
-- [x] 修改BadMultiToolCall插件
-    - 在检测到缺少原因时提醒“为了机械式检查你的输出，你需要...”并带上一个例子演示调用多个工具时应该如何输出“同时调用的原因”
-- [x] 在compress_history_range删除的message数量小于总消息数量的30%时提醒agent删除过少
-- [x] 把assert_success移动到arguments外
-    - 将assert_success和普通参数混合在一起是不好的时间，它和函数名一样是指导“如何调用函数”的信息
-- [x] 修改prompt.py，使其的示例更加贴近实际
-    - 现在的示例省略了大量内容，应该使用横杠隔开每条消息，注明每条消息的来源角色
-- [x] 在CLI底栏消息长度百分比旁边显示当前的message数量
-    - [x] 改到进度条左边，而且格式改为`xxx msgs`
-    - 在终端中运行linhai，让其计算114*514，验证计算完毕后是否在底栏显示message数量
-- [x] 再次运行所有unittest并修复，确认没有破坏性修改
+- [ ] 改进compress_history_range
+    - [ ] 第一个小任务
+        - 重构其的实现，将一部分代码拆到其他函数中，这个函数太长了
+        - 运行所有unittest保证没有破坏性更改
+    - [ ] 第二个小任务
+        - 这个workflow会让agent生成一个包含被压缩信息的总结，以及一个json，包含被压缩信息的开始结束编号
+        - 可是workflow会删除其注入的prompt但是不会删除agent生成的总结
+        - 我们需要同时删除（pop）对应的总结，将总结的文本包裹一下插入到被删除消息的原位置上
+            - 包裹一下是为了告诉agent这里的消息被删除了，并让agent在正确的位置读取总结
+        - 需要编写unittest
+    - [ ] 第三个小任务
+        - 这个workflow在插入request之后会退出，但是有时会提前return导致request没有被删除
+        - 可能用try catch来写比较好
+        - 需要编写unittest
+- 运行所有unittest保证没有破坏性更改
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
