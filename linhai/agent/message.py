@@ -20,17 +20,18 @@ class AgentMessage:
 
     def __init__(self, init_messages: Optional[Sequence[Message]] = None):
         """初始化消息处理器。
-        
+
         Args:
             init_messages: 初始消息列表
         """
         self.messages: List[Message] = list(init_messages) if init_messages else []
         self.large_messages: dict[str, Message] = {}
         self.queued_messages: List[Message] = []
+        self.garbage_message_ids: set[str] = set()  # 存储被标记为垃圾的消息ID
 
     def handle_user_message(self, msg: ChatMessage) -> None:
         """处理用户消息。
-        
+
         Args:
             msg: 用户消息
         """
@@ -49,7 +50,7 @@ class AgentMessage:
 
     def append_message(self, msg: Message) -> None:
         """添加消息到队列。
-        
+
         Args:
             msg: 要添加的消息
         """
@@ -57,7 +58,7 @@ class AgentMessage:
 
     def get_messages(self) -> List[Message]:
         """获取当前所有消息。
-        
+
         Returns:
             消息列表
         """
@@ -65,7 +66,7 @@ class AgentMessage:
 
     def get_message_count(self) -> int:
         """获取当前消息数量。
-        
+
         Returns:
             消息数量
         """
@@ -73,7 +74,7 @@ class AgentMessage:
 
     def is_last_message_user(self) -> bool:
         """检查最后一条消息是否来自用户。
-        
+
         Returns:
             如果是用户消息返回True，否则False
         """
@@ -84,91 +85,67 @@ class AgentMessage:
 
     def mark_messages_as_garbage(self, message_ids: list[str]) -> str:
         """将多个消息标记为垃圾消息。
-        
+
         Args:
             message_ids: 要标记为垃圾的消息ID列表
-            
+
         Returns:
             标记结果消息
         """
         marked_ids = []
         not_found_ids = []
         already_marked_ids = []
-        
+
         for message_id in message_ids:
             if message_id not in self.large_messages:
                 not_found_ids.append(message_id)
                 continue
-                
-            message_to_mark = self.large_messages[message_id]
+
             # 检查消息是否已经被标记为垃圾
-            if any(isinstance(msg, RuntimeMessage) and f"本条ID为{message_id}的消息已被标记为垃圾" in msg.message 
-                   for msg in self.messages):
+            if message_id in self.garbage_message_ids:
                 already_marked_ids.append(message_id)
                 continue
-                
-            # 标记消息为垃圾，但不立即删除
-            if message_to_mark in self.messages:
-                index = self.messages.index(message_to_mark)
-                self.messages[index] = RuntimeMessage(f"本条ID为{message_id}的消息已被标记为垃圾")
-                marked_ids.append(message_id)
-        
+
+            self.garbage_message_ids.add(message_id)
+            marked_ids.append(message_id)
+
         # 构建结果消息
         result_parts = []
         if marked_ids:
             result_parts.append(f"已成功标记 {len(marked_ids)} 条消息为垃圾消息")
+            result_parts.append(f"ID为{', '.join(marked_ids)}的消息已被标记为垃圾")
         if not_found_ids:
             result_parts.append(f"以下ID不存在: {', '.join(not_found_ids)}")
         if already_marked_ids:
             result_parts.append(f"以下ID已被重复标记: {', '.join(already_marked_ids)}")
-        
+
         return "; ".join(result_parts) if result_parts else "没有消息被标记"
 
     def message_garbage_clean(self) -> str:
         """清理所有已标记为垃圾的消息。
-        
+
         Returns:
             清理结果消息
         """
-        # 查找所有被标记为垃圾的消息
-        garbage_messages = []
-        for i, msg in enumerate(self.messages):
-            if isinstance(msg, RuntimeMessage) and "已被标记为垃圾" in msg.message:
-                garbage_messages.append(i)
-        
-        # 从large_messages中移除所有被标记为垃圾的消息
-        marked_ids = []
-        for index in garbage_messages:
-            # 从RuntimeMessage中提取消息ID
-            msg_content = self.messages[index].message
-            if "ID为" in msg_content and "的消息已被标记为垃圾" in msg_content:
-                start = msg_content.find("ID为") + 3
-                end = msg_content.find("的消息已被标记为垃圾")
-                if start < end:
-                    message_id = msg_content[start:end]
-                    marked_ids.append(message_id)
-        
-        # 从large_messages中删除对应的消息
-        for message_id in marked_ids:
+        if not self.garbage_message_ids:
+            return "没有垃圾消息需要清理"
+
+        for message_id in self.garbage_message_ids:
             if message_id in self.large_messages:
-                del self.large_messages[message_id]
-        
-        # 从后往前删除消息，避免索引变化
-        garbage_messages.sort(reverse=True)
-        cleaned_count = 0
-        for index in garbage_messages:
-            del self.messages[index]
-            cleaned_count += 1
-        
-        return f"已清理 {cleaned_count} 条垃圾消息"
+                msg = self.large_messages.pop(message_id)
+                self.messages.remove(msg)
+
+        self.garbage_message_ids.clear()
+
+        return "已清理所有消息"
 
     def record_large_message(self, message: Message, _: str) -> str:
         """记录大消息并返回ID。
-        
+
         Args:
             message: 大消息对象
             content: 消息内容
-            
+
         Returns:
             分配的消息ID
         """
@@ -178,7 +155,7 @@ class AgentMessage:
 
     def add_queued_message(self, msg: Message) -> None:
         """添加排队消息。
-        
+
         Args:
             msg: 排队消息
         """
@@ -195,7 +172,7 @@ class AgentMessage:
 
     def thanox_history(self) -> str:
         """随机删除一半消息（不包括前5条系统消息）。
-        
+
         Returns:
             str: 删除结果消息
         """
@@ -208,15 +185,16 @@ class AgentMessage:
 
         # 删除指定索引的消息
         self.messages = [
-            msg for idx, msg in enumerate(self.messages)
-            if idx not in indices_to_delete
+            msg for idx, msg in enumerate(self.messages) if idx not in indices_to_delete
         ]
 
         return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
-    def add_soft_threshold_notification(self, threshold_info: tuple, large_messages: dict, compress_tool_called: bool) -> None:
+    def add_soft_threshold_notification(
+        self, threshold_info: tuple, large_messages: dict, compress_tool_called: bool
+    ) -> None:
         """添加软限制消息提示。
-        
+
         Args:
             threshold_info: 阈值信息元组 (soft, hard, used, remaining, taken)
             large_messages: 大消息字典
@@ -224,7 +202,7 @@ class AgentMessage:
         """
         if compress_tool_called:
             return
-            
+
         if threshold_info:
             soft, hard, used, remaining, taken = threshold_info
             if used > soft:
@@ -233,7 +211,7 @@ class AgentMessage:
                 if large_messages:
                     large_message_ids = list(large_messages.keys())[:3]
                     large_messages_info = f"当前已有{len(large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
-                
+
                 self.messages.append(
                     RuntimeMessage(
                         f"当前Token用量为{used}，已达到软限制。硬限制为{hard}，当前使用{taken*100:.1f}%，还有{remaining} token直到强制压缩。"
@@ -243,7 +221,7 @@ class AgentMessage:
 
     async def save_conversation_history(self, save_dir: Optional[Path] = None) -> None:
         """保存对话历史到文件。
-        
+
         Args:
             save_dir: 保存目录，默认为用户home目录下的.linhai/history
         """
@@ -261,6 +239,7 @@ class AgentMessage:
                 try:
                     to_json_result = msg.to_json()
                     import asyncio
+
                     if asyncio.iscoroutine(to_json_result):
                         to_json_result = await to_json_result
                     msg_dict = json.loads(to_json_result)

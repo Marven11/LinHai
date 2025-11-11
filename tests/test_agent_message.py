@@ -81,8 +81,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         result = self.message_processor.mark_messages_as_garbage([message_id])
         
         self.assertIn("成功标记 1 条消息", result)
-        # 消息应该被替换为RuntimeMessage，标记为垃圾
-        self.assertTrue(any(isinstance(msg, RuntimeMessage) and f"本条ID为{message_id}的消息已被标记为垃圾" in msg.message for msg in self.message_processor.messages))
+        self.assertIn(f"ID为{message_id}的消息已被标记为垃圾", result)
 
     def test_mark_messages_as_garbage_not_found(self):
         """测试标记不存在的消息为垃圾。"""
