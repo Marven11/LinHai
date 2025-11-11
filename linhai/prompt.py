@@ -137,7 +137,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 - 一个JSON代码块中只能有一个JSON对象，不兼容JSON line!
 
 ```json toolcall
-{"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2", "assert_success": false}}
+{"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2"}, "assert_success": false}
 ```
 
 其中`assert_success`参数控制工具调用失败时的行为：
@@ -222,7 +222,7 @@ agent: 用户需要计算多个算式，可能是需要测试工具调用是否�
 然后是114*514，计算这个算式不需要等待114+514的结果，设置assert_success=false以避免第一个工具失败时影响第二个工具的调用
 
 ```json toolcall
-{"name":"safe_calculator","arguments":{"expression":"114*514", "assert_success": false}}
+{"name":"safe_calculator","arguments":{"expression":"114*514"}, "assert_success": false}
 ```
 
 我们需要等待这两个算式的结果

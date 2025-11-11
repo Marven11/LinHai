@@ -154,11 +154,6 @@ class ToolCallMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        # 将assert_success添加到函数参数中
-        function_arguments = self.function_arguments.copy()
-        if not self.assert_success:
-            function_arguments["assert_success"] = False
-
         msg = {
             "role": "assistant",
             "content": "",
@@ -166,7 +161,7 @@ class ToolCallMessage:
                 {
                     "function": {
                         "name": self.function_name,
-                        "arguments": function_arguments,
+                        "arguments": self.function_arguments,
                     },
                 }
             ],
@@ -196,21 +191,11 @@ class ToolCallMessage:
         function_name = tool_call["function"]["name"]
         function_arguments = tool_call["function"]["arguments"]
 
-        # 从函数参数中解析assert_success，默认为True
-        assert_success = True
-        if (
-            isinstance(function_arguments, dict)
-            and "assert_success" in function_arguments
-        ):
-            assert_success = function_arguments["assert_success"]
-            # 移除特殊参数，避免传递给实际工具
-            function_arguments = function_arguments.copy()
-            del function_arguments["assert_success"]
-
+        # assert_success现在不在function_arguments中，直接使用默认值True
         return cls(
             function_name=function_name,
             function_arguments=function_arguments,
-            assert_success=assert_success,
+            assert_success=True,
         )
 
 
