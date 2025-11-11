@@ -13,6 +13,10 @@
             - 在绿灯、绿闪、黄灯时：优先使用mark_messages_as_garbage标记消息
             - 在红灯时：如果有至少10条垃圾消息则引导agent调用message_garbage_clean，否则引导调用compress_history_range
     - [ ] 修改对应的unittest
+- [ ] linhai/agent/workflow.py直接操作messages数组，很丑，修改AgentMessage添加对应的函数优化
+- [ ] 修改现在的软阈值消息提示：
+    - 将现在的静态格式改成根据当前的比例分别提醒当前是处于绿灯、绿闪、黄灯还是红灯，以及每种状态对应的操作
+    - 不重复提醒绿灯：如果当前绿灯的状态没有改变则不提醒，如果由其他状态转为绿灯则提醒
 - [ ] 在工具调用格式出错时不仅仅发送CLI通知，还添加RuntimeMessage
 - [ ] 运行所有unittest并修复，确认没有破坏性修改
 
