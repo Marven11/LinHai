@@ -117,14 +117,12 @@ class Agent:
         )
         remaining = compress_threshold_hard - self.last_token_usage
         return (
-            compress_threshold_soft,
-            compress_threshold_hard,
-            self.last_token_usage,
-            remaining,
-            taken,
+            compress_threshold_soft, # 软阈值（token数）
+            compress_threshold_hard, # 硬阈值（token数）
+            self.last_token_usage, # 当前已经使用（token数）
+            remaining, # 到硬阈值的token数
+            taken, # 当前已经使用（比例）
         )
-
-
 
 
     async def interrupt(self, custom_message: str | None = None):
@@ -194,18 +192,15 @@ class Agent:
             await self.generate_response()
 
         # 如果最近没有调用压缩工具，才检查软限制并提醒
-        if not self.compress_tool_called_in_last_response:
-            threshold_info = self.get_threshold_info()
-            if threshold_info:
-                self.message_processor.add_soft_threshold_notification(
-                    threshold_info, self.large_messages, self.compress_tool_called_in_last_response
-                )
-
-        if self.last_token_usage and self.last_token_usage > self.context.get(
-            "compress_threshold_hard", int(65536 * 0.8)
-        ):
-            # await self.compress()
-            await compress_history_range(self)
+        threshold_info = self.get_threshold_info()
+        if not self.compress_tool_called_in_last_response and threshold_info:
+            self.message_processor.add_soft_threshold_notification(
+                threshold_info, self.large_messages, self.compress_tool_called_in_last_response
+            )
+        if self.last_token_usage and threshold_info:
+            _soft, hard, _used, _remaining, _taken = threshold_info
+            if self.last_token_usage and self.last_token_usage > hard:
+                await compress_history_range(self)
 
 
 

@@ -178,4 +178,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
 
     # 使用filter_messages方法过滤CompressRangeRequest消息
     agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
+    # 清掉token用量以防立马重新开启compress_history_range
+    # [TODO]: 现在硬阈值开启compress_history_range的逻辑完全基于token用量，需要修改
+    agent.last_token_usage = None
     return "历史压缩成功完成，现在请继续工作！"

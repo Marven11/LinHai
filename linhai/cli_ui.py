@@ -613,25 +613,28 @@ class CLIApp(App):
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, llm_instance = agent.get_current_llm_info()
             token_limit = llm_instance.get_token_limit()
-            display_text = f"{llm_name} | in {input_tokens:,} | out {output_tokens:,}"
+
+            message_count = len(agent.message_processor.messages)
+            display_text_pieces = []
+            display_text_pieces += [
+                llm_name,
+                f"{message_count} msgs",
+                f"in {input_tokens:,}",
+                f"out {output_tokens:,}",
+            ]
             if token_limit and token_limit > 0:
                 percentage = (current_answer_token / token_limit) * 100
                 # 使用进度条样式显示百分比
                 filled_bars = int(percentage / 10)  # 每10%一个实心方块
                 empty_bars = 10 - filled_bars
                 progress_bar = "█" * filled_bars + "▒" * empty_bars
-                display_text += (
-                    f" | {progress_bar} {percentage:.0f}% of {token_limit:,}"
+                display_text_pieces.append(
+                    f"{progress_bar} {percentage:.0f}% of {token_limit:,}"
                 )
-            
-            # 显示当前消息数量
-            agent = self.group_chat.get_members("agent", Agent)
-            message_count = len(agent.message_processor.messages)
-            display_text += f" | msgs {message_count}"
 
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
-        token_display.update(display_text)
+        token_display.update(" | ".join(display_text_pieces))
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
@@ -650,7 +653,7 @@ class CLIApp(App):
         if self.agent_task and self.agent_task.done():
             await self.agent_task
             raise RuntimeError("Agent task is dead!")
-        
+
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
