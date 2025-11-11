@@ -83,6 +83,45 @@ class AgentMessage:
         msg = self.messages[-1]
         return isinstance(msg, ChatMessage) and msg.role == "user"
 
+    def replace_messages(self, messages: List[Message]) -> None:
+        """替换整个消息列表。
+
+        Args:
+            messages: 新的消息列表
+        """
+        self.messages = messages
+
+    def insert_message(self, index: int, message: Message) -> None:
+        """在指定位置插入消息。
+
+        Args:
+            index: 插入位置
+            message: 要插入的消息
+        """
+        self.messages.insert(index, message)
+
+    def delete_message_range(self, start: int, end: int) -> List[Message]:
+        """删除指定范围的消息。
+
+        Args:
+            start: 起始索引
+            end: 结束索引
+
+        Returns:
+            被删除的消息列表
+        """
+        deleted = self.messages[start:end + 1]
+        self.messages[start:end + 1] = []
+        return deleted
+
+    def filter_messages(self, condition) -> None:
+        """根据条件过滤消息。
+
+        Args:
+            condition: 过滤条件函数
+        """
+        self.messages = [msg for msg in self.messages if condition(msg)]
+
     def mark_messages_as_garbage(self, message_ids: list[str]) -> str:
         """将多个消息标记为垃圾消息。
 
