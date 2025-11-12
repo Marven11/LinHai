@@ -121,37 +121,8 @@ def _collect_deleted_user_messages(agent: "linhai.agent.Agent", start_id: int, e
     return deleted_user_messages
 
 
-async def compress_history_range(agent: "linhai.agent.Agent") -> str:
-    """
-    压缩指定范围的历史消息以减少上下文长度。
-
-    通过提示LLM输出要压缩的消息范围（start_id和end_id），
-    然后删除指定范围内的消息。
-    """
-
-    # 检查token阈值
-    passed, error_msg = _check_token_threshold(agent)
-    if not passed:
-        agent.message_processor.append_message(RuntimeMessage(error_msg))
-        return f"历史压缩未执行：{error_msg}"
-
-    # 使用filter_messages方法过滤CompressRangeRequest消息
-    await agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
-
-    # 准备消息摘要
-    messages_summerization = _prepare_messages_for_compression(agent)
-    agent.message_processor.append_message(
-        CompressRangeRequest(messages_summerization, len(agent.message_processor.messages))
-    )
-
-    # 生成响应，让LLM输出范围
-    answer = await agent.generate_response(
-        enable_compress=False, disable_waiting_user_warning=True
-    )
-    chat_message = cast(ChatMessage, answer.get_message())
-    full_response = chat_message.message
-
-    # 解析压缩范围
+def _process_compression_range(agent: "linhai.agent.Agent", full_response: str) -> tuple[int, int] | str:
+    """处理压缩范围的解析和验证，返回(start_id, end_id)或错误消息"""
     try:
         start_id, end_id = _parse_compression_range(full_response)
     except ValueError as exc:
@@ -164,6 +135,11 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
         agent.message_processor.append_message(RuntimeMessage(error_msg))
         return f"历史压缩失败：{error_msg}"
 
+    return start_id, end_id
+
+
+async def _execute_message_deletion(agent: "linhai.agent.Agent", start_id: int, end_id: int) -> None:
+    """执行消息删除和相关操作"""
     # 检查删除比例警告
     warning_msg = _check_delete_ratio_warning(agent, start_id, end_id)
     if warning_msg:
@@ -187,9 +163,67 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
             RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
+
+async def compress_history_range(agent: "linhai.agent.Agent") -> str:
+    """
+    压缩指定范围的历史消息以减少上下文长度。
+
+    通过提示LLM输出要压缩的消息范围（start_id和end_id），
+    然后删除指定范围内的消息。
+    """
+
+    # 检查token阈值
+    passed, error_msg = _check_token_threshold(agent)
+    if not passed:
+        agent.message_processor.append_message(RuntimeMessage(error_msg))
+        return f"历史压缩未执行：{error_msg}"
+
     # 使用filter_messages方法过滤CompressRangeRequest消息
     await agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
-    # 清掉token用量以防立马重新开启compress_history_range
-    # [TODO]: 现在硬阈值开启compress_history_range的逻辑完全基于token用量，需要修改
-    agent.last_token_usage = None
-    return "历史压缩成功完成，现在请继续工作！"
+
+    # 准备消息摘要
+    messages_summerization = _prepare_messages_for_compression(agent)
+    agent.message_processor.append_message(
+        CompressRangeRequest(messages_summerization, len(agent.message_processor.messages))
+    )
+
+    try:
+        # 生成响应，让LLM输出范围
+        answer = await agent.generate_response(
+            enable_compress=False, disable_waiting_user_warning=True
+        )
+        chat_message = cast(ChatMessage, answer.get_message())
+        full_response = chat_message.message
+
+        # 记录总结消息的位置（最后一条消息）
+        summary_message_index = len(agent.message_processor.messages) - 1
+        summary_content = full_response
+
+        # 使用新函数处理压缩范围
+        range_result = _process_compression_range(agent, full_response)
+        if isinstance(range_result, str):
+            return range_result  # 返回错误消息
+        
+        start_id, end_id = range_result
+
+        # 删除总结消息（在删除范围之前处理，以避免索引变化）
+        if summary_message_index >= 0:
+            agent.message_processor.delete_message_range(summary_message_index, summary_message_index)
+
+        # 使用新函数执行消息删除操作
+        await _execute_message_deletion(agent, start_id, end_id)
+
+        # 将总结内容包裹后插入到被删除消息的起始位置
+        wrapped_summary = f"历史压缩总结（已删除的消息范围：{start_id}-{end_id}）：\n{summary_content}"
+        await agent.message_processor.insert_message(
+            start_id,
+            RuntimeMessage(wrapped_summary),
+        )
+
+        return "历史压缩成功完成，现在请继续工作！"
+    finally:
+        # 使用filter_messages方法过滤CompressRangeRequest消息
+        await agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
+        # 清掉token用量以防立马重新开启compress_history_range
+        # [TODO]: 现在硬阈值开启compress_history_range的逻辑完全基于token用量，需要修改
+        agent.last_token_usage = None

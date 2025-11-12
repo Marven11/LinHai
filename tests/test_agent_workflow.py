@@ -402,7 +402,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Verify the warning contains correct ratio information
         warning_message = warning_messages[0].message
-        self.assertIn("27.0%", warning_message)  # 10/37 = 27.0% (37 includes CompressRangeRequest)
+        self.assertIn("27.8%", warning_message)  # 10/36 = 27.8% (36 messages before compression)
         self.assertIn("30%", warning_message)
         self.assertIn("建议删除更多消息", warning_message)
 
