@@ -70,7 +70,7 @@ class ToolManager:
 
     @property
     def toolsets(self):
-        toolsets = self._toolsets
+        toolsets = self._toolsets.copy()
         if self.mcp_connector:
             toolsets += self.mcp_connector.get_toolsets()
         return toolsets
@@ -105,7 +105,7 @@ class ToolManager:
         Returns:
             Message: 工具调用结果消息
         """
-        await self.ensure_mcp_connector() 
+        await self.ensure_mcp_connector()
 
         kwargs = tool_call.function_arguments if tool_call.function_arguments else {}
 

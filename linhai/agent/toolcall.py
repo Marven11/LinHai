@@ -148,6 +148,9 @@ class AgentToolcall:
 
         self.tool_manager.add_toolset(workflow_toolset)
 
+    async def postinit(self):
+        await self.tool_manager.ensure_mcp_connector()
+
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
         调用工具并处理结果。
