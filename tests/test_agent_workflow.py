@@ -303,7 +303,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
         # Mock delete_message_range to actually modify the messages array
-        def delete_message_range_side_effect(start, end):
+        async def delete_message_range_side_effect(start, end):
             deleted = mock_agent.message_processor.messages[start:end + 1]
             mock_agent.message_processor.messages[start:end + 1] = []
             return deleted
@@ -362,8 +362,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Mock delete_message_range
-        def delete_message_range_side_effect(start, end):
+        # Mock delete_message_range as async function
+        async def delete_message_range_side_effect(start, end):
             deleted = mock_agent.message_processor.messages[start:end + 1]
             del mock_agent.message_processor.messages[start:end + 1]
             return deleted

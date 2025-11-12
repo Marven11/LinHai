@@ -150,7 +150,7 @@ async def _execute_message_deletion(agent: "linhai.agent.Agent", start_id: int, 
 
     # 使用delete_message_range方法删除指定范围的消息
     range_size = end_id - start_id + 1
-    deleted_messages = agent.message_processor.delete_message_range(start_id, end_id)
+    deleted_messages = await agent.message_processor.delete_message_range(start_id, end_id)
     agent.message_processor.append_message(
         RuntimeMessage(f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）")
     )
@@ -208,7 +208,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
 
         # 删除总结消息（在删除范围之前处理，以避免索引变化）
         if summary_message_index >= 0:
-            agent.message_processor.delete_message_range(summary_message_index, summary_message_index)
+            await agent.message_processor.delete_message_range(summary_message_index, summary_message_index)
 
         # 使用新函数执行消息删除操作
         await _execute_message_deletion(agent, start_id, end_id)
