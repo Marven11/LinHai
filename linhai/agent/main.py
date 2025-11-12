@@ -64,7 +64,7 @@ class Agent:
         self.state: AgentState = "waiting_user"
 
         # 使用AgentMessage类管理消息
-        self.message_processor = AgentMessage(init_messages)
+        self.message_processor = AgentMessage(group_chat, init_messages)
         self.toolcall_processor = AgentToolcall(self)
 
         self.last_token_usage = None

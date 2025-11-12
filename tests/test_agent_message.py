@@ -17,12 +17,15 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        mock_group_chat = Mock()
+        from linhai.group_chat import GroupChat
+        group_chat = GroupChat()
+        # 注册测试所需的queue
+        group_chat.register_queue("cli_runtime_output")
         self.init_messages = [
-            SystemMessage(template="System message", current_time="2025-10-26 17:00:00", group_chat=mock_group_chat),
+            SystemMessage(template="System message", current_time="2025-10-26 17:00:00", group_chat=group_chat),
             ChatMessage(role="user", message="Initial message")
         ]
-        self.message_processor = AgentMessage(self.init_messages)
+        self.message_processor = AgentMessage(group_chat, self.init_messages)
 
     def test_initialization(self):
         """测试AgentMessage初始化。"""
@@ -117,21 +120,21 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.assertIn("排队消息", str(self.message_processor.messages[-2]))
         self.assertEqual(self.message_processor.messages[-1], queued_msg)
 
-    def test_thanox_history(self):
+    async def test_thanox_history(self):
         """测试随机删除历史消息。"""
         # 添加更多消息以触发删除
         for i in range(10):
             self.message_processor.append_message(ChatMessage(role="user", message=f"Message {i}"))
         
         original_count = len(self.message_processor.get_messages())
-        result = self.message_processor.thanox_history()
+        result = await self.message_processor.thanox_history()
         
         self.assertIn("thanox_history", result)
         self.assertLess(len(self.message_processor.get_messages()), original_count)
 
-    def test_thanox_history_insufficient_messages(self):
+    async def test_thanox_history_insufficient_messages(self):
         """测试消息不足时的不删除。"""
-        result = self.message_processor.thanox_history()
+        result = await self.message_processor.thanox_history()
         self.assertEqual(result, "消息数量不足，无需删除")
 
     def test_add_soft_threshold_notification(self):

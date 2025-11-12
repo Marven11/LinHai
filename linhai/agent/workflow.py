@@ -136,7 +136,7 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
         return f"历史压缩未执行：{error_msg}"
 
     # 使用filter_messages方法过滤CompressRangeRequest消息
-    agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
+    await agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
 
     # 准备消息摘要
     messages_summerization = _prepare_messages_for_compression(agent)
@@ -182,13 +182,13 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
     # 如果删除了用户消息，添加额外的消息包含被删除的用户消息内容
     if deleted_user_messages:
         user_messages_summary = "\n".join(f"- {msg}" for msg in deleted_user_messages)
-        agent.message_processor.insert_message(
+        await agent.message_processor.insert_message(
             start_id + 1,
             RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
     # 使用filter_messages方法过滤CompressRangeRequest消息
-    agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
+    await agent.message_processor.filter_messages(lambda msg: not isinstance(msg, CompressRangeRequest))
     # 清掉token用量以防立马重新开启compress_history_range
     # [TODO]: 现在硬阈值开启compress_history_range的逻辑完全基于token用量，需要修改
     agent.last_token_usage = None

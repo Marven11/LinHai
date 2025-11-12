@@ -97,6 +97,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage("User message 10"),
         ]
         mock_agent.message_processor.messages = mock_messages
+        # 修复filter_messages的异步mock
+        mock_agent.message_processor.filter_messages = AsyncMock()
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -127,6 +129,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test compress_history_range with invalid range parameters."""
         mock_agent = MagicMock()
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
+        # 修复filter_messages的异步mock
+        mock_agent.message_processor.filter_messages = AsyncMock()
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -153,6 +157,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test compress_history_range with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
+        # 修复filter_messages的异步mock
+        mock_agent.message_processor.filter_messages = AsyncMock()
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -274,6 +280,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             ChatMessage("assistant", "Assistant response x"),
         ]
         mock_agent.message_processor.messages = mock_messages
+        # 修复filter_messages的异步mock
+        mock_agent.message_processor.filter_messages = AsyncMock()
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -305,7 +313,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_agent.message_processor.messages.insert(index, message)
         
         mock_agent.message_processor.delete_message_range.side_effect = delete_message_range_side_effect
-        mock_agent.message_processor.insert_message.side_effect = insert_message_side_effect
+        mock_agent.message_processor.insert_message = AsyncMock(side_effect=insert_message_side_effect)
 
         # Call the function
         result = await compress_history_range(mock_agent)
@@ -338,6 +346,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         # Create 36 messages to test delete ratio (10/36 = 27.8% < 30%)
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(36)]
+        # 修复filter_messages的异步mock
+        mock_agent.message_processor.filter_messages = AsyncMock()
 
         # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
@@ -367,8 +377,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_agent.message_processor.messages.append(message)
         
         mock_agent.message_processor.delete_message_range = MagicMock(side_effect=delete_message_range_side_effect)
-        mock_agent.message_processor.insert_message = MagicMock()
-        mock_agent.message_processor.filter_messages = MagicMock(side_effect=filter_messages_side_effect)
+        mock_agent.message_processor.insert_message = AsyncMock()
+        mock_agent.message_processor.filter_messages = AsyncMock(side_effect=filter_messages_side_effect)
         mock_agent.message_processor.append_message = MagicMock(side_effect=append_message_side_effect)
 
         # Call the function

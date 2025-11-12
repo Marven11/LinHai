@@ -602,6 +602,9 @@ class CLIApp(App):
         """更新token使用量显示，包括百分比"""
         if self.cumulative_token_usage is None:
             display_text = "Token usage: Not available"
+            token_display = self.query_one("#token-usage")
+            assert isinstance(token_display, Static)
+            token_display.update(display_text)
         else:
             input_tokens = self.cumulative_token_usage["input_tokens"]
             output_tokens = self.cumulative_token_usage["output_tokens"]
@@ -615,8 +618,7 @@ class CLIApp(App):
             token_limit = llm_instance.get_token_limit()
 
             message_count = len(agent.message_processor.messages)
-            display_text_pieces = []
-            display_text_pieces += [
+            display_text_pieces = [
                 llm_name,
                 f"{message_count} msgs",
                 f"in {input_tokens:,}",
@@ -632,9 +634,9 @@ class CLIApp(App):
                     f"{progress_bar} {percentage:.0f}% of {token_limit:,}"
                 )
 
-        token_display = self.query_one("#token-usage")
-        assert isinstance(token_display, Static)
-        token_display.update(" | ".join(display_text_pieces))
+            token_display = self.query_one("#token-usage")
+            assert isinstance(token_display, Static)
+            token_display.update(" | ".join(display_text_pieces))
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""

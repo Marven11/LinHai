@@ -11,7 +11,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.tool.main import ToolManager
 
 
-class TestMarkMessagesAsGarbage(unittest.TestCase):
+class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         # 创建模拟group_chat和config
         self.group_chat = Mock(spec=GroupChat)
@@ -51,7 +51,7 @@ class TestMarkMessagesAsGarbage(unittest.TestCase):
         self.assertIn("已成功标记 1 条消息为垃圾消息", result)
         self.assertIn(f"ID为{test_id}的消息已被标记为垃圾", result)
 
-    def test_message_garbage_clean(self):
+    async def test_message_garbage_clean(self):
         # 测试清理垃圾消息
         large_message = RuntimeMessage("x" * 30001)  # 大于30000字符
         test_id = self.agent.message_processor.record_large_message(large_message, "x" * 30001)
@@ -61,7 +61,7 @@ class TestMarkMessagesAsGarbage(unittest.TestCase):
         self.agent.message_processor.mark_messages_as_garbage([test_id])
         
         # 然后清理垃圾消息
-        result = self.agent.message_processor.message_garbage_clean()
+        result = await self.agent.message_processor.message_garbage_clean()
         self.assertIn("已清理所有消息", result)
         # 垃圾消息应该被删除
         self.assertNotIn(test_id, self.agent.message_processor.large_messages)

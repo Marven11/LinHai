@@ -17,6 +17,8 @@ class TestDirectoryChangePlugin(unittest.TestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
+        # 注册测试所需的queue
+        self.group_chat.register_queue("cli_runtime_output")
         self.plugin = DirectoryChangePlugin(self.group_chat)
         
         # 创建临时目录用于测试
@@ -31,12 +33,12 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.llm import ChatMessage, SystemMessage
         
-        mock_group_chat = Mock()
+        # 使用真正的GroupChat而不是Mock
         init_messages = [
-            SystemMessage(template="System message", current_time="2025-10-26 17:00:00", group_chat=mock_group_chat),
+            SystemMessage(template="System message", current_time="2025-10-26 17:00:00", group_chat=self.group_chat),
             ChatMessage(role="user", message="Initial message")
         ]
-        self.mock_agent.message_processor = AgentMessage(init_messages)
+        self.mock_agent.message_processor = AgentMessage(self.group_chat, init_messages)
         
         # 使用patch模拟get_members方法以返回mock_agent
         self.get_members_patch = patch.object(self.group_chat, 'get_members', return_value=self.mock_agent)

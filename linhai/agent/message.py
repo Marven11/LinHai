@@ -8,9 +8,10 @@ import datetime
 import random
 
 from .base import Message, RuntimeMessage
+from linhai.group_chat import GroupChat
 from linhai.llm import ChatMessage
 from linhai.input_parser import parse_user_input
-from linhai.utils import generate_id
+from linhai.utils import generate_id, CliRuntimeNotice
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +19,23 @@ logger = logging.getLogger(__name__)
 class AgentMessage:
     """消息处理器，负责管理消息队列和相关操作。"""
 
-    def __init__(self, init_messages: Optional[Sequence[Message]] = None):
+    def __init__(self, group_chat: GroupChat, init_messages: Optional[Sequence[Message]] = None):
         """初始化消息处理器。
 
         Args:
             init_messages: 初始消息列表
         """
+        self.group_chat = group_chat
+        self.group_chat.register_member("agent_message", self)
+
         self.messages: List[Message] = list(init_messages) if init_messages else []
         self.large_messages: dict[str, Message] = {}
         self.queued_messages: List[Message] = []
-        self.garbage_message_ids: set[str] = set()  # 存储被标记为垃圾的消息ID
-        self.last_threshold_state: Optional[str] = None  # 跟踪上一次的阈值状态
+        self.garbage_message_ids: set[str] = set()
+        self.last_threshold_state: Optional[str] = None
+
+        # 记录消息变化导致缓存失效的次数
+        self.cache_invalidate_count = 0
 
     def handle_user_message(self, msg: ChatMessage) -> None:
         """处理用户消息。
@@ -48,6 +55,13 @@ class AgentMessage:
             return
 
         self.messages.append(msg)
+
+    async def count_invalidate_cache(self):
+        interrupt_msg = CliRuntimeNotice(
+            level="WARNING", content="消息缓存失效！"
+        )
+        self.cache_invalidate_count += 1
+        await self.group_chat.send("cli_runtime_output", interrupt_msg)
 
     def append_message(self, msg: Message) -> None:
         """添加消息到队列。
@@ -84,24 +98,26 @@ class AgentMessage:
         msg = self.messages[-1]
         return isinstance(msg, ChatMessage) and msg.role == "user"
 
-    def replace_messages(self, messages: List[Message]) -> None:
+    async def replace_messages(self, messages: List[Message]) -> None:
         """替换整个消息列表。
 
         Args:
             messages: 新的消息列表
         """
+        await self.count_invalidate_cache()
         self.messages = messages
 
-    def insert_message(self, index: int, message: Message) -> None:
+    async def insert_message(self, index: int, message: Message) -> None:
         """在指定位置插入消息。
 
         Args:
             index: 插入位置
             message: 要插入的消息
         """
+        await self.count_invalidate_cache()
         self.messages.insert(index, message)
 
-    def delete_message_range(self, start: int, end: int) -> List[Message]:
+    async def delete_message_range(self, start: int, end: int) -> List[Message]:
         """删除指定范围的消息。
 
         Args:
@@ -111,16 +127,18 @@ class AgentMessage:
         Returns:
             被删除的消息列表
         """
+        await self.count_invalidate_cache()
         deleted = self.messages[start:end + 1]
         self.messages[start:end + 1] = []
         return deleted
 
-    def filter_messages(self, condition) -> None:
+    async def filter_messages(self, condition) -> None:
         """根据条件过滤消息。
 
         Args:
             condition: 过滤条件函数
         """
+        await self.count_invalidate_cache()
         self.messages = [msg for msg in self.messages if condition(msg)]
 
     def mark_messages_as_garbage(self, message_ids: list[str]) -> str:
@@ -161,12 +179,13 @@ class AgentMessage:
 
         return "; ".join(result_parts) if result_parts else "没有消息被标记"
 
-    def message_garbage_clean(self) -> str:
+    async def message_garbage_clean(self) -> str:
         """清理所有已标记为垃圾的消息。
 
         Returns:
             清理结果消息
         """
+        await self.count_invalidate_cache()
         if not self.garbage_message_ids:
             return "没有垃圾消息需要清理"
 
@@ -210,7 +229,7 @@ class AgentMessage:
             self.messages.extend(self.queued_messages)
             self.queued_messages = []
 
-    def thanox_history(self) -> str:
+    async def thanox_history(self) -> str:
         """随机删除一半消息（不包括前5条系统消息）。
 
         Returns:
@@ -219,6 +238,7 @@ class AgentMessage:
         if len(self.messages) <= 10:
             return "消息数量不足，无需删除"
 
+        await self.count_invalidate_cache()
         indices_to_delete = random.sample(
             range(5, len(self.messages)), len(self.messages) // 2
         )

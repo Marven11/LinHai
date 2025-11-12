@@ -99,8 +99,8 @@ class AgentToolcall:
             args={},
             required_args=[],
         )
-        def thanox_history() -> str:
-            return self.agent.message_processor.thanox_history()
+        async def thanox_history() -> str:
+            return await self.agent.message_processor.thanox_history()
 
         @dummy_toolset.register_tool(
             name="mark_messages_as_garbage",
@@ -110,7 +110,7 @@ class AgentToolcall:
             },
             required_args=["ids"],
         )
-        def mark_messages_as_garbage(ids: list[str]) -> str:
+        async def mark_messages_as_garbage(ids: list[str]) -> str:
             threshold_info = self.agent.get_threshold_info()
             if threshold_info:
                 soft, _hard, used, _remaining, taken = threshold_info
@@ -127,8 +127,8 @@ class AgentToolcall:
             args={},
             required_args=[],
         )
-        def message_garbage_clean() -> str:
-            return self.agent.message_processor.message_garbage_clean()
+        async def message_garbage_clean() -> str:
+            return await self.agent.message_processor.message_garbage_clean()
 
         self.tool_manager.add_toolset(dummy_toolset)
 
