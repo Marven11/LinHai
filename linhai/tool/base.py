@@ -140,26 +140,52 @@ class ToolResultMessage(Message):
 
         # 检查内容长度是否超过max_output_length字符
         if len(content_str) > max_output_length:
-            # 创建临时文件保存内容
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False, encoding="utf-8"
-            ) as temp_file:
-                temp_file.write(content_str)
-                temp_path = temp_file.name
-                file_size = os.path.getsize(temp_path)  # 获取文件大小
             # 计算行数
             line_count = content_str.count("\n") + 1
-            # 生成内容预览
+            
+            # 根据行数决定分块策略
+            if line_count > 1000:
+                # 按行分块：每800行一个文件
+                lines = content_str.split('\n')
+                file_paths = []
+                for i in range(0, len(lines), 800):
+                    chunk_lines = lines[i:i+800]
+                    chunk_content = '\n'.join(chunk_lines)
+                    start_line = i + 1
+                    end_line = min(i + 800, len(lines))
+                    
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", suffix=f"_lines_{start_line}-{end_line}.txt", delete=False, encoding="utf-8"
+                    ) as temp_file:
+                        temp_file.write(chunk_content)
+                        file_paths.append(temp_file.name)
+                
+                # 生成文件列表信息
+                file_info = "\n".join([f"- {path}" for path in file_paths])
+                message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按行分块保存到以下临时文件（每800行一个文件）：\n{file_info}"
+            else:
+                # 按字符分块：每10000字符一个文件
+                file_paths = []
+                for i in range(0, len(content_str), 10000):
+                    chunk_content = content_str[i:i+10000]
+                    start_char = i + 1
+                    end_char = min(i + 10000, len(content_str))
+                    
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", suffix=f"_chars_{start_char}-{end_char}.txt", delete=False, encoding="utf-8"
+                    ) as temp_file:
+                        temp_file.write(chunk_content)
+                        file_paths.append(temp_file.name)
+                
+                # 生成文件列表信息
+                file_info = "\n".join([f"- {path}" for path in file_paths])
+                message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按字符分块保存到以下临时文件（每10000字符一个文件）：\n{file_info}"
+            
+            # 添加预览信息
             r = reprlib.Repr()
             r.maxstring = 500
             preview = r.repr(content_str)
-            # 返回文件路径、大小、行数和预览的消息
-            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已保存到临时文件：{temp_path}。大小：{file_size}字节。请使用sed等工具部分读取。\n预览: {preview}"
-            # 我们指导agent使用合适的大小分块读取，避免每次只读100行
-            limit = max_output_length / len(content_str)
-            if limit > 0.5:
-                limit = 0.5
-            message_content += f"尝试分块读取：为了提高阅读速度，完整地读取文件，你应该 一次性读取接近{limit*100:.2f}%或者{int(limit*line_count)//10*10}行，如果还是不行就砍半"
+            message_content += f"\n\n预览: {preview}"
         else:
             message_content = content_str
 

@@ -1,6 +1,10 @@
 """Unit tests for ToolResultMessage with large content handling."""
 
 import unittest
+import os
+import re
+import tempfile
+
 class TestToolResultMessage(unittest.TestCase):
     """Test cases for ToolResultMessage with large content handling."""
 
@@ -17,56 +21,79 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
-    def test_tool_result_message_with_long_content(self):
-        """测试长内容情况，应保存到临时文件并返回文件信息"""
+    def test_tool_result_message_with_long_content_by_chars(self):
+        """测试长内容情况，应按字符分块保存到多个文件"""
         from linhai.tool.main import ToolResultMessage
-        import tempfile
-        import os
 
-        # 生成长内容（超过50000字符）
-        long_content = "A" * 50001  # 50001个字符
+        # 生成长内容（超过50000字符但行数少于1000）
+        long_content = "A" * 50001  # 50001个字符，1行
         message = ToolResultMessage(long_content)
         llm_message = message.to_llm_message()
 
-        # 验证返回的消息包含文件信息
+        # 验证返回的消息包含分块文件信息
         content = str(llm_message.get("content", ""))
         self.assertIn("内容过长", content)
-        self.assertIn("已保存到临时文件", content)
-        self.assertIn("大小", content)
-        self.assertIn("字节", content)
+        self.assertIn("已按字符分块保存", content)
+        self.assertIn("每10000字符一个文件", content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
-        # 验证返回的消息包含文件信息
+        # 提取所有文件路径
+        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        self.assertGreater(len(file_paths), 1, "应该生成多个文件")
+
+        # 验证所有临时文件存在且内容正确
+        reconstructed_content = ""
+        for file_path in file_paths:
+            self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+                reconstructed_content += file_content
+            # 清理临时文件
+            os.unlink(file_path)
+
+        self.assertEqual(reconstructed_content, long_content)
+
+    def test_tool_result_message_with_long_content_by_lines(self):
+        """测试长内容情况，应按行分块保存到多个文件"""
+        from linhai.tool.main import ToolResultMessage
+
+        # 生成超过1000行的内容
+        lines = [f"Line {i}: {'A' * 50}" for i in range(1200)]  # 1200行，每行约55字符
+        long_content = "\n".join(lines)
+        message = ToolResultMessage(long_content)
+        llm_message = message.to_llm_message()
+
+        # 验证返回的消息包含分块文件信息
         content = str(llm_message.get("content", ""))
-        self.assertIsNotNone(content)
-        self.assertIn("已保存到临时文件", content)
-        self.assertIn("大小", content)
+        self.assertIn("内容过长", content)
+        self.assertIn("已按行分块保存", content)
+        self.assertIn("每800行一个文件", content)
+        self.assertEqual(llm_message["role"], "user")
+        self.assertEqual(llm_message.get("name", ""), "tool-result")
 
-        # 使用更健壮的方法提取文件路径
-        import re
+        # 提取所有文件路径
+        file_paths = re.findall(r'- (\S+_lines_\d+-\d+\.txt)', content)
+        self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
-        file_match = re.search(
-            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
-        )
-        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
-        assert file_match is not None
-        file_path = file_match.group(1).strip()
+        # 验证所有临时文件存在且内容正确
+        reconstructed_lines = []
+        for file_path in file_paths:
+            self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+                reconstructed_lines.extend(file_content.split('\n'))
+            # 清理临时文件
+            os.unlink(file_path)
 
-        # 验证临时文件存在且内容正确
-        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
-        self.assertEqual(file_content, long_content)
-
-        # 清理临时文件
-        os.unlink(file_path)
+        # 移除可能的空行
+        reconstructed_lines = [line for line in reconstructed_lines if line]
+        self.assertEqual(len(reconstructed_lines), len(lines))
+        self.assertEqual(reconstructed_lines, lines)
 
     def test_tool_result_message_with_custom_max_length(self):
         """测试自定义最大长度限制"""
         from linhai.tool.main import ToolResultMessage
-        import os
 
         # 设置自定义最大长度为1000
         custom_max_length = 1000
@@ -76,32 +103,24 @@ class TestToolResultMessage(unittest.TestCase):
         message = ToolResultMessage(long_content, max_output_length=custom_max_length)
         llm_message = message.to_llm_message()
 
-        # 验证返回的消息包含文件信息
+        # 验证返回的消息包含分块文件信息
         content = str(llm_message.get("content", ""))
         self.assertIn("内容过长", content)
-        self.assertIn("已保存到临时文件", content)
-        self.assertIn("大小", content)
-        self.assertIn("字节", content)
+        self.assertIn("已按字符分块保存", content)
+        self.assertIn("每10000字符一个文件", content)
 
-        # 使用更健壮的方法提取文件路径
-        import re
-
-        file_match = re.search(
-            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
-        )
-        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
-        assert file_match is not None
-        file_path = file_match.group(1).strip()
+        # 提取文件路径
+        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        self.assertEqual(len(file_paths), 1, "应该生成一个文件")
 
         # 验证临时文件存在且内容正确
-        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
-        self.assertEqual(file_content, long_content)
-
-        # 清理临时文件
-        os.unlink(file_path)
+        for file_path in file_paths:
+            self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+            self.assertEqual(file_content, long_content)
+            # 清理临时文件
+            os.unlink(file_path)
 
         # 测试刚好在限制内的内容
         short_content = "A" * 1000  # 1000个字符
@@ -126,53 +145,39 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
     def test_tool_result_message_with_long_json_content(self):
-        """测试长JSON内容情况，应保存到临时文件"""
+        """测试长JSON内容情况，应分块保存到文件"""
         from linhai.tool.main import ToolResultMessage
-        import tempfile
-        import os
 
         # 生成长JSON内容
         long_json_content = {"data": "A" * 50000}  # 超过50000字符
         message = ToolResultMessage(long_json_content)
         llm_message = message.to_llm_message()
 
-        # 验证返回的消息包含文件信息
+        # 验证返回的消息包含分块文件信息
         content = str(llm_message.get("content", ""))
         self.assertIn("内容过长", content)
-        self.assertIn("已保存到临时文件", content)
-        self.assertIn("大小", content)
-        self.assertIn("字节", content)
+        self.assertIn("已按字符分块保存", content)
+        self.assertIn("每10000字符一个文件", content)
 
-        # 验证返回的消息包含文件信息
-        content = str(llm_message.get("content", ""))
-        self.assertIsNotNone(content)
-        self.assertIn("已保存到临时文件", content)
-        self.assertIn("大小", content)
+        # 提取文件路径
+        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
-        # 使用更健壮的方法提取文件路径
-        import re
+        # 验证所有临时文件存在且内容正确
+        reconstructed_content = ""
+        for file_path in file_paths:
+            self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+                reconstructed_content += file_content
+            # 清理临时文件
+            os.unlink(file_path)
 
-        file_match = re.search(
-            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
-        )
-        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
-        assert file_match is not None
-        file_path = file_match.group(1).strip()
-
-        # 验证临时文件存在且内容正确
-        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
-        self.assertEqual(file_content, '{"data": "' + "A" * 50000 + '"}')
-
-        # 清理临时文件
-        os.unlink(file_path)
+        self.assertEqual(reconstructed_content, '{"data": "' + "A" * 50000 + '"}')
 
     def test_tool_result_message_includes_line_count_for_long_content(self):
-        """测试长内容时包含行数提醒"""
+        """测试长内容时包含行数信息"""
         from linhai.tool.main import ToolResultMessage
-        import os
 
         # 生成长内容，包含多个换行符
         lines = ["Line " + str(i) for i in range(1000)]  # 1000行
@@ -195,28 +200,23 @@ class TestToolResultMessage(unittest.TestCase):
 
         # 验证其他文件信息也存在
         self.assertIn("内容过长", content_str)
-        self.assertIn("已保存到临时文件", content_str)
-        self.assertIn("大小", content_str)
-        self.assertIn("字节", content_str)
+        self.assertIn("已按字符分块保存", content_str)
+        self.assertIn("每10000字符一个文件", content_str)
 
         # 提取文件路径并验证临时文件
-        import re
+        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content_str)
+        self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
-        file_match = re.search(
-            r"已保存到临时文件：([^。]+)", str(llm_message.get("content", ""))
-        )
-        self.assertIsNotNone(file_match, "文件路径未在消息中找到")
-        assert file_match is not None
-        file_path = file_match.group(1).strip()
+        # 验证所有临时文件存在且内容正确
+        reconstructed_content = ""
+        for file_path in file_paths:
+            self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+                reconstructed_content += file_content
+            # 清理临时文件
+            os.unlink(file_path)
 
-        # 验证临时文件存在且内容正确
-        self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_content = f.read()
-        self.assertEqual(file_content, long_content)
-
-        # 清理临时文件
-        os.unlink(file_path)
+        self.assertEqual(reconstructed_content, long_content)
 
 
