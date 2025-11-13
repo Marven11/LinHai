@@ -168,6 +168,8 @@ class Agent:
             msg = await self.group_chat.receive("agent_user_input")
             assert isinstance(msg, ChatMessage)
             self.handle_user_message(msg)
+            # 接收到用户消息后直接转为working状态
+            self.state = "working"
 
         await self.generate_response()
 
