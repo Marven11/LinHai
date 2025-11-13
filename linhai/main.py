@@ -46,27 +46,29 @@ def main():
         default="~/.config/linhai/config.toml",
         help="配置文件路径",
     )
-    parser.add_argument("-m", "--message", type=str, help="初始用户消息")
-    parser.add_argument("-f", "--file", type=Path, help="从文件中读取初始用户消息")
+    parser.add_argument("-m", "--message", type=str, action="append", help="初始用户消息")
+    parser.add_argument("-f", "--file", type=Path, action="append", help="从文件中读取初始用户消息")
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
     args = parser.parse_args()
 
-    init_messages = [args.message] if args.message else None
+    init_messages = []
+    if args.message:
+        for msg in args.message:
+            init_messages.append(msg)
     if args.file:
-        try:
-            with open(args.file, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                init_messages = [
-                    f"用户使用-f选项指定了文件路径: {str(args.file)}",
-                    f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}"
-                ]
-        except FileNotFoundError:
-            print(f"错误: 文件 {args.file} 未找到")
-            sys.exit(1)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"错误: 读取文件时发生错误: {e}")
-            sys.exit(1)
+        for file_path in args.file:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    init_messages.append(f"用户使用-f选项指定了文件路径: {str(file_path)}")
+                    init_messages.append(f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}")
+            except FileNotFoundError:
+                print(f"错误: 文件 {file_path} 未找到")
+                sys.exit(1)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"错误: 读取文件时发生错误: {e}")
+                sys.exit(1)
 
     return_code = asyncio.run(run(args, init_messages))
     sys.exit(return_code)

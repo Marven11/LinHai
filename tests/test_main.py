@@ -103,10 +103,10 @@ class TestMainCommandLine(unittest.TestCase):
 
 
 
-        # 验证CLIApp被调用时init_messages为None
+        # 验证CLIApp被调用时init_messages为空列表
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertIsNone(cli_call_args.kwargs.get("init_messages"))
+        self.assertEqual(cli_call_args.kwargs.get("init_messages"), [])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
@@ -233,10 +233,11 @@ class TestMainCommandLine(unittest.TestCase):
 
 
 
-        # 验证CLIApp被调用时init_messages为两条消息
+        # 验证CLIApp被调用时init_messages为三条消息（-m一条，-f两条）
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         expected_messages = [
+            "命令行消息",
             "用户使用-f选项指定了文件路径: " + str(Path('test_message.txt')),
             "文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n文件中的优先消息"
         ]
@@ -352,10 +353,10 @@ class TestMainCommandLine(unittest.TestCase):
 
 
 
-        # 验证CLIApp被调用时init_messages为None
+        # 验证CLIApp被调用时init_messages为空列表
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertIsNone(cli_call_args.kwargs.get("init_messages"))
+        self.assertEqual(cli_call_args.kwargs.get("init_messages"), [])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
