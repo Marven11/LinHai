@@ -11,7 +11,7 @@ import unittest
 import sys
 
 from linhai.agent.main import create_agent
-from linhai.cli_ui import CLIApp
+from linhai.cli import CLIApp
 from linhai.group_chat import GroupChat
 
 

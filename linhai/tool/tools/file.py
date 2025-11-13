@@ -170,15 +170,17 @@ def write_file(filepath: str, content: str, override: bool = False) -> ToolResul
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
+        "assume_empty_line": ToolArgInfo(desc="是否假设文件以空行结尾，默认为true", type="bool"),
     },
     required_args=["filepath", "content"],
 )
-def append_file(filepath: str, content: str) -> ToolResultMessage | ToolErrorMessage:
+def append_file(filepath: str, content: str, assume_empty_line: bool = True) -> ToolResultMessage | ToolErrorMessage:
     """追加内容到文件末尾。
 
     Args:
         filepath: 文件路径
         content: 要追加的内容
+        assume_empty_line: 是否假设文件以空行结尾，默认为true
 
     Returns:
         成功或错误消息
@@ -188,7 +190,23 @@ def append_file(filepath: str, content: str) -> ToolResultMessage | ToolErrorMes
         validation_error = validate_file(file_path)
         if validation_error:
             return ToolErrorMessage(validation_error)
+    
     try:
+        if assume_empty_line and file_path.exists():
+            # 读取文件内容检查是否以换行符结尾
+            existing_content = file_path.read_text(encoding="utf-8")
+            file_ends_with_newline = existing_content.endswith("\n")
+            content_starts_with_newline = content.startswith("\n")
+            
+            # 如果文件不以换行符结尾且新内容也不以换行符开头，则添加警告
+            if not file_ends_with_newline and not content_starts_with_newline:
+                warning_msg = "警告：原文件末尾没有换行，原最后一行被修改！你最好重新读取一下这个文件\n"
+                content = warning_msg + content
+            
+            # 如果文件不以换行符结尾，在追加前添加换行符
+            if not file_ends_with_newline:
+                content = "\n" + content
+        
         with file_path.open("a+", encoding="utf-8") as f:
             f.write(content)
     except OSError as exc:

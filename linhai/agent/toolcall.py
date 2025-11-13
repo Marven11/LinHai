@@ -223,7 +223,8 @@ class AgentToolcall:
 
     async def _call_tool_with_confirmation(self, tool_call: ToolCallMessage) -> bool:
         """需要用户确认的工具调用。"""
-        from linhai.cli_ui import CLIApp
+        from linhai.cli import CLIApp
+        
 
         confirmation = await self.group_chat.get_members(
             "cli_app", CLIApp
