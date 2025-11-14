@@ -94,7 +94,9 @@ def validate_file(file_path: Path) -> str:
     },
     required_args=["filepath"],
 )
-def read_file(filepath: str, show_line_numbers: bool = False) -> ToolResultMessage | ToolErrorMessage:
+def read_file(
+    filepath: str, show_line_numbers: bool = False
+) -> ToolResultMessage | ToolErrorMessage:
     """读取文件内容。
 
     Args:
@@ -122,10 +124,12 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> ToolResultMessa
     else:
         formatted_content = content
 
-    return ToolResultMessage(f"""\
+    return ToolResultMessage(
+        f"""\
 文件路径为: {file_path.as_posix()!r}
 文件内容如下，不要复读文件内容:
-{formatted_content}""")
+{formatted_content}"""
+    )
 
 
 @global_tools.register_tool(
@@ -139,7 +143,9 @@ def read_file(filepath: str, show_line_numbers: bool = False) -> ToolResultMessa
     },
     required_args=["filepath", "content"],
 )
-def write_file(filepath: str, content: str, override: bool = False) -> ToolResultMessage | ToolErrorMessage:
+def write_file(
+    filepath: str, content: str, override: bool = False
+) -> ToolResultMessage | ToolErrorMessage:
     """写入内容到文件。
 
     Args:
@@ -153,7 +159,9 @@ def write_file(filepath: str, content: str, override: bool = False) -> ToolResul
     file_path = Path(filepath)
     if file_path.exists():
         if not override:
-            return ToolErrorMessage(f"文件{filepath!r}已存在，如果需要覆盖请使用override参数")
+            return ToolErrorMessage(
+                f"文件{filepath!r}已存在，如果需要覆盖请使用override参数"
+            )
         validation_error = validate_file(file_path)
         if validation_error:
             return ToolErrorMessage(validation_error)
@@ -170,11 +178,15 @@ def write_file(filepath: str, content: str, override: bool = False) -> ToolResul
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
-        "assume_empty_line": ToolArgInfo(desc="是否假设文件以空行结尾，默认为true", type="bool"),
+        "assume_empty_line": ToolArgInfo(
+            desc="是否假设文件以空行结尾，默认为true", type="bool"
+        ),
     },
     required_args=["filepath", "content"],
 )
-def append_file(filepath: str, content: str, assume_empty_line: bool = True) -> ToolResultMessage | ToolErrorMessage:
+def append_file(
+    filepath: str, content: str, assume_empty_line: bool = True
+) -> ToolResultMessage | ToolErrorMessage:
     """追加内容到文件末尾。
 
     Args:
@@ -190,24 +202,23 @@ def append_file(filepath: str, content: str, assume_empty_line: bool = True) -> 
         validation_error = validate_file(file_path)
         if validation_error:
             return ToolErrorMessage(validation_error)
-    
+
+    if not file_path.exists():
+        return ToolErrorMessage("文件不存在")
     try:
-        if assume_empty_line and file_path.exists():
-            # 读取文件内容检查是否以换行符结尾
-            existing_content = file_path.read_text(encoding="utf-8")
-            file_ends_with_newline = existing_content.endswith("\n")
-            content_starts_with_newline = content.startswith("\n")
-            
-            # 如果文件不以换行符结尾且新内容也不以换行符开头，则添加警告
-            if not file_ends_with_newline and not content_starts_with_newline:
-                warning_msg = "警告：原文件末尾没有换行，原最后一行被修改！你最好重新读取一下这个文件\n"
-                content = warning_msg + content
-            
-            # 如果文件不以换行符结尾，在追加前添加换行符
-            if not file_ends_with_newline:
-                content = "\n" + content
-        
-        with file_path.open("a+", encoding="utf-8") as f:
+        old_content = file_path.read_bytes()
+        if (
+            assume_empty_line
+            and not old_content.endswith(b"\n")
+            and not content.startswith("\n")
+        ):
+            return ToolErrorMessage(
+                "错误：使用assume_empty_line假设原文件末尾有换行，但是原文件并没有换行，且新内容开头也没有换行。"
+                "这会导致原文件的最后一行被修改。"
+                "如果你确实需要修改原文件的最后一行，将assume_empty_line设置为false,"
+                "如果你不需要修改原文件的最后一行，在content的开头加上换行符\\n"
+            )
+        with file_path.open("a", encoding="utf-8") as f:
             f.write(content)
     except OSError as exc:
         return ToolErrorMessage(f"写入文件时发生错误: {exc!r}")
@@ -225,7 +236,8 @@ def append_file(filepath: str, content: str, assume_empty_line: bool = True) -> 
         "old": ToolArgInfo(desc="要替换的字符串", type="str"),
         "new": ToolArgInfo(desc="新的字符串", type="str"),
         "replace_times": ToolArgInfo(
-            desc="替换次数，正数代表替换次数，-1代表替换所有，默认不提供时验证旧内容只出现一次", type="int"
+            desc="替换次数，正数代表替换次数，-1代表替换所有，默认不提供时验证旧内容只出现一次",
+            type="int",
         ),
     },
     required_args=["filepath", "old", "new"],
@@ -261,7 +273,7 @@ def replace_file_content(
 
         # 检查匹配次数
         count = content.count(old)
-        
+
         # 参数验证逻辑
         if replace_times is None:
             # 没有提供参数时，验证旧内容只出现一次
@@ -291,7 +303,9 @@ def replace_file_content(
                 )
             replace_count = -1  # 表示替换所有
         else:
-            return ToolErrorMessage(f"无效的replace_times参数值: {replace_times}，应为正数或-1")
+            return ToolErrorMessage(
+                f"无效的replace_times参数值: {replace_times}，应为正数或-1"
+            )
 
         # 根据replace_count决定替换方式
         if replace_count == -1:
@@ -304,27 +318,30 @@ def replace_file_content(
         file_path.write_text(new_content, encoding="utf-8")
     except OSError as exc:
         return ToolErrorMessage(f"替换内容时发生错误: {exc!r}")
-    return ToolResultMessage(f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {actual_replace_count}")
+    return ToolResultMessage(
+        f"路径{file_path.as_posix()!r}的文件内容{old!r}已替换为{new!r}，替换次数: {actual_replace_count}"
+    )
 
 
 def format_permissions(mode: int) -> str:
     """格式化文件权限字符串。"""
     permissions = [
-        'r' if mode & stat.S_IRUSR else '-',
-        'w' if mode & stat.S_IWUSR else '-',
-        'x' if mode & stat.S_IXUSR else '-',
-        'r' if mode & stat.S_IRGRP else '-',
-        'w' if mode & stat.S_IWGRP else '-',
-        'x' if mode & stat.S_IXGRP else '-',
-        'r' if mode & stat.S_IROTH else '-',
-        'w' if mode & stat.S_IWOTH else '-',
-        'x' if mode & stat.S_IXOTH else '-',
+        "r" if mode & stat.S_IRUSR else "-",
+        "w" if mode & stat.S_IWUSR else "-",
+        "x" if mode & stat.S_IXUSR else "-",
+        "r" if mode & stat.S_IRGRP else "-",
+        "w" if mode & stat.S_IWGRP else "-",
+        "x" if mode & stat.S_IXGRP else "-",
+        "r" if mode & stat.S_IROTH else "-",
+        "w" if mode & stat.S_IWOTH else "-",
+        "x" if mode & stat.S_IXOTH else "-",
     ]
-    return ''.join(permissions)
+    return "".join(permissions)
+
 
 def format_file_size(size: int) -> str:
     """格式化文件大小为人类可读格式。"""
-    size_units = ['B', 'K', 'M', 'G', 'T']
+    size_units = ["B", "K", "M", "G", "T"]
     current_size = size
     for i, unit in enumerate(size_units):
         if current_size < 1024.0 or i == len(size_units) - 1:
@@ -333,27 +350,31 @@ def format_file_size(size: int) -> str:
         current_size /= 1024.0
     return f"{size}B"  # 备用
 
+
 def get_file_info(file_path: Path) -> str:
     """获取文件的详细信息，类似ls -lah格式"""
     try:
         stat_info = file_path.stat()
-        
+
         # 文件类型和权限
         mode = stat_info.st_mode
-        file_type = 'd' if file_path.is_dir() else '-'
+        file_type = "d" if file_path.is_dir() else "-"
         permissions = format_permissions(mode)
-        
+
         # 文件大小（人类可读格式）
         size_str = format_file_size(stat_info.st_size)
-        
+
         # 修改时间
-        mtime = time.strftime('%b %d %H:%M', time.localtime(stat_info.st_mtime))
-        
+        mtime = time.strftime("%b %d %H:%M", time.localtime(stat_info.st_mtime))
+
         return f"{file_type}{permissions} {stat_info.st_nlink:>2} {stat_info.st_uid:>4} {stat_info.st_gid:>4} {size_str:>8} {mtime} {file_path.name}"
     except OSError:
         # 如果无法获取详细信息，返回基本名称
-        file_type = 'd' if file_path.is_dir() else '-'
-        return f"{file_type}?????????  ?    ?    ?         ? ??? ?? ???? {file_path.name}"
+        file_type = "d" if file_path.is_dir() else "-"
+        return (
+            f"{file_type}?????????  ?    ?    ?         ? ??? ?? ???? {file_path.name}"
+        )
+
 
 @global_tools.register_tool(
     name="list_files",
@@ -382,15 +403,17 @@ def list_files(dirpath: str) -> ToolResultMessage | ToolErrorMessage:
         items = []
         for item in dir_path.iterdir():
             items.append(get_file_info(item))
-        
+
         # 按名称排序
         items.sort()
-        
+
         items_str = "\n".join(items)
-        return ToolResultMessage(f"""\
+        return ToolResultMessage(
+            f"""\
 文件夹路径: {dir_path.as_posix()}
 总用量 {len(items)}
-{items_str}""")
+{items_str}"""
+        )
     except OSError as exc:
         return ToolErrorMessage(f"列出文件时发生错误: {exc!r}")
 
@@ -469,7 +492,9 @@ def run_sed_expression(expression: str, filepath: str) -> Message:
     },
     required_args=["expression", "filepath"],
 )
-def modify_file_with_sed(expression: str, filepath: str) -> ToolResultMessage | ToolErrorMessage:
+def modify_file_with_sed(
+    expression: str, filepath: str
+) -> ToolResultMessage | ToolErrorMessage:
     """使用sed表达式修改文件。
 
     Args:
@@ -490,7 +515,9 @@ def modify_file_with_sed(expression: str, filepath: str) -> ToolResultMessage | 
             cmd = ["sed", "-i", "", expression, file_path.as_posix()]
         else:  # Linux或其他
             cmd = ["sed", "-i", expression, file_path.as_posix()]
-        _ = subprocess.run(cmd, capture_output=True, text=True, check=True)  # Unused variable result
+        _ = subprocess.run(
+            cmd, capture_output=True, text=True, check=True
+        )  # Unused variable result
 
         # 检查表达式是否使用行号匹配
 
@@ -546,7 +573,9 @@ def insert_at_line(
         num_lines = len(lines)
 
         if line_number < 1 or line_number > num_lines + 1:
-            return ToolErrorMessage(f"行号{line_number}无效，有效范围是1到{num_lines + 1}")
+            return ToolErrorMessage(
+                f"行号{line_number}无效，有效范围是1到{num_lines + 1}"
+            )
 
         # 验证当前行内容是否匹配预期
         if line_number <= num_lines:
@@ -564,7 +593,9 @@ def insert_at_line(
                     "你可能需要重新读取文件"
                 )
         else:
-            return ToolErrorMessage(f"行号{line_number}超出范围，无法验证" "你可能需要重新读取文件")
+            return ToolErrorMessage(
+                f"行号{line_number}超出范围，无法验证" "你可能需要重新读取文件"
+            )
 
         # 如果内容不以换行符结尾，添加一个换行符使其成为完整行
         content_to_insert = content
@@ -584,6 +615,8 @@ def insert_at_line(
             new_content = before + content_to_insert + after
 
         file_path.write_text(new_content, encoding="utf-8")
-        return ToolResultMessage(f"成功在文件{file_path.as_posix()!r}的第{line_number}行插入内容")
+        return ToolResultMessage(
+            f"成功在文件{file_path.as_posix()!r}的第{line_number}行插入内容"
+        )
     except OSError as exc:
         return ToolErrorMessage(f"插入内容时发生错误: {exc!r}")
