@@ -34,6 +34,7 @@ from .components import (
     AnimatedWelcomeWidget,
     RuntimeMessageWidget,
     MessageWidget,
+    CandidateList,
 )
 
 ASCII_ART = r"""
@@ -105,6 +106,12 @@ class CLIApp(App):
         self.cumulative_token_usage: dict[str, int] | None = None
         self.last_user_scroll_time: float | None = None  # 记录用户上次滚动时间
 
+        # 补全相关状态
+        self.candidate_list: Optional[CandidateList] = None
+        self.completion_prefix: str = ""  # @或/
+        self.completion_candidates: list[str] = []
+        self.completion_active: bool = False
+
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         with VerticalScroll(id="chat-container"):
@@ -126,11 +133,89 @@ class CLIApp(App):
                     role=llm_message["role"], content=content, sender_name=name
                 )
 
+        # 候选列表初始隐藏，根据需要显示（放在输入框上方）
+        yield Static("", id="candidate-list-container")
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
 
+    def get_completion_candidates(self, prefix: str, current_text: str) -> list[str]:
+        """获取补全候选项"""
+        if prefix == "@":
+            # 获取配置的LLM名称列表
+            agent = self.group_chat.get_members("agent", Agent)
+            return agent.context.get("llm_names", [])
+        elif prefix == "/":
+            # 获取可用的命令列表
+            return ["queue", "quit", "exit"]
+        return []
+
+    def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
+        """显示候选列表"""
+        if not candidates:
+            self.hide_completion_list()
+            return
+
+        self.completion_prefix = prefix
+        self.completion_candidates = candidates
+        self.completion_active = True
+
+        # 创建或更新候选列表组件
+        container = self.query_one("#candidate-list-container")
+        if self.candidate_list:
+            self.candidate_list.candidates = candidates
+            self.candidate_list.prefix = prefix
+            self.candidate_list.selected_index = 0
+            self.candidate_list.update_display()
+        else:
+            self.candidate_list = CandidateList(candidates, prefix)
+            container.mount(self.candidate_list)
+
+    def hide_completion_list(self) -> None:
+        """隐藏候选列表"""
+        self.completion_active = False
+        if self.candidate_list:
+            self.candidate_list.remove()
+            self.candidate_list = None
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """处理输入框内容变化"""
+        value = event.value
+        if not value:
+            self.hide_completion_list()
+            return
+
+        # 检查是否以@或/开头
+        if value.startswith("@"):
+            # 提取@后面的文本，处理@后面是空格的情况
+            parts = value[1:].split()
+            after_at = parts[0] if parts else ""
+            candidates = self.get_completion_candidates("@", after_at)
+            # 过滤匹配的候选项
+            if after_at:
+                candidates = [c for c in candidates if c.startswith(after_at)]
+            self.show_completion_list("@", candidates)
+        elif value.startswith("/"):
+            # 提取/后面的文本，处理/后面是空格的情况
+            parts = value[1:].split()
+            after_slash = parts[0] if parts else ""
+            candidates = self.get_completion_candidates("/", after_slash)
+            # 过滤匹配的候选项
+            if after_slash:
+                candidates = [c for c in candidates if c.startswith(after_slash)]
+            # 如果输入中包含空格，说明命令已输入完毕，隐藏候选列表
+            if " " in value:
+                self.hide_completion_list()
+            else:
+                self.show_completion_list("/", candidates)
+        else:
+            self.hide_completion_list()
+
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理用户输入"""
+        # 如果补全列表处于激活状态，不处理提交事件
+        if self.completion_active:
+            return
+            
         if self.current_tool_call:
             # 处理工具确认响应
             user_input = event.value.strip().lower()
@@ -441,6 +526,42 @@ class CLIApp(App):
         if self.agent_task and self.agent_task.done():
             await self.agent_task
             raise RuntimeError("Agent task is dead!")
+
+        # 处理补全相关的键盘事件
+        if self.completion_active and self.candidate_list:
+            if event.key == "up":
+                # 上箭头：向上移动（索引增加）
+                self.candidate_list.update_selection(1)
+                event.stop()
+                return
+            elif event.key == "down":
+                # 下箭头：向下移动（索引减少）
+                self.candidate_list.update_selection(-1)
+                event.stop()
+                return
+            elif event.key in ["tab", "enter"]:
+                # 选择当前候选项
+                selected = self.candidate_list.get_selected()
+                input_widget = cast(Input, self.query_one("#input"))
+                current_value = input_widget.value
+
+                # 替换@或/后面的文本
+                if current_value.startswith("@"):
+                    input_widget.value = f"@{selected} "
+                elif current_value.startswith("/"):
+                    input_widget.value = f"/{selected} "
+
+                # 同步光标位置到末尾
+                input_widget.cursor_position = len(input_widget.value)
+
+                self.hide_completion_list()
+                event.stop()
+                return
+            elif event.key == "escape":
+                # 取消补全
+                self.hide_completion_list()
+                event.stop()
+                return
 
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
