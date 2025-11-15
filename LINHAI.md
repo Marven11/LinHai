@@ -8,3 +8,4 @@
 - 当用户要求为某个项目编写代码时，建议跳转到项目根目录(包含pyproject.toml等文件)，以确保后续操作在正确的项目上下文中进行。
 - 运行python命令前使用uv管理环境：使用`uv run python`或检查Python解释器路径
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/ tests/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
+- 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框

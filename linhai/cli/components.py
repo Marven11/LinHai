@@ -188,6 +188,46 @@ class RuntimeMessageWidget(Static):
         yield Static(message_text)
 
 
+class CandidateList(Static):
+    """候选列表组件，用于显示补全选项"""
+
+    def __init__(self, candidates: list[str], prefix: str):
+        super().__init__()
+        self.candidates = candidates
+        self.prefix = prefix
+        self.selected_index = 0
+
+    def on_mount(self) -> None:
+        """组件挂载时更新显示"""
+        self.update_display()
+
+    def update_display(self) -> None:
+        """更新显示"""
+        # 显示候选列表，底部最靠近文本框的是最有可能的候选项（索引0）
+        # 列表没有边框
+        text = Text()
+        candidates = list(reversed(list(enumerate(self.candidates))))
+        for i, candidate in candidates:
+            # 计算显示位置：索引0显示在底部，索引n-1显示在顶部
+            if i == self.selected_index:
+                text.append(f"> {self.prefix}{candidate}", style="reverse")
+            else:
+                text.append(f"  {self.prefix}{candidate}")
+            # 如果不是最后一个候选项，添加换行符
+            if i != 0:
+                text.append("\n")
+        self.update(text)
+
+    def update_selection(self, direction: int):
+        """更新选择"""
+        self.selected_index = (self.selected_index + direction) % len(self.candidates)
+        self.update_display()
+
+    def get_selected(self) -> str:
+        """获取当前选中的候选项"""
+        return self.candidates[self.selected_index]
+
+
 class MessageWidget(Static):
     """单条消息显示组件"""
 

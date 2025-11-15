@@ -111,6 +111,7 @@ class CLIApp(App):
         self.completion_prefix: str = ""  # @或/
         self.completion_candidates: list[str] = []
         self.completion_active: bool = False
+        self.just_completed_candidate: bool = False  # 标记是否刚刚完成候选选择
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -193,7 +194,11 @@ class CLIApp(App):
             # 过滤匹配的候选项
             if after_at:
                 candidates = [c for c in candidates if c.startswith(after_at)]
-            self.show_completion_list("@", candidates)
+            # 如果输入中包含空格，说明LLM名称已输入完毕，隐藏候选列表
+            if " " in value:
+                self.hide_completion_list()
+            else:
+                self.show_completion_list("@", candidates)
         elif value.startswith("/"):
             # 提取/后面的文本，处理/后面是空格的情况
             parts = value[1:].split()
@@ -214,6 +219,11 @@ class CLIApp(App):
         """处理用户输入"""
         # 如果补全列表处于激活状态，不处理提交事件
         if self.completion_active:
+            return
+        
+        # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
+        if self.just_completed_candidate:
+            self.just_completed_candidate = False
             return
             
         if self.current_tool_call:
@@ -554,8 +564,10 @@ class CLIApp(App):
                 # 同步光标位置到末尾
                 input_widget.cursor_position = len(input_widget.value)
 
-                self.hide_completion_list()
+                # 标记刚刚完成候选选择，忽略接下来的提交事件
+                self.just_completed_candidate = True
                 event.stop()
+                self.hide_completion_list()
                 return
             elif event.key == "escape":
                 # 取消补全

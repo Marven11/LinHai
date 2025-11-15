@@ -1,6 +1,6 @@
 [[llm]]
 
-name = "deepseek v3.2 reasoning"
+name = "deepseek"
 base_url = "https://api.deepseek.com/v1"
 api_key = "sk-xxx"
 model = "deepseek-reasoner"
