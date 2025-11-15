@@ -120,11 +120,11 @@ class StreamJsonParser:
             match current.pop(0):
                 case "[":
                     key = current.pop(0)
-                    assert isinstance(key, int)
+                    assert isinstance(key, int), f"{key=}"
                     result.append(str(key))
                 case "{":
                     key = current.pop(0)
-                    assert isinstance(key, str)
+                    assert isinstance(key, str), f"{key=}"
                     key_repr = (
                         key if re.match("^[0-9a-zA-Z-_]", key) else json.dumps(key)
                     )
@@ -134,6 +134,7 @@ class StreamJsonParser:
     def _handle_brackets(self, c: str):
         """处理括号字符"""
         if c in "{[":
+            self.current_list_index = 0
             self.stack.append(c)
         elif c in "}]":
             if not self.stack:
@@ -143,7 +144,6 @@ class StreamJsonParser:
             if pair != PAIRS[c]:
                 self.state = ParserState.INVALID
                 raise RuntimeError(f"Bracket mismatch: {pair!r} != {PAIRS[c]!r}")
-            self.current_list_index = 0
             if self.stack:
                 used_key_index = self.stack.pop()
                 assert used_key_index not in ["{", "["]
@@ -359,4 +359,7 @@ def example2():
 
 def main():
     example1()
-    example2()
+    # example2()
+
+if __name__ == "__main__":
+    main()
