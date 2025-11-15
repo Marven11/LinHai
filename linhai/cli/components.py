@@ -371,6 +371,11 @@ class MessageWidget(Static):
         self.append_content("")
 
     def append_content(self, new_content: str):
+        for line in new_content.splitlines(keepends=True):
+            self._append_content(line[:-1])
+            self._append_content(line[-1])
+
+    def _append_content(self, new_content: str):
         """流式追加内容到消息，根据内容类型分发到子widget"""
         self.content_str += new_content
         self.panel_content += new_content
