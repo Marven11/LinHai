@@ -353,8 +353,7 @@ class CLIApp(App):
                         current_message.update_display()
                         self._trim_messages_if_needed()
                     else:
-                        updated = current_message.append_content_lazy(content)
-                        should_scroll = should_scroll and updated
+                        current_message.append_content(content)
 
                     if should_scroll:
                         container.scroll_end()
@@ -366,8 +365,6 @@ class CLIApp(App):
                     self.exit(return_code=return_code)
                     return
                 elif isinstance(output, Answer):
-                    if current_message:
-                        current_message.update_display()
 
                     # 获取并累加token使用量
                     token_usage = output.get_token_usage()

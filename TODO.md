@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 参考/home/cube/Code/Python/StreamJson改进现在的CLI界面Agent消息：实现流式显示每个键值对
+- [x] 参考/home/cube/Code/Python/StreamJson改进现在的CLI界面Agent消息：实现流式显示每个键值对
     - 你需要先运行stream json中的示例看看它能输出什么
     - 你需要将stream json的实现直接复制到当前项目
     - 现在的CLI会在消息中直接显示原始的toolcall的JSON字符
