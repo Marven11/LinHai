@@ -242,9 +242,16 @@ class ToolCallWidget(Static):
         self.content_before_current_value = ""
         self.current_key = ""
         self.current_value = ""
+        self.has_error = False
+        self.error_message = ""
 
     def feed_string(self, s: str):
-        self.parser.feed_string(s)
+        try:
+            self.parser.feed_string(s)
+        except RuntimeError as e:
+            # 捕获feed_string过程中的RuntimeError
+            self.has_error = True
+            self.error_message = str(e)
 
     def is_current_data_finished(self):
         return self.parser.is_current_data_finished()
@@ -257,59 +264,86 @@ class ToolCallWidget(Static):
 
     def _update_display(self) -> None:
         """更新显示"""
-        # 从解析器获取新的值
-        for value in self.parser:
-            if value.index_key != self.current_key:
-                self.current_key = value.index_key
-                self.content_before_current_value = self.current_content
-                self.current_content += f"- {self.current_key}: `"
-
-            if isinstance(value, Value):
-                final_value = str(value.value)
-                if "\n" in final_value:
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
-                    )
-                else:
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}: `{final_value}`\n"
-                    )
-
-
-                # [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
-                if final_value.endswith(".py"):
-                    self.guessed_content_type = "python"
-                if final_value.endswith(".js"):
-                    self.guessed_content_type = "javascript"
-
-
-            elif isinstance(value, ValuePiece):
-                self.current_content += value.char
-                self.current_value += value.char
-                if value.char == "\n":
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
-                    )
-
+        if self.has_error:
+            # 如果已经发生错误，显示错误消息和原始JSON
             panel = Panel(
                 Syntax(
-                    self.current_content.strip(),
+                    f"JSON解析错误: {self.error_message}\n\n原始JSON:\n```json\n{self.json_str}\n```",
                     "markdown",
                     theme="nord-darker",
                     background_color="#2E3440",
                     word_wrap=True,
                 ),
                 box=box.SQUARE,
-                border_style="blue",
-                title="tool call",
+                border_style="red",  # 使用红色边框表示错误
+                title="tool call (解析错误)",
                 title_align="left",
                 expand=True,
                 style="on #2E3440",
             )
             self.update(panel)
+            return
+
+        # 从解析器获取新的值
+        try:
+            for value in self.parser:
+                if value.index_key != self.current_key:
+                    self.current_key = value.index_key
+                    self.content_before_current_value = self.current_content
+                    self.current_content += f"- {self.current_key}: `"
+
+                if isinstance(value, Value):
+                    final_value = str(value.value)
+                    if "\n" in final_value:
+                        self.current_content = (
+                            self.content_before_current_value
+                            + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
+                        )
+                    else:
+                        self.current_content = (
+                            self.content_before_current_value
+                            + f"- {self.current_key}: `{final_value}`\n"
+                        )
+
+
+                    # [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
+                    if final_value.endswith(".py"):
+                        self.guessed_content_type = "python"
+                    if final_value.endswith(".js"):
+                        self.guessed_content_type = "javascript"
+
+
+                elif isinstance(value, ValuePiece):
+                    self.current_content += value.char
+                    self.current_value += value.char
+                    if value.char == "\n":
+                        self.current_content = (
+                            self.content_before_current_value
+                            + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
+                        )
+
+                panel = Panel(
+                    Syntax(
+                        self.current_content.strip(),
+                        "markdown",
+                        theme="nord-darker",
+                        background_color="#2E3440",
+                        word_wrap=True,
+                    ),
+                    box=box.SQUARE,
+                    border_style="blue",
+                    title="tool call",
+                    title_align="left",
+                    expand=True,
+                    style="on #2E3440",
+                )
+                self.update(panel)
+        except RuntimeError as e:
+            # 捕获RuntimeError，记录错误并标记
+            self.has_error = True
+            self.error_message = str(e)
+            # 立即更新显示以显示错误
+            self._update_display()
 
 
 class MessageWidget(Static):

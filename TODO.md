@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 现在CLI在接收到错误的toolcall格式时会崩溃（因为JSON解析器解析错误抛出RuntimeError等）
+- [x] 现在CLI在接收到错误的toolcall格式时会崩溃（因为JSON解析器解析错误抛出RuntimeError等）
     - 让其在崩溃时显示原始的JSON而非人类可读的markdown化tool call
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
