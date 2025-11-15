@@ -12,11 +12,11 @@
         - 按下tab或者回车选择
     - 你可能需要阅读parse_user_input的实现和使用例理解`@`和`/`的解析流程
     - 在终端中启动python -m linhai然后在输入框中输入@看看有没有补全
-- [ ] 在使用了json toolcall这个code block但是里面的工具调用格式有误时，仔细检查并提示
+- [x] 在使用了json toolcall这个code block但是里面的工具调用格式有误时，仔细检查并提示
     - code block是不是合法的json
     - code block是不是object
     - code block有没有name和arguments参数
-- [ ] 切换llm之后的逻辑有问题
+- [x] 切换llm之后的逻辑有问题
     - compress_threshold_soft = int(soft_config * token_limit) if isinstance
     - TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'
 - [x] 运行所有unittest确认没有破坏性错误
