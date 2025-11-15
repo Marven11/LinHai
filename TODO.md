@@ -4,9 +4,8 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 完成linhai/cli/components.py中的TODO
-    - [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
-    - 建议将后缀名和类型放在一个global字典中，然后用字符串操作提取出后缀名去字典里查
+- [ ] linhai/streamjson/main.py给列表元素设置的编号是错误的，永远是0
+- [ ] 修复unittest
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩

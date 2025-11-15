@@ -107,6 +107,7 @@ class StreamJsonParser:
         self.payload = ""
         self.payload_string_parser: StreamJsonStringParser | None = None
         self.started = False
+        self.current_list_index = 0
 
     def is_current_data_finished(self):
         return self.started and not self.stack
@@ -142,6 +143,7 @@ class StreamJsonParser:
             if pair != PAIRS[c]:
                 self.state = ParserState.INVALID
                 raise RuntimeError(f"Bracket mismatch: {pair!r} != {PAIRS[c]!r}")
+            self.current_list_index = 0
             if self.stack:
                 used_key_index = self.stack.pop()
                 assert used_key_index not in ["{", "["]
@@ -176,6 +178,7 @@ class StreamJsonParser:
 
         # 处理逗号
         if c == "," and current_top in ["{", "["]:
+            self.current_list_index += 1
             return
 
         # 处理对象中的冒号
@@ -196,11 +199,11 @@ class StreamJsonParser:
         # 处理数组中的值
         if current_top == "[":
             if c == '"':
-                self.stack.append(0)
+                self.stack.append(self.current_list_index)
                 self.payload = '"'
                 self.state = ParserState.STRING_VALUE
             elif is_atomic_value_char(c):
-                self.stack.append(0)
+                self.stack.append(self.current_list_index)
                 self.payload = c
                 self.state = ParserState.ATOMIC_VALUE
             else:
