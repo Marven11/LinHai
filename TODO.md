@@ -13,7 +13,7 @@
         - 表格内容必须流式填充！
         - 表格必须美观，带有合适的边框，嵌套在message框中
     - 修改前后运行linhai让其计算114514+1919810观察CLI是否修改成功
-- [ ] 移动linhai/tests的测试到tests/中
+- [x] 移动linhai/tests的测试到tests/中
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
