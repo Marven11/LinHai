@@ -303,6 +303,7 @@ class ToolCallWidget(Static):
 
     def feed_string(self, new_content: str):
         try:
+            self.json_str += new_content
             self.parser.feed_string(new_content)
         except RuntimeError as e:
             # 捕获feed_string过程中的RuntimeError
@@ -341,7 +342,6 @@ class ToolCallWidget(Static):
             self.update(panel)
             return
 
-        # 从解析器获取新的值
         try:
             for value in self.parser:
                 if value.index_key != self.current_key:
@@ -363,7 +363,9 @@ class ToolCallWidget(Static):
                         )
 
                     # 根据文件后缀名猜测内容类型
-                    self.guessed_content_type = self._guess_content_type(final_value)
+                    new_guessed_type = self._guess_content_type(final_value)
+                    if not self.guessed_content_type or new_guessed_type:
+                        self.guessed_content_type = new_guessed_type
                     self.current_value = ""
 
                 elif isinstance(value, ValuePiece):

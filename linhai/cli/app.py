@@ -96,7 +96,6 @@ class CLIApp(App):
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
         self.current_token_usage: AnswerTokenUsage | None = None
         self.cumulative_token_usage: dict[str, int] | None = None
-        self.last_user_scroll_time: float | None = None  # 记录用户上次滚动时间
 
         # 补全相关状态
         self.candidate_list: Optional[CandidateList] = None
@@ -104,6 +103,9 @@ class CLIApp(App):
         self.completion_candidates: list[str] = []
         self.completion_active: bool = False
         self.just_completed_candidate: bool = False  # 标记是否刚刚完成候选选择
+
+        # 自动滚动状态
+        self.auto_scroll: bool = True  # 是否自动滚动到底部
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -253,9 +255,11 @@ class CLIApp(App):
                 "agent", Agent
             )  # pylint: disable=unused-variable
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
-            container.scroll_end()
             container.mount(widget)
             widget.update_display()
+            # 自动滚动到底部
+            self.auto_scroll = True
+            container.scroll_end(animate=False)
 
     async def watch_output_queue(self):
         """监听输出队列并更新UI"""
@@ -298,8 +302,10 @@ class CLIApp(App):
                         level=output.level, content=output.content
                     )
                     container.mount(widget)
-                    container.scroll_end()
                     self._trim_messages_if_needed()
+                    # 自动滚动到底部
+                    if self.auto_scroll:
+                        container.scroll_end(animate=False)
                 elif isinstance(output, AnswerToken):
                     if output.reasoning_content:
                         is_reasoning = True
@@ -315,12 +321,6 @@ class CLIApp(App):
                         current_message = None
 
                     container = self.query_one("#chat-container")
-                    if self.is_user_recently_scrolled():
-                        should_scroll = container.is_vertical_scroll_end
-                    else:
-                        should_scroll = (
-                            container.scroll_offset.y >= container.max_scroll_y - 10
-                        )
 
                     if current_message is None:
 
@@ -340,9 +340,9 @@ class CLIApp(App):
                         self._trim_messages_if_needed()
                     else:
                         current_message.append_content(content)
-
-                    if should_scroll:
-                        container.scroll_end()
+                    # 自动滚动到底部
+                    if self.auto_scroll:
+                        container.scroll_end(animate=False)
                 elif isinstance(output, AnswerTokenUsage):
                     self.current_token_usage = output
                 elif isinstance(output, dict) and "return_code" in output:
@@ -400,9 +400,11 @@ class CLIApp(App):
                     user_msg.role, user_msg.message, sender_name="user"
                 )
                 container = self.query_one("#chat-container")
-                container.scroll_end()
                 container.mount(widget)
                 widget.update_display()
+                # 自动滚动到底部
+                if self.auto_scroll:
+                    container.scroll_end(animate=False)
         else:
             # 显示欢迎消息（如果没有初始消息）
             agent = self.group_chat.get_members("agent", Agent)
@@ -420,7 +422,6 @@ class CLIApp(App):
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
             animated_welcome.add_class("welcome-message")
             container.mount(animated_welcome)
-            container.scroll_end()
 
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
@@ -570,18 +571,6 @@ class CLIApp(App):
             close_all_terminals()
             self.app.exit()
 
-    def on_scroll(self, _event) -> None:
-        """监听滚动事件，记录用户滚动时间"""
-        self.last_user_scroll_time = time.perf_counter()
-
-    def is_user_recently_scrolled(self) -> bool:
-        """检查用户是否在最近3秒内滚动了"""
-        if self.last_user_scroll_time is None:
-            return False
-
-        current_time = time.perf_counter()
-        return (current_time - self.last_user_scroll_time) < 3.0
-
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
         """向用户确认是否需要调用工具"""
         self.current_tool_confirmation = None
@@ -594,3 +583,9 @@ class CLIApp(App):
         while self.current_tool_confirmation is None:
             await asyncio.sleep(0.01)
         return self.current_tool_confirmation
+
+    def on_vertical_scroll_scroll_changed(self, event) -> None:
+        """监听滚动事件，控制自动滚动"""
+        container = self.query_one("#chat-container")
+
+        self.auto_scroll = container.scroll_y >= container.max_scroll_y - 2
