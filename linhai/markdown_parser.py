@@ -84,17 +84,47 @@ def extract_tool_calls_with_errors(
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == "json toolcall":
             try:
-                data = json.loads(block["content"])
-                if isinstance(data, dict) and "name" in data and "arguments" in data:
-                    tool_calls.append(data)
-                else:
-                    raise ParseError(
-                        f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block['content'])}不是合法的工具调用"
-                        "，可能为其他json数据，已忽略"
+                # 检查是否是合法的JSON
+                try:
+                    data = json.loads(block["content"])
+                except json.JSONDecodeError as e:
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个code block中的JSON格式无效: {str(e)}\n"
+                        f"内容: {repr_obj.repr(block['content'])}"
                     )
-            except json.JSONDecodeError as e:
-                raise ParseError(
-                    f"工具调用解析出错：第{i+1}工具调用{repr_obj.repr(block['content'])}解析JSON出错，已忽略"
-                ) from e
+                    continue
+
+                # 检查是否是object（字典类型）
+                if not isinstance(data, dict):
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个code block中的JSON不是对象类型，"
+                        f"实际类型: {type(data).__name__}\n"
+                        f"内容: {repr_obj.repr(block['content'])}"
+                    )
+                    continue
+
+                # 检查是否有name和arguments参数
+                if "name" not in data:
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个code block缺少必需的'name'字段\n"
+                        f"内容: {repr_obj.repr(block['content'])}"
+                    )
+                    continue
+
+                if "arguments" not in data:
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个code block缺少必需的'arguments'字段\n"
+                        f"内容: {repr_obj.repr(block['content'])}"
+                    )
+                    continue
+
+                # 所有检查通过，添加到tool_calls
+                tool_calls.append(data)
+
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                errors.append(
+                    f"工具调用解析出错：第{i+1}个code block解析时发生未知错误: {str(e)}\n"
+                    f"内容: {repr_obj.repr(block['content'])}"
+                )
 
     return tool_calls, errors
