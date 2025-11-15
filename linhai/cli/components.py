@@ -236,6 +236,8 @@ class ToolCallWidget(Static):
         super().__init__()
         self.json_str = json_str
         self.parser = StreamJsonParser()
+
+        self.guessed_content_type = ""
         self.current_content = ""
         self.content_before_current_value = ""
         self.current_key = ""
@@ -265,16 +267,32 @@ class ToolCallWidget(Static):
             if isinstance(value, Value):
                 final_value = str(value.value)
                 if "\n" in final_value:
-                    self.current_content = self.content_before_current_value + f"- {self.current_key}:\n\n```\n{final_value}\n```\n\n"
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
+                    )
                 else:
-                    self.current_content = self.content_before_current_value + f"- {self.current_key}: `{final_value}`\n"
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"- {self.current_key}: `{final_value}`\n"
+                    )
+
+
+                # [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
+                if final_value.endswith(".py"):
+                    self.guessed_content_type = "python"
+                if final_value.endswith(".js"):
+                    self.guessed_content_type = "javascript"
+
 
             elif isinstance(value, ValuePiece):
                 self.current_content += value.char
                 self.current_value += value.char
                 if value.char == "\n":
-                    self.current_content = self.content_before_current_value + f"- {self.current_key}:\n\n```\n{self.current_value}"
-
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
+                    )
 
             panel = Panel(
                 Syntax(
