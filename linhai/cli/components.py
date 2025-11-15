@@ -15,6 +15,64 @@ from rich.style import Style
 from linhai.llm import ChatMessage
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 
+# 常用文件后缀名到语法高亮类型的映射
+EXTENSION_TO_TYPE = {
+    # 编程语言
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".java": "java",
+    ".cpp": "cpp",
+    ".c": "c",
+    ".cs": "csharp",
+    ".go": "go",
+    ".rs": "rust",
+    ".php": "php",
+    ".rb": "ruby",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".scala": "scala",
+    ".pl": "perl",
+    ".lua": "lua",
+    ".r": "r",
+    ".m": "matlab",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".fish": "bash",
+    # 标记语言
+    ".html": "html",
+    ".htm": "html",
+    ".xml": "xml",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".toml": "toml",
+    ".ini": "ini",
+    ".cfg": "ini",
+    ".conf": "ini",
+    ".csv": "csv",
+    ".tsv": "tsv",
+    # 配置文件
+    ".dockerfile": "dockerfile",
+    ".gitignore": "gitignore",
+    ".gitattributes": "gitattributes",
+    ".dockerignore": "dockerignore",
+    # 样式文件
+    ".css": "css",
+    ".scss": "scss",
+    ".sass": "sass",
+    ".less": "less",
+    # SQL
+    ".sql": "sql",
+    ".psql": "sql",
+    # 其他
+    ".txt": "text",
+    ".log": "text",
+}
+
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
  ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███ 
@@ -304,11 +362,9 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}: `{final_value}`\n"
                         )
 
-                    # [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
-                    if final_value.endswith(".py"):
-                        self.guessed_content_type = "python"
-                    if final_value.endswith(".js"):
-                        self.guessed_content_type = "javascript"
+                    # 根据文件后缀名猜测内容类型
+                    self.guessed_content_type = self._guess_content_type(final_value)
+                    self.current_value = ""
 
                 elif isinstance(value, ValuePiece):
                     self.current_content += value.char
@@ -342,6 +398,16 @@ class ToolCallWidget(Static):
             # 立即更新显示以显示错误
             self._update_display()
 
+    def _guess_content_type(self, value: str) -> str:
+        """根据文件后缀名猜测内容类型"""
+        # 检查value是否以某个后缀名结尾
+        for ext, content_type in EXTENSION_TO_TYPE.items():
+            if value.endswith(ext):
+                return content_type
+        
+        # 如果没有匹配，返回空字符串
+        return ""
+
 
 class NormalContentWidget(Static):
     """单条消息显示组件"""
@@ -369,7 +435,6 @@ class NormalContentWidget(Static):
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
         self.timer = self.set_interval(0.05, self._update_display)
-        # [TODO]: 结束时stop timer
 
     def _update_display(self) -> None:
         """更新消息显示"""
