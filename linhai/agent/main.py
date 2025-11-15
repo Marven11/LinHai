@@ -98,7 +98,10 @@ class Agent:
         
         # 获取当前LLM的token_limit
         current_llm = self.context["llms"][self.context["current_llm_index"]]
-        token_limit = getattr(current_llm, 'token_limit', 65536)
+        token_limit = getattr(current_llm, 'token_limit', None)
+        # 如果token_limit为None，使用默认值65536
+        if token_limit is None:
+            token_limit = 65536
         
         # 动态计算阈值：如果是float则乘以token_limit，如果是int则直接使用
         soft_config = self.context.get("compress_threshold_soft", 0.5)

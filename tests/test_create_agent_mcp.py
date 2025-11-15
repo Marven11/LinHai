@@ -23,8 +23,8 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.group_chat = GroupChat()
         
         # Copy real_mcp_server.py to temp directory for MCP tests
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        source_file = os.path.join(project_root, "linhai", "tests", "real_mcp_server.py")
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        source_file = os.path.join(project_root, "real_mcp_server.py")
         dest_file = os.path.join(self.temp_dir, "real_mcp_server.py")
         import shutil
         shutil.copy2(source_file, dest_file)
