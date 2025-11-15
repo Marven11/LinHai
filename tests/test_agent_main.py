@@ -4,7 +4,6 @@
 
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
 
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat

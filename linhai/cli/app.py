@@ -8,14 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, Input
 from textual import events
-from textual.timer import Timer
-from rich import box
-from rich.syntax import Syntax
-from rich.panel import Panel
-from rich.text import Text
-from rich.style import Style
 from linhai.llm import (
-    Message,
     ChatMessage,
     AnswerToken,
     AnswerTokenUsage,

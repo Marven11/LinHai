@@ -1,7 +1,7 @@
 """Test markdown_parser module."""
 
 import unittest
-from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors, ParseError
+from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
 
 
 class TestMarkdownParser(unittest.TestCase):
