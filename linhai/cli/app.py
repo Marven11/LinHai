@@ -121,8 +121,6 @@ class CLIApp(App):
                 content = None
                 if "content" in llm_message:
                     content = str(llm_message["content"])
-                elif "function_call" in llm_message:
-                    content = f"{llm_message['function_call']}(...)"
                 else:
                     content = f"<Unknown {llm_message!r}>"
                 # 获取当前LLM名字
