@@ -4,8 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] linhai/streamjson/main.py给列表元素设置的编号是错误的，永远是0
-- [ ] 修复unittest
+- [x] linhai/streamjson/main.py给列表元素设置的编号是错误的，永远是0
+- [x] 修复unittest
+    - [x] 并删除RuntimeWarning: coroutine 'TestAgentStateTransition.test_state_waiting_user_transitions_to_working' was never awaited等垃圾消息
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩

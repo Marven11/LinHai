@@ -11,7 +11,7 @@ from linhai.agent.base import AgentContext
 from linhai.llm import ChatMessage
 
 
-class TestAgentStateTransition(unittest.TestCase):
+class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
     """测试Agent状态转换。"""
 
     def setUp(self):
