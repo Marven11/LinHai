@@ -314,7 +314,7 @@ class ToolCallWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.timer = self.set_interval(0.05, self._update_display)
+        self.timer = self.set_interval(0.1, self._update_display)
         # 喂入JSON字符串到解析器
         self.parser.feed_string(self.json_str)
 
@@ -434,7 +434,7 @@ class NormalContentWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.timer = self.set_interval(0.05, self._update_display)
+        self.timer = self.set_interval(0.1, self._update_display)
 
     def _update_display(self) -> None:
         """更新消息显示"""
@@ -525,7 +525,7 @@ class MessageWidget(Static):
             if not self.current_line.endswith("\n"):
                 return "", None
             if isinstance(self.current_widget, NormalContentWidget):
-                if self.current_line == "```json toolcall\n":
+                if self.current_line == "```json toolcall\n" and not self.is_reasoning:
                     self.current_line = ""
                     return "", ToolCallWidget("")
                 else:
