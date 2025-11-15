@@ -1,8 +1,8 @@
 """CLI UI components for LinHai agent."""
 
 import time
+import json
 import colorsys
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.widgets import Static
@@ -12,7 +12,6 @@ from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
-from rich.table import Table
 from linhai.llm import ChatMessage
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 
@@ -41,8 +40,6 @@ class RainbowAsciiArt(Static):
 
     def _generate_rainbow_colors(self) -> list[Style]:
         """使用HSL颜色空间生成平滑的彩虹颜色样式列表"""
-        import colorsys
-
         num_colors = 256
         styles = []
         for i in range(num_colors):
@@ -138,7 +135,6 @@ class AnimatedWelcomeWidget(Static):
     def _render_glitch(self) -> Text:
         """渲染乱码效果，颜色从黄色渐变到灰色"""
         import random
-        import colorsys
 
         text = Text()
         glitch_text = "".join(
@@ -237,6 +233,8 @@ class ToolCallWidget(Static):
         self.json_str = json_str
         self.parser = StreamJsonParser()
 
+        self.timer: Timer | None = None
+
         self.guessed_content_type = ""
         self.current_content = ""
         self.content_before_current_value = ""
@@ -245,9 +243,9 @@ class ToolCallWidget(Static):
         self.has_error = False
         self.error_message = ""
 
-    def feed_string(self, s: str):
+    def feed_string(self, new_content: str):
         try:
-            self.parser.feed_string(s)
+            self.parser.feed_string(new_content)
         except RuntimeError as e:
             # 捕获feed_string过程中的RuntimeError
             self.has_error = True
@@ -258,12 +256,13 @@ class ToolCallWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.set_interval(0.05, self._update_display)
+        self.timer = self.set_interval(0.05, self._update_display)
         # 喂入JSON字符串到解析器
         self.parser.feed_string(self.json_str)
 
     def _update_display(self) -> None:
         """更新显示"""
+
         if self.has_error:
             # 如果已经发生错误，显示错误消息和原始JSON
             panel = Panel(
@@ -290,21 +289,20 @@ class ToolCallWidget(Static):
                 if value.index_key != self.current_key:
                     self.current_key = value.index_key
                     self.content_before_current_value = self.current_content
-                    self.current_content += f"- {self.current_key}: `"
+                    self.current_content += f"{self.current_key}: `"
 
                 if isinstance(value, Value):
-                    final_value = str(value.value)
+                    final_value = value.value if isinstance(value.value, str) else json.dumps(value.value)
                     if "\n" in final_value:
                         self.current_content = (
                             self.content_before_current_value
-                            + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
+                            + f"{self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
                         )
                     else:
                         self.current_content = (
                             self.content_before_current_value
-                            + f"- {self.current_key}: `{final_value}`\n"
+                            + f"{self.current_key}: `{final_value}`\n"
                         )
-
 
                     # [TODO] 添加常用格式，包括热门编程语言和markdown, json, html等常用纯文本格式
                     if final_value.endswith(".py"):
@@ -312,14 +310,13 @@ class ToolCallWidget(Static):
                     if final_value.endswith(".js"):
                         self.guessed_content_type = "javascript"
 
-
                 elif isinstance(value, ValuePiece):
                     self.current_content += value.char
                     self.current_value += value.char
                     if value.char == "\n":
                         self.current_content = (
                             self.content_before_current_value
-                            + f"- {self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
+                            + f"{self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
                         )
 
                 panel = Panel(
@@ -346,8 +343,8 @@ class ToolCallWidget(Static):
             self._update_display()
 
 
-class MessageWidget(Static):
-    """单条消息显示组件，支持流式token处理和JSON工具调用显示"""
+class NormalContentWidget(Static):
+    """单条消息显示组件"""
 
     def __init__(
         self, role: str, content: str, sender_name: str, is_reasoning: bool = False
@@ -355,6 +352,8 @@ class MessageWidget(Static):
         super().__init__()
         self.content_str = content
         self.is_reasoning = is_reasoning
+        self.timer: Timer | None = None
+
         if is_reasoning:
             self.display_name = f"{sender_name} (reasoning)"
             self.role = f"{role}-reasoning"
@@ -363,82 +362,121 @@ class MessageWidget(Static):
             self.role = role
         self.last_update_time = time.perf_counter()
 
-        self.current_widget: ToolCallWidget | Static | None = None
-        self.should_remove_quote = False  # 是否应该去除开头的```
-        self.panel_content = content  # 当前普通面板内容
-
-    def update_display(self):
-        self.append_content("")
-
-    def append_content(self, new_content: str):
-        for line in new_content.splitlines(keepends=True):
-            self._append_content(line[:-1])
-            self._append_content(line[-1])
-
-    def _append_content(self, new_content: str):
-        """流式追加内容到消息，根据内容类型分发到子widget"""
+    def feed_string(self, new_content: str):
+        """追加内容到消息"""
         self.content_str += new_content
-        self.panel_content += new_content
 
-        if self.panel_content.endswith("```json toolcall") and not self.is_reasoning:
-            self.panel_content = self.panel_content.split("```json toolcall")[0].strip()
-            self._update_panel()
-            toolcall_widget = ToolCallWidget("")
-            self.current_widget = toolcall_widget
-            self.mount(toolcall_widget)
-        elif isinstance(self.current_widget, ToolCallWidget):
-            self.current_widget.feed_string(new_content)
-            if self.current_widget.is_current_data_finished():
-                self.current_widget = None
-                self.should_remove_quote = True
-                self.panel_content = ""
-        else:
-            if self.should_remove_quote:
-                if self.panel_content.startswith("```"):
-                    self.panel_content = self.panel_content.removeprefix("```")
-                    self.should_remove_quote = False
-            else:
-                self._update_panel()
+    def on_mount(self) -> None:
+        """组件挂载时开始解析JSON"""
+        self.timer = self.set_interval(0.05, self._update_display)
+        # [TODO]: 结束时stop timer
 
-    def _update_panel(self) -> None:
-        """更新普通面板显示"""
-        assert not isinstance(self.current_widget, ToolCallWidget)
-        if self.panel_content.strip():
-            if self.current_widget is None:
-                self.current_widget = Static()
-                self.mount(self.current_widget)
+    def _update_display(self) -> None:
+        """更新消息显示"""
 
-            # 更新面板内容
-            border_color = {
-                "user": "yellow",
-                "assistant": "green",
-                "assistant-reasoning": "grey50",
-            }.get(self.role, "grey50")
-
-            content_to_display = self.panel_content
-            if self.is_reasoning:
-                # 只显示思考内容的最后5行
-                lines = content_to_display.splitlines()
-                if len(lines) > 5:
-                    content_to_display = "\n".join(lines[-5:])
-
-            panel = Panel(
-                Syntax(
-                    content_to_display,
-                    "markdown",
-                    theme="nord-darker",
-                    background_color="#2E3440",
-                    word_wrap=True,
-                ),
-                box=box.SQUARE,
-                border_style=border_color,
-                title=self.display_name,
-                title_align="left",
-                expand=True,
-                style="on #2E3440",
-            )
-            self.current_widget.update(panel)
+        self.remove_children()
+        content_to_display = self.content_str.strip()
+        if self.is_reasoning:
+            # 只显示思考内容的最后5行
+            lines = content_to_display.splitlines()
+            if len(lines) > 5:
+                content_to_display = "\n".join(lines[-5:])
+        border_color = {
+            "user": "yellow",
+            "assistant": "green",
+            "assistant-reasoning": "grey50",
+        }.get(self.role, "grey50")
+        panel = Panel(
+            Syntax(
+                content_to_display,
+                "markdown",
+                theme="nord-darker",
+                background_color="#2E3440",
+                word_wrap=True,
+            ),
+            box=box.SQUARE,
+            border_style=border_color,
+            title=self.display_name,
+            title_align="left",
+            expand=True,
+            style="on #2E3440",
+        )
+        self.mount(Static(panel))
 
     def to_message(self) -> ChatMessage:
         """转换为ChatMessage"""
         return ChatMessage(role=self.role, message=self.content_str)
+
+
+class MessageWidget(Static):
+    """单条消息显示组件，支持流式token处理和JSON工具调用显示"""
+
+    def __init__(
+        self, role: str, content: str, sender_name: str, is_reasoning: bool = False
+    ):
+        super().__init__()
+        self.role = role
+        self.initial_content = content
+        self.sender_name = sender_name
+        self.content_str = content
+        self.is_reasoning = is_reasoning
+
+        self.current_widget: ToolCallWidget | NormalContentWidget | None = None
+        # 当前行，可能以换行符结尾，特别注意以```开头的行
+        self.current_line = ""
+
+    def update_display(self):
+        self.append_content("")
+
+    def stop_old_widget(self, old_widget: ToolCallWidget | NormalContentWidget):
+        def stop_timer():
+            if old_widget.timer:
+                old_widget.timer.stop()
+        self.set_timer(5, stop_timer)
+
+    def append_content(self, new_content: str):
+        if self.current_widget is None:
+            self.current_widget = NormalContentWidget(
+                self.role,
+                "",
+                self.sender_name,
+                self.is_reasoning,
+            )
+            self.mount(self.current_widget)
+            self.append_content(self.initial_content)
+        for line in new_content.splitlines(keepends=True):
+            new_content, new_widget = self.handle_line(line)
+            self.current_widget.feed_string(new_content)
+            if new_widget is not None:
+                self.stop_old_widget(self.current_widget)
+                self.current_widget = new_widget
+                self.mount(self.current_widget)
+
+    def handle_line(
+        self, line: str
+    ) -> tuple[str, ToolCallWidget | NormalContentWidget | None]:
+        self.current_line += line
+        if self.current_line.startswith("```"):
+            if not self.current_line.endswith("\n"):
+                return "", None
+            if isinstance(self.current_widget, NormalContentWidget):
+                if self.current_line == "```json toolcall\n":
+                    self.current_line = ""
+                    return "", ToolCallWidget("")
+                else:
+                    whole_line = self.current_line
+                    self.current_line = ""
+                    return whole_line, None
+            else:
+                whole_line = self.current_line
+                self.current_line = ""
+                return "", NormalContentWidget(
+                    self.role,
+                    "" if whole_line == "```\n" else whole_line,
+                    self.sender_name,
+                    self.is_reasoning,
+                )
+        else:
+            if self.current_line.endswith("\n"):
+                self.current_line = ""
+            return line, None

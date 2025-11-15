@@ -49,7 +49,6 @@ ASCII_ART = r"""
 """
 
 
-
 class CLIApp(App):
     """Textual-based CLI application for LinHai agent interaction."""
 
@@ -88,7 +87,7 @@ class CLIApp(App):
         init_messages: list[str] | None = None,
     ):
         super().__init__()
-        self.messages: List[Message] = []
+        self.messages: List[MessageWidget] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("cli_agent_output")
         self.group_chat.register_queue("cli_runtime_output")
@@ -117,20 +116,7 @@ class CLIApp(App):
         """组合UI组件"""
         with VerticalScroll(id="chat-container"):
             for msg in self.messages:
-                llm_message = msg.to_llm_message()
-                content = None
-                if "content" in llm_message:
-                    content = str(llm_message["content"])
-                else:
-                    content = f"<Unknown {llm_message!r}>"
-                # 获取当前LLM名字
-                name = llm_message["role"]
-                if llm_message["role"] == "assistant":
-                    agent = self.group_chat.get_members("agent", Agent)
-                    name, _llm = agent.get_current_llm_info()
-                yield MessageWidget(
-                    role=llm_message["role"], content=content, sender_name=name
-                )
+                yield msg
 
         # 候选列表初始隐藏，根据需要显示（放在输入框上方）
         yield Static("", id="candidate-list-container")
@@ -218,12 +204,12 @@ class CLIApp(App):
         # 如果补全列表处于激活状态，不处理提交事件
         if self.completion_active:
             return
-        
+
         # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
         if self.just_completed_candidate:
             self.just_completed_candidate = False
             return
-            
+
         if self.current_tool_call:
             # 处理工具确认响应
             user_input = event.value.strip().lower()
@@ -259,7 +245,14 @@ class CLIApp(App):
 
             # 添加用户消息
             user_msg = ChatMessage(role="user", message=event.value)
-            self.messages.append(user_msg)
+            self.messages.append(
+                MessageWidget(
+                    role="user",
+                    content=event.value,
+                    sender_name="user",
+                    is_reasoning=False,
+                )
+            )
             await self.group_chat.send("agent_user_input", user_msg)
             event.input.value = ""
             # 更新UI
@@ -349,7 +342,7 @@ class CLIApp(App):
                         )
                         await asyncio.sleep(0)
                         container.mount(current_message)
-                        self.messages.append(current_message.to_message())
+                        self.messages.append(current_message)
                         current_message.update_display()
                         self._trim_messages_if_needed()
                     else:
@@ -399,7 +392,14 @@ class CLIApp(App):
         if self.init_messages:
             for init_message in self.init_messages:
                 user_msg = ChatMessage(role="user", message=init_message)
-                self.messages.append(user_msg)
+                self.messages.append(
+                    MessageWidget(
+                        role="user",
+                        content=init_message,
+                        sender_name="user",
+                        is_reasoning=False,
+                    )
+                )
                 await self.group_chat.send("agent_user_input", user_msg)
                 # 更新UI
                 agent = self.group_chat.get_members("agent", Agent)

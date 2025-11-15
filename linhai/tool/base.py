@@ -7,7 +7,6 @@ from typing import TypedDict, Callable, Any, cast, Self  # pylint: disable=unuse
 
 import json
 import tempfile
-import os
 import reprlib
 
 from linhai.type_hints import LanguageModelMessage
