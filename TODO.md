@@ -19,7 +19,7 @@
 - [ ] 切换llm之后的逻辑有问题
     - compress_threshold_soft = int(soft_config * token_limit) if isinstance
     - TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'
-- [ ] 运行所有unittest确认没有破坏性错误
+- [x] 运行所有unittest确认没有破坏性错误
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
