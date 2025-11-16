@@ -585,7 +585,7 @@ class CLIApp(App):
 
     def should_auto_scroll(self):
         container = self.query_one("#chat-container")
-        return self.is_user_scroll_to_end and container.scroll_y >= container.max_scroll_y - 2
+        return self.is_user_scroll_to_end and container.scroll_y >= container.max_scroll_y - 5
 
     def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
         container = self.query_one("#chat-container")
