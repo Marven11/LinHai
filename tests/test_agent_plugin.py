@@ -465,3 +465,187 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         # self.assertEqual(path_memory_count, 1)
 
 
+
+
+class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试MarkdownSyntaxPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        from linhai.agent.plugin import MarkdownSyntaxPlugin
+        self.plugin = MarkdownSyntaxPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_after_message_generation_with_valid_syntax(self):
+        """测试markdown语法正确的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+更多内容
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+结束"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 语法正确，不应该添加警告消息
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
+
+    async def test_after_message_generation_with_odd_delimiters(self):
+        """测试代码块分隔符数量为奇数的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+
+更多内容"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 分隔符数量为奇数，应该添加警告消息
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("代码块分隔符数量为奇数", args[0].message)
+
+    async def test_after_message_generation_with_unclosed_block(self):
+        """测试代码块未正确闭合的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+
+更多内容
+
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+
+```json toolcall
+{"name": "tool3", "arguments": {}}
+内容
+
+```
+
+更多内容"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 第三个代码块未闭合，应该添加警告消息
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("未正确闭合", args[0].message)
+
+    async def test_after_message_generation_with_empty_block(self):
+        """测试空代码块的情况。"""
+        full_response = """一些内容
+
+```json toolcall
+```
+
+更多内容"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 存在空代码块，应该添加警告消息
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("内容为空的代码块", args[0].message)
+
+    async def test_after_message_generation_with_nested_blocks(self):
+        """测试嵌套代码块的情况。"""
+        full_response = """一些内容
+
+```json
+内容
+```json
+内部嵌套
+```
+更多内容
+```
+
+更多内容"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 存在嵌套代码块，应该添加警告消息
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("嵌套代码块", args[0].message)
+
+    async def test_after_message_generation_with_multiple_errors(self):
+        """测试多个语法错误的情况（应该只报告第一个）。"""
+        full_response = """一些内容
+
+```json toolcall
+
+更多内容"""
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 应该只报告第一个错误（分隔符数量为奇数）
+        self.agent.message_processor.append_message.assert_called_once()
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("代码块分隔符数量为奇数", args[0].message)

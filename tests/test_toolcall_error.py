@@ -12,10 +12,9 @@ class TestToolCallErrorHandling(unittest.TestCase):
         # 创建无效的JSON字符串
         invalid_json = '{"name": "test", "args": {missing_quote: "value"}'
         
-        # 创建ToolCallWidget实例
-        widget = ToolCallWidget(invalid_json)
-        
-        # 模拟解析过程
+        # 创建ToolCallWidget实例，传入空字符串
+        widget = ToolCallWidget("")
+        # 通过feed_string喂入无效JSON来触发错误
         widget.feed_string(invalid_json)
         
         # 触发显示更新

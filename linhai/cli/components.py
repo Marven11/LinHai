@@ -316,11 +316,11 @@ class ToolCallWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.timer = self.set_interval(0.1, self._update_display)
+        self.timer = self.set_interval(0.1, self.update_display)
         # 喂入JSON字符串到解析器
         self.parser.feed_string(self.json_str)
 
-    def _update_display(self) -> None:
+    def update_display(self) -> None:
         """更新显示"""
 
         if self.has_error:
@@ -362,11 +362,13 @@ class ToolCallWidget(Static):
                         self.guessed_content_type = new_guessed_type
 
                     if "\n" in final_value:
+                        backticks = '`' * self.get_backtick_count(final_value)
                         self.current_content = (
                             self.content_before_current_value
-                            + f"{self.current_key}:\n\n```{self.guessed_content_type}\n{final_value}\n```\n\n"
+                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                         )
                     else:
+                        # 没有换行时使用单个反引号
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{final_value}`\n"
@@ -377,11 +379,14 @@ class ToolCallWidget(Static):
                 elif isinstance(value, ValuePiece):
                     self.current_value += value.char
                     if "\n" in self.current_value:
+                        backtick_count = self.get_backtick_count(self.current_value)
+                        backticks = '`' * backtick_count
                         self.current_content = (
                             self.content_before_current_value
-                            + f"{self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
+                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}"
                         )
                     else:
+                        # 没有换行时使用单个反引号
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{self.current_value}"
@@ -408,7 +413,16 @@ class ToolCallWidget(Static):
             self.has_error = True
             self.error_message = str(e)
             # 立即更新显示以显示错误
-            self._update_display()
+            self.update_display()
+
+    def get_backtick_count(self, text: str) -> int:
+        """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
+        matches = re.findall(r'`+', text)
+        if matches:
+            max_count = max(len(match) for match in matches)
+        else:
+            max_count = 0
+        return max(3, max_count + 1)
 
     def _guess_content_type(self, value: str) -> str:
         """根据文件后缀名猜测接下来或当前的文件类型"""
@@ -450,9 +464,9 @@ class NormalContentWidget(Static):
         """组件挂载时开始解析JSON"""
         self._content_static = Static("")
         self.mount(self._content_static)
-        self.timer = self.set_interval(0.1, self._update_display)
+        self.timer = self.set_interval(0.1, self.update_display)
 
-    def _update_display(self) -> None:
+    def update_display(self) -> None:
         """更新消息显示"""
 
         content_to_display = self.content_str.strip()
