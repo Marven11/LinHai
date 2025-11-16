@@ -3,6 +3,7 @@
 import time
 import json
 import colorsys
+import re
 
 from textual.app import ComposeResult
 from textual.widgets import Static
@@ -350,7 +351,16 @@ class ToolCallWidget(Static):
                     self.current_content += f"{self.current_key}: `"
 
                 if isinstance(value, Value):
-                    final_value = value.value if isinstance(value.value, str) else json.dumps(value.value)
+                    final_value = (
+                        value.value
+                        if isinstance(value.value, str)
+                        else json.dumps(value.value)
+                    )
+
+                    new_guessed_type = self._guess_content_type(final_value)
+                    if not self.guessed_content_type or new_guessed_type:
+                        self.guessed_content_type = new_guessed_type
+
                     if "\n" in final_value:
                         self.current_content = (
                             self.content_before_current_value
@@ -362,19 +372,19 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}: `{final_value}`\n"
                         )
 
-                    # 根据文件后缀名猜测内容类型
-                    new_guessed_type = self._guess_content_type(final_value)
-                    if not self.guessed_content_type or new_guessed_type:
-                        self.guessed_content_type = new_guessed_type
                     self.current_value = ""
 
                 elif isinstance(value, ValuePiece):
-                    self.current_content += value.char
                     self.current_value += value.char
-                    if value.char == "\n":
+                    if "\n" in self.current_value:
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}:\n\n```{self.guessed_content_type}\n{self.current_value}"
+                        )
+                    else:
+                        self.current_content = (
+                            self.content_before_current_value
+                            + f"{self.current_key}: `{self.current_value}"
                         )
 
                 panel = Panel(
@@ -401,13 +411,14 @@ class ToolCallWidget(Static):
             self._update_display()
 
     def _guess_content_type(self, value: str) -> str:
-        """根据文件后缀名猜测内容类型"""
-        # 检查value是否以某个后缀名结尾
+        """根据文件后缀名猜测接下来或当前的文件类型"""
         for ext, content_type in EXTENSION_TO_TYPE.items():
             if value.endswith(ext):
                 return content_type
-        
-        # 如果没有匹配，返回空字符串
+
+        if re.match("^(GET|POST|PUT|DELETE|HEAD|OPTION)", value):
+            return "http"
+
         return ""
 
 
@@ -421,6 +432,7 @@ class NormalContentWidget(Static):
         self.content_str = content
         self.is_reasoning = is_reasoning
         self.timer: Timer | None = None
+        self._content_static: Static | None = None
 
         if is_reasoning:
             self.display_name = f"{sender_name} (reasoning)"
@@ -436,12 +448,13 @@ class NormalContentWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
+        self._content_static = Static("")
+        self.mount(self._content_static)
         self.timer = self.set_interval(0.1, self._update_display)
 
     def _update_display(self) -> None:
         """更新消息显示"""
 
-        self.remove_children()
         content_to_display = self.content_str.strip()
         if self.is_reasoning:
             # 只显示思考内容的最后5行
@@ -468,7 +481,8 @@ class NormalContentWidget(Static):
             expand=True,
             style="on #2E3440",
         )
-        self.mount(Static(panel))
+        if self._content_static is not None:
+            self._content_static.update(panel)
 
     def to_message(self) -> ChatMessage:
         """转换为ChatMessage"""
@@ -499,6 +513,7 @@ class MessageWidget(Static):
         def stop_timer():
             if old_widget.timer:
                 old_widget.timer.stop()
+
         self.set_timer(5, stop_timer)
 
     def append_content(self, new_content: str):
