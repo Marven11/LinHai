@@ -105,7 +105,7 @@ class CLIApp(App):
         self.just_completed_candidate: bool = False  # 标记是否刚刚完成候选选择
 
         # 自动滚动状态
-        self.auto_scroll: bool = True  # 是否自动滚动到底部
+        self.is_user_scroll_to_end = False
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -257,8 +257,7 @@ class CLIApp(App):
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.mount(widget)
             widget.update_display()
-            # 自动滚动到底部
-            self.auto_scroll = True
+            self.is_user_scroll_to_end = True
             container.scroll_end(animate=False)
 
     async def watch_output_queue(self):
@@ -304,7 +303,7 @@ class CLIApp(App):
                     container.mount(widget)
                     self._trim_messages_if_needed()
                     # 自动滚动到底部
-                    if self.auto_scroll:
+                    if self.should_auto_scroll():
                         container.scroll_end(animate=False)
                 elif isinstance(output, AnswerToken):
                     if output.reasoning_content:
@@ -341,7 +340,7 @@ class CLIApp(App):
                     else:
                         current_message.append_content(content)
                     # 自动滚动到底部
-                    if self.auto_scroll:
+                    if self.should_auto_scroll():
                         container.scroll_end(animate=False)
                 elif isinstance(output, AnswerTokenUsage):
                     self.current_token_usage = output
@@ -403,7 +402,7 @@ class CLIApp(App):
                 container.mount(widget)
                 widget.update_display()
                 # 自动滚动到底部
-                if self.auto_scroll:
+                if self.should_auto_scroll():
                     container.scroll_end(animate=False)
         else:
             # 显示欢迎消息（如果没有初始消息）
@@ -584,8 +583,17 @@ class CLIApp(App):
             await asyncio.sleep(0.01)
         return self.current_tool_confirmation
 
-    def on_vertical_scroll_scroll_changed(self, event) -> None:
-        """监听滚动事件，控制自动滚动"""
+    def should_auto_scroll(self):
         container = self.query_one("#chat-container")
+        return self.is_user_scroll_to_end and container.scroll_y >= container.max_scroll_y - 2
 
-        self.auto_scroll = container.scroll_y >= container.max_scroll_y - 2
+    def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
+        container = self.query_one("#chat-container")
+        
+        self.is_user_scroll_to_end = container.is_vertical_scroll_end
+
+    def on_mouse_scroll_up(self, _event: events.MouseScrollUp) -> None:
+        container = self.query_one("#chat-container")
+        
+        self.is_user_scroll_to_end = False
+
