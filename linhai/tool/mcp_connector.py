@@ -104,8 +104,8 @@ class MCPConnector:
         connector_toolset = ToolSet()
 
         @connector_toolset.register_tool(
-            name="connect_stdio",
-            desc="通过stdio连接到一个MCP服务器（本地脚本）",
+            name="connect_mcp_server",
+            desc="通过stdio连接到一个外部服务（本地脚本）",
             args={
                 "name": ToolArgInfo(
                     desc="MCP服务器的名字，为这个MCP服务器命名", type="str"
@@ -116,7 +116,7 @@ class MCPConnector:
             },
             required_args=["name", "command"],
         )
-        async def connect_stdio(name: str, command: str):
+        async def connect_mcp_server(name: str, command: str):
             try:
                 _, _, toolset = await self.connect_stdio(name, command)
                 return ToolResultMessage(
@@ -129,8 +129,8 @@ class MCPConnector:
                 return ToolErrorMessage(f"连接{command!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
-            name="disconnect",
-            desc="断开一个已连接的MCP服务器",
+            name="disconnect_mcp_server",
+            desc="断开一个已连接的外部服务",
             args={
                 "name": ToolArgInfo(
                     desc="要断开的MCP服务器名字", type="str"
@@ -138,7 +138,7 @@ class MCPConnector:
             },
             required_args=["name"],
         )
-        async def disconnect_server(name: str):
+        async def disconnect_mcp_server(name: str):
             try:
                 await self.disconnect(name)
                 return ToolResultMessage(f"成功断开MCP服务器: {name!r}")
@@ -146,12 +146,12 @@ class MCPConnector:
                 return ToolErrorMessage(f"断开失败: {e!r}")
 
         @connector_toolset.register_tool(
-            name="disconnect_all",
-            desc="断开所有已连接的MCP服务器",
+            name="disconnect_all_mcp_servers",
+            desc="断开所有已连接的外部服务",
             args={},
             required_args=[],
         )
-        async def disconnect_all():
+        async def disconnect_all_mcp_servers():
             try:
                 await self.disconnect_all()
                 return ToolResultMessage("成功断开所有MCP服务器")
@@ -160,7 +160,7 @@ class MCPConnector:
 
         @connector_toolset.register_tool(
             name="list_mcp_servers",
-            desc="列出所有已连接的MCP服务器",
+            desc="列出所有已连接的外部服务",
             args={},
             required_args=[],
         )
