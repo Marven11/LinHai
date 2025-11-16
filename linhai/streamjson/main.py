@@ -59,6 +59,11 @@ def is_whitespace(c: str) -> bool:
     """检查字符是否为空白字符"""
     return c in " \n\t\r"
 
+def wrapped_json_loads(s: str):
+    try:
+        return json.loads(s)
+    except json.decoder.JSONDecodeError as e:
+        raise RuntimeError("decode error") from e
 
 class StreamJsonStringParser:
     """解析JSON字符串双引号内的数据，处理转义字符"""
@@ -237,7 +242,7 @@ class StreamJsonParser:
 
         if c == '"' and backslash_count % 2 == 0:
             payload = self.payload + c
-            self.stack.append(json.loads(payload))
+            self.stack.append(wrapped_json_loads(payload))
             self.payload = ""
             self.state = ParserState.OUTSIDE
         else:
@@ -250,7 +255,7 @@ class StreamJsonParser:
         index_key = self.calculate_current_index_key()
 
         if not is_atomic_value_char(c):
-            value = json.loads(self.payload)
+            value = wrapped_json_loads(self.payload)
             self.payload = ""
             self.toyield.append(Value(index_key=index_key, value=value))
             key = self.stack.pop()
@@ -278,7 +283,7 @@ class StreamJsonParser:
 
         is_string_ended: bool = parsed
         if is_string_ended:
-            value = json.loads(self.payload)
+            value = wrapped_json_loads(self.payload)
             self.toyield.append(Value(index_key=index_key, value=value))
             key = self.stack.pop()
             if isinstance(key, int):
