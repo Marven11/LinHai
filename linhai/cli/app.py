@@ -2,7 +2,6 @@
 
 from typing import List, Optional, cast
 import asyncio
-import time
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -29,6 +28,10 @@ from .components import (
     MessageWidget,
     CandidateList,
 )
+
+# Import new managers
+from .completion import CompletionManager
+from .token_manager import TokenManager
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
@@ -94,18 +97,16 @@ class CLIApp(App):
         self.agent_task: Optional[asyncio.Task] = None
         self.current_tool_call: Optional[ToolCallMessage] = None
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
-        self.current_token_usage: AnswerTokenUsage | None = None
-        self.cumulative_token_usage: dict[str, int] | None = None
 
-        # 补全相关状态
-        self.candidate_list: Optional[CandidateList] = None
-        self.completion_prefix: str = ""  # @或/
-        self.completion_candidates: list[str] = []
-        self.completion_active: bool = False
-        self.just_completed_candidate: bool = False  # 标记是否刚刚完成候选选择
+        # 初始化管理器
+        self.completion_manager = CompletionManager(group_chat)
+        self.token_manager = TokenManager()
 
         # 自动滚动状态
         self.is_user_scroll_to_end = False
+        
+        # 候选列表组件
+        self.candidate_list: Optional[CandidateList] = None
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -118,16 +119,7 @@ class CLIApp(App):
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
 
-    def get_completion_candidates(self, prefix: str, current_text: str) -> list[str]:
-        """获取补全候选项"""
-        if prefix == "@":
-            # 获取配置的LLM名称列表
-            agent = self.group_chat.get_members("agent", Agent)
-            return agent.context.get("llm_names", [])
-        elif prefix == "/":
-            # 获取可用的命令列表
-            return ["queue", "quit", "exit"]
-        return []
+
 
     def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
         """显示候选列表"""
@@ -135,12 +127,11 @@ class CLIApp(App):
             self.hide_completion_list()
             return
 
-        self.completion_prefix = prefix
-        self.completion_candidates = candidates
-        self.completion_active = True
+        self.completion_manager.completion_prefix = prefix
+        self.completion_manager.completion_candidates = candidates
+        self.completion_manager.completion_active = True
 
         # 创建或更新候选列表组件
-        container = self.query_one("#candidate-list-container")
         if self.candidate_list:
             self.candidate_list.candidates = candidates
             self.candidate_list.prefix = prefix
@@ -148,11 +139,11 @@ class CLIApp(App):
             self.candidate_list.update_display()
         else:
             self.candidate_list = CandidateList(candidates, prefix)
-            container.mount(self.candidate_list)
+            self.query_one("#candidate-list-container").mount(self.candidate_list)
 
     def hide_completion_list(self) -> None:
         """隐藏候选列表"""
-        self.completion_active = False
+        self.completion_manager.completion_active = False
         if self.candidate_list:
             self.candidate_list.remove()
             self.candidate_list = None
@@ -160,49 +151,22 @@ class CLIApp(App):
     def on_input_changed(self, event: Input.Changed) -> None:
         """处理输入框内容变化"""
         value = event.value
-        if not value:
-            self.hide_completion_list()
-            return
-
-        # 检查是否以@或/开头
-        if value.startswith("@"):
-            # 提取@后面的文本，处理@后面是空格的情况
-            parts = value[1:].split()
-            after_at = parts[0] if parts else ""
-            candidates = self.get_completion_candidates("@", after_at)
-            # 过滤匹配的候选项
-            if after_at:
-                candidates = [c for c in candidates if c.startswith(after_at)]
-            # 如果输入中包含空格，说明LLM名称已输入完毕，隐藏候选列表
-            if " " in value:
-                self.hide_completion_list()
-            else:
-                self.show_completion_list("@", candidates)
-        elif value.startswith("/"):
-            # 提取/后面的文本，处理/后面是空格的情况
-            parts = value[1:].split()
-            after_slash = parts[0] if parts else ""
-            candidates = self.get_completion_candidates("/", after_slash)
-            # 过滤匹配的候选项
-            if after_slash:
-                candidates = [c for c in candidates if c.startswith(after_slash)]
-            # 如果输入中包含空格，说明命令已输入完毕，隐藏候选列表
-            if " " in value:
-                self.hide_completion_list()
-            else:
-                self.show_completion_list("/", candidates)
+        candidates = self.completion_manager.handle_input_change(value)
+        
+        if candidates is not None:
+            self.show_completion_list(self.completion_manager.completion_prefix, candidates)
         else:
             self.hide_completion_list()
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理用户输入"""
         # 如果补全列表处于激活状态，不处理提交事件
-        if self.completion_active:
+        if self.completion_manager.completion_active:
             return
 
         # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
-        if self.just_completed_candidate:
-            self.just_completed_candidate = False
+        if self.completion_manager.just_completed_candidate:
+            self.completion_manager.just_completed_candidate = False
             return
 
         if self.current_tool_call:
@@ -343,7 +307,7 @@ class CLIApp(App):
                     if self.should_auto_scroll():
                         container.scroll_end(animate=False)
                 elif isinstance(output, AnswerTokenUsage):
-                    self.current_token_usage = output
+                    self.token_manager.current_token_usage = output
                 elif isinstance(output, dict) and "return_code" in output:
                     # 处理退出信号
                     return_code = output["return_code"]
@@ -354,19 +318,8 @@ class CLIApp(App):
                     # 获取并累加token使用量
                     token_usage = output.get_token_usage()
                     if token_usage is not None:
-                        if self.cumulative_token_usage is None:
-                            self.cumulative_token_usage = token_usage.model_dump()
-                        else:
-                            self.cumulative_token_usage[
-                                "input_tokens"
-                            ] += token_usage.input_tokens
-                            self.cumulative_token_usage[
-                                "output_tokens"
-                            ] += token_usage.output_tokens
-                            self.cumulative_token_usage[
-                                "total_tokens"
-                            ] += token_usage.total_tokens
-                        self.current_token_usage = None
+                        self.token_manager.update_cumulative_usage(token_usage)
+                        self.token_manager.current_token_usage = None
                         # 传入当前回答的token长度
                         self.update_token_display(token_usage.total_tokens)
 
@@ -469,43 +422,12 @@ class CLIApp(App):
 
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
-        if self.cumulative_token_usage is None:
-            display_text = "Token usage: Not available"
-            token_display = self.query_one("#token-usage")
-            assert isinstance(token_display, Static)
-            token_display.update(display_text)
-        else:
-            input_tokens = self.cumulative_token_usage["input_tokens"]
-            output_tokens = self.cumulative_token_usage["output_tokens"]
-            if self.current_token_usage is not None:
-                input_tokens += self.current_token_usage.input_tokens
-                output_tokens += self.current_token_usage.output_tokens
-
-            # 获取当前LLM的token限制
-            agent = self.group_chat.get_members("agent", Agent)
-            llm_name, llm_instance = agent.get_current_llm_info()
-            token_limit = llm_instance.get_token_limit()
-
-            message_count = len(agent.message_processor.messages)
-            display_text_pieces = [
-                llm_name,
-                f"{message_count} msgs",
-                f"in {input_tokens:,}",
-                f"out {output_tokens:,}",
-            ]
-            if token_limit and token_limit > 0:
-                percentage = (current_answer_token / token_limit) * 100
-                # 使用进度条样式显示百分比
-                filled_bars = int(percentage / 10)  # 每10%一个实心方块
-                empty_bars = 10 - filled_bars
-                progress_bar = "█" * filled_bars + "▒" * empty_bars
-                display_text_pieces.append(
-                    f"{progress_bar} {percentage:.0f}% of {token_limit:,}"
-                )
-
-            token_display = self.query_one("#token-usage")
-            assert isinstance(token_display, Static)
-            token_display.update(" | ".join(display_text_pieces))
+        agent = self.group_chat.get_members("agent", Agent)
+        display_text = self.token_manager.get_token_display_text(agent, current_answer_token)
+        
+        token_display = self.query_one("#token-usage")
+        assert isinstance(token_display, Static)
+        token_display.update(display_text)
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
@@ -526,42 +448,11 @@ class CLIApp(App):
             raise RuntimeError("Agent task is dead!")
 
         # 处理补全相关的键盘事件
-        if self.completion_active and self.candidate_list:
-            if event.key == "up":
-                # 上箭头：向上移动（索引增加）
-                self.candidate_list.update_selection(1)
-                event.stop()
-                return
-            elif event.key == "down":
-                # 下箭头：向下移动（索引减少）
-                self.candidate_list.update_selection(-1)
-                event.stop()
-                return
-            elif event.key in ["tab", "enter"]:
-                # 选择当前候选项
-                selected = self.candidate_list.get_selected()
-                input_widget = cast(Input, self.query_one("#input"))
-                current_value = input_widget.value
-
-                # 替换@或/后面的文本
-                if current_value.startswith("@"):
-                    input_widget.value = f"@{selected} "
-                elif current_value.startswith("/"):
-                    input_widget.value = f"/{selected} "
-
-                # 同步光标位置到末尾
-                input_widget.cursor_position = len(input_widget.value)
-
-                # 标记刚刚完成候选选择，忽略接下来的提交事件
-                self.just_completed_candidate = True
-                event.stop()
-                self.hide_completion_list()
-                return
-            elif event.key == "escape":
-                # 取消补全
-                self.hide_completion_list()
-                event.stop()
-                return
+        if self.completion_manager.completion_active and self.candidate_list:
+            if event.key in ["up", "down", "tab", "enter", "escape"]:
+                if self.completion_manager.handle_key_event(event.key, cast(Input, self.query_one("#input"))):
+                    event.stop()
+                    return
 
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
