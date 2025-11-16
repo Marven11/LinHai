@@ -318,7 +318,11 @@ class ToolCallWidget(Static):
         """组件挂载时开始解析JSON"""
         self.timer = self.set_interval(0.1, self.update_display)
         # 喂入JSON字符串到解析器
-        self.parser.feed_string(self.json_str)
+        try:
+            self.parser.feed_string(self.json_str)
+        except RuntimeError as e:
+            self.has_error = True
+            self.error_message = str(e)
 
     def update_display(self) -> None:
         """更新显示"""
@@ -362,7 +366,7 @@ class ToolCallWidget(Static):
                         self.guessed_content_type = new_guessed_type
 
                     if "\n" in final_value:
-                        backticks = '`' * self.get_backtick_count(final_value)
+                        backticks = "`" * self.get_backtick_count(final_value)
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
@@ -380,7 +384,7 @@ class ToolCallWidget(Static):
                     self.current_value += value.char
                     if "\n" in self.current_value:
                         backtick_count = self.get_backtick_count(self.current_value)
-                        backticks = '`' * backtick_count
+                        backticks = "`" * backtick_count
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}"
@@ -417,7 +421,7 @@ class ToolCallWidget(Static):
 
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
-        matches = re.findall(r'`+', text)
+        matches = re.findall(r"`+", text)
         if matches:
             max_count = max(len(match) for match in matches)
         else:
