@@ -194,6 +194,10 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
 
 # EXAMPLES
 
+以下是一系列示例，其中`**user**`, `**agent**`和`**tool**`是发送者角色，不要输出！
+
+你应该输出的部分是`**agent**`后，`**tool**`前的部分！
+
 ## 基础对话示例
 
 ---
