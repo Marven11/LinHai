@@ -312,6 +312,8 @@ class StreamJsonParser:
         """输入字符串进行解析"""
         for c in s:
             self.feed_char(c)
+            if self.is_current_data_finished():
+                return
 
     def __iter__(self):
         return self
