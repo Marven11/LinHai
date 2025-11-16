@@ -50,8 +50,7 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
         }
         for similarity, chunk_index, chunk_content in similarities[:top_n]
     ]
-
-    return results
+    return json.dumps(results, indent=2, ensure_ascii=False)
 
 
 def validate_file(file_path: Path) -> str:
@@ -262,13 +261,10 @@ def replace_file_content(
         return ToolErrorMessage(validation_error)
     try:
         content = file_path.read_text(encoding="utf-8")
-        similar_info = json.dumps(
-            find_most_similar_in_files(old, content), indent=2, ensure_ascii=False
-        )
         if old not in content:
             return ToolErrorMessage(
                 f"内容{old!r}在文件{file_path.as_posix()!r}中未找到。"
-                f"内容类似的部分如下: {similar_info}"
+                f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
             )
 
         # 检查匹配次数
@@ -281,7 +277,7 @@ def replace_file_content(
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
                     f"默认只替换一次匹配，但找到多次匹配，请明确指定替换次数。"
-                    f"内容类似的部分如下: {similar_info}"
+                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
                 )
             replace_count = 1
         elif replace_times > 0:
@@ -290,7 +286,7 @@ def replace_file_content(
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
                     f"但要求替换{replace_times}次。"
-                    f"内容类似的部分如下: {similar_info}"
+                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
                 )
             replace_count = replace_times
         elif replace_times == -1:
@@ -299,7 +295,7 @@ def replace_file_content(
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
                     f"但要求替换所有匹配（至少需要2次匹配）。"
-                    f"内容类似的部分如下: {similar_info}"
+                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
                 )
             replace_count = -1  # 表示替换所有
         else:
