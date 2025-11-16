@@ -18,7 +18,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         widget.feed_string(invalid_json)
         
         # 触发显示更新
-        widget._update_display()
+        widget.update_display()
         
         # 验证错误状态已设置
         self.assertTrue(widget.has_error)
@@ -37,7 +37,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         widget.feed_string(valid_json)
         
         # 触发显示更新
-        widget._update_display()
+        widget.update_display()
         
         # 验证没有错误
         self.assertFalse(widget.has_error)

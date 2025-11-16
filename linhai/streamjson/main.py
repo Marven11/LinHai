@@ -52,7 +52,7 @@ class Value:
 def is_atomic_value_char(c: str) -> bool:
     """检查字符是否为原子值起始字符"""
     assert len(c) == 1
-    return c in "0123456789truefalsenull"
+    return c in "0123456789truefalsenull-."
 
 
 def is_whitespace(c: str) -> bool:
