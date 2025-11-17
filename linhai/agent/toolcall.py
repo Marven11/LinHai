@@ -111,15 +111,7 @@ class AgentToolcall:
             required_args=["ids"],
         )
         async def mark_messages_as_garbage(ids: list[str]) -> str:
-            threshold_info = self.agent.get_threshold_info()
-            if threshold_info:
-                soft, _hard, used, _remaining, taken = threshold_info
-                if used < soft:
-                    return "当前token占用没有超过软限制，禁止标记垃圾消息"
-                if taken < 0.4:
-                    return f"当前token占用小于40%，仅为{taken*100:.2f}%，禁止标记垃圾消息"
-            result = self.agent.message_processor.mark_messages_as_garbage(ids)
-            return result
+            return self.agent.message_processor.mark_messages_as_garbage(ids)
 
         @dummy_toolset.register_tool(
             name="message_garbage_clean",
