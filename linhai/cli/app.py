@@ -5,7 +5,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static, Input
+from textual.widgets import Static, Input, TabbedContent, TabPane
 from textual import events
 from linhai.llm import (
     ChatMessage,
@@ -53,9 +53,23 @@ class CLIApp(App):
         layout: vertical;
         background: #2E3440;
     }
+    TabbedContent {
+        height: 1fr;
+    }
+    TabbedContent > ContentSwitcher {
+        height: 1fr;
+    }
+    TabPane {
+        height: 1fr;
+        background: #2E3440;
+    }
     #chat-container {
         min-height: 60%;
         background: #2E3440;
+    }
+    #notes-container {
+        background: #2E3440;
+        padding: 1;
     }
     #input {
         height: 3;
@@ -110,14 +124,20 @@ class CLIApp(App):
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
-        with VerticalScroll(id="chat-container"):
-            for msg in self.messages:
-                yield msg
+        with TabbedContent(id="main-tabs"):
+            with TabPane("Agent对话", id="agent-tab"):
+                with VerticalScroll(id="chat-container"):
+                    for msg in self.messages:
+                        yield msg
 
-        # 候选列表初始隐藏，根据需要显示（放在输入框上方）
-        yield Static("", id="candidate-list-container")
-        yield Input(placeholder="输入消息...", id="input")
-        yield Static("", id="token-usage")
+                # 候选列表初始隐藏，根据需要显示（放在输入框上方）
+                yield Static("", id="candidate-list-container")
+                yield Input(placeholder="输入消息...", id="input")
+                yield Static("", id="token-usage")
+            
+            with TabPane("笔记", id="notes-tab"):
+                with VerticalScroll(id="notes-container"):
+                    yield Static("TODO", id="notes-content")
 
     def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
         """显示候选列表"""
