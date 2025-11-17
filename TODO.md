@@ -4,12 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 有些toolcall json block是extract_tool_calls_with_errors可以解析但是linhai/cli/components.py无法解析的
-    - 编写测试脚本找出这些block并加入到unittest中，然后修复linhai/cli/components.py和streamjson
-- [ ] 使用gettext完成i18n, 按照用户操作系统语言选择对应的语言,默认英文,先完成简体中文和英文的翻译
-    - 使用rg搜索所有汉字以找到需要翻译的部分
-    - 注释不用改，保持中文
-
+- [x] 写一个新插件
+    - 有时agent会根据prompt.py中的示例错误的输出`**tool**`
+    - 当目前是agent生成的第一个回复且有一行的开头是`**tool**`时打断agent，并提示不要输出工具调用的内容
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩

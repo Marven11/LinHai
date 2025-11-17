@@ -89,6 +89,7 @@ class Lifecycle:
             TaskPlanningPlugin,
             EndThinkPlugin,
         )
+        from .plugins.prevent_tool_output import PreventToolOutputPlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
@@ -101,6 +102,7 @@ class Lifecycle:
             ThinkingToolCallPlugin(self.group_chat),
             TaskPlanningPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
+            PreventToolOutputPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
