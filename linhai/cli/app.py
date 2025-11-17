@@ -457,8 +457,10 @@ class CLIApp(App):
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
+            from linhai.tool.mcp_connector import MCPConnector
 
             close_all_terminals()
+            await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
             self.app.exit()
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
