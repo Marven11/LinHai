@@ -98,7 +98,12 @@ class MCPConnector:
     async def call_tool_raw(
         self, server_name: str, tool_name: str, args: dict[str, Any]
     ):
-        return await self.get_server(server_name).call_tool(tool_name, arguments=args)
+        data = await self.get_server(server_name).call_tool(tool_name, arguments=args)
+        result = f"{data.meta=}\n"
+        for content in data.content:
+            if content.type == "text":
+                result += content.text
+        return result
 
     def init_connector_toolset(self):
         connector_toolset = ToolSet()
