@@ -52,6 +52,7 @@
               selenium
               mcp
               pyte
+              pkgs.nodejs # for MCPs like `npx -y chrome-devtools-mcp@latest`
             ];
 
             src = ./.;

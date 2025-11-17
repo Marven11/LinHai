@@ -94,6 +94,14 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
     - 分析代码/文件/输出，**根据结果**编写/修改/执行
 - 注意消息标签：用户消息使用`<user>...</user>`标签，运行时消息使用`<runtime>...</runtime>`标签，工具消息使用`<tool>...</tool>`标签，你需要根据标签区分消息来源
 
+## ACTION RULES - MCP
+
+- MCP是可以动态加载的工具集，目前你只支持使用connect_mcp_server工具连接通过STDIO通信的MCP
+  - 需要提供MCP启动命令，如`uv run xxx.py`, `npx -y xxx`
+- 当你需要使用浏览器访问网页，且fetch_article不适用时，加载Chrome Devtools MCP
+  - 首先使用`which chromium`查找chromium的路径
+  - 使用`npx -y chrome-devtools-mcp@latest --headless -e <chromium的路径>`连接MCP
+
 ## ACTION RULES - HISTORY COMPRESSION
 
 - 什么时候应该担心历史信息过长的问题：
