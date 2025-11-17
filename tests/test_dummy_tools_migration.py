@@ -20,17 +20,17 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
         # Register queues that are normally initialized by CLI
-        self.group_chat.register_queue("cli_agent_output")
-        self.group_chat.register_queue("cli_runtime_output")
+        self.group_chat.register_queue("agent_answer")
         from linhai.tool.base import global_tools
         from linhai.tool.tools.terminal import terminal_toolset
         from linhai.config import ToolConfig
+
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat, 
+            group_chat=self.group_chat,
             toolsets=[global_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            mcp_basedir=Path("/tmp"),
         )
 
     async def test_get_token_usage_tool_registered(self):
@@ -38,8 +38,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Mock the agent configuration with proper typing
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -66,8 +64,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         # Mock the agent configuration with proper typing
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -93,8 +89,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when token usage is available."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -123,8 +117,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test get_token_usage tool call when no token usage is available."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -152,8 +144,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test thanox_history tool call when there are sufficient messages."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -194,8 +184,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Test thanox_history tool call when there are insufficient messages."""
         mock_config: AgentContext = {
             "system_prompt": "test prompt",
-            
-            
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,

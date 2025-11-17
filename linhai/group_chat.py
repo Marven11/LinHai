@@ -5,9 +5,10 @@ GroupChat通信框架，实现多个单例之间的通信，解耦设计
 管理数据
     - GroupChat管理以下两种数据
         - 单例
-        - queue: 
+        - queue:
             - 每个queue都有相应的接收者接收并处理数据
             - 一个queue只有**一个**接收者!
+            - queue的名字表示其中的数据类型
 注册
     - 每个单例在初始化时获得GroupChat实例，此时注册自己以及需要从中读取数据的queue
         - 不要在其他地方注册：如果在初始函数外注册单例则会导致RuntimeError!
@@ -23,6 +24,7 @@ from typing import Any, TypeVar, Type, LiteralString
 import asyncio
 
 T = TypeVar("T")
+
 
 class GroupChat:
     def __init__(self):
@@ -55,6 +57,10 @@ class GroupChat:
         if name not in self.queues:
             raise RuntimeError(f"{name!r} not exists")
         await self.queues[name].put(message)
+
+    async def send_if_exists(self, name: LiteralString, message: Any):
+        if name in self.queues:
+            await self.queues[name].put(message)
 
     def is_empty(self, name: LiteralString) -> bool:
         if name not in self.queues:

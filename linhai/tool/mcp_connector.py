@@ -36,7 +36,7 @@ class MCPConnector:
     def get_toolsets(self) -> list[ToolSet]:
         return [toolset for _, _, toolset in self.sessions.values()] + [self.connector_toolset]
 
-    async def connect_stdio(self, name: str, command: str):
+    async def connect_mcp_server(self, name: str, command: str):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
 
@@ -79,13 +79,13 @@ class MCPConnector:
         self.sessions[name] = (session, exit_stack, toolset)
         return self.sessions[name]
 
-    async def disconnect(self, name: str):
+    async def disconnect_mcp_server(self, name: str):
         if name not in self.sessions:
             raise RuntimeError(f"{name!r} not exists")
         _, exit_stack, _ = self.sessions.pop(name)
         await exit_stack.aclose()
 
-    async def disconnect_all(self):
+    async def disconnect_all_mcp_servers(self):
         coros = [exit_stack.aclose() for _, exit_stack, _ in self.sessions.values()]
         await asyncio.gather(*coros)
         self.sessions = {}
@@ -118,7 +118,7 @@ class MCPConnector:
         )
         async def connect_mcp_server(name: str, command: str):
             try:
-                _, _, toolset = await self.connect_stdio(name, command)
+                _, _, toolset = await self.connect_mcp_server(name, command)
                 return ToolResultMessage(
                     f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
                     + ", ".join(name for name in toolset.tools.keys())
@@ -140,7 +140,7 @@ class MCPConnector:
         )
         async def disconnect_mcp_server(name: str):
             try:
-                await self.disconnect(name)
+                await self.disconnect_mcp_server(name)
                 return ToolResultMessage(f"成功断开MCP服务器: {name!r}")
             except RuntimeError as e:
                 return ToolErrorMessage(f"断开失败: {e!r}")
@@ -153,7 +153,7 @@ class MCPConnector:
         )
         async def disconnect_all_mcp_servers():
             try:
-                await self.disconnect_all()
+                await self.disconnect_all_mcp_servers()
                 return ToolResultMessage("成功断开所有MCP服务器")
             except (RuntimeError, ConnectionError, OSError) as e:
                 return ToolErrorMessage(f"断开所有服务器失败: {e!r}")

@@ -84,7 +84,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
 
         # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_agent_output队列用于输出
-        self.group_chat.register_queue("cli_agent_output")
+        self.group_chat.register_queue("agent_answer")
 
         # 创建真实的ToolManager实例
         from linhai.config import ToolConfig
@@ -138,8 +138,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         tokens = []
         final_answer = None
 
-        while not self.agent.group_chat.is_empty("cli_agent_output"):
-            item = await self.agent.group_chat.receive("cli_agent_output")
+        while not self.agent.group_chat.is_empty("agent_answer"):
+            item = await self.agent.group_chat.receive("agent_answer")
             if isinstance(item, dict):  # AnswerToken
                 tokens.append(item)
             elif hasattr(item, "get_message"):  # 通过鸭子类型检查 Answer 对象

@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 class AgentMessage:
     """消息处理器，负责管理消息队列和相关操作。"""
 
-    def __init__(self, group_chat: GroupChat, init_messages: Optional[Sequence[Message]] = None):
+    def __init__(
+        self, group_chat: GroupChat, init_messages: Optional[Sequence[Message]] = None
+    ):
         """初始化消息处理器。
 
         Args:
@@ -57,11 +59,9 @@ class AgentMessage:
         self.messages.append(msg)
 
     async def count_invalidate_cache(self):
-        interrupt_msg = CliRuntimeNotice(
-            level="WARNING", content="消息缓存失效！"
-        )
+        interrupt_msg = CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
         self.cache_invalidate_count += 1
-        await self.group_chat.send("cli_runtime_output", interrupt_msg)
+        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
     def append_message(self, msg: Message) -> None:
         """添加消息到队列。
@@ -128,8 +128,8 @@ class AgentMessage:
             被删除的消息列表
         """
         await self.count_invalidate_cache()
-        deleted = self.messages[start:end + 1]
-        self.messages[start:end + 1] = []
+        deleted = self.messages[start : end + 1]
+        self.messages[start : end + 1] = []
         return deleted
 
     async def filter_messages(self, condition) -> None:
@@ -265,7 +265,7 @@ class AgentMessage:
 
         if threshold_info:
             soft, hard, used, remaining, taken = threshold_info
-            
+
             # 确定当前状态
             current_state = None
             if taken < 0.4:
@@ -276,13 +276,13 @@ class AgentMessage:
                 current_state = "黄灯"
             else:
                 current_state = "红灯"
-            
+
             # 不重复提醒绿灯状态
             if current_state == "绿灯" and self.last_threshold_state == "绿灯":
                 return
-            
+
             self.last_threshold_state = current_state
-            
+
             # 构建状态提示消息
             if current_state == "绿灯":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯状态）。当前已有{len(self.messages)}条消息。可以顺手标记大消息，无需担心token限制。"
@@ -296,16 +296,16 @@ class AgentMessage:
                 if large_messages:
                     large_message_ids = list(large_messages.keys())[:3]
                     large_messages_info = f"当前已有{len(large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
-                
+
                 # 检查垃圾消息数量
                 garbage_count = len(self.garbage_message_ids)
-                if garbage_count >= 10:
-                    action_guide = "当前有至少10条垃圾消息，建议调用message_garbage_clean清理垃圾消息。"
+                if garbage_count >= 5:
+                    action_guide = "当前有至少5条垃圾消息，建议调用message_garbage_clean清理垃圾消息。"
                 else:
                     action_guide = "建议调用compress_history_range删除大约一半消息！"
-                
+
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（红灯状态）。当前已有{len(self.messages)}条消息。{large_messages_info}{action_guide}"
-            
+
             self.append_message(RuntimeMessage(message_content))
 
     async def save_conversation_history(self, save_dir: Optional[Path] = None) -> None:

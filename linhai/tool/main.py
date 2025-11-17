@@ -30,7 +30,7 @@ class ToolManager:
         toolsets: list[ToolSet],
         config: ToolConfig,
         mcp_config: list[MCPConfig],
-        mcp_basedir: Path
+        mcp_basedir: Path,
     ):
         """初始化工具管理器
 
@@ -61,10 +61,8 @@ class ToolManager:
             return
         self.mcp_connector = MCPConnector(self.group_chat)
         for mcp_config in self.mcp_config:
-            server_script_path = (
-                self.mcp_basedir / mcp_config.server_script_path
-            )
-            await self.mcp_connector.connect_stdio(
+            server_script_path = self.mcp_basedir / mcp_config.server_script_path
+            await self.mcp_connector.connect_mcp_server(
                 mcp_config.name, server_script_path.absolute().as_posix()
             )
 
@@ -115,8 +113,8 @@ class ToolManager:
                 target_toolset = toolset
         if target_toolset is None:
             # 发送错误消息
-            await self.group_chat.send(
-                "cli_runtime_output",
+            await self.group_chat.send_if_exists(
+                "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"未找到工具: {tool_call.function_name}"
                 ),
@@ -135,8 +133,8 @@ class ToolManager:
             # 检查工具返回结果，如果是ToolErrorMessage则发送失败通知
             if isinstance(result, ToolErrorMessage):
                 # 发送工具调用失败消息
-                await self.group_chat.send(
-                    "cli_runtime_output",
+                await self.group_chat.send_if_exists(
+                    "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
                         content=f"工具执行失败: {tool_call.function_name}",
@@ -144,8 +142,8 @@ class ToolManager:
                 )
             else:
                 # 发送工具调用成功消息
-                await self.group_chat.send(
-                    "cli_runtime_output",
+                await self.group_chat.send_if_exists(
+                    "ui_log",
                     CliRuntimeNotice(
                         level="INFO", content=f"工具执行成功: {tool_call.function_name}"
                     ),
@@ -153,8 +151,8 @@ class ToolManager:
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             # 发送工具调用失败消息
-            await self.group_chat.send(
-                "cli_runtime_output",
+            await self.group_chat.send_if_exists(
+                "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
                     content=f"工具执行失败: {tool_call.function_name} - {str(e)}",
@@ -173,8 +171,8 @@ class ToolManager:
         if self.config and self.config.max_output_length is not None:
             max_output_length = self.config.max_output_length
         else:
-            await self.group_chat.send(
-                "cli_runtime_output",
+            await self.group_chat.send_if_exists(
+                "ui_log",
                 CliRuntimeNotice(level="INFO", content="使用默认输出长度限制: 50000"),
             )
             max_output_length = 50000

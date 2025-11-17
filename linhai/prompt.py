@@ -97,7 +97,7 @@ DEFAULT_SYSTEM_PROMPT_ZH = """
   - 40% ~ 60% - 绿灯闪烁：应该积极标记大消息，可以顺手删除一些**实在和当前任务无关的消息**
   - 60% ~ 80% - 黄灯：积极考虑删除**和当前任务无关**的消息，也可以使用历史压缩删除**之前任务**的消息
   - 80 ~ 100% - 红灯：优先考虑token限制问题，此时应该放下手中的任何任务，直接使用compress_history_range删除一半消息！
-    - 此时消息非常多，如果已有至少10条垃圾消息，则调用message_garbage_clean清理垃圾消息；否则，使用compress_history_range删除大约一半消息！
+    - 此时消息非常多，如果已有至少5条垃圾消息，则调用message_garbage_clean清理垃圾消息；否则，使用compress_history_range删除大约一半消息！
 - 优先使用mark_messages_as_garbage: 在Token达到软阈值时，一般使用mark_messages_as_garbage标记一些上一个任务的消息为垃圾
   - mark_messages_as_garbage可以和其他工具一起调用，不需要暂停当前任务
   - 但是需要确保标记的消息和当前的任务无关！

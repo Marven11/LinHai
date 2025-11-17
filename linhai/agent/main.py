@@ -41,9 +41,6 @@ from linhai.utils import CliRuntimeNotice
 logger = logging.getLogger(__name__)
 
 
-
-
-
 class Agent:
     """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
 
@@ -56,7 +53,7 @@ class Agent:
         self.context = context
         self.group_chat = group_chat
 
-        group_chat.register_queue("agent_user_input")
+        group_chat.register_queue("user_message")
         group_chat.register_member("agent", self)
 
         self.mcp_connector: MCPConnector | None = None
@@ -95,21 +92,29 @@ class Agent:
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
             return None
-        
+
         # 获取当前LLM的token_limit
         current_llm = self.context["llms"][self.context["current_llm_index"]]
-        token_limit = getattr(current_llm, 'token_limit', None)
+        token_limit = getattr(current_llm, "token_limit", None)
         # 如果token_limit为None，使用默认值65536
         if token_limit is None:
             token_limit = 65536
-        
+
         # 动态计算阈值：如果是float则乘以token_limit，如果是int则直接使用
         soft_config = self.context.get("compress_threshold_soft", 0.5)
         hard_config = self.context.get("compress_threshold_hard", 0.8)
-        
-        compress_threshold_soft = int(soft_config * token_limit) if isinstance(soft_config, float) else soft_config
-        compress_threshold_hard = int(hard_config * token_limit) if isinstance(hard_config, float) else hard_config
-        
+
+        compress_threshold_soft = (
+            int(soft_config * token_limit)
+            if isinstance(soft_config, float)
+            else soft_config
+        )
+        compress_threshold_hard = (
+            int(hard_config * token_limit)
+            if isinstance(hard_config, float)
+            else hard_config
+        )
+
         taken = (
             0.0
             if self.last_token_usage <= compress_threshold_soft
@@ -120,13 +125,12 @@ class Agent:
         )
         remaining = compress_threshold_hard - self.last_token_usage
         return (
-            compress_threshold_soft, # 软阈值（token数）
-            compress_threshold_hard, # 硬阈值（token数）
-            self.last_token_usage, # 当前已经使用（token数）
-            remaining, # 到硬阈值的token数
-            taken, # 当前已经使用（比例）
+            compress_threshold_soft,  # 软阈值（token数）
+            compress_threshold_hard,  # 硬阈值（token数）
+            self.last_token_usage,  # 当前已经使用（token数）
+            remaining,  # 到硬阈值的token数
+            taken,  # 当前已经使用（比例）
         )
-
 
     async def interrupt(self, custom_message: str | None = None):
         """
@@ -137,9 +141,9 @@ class Agent:
         """
         if self.current_answer:
             self.current_answer.interrupt()
-            await self.group_chat.send("cli_agent_output", self.current_answer)
+            await self.group_chat.send("agent_answer", self.current_answer)
             self.current_answer = None
-            
+
             # 发送插件打断消息到运行时输出
             if custom_message:
                 interrupt_msg = CliRuntimeNotice(
@@ -147,12 +151,10 @@ class Agent:
                 )
                 self.message_processor.append_message(RuntimeMessage(custom_message))
             else:
-                interrupt_msg = CliRuntimeNotice(
-                    level="WARNING", content="Agent被打断"
-                )
+                interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
                 self.message_processor.append_message(RuntimeMessage("Agent被打断"))
-            
-            await self.group_chat.send("cli_runtime_output", interrupt_msg)
+
+            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
             self.state = "working"
 
     async def state_waiting_user(self):
@@ -164,11 +166,11 @@ class Agent:
         logger.info("Agent进入等待用户状态")
 
         if not self.is_last_message_user():
-            await self.group_chat.send(
-                "cli_runtime_output",
+            await self.group_chat.send_if_exists(
+                "ui_log",
                 CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
             )
-            msg = await self.group_chat.receive("agent_user_input")
+            msg = await self.group_chat.receive("user_message")
             assert isinstance(msg, ChatMessage)
             self.handle_user_message(msg)
             # 接收到用户消息后直接转为working状态
@@ -185,9 +187,9 @@ class Agent:
         """
         logger.info("Agent进入自动运行状态")
         # 直接处理用户输入消息
-        if not self.group_chat.is_empty("agent_user_input"):
+        if not self.group_chat.is_empty("user_message"):
             try:
-                msg = await self.group_chat.receive("agent_user_input")
+                msg = await self.group_chat.receive("user_message")
                 assert isinstance(msg, ChatMessage)
                 self.handle_user_message(msg)
                 await self.generate_response()
@@ -200,14 +202,14 @@ class Agent:
         threshold_info = self.get_threshold_info()
         if not self.compress_tool_called_in_last_response and threshold_info:
             self.message_processor.add_soft_threshold_notification(
-                threshold_info, self.large_messages, self.compress_tool_called_in_last_response
+                threshold_info,
+                self.large_messages,
+                self.compress_tool_called_in_last_response,
             )
         if self.last_token_usage and threshold_info:
             _soft, hard, _used, _remaining, _taken = threshold_info
             if self.last_token_usage and self.last_token_usage > hard:
                 await compress_history_range(self)
-
-
 
     def is_last_message_user(self) -> bool:
         if not self.message_processor.get_messages():
@@ -286,13 +288,15 @@ class Agent:
         # 选择模型
         model = await self._select_model()
 
-        answer: Answer = await model.answer_stream(self.message_processor.get_messages())
+        answer: Answer = await model.answer_stream(
+            self.message_processor.get_messages()
+        )
 
         # 设置当前Answer用于plugin打断
         self.current_answer = answer
 
         async for token in answer:
-            await self.group_chat.send("cli_agent_output", token)
+            await self.group_chat.send("agent_answer", token)
 
             # 实时检查工具调用量（通过lifecycle回调处理）
             current_content = answer.get_current_content()
@@ -304,8 +308,8 @@ class Agent:
             if interrupted:
                 return answer
 
-            if not self.group_chat.is_empty("agent_user_input"):
-                msg = await self.group_chat.receive("agent_user_input")
+            if not self.group_chat.is_empty("user_message"):
+                msg = await self.group_chat.receive("user_message")
                 assert isinstance(msg, ChatMessage)
                 parsed_input = parse_user_input(msg.message.strip())
                 if parsed_input.command == "queue":
@@ -313,30 +317,30 @@ class Agent:
                     self.queued_messages.append(msg)
                 elif parsed_input.command in ["quit", "exit"]:
                     # 以/quit或/exit开头，直接退出程序
-                    await self.group_chat.send("cli_agent_output", answer)
+                    await self.group_chat.send("agent_answer", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.message_processor.append_message(chat_message)
                     # 发送退出信号
-                    await self.group_chat.send("cli_exit", {"return_code": 0})
+                    await self.group_chat.send("exit_signal", {"return_code": 0})
                     answer.interrupt()
                     return answer
                 else:
                     # 正常打断
-                    await self.group_chat.send("cli_agent_output", answer)
+                    await self.group_chat.send("agent_answer", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.message_processor.append_message(chat_message)
                     await self.interrupt("Agent被用户打断")
                     self.handle_user_message(msg)
                     return answer
 
-        await self.group_chat.send("cli_agent_output", answer)
+        await self.group_chat.send("agent_answer", answer)
 
         chat_message = cast(ChatMessage, answer.get_message())
         full_response = chat_message.message
         self.message_processor.append_message(chat_message)
 
         # 将排队消息添加到消息列表，放在agent输出后面
-        if hasattr(self, 'queued_messages') and self.queued_messages:
+        if hasattr(self, "queued_messages") and self.queued_messages:
             self.message_processor.append_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
@@ -350,7 +354,7 @@ class Agent:
             interrupt_msg = CliRuntimeNotice(
                 level="WARNING", content="工具调用格式出错"
             )
-            await self.group_chat.send("cli_runtime_output", interrupt_msg)
+            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
             # 添加RuntimeMessage到消息队列
             self.message_processor.append_message(RuntimeMessage("工具调用格式出错"))
             return answer
@@ -385,10 +389,10 @@ class Agent:
 
     async def call_tool(self, tool_call):
         """调用工具，委托给toolcall_processor处理。
-        
+
         Args:
             tool_call: 工具调用消息
-            
+
         Returns:
             bool: 是否需要进行早期返回
         """
@@ -449,8 +453,8 @@ class Agent:
         logger.info("Agent启动")
         user_input_found = False
         await self.toolcall_processor.postinit()
-        while not self.group_chat.is_empty("agent_user_input"):
-            msg = await self.group_chat.receive("agent_user_input")
+        while not self.group_chat.is_empty("user_message"):
+            msg = await self.group_chat.receive("user_message")
             self.handle_user_message(msg)
             user_input_found = True
         if user_input_found:
@@ -472,6 +476,6 @@ class Agent:
 
         # 只有在MCP连接器存在时才断开连接
         if self.group_chat.has_member("mcp_connector"):
-            await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
-
-
+            await self.group_chat.get_members(
+                "mcp_connector", MCPConnector
+            ).disconnect_all_mcp_servers()

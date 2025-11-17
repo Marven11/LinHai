@@ -85,9 +85,9 @@ class CLIApp(App):
         super().__init__()
         self.messages: List[MessageWidget] = []
         self.group_chat = group_chat
-        self.group_chat.register_queue("cli_agent_output")
-        self.group_chat.register_queue("cli_runtime_output")
-        self.group_chat.register_queue("cli_exit")
+        self.group_chat.register_queue("agent_answer")
+        self.group_chat.register_queue("ui_log")
+        self.group_chat.register_queue("exit_signal")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -104,7 +104,7 @@ class CLIApp(App):
 
         # 自动滚动状态
         self.is_user_scroll_to_end = False
-        
+
         # 候选列表组件
         self.candidate_list: Optional[CandidateList] = None
 
@@ -118,8 +118,6 @@ class CLIApp(App):
         yield Static("", id="candidate-list-container")
         yield Input(placeholder="输入消息...", id="input")
         yield Static("", id="token-usage")
-
-
 
     def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
         """显示候选列表"""
@@ -152,9 +150,11 @@ class CLIApp(App):
         """处理输入框内容变化"""
         value = event.value
         candidates = self.completion_manager.handle_input_change(value)
-        
+
         if candidates is not None:
-            self.show_completion_list(self.completion_manager.completion_prefix, candidates)
+            self.show_completion_list(
+                self.completion_manager.completion_prefix, candidates
+            )
         else:
             self.hide_completion_list()
 
@@ -212,7 +212,7 @@ class CLIApp(App):
                     is_reasoning=False,
                 )
             )
-            await self.group_chat.send("agent_user_input", user_msg)
+            await self.group_chat.send("user_message", user_msg)
             event.input.value = ""
             # 更新UI
             _ = self.group_chat.get_members(
@@ -230,12 +230,10 @@ class CLIApp(App):
         while True:
             # 同时监听三个队列
             agent_output_task = asyncio.create_task(
-                self.group_chat.receive("cli_agent_output")
+                self.group_chat.receive("agent_answer")
             )
-            runtime_output_task = asyncio.create_task(
-                self.group_chat.receive("cli_runtime_output")
-            )
-            exit_task = asyncio.create_task(self.group_chat.receive("cli_exit"))
+            runtime_output_task = asyncio.create_task(self.group_chat.receive("ui_log"))
+            exit_task = asyncio.create_task(self.group_chat.receive("exit_signal"))
 
             done, pending = await asyncio.wait(
                 [agent_output_task, runtime_output_task, exit_task],
@@ -345,7 +343,7 @@ class CLIApp(App):
                         is_reasoning=False,
                     )
                 )
-                await self.group_chat.send("agent_user_input", user_msg)
+                await self.group_chat.send("user_message", user_msg)
                 # 更新UI
                 agent = self.group_chat.get_members("agent", Agent)
                 widget = MessageWidget(
@@ -423,8 +421,10 @@ class CLIApp(App):
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
         agent = self.group_chat.get_members("agent", Agent)
-        display_text = self.token_manager.get_token_display_text(agent, current_answer_token)
-        
+        display_text = self.token_manager.get_token_display_text(
+            agent, current_answer_token
+        )
+
         token_display = self.query_one("#token-usage")
         assert isinstance(token_display, Static)
         token_display.update(display_text)
@@ -450,7 +450,9 @@ class CLIApp(App):
         # 处理补全相关的键盘事件
         if self.completion_manager.completion_active and self.candidate_list:
             if event.key in ["up", "down", "tab", "enter", "escape"]:
-                if self.completion_manager.handle_key_event(event.key, cast(Input, self.query_one("#input"))):
+                if self.completion_manager.handle_key_event(
+                    event.key, cast(Input, self.query_one("#input"))
+                ):
                     event.stop()
                     return
 
@@ -460,7 +462,9 @@ class CLIApp(App):
             from linhai.tool.mcp_connector import MCPConnector
 
             close_all_terminals()
-            await self.group_chat.get_members("mcp_connector", MCPConnector).disconnect_all()
+            await self.group_chat.get_members(
+                "mcp_connector", MCPConnector
+            ).disconnect_all_mcp_servers()
             self.app.exit()
 
     async def confirm_tool_request(self, tool_call: ToolCallMessage):
@@ -478,15 +482,17 @@ class CLIApp(App):
 
     def should_auto_scroll(self):
         container = self.query_one("#chat-container")
-        return self.is_user_scroll_to_end and container.scroll_y >= container.max_scroll_y - 5
+        return (
+            self.is_user_scroll_to_end
+            and container.scroll_y >= container.max_scroll_y - 5
+        )
 
     def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
         container = self.query_one("#chat-container")
-        
+
         self.is_user_scroll_to_end = container.is_vertical_scroll_end
 
     def on_mouse_scroll_up(self, _event: events.MouseScrollUp) -> None:
         container = self.query_one("#chat-container")
-        
-        self.is_user_scroll_to_end = False
 
+        self.is_user_scroll_to_end = False

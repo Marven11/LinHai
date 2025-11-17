@@ -41,21 +41,19 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
 
         # 注册必要的队列
-        self.group_chat.register_queue("cli_agent_output")
-        self.group_chat.register_queue("cli_runtime_output")
-        
+        self.group_chat.register_queue("agent_answer")
+
         # 创建并注册ToolManager
         from linhai.tool.tools.terminal import terminal_toolset
         from linhai.config import ToolConfig
+
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat, 
+            group_chat=self.group_chat,
             toolsets=[global_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            mcp_basedir=Path("/tmp"),
         )
-
-
 
         # 创建初始消息列表
         init_messages = [
@@ -86,7 +84,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 如果返回ToolErrorMessage，检查错误内容
         if isinstance(result, ToolErrorMessage):
             self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
-        
+
         self.assertIsInstance(result, ToolResultMessage)
         self.assertIn("primary", str(result.content))  # type: ignore
 
@@ -104,7 +102,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 如果返回ToolErrorMessage，检查错误内容
         if isinstance(result, ToolErrorMessage):
             self.fail(f"switch_llm tool failed: {result.content}")
-        
+
         self.assertIsInstance(result, ToolResultMessage)
         self.assertIn("已切换到LLM: secondary", str(result.content))  # type: ignore
 
@@ -125,7 +123,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         # 如果返回ToolErrorMessage，检查错误内容
         if isinstance(result, ToolErrorMessage):
             self.fail(f"switch_llm tool failed: {result.content}")
-        
+
         self.assertIsInstance(result, ToolResultMessage)
         self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))  # type: ignore
         self.assertIn("可用的LLM包括: primary, secondary", str(result.content))  # type: ignore
