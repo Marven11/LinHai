@@ -37,12 +37,11 @@ class TokenManager:
             output_tokens += self.current_token_usage.output_tokens
 
         # 获取当前LLM的token限制
-        llm_name, llm_instance = agent.get_current_llm_info()
+        _llm_name, llm_instance = agent.get_current_llm_info()
         token_limit = llm_instance.get_token_limit()
 
         message_count = len(agent.message_processor.messages)
         display_text_pieces = [
-            llm_name,
             f"{message_count} msgs",
             f"in {input_tokens:,}",
             f"out {output_tokens:,}",

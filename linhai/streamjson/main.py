@@ -152,8 +152,10 @@ class StreamJsonParser:
                 self.state = ParserState.INVALID
                 raise RuntimeError(f"Bracket mismatch: {pair!r} != {PAIRS[c]!r}")
             if self.stack:
+                if self.stack[-1] in ["{", "["]:
+                    self.state = ParserState.INVALID
+                    raise RuntimeError(f"Invalid stack: {self.stack}")
                 key = self.stack.pop()
-                assert key not in ["{", "["]
                 if isinstance(key, int):
                     self.stack.append(key + 1)
 
