@@ -505,6 +505,19 @@ class OpenAi:
         """
         return self.token_limit
 
+    def _estimate_input_tokens(self, history: Sequence[Message]) -> int:
+        """估算输入消息的token数量。
+        
+        使用简单的字符计数方法：平均每个token约4个字符
+        """
+        total_chars = 0
+        for msg in history:
+            llm_msg = msg.to_llm_message()
+            if "content" in llm_msg and llm_msg["content"]:
+                total_chars += len(str(llm_msg["content"]))
+        # 简单估算：平均每个token约4个字符
+        return max(1, total_chars // 4)
+
 
 
     async def answer_stream(
@@ -558,9 +571,9 @@ class OpenAi:
                 else:
                     break
             
-            # 估算缓存token量
+            # 估算缓存token量 - 确保至少为0
             if previous_total_chars > 0:
-                cached_input_tokens = int(self.previous_input_tokens * (same_prefix_chars / previous_total_chars))
+                cached_input_tokens = max(0, int(self.previous_input_tokens * (same_prefix_chars / previous_total_chars)))
 
         params = {
             "model": self.model,
@@ -597,11 +610,11 @@ class OpenAi:
         
         # 更新上一个history和input_tokens
         if answer is not None:
-            # 等待获取token使用量
-            token_usage = answer.get_token_usage()
-            if token_usage:
-                self.previous_input_tokens = token_usage.input_tokens
-                self.previous_history = history
+            # 保存当前history和input_tokens用于下一次缓存计算
+            self.previous_history = history
+            # 注意：这里我们保存的是当前调用的输入token数，用于下一次调用的缓存计算
+            # 实际的input_tokens会在API响应中获取，这里我们先用估算值
+            self.previous_input_tokens = self._estimate_input_tokens(history)
             return answer
         else:
             raise RuntimeError("Failed to create OpenAI answer after retries")  # 这行可能永远不会执行，但保留

@@ -66,16 +66,19 @@ class TokenManager:
 
         message_count = len(agent.message_processor.messages)
         
-        # 计算缓存比例
-        cache_percentage = 0
-        if input_tokens > 0:
-            cache_percentage = int((cached_input_tokens / input_tokens) * 100)
-        
+        # 只在有输入token时才显示缓存比例
         display_text_pieces = [
             f"{message_count} msgs",
-            f"in {self._format_token_number(input_tokens)} (~{cache_percentage}% cached)",
-            f"out {self._format_token_number(output_tokens)}",
         ]
+        
+        if input_tokens > 0:
+            # 计算缓存比例
+            cache_percentage = int((cached_input_tokens / input_tokens) * 100)
+            display_text_pieces.append(f"in {self._format_token_number(input_tokens)} (~{cache_percentage}% cached)")
+        else:
+            display_text_pieces.append(f"in {self._format_token_number(input_tokens)}")
+        
+        display_text_pieces.append(f"out {self._format_token_number(output_tokens)}")
         
         if token_limit and token_limit > 0:
             percentage = (current_answer_token / token_limit) * 100
