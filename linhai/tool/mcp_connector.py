@@ -120,7 +120,7 @@ class MCPConnector:
                 ),
             },
             required_args=["name", "command"],
-            collapse_with=["disconnect_mcp_server", "disconnect_all_mcp_servers", "list_mcp_servers"],
+            conflict_with=["disconnect_mcp_server", "disconnect_all_mcp_servers", "list_mcp_servers"],
         )
         async def connect_mcp_server(name: str, command: str):
             try:

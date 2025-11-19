@@ -68,11 +68,11 @@ class TestToolConflict(unittest.TestCase):
         mock_toolset.get_tools.return_value = {
             "read_file": {
                 "name": "read_file",
-                "collapse_with": ["write_file"]
+                "conflict_with": ["write_file"]
             },
             "list_files": {
                 "name": "list_files",
-                "collapse_with": []
+                "conflict_with": []
             }
         }
         self.mock_tool_manager.toolsets = [mock_toolset]
@@ -91,11 +91,11 @@ class TestToolConflict(unittest.TestCase):
         mock_toolset.get_tools.return_value = {
             "read_file": {
                 "name": "read_file", 
-                "collapse_with": ["write_file"]
+                "conflict_with": ["write_file"]
             },
             "write_file": {
                 "name": "write_file",
-                "collapse_with": ["read_file"]
+                "conflict_with": ["read_file"]
             }
         }
         self.mock_tool_manager.toolsets = [mock_toolset]

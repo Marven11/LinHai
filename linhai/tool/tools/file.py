@@ -92,7 +92,7 @@ def validate_file(file_path: Path) -> str:
         "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),
     },
     required_args=["filepath"],
-    collapse_with=["write_file", "append_file", "replace_file_content", "modify_file_with_sed", "insert_at_line"],
+    conflict_with=["write_file", "append_file", "replace_file_content", "modify_file_with_sed", "insert_at_line"],
 )
 def read_file(
     filepath: str, show_line_numbers: bool = False
@@ -142,7 +142,7 @@ def read_file(
         "override": ToolArgInfo(desc="是否覆盖已有文件", type="bool"),
     },
     required_args=["filepath", "content"],
-    collapse_with=["read_file", "list_files", "get_absolute_path", "run_sed_expression"],
+    conflict_with=["read_file", "list_files", "get_absolute_path", "run_sed_expression"],
 )
 def write_file(
     filepath: str, content: str, override: bool = False

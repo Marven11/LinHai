@@ -63,18 +63,18 @@ class AgentToolcall:
 
         # 检查当前工具是否与已调用工具有冲突
         for called_tool in self.called_tools_in_round:
-            # 检查当前工具的collapse_with是否包含已调用工具
-            if called_tool in tool_def["collapse_with"]:
+            # 检查当前工具的conflict_with是否包含已调用工具
+            if called_tool in tool_def["conflict_with"]:
                 return True
 
-            # 检查已调用工具的collapse_with是否包含当前工具
+            # 检查已调用工具的conflict_with是否包含当前工具
             called_tool_def = None
             for toolset in self.tool_manager.toolsets:
                 if toolset.has_tool(called_tool):
                     called_tool_def = toolset.get_tools()[called_tool]
                     break
 
-            if called_tool_def and tool_name in called_tool_def["collapse_with"]:
+            if called_tool_def and tool_name in called_tool_def["conflict_with"]:
                 return True
 
         return False
