@@ -4,7 +4,8 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 将linhai/cli/token_manager.py中的Token用量改成使用k, m等字母表示数量
+- [ ] 让agent将对话记录保存到合适的目录中，在linux下是~/.local/share/linhai/conversations/ 文件名以可读日期命名，文件类型为.json
+     - [ ] 编写unittest测试写入和读取
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
