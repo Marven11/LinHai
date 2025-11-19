@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
-from linhai.utils import generate_id
+from linhai.utils import generate_id, CliRuntimeNotice
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -207,7 +207,15 @@ class AgentToolcall:
 
         # 检查工具调用冲突
         if self._check_tool_conflict(tool_call.function_name):
-            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与已调用的工具存在冲突，跳过此工具调用"
+            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与已调用的工具存在冲突，已阻止调用，剩余工具调用已忽略"
+
+            await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="ERROR",
+                        content=f"工具调用冲突: {tool_call.function_name}",
+                    ),
+                )
             logger.warning(conflict_msg)
             self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
             return True  # 需要早期返回，中止其他工具调用
