@@ -88,8 +88,8 @@ class Lifecycle:
             ThinkingToolCallPlugin,
             TaskPlanningPlugin,
             EndThinkPlugin,
+            PreventToolOutputPlugin,
         )
-        from .plugins.prevent_tool_output import PreventToolOutputPlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
