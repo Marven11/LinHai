@@ -4,7 +4,8 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 实现subagent系统
+- [x] 实现subagent系统
+    - [x] 为subagent编写prompt到linhai/prompt.py
     - subagent设计
         - 每个subagent有对应的类型和名字，当前只有一个类型dummy用于测试
         - subagent启动时会获得一个消息，需要调用对应的工具完成对应任务并退出，退出时需要提供reason供agent检视

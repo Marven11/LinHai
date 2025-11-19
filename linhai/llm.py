@@ -93,6 +93,38 @@ class SystemMessage:
         )
 
 
+class SubagentSystemMessage:
+    """系统消息类，用于表示系统角色消息。"""
+
+    def __init__(
+        self,
+        msg: str,
+    ):
+        """初始化系统消息。"""
+        self.msg = msg
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
+        return cast(LanguageModelMessage, {"role": "system", "content": self.msg})
+
+    def __repr__(self) -> str:
+        """返回消息的字符串表示。"""
+        return "SubagentSystemMessage()"
+
+    def to_json(self) -> str:
+
+        return json.dumps({"msg": self.msg})
+
+    @classmethod
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+
+        data = json.loads(json_str)
+
+        return cls(
+            msg=data["msg"],
+        )
+
+
 class ChatMessage:
     """聊天消息类，用于表示用户或助理角色消息。"""
 
@@ -179,6 +211,7 @@ class ToolConfirmationMessage:
             f"ToolConfirmationMessage(tool_call={self.tool_call!r}, "
             f"confirmed={self.confirmed!r})"
         )
+
 
 class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""
@@ -486,7 +519,10 @@ class OpenAi:
 
         for i in range(0, min(len(previous_content), len(current_content)), block_size):
 
-            if previous_content[i : i + block_size] == current_content[i : i + block_size]:
+            if (
+                previous_content[i : i + block_size]
+                == current_content[i : i + block_size]
+            ):
                 same_prefix_chars += block_size
             else:
                 break

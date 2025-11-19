@@ -11,6 +11,8 @@ from linhai.tool.tools.terminal import terminal_toolset
 from linhai.tool.base import global_tools
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from .base import GlobalMemory, AgentContext
+from linhai.subagent.tools import create_subagent_toolset
+from linhai.subagent import SubAgentManager
 
 
 async def create_agent(
@@ -53,7 +55,12 @@ async def create_agent(
 
     # 创建ToolManager
     tool_config = config.tools if config.tools else ToolConfig()
-    await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=config_path.parent)
+    tool_manager = await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=config_path.parent)
+
+    # 创建SubAgentManager并注册subagent工具
+    subagent_manager = SubAgentManager(group_chat)
+    subagent_toolset = create_subagent_toolset(subagent_manager)
+    tool_manager.add_toolset(subagent_toolset)
 
     # 创建初始化消息
     memory_file_path = (config_path.parent / config.memory.file_path) if config.memory else None
