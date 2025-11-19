@@ -294,7 +294,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # 设置tool_manager的process_tool_call模拟
-        self.tool_manager.process_tool_call = AsyncMock()
+        self.tool_manager.process_tool_call = AsyncMock(return_value=ToolResultMessage("工具执行成功"))
 
         # 发送用户消息触发处理
         self.agent.handle_user_message(
