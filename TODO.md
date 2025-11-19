@@ -4,8 +4,9 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 修复所有unittest
-    - 并消除所有垃圾消息，如/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:496: RuntimeWarning: coroutine 'SubAgentManager.check_subagent' was never awaited
+- [ ] 将subagent的消息放在TUI中的新tab中，同时删除笔记tab
+    - [ ] 运行所有unittest保证没有破坏性修改
+    - 测试：启动linhai，按下两次tab选择tab栏，然后按左右按键切换tab
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
