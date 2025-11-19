@@ -405,7 +405,7 @@ class ToolCallWidget(Static):
                         word_wrap=True,
                     ),
                     box=box.SQUARE,
-                    border_style="blue",
+                    border_style="#B48EAD",  # 调整后的紫色
                     title="tool call",
                     title_align="left",
                     expand=True,
@@ -480,9 +480,9 @@ class NormalContentWidget(Static):
             if len(lines) > 5:
                 content_to_display = "\n".join(lines[-5:])
         border_color = {
-            "user": "yellow",
-            "assistant": "green",
-            "assistant-reasoning": "grey50",
+            "user": "#A3BE8C",  # 调整后的绿色
+            "assistant": "#81A1C1",  # nord primary 蓝色
+            "assistant-reasoning": "#4C566A",  # nord secondary 灰色
         }.get(self.role, "grey50")
         panel = Panel(
             Syntax(

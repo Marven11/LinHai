@@ -79,14 +79,11 @@ class Lifecycle:
         """注册默认的Plugin。"""
         from .plugin import (
             WaitingUserPlugin,
-            ToolcallWithoutPlanningPlugin,
             WrongEndPlugin,
             WeirdEndOfSentencePlugin,
             BadMultiToolCall,
-            ExcessiveCheckmarkPlugin,
             MarkdownSyntaxPlugin,
             ThinkingToolCallPlugin,
-            TaskPlanningPlugin,
             EndThinkPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
@@ -94,14 +91,11 @@ class Lifecycle:
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
-            ToolcallWithoutPlanningPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
             WeirdEndOfSentencePlugin(self.group_chat),
             BadMultiToolCall(self.group_chat),
-            ExcessiveCheckmarkPlugin(self.group_chat),
             MarkdownSyntaxPlugin(self.group_chat),
             ThinkingToolCallPlugin(self.group_chat),
-            TaskPlanningPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),

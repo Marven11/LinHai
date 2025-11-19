@@ -67,56 +67,7 @@ class WaitingUserPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class ToolcallWithoutPlanningPlugin(Plugin):
-    """工具调用量检查Plugin。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.json_block_count = 0
-        self.planning_count = 0
-
-    async def during_message_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
-    ):
-        """在生成过程中记录工具调用和计划数量。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        self.json_block_count = current_content.count("\n```json toolcall")
-        pattern = r"^ *- \[[ x]\]"
-        self.planning_count = len(re.findall(pattern, current_content, re.MULTILINE))
-
-        # 只有在超过3个工具且没有计划时才立即打断
-        if self.json_block_count > 3 and self.planning_count == 0:
-            await agent.interrupt(
-                "错误：你没有使用`- [ ]`和`- [x]`进行计划就调用了大量工具，必须先输出计划再调用多个工具！"
-            )
-            return True
-
-        return False
-
-    async def after_message_generation(
-        self, _answer: Answer, full_response: str, _tool_calls
-    ):
-        """在生成完毕后检查是否没有计划就调用了多个工具。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-
-        # 如果在生成过程中已经检查过，这里不再重复检查
-        # 只有在1-3个工具且没有计划时提醒（不打断）
-        if 1 <= self.json_block_count <= 3 and self.planning_count == 0:
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    "注意：你调用了多个工具但没有输出任务规划。"
-                    "请先使用`- [ ]`和`- [x]`进行任务规划，再调用工具。"
-                )
-            )
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during和after_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class WrongEndPlugin(Plugin):
@@ -252,29 +203,7 @@ class ThinkingToolCallPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class ExcessiveCheckmarkPlugin(Plugin):
-    """检查过多完成标记的Plugin。"""
 
-    async def after_message_generation(
-        self, _answer: Answer, full_response, _tool_calls
-    ):
-        """检查是否输出了过多的- [x]标记。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        count = full_response.count("- [x]")
-        if count > 10:  # 阈值设为10
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    f"警告：你输出了过多`- [x]`标记（{count}个），请使用分级无序列表整理大小任务。"
-                    "请注意：如果完成的任务过多，可以不输出完成的小任务，只输出大任务已完成。"
-                    "提示：如果完成的任务过多（十几条），在所有小任务都完成时，可以不输出完成的小任务，只输出大任务已完成。因为小任务是过程性的，完成的细节相对于结果来说不重要。"
-                )
-            )
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class MarkdownSyntaxPlugin(Plugin):
@@ -326,86 +255,7 @@ class WeirdEndOfSentencePlugin(Plugin):
         lifecycle.register_during_message_generation(self.during_message_generation)
 
 
-class TaskPlanningPlugin(Plugin):
-    """任务规划格式检查Plugin。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.no_planning_score = 0
-
-    async def during_message_generation(
-        self, answer: Answer, current_content: str
-    ):
-        """检查工具调用量是否超过限制。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        if self.no_planning_score <= 3:
-            return
-        current_reasoning_content = answer.get_reasoning_message()
-        if current_reasoning_content is None:
-            return False
-        pattern = r"^ *- \[[ x]\]"
-        matches = re.findall(pattern, current_content, re.MULTILINE)
-        if not matches:
-            return False
-        json_block_count = current_reasoning_content.count("\n```json toolcall")
-        if json_block_count == 0:
-            return False
-        await agent.interrupt(
-            "错误：你已经连续多次忘记任务规划，你的工具调用已经被打断。"
-            "你必须在工具调用前补上任务规划！"
-        )
-        return True
-
-    async def after_message_generation(
-        self, answer: Answer, full_response, _tool_calls
-    ):
-        """检查是否输出了任务规划格式（- [ ] 或 - [x]）。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-
-        # 使用正则匹配每一行开头的任务规划标记
-        pattern = r"^ *- \[[ x]\]"
-        matches = re.findall(pattern, full_response, re.MULTILINE)
-
-        # 如果没有找到任何任务规划标记，则提醒
-        if not matches:
-            self.no_planning_score += 1
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    (
-                        "注意：你没有输出任务规划"
-                        if self.no_planning_score == 1
-                        else f"【注意】：你已累计{self.no_planning_score}次没有输出任务规划，"
-                        "超过3次则会被强制暂停，直到你输出任务规划为止才能继续！"
-                    )
-                    + "请使用`- [ ]`或`- [x]`进行任务规划"
-                    + "！" * (self.no_planning_score - 1) * 3
-                )
-            )
-            reasoning_content = answer.get_reasoning_message()
-            if reasoning_content is not None and re.findall(
-                pattern, reasoning_content, re.MULTILINE
-            ):
-                agent.message_processor.append_message(
-                    RuntimeMessage(
-                        "注意：你刚刚在思考时输出了任务规划，但是没有在实际的输出中输出！"
-                        "必须在实际的输出而非只有思考时输出任务规划！"
-                    )
-                )
-        elif self.no_planning_score > 0:
-            self.no_planning_score -= 1
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    "成功输出任务规划，抵消一次错误输出，之后一定要注意任务规划"
-                )
-            )
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class EndThinkPlugin(Plugin):
