@@ -7,7 +7,7 @@
 - [x] 把多余的linhai/agent/plugins/prevent_tool_output.py合并到linhai/agent/plugin.py，并清理多余的文件夹
     - [x] 运行unittest确认没有破坏性调整
 - [x] 修复错误的unittest, to_json不可能是异步函数！
-- [ ] 清理unittest中的垃圾消息
+- [x] 清理unittest中的垃圾消息
     - `DeprecationWarning: It is deprecated to return a value that is not None from a test case (<bound method TestCLITabs.test_tabs_display of <tests.test_cli_tabs.TestCLITabs testMethod=test_tabs_display>>)`
     - `/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/case.py:606: RuntimeWarning: coroutine 'TestCLITabs.test_tabs_display' was never awaited`
 - [ ] 添加插件提醒agent调用多个工具
@@ -19,6 +19,7 @@
     - [ ] 工具调用使用调整后的紫色
     - [ ] 用户消息使用调整后的绿色
     - [ ] 运行linhai确认可以成功启动
+- [ ] TaskPlanningPlugin貌似没有生效，agent不会被打断，编写unittest测试
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
