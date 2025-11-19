@@ -368,7 +368,7 @@ class Agent:
                     function_name=call["name"],
                     function_arguments=call["arguments"],
                 )
-                early_return = await self.call_tool(tool_call)
+                early_return = await self.toolcall_processor.call_tool(tool_call)
                 if early_return:
                     return await self.generate_response()
 
@@ -386,17 +386,6 @@ class Agent:
         # 清除当前Answer引用
         self.current_answer = None
         return answer
-
-    async def call_tool(self, tool_call):
-        """调用工具，委托给toolcall_processor处理。
-
-        Args:
-            tool_call: 工具调用消息
-
-        Returns:
-            bool: 是否需要进行早期返回
-        """
-        return await self.toolcall_processor.call_tool(tool_call)
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
         """获取当前LLM的名称和实例。

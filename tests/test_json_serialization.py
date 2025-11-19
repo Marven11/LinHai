@@ -44,26 +44,9 @@ class TestJsonSerialization(unittest.TestCase):
         self.assertEqual(original.message, restored.message)
         self.assertEqual(original.name, restored.name)
 
-    def test_tool_call_message_serialization(self):
-        """测试ToolCallMessage的序列化"""
-        original = ToolCallMessage("test_function", {"arg1": "value1"})
-        json_str = original.to_json()
-        restored = ToolCallMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.function_name, restored.function_name)
-        self.assertEqual(original.function_arguments, restored.function_arguments)
 
-    def test_tool_confirmation_message_serialization(self):
-        """测试ToolConfirmationMessage的序列化"""
-        tool_call = ToolCallMessage("test_function", {"arg1": "value1"})
-        original = ToolConfirmationMessage(tool_call, True)
-        json_str = original.to_json()
-        restored = ToolConfirmationMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.confirmed, restored.confirmed)
-        self.assertEqual(
-            original.tool_call.function_name, restored.tool_call.function_name
-        )
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""

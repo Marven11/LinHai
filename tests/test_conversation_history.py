@@ -100,30 +100,8 @@ class TestConversationHistory(unittest.TestCase):
                 pass  # RuntimeMessage只有message字段
             # 其他消息类型可能有不同的字段结构
 
-    @patch("pathlib.Path.home")
-    def test_save_conversation_history_with_tool_calls(self, mock_home):
-        """测试保存包含工具调用的对话历史。"""
-        # 模拟home目录为临时目录
-        mock_home.return_value = Path(self.temp_dir)
-
-        # 添加包含工具调用的消息
-        self.agent.message_processor.append_message(ChatMessage("user", "请调用一个工具"))
-        self.agent.message_processor.append_message(ToolCallMessage("test_tool", {"param": "value"}))
-
-        # 调用保存方法
-        asyncio.run(self.agent.save_conversation_history())
-
-        # 检查文件是否创建
-        history_files = list(self.history_dir.glob("conversation_*.json"))
-        self.assertEqual(len(history_files), 1)
-
-        # 检查文件内容
-        with open(history_files[0], "r", encoding="utf-8") as f:
-            history_data = json.load(f)
-
-        # 应该保存了工具调用消息
-        tool_call_found = any("tool_calls" in msg for msg in history_data)
-        self.assertTrue(tool_call_found)
+    # ToolCallMessage和ToolConfirmationMessage不应该被保存到对话历史中
+    # 因此移除相关测试用例
 
     @patch("pathlib.Path.home")
     def test_save_conversation_history_directory_creation(self, mock_home):

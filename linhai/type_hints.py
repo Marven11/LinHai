@@ -1,4 +1,8 @@
-"""Type definitions for the LinHai project."""
+"""
+传给OpenAI的LLM Message定义等
+
+我们完全弃用OpenAI的工具调用功能
+"""
 
 from __future__ import annotations
 from typing import Union, Optional, Iterable, TypedDict, Literal
@@ -47,7 +51,7 @@ class SystemMessage(TypedDict, total=False):
     """System message type definition."""
 
     role: Required[Literal["system"]]
-    content: Required[Union[str, Iterable[ChatCompletionContentPartTextParam]]]
+    content: str
     name: str
 
 
@@ -55,7 +59,7 @@ class UserMessage(TypedDict, total=False):
     """User message type definition."""
 
     role: Required[Literal["user"]]
-    content: Required[Union[str, Iterable[ChatCompletionContentPartParam]]]
+    content: str
     name: str
 
 
@@ -63,39 +67,21 @@ class AssistantMessage(TypedDict, total=False):
     """Assistant message type definition."""
 
     role: Required[Literal["assistant"]]
-    content: Union[str, Iterable[Union[ChatCompletionContentPartTextParam, dict]]]
+    content: str
     name: str
     tool_calls: Iterable[ChatCompletionMessageToolCallParam]
     function_call: Optional[FunctionCall]
     audio: Optional[Audio]
 
 
-class ToolMessage(TypedDict, total=False):
-    """Tool message type definition."""
-
-    role: Required[Literal["tool"]]
-    content: Required[Union[str, Iterable[ChatCompletionContentPartTextParam]]]
-    tool_call_id: Required[str]
-
-
-class FunctionMessage(TypedDict, total=False):
-    """Function message type definition."""
-
-    role: Required[Literal["function"]]
-    content: Required[Optional[str]]
-    name: Required[str]
-
-
 LanguageModelMessage: TypeAlias = Union[
-    SystemMessage, UserMessage, AssistantMessage, ToolMessage, FunctionMessage
+    SystemMessage, UserMessage, AssistantMessage
 ]
 
 __all__ = [
     "SystemMessage",
     "UserMessage",
     "AssistantMessage",
-    "ToolMessage",
-    "FunctionMessage",
     "LanguageModelMessage",
     "AgentState",
 ]

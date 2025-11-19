@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
-from linhai.type_hints import LanguageModelMessage, ToolMessage
+from linhai.type_hints import LanguageModelMessage
 import linhai
 
 
@@ -152,50 +152,12 @@ class ToolCallMessage:
         self.assert_success = assert_success
         self.function_arguments = function_arguments
 
-    def to_llm_message(self) -> LanguageModelMessage:
-        """转换为LLM消息格式。"""
-        msg = {
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [
-                {
-                    "function": {
-                        "name": self.function_name,
-                        "arguments": self.function_arguments,
-                    },
-                }
-            ],
-        }
-        return cast(ToolMessage, msg)
-
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
         return (
             f"ToolCallMessage(function_name={self.function_name!r}, "
             f"function_arguments={self.function_arguments!r}, "
             f"assert_success={self.assert_success!r})"
-        )
-
-    def to_json(self) -> str:
-
-        return json.dumps(self.to_llm_message())
-
-    @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
-    ):  # pylint: disable=unused-argument
-
-        data = json.loads(json_str)
-        # 从tool_calls中提取函数名和参数
-        tool_call = data["tool_calls"][0]
-        function_name = tool_call["function"]["name"]
-        function_arguments = tool_call["function"]["arguments"]
-
-        # assert_success现在不在function_arguments中，直接使用默认值True
-        return cls(
-            function_name=function_name,
-            function_arguments=function_arguments,
-            assert_success=True,
         )
 
 
@@ -211,38 +173,12 @@ class ToolConfirmationMessage:
         self.tool_call = tool_call
         self.confirmed = confirmed
 
-    def to_llm_message(self) -> LanguageModelMessage:
-        """转换为LLM消息格式。"""
-        return cast(
-            LanguageModelMessage,
-            {
-                "role": "user",
-                "content": f"<tool_confirmation>tool_call={self.tool_call.function_name}, "
-                f"confirmed={self.confirmed}</tool_confirmation>",
-            },
-        )
-
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
         return (
             f"ToolConfirmationMessage(tool_call={self.tool_call!r}, "
             f"confirmed={self.confirmed!r})"
         )
-
-    def to_json(self) -> str:
-
-        data = {"tool_call": self.tool_call.to_json(), "confirmed": self.confirmed}
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
-    ):  # pylint: disable=unused-argument
-
-        data = json.loads(json_str)
-        tool_call = ToolCallMessage.from_json(data["tool_call"], group_chat)
-        return cls(tool_call=tool_call, confirmed=data["confirmed"])
-
 
 class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""
@@ -331,7 +267,13 @@ class LanguageModel(Protocol):
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
 
-    def __init__(self, stream, estimated_usage: AnswerTokenUsage | None = None, cached_input_tokens: int = 0):
+    def __init__(
+        self,
+        stream,
+        openai_instance: "OpenAi",
+        estimated_usage: AnswerTokenUsage | None = None,
+        cached_input_tokens: int = 0,
+    ):
         """初始化OpenAI回答。"""
         self._tokens = []
         self._reasoning_content = None
@@ -343,6 +285,7 @@ class OpenAiAnswer:
         self.output_tokens = 0
         self.cached_input_tokens = cached_input_tokens
         self._toyield: list[AnswerToken | AnswerTokenUsage] = []
+        self.openai_instance = openai_instance  # 用于更新previous_input_tokens
         if estimated_usage:
             self._toyield.append(estimated_usage)
             self.input_tokens = estimated_usage.input_tokens
@@ -368,9 +311,17 @@ class OpenAiAnswer:
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = chunk.usage
                 # 直接访问usage对象的属性，如果属性不存在则使用0
-                self.input_tokens = usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
-                self.output_tokens = usage.completion_tokens if hasattr(usage, "completion_tokens") else 0
-                self.total_tokens = usage.total_tokens if hasattr(usage, "total_tokens") else 0
+                self.input_tokens = (
+                    usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
+                )
+                self.output_tokens = (
+                    usage.completion_tokens
+                    if hasattr(usage, "completion_tokens")
+                    else 0
+                )
+                self.total_tokens = (
+                    usage.total_tokens if hasattr(usage, "total_tokens") else 0
+                )
                 self._toyield.append(
                     AnswerTokenUsage(
                         input_tokens=self.input_tokens,
@@ -378,6 +329,9 @@ class OpenAiAnswer:
                         total_tokens=self.total_tokens,
                     )
                 )
+                # 更新OpenAi实例的previous_input_tokens为实际值
+                if self.openai_instance is not None:
+                    self.openai_instance.previous_input_tokens = self.input_tokens
             if len(chunk.choices) == 0:
                 return
             delta = chunk.choices[0].delta
@@ -385,7 +339,9 @@ class OpenAiAnswer:
             self._content += content
 
             # 处理OpenAI格式的reasoning_content
-            reasoning_content = delta.reasoning_content if hasattr(delta, "reasoning_content") else None
+            reasoning_content = (
+                delta.reasoning_content if hasattr(delta, "reasoning_content") else None
+            )
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
                 self._reasoning_content = (
@@ -396,7 +352,9 @@ class OpenAiAnswer:
 
             # 处理minimax格式的reasoning_details
             # https://platform.minimaxi.com/docs/api-reference/text-openai-api
-            reasoning_details = delta.reasoning_details if hasattr(delta, "reasoning_details") else None
+            reasoning_details = (
+                delta.reasoning_details if hasattr(delta, "reasoning_details") else None
+            )
             if reasoning_details and isinstance(reasoning_details, list):
                 for detail in reasoning_details:
                     if "text" in detail and isinstance(detail["text"], str):
@@ -506,20 +464,39 @@ class OpenAi:
         """
         return self.token_limit
 
-    def _estimate_input_tokens(self, history: Sequence[Message]) -> int:
-        """估算输入消息的token数量。
-        
-        使用简单的字符计数方法：平均每个token约4个字符
+    def _estimate_cached_input_tokens(self, current_history: Sequence[Message]) -> int:
+        """估算缓存的输入token数量。
+
+        将上一个history和当前history的所有内容拼接成字符串，
+        然后按64字符块对比相同前缀，计算缓存比例。
         """
-        total_chars = 0
-        for msg in history:
-            llm_msg = msg.to_llm_message()
-            if "content" in llm_msg and llm_msg["content"]:
-                total_chars += len(str(llm_msg["content"]))
-        # 简单估算：平均每个token约4个字符
-        return max(1, total_chars // 4)
+        if self.previous_history is None or self.previous_input_tokens is None:
+            return 0
 
+        previous_content = "".join(
+            msg.to_llm_message().get("content", "") for msg in self.previous_history
+        )
+        current_content = "".join(
+            msg.to_llm_message().get("content", "") for msg in current_history
+        )
 
+        # 按64字符块对比相同前缀
+        same_prefix_chars = 0
+        block_size = 64
+
+        for i in range(0, min(len(previous_content), len(current_content)), block_size):
+
+            if previous_content[i : i + block_size] == current_content[i : i + block_size]:
+                same_prefix_chars += block_size
+            else:
+                break
+
+        if len(previous_content) > 0:
+            cached_ratio = same_prefix_chars / len(previous_content)
+            cached_tokens = int(self.previous_input_tokens * cached_ratio)
+            return max(0, cached_tokens)
+
+        return 0
 
     async def answer_stream(
         self,
@@ -544,37 +521,10 @@ class OpenAi:
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
-        # 计算输入token缓存估算
+        # 计算输入token缓存估算 - 只在有上一次实际input tokens时计算
         cached_input_tokens = 0
-        if self.previous_history is not None and self.previous_input_tokens is not None:
-            # 计算相同前缀字符数
-            same_prefix_chars = 0
-            previous_total_chars = 0
-            
-            # 计算上一个history的总字符数
-            for msg in self.previous_history:
-                llm_msg = msg.to_llm_message()
-                if "content" in llm_msg and llm_msg["content"]:
-                    previous_total_chars += len(str(llm_msg["content"]))
-            
-            # 计算当前history和上一个history的相同前缀字符数
-            min_len = min(len(history), len(self.previous_history))
-            for i in range(min_len):
-                current_msg = history[i].to_llm_message()
-                previous_msg = self.previous_history[i].to_llm_message()
-                
-                # 比较消息内容，不使用get方法
-                current_content = current_msg["content"] if "content" in current_msg else ""
-                previous_content = previous_msg["content"] if "content" in previous_msg else ""
-                
-                if current_content == previous_content:
-                    same_prefix_chars += len(str(current_content))
-                else:
-                    break
-            
-            # 估算缓存token量 - 确保至少为0
-            if previous_total_chars > 0:
-                cached_input_tokens = max(0, int(self.previous_input_tokens * (same_prefix_chars / previous_total_chars)))
+        if self.previous_input_tokens is not None:
+            cached_input_tokens = self._estimate_cached_input_tokens(history)
 
         params = {
             "model": self.model,
@@ -603,19 +553,19 @@ class OpenAi:
         while True:
             try:
                 stream = await self.openai.chat.completions.create(**params)
-                answer = OpenAiAnswer(stream, cached_input_tokens=cached_input_tokens)
-                break  # 成功时跳出循环
+                answer = OpenAiAnswer(
+                    stream,
+                    openai_instance=self,
+                    cached_input_tokens=cached_input_tokens,
+                )
+                break
             except (asyncio.TimeoutError, OpenAIError):
-                # 记录错误日志，然后重试
                 await asyncio.sleep(retry_delay)
-        
-        # 更新上一个history和input_tokens
+
         if answer is not None:
-            # 保存当前history和input_tokens用于下一次缓存计算
             self.previous_history = history
-            # 注意：这里我们保存的是当前调用的输入token数，用于下一次调用的缓存计算
-            # 实际的input_tokens会在API响应中获取，这里我们先用估算值
-            self.previous_input_tokens = self._estimate_input_tokens(history)
             return answer
         else:
-            raise RuntimeError("Failed to create OpenAI answer after retries")  # 这行可能永远不会执行，但保留
+            raise RuntimeError(
+                "Failed to create OpenAI answer after retries"
+            )  # 这行可能永远不会执行，但保留
