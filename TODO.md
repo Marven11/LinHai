@@ -4,26 +4,17 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-<<<<<<< HEAD
-- [x] 完全删除要求agent使用`- [ ]`标记进行任务规划的任何相关内容，并删除对应的unittest
-    - 我们的目标是完全删除相关功能，完全不检查、要求、提示agent进行任务规划
-    - 你需要一个个读取并修改`linhai/*.py`和`linhai/agent/*.py`
-    - 运行所有unittest查看是否有过时的unittest没有删除，是否破坏了其他不相关的unittest
-- [x] 调整NormalContentWidget等的边框颜色，使其和nord主题更加搭配
-    - [x] agent思考使用secondary
-    - [x] agent回答使用primary
-    - [x] 工具调用使用调整后的紫色
-    - [x] 用户消息使用调整后的绿色
-    - [x] 运行linhai确认可以成功启动
-- [x] 让llm.py估算输入token缓存
-    - 如果上一个history的前X个token和当前history相同，则这些token被缓存
-    - 估算规则为:
-        - 计算相同前X字符
-        - 计算上一个history的字符总量L_c和token总量L_t
-        - 估算当前回答的缓存token量: L_t * (X / L_c)
-        - 注意给这些变量起一个更好的名字，不要用单个字符
-- [x] 让CLI将输入token缓存比例显示在底栏token用量中
-	- 如`xxx in (~xx% cached) | xx out`
+- [ ] 完成工具调用冲突系统
+    - 我们需要阻止agent在一轮回答中同时调用读取文件的工具和写入文件的工具
+    - 修改工具定义添加collapse_with参数：一个列表，包含不能和当前工具同时调用的工具名称
+        - 文件写入工具不能和文件读取工具同时调用
+        - 连接MCP工具不能和其他MCP工具同时调用
+        - 创建终端工具不能和其他终端工具同时调用
+    - 在toolcall_processor中记录已经调用的工具
+    - 在toolcall_processor中检查当前调用的工具是否和之前调用的工具有冲突，如果有则：
+        - 拒绝执行当前工具
+        - 像工具执行失败一样丢弃剩下的工具
+    - 在generate response的for call in tool_calls:前清空已经调用的工具
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
