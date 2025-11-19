@@ -4,17 +4,18 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [x] 完成工具调用冲突系统
-    - 我们需要阻止agent在一轮回答中同时调用读取文件的工具和写入文件的工具
-    - 修改工具定义添加collapse_with参数：一个列表，包含不能和当前工具同时调用的工具名称
-        - 文件写入工具不能和文件读取工具同时调用
-        - 连接MCP工具不能和其他MCP工具同时调用
-        - 创建终端工具不能和其他终端工具同时调用
-    - 在toolcall_processor中记录已经调用的工具
-    - 在toolcall_processor中检查当前调用的工具是否和之前调用的工具有冲突，如果有则：
-        - 拒绝执行当前工具
-        - 像工具执行失败一样丢弃剩下的工具
-    - 在generate response的for call in tool_calls:前清空已经调用的工具
+- [ ] 实现subagent系统
+    - subagent设计
+        - 每个subagent有对应的类型和名字，当前只有一个类型dummy用于测试
+        - subagent启动时会获得一个消息，需要调用对应的工具完成对应任务并退出，退出时需要提供reason供agent检视
+        - subagent不像agent一样可以响应用户消息，等待用户回答等，只会一直运行直到调用
+            - subagent可以调用的工具和agent不同，目前只有sleep工具和exit工具
+        - subagent的实现类似agent但是更加简单，完全没有用户交互的部分
+    - 实现一个SubAgentManager用来管理所有sub agent的启动，关闭等
+    - 实现对应的工具，让agent可以通过工具启动subagent并对话
+        - create_subagent
+        - check_subagent - 检查subagent的状态：是否运行，退出时留下了什么reason
+    - 启动linhai测试：让linhai启动一个subagent，命令subagent睡眠5秒并退出
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
@@ -23,5 +24,4 @@
 
 # 暂时搁置
 
-- [ ] 研究subagent集成
 - [ ] 添加假设颠覆法
