@@ -255,7 +255,7 @@ class AnswerTokenUsage(BaseModel):
     input_tokens: int
     output_tokens: int
     total_tokens: int
-    cached_input_tokens: int = 0  # 估算的缓存输入token数量
+    cached_input_tokens: int | None = None  # 估算的缓存输入token数量，可为None
 
 
 @runtime_checkable
@@ -367,9 +367,10 @@ class OpenAiAnswer:
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = chunk.usage
-                self.input_tokens = getattr(usage, "prompt_tokens", 0)
-                self.output_tokens = getattr(usage, "completion_tokens", 0)
-                self.total_tokens = getattr(usage, "total_tokens", 0)
+                # 直接访问usage对象的属性，如果属性不存在则使用0
+                self.input_tokens = usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
+                self.output_tokens = usage.completion_tokens if hasattr(usage, "completion_tokens") else 0
+                self.total_tokens = usage.total_tokens if hasattr(usage, "total_tokens") else 0
                 self._toyield.append(
                     AnswerTokenUsage(
                         input_tokens=self.input_tokens,
@@ -384,7 +385,7 @@ class OpenAiAnswer:
             self._content += content
 
             # 处理OpenAI格式的reasoning_content
-            reasoning_content = getattr(delta, "reasoning_content", None)
+            reasoning_content = delta.reasoning_content if hasattr(delta, "reasoning_content") else None
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
                 self._reasoning_content = (
@@ -395,7 +396,7 @@ class OpenAiAnswer:
 
             # 处理minimax格式的reasoning_details
             # https://platform.minimaxi.com/docs/api-reference/text-openai-api
-            reasoning_details = getattr(delta, "reasoning_details", None)
+            reasoning_details = delta.reasoning_details if hasattr(delta, "reasoning_details") else None
             if reasoning_details and isinstance(reasoning_details, list):
                 for detail in reasoning_details:
                     if "text" in detail and isinstance(detail["text"], str):
@@ -562,9 +563,9 @@ class OpenAi:
                 current_msg = history[i].to_llm_message()
                 previous_msg = self.previous_history[i].to_llm_message()
                 
-                # 比较消息内容
-                current_content = current_msg.get("content", "")
-                previous_content = previous_msg.get("content", "")
+                # 比较消息内容，不使用get方法
+                current_content = current_msg["content"] if "content" in current_msg else ""
+                previous_content = previous_msg["content"] if "content" in previous_msg else ""
                 
                 if current_content == previous_content:
                     same_prefix_chars += len(str(current_content))

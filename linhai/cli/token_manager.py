@@ -16,11 +16,17 @@ class TokenManager:
         """更新累计token使用量"""
         if self.cumulative_token_usage is None:
             self.cumulative_token_usage = token_usage.model_dump()
+            # 确保cached_input_tokens字段存在
+            if "cached_input_tokens" not in self.cumulative_token_usage:
+                self.cumulative_token_usage["cached_input_tokens"] = token_usage.cached_input_tokens or 0
         else:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens
             self.cumulative_token_usage["output_tokens"] += token_usage.output_tokens
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
-            self.cumulative_token_usage["cached_input_tokens"] = self.cumulative_token_usage.get("cached_input_tokens", 0) + token_usage.cached_input_tokens
+            # 处理cached_input_tokens，如果为None则视为0
+            current_cache = token_usage.cached_input_tokens or 0
+            existing_cache = self.cumulative_token_usage["cached_input_tokens"]
+            self.cumulative_token_usage["cached_input_tokens"] = existing_cache + current_cache
 
     def _format_token_number(self, number: int) -> str:
         """Format a large number with k, m, etc. suffixes."""
@@ -52,13 +58,15 @@ class TokenManager:
 
         input_tokens = self.cumulative_token_usage["input_tokens"]
         output_tokens = self.cumulative_token_usage["output_tokens"]
-        cached_input_tokens = self.cumulative_token_usage.get("cached_input_tokens", 0)
+        cached_input_tokens = self.cumulative_token_usage["cached_input_tokens"]
         
         # 如果当前有正在进行的token使用，累加
         if self.current_token_usage is not None:
             input_tokens += self.current_token_usage.input_tokens
             output_tokens += self.current_token_usage.output_tokens
-            cached_input_tokens += getattr(self.current_token_usage, "cached_input_tokens", 0)
+            # 直接访问cached_input_tokens属性，如果为None则视为0
+            current_cache = self.current_token_usage.cached_input_tokens or 0
+            cached_input_tokens += current_cache
 
         # 获取当前LLM的token限制
         _llm_name, llm_instance = agent.get_current_llm_info()
