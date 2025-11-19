@@ -5,8 +5,10 @@
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
 - [ ] 将subagent的消息放在TUI中的新tab中，同时删除笔记tab
+    - 需要调整subagent发送answer的方式和显示消息的样式和agent一致
     - [ ] 运行所有unittest保证没有破坏性修改
     - 测试：启动linhai，按下两次tab选择tab栏，然后按左右按键切换tab
+- [ ] 删除ThinkingToolCallPlugin
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
