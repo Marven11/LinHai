@@ -14,6 +14,15 @@
     - [x] 工具调用使用调整后的紫色
     - [x] 用户消息使用调整后的绿色
     - [x] 运行linhai确认可以成功启动
+- [ ] 让llm.py估算输入token缓存
+    - 如果上一个history的前X个token和当前history相同，则这些token被缓存
+    - 估算规则为:
+        - 计算相同前X字符
+        - 计算上一个history的字符总量L_c和token总量L_t
+        - 估算当前回答的缓存token量: L_t * (X / L_c)
+        - 注意给这些变量起一个更好的名字，不要用单个字符
+- [ ] 让CLI将输入token缓存比例显示在底栏token用量中
+	- 如`xxx in (~xx% cached) | xx out`
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
