@@ -362,6 +362,9 @@ class Agent:
         for error in errors:
             self.message_processor.append_message(RuntimeMessage(error))
 
+        # 开始新一轮工具调用
+        self.toolcall_processor.start_new_tool_call_round()
+
         for call in tool_calls:
             if "name" in call and "arguments" in call:
                 tool_call = ToolCallMessage(

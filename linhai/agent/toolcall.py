@@ -22,18 +22,62 @@ class AgentToolcall:
         self.agent = agent
         self.group_chat = agent.group_chat
         self.context = agent.context
-        
+
         # 工具管理器
-        self.tool_manager: ToolManager = self.group_chat.get_members("tool_manager", ToolManager)
-        
+        self.tool_manager: ToolManager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
+
         # 工具确认配置
         tool_confirmation_config = self.context.get("tool_confirmation", {})
-        self.skip_confirmation = tool_confirmation_config.get("skip_confirmation", False)
+        self.skip_confirmation = tool_confirmation_config.get(
+            "skip_confirmation", False
+        )
         self.whitelist = tool_confirmation_config.get("whitelist", [])
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
-        
+
+        # 工具调用冲突检查
+        self.called_tools_in_round: list[str] = []
+
         # 注册默认工具集
         self._register_default_toolsets()
+
+    def _check_tool_conflict(self, tool_name: str) -> bool:
+        """检查工具调用冲突
+
+        Args:
+            tool_name: 要调用的工具名称
+
+        Returns:
+            bool: 是否存在冲突
+        """
+        # 获取工具定义
+        tool_def = None
+        for toolset in self.tool_manager.toolsets:
+            if toolset.has_tool(tool_name):
+                tool_def = toolset.get_tools()[tool_name]
+                break
+
+        if not tool_def:
+            return False
+
+        # 检查当前工具是否与已调用工具有冲突
+        for called_tool in self.called_tools_in_round:
+            # 检查当前工具的collapse_with是否包含已调用工具
+            if called_tool in tool_def["collapse_with"]:
+                return True
+
+            # 检查已调用工具的collapse_with是否包含当前工具
+            called_tool_def = None
+            for toolset in self.tool_manager.toolsets:
+                if toolset.has_tool(called_tool):
+                    called_tool_def = toolset.get_tools()[called_tool]
+                    break
+
+            if called_tool_def and tool_name in called_tool_def["collapse_with"]:
+                return True
+
+        return False
 
     def _register_default_toolsets(self):
         """注册默认工具集（LLM切换、虚拟工具、工作流工具）。"""
@@ -136,12 +180,17 @@ class AgentToolcall:
         )
         async def compress_history_range_tool() -> str:
             from .workflow import compress_history_range
+
             return await compress_history_range(self.agent)
 
         self.tool_manager.add_toolset(workflow_toolset)
 
     async def postinit(self):
         await self.tool_manager.ensure_mcp_connector()
+
+    def start_new_tool_call_round(self):
+        """开始新一轮工具调用，清空已调用工具记录"""
+        self.called_tools_in_round = []
 
     async def call_tool(self, tool_call: ToolCallMessage) -> bool:
         """
@@ -155,6 +204,16 @@ class AgentToolcall:
         """
         if self.agent.state == "waiting_user":
             self.agent.state = "working"
+
+        # 检查工具调用冲突
+        if self._check_tool_conflict(tool_call.function_name):
+            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与已调用的工具存在冲突，跳过此工具调用"
+            logger.warning(conflict_msg)
+            self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
+            return True  # 需要早期返回，中止其他工具调用
+
+        # 记录已调用工具
+        self.called_tools_in_round.append(tool_call.function_name)
 
         # 统一设置compress_tool_called_in_last_response
         compress_tools = [
@@ -184,17 +243,14 @@ class AgentToolcall:
             # 检查工具结果，如果是ToolErrorMessage且assert_success为True，则中止
             from linhai.tool.base import ToolErrorMessage
 
-            if (
-                isinstance(tool_result, ToolErrorMessage)
-                and tool_call.assert_success
-            ):
+            if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
                 # 触发工具调用后的生命周期事件（失败）
                 await self.agent.lifecycle.trigger_after_tool_call(
                     tool_call, tool_result, False
                 )
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
-                self.agent.message_processor.get_messages().append(RuntimeMessage(msg))
+                self.agent.message_processor.append_message(RuntimeMessage(msg))
                 return True  # 需要早期返回，中止其他工具调用
 
             # 触发工具调用后的生命周期事件（成功）
@@ -210,24 +266,25 @@ class AgentToolcall:
             await self.agent.lifecycle.trigger_after_tool_call(tool_call, e, False)
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
-            self.agent.message_processor.get_messages().append(RuntimeMessage(msg))
+            self.agent.message_processor.append_message(RuntimeMessage(msg))
             return False
 
     async def _call_tool_with_confirmation(self, tool_call: ToolCallMessage) -> bool:
         """需要用户确认的工具调用。"""
         from linhai.cli import CLIApp
-        
 
         confirmation = await self.group_chat.get_members(
             "cli_app", CLIApp
         ).confirm_tool_request(tool_call)
-        self.agent.message_processor.get_messages().append(
-            RuntimeMessage(f"已发送工具调用请求: {tool_call.function_name}，等待用户确认...")
+        self.agent.message_processor.append_message(
+            RuntimeMessage(
+                f"已发送工具调用请求: {tool_call.function_name}，等待用户确认..."
+            )
         )
 
         # 检查确认消息是否匹配当前工具调用
         if confirmation.tool_call.function_name != tool_call.function_name:
-            self.agent.message_processor.get_messages().append(
+            self.agent.message_processor.append_message(
                 RuntimeMessage("错误：收到的确认消息不匹配当前工具调用")
             )
             return False
@@ -241,10 +298,10 @@ class AgentToolcall:
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
-                self.agent.message_processor.get_messages().append(RuntimeMessage(msg))
+                self.agent.message_processor.append_message(RuntimeMessage(msg))
                 return False
         else:
-            self.agent.message_processor.get_messages().append(
+            self.agent.message_processor.append_message(
                 RuntimeMessage(f"用户取消了工具调用: {tool_call.function_name}")
             )
             return False

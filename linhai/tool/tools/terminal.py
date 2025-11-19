@@ -138,6 +138,7 @@ class PyteTerminal:
         "lines": ToolArgInfo(desc="终端行数，默认24", type="int"),
     },
     required_args=[],
+    collapse_with=["send_keys_to_terminal", "send_string_to_terminal", "read_terminal_screen", "close_terminal"],
 )
 def create_terminal(columns: int = 80, lines: int = 24) -> str:
     """新建虚拟终端

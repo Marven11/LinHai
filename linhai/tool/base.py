@@ -29,6 +29,7 @@ class Tool(TypedDict):
     args: dict[str, ToolArgInfo]  # 参数信息
     required: list[str]  # 必填参数列表
     func: Callable  # 工具函数
+    collapse_with: list[str]  # 不能同时调用的工具名称列表
 
 
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
@@ -78,6 +79,7 @@ class ToolSet:
         desc: str,
         args: dict[str, ToolArgInfo],
         required_args: list[str],
+        collapse_with: list[str] | None = None,
     ):
 
         def _wraps(f: Callable) -> Callable:
@@ -95,6 +97,7 @@ class ToolSet:
                 "desc": desc,
                 "args": args,
                 "required": required_args,
+                "collapse_with": collapse_with or [],
             }
             return f
 

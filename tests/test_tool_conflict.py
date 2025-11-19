@@ -1,0 +1,112 @@
+"""工具调用冲突系统的单元测试"""
+
+import unittest
+from unittest.mock import Mock, AsyncMock
+from linhai.agent.toolcall import AgentToolcall
+from linhai.llm import ToolCallMessage
+from linhai.agent.base import RuntimeMessage
+
+
+class TestToolConflict(unittest.TestCase):
+    """测试工具调用冲突系统"""
+
+    def setUp(self):
+        """设置测试环境"""
+        self.mock_agent = Mock()
+        self.mock_agent.state = "working"
+        self.mock_agent.message_processor = Mock()
+        self.mock_agent.message_processor.get_messages.return_value = []
+        self.mock_agent.compress_tool_called_in_last_response = False
+        
+        # 模拟工具管理器
+        self.mock_tool_manager = Mock()
+        self.mock_tool_manager.toolsets = []
+        
+        self.mock_group_chat = Mock()
+        self.mock_group_chat.get_members.return_value = self.mock_tool_manager
+        
+        self.mock_context = {
+            "tool_confirmation": {
+                "skip_confirmation": True,
+                "whitelist": [],
+                "timeout_seconds": 30
+            },
+            "llms": [],
+            "llm_names": [],
+            "current_llm_index": 0
+        }
+        
+        self.mock_agent.group_chat = self.mock_group_chat
+        self.mock_agent.context = self.mock_context
+        
+        # 创建AgentToolcall实例
+        self.toolcall_processor = AgentToolcall(self.mock_agent)
+
+    def test_start_new_tool_call_round(self):
+        """测试开始新一轮工具调用"""
+        # 先添加一些已调用工具
+        self.toolcall_processor.called_tools_in_round = ["read_file", "write_file"]
+        
+        # 开始新一轮
+        self.toolcall_processor.start_new_tool_call_round()
+        
+        # 验证已调用工具列表被清空
+        self.assertEqual(self.toolcall_processor.called_tools_in_round, [])
+
+    def test_check_tool_conflict_no_tools(self):
+        """测试没有工具时的冲突检查"""
+        result = self.toolcall_processor._check_tool_conflict("read_file")
+        self.assertFalse(result)
+
+
+
+    def test_check_tool_conflict_no_conflict_fixed(self):
+        """测试无冲突的工具调用（修复版本）"""
+        # 模拟无冲突的工具
+        mock_toolset = Mock()
+        mock_toolset.has_tool.return_value = True
+        mock_toolset.get_tools.return_value = {
+            "read_file": {
+                "name": "read_file",
+                "collapse_with": ["write_file"]
+            },
+            "list_files": {
+                "name": "list_files",
+                "collapse_with": []
+            }
+        }
+        self.mock_tool_manager.toolsets = [mock_toolset]
+        
+        # 添加一个已调用工具
+        self.toolcall_processor.called_tools_in_round = ["list_files"]
+        
+        result = self.toolcall_processor._check_tool_conflict("read_file")
+        self.assertFalse(result)
+
+    def test_check_tool_conflict_with_conflict_fixed(self):
+        """测试有冲突的工具调用（修复版本）"""
+        # 模拟有冲突的工具
+        mock_toolset = Mock()
+        mock_toolset.has_tool.return_value = True
+        mock_toolset.get_tools.return_value = {
+            "read_file": {
+                "name": "read_file", 
+                "collapse_with": ["write_file"]
+            },
+            "write_file": {
+                "name": "write_file",
+                "collapse_with": ["read_file"]
+            }
+        }
+        self.mock_tool_manager.toolsets = [mock_toolset]
+        
+        # 先调用write_file
+        self.toolcall_processor.called_tools_in_round = ["write_file"]
+        
+        # 尝试调用read_file，应该冲突
+        result = self.toolcall_processor._check_tool_conflict("read_file")
+        self.assertTrue(result)
+
+
+if __name__ == "__main__":
+    unittest.main()
