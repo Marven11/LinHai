@@ -89,6 +89,7 @@ class Lifecycle:
             TaskPlanningPlugin,
             EndThinkPlugin,
             PreventToolOutputPlugin,
+            SingleToolCallReminderPlugin,
         )
 
         plugins = [
@@ -103,6 +104,7 @@ class Lifecycle:
             TaskPlanningPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
+            SingleToolCallReminderPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

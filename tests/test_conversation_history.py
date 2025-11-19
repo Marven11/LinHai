@@ -20,7 +20,7 @@ class TestConversationHistory(unittest.TestCase):
         """设置测试环境。"""
         self.temp_dir = tempfile.mkdtemp()
         self.history_dir = (
-            Path(self.temp_dir) / ".local" / "share" / "linhai" / "history"
+            Path(self.temp_dir) / ".local" / "share" / "linhai" / "conversations"
         )
 
         # 创建模拟配置
@@ -144,7 +144,7 @@ class TestConversationHistory(unittest.TestCase):
         self.assertTrue(self.history_dir.exists())
 
     @patch("pathlib.Path.home")
-    @patch("linhai.agent.main.logger")
+    @patch("linhai.agent.message.logger")
     def test_save_conversation_history_error_handling(self, mock_logger, mock_home):
         """测试保存对话历史的错误处理。"""
         # 模拟home目录为临时目录

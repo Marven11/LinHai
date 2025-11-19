@@ -334,7 +334,7 @@ class TaskPlanningPlugin(Plugin):
         self.no_planning_score = 0
 
     async def during_message_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self, answer: Answer, current_content: str
     ):
         """检查工具调用量是否超过限制。"""
         from linhai.agent import Agent
@@ -482,6 +482,42 @@ class DirectoryChangePlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到before_message_generation回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
+
+
+class SingleToolCallReminderPlugin(Plugin):
+    """提醒agent不要连续多次只调用单个工具的插件。"""
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.single_tool_call_count = 0
+
+    async def after_message_generation(
+        self, _answer: Answer, _full_response: str, tool_calls
+    ):
+        """检查是否连续多次只调用了一个工具。"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        # 检查tool_calls长度是否为1
+        if len(tool_calls) == 1:
+            self.single_tool_call_count += 1
+            
+            # 如果连续5次都只调用1个工具，提醒agent
+            if self.single_tool_call_count >= 5:
+                agent.message_processor.append_message(
+                    RuntimeMessage(
+                        f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
+                        "除开特殊原因不要每次只调用一个工具！"
+                    )
+                )
+        else:
+            # 重置计数器
+            self.single_tool_call_count = 0
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class PreventToolOutputPlugin(Plugin):

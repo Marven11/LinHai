@@ -634,3 +634,96 @@ class TestMarkdownSyntaxPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 应该只报告第一个错误（分隔符数量为奇数）
         # 插件可能不再调用append_message，跳过此断言
+
+
+class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试SingleToolCallReminderPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        from linhai.agent.plugin import SingleToolCallReminderPlugin
+        self.plugin = SingleToolCallReminderPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_after_message_generation_with_single_tool_call(self):
+        """测试连续多次只调用一个工具的情况。"""
+        full_response = "一些内容"
+        tool_calls = [{"name": "tool1", "arguments": {}}]
+
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+
+        # 连续调用5次，每次只调用1个工具
+        for _ in range(5):
+            await self.plugin.after_message_generation(
+                self.answer, full_response, tool_calls
+            )
+
+        # 第5次应该添加警告消息
+        self.assertEqual(self.plugin.single_tool_call_count, 5)
+        args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(args[0], RuntimeMessage)
+        self.assertIn("连续5次仅调用一个工具", args[0].message)
+
+    async def test_after_message_generation_with_multiple_tool_calls(self):
+        """测试调用多个工具时重置计数器。"""
+        full_response = "一些内容"
+        
+        # 先连续调用4次单个工具
+        for _ in range(4):
+            await self.plugin.after_message_generation(
+                self.answer, full_response, [{"name": "tool1", "arguments": {}}]
+            )
+        
+        self.assertEqual(self.plugin.single_tool_call_count, 4)
+        
+        # 第5次调用多个工具，应该重置计数器
+        await self.plugin.after_message_generation(
+            self.answer, full_response, [
+                {"name": "tool1", "arguments": {}},
+                {"name": "tool2", "arguments": {}}
+            ]
+        )
+        
+        self.assertEqual(self.plugin.single_tool_call_count, 0)
+        
+        # 不应该添加警告消息
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
+
+    async def test_after_message_generation_with_zero_tool_calls(self):
+        """测试没有调用工具时重置计数器。"""
+        full_response = "一些内容"
+        
+        # 先连续调用3次单个工具
+        for _ in range(3):
+            await self.plugin.after_message_generation(
+                self.answer, full_response, [{"name": "tool1", "arguments": {}}]
+            )
+        
+        self.assertEqual(self.plugin.single_tool_call_count, 3)
+        
+        # 第4次没有调用工具，应该重置计数器
+        await self.plugin.after_message_generation(
+            self.answer, full_response, []
+        )
+        
+        self.assertEqual(self.plugin.single_tool_call_count, 0)
+        
+        # 不应该添加警告消息
+        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)

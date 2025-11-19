@@ -10,7 +10,7 @@
 - [x] 清理unittest中的垃圾消息
     - `DeprecationWarning: It is deprecated to return a value that is not None from a test case (<bound method TestCLITabs.test_tabs_display of <tests.test_cli_tabs.TestCLITabs testMethod=test_tabs_display>>)`
     - `/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/case.py:606: RuntimeWarning: coroutine 'TestCLITabs.test_tabs_display' was never awaited`
-- [ ] 添加插件提醒agent调用多个工具
+- [x] 添加插件提醒agent调用多个工具
     - 每次消息生成完毕之后都检查tool_calls是否为1，如果连续5次都为1说明agent忘记同时调用多个工具的功能
     - 提醒agent: “注意：你连续x次仅调用一个工具，除开特殊原因不要每次只调用一个工具！”
 - [ ] 调整NormalContentWidget等的边框颜色，使其和nord主题更加搭配
