@@ -411,36 +411,8 @@ class Agent:
 
     async def save_conversation_history(self):
         """保存对话历史到文件。"""
-        history_dir = Path.home() / ".local" / "share" / "linhai" / "history"
-        history_dir.mkdir(parents=True, exist_ok=True)
-
-        # 使用当前时间戳生成文件名
-        timestamp = datetime.datetime.now().isoformat().replace(":", "-")
-        filename = f"conversation_{timestamp}.json"
-        filepath = history_dir / filename
-
-        # 将消息列表转换为JSON可序列化的数据
-        history_data = []
-        for msg in self.message_processor.get_messages():
-            # 只保存有to_json方法的消息
-            if hasattr(msg, "to_json"):
-                try:
-                    to_json_result = msg.to_json()
-                    # 如果to_json是协程，则await它
-                    if asyncio.iscoroutine(to_json_result):
-                        to_json_result = await to_json_result
-                    msg_dict = json.loads(to_json_result)
-                    history_data.append(msg_dict)
-                except (TypeError, ValueError, AttributeError):
-                    # 如果序列化失败，跳过该消息
-                    continue
-
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(history_data, f, ensure_ascii=False, indent=2)
-            logger.info("对话历史已保存到: %s", filepath)
-        except (IOError, OSError) as e:
-            logger.error("保存对话历史失败: %s", str(e))
+        # 委托给message_processor处理，确保使用统一的保存逻辑
+        await self.message_processor.save_conversation_history()
 
     async def run(self):
         """

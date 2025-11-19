@@ -331,7 +331,7 @@ class ToolCallWidget(Static):
             # 如果已经发生错误，显示错误消息和原始JSON
             panel = Panel(
                 Syntax(
-                    f"JSON解析错误: {self.error_message}\n\n原始JSON:\n```json\n{self.json_str}\n```",
+                    self.json_str,
                     "markdown",
                     theme="nord-darker",
                     background_color="#2E3440",
