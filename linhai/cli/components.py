@@ -232,8 +232,8 @@ class RuntimeMessageWidget(Static):
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         # 设置样式
-        level_style = {"INFO": "grey50", "WARNING": "yellow", "ERROR": "red"}.get(
-            self.level, "grey50"
+        level_style = {"INFO": "#4C566A", "WARNING": "#EBCB8B", "ERROR": "#BF616A"}.get(
+            self.level, "#4C566A"
         )
 
         # 创建消息文本
