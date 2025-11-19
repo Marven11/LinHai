@@ -21,6 +21,27 @@ class TokenManager:
             self.cumulative_token_usage["output_tokens"] += token_usage.output_tokens
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
 
+    def _format_token_number(self, number: int) -> str:
+        """Format a large number with k, m, etc. suffixes."""
+        if number < 1000:
+            return str(number)
+        elif number < 1_000_000:
+            formatted = f"{number / 1000:.1f}k"
+            # Remove trailing .0 if present
+            if formatted.endswith('.0k'):
+                return formatted[:-3] + 'k'
+            return formatted
+        elif number < 1_000_000_000:
+            formatted = f"{number / 1_000_000:.1f}m"
+            if formatted.endswith('.0m'):
+                return formatted[:-3] + 'm'
+            return formatted
+        else:
+            formatted = f"{number / 1_000_000_000:.1f}b"
+            if formatted.endswith('.0b'):
+                return formatted[:-3] + 'b'
+            return formatted
+
     def get_token_display_text(
         self, agent: Agent, current_answer_token: int
     ) -> str:
@@ -43,8 +64,8 @@ class TokenManager:
         message_count = len(agent.message_processor.messages)
         display_text_pieces = [
             f"{message_count} msgs",
-            f"in {input_tokens:,}",
-            f"out {output_tokens:,}",
+            f"in {self._format_token_number(input_tokens)}",
+            f"out {self._format_token_number(output_tokens)}",
         ]
         
         if token_limit and token_limit > 0:
@@ -54,7 +75,7 @@ class TokenManager:
             empty_bars = 10 - filled_bars
             progress_bar = "█" * filled_bars + "▒" * empty_bars
             display_text_pieces.append(
-                f"{progress_bar} {percentage:.0f}% of {token_limit:,}"
+                f"{progress_bar} {percentage:.0f}% of {self._format_token_number(token_limit)}"
             )
 
         return " | ".join(display_text_pieces)

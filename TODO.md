@@ -4,7 +4,7 @@
 
 每完成一个任务就压缩历史一次（因为完成之后历史消息几乎都是无用的）
 
-- [ ] 将linhai/cli/token_manager.py中的Token用量改成使用k, m等字母表示数量
+- [x] 将linhai/cli/token_manager.py中的Token用量改成使用k, m等字母表示数量
 
 注意：一定记得参考历史commit|git commit|勾上TODO|历史压缩
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO|历史压缩
