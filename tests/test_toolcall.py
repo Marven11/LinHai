@@ -28,6 +28,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         
         # Mock tool manager
         self.mock_tool_manager = Mock()
+        self.mock_tool_manager.toolsets = []
         self.mock_agent.group_chat.get_members.return_value = self.mock_tool_manager
         
         self.toolcall_processor = AgentToolcall(self.mock_agent)
