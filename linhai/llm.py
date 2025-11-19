@@ -255,6 +255,7 @@ class AnswerTokenUsage(BaseModel):
     input_tokens: int
     output_tokens: int
     total_tokens: int
+    cached_input_tokens: int = 0  # 估算的缓存输入token数量
 
 
 @runtime_checkable
@@ -330,7 +331,7 @@ class LanguageModel(Protocol):
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
 
-    def __init__(self, stream, estimated_usage: AnswerTokenUsage | None = None):
+    def __init__(self, stream, estimated_usage: AnswerTokenUsage | None = None, cached_input_tokens: int = 0):
         """初始化OpenAI回答。"""
         self._tokens = []
         self._reasoning_content = None
@@ -340,6 +341,7 @@ class OpenAiAnswer:
         self.total_tokens = 0
         self.input_tokens = 0
         self.output_tokens = 0
+        self.cached_input_tokens = cached_input_tokens
         self._toyield: list[AnswerToken | AnswerTokenUsage] = []
         if estimated_usage:
             self._toyield.append(estimated_usage)
@@ -454,6 +456,7 @@ class OpenAiAnswer:
             input_tokens=self.input_tokens,
             output_tokens=self.output_tokens,
             total_tokens=self.total_tokens,
+            cached_input_tokens=self.cached_input_tokens,
         )
 
 
@@ -491,6 +494,8 @@ class OpenAi:
         self.chat_completion_kwargs = chat_completion_kwargs
         self.token_limit = token_limit
         self.compatibility = compatibility
+        self.previous_history: Sequence[Message] | None = None
+        self.previous_input_tokens: int | None = None
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -525,6 +530,38 @@ class OpenAi:
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
+        # 计算输入token缓存估算
+        cached_input_tokens = 0
+        if self.previous_history is not None and self.previous_input_tokens is not None:
+            # 计算相同前缀字符数
+            same_prefix_chars = 0
+            previous_total_chars = 0
+            
+            # 计算上一个history的总字符数
+            for msg in self.previous_history:
+                llm_msg = msg.to_llm_message()
+                if "content" in llm_msg and llm_msg["content"]:
+                    previous_total_chars += len(str(llm_msg["content"]))
+            
+            # 计算当前history和上一个history的相同前缀字符数
+            min_len = min(len(history), len(self.previous_history))
+            for i in range(min_len):
+                current_msg = history[i].to_llm_message()
+                previous_msg = self.previous_history[i].to_llm_message()
+                
+                # 比较消息内容
+                current_content = current_msg.get("content", "")
+                previous_content = previous_msg.get("content", "")
+                
+                if current_content == previous_content:
+                    same_prefix_chars += len(str(current_content))
+                else:
+                    break
+            
+            # 估算缓存token量
+            if previous_total_chars > 0:
+                cached_input_tokens = int(self.previous_input_tokens * (same_prefix_chars / previous_total_chars))
+
         params = {
             "model": self.model,
             "messages": messages,
@@ -552,12 +589,19 @@ class OpenAi:
         while True:
             try:
                 stream = await self.openai.chat.completions.create(**params)
-                answer = OpenAiAnswer(stream)
+                answer = OpenAiAnswer(stream, cached_input_tokens=cached_input_tokens)
                 break  # 成功时跳出循环
             except (asyncio.TimeoutError, OpenAIError):
                 # 记录错误日志，然后重试
                 await asyncio.sleep(retry_delay)
+        
+        # 更新上一个history和input_tokens
         if answer is not None:
+            # 等待获取token使用量
+            token_usage = answer.get_token_usage()
+            if token_usage:
+                self.previous_input_tokens = token_usage.input_tokens
+                self.previous_history = history
             return answer
         else:
             raise RuntimeError("Failed to create OpenAI answer after retries")  # 这行可能永远不会执行，但保留

@@ -20,6 +20,7 @@ class TokenManager:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens
             self.cumulative_token_usage["output_tokens"] += token_usage.output_tokens
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
+            self.cumulative_token_usage["cached_input_tokens"] = self.cumulative_token_usage.get("cached_input_tokens", 0) + token_usage.cached_input_tokens
 
     def _format_token_number(self, number: int) -> str:
         """Format a large number with k, m, etc. suffixes."""
@@ -51,20 +52,28 @@ class TokenManager:
 
         input_tokens = self.cumulative_token_usage["input_tokens"]
         output_tokens = self.cumulative_token_usage["output_tokens"]
+        cached_input_tokens = self.cumulative_token_usage.get("cached_input_tokens", 0)
         
         # 如果当前有正在进行的token使用，累加
         if self.current_token_usage is not None:
             input_tokens += self.current_token_usage.input_tokens
             output_tokens += self.current_token_usage.output_tokens
+            cached_input_tokens += getattr(self.current_token_usage, "cached_input_tokens", 0)
 
         # 获取当前LLM的token限制
         _llm_name, llm_instance = agent.get_current_llm_info()
         token_limit = llm_instance.get_token_limit()
 
         message_count = len(agent.message_processor.messages)
+        
+        # 计算缓存比例
+        cache_percentage = 0
+        if input_tokens > 0:
+            cache_percentage = int((cached_input_tokens / input_tokens) * 100)
+        
         display_text_pieces = [
             f"{message_count} msgs",
-            f"in {self._format_token_number(input_tokens)}",
+            f"in {self._format_token_number(input_tokens)} (~{cache_percentage}% cached)",
             f"out {self._format_token_number(output_tokens)}",
         ]
         
