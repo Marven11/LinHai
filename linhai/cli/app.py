@@ -66,19 +66,17 @@ class CLIApp(App):
     #chat-container {
         min-height: 60%;
         background: #2E3440;
-        scrollbar-color: #4C566A;
         scrollbar-size-vertical: 1;
     }
     #notes-container {
         background: #2E3440;
         padding: 1;
-        scrollbar-color: #4C566A;
         scrollbar-size-vertical: 1;
     }
     #input {
         height: 3;
         background: #2E3440;
-        border: solid yellow;
+        border: solid $primary;
     }
     #token-usage {
         width: 100%;
@@ -101,6 +99,7 @@ class CLIApp(App):
         init_messages: list[str] | None = None,
     ):
         super().__init__()
+        self.theme = "nord"
         self.messages: List[MessageWidget] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("agent_answer")
