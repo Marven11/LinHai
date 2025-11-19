@@ -14,7 +14,7 @@ class TestCLITabs(unittest.TestCase):
     """测试CLI的标签页功能"""
 
     @patch("linhai.cli.app.CLIApp.on_mount")
-    async def test_tabs_display(self, mock_on_mount):
+    def test_tabs_display(self, mock_on_mount):
         """测试标签页是否正确显示"""
         # Mock on_mount以避免agent初始化问题
         mock_on_mount.return_value = None
@@ -23,20 +23,23 @@ class TestCLITabs(unittest.TestCase):
         
         app = CLIApp(group_chat=group_chat, init_messages=None)
         
-        async with app.run_test() as pilot:
-            # 检查TabbedContent是否存在
-            tabbed_content = pilot.app.query_one("#main-tabs")
-            self.assertIsNotNone(tabbed_content)
-            
-            # 检查两个标签页是否存在
-            agent_tab = pilot.app.query_one("#agent-tab")
-            notes_tab = pilot.app.query_one("#notes-tab")
-            self.assertIsNotNone(agent_tab)
-            self.assertIsNotNone(notes_tab)
-            
-            # 检查笔记内容是否正确显示
-            notes_content = pilot.app.query_one("#notes-content")
-            self.assertIsNotNone(notes_content)
+        async def _run_test():
+            async with app.run_test() as pilot:
+                # 检查TabbedContent是否存在
+                tabbed_content = pilot.app.query_one("#main-tabs")
+                self.assertIsNotNone(tabbed_content)
+                
+                # 检查两个标签页是否存在
+                agent_tab = pilot.app.query_one("#agent-tab")
+                notes_tab = pilot.app.query_one("#notes-tab")
+                self.assertIsNotNone(agent_tab)
+                self.assertIsNotNone(notes_tab)
+                
+                # 检查笔记内容是否正确显示
+                notes_content = pilot.app.query_one("#notes-content")
+                self.assertIsNotNone(notes_content)
+        
+        asyncio.run(_run_test())
 
     def test_tabs_functionality(self):
         """测试标签页功能"""
