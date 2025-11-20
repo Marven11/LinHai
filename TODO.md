@@ -2,13 +2,9 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行git commit，消息参考历史
 
-- [x] 我刚刚重构了llm.py，查看上一个commit并修正unittest
-- [x] 修正unittest
-- [ ] 重构watch_output_queue，拆成四个task分别监听自己的queue, 拆分超大if语句
-- [x] 继续重构llm.py的answer_stream
-    - 不要让OpenAIAnswer通过持有OpenAi实例更新OpenAi的previous...
-    - 让OpenAi实例传入一个callback，OpenAiAnswer调用Callback实现更新
-- [ ] 修正unittest
+- [ ] 让CLI中的文本输入框支持多行输入，按下回车换行，ctrl+回车发送
+    - 应该需要换一个支持多行输入的组件
+    - 你需要完全放弃监听enter的逻辑，直接依靠组件本身完成多行输入，而非监听enter并插入换行符号
 
 注意：一定记得参考历史commit|git commit|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO

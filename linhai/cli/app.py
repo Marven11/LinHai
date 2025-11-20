@@ -132,7 +132,7 @@ class CLIApp(App):
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
-            with TabPane("Agent对话", id="agent-tab"):
+            with TabPane("Agent", id="agent-tab"):
                 with VerticalScroll(id="chat-container"):
                     for msg in self.messages:
                         yield msg
@@ -141,7 +141,7 @@ class CLIApp(App):
                 yield Static("", id="candidate-list-container")
                 yield Input(placeholder="输入消息...", id="input")
                 yield Static("", id="token-usage")
-            
+
             with TabPane("SubAgent", id="subagent-tab"):
                 with VerticalScroll(id="subagent-container"):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
@@ -251,162 +251,195 @@ class CLIApp(App):
             self.is_user_scroll_to_end = True
             container.scroll_end(animate=False)
 
-    async def watch_output_queue(self):
-        """监听输出队列并更新UI"""
+    async def watch_agent_answer_queue(self):
+        """监听agent_answer队列并处理Agent回答"""
         current_message = None
         while True:
-            # 同时监听四个队列
-            agent_output_task = asyncio.create_task(
-                self.group_chat.receive("agent_answer")
-            )
-            runtime_output_task = asyncio.create_task(self.group_chat.receive("ui_log"))
-            exit_task = asyncio.create_task(self.group_chat.receive("exit_signal"))
-            subagent_task = asyncio.create_task(self.group_chat.receive("subagent_message"))
+            output = await self.group_chat.receive("agent_answer")
+            if isinstance(output, AnswerToken):
+                if output.reasoning_content:
+                    is_reasoning = True
+                    content = output.reasoning_content
+                else:
+                    is_reasoning = False
+                    content = output.content
+                if not content:
+                    continue
 
-            done, pending = await asyncio.wait(
-                [agent_output_task, runtime_output_task, exit_task, subagent_task],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+                if current_message and current_message.is_reasoning != is_reasoning:
+                    current_message.update_display()
+                    current_message = None
 
-            # 取消未完成的任务
-            for task in pending:
-                task.cancel()
+                container = self.query_one("#chat-container")
 
-            # 处理完成的任务
-            for task in done:
-                output = task.result()
-
-                # 检查是否是退出任务
-                if task == exit_task:
-                    if isinstance(output, dict) and "return_code" in output:
-                        return_code = output["return_code"]
-                        self.exit(return_code=return_code)
-                        return  # 立即返回，不再处理其他消息
-                    continue  # 跳过其他处理
-
-                if isinstance(output, CliRuntimeNotice):
-                    # 处理运行时消息
-                    container = self.query_one("#chat-container")
-                    widget = RuntimeMessageWidget(
-                        level=output.level, content=output.content
+                if current_message is None:
+                    # 获取当前LLM名字
+                    agent = self.group_chat.get_members("agent", Agent)
+                    llm_name, _llm = agent.get_current_llm_info()
+                    current_message = MessageWidget(
+                        role="assistant",
+                        content=content,
+                        is_reasoning=is_reasoning,
+                        sender_name=llm_name,
                     )
-                    container.mount(widget)
+                    await asyncio.sleep(0)
+                    container.mount(current_message)
+                    self.messages.append(current_message)
+                    current_message.update_display()
                     self._trim_messages_if_needed()
-                    # 自动滚动到底部
-                    if self.should_auto_scroll():
-                        container.scroll_end(animate=False)
-                elif isinstance(output, AnswerToken):
-                    if output.reasoning_content:
-                        is_reasoning = True
-                        content = output.reasoning_content
-                    else:
-                        is_reasoning = False
-                        content = output.content
-                    if not content:
-                        continue
+                else:
+                    current_message.append_content(content)
+                # 自动滚动到底部
+                if self.should_auto_scroll():
+                    container.scroll_end(animate=False)
+            elif isinstance(output, AnswerTokenUsage):
+                self.token_manager.current_token_usage = output
+            elif isinstance(output, Answer):
+                # 获取并累加token使用量
+                token_usage = output.get_token_usage()
+                if token_usage is not None:
+                    self.token_manager.update_cumulative_usage(token_usage)
+                    self.token_manager.current_token_usage = None
+                    # 传入当前回答的token长度
+                    self.update_token_display(token_usage.total_tokens)
 
-                    if current_message and current_message.is_reasoning != is_reasoning:
-                        current_message.update_display()
-                        current_message = None
+                if current_message:
+                    current_message.update_display()
+                current_message = None
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in agent_answer: {type(output)=} {output=}"
+                )
 
-                    container = self.query_one("#chat-container")
+    async def watch_ui_log_queue(self):
+        """监听ui_log队列并处理运行时日志"""
+        while True:
+            output = await self.group_chat.receive("ui_log")
 
-                    if current_message is None:
+            if isinstance(output, CliRuntimeNotice):
+                # 处理运行时消息
+                container = self.query_one("#chat-container")
+                widget = RuntimeMessageWidget(
+                    level=output.level, content=output.content
+                )
+                container.mount(widget)
+                self._trim_messages_if_needed()
+                # 自动滚动到底部
+                if self.should_auto_scroll():
+                    container.scroll_end(animate=False)
+            else:
+                raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
 
-                        # 获取当前LLM名字
-                        agent = self.group_chat.get_members("agent", Agent)
-                        llm_name, _llm = agent.get_current_llm_info()
+    async def watch_exit_signal_queue(self):
+        """监听exit_signal队列并处理退出信号"""
+        while True:
+            output = await self.group_chat.receive("exit_signal")
+
+            if isinstance(output, dict) and "return_code" in output:
+                return_code = output["return_code"]
+                self.exit(return_code=return_code)
+                return  # 立即返回，不再处理其他消息
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in exit_signal: {type(output)=} {output=}"
+                )
+
+    async def watch_subagent_message_queue(self):
+        """监听subagent_message队列并处理SubAgent消息"""
+        while True:
+            output = await self.group_chat.receive("subagent_message")
+
+            if isinstance(output, dict) and "subagent_name" in output:
+                # 处理SubAgent消息
+                subagent_name = output["subagent_name"]
+                content = output["content"]
+                message_type = output.get("type", "message")
+                is_reasoning = output.get("is_reasoning", False)
+
+                # 在SubAgent标签页显示消息
+                subagent_container = self.query_one("#subagent-container")
+
+                if message_type == "token":
+                    # 流式token输出
+                    if subagent_name not in self.subagent_current_messages:
+                        # 创建新消息
                         current_message = MessageWidget(
                             role="assistant",
                             content=content,
-                            is_reasoning=is_reasoning,
-                            sender_name=llm_name,
-                        )
-                        await asyncio.sleep(0)
-                        container.mount(current_message)
-                        self.messages.append(current_message)
-                        current_message.update_display()
-                        self._trim_messages_if_needed()
-                    else:
-                        current_message.append_content(content)
-                    # 自动滚动到底部
-                    if self.should_auto_scroll():
-                        container.scroll_end(animate=False)
-                elif isinstance(output, AnswerTokenUsage):
-                    self.token_manager.current_token_usage = output
-                elif isinstance(output, dict) and "return_code" in output:
-                    # 处理退出信号
-                    return_code = output["return_code"]
-                    self.exit(return_code=return_code)
-                    return
-                elif isinstance(output, dict) and "subagent_name" in output:
-                    # 处理SubAgent消息
-                    subagent_name = output["subagent_name"]
-                    content = output["content"]
-                    message_type = output.get("type", "message")
-                    is_reasoning = output.get("is_reasoning", False)
-                    
-                    # 在SubAgent标签页显示消息
-                    subagent_container = self.query_one("#subagent-container")
-                    
-                    if message_type == "token":
-                        # 流式token输出
-                        if subagent_name not in self.subagent_current_messages:
-                            # 创建新消息
-                            current_message = MessageWidget(
-                                role="assistant",
-                                content=content,
-                                sender_name=subagent_name,
-                                is_reasoning=is_reasoning,
-                            )
-                            self.subagent_current_messages[subagent_name] = current_message
-                            subagent_container.mount(current_message)
-                            current_message.update_display()
-                        else:
-                            # 追加到现有消息
-                            current_message = self.subagent_current_messages[subagent_name]
-                            current_message.append_content(content)
-                    elif message_type == "message_complete":
-                        # 消息完成，清除当前消息引用
-                        if subagent_name in self.subagent_current_messages:
-                            self.subagent_current_messages[subagent_name].update_display()
-                            del self.subagent_current_messages[subagent_name]
-                    elif message_type == "runtime_notice":
-                        # 运行时通知消息
-                        level = output.get("level", "INFO")
-                        widget = RuntimeMessageWidget(
-                            level=level,
-                            content=content
-                        )
-                        subagent_container.mount(widget)
-                    else:
-                        # 完整消息（向后兼容）
-                        widget = MessageWidget(
-                            role="assistant",
-                            content=content,
                             sender_name=subagent_name,
-                            is_reasoning=False,
+                            is_reasoning=is_reasoning,
                         )
-                        subagent_container.mount(widget)
-                        widget.update_display()
-                    
-                    # 自动滚动到底部
-                    subagent_container.scroll_end(animate=False)
-                elif isinstance(output, Answer):
-
-                    # 获取并累加token使用量
-                    token_usage = output.get_token_usage()
-                    if token_usage is not None:
-                        self.token_manager.update_cumulative_usage(token_usage)
-                        self.token_manager.current_token_usage = None
-                        # 传入当前回答的token长度
-                        self.update_token_display(token_usage.total_tokens)
-
-                    if current_message:
+                        self.subagent_current_messages[subagent_name] = current_message
+                        subagent_container.mount(current_message)
                         current_message.update_display()
-                    current_message = None
+                    else:
+                        # 追加到现有消息
+                        current_message = self.subagent_current_messages[subagent_name]
+                        current_message.append_content(content)
+                elif message_type == "message_complete":
+                    # 消息完成，清除当前消息引用
+                    if subagent_name in self.subagent_current_messages:
+                        self.subagent_current_messages[subagent_name].update_display()
+                        del self.subagent_current_messages[subagent_name]
+                elif message_type == "runtime_notice":
+                    # 运行时通知消息
+                    level = output.get("level", "INFO")
+                    widget = RuntimeMessageWidget(level=level, content=content)
+                    subagent_container.mount(widget)
                 else:
-                    raise RuntimeError(f"Unknown Type: {type(output)=} {output=}")
+                    # 完整消息（向后兼容）
+                    widget = MessageWidget(
+                        role="assistant",
+                        content=content,
+                        sender_name=subagent_name,
+                        is_reasoning=False,
+                    )
+                    subagent_container.mount(widget)
+                    widget.update_display()
+
+                # 自动滚动到底部
+                subagent_container.scroll_end(animate=False)
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in subagent_message: {type(output)=} {output=}"
+                )
+
+    async def watch_output_queue(self):
+        """启动四个独立的任务分别监听不同的队列"""
+        # 创建四个独立的任务
+        agent_answer_task = asyncio.create_task(self.watch_agent_answer_queue())
+        ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
+        exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
+        subagent_message_task = asyncio.create_task(self.watch_subagent_message_queue())
+
+        # 等待任一任务完成（通常是因为退出信号或异常）
+        done, pending = await asyncio.wait(
+            [agent_answer_task, ui_log_task, exit_signal_task, subagent_message_task],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        # 取消其他未完成的任务
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        # 如果是退出任务，确保正确退出
+        if exit_signal_task in done:
+            # exit_signal_task已经处理了退出逻辑
+            return
+
+        # 如果其他任务出现异常，重新抛出
+        for task in done:
+            if task.exception():
+                exception = task.exception()
+                raise (
+                    exception
+                    if exception
+                    else Exception("Task failed without exception")
+                )
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
