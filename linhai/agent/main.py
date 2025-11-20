@@ -142,7 +142,6 @@ class Agent:
         if self.current_answer:
             self.current_answer.interrupt()
             await self.group_chat.send("agent_answer", self.current_answer)
-            self.current_answer = None
 
             # 发送插件打断消息到运行时输出
             if custom_message:
@@ -153,6 +152,13 @@ class Agent:
             else:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
                 self.message_processor.append_message(RuntimeMessage("Agent被打断"))
+
+            if "```json toolcall" in self.current_answer.get_current_content():
+                self.message_processor.append_message(
+                    RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
+                )
+
+            self.current_answer = None
 
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
             self.state = "working"
