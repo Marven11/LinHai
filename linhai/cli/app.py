@@ -371,6 +371,14 @@ class CLIApp(App):
                         if subagent_name in self.subagent_current_messages:
                             self.subagent_current_messages[subagent_name].update_display()
                             del self.subagent_current_messages[subagent_name]
+                    elif message_type == "runtime_notice":
+                        # 运行时通知消息
+                        level = output.get("level", "INFO")
+                        widget = RuntimeMessageWidget(
+                            level=level,
+                            content=content
+                        )
+                        subagent_container.mount(widget)
                     else:
                         # 完整消息（向后兼容）
                         widget = MessageWidget(

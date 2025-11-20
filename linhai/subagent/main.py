@@ -190,6 +190,17 @@ class SubAgent:
         logger.info(
             "SubAgent %s 结束运行，原因: %s", self.context["name"], self.exit_reason
         )
+        
+        # 发送退出通知到subagent标签页
+        await self.group_chat.send_if_exists(
+            "subagent_message",
+            {
+                "subagent_name": self.context['name'],
+                "content": f"SubAgent {self.context['name']} 已退出: {self.exit_reason}",
+                "type": "runtime_notice",
+                "level": "INFO"
+            },
+        )
 
 
 class SubAgentManager:
