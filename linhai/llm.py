@@ -67,7 +67,6 @@ class SystemMessage:
                     "tool_manager", ToolManager
                 ).get_tools_info(),
                 ensure_ascii=False,
-                indent=2,
             ),
         ).replace("{|CURRENT_TIME|}", self.current_time)
         return cast(LanguageModelMessage, {"role": "system", "content": system_prompt})
