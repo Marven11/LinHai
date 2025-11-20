@@ -2,11 +2,12 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行git commit，消息参考历史
 
-- [ ] 将subagent的消息放在TUI中的新tab中，同时删除笔记tab
-    - 需要调整subagent发送answer的方式和显示消息的样式和agent一致
-    - [ ] 运行所有unittest保证没有破坏性修改
-    - [ ] 测试：启动linhai，按下两次tab选择tab栏，然后按左右按键切换tab
-- [ ] 删除ThinkingToolCallPlugin
+- [x] 我刚刚重构了llm.py，查看上一个commit并修正unittest
+- [ ] 重构watch_output_queue，拆成四个task分别监听自己的queue, 拆分超大if语句
+- [ ] 继续重构llm.py的answer_stream
+    - 不要让OpenAIAnswer通过持有OpenAi实例更新OpenAi的previous...
+    - 让OpenAi实例传入一个callback，OpenAiAnswer调用Callback实现更新
+- [ ] 修正unittest
 
 注意：一定记得参考历史commit|git commit|勾上TODO
     - 一定在你的任务规划中显式规划读取历史commit|git commit|勾上TODO

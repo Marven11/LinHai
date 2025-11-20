@@ -304,23 +304,25 @@ class OpenAiAnswer:
         self,
         stream,
         openai_instance: "OpenAi",
+        compatibility: str | None = None,
         estimated_usage: AnswerTokenUsage | None = None,
         cached_input_tokens: int = 0,
     ):
         """初始化OpenAI回答。"""
-        self._tokens = []
-        self._reasoning_content = None
-        self._content = ""
-        self._stream = stream
-        self._interrupted = False
+        self.tokens = []
+        self.reasoning_content = None
+        self.content = ""
+        self.stream = stream
+        self.interrupted = False
+        self.compatibility = compatibility
         self.total_tokens = 0
         self.input_tokens = 0
         self.output_tokens = 0
         self.cached_input_tokens = cached_input_tokens
-        self._toyield: list[AnswerToken | AnswerTokenUsage] = []
+        self.toyield: list[AnswerToken | AnswerTokenUsage] = []
         self.openai_instance = openai_instance  # 用于更新previous_input_tokens
         if estimated_usage:
-            self._toyield.append(estimated_usage)
+            self.toyield.append(estimated_usage)
             self.input_tokens = estimated_usage.input_tokens
             self.output_tokens = estimated_usage.output_tokens
             self.total_tokens = estimated_usage.total_tokens
@@ -331,14 +333,14 @@ class OpenAiAnswer:
 
     async def update_toyield(self):
         """获取下一个token。"""
-        if self._interrupted:
+        if self.interrupted:
             raise StopAsyncIteration
 
         try:
             # 获取下一个chunk
-            chunk = cast(ChatCompletionChunk, await self._stream.__anext__())
+            chunk = cast(ChatCompletionChunk, await self.stream.__anext__())
 
-            if self._interrupted:
+            if self.interrupted:
                 raise StopAsyncIteration
 
             if hasattr(chunk, "usage") and chunk.usage:
@@ -355,7 +357,7 @@ class OpenAiAnswer:
                 self.total_tokens = (
                     usage.total_tokens if hasattr(usage, "total_tokens") else 0
                 )
-                self._toyield.append(
+                self.toyield.append(
                     AnswerTokenUsage(
                         input_tokens=self.input_tokens,
                         output_tokens=self.output_tokens,
@@ -369,72 +371,71 @@ class OpenAiAnswer:
                 return
             delta = chunk.choices[0].delta
             content = delta.content or ""
-            self._content += content
+            self.content += content
 
             # 处理OpenAI格式的reasoning_content
-            reasoning_content = (
-                delta.reasoning_content if hasattr(delta, "reasoning_content") else None
-            )
+            reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
-                self._reasoning_content = (
-                    self._reasoning_content + reasoning_content
-                    if self._reasoning_content
+                self.reasoning_content = (
+                    self.reasoning_content + reasoning_content
+                    if self.reasoning_content
                     else reasoning_content
                 )
 
             # 处理minimax格式的reasoning_details
             # https://platform.minimaxi.com/docs/api-reference/text-openai-api
             reasoning_details = (
-                delta.reasoning_details if hasattr(delta, "reasoning_details") else None
+                getattr(delta, "reasoning_details", None)
+                if self.compatibility == "minimax"
+                else None
             )
             if reasoning_details and isinstance(reasoning_details, list):
                 for detail in reasoning_details:
                     if "text" in detail and isinstance(detail["text"], str):
                         reasoning_content = detail["text"]
-                        self._reasoning_content = (
+                        self.reasoning_content = (
                             reasoning_content
-                            if self._reasoning_content is None
-                            else self._reasoning_content + reasoning_content
+                            if self.reasoning_content is None
+                            else self.reasoning_content + reasoning_content
                         )
 
             # 有时候会出现reasoning_content is None and content == ""的情况
             # API返回的数据如此，我们应该原样yield
             token = AnswerToken(
-                reasoning_content=reasoning_content
-                or (self._reasoning_content if reasoning_details else None),
+                reasoning_content=reasoning_content,
                 content=content,
             )
-            self._toyield.append(token)
+            self.toyield.append(token)
         except StopAsyncIteration:
             raise
         except asyncio.CancelledError as exc:
-            self._interrupted = True
+            self.interrupted = True
             raise StopAsyncIteration from exc
         except Exception as exc:
-            self._interrupted = True
+            self.interrupted = True
             raise StopAsyncIteration from exc
 
     async def __anext__(self) -> AnswerToken | AnswerTokenUsage:
-        if not self._toyield:
+        if not self.toyield:
             await self.update_toyield()
-        return self._toyield.pop(0)
+        return self.toyield.pop(0)
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
-        return ChatMessage(role="assistant", message=self._content)
+        return ChatMessage(role="assistant", message=self.content)
 
     def get_reasoning_message(self) -> str | None:
         """获取推理消息（如果存在）。"""
-        return self._reasoning_content
+        return self.reasoning_content
 
     def interrupt(self):
         """中断当前回答的生成。"""
-        self._interrupted = True
+        self.interrupted = True
 
     def get_current_content(self) -> str:
         """获取当前累积的回答内容。"""
-        return self._content
+        return self.content
 
     def get_token_count(self) -> int:
         """获取当前回答的token总数。"""
@@ -571,18 +572,15 @@ class OpenAi:
             **self.chat_completion_kwargs,
         }
 
-        # 为minimax兼容性添加extra_body参数
         if self.compatibility == "minimax":
             params["extra_body"] = {"reasoning_split": True}
 
-        # 为Kimi兼容性添加stream_options参数
         if self.compatibility == "kimi":
             params["stream_options"] = {"include_usage": True}
 
         if self.tools:
             params["tools"] = self.tools
 
-        # 重试逻辑 - 无限次重试
         retry_delay = 20  # 重试延迟，秒
 
         answer = None
@@ -591,6 +589,7 @@ class OpenAi:
                 stream = await self.openai.chat.completions.create(**params)
                 answer = OpenAiAnswer(
                     stream,
+                    compatibility=self.compatibility,
                     openai_instance=self,
                     cached_input_tokens=cached_input_tokens,
                 )

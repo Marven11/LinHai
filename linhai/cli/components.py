@@ -556,7 +556,7 @@ class MessageWidget(Static):
         self, line: str
     ) -> tuple[str, ToolCallWidget | NormalContentWidget | None]:
         self.current_line += line
-        if self.current_line.startswith("```"):
+        if self.current_line.startswith("`"):
             if not self.current_line.endswith("\n"):
                 return "", None
             if isinstance(self.current_widget, NormalContentWidget):
