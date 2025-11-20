@@ -6,13 +6,20 @@ import os
 import signal
 import subprocess
 import re
-from linhai.tool.base import global_tools, ToolArgInfo, ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import (
+    global_tools,
+    ToolArgInfo,
+    ToolResultMessage,
+    ToolErrorMessage,
+)
 import platform
 
 VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
 
-async def execute_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
+async def execute_command(
+    command: str, timeout: float = 30.0
+) -> ToolResultMessage | ToolErrorMessage:
     """执行系统命令并返回输出（内部函数）
 
     Args:
@@ -32,6 +39,7 @@ async def execute_command(command: str, timeout: float = 30.0) -> ToolResultMess
 
         process = await asyncio.create_subprocess_shell(
             command,
+            stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             shell=True,
@@ -49,7 +57,10 @@ async def execute_command(command: str, timeout: float = 30.0) -> ToolResultMess
             except ProcessLookupError:
                 pass  # 进程已经结束
             await process.wait()
-            return ToolErrorMessage(f"Command timed out after {timeout} seconds")
+            return ToolErrorMessage(
+                f"Command timed out after {timeout} seconds, "
+                "try to interact with it inside terminal"
+            )
 
         stdout_str = stdout.decode("utf-8") if stdout else ""
         stderr_str = stderr.decode("utf-8") if stderr else ""
@@ -92,7 +103,9 @@ def validate_simple_command(command: str) -> bool:
     },
     required_args=["command"],
 )
-async def run_simple_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
+async def run_simple_command(
+    command: str, timeout: float = 30.0
+) -> ToolResultMessage | ToolErrorMessage:
     """执行简单系统命令（白名单验证），只允许安全命令
 
     Args:
@@ -122,7 +135,9 @@ async def run_simple_command(command: str, timeout: float = 30.0) -> ToolResultM
     },
     required_args=["command"],
 )
-async def run_complex_command(command: str, timeout: float = 30.0) -> ToolResultMessage | ToolErrorMessage:
+async def run_complex_command(
+    command: str, timeout: float = 30.0
+) -> ToolResultMessage | ToolErrorMessage:
     """执行复杂系统命令（可能包含危险操作，请谨慎使用）
 
     Args:
@@ -166,4 +181,6 @@ def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
 async def sleep_tool(seconds: float) -> ToolResultMessage:
     start = datetime.now()
     await asyncio.sleep(seconds)
-    return ToolResultMessage(f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    return ToolResultMessage(
+        f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    )
