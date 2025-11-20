@@ -69,7 +69,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             context=self.config, group_chat=self.group_chat, init_messages=[]
         )
 
-    async def test_select_model_with_at_system_valid(self):
+    async def testget_current_model_with_at_system_valid(self):
         """测试有效的@系统调用。"""
         # 添加一个@llm2的用户消息
         user_message = ChatMessage(role="user", message="@llm2 你好")
@@ -77,13 +77,13 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         # 调用handle_message，这会更新current_llm_index
         self.agent.handle_user_message(user_message)
 
-        # 调用_select_model
-        selected_model = await self.agent._select_model()
+        # 调用get_current_model
+        selected_model = await self.agent.get_current_model()
 
         # 验证选择了正确的LLM
         self.assertEqual(selected_model, self.mock_llm2)
 
-    async def test_select_model_with_at_system_invalid(self):
+    async def testget_current_model_with_at_system_invalid(self):
         """测试无效的@系统调用。"""
         # 添加一个@invalid_llm的用户消息
         user_message = ChatMessage(role="user", message="@invalid_llm 你好")
@@ -91,8 +91,8 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         # 调用handle_message，这会添加错误消息
         self.agent.handle_user_message(user_message)
 
-        # 调用_select_model
-        selected_model = await self.agent._select_model()
+        # 调用get_current_model
+        selected_model = await self.agent.get_current_model()
 
         # 验证使用了默认LLM
         self.assertEqual(selected_model, self.mock_llm1)
@@ -107,38 +107,38 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-    async def test_select_model_without_at_system(self):
+    async def testget_current_model_without_at_system(self):
         """测试没有@系统的默认行为。"""
         # 添加一个普通用户消息
         user_message = ChatMessage(role="user", message="你好")
         self.agent.message_processor.append_message(user_message)
 
-        # 调用_select_model
-        selected_model = await self.agent._select_model()
+        # 调用get_current_model
+        selected_model = await self.agent.get_current_model()
 
         # 验证使用了默认LLM
         self.assertEqual(selected_model, self.mock_llm1)
 
-    async def test_select_model_with_at_in_middle(self):
+    async def testget_current_model_with_at_in_middle(self):
         """测试消息中间包含@的情况。"""
         # 添加一个消息中间包含@的用户消息
         user_message = ChatMessage(role="user", message="请@llm2回答这个问题")
         self.agent.message_processor.append_message(user_message)
 
-        # 调用_select_model
-        selected_model = await self.agent._select_model()
+        # 调用get_current_model
+        selected_model = await self.agent.get_current_model()
 
         # 验证使用了默认LLM（因为@不在开头）
         self.assertEqual(selected_model, self.mock_llm1)
 
-    async def test_select_model_with_empty_at(self):
+    async def testget_current_model_with_empty_at(self):
         """测试只有@的情况。"""
         # 添加一个只有@的用户消息
         user_message = ChatMessage(role="user", message="@")
         self.agent.message_processor.append_message(user_message)
 
-        # 调用_select_model
-        selected_model = await self.agent._select_model()
+        # 调用get_current_model
+        selected_model = await self.agent.get_current_model()
 
         # 验证使用了默认LLM
         self.assertEqual(selected_model, self.mock_llm1)

@@ -134,12 +134,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""
         # 初始状态下应该选择第一个LLM
-        selected_llm = await self.agent._select_model()
+        selected_llm = await self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm1)
 
         # 切换到第二个LLM
         self.agent.context["current_llm_index"] = 1
-        selected_llm = await self.agent._select_model()
+        selected_llm = await self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 
 

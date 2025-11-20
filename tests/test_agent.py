@@ -354,7 +354,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 测试场景1: 有效的@qwen消息，应该更新索引到1
         self.agent.handle_user_message(ChatMessage(role="user", message="@qwen Hello"))
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
-        model = await self.agent._select_model()
+        model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
 
         # 测试场景2: 无效的@invalid消息，索引不应更新，并添加错误消息
@@ -363,7 +363,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             ChatMessage(role="user", message="@invalid command")
         )
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
-        model = await self.agent._select_model()
+        model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
         # 验证添加了错误消息
         messages = self.agent.message_processor.get_messages()
@@ -379,7 +379,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.context["current_llm_index"] = 0  # 重置索引
         self.agent.handle_user_message(ChatMessage(role="user", message="Hello world"))
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
-        model = await self.agent._select_model()
+        model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
 
         # 测试场景4: 多个消息，只有@消息更新索引
@@ -397,7 +397,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             ChatMessage(role="user", message="@deepseek-reasoning second")
         )
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引更新为0
-        model = await self.agent._select_model()
+        model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
 
 

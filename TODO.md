@@ -3,6 +3,7 @@
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行git commit，消息参考历史
 
 - [x] 我刚刚重构了llm.py，查看上一个commit并修正unittest
+- [x] 修正unittest
 - [ ] 重构watch_output_queue，拆成四个task分别监听自己的queue, 拆分超大if语句
 - [ ] 继续重构llm.py的answer_stream
     - 不要让OpenAIAnswer通过持有OpenAi实例更新OpenAi的previous...

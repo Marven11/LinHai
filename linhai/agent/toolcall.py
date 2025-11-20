@@ -260,6 +260,7 @@ class AgentToolcall:
             result = await self._call_tool_with_confirmation(tool_call)
         if result:
             self.early_return = True
+        return result
 
     async def _call_tool_without_confirmation(self, tool_call: ToolCallMessage) -> bool:
         """无需确认直接调用工具。"""
