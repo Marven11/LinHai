@@ -246,7 +246,7 @@ class Agent:
 
         self.message_processor.append_message(msg)
 
-    async def _select_model(self) -> LanguageModel:
+    async def get_current_model(self) -> LanguageModel:
         """
         根据当前LLM索引选择合适的模型。
 
@@ -286,7 +286,7 @@ class Agent:
         )
 
         # 选择模型
-        model = await self._select_model()
+        model = await self.get_current_model()
 
         answer: Answer = await model.answer_stream(
             self.message_processor.get_messages()

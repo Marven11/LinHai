@@ -119,7 +119,9 @@ class BadMultiToolCall(Plugin):
 {"name": "read_file", "arguments": {"filepath": "./example.txt"}}
 ```"""
 
-    async def during_message_generation(self, _answer: Answer, current_content: str) -> bool:
+    async def during_message_generation(
+        self, _answer: Answer, current_content: str
+    ) -> bool:
         agent = self.group_chat.get_members("agent", linhai_agent.Agent)
         agent_messages = [
             msg
@@ -201,6 +203,30 @@ class MarkdownSyntaxPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class GuideMinimaxPlugin(Plugin):
+    """禁止minimax m2疯狂调用工具的插件"""
+
+    async def during_message_generation(
+        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+    ):
+        from linhai.agent import Agent
+        from linhai.llm import OpenAi
+
+        agent = self.group_chat.get_members("agent", Agent)
+        model = await agent.get_current_model()
+        if not isinstance(model, OpenAi) or model.compatibility != "minimax":
+            return False
+
+        if current_content.count("```json toolcall") > 5:
+            await agent.interrupt("错误：你现在是Minimax，禁止使用超过5个工具！")
+            return True
+        return False
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)
 
 
 class WeirdEndOfSentencePlugin(Plugin):
