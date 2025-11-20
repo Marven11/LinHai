@@ -5,7 +5,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static, Input, TabbedContent, TabPane
+from textual.widgets import Static, TextArea, TabbedContent, TabPane
 from textual import events
 from linhai.llm import (
     ChatMessage,
@@ -74,7 +74,8 @@ class CLIApp(App):
         scrollbar-size-vertical: 1;
     }
     #input {
-        height: 3;
+        min-height: 1;
+        height: auto;
         background: #2E3440;
         border: solid $primary;
     }
@@ -139,7 +140,9 @@ class CLIApp(App):
 
                 # 候选列表初始隐藏，根据需要显示（放在输入框上方）
                 yield Static("", id="candidate-list-container")
-                yield Input(placeholder="输入消息...", id="input")
+                yield TextArea(
+                    placeholder="输入消息...", id="input", language="markdown"
+                )
                 yield Static("", id="token-usage")
 
             with TabPane("SubAgent", id="subagent-tab"):
@@ -173,9 +176,9 @@ class CLIApp(App):
             self.candidate_list.remove()
             self.candidate_list = None
 
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """处理输入框内容变化"""
-        value = event.value
+    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        """处理文本区域内容变化"""
+        value = event.text_area.text
         candidates = self.completion_manager.handle_input_change(value)
 
         if candidates is not None:
@@ -184,72 +187,6 @@ class CLIApp(App):
             )
         else:
             self.hide_completion_list()
-
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """处理用户输入"""
-        # 如果补全列表处于激活状态，不处理提交事件
-        if self.completion_manager.completion_active:
-            return
-
-        # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
-        if self.completion_manager.just_completed_candidate:
-            self.completion_manager.just_completed_candidate = False
-            return
-
-        if self.current_tool_call:
-            # 处理工具确认响应
-            user_input = event.value.strip().lower()
-            if user_input in ["y", "yes", "是"]:
-                confirmed = True
-            elif user_input in ["n", "no", "否"]:
-                confirmed = False
-            else:
-                # 无效输入，提示重新输入
-                event.input.value = ""
-                cast(Input, self.query_one("#input")).placeholder = (  # type: ignore
-                    "请输入 'y' 或 'n' 来确认工具调用"
-                )
-                return
-
-            # 发送确认消息
-            self.current_tool_confirmation = ToolConfirmationMessage(
-                tool_call=self.current_tool_call, confirmed=confirmed
-            )
-
-            # 重置当前工具请求
-            self.current_tool_call = None
-            event.input.value = ""
-            cast(Input, self.query_one("#input")).placeholder = "输入消息..."  # type: ignore
-            return
-
-        if event.value:
-            # 隐藏欢迎消息
-            container = self.query_one("#chat-container")
-            welcome_widgets = container.query(".welcome-message")
-            for widget in welcome_widgets:
-                widget.remove()
-
-            # 添加用户消息
-            user_msg = ChatMessage(role="user", message=event.value)
-            self.messages.append(
-                MessageWidget(
-                    role="user",
-                    content=event.value,
-                    sender_name="user",
-                    is_reasoning=False,
-                )
-            )
-            await self.group_chat.send("user_message", user_msg)
-            event.input.value = ""
-            # 更新UI
-            _ = self.group_chat.get_members(
-                "agent", Agent
-            )  # pylint: disable=unused-variable
-            widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
-            container.mount(widget)
-            widget.update_display()
-            self.is_user_scroll_to_end = True
-            container.scroll_end(animate=False)
 
     async def watch_agent_answer_queue(self):
         """监听agent_answer队列并处理Agent回答"""
@@ -565,10 +502,16 @@ class CLIApp(App):
         if self.completion_manager.completion_active and self.candidate_list:
             if event.key in ["up", "down", "tab", "enter", "escape"]:
                 if self.completion_manager.handle_key_event(
-                    event.key, cast(Input, self.query_one("#input"))
+                    event.key, cast(TextArea, self.query_one("#input"))
                 ):
                     event.stop()
                     return
+
+        # 处理ctrl+enter发送消息
+        if event.key == "ctrl+enter":
+            await self._handle_message_submission()
+            event.stop()
+            return
 
         if event.key == "ctrl+c":
             # 先关闭所有终端，然后退出应用
@@ -607,6 +550,68 @@ class CLIApp(App):
         self.is_user_scroll_to_end = container.is_vertical_scroll_end
 
     def on_mouse_scroll_up(self, _event: events.MouseScrollUp) -> None:
-        container = self.query_one("#chat-container")
-
         self.is_user_scroll_to_end = False
+
+    async def _handle_message_submission(self) -> None:
+        """处理消息提交"""
+        text_area = cast(TextArea, self.query_one("#input"))
+        message_text = text_area.text.strip()
+
+        # 如果补全列表处于激活状态，不处理提交事件
+        if self.completion_manager.completion_active:
+            return
+
+        # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
+        if self.completion_manager.just_completed_candidate:
+            self.completion_manager.just_completed_candidate = False
+            return
+
+        if self.current_tool_call:
+            # 处理工具确认响应
+            user_input = message_text.strip().lower()
+            if user_input in ["y", "yes", "是"]:
+                confirmed = True
+            elif user_input in ["n", "no", "否"]:
+                confirmed = False
+            else:
+                # 无效输入，提示重新输入
+                text_area.text = ""
+                text_area.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
+                return
+
+            # 发送确认消息
+            self.current_tool_confirmation = ToolConfirmationMessage(
+                tool_call=self.current_tool_call, confirmed=confirmed
+            )
+
+            # 重置当前工具请求
+            self.current_tool_call = None
+            text_area.text = ""
+            text_area.placeholder = "输入消息..."
+            return
+
+        if message_text:
+            # 隐藏欢迎消息
+            container = self.query_one("#chat-container")
+            welcome_widgets = container.query(".welcome-message")
+            for widget in welcome_widgets:
+                widget.remove()
+
+            # 添加用户消息
+            user_msg = ChatMessage(role="user", message=message_text)
+            self.messages.append(
+                MessageWidget(
+                    role="user",
+                    content=message_text,
+                    sender_name="user",
+                    is_reasoning=False,
+                )
+            )
+            await self.group_chat.send("user_message", user_msg)
+            text_area.text = ""
+            # 更新UI
+            widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
+            container.mount(widget)
+            widget.update_display()
+            self.is_user_scroll_to_end = True
+            container.scroll_end(animate=False)

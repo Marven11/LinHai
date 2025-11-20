@@ -1,7 +1,7 @@
 """Completion logic for CLI."""
 
 from typing import List, Optional
-from textual.widgets import Input
+from textual.widgets import Input, TextArea
 from linhai.agent import Agent
 
 
@@ -82,7 +82,7 @@ class CompletionManager:
             self.hide_completion_list()
             return None
 
-    def handle_key_event(self, event_key: str, input_widget: Input) -> bool:
+    def handle_key_event(self, event_key: str, _input_widget: Input | TextArea) -> bool:
         """处理键盘事件，返回是否处理了事件"""
         if not self.completion_active:
             return False
