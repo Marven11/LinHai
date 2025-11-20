@@ -158,49 +158,7 @@ class BadMultiToolCall(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class ThinkingToolCallPlugin(Plugin):
-    """禁止过度思考工具调用plugin"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.interruped_count = 0
-
-    async def during_message_generation(self, answer: Answer, _current_content: str):
-        """检查工具调用量是否超过限制。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        current_reasoning_content = answer.get_reasoning_message()
-        if current_reasoning_content is None:
-            return False
-        json_block_count = current_reasoning_content.count("\n```json toolcall")
-
-        max_json_blocks = 3 if self.interruped_count else 5
-
-        if json_block_count >= max_json_blocks:
-            self.interruped_count += 1
-            await agent.interrupt(
-                f"错误：大量思考如何使用```json toolcall调用工具，输出```json toolcall达到{max_json_blocks}次"
-                "，你只能（且应该）在实际输出时调用多个工具！必须先结束思考再调用工具！"
-                f"注意：当前已经输出错误{self.interruped_count}次，下次再错误输出则会加紧限制"
-                + "！" * self.interruped_count
-            )
-            return True
-
-        return False
-
-    async def after_message_generation(
-        self,
-        _answer: Answer,
-        full_response: str,
-        _tool_calls,
-    ):
-        self.interruped_count = 0
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 
