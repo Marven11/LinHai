@@ -105,6 +105,7 @@ class CLIApp(App):
         self.group_chat.register_queue("agent_answer")
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
+        self.group_chat.register_queue("subagent_message")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -125,6 +126,9 @@ class CLIApp(App):
         # 候选列表组件
         self.candidate_list: Optional[CandidateList] = None
 
+        # SubAgent当前消息引用
+        self.subagent_current_messages: dict[str, MessageWidget] = {}
+
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
@@ -138,9 +142,9 @@ class CLIApp(App):
                 yield Input(placeholder="输入消息...", id="input")
                 yield Static("", id="token-usage")
             
-            with TabPane("笔记", id="notes-tab"):
-                with VerticalScroll(id="notes-container"):
-                    yield Static("TODO", id="notes-content")
+            with TabPane("SubAgent", id="subagent-tab"):
+                with VerticalScroll(id="subagent-container"):
+                    yield Static("SubAgent消息将显示在这里", id="subagent-content")
 
     def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
         """显示候选列表"""
@@ -251,15 +255,16 @@ class CLIApp(App):
         """监听输出队列并更新UI"""
         current_message = None
         while True:
-            # 同时监听三个队列
+            # 同时监听四个队列
             agent_output_task = asyncio.create_task(
                 self.group_chat.receive("agent_answer")
             )
             runtime_output_task = asyncio.create_task(self.group_chat.receive("ui_log"))
             exit_task = asyncio.create_task(self.group_chat.receive("exit_signal"))
+            subagent_task = asyncio.create_task(self.group_chat.receive("subagent_message"))
 
             done, pending = await asyncio.wait(
-                [agent_output_task, runtime_output_task, exit_task],
+                [agent_output_task, runtime_output_task, exit_task, subagent_task],
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
@@ -334,6 +339,51 @@ class CLIApp(App):
                     return_code = output["return_code"]
                     self.exit(return_code=return_code)
                     return
+                elif isinstance(output, dict) and "subagent_name" in output:
+                    # 处理SubAgent消息
+                    subagent_name = output["subagent_name"]
+                    content = output["content"]
+                    message_type = output.get("type", "message")
+                    is_reasoning = output.get("is_reasoning", False)
+                    
+                    # 在SubAgent标签页显示消息
+                    subagent_container = self.query_one("#subagent-container")
+                    
+                    if message_type == "token":
+                        # 流式token输出
+                        if subagent_name not in self.subagent_current_messages:
+                            # 创建新消息
+                            current_message = MessageWidget(
+                                role="assistant",
+                                content=content,
+                                sender_name=subagent_name,
+                                is_reasoning=is_reasoning,
+                            )
+                            self.subagent_current_messages[subagent_name] = current_message
+                            subagent_container.mount(current_message)
+                            current_message.update_display()
+                        else:
+                            # 追加到现有消息
+                            current_message = self.subagent_current_messages[subagent_name]
+                            current_message.append_content(content)
+                    elif message_type == "message_complete":
+                        # 消息完成，清除当前消息引用
+                        if subagent_name in self.subagent_current_messages:
+                            self.subagent_current_messages[subagent_name].update_display()
+                            del self.subagent_current_messages[subagent_name]
+                    else:
+                        # 完整消息（向后兼容）
+                        widget = MessageWidget(
+                            role="assistant",
+                            content=content,
+                            sender_name=subagent_name,
+                            is_reasoning=False,
+                        )
+                        subagent_container.mount(widget)
+                        widget.update_display()
+                    
+                    # 自动滚动到底部
+                    subagent_container.scroll_end(animate=False)
                 elif isinstance(output, Answer):
 
                     # 获取并累加token使用量

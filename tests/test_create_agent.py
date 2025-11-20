@@ -27,7 +27,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
         
         group_chat = GroupChat()
-        config_path = "tests/config.toml"
+        config_path = Path(__file__).parent / "config.toml"
         
         # 调用create_agent应该成功返回agent
         result = asyncio.run(create_agent(group_chat, Path(config_path)))
@@ -56,20 +56,20 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
         
         group_chat = GroupChat()
-        config_path = "tests/config.toml"
+        config_path = Path(__file__).parent / "config.toml"
         
         # 使用llm_name参数
-        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="deepseek"))
+        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="test"))
         self.assertIsInstance(result, Agent)
         
         # 检查agent配置中的当前LLM索引
         agent = group_chat.get_members("agent", Agent)
-        self.assertEqual(agent.context["current_llm_index"], 0)  # 假设deepseek是第一个LLM
+        self.assertEqual(agent.context["current_llm_index"], 0)  # test是第一个LLM
 
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""
         group_chat = GroupChat()
-        config_path = "tests/config.toml"
+        config_path = Path(__file__).parent / "config.toml"
         
         # 使用无效的llm_name应该抛出ValueError
         with self.assertRaises(ValueError) as context:

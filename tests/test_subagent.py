@@ -70,16 +70,18 @@ file_path = "memory.md"
             self.assertIn("test-agent", manager.subagents)
             
             # 检查初始状态
-            status = manager.check_subagent("test-agent")
+            status = await manager.check_subagent("test-agent")
             self.assertIn("正在运行", status)
         
         asyncio.run(run_test())
 
     def test_check_nonexistent_subagent(self):
         """测试检查不存在的SubAgent。"""
-        manager = SubAgentManager(self.group_chat)
-        result = manager.check_subagent("nonexistent")
-        self.assertIn("不存在", result)
+        async def run_test():
+            manager = SubAgentManager(self.group_chat)
+            result = await manager.check_subagent("nonexistent")
+            self.assertIn("不存在", result)
+        asyncio.run(run_test())
 
     def test_create_duplicate_subagent(self):
         """测试创建重复的SubAgent。"""

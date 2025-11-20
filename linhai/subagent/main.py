@@ -88,23 +88,44 @@ class SubAgent:
             return f"SubAgent {self.context['name']} 已退出: {reason}"
 
     async def _generate_response(self) -> str:
-        """生成LLM响应并返回完整内容。"""
+        """生成LLM响应并返回完整内容，支持流式输出。"""
         answer: Answer = await self.context["llm"].answer_stream(self.messages)
 
         full_response = ""
         async for token in answer:
             if isinstance(token, AnswerToken):
                 full_response += token.content
+                # 发送流式token到队列
+                await self.group_chat.send_if_exists(
+                    "subagent_message",
+                    {
+                        "subagent_name": self.context['name'],
+                        "content": token.content,
+                        "type": "token",
+                        "is_reasoning": token.reasoning_content is not None,
+                    },
+                )
             elif isinstance(token, str):
                 full_response += token
+                # 对于字符串token，也发送
+                await self.group_chat.send_if_exists(
+                    "subagent_message",
+                    {
+                        "subagent_name": self.context['name'],
+                        "content": token,
+                        "type": "token",
+                        "is_reasoning": False,
+                    },
+                )
 
+        # 发送完成消息
         await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO",
-                content=f"Subagent {self.context['name']}: "
-                + reprobj.repr(full_response),
-            ),
+            "subagent_message",
+            {
+                "subagent_name": self.context['name'],
+                "content": full_response,
+                "type": "message_complete"
+            },
         )
 
         return full_response

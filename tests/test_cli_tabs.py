@@ -31,13 +31,13 @@ class TestCLITabs(unittest.TestCase):
                 
                 # 检查两个标签页是否存在
                 agent_tab = pilot.app.query_one("#agent-tab")
-                notes_tab = pilot.app.query_one("#notes-tab")
+                subagent_tab = pilot.app.query_one("#subagent-tab")
                 self.assertIsNotNone(agent_tab)
-                self.assertIsNotNone(notes_tab)
+                self.assertIsNotNone(subagent_tab)
                 
-                # 检查笔记内容是否正确显示
-                notes_content = pilot.app.query_one("#notes-content")
-                self.assertIsNotNone(notes_content)
+                # 检查subagent内容是否正确显示
+                subagent_content = pilot.app.query_one("#subagent-content")
+                self.assertIsNotNone(subagent_content)
         
         asyncio.run(_run_test())
 
@@ -61,9 +61,9 @@ class TestCLITabs(unittest.TestCase):
             agent_pane = pilot.app.query_one("#agent-tab")
             self.assertIsNotNone(agent_pane)
             
-            # 笔记标签页也应该存在
-            notes_pane = pilot.app.query_one("#notes-tab")
-            self.assertIsNotNone(notes_pane)
+            # subagent标签页也应该存在
+            subagent_pane = pilot.app.query_one("#subagent-tab")
+            self.assertIsNotNone(subagent_pane)
 
 
 if __name__ == "__main__":
