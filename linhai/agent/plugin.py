@@ -176,6 +176,10 @@ class BadMultiToolCall(Plugin):
                     )
                 )
             self.last_message_had_reason = True
+        if re.search(r"```\n+[^\n]+<---[^\n]+\n+```json toolcall", pattern) is not None:
+            agent.message_processor.append_message(
+                RuntimeMessage("不要在原因中加上箭头！")
+            )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""

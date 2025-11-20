@@ -5,7 +5,7 @@
 - [x] 我刚刚重构了llm.py，查看上一个commit并修正unittest
 - [x] 修正unittest
 - [ ] 重构watch_output_queue，拆成四个task分别监听自己的queue, 拆分超大if语句
-- [ ] 继续重构llm.py的answer_stream
+- [x] 继续重构llm.py的answer_stream
     - 不要让OpenAIAnswer通过持有OpenAi实例更新OpenAi的previous...
     - 让OpenAi实例传入一个callback，OpenAiAnswer调用Callback实现更新
 - [ ] 修正unittest
