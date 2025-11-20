@@ -2,8 +2,9 @@
 
 from abc import ABC, abstractmethod
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from linhai.llm import Answer
+from linhai.llm import Answer, ChatMessage
 import linhai.agent as linhai_agent
+import random
 import re
 
 
@@ -67,9 +68,6 @@ class WaitingUserPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-
-
-
 class WrongEndPlugin(Plugin):
     """禁止输出end of sentence的plugin"""
 
@@ -106,23 +104,7 @@ class BadMultiToolCall(Plugin):
     def __init__(self, group_chat):
         super().__init__(group_chat)
         self.last_message_had_reason = True
-
-    async def after_message_generation(
-        self,
-        _answer: Answer,
-        full_response: str,
-        _tool_calls,
-    ):
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        tool_call_count = full_response.count("```json toolcall")
-
-        pattern = r"```\n+```json toolcall"
-        has_no_reason = re.search(pattern, full_response) is not None
-
-        if tool_call_count > 1 and has_no_reason:
-            example = """
+        self.example = """
 例如，当你需要同时调用多个工具时，应该这样输出（用箭头标记了你应该输出的部分）：
 
 我将开始探索当前代码仓库，首先是列出当前文件夹
@@ -136,11 +118,51 @@ class BadMultiToolCall(Plugin):
 ```json toolcall
 {"name": "read_file", "arguments": {"filepath": "./example.txt"}}
 ```"""
+
+    async def during_message_generation(self, _answer: Answer, current_content: str) -> bool:
+        agent = self.group_chat.get_members("agent", linhai_agent.Agent)
+        agent_messages = [
+            msg
+            for msg in agent.message_processor.get_messages()
+            if isinstance(msg, ChatMessage) and msg.role == "assistant"
+        ]
+        is_start_message = len(agent_messages) <= 2
+        if not is_start_message:
+            return False
+        pattern = r"```\n+```json toolcall"
+        tool_call_count = current_content.count("```json toolcall")
+        has_no_reason = re.search(pattern, current_content) is not None
+        if tool_call_count > 1 and has_no_reason:
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
+                    + self.example
+                )
+            )
+            await agent.interrupt("错误：必须同时调用工具且在中间加上原因！")
+            return True
+        return False
+
+    async def after_message_generation(
+        self,
+        _answer: Answer,
+        full_response: str,
+        _tool_calls,
+    ):
+        agent = self.group_chat.get_members("agent", linhai_agent.Agent)
+
+        tool_call_count = full_response.count("```json toolcall")
+
+        pattern = r"```\n+```json toolcall"
+        has_no_reason = re.search(pattern, full_response) is not None
+
+        if tool_call_count > 1 and has_no_reason:
+
             agent.message_processor.append_message(
                 RuntimeMessage(
                     "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
                     "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
-                    + example
+                    + self.example
                 )
             )
             self.last_message_had_reason = False
@@ -156,12 +178,7 @@ class BadMultiToolCall(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
-
-
-
-
-
-
+        lifecycle.register_during_message_generation(self.during_message_generation)
 
 
 class MarkdownSyntaxPlugin(Plugin):
@@ -211,9 +228,6 @@ class WeirdEndOfSentencePlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
-
-
-
 
 
 class EndThinkPlugin(Plugin):
@@ -306,11 +320,11 @@ class SingleToolCallReminderPlugin(Plugin):
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
-        
+
         # 检查tool_calls长度是否为1
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
-            
+
             # 如果连续5次都只调用1个工具，提醒agent
             if self.single_tool_call_count >= 5:
                 agent.message_processor.append_message(

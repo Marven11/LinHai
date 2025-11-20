@@ -371,9 +371,10 @@ class Agent:
                     function_name=call["name"],
                     function_arguments=call["arguments"],
                 )
-                early_return = await self.toolcall_processor.call_tool(tool_call)
-                if early_return:
-                    return await self.generate_response()
+                await self.toolcall_processor.call_tool(tool_call)
+
+        if self.toolcall_processor.early_return:
+            return await self.generate_response()
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
