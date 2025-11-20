@@ -6,6 +6,7 @@ from typing import (
     AsyncIterator,
     cast,
     runtime_checkable,
+    Callable,
 )
 import asyncio
 import json
@@ -303,10 +304,10 @@ class OpenAiAnswer:
     def __init__(
         self,
         stream,
-        openai_instance: "OpenAi",
         compatibility: str | None = None,
         estimated_usage: AnswerTokenUsage | None = None,
         cached_input_tokens: int = 0,
+        previous_update_callback: Callable[[int], None] | None = None,
     ):
         """初始化OpenAI回答。"""
         self.tokens = []
@@ -320,7 +321,7 @@ class OpenAiAnswer:
         self.output_tokens = 0
         self.cached_input_tokens = cached_input_tokens
         self.toyield: list[AnswerToken | AnswerTokenUsage] = []
-        self.openai_instance = openai_instance  # 用于更新previous_input_tokens
+        self.previous_update_callback = previous_update_callback
         if estimated_usage:
             self.toyield.append(estimated_usage)
             self.input_tokens = estimated_usage.input_tokens
@@ -364,9 +365,9 @@ class OpenAiAnswer:
                         total_tokens=self.total_tokens,
                     )
                 )
-                # 更新OpenAi实例的previous_input_tokens为实际值
-                if self.openai_instance is not None:
-                    self.openai_instance.previous_input_tokens = self.input_tokens
+                # 使用callback更新previous_input_tokens为实际值
+                if self.previous_update_callback is not None:
+                    self.previous_update_callback(self.input_tokens)
             if len(chunk.choices) == 0:
                 return
             delta = chunk.choices[0].delta
@@ -467,6 +468,7 @@ class OpenAi:
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
+        previous_update_callback: Callable[[int], None] | None = None,
     ):
         """初始化OpenAI语言模型。
 
@@ -489,6 +491,11 @@ class OpenAi:
         self.compatibility = compatibility
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
+        self.previous_update_callback = previous_update_callback or self._default_previous_update_callback
+
+    def _default_previous_update_callback(self, input_tokens: int):
+        """默认的previous_input_tokens更新回调。"""
+        self.previous_input_tokens = input_tokens
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -590,8 +597,8 @@ class OpenAi:
                 answer = OpenAiAnswer(
                     stream,
                     compatibility=self.compatibility,
-                    openai_instance=self,
                     cached_input_tokens=cached_input_tokens,
+                    previous_update_callback=self.previous_update_callback,
                 )
                 break
             except (asyncio.TimeoutError, OpenAIError):
