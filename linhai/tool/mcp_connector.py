@@ -26,6 +26,7 @@ from mcp.client.stdio import stdio_client
 from .base import ToolArgInfo, ToolSet, ToolErrorMessage, ToolResultMessage
 from ..group_chat import GroupChat
 
+
 class MCPConnector:
     def __init__(self, group_chat: GroupChat):
         group_chat.register_member("mcp_connector", self)
@@ -34,7 +35,9 @@ class MCPConnector:
         self.connector_toolset = self.init_connector_toolset()
 
     def get_toolsets(self) -> list[ToolSet]:
-        return [toolset for _, _, toolset in self.sessions.values()] + [self.connector_toolset]
+        return [toolset for _, _, toolset in self.sessions.values()] + [
+            self.connector_toolset
+        ]
 
     async def connect_mcp_server(self, name: str, command: str):
         if name in self.sessions:
@@ -120,7 +123,14 @@ class MCPConnector:
                 ),
             },
             required_args=["name", "command"],
-            conflict_with=["disconnect_mcp_server", "disconnect_all_mcp_servers", "list_mcp_servers"],
+            conflict_with=[
+                "disconnect_mcp_server",
+                "disconnect_all_mcp_servers",
+                "list_mcp_servers",
+                # 必须先查询chrome再启动
+                "run_simple_command",
+                "run_complex_command",
+            ],
         )
         async def connect_mcp_server(name: str, command: str):
             try:
@@ -138,9 +148,7 @@ class MCPConnector:
             name="disconnect_mcp_server",
             desc="断开一个已连接的外部服务",
             args={
-                "name": ToolArgInfo(
-                    desc="要断开的MCP服务器名字", type="str"
-                ),
+                "name": ToolArgInfo(desc="要断开的MCP服务器名字", type="str"),
             },
             required_args=["name"],
         )
@@ -173,11 +181,11 @@ class MCPConnector:
         async def list_mcp_servers():
             if not self.sessions:
                 return ToolResultMessage("当前没有已连接的MCP服务器")
-            
+
             server_names = list(self.sessions.keys())
             return ToolResultMessage(
-                f"已连接的MCP服务器 ({len(server_names)}个):\n" + 
-                "\n".join(f"- {name}" for name in server_names)
+                f"已连接的MCP服务器 ({len(server_names)}个):\n"
+                + "\n".join(f"- {name}" for name in server_names)
             )
 
         return connector_toolset

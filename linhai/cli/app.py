@@ -1,6 +1,6 @@
 """Command-line interface for LinHai agent."""
 
-from typing import List, Optional, cast
+from typing import List, Optional, Union, cast
 import asyncio
 
 from textual.app import App, ComposeResult
@@ -26,6 +26,7 @@ from .components import (
     AnimatedWelcomeWidget,
     RuntimeMessageWidget,
     MessageWidget,
+    ReasoningContentWidget,
     CandidateList,
 )
 
@@ -90,6 +91,19 @@ class CLIApp(App):
         text-align: center;
         content-align: center middle;
     }
+
+    .reasoning-widget {
+        width: 100%;
+        padding-left: 1;
+        padding-right: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: solid grey;
+    }
+
+    .reasoning-widget-expanded {
+        text-overflow: fold;
+    }
     """
 
     MAX_MESSAGES = 1000
@@ -101,7 +115,7 @@ class CLIApp(App):
     ):
         super().__init__()
         self.theme = "nord"
-        self.messages: List[MessageWidget] = []
+        self.messages: List[Union[MessageWidget, ReasoningContentWidget]] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("agent_answer")
         self.group_chat.register_queue("ui_log")
@@ -128,7 +142,7 @@ class CLIApp(App):
         self.candidate_list: Optional[CandidateList] = None
 
         # SubAgent当前消息引用
-        self.subagent_current_messages: dict[str, MessageWidget] = {}
+        self.subagent_current_messages: dict[str, Union[MessageWidget, ReasoningContentWidget]] = {}
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -203,7 +217,7 @@ class CLIApp(App):
                 if not content:
                     continue
 
-                if current_message and current_message.is_reasoning != is_reasoning:
+                if current_message and (isinstance(current_message, ReasoningContentWidget) != is_reasoning):
                     current_message.update_display()
                     current_message = None
 
@@ -213,19 +227,25 @@ class CLIApp(App):
                     # 获取当前LLM名字
                     agent = self.group_chat.get_members("agent", Agent)
                     llm_name, _llm = agent.get_current_llm_info()
-                    current_message = MessageWidget(
-                        role="assistant",
-                        content=content,
-                        is_reasoning=is_reasoning,
-                        sender_name=llm_name,
-                    )
+                    if is_reasoning:
+                        current_message = ReasoningContentWidget(
+                            role="assistant",
+                            content=content,
+                            sender_name=llm_name,
+                        )
+                    else:
+                        current_message = MessageWidget(
+                            role="assistant",
+                            content=content,
+                            sender_name=llm_name,
+                        )
                     await asyncio.sleep(0)
                     container.mount(current_message)
                     self.messages.append(current_message)
                     current_message.update_display()
                     self._trim_messages_if_needed()
                 else:
-                    current_message.append_content(content)
+                    current_message.feed_string(content)
                 # 自动滚动到底部
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
@@ -300,12 +320,18 @@ class CLIApp(App):
                     # 流式token输出
                     if subagent_name not in self.subagent_current_messages:
                         # 创建新消息
-                        current_message = MessageWidget(
-                            role="assistant",
-                            content=content,
-                            sender_name=subagent_name,
-                            is_reasoning=is_reasoning,
-                        )
+                        if is_reasoning:
+                            current_message = ReasoningContentWidget(
+                                role="assistant",
+                                content=content,
+                                sender_name=subagent_name,
+                            )
+                        else:
+                            current_message = MessageWidget(
+                                role="assistant",
+                                content=content,
+                                sender_name=subagent_name,
+                            )
                         self.subagent_current_messages[subagent_name] = current_message
                         subagent_container.mount(current_message)
                         current_message.update_display()
@@ -329,7 +355,6 @@ class CLIApp(App):
                         role="assistant",
                         content=content,
                         sender_name=subagent_name,
-                        is_reasoning=False,
                     )
                     subagent_container.mount(widget)
                     widget.update_display()
@@ -391,7 +416,6 @@ class CLIApp(App):
                         role="user",
                         content=init_message,
                         sender_name="user",
-                        is_reasoning=False,
                     )
                 )
                 await self.group_chat.send("user_message", user_msg)
@@ -604,7 +628,6 @@ class CLIApp(App):
                     role="user",
                     content=message_text,
                     sender_name="user",
-                    is_reasoning=False,
                 )
             )
             await self.group_chat.send("user_message", user_msg)

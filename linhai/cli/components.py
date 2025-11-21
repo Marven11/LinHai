@@ -7,13 +7,13 @@ import re
 
 from textual.app import ComposeResult
 from textual.widgets import Static
+from textual.reactive import reactive
 from textual.timer import Timer
 from rich import box
 from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
-from linhai.llm import ChatMessage
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 
 # 常用文件后缀名到语法高亮类型的映射
@@ -440,49 +440,84 @@ class ToolCallWidget(Static):
         return ""
 
 
-class NormalContentWidget(Static):
-    """单条消息显示组件"""
+class ReasoningContentWidget(Static):
+    """思考消息显示组件，不换行并用省略号省略超出行"""
 
-    def __init__(
-        self, role: str, content: str, sender_name: str, is_reasoning: bool = False
-    ):
+    def __init__(self, role: str, content: str, sender_name: str):
+        super().__init__()
+        self.role = f"{role}-reasoning"
+        self.content_str = content
+        self.is_expanded = False
+        self.timer: Timer | None = None
+        self.add_class("reasoning-widget")
+        self.sender_name = sender_name
+        self.border_title = self.calculate_border_title()
+
+    def feed_string(self, new_content: str):
+        """追加内容到消息"""
+        self.content_str += new_content
+
+    def append_content(self, new_content: str):
+        """追加内容到消息（兼容性方法）"""
+        self.feed_string(new_content)
+
+    def calculate_border_title(self) -> str:
+        return f"{self.sender_name} (reasoning) {'[点击隐藏]' if self.is_expanded else '[点击展开]'}"
+
+    def on_click(self):
+        if self.is_expanded:
+            self.is_expanded = False
+            self.remove_class("reasoning-widget-expanded")
+        else:
+            self.is_expanded = True
+            self.add_class("reasoning-widget-expanded")
+
+        self.border_title = self.calculate_border_title()
+
+
+    def on_mount(self) -> None:
+        """组件挂载时开始显示"""
+        self.timer = self.set_interval(0.1, self.update_display)
+
+    def update_display(self) -> None:
+        """更新思考消息显示"""
+        content_to_display = self.content_str.strip()
+
+        if not self.is_expanded:
+            lines = [line for line in content_to_display.splitlines() if line]
+            content_to_display = "\n".join(lines[-2:])
+
+        # 直接使用Textual的Static组件显示文本，让CSS处理省略号
+        self.update(content_to_display)
+
+
+class NormalContentWidget(Static):
+    """普通消息显示组件，按字符换行"""
+
+    def __init__(self, role: str, content: str, sender_name: str):
         super().__init__()
         self.content_str = content
-        self.is_reasoning = is_reasoning
+        self.display_name = sender_name
+        self.role = role
         self.timer: Timer | None = None
         self._content_static: Static | None = None
-
-        if is_reasoning:
-            self.display_name = f"{sender_name} (reasoning)"
-            self.role = f"{role}-reasoning"
-        else:
-            self.display_name = sender_name
-            self.role = role
-        self.last_update_time = time.perf_counter()
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
         self.content_str += new_content
 
     def on_mount(self) -> None:
-        """组件挂载时开始解析JSON"""
+        """组件挂载时开始显示"""
         self._content_static = Static("")
         self.mount(self._content_static)
         self.timer = self.set_interval(0.1, self.update_display)
 
     def update_display(self) -> None:
-        """更新消息显示"""
-
+        """更新普通消息显示，按字符换行"""
         content_to_display = self.content_str.strip()
-        if self.is_reasoning:
-            # 只显示思考内容的最后5行
-            lines = content_to_display.splitlines()
-            if len(lines) > 5:
-                content_to_display = "\n".join(lines[-5:])
         border_color = {
             "user": "#A3BE8C",  # 调整后的绿色
             "assistant": "#81A1C1",  # nord primary 蓝色
-            "assistant-reasoning": "#4C566A",  # nord secondary 灰色
         }.get(self.role, "grey50")
         panel = Panel(
             Syntax(
@@ -490,7 +525,7 @@ class NormalContentWidget(Static):
                 "markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
-                word_wrap=True,
+                word_wrap=True,  # 按字符换行
             ),
             box=box.SQUARE,
             border_style=border_color,
@@ -502,23 +537,16 @@ class NormalContentWidget(Static):
         if self._content_static is not None:
             self._content_static.update(panel)
 
-    def to_message(self) -> ChatMessage:
-        """转换为ChatMessage"""
-        return ChatMessage(role=self.role, message=self.content_str)
-
 
 class MessageWidget(Static):
-    """单条消息显示组件，支持流式token处理和JSON工具调用显示"""
+    """普通消息显示组件，支持流式token处理和JSON工具调用显示"""
 
-    def __init__(
-        self, role: str, content: str, sender_name: str, is_reasoning: bool = False
-    ):
+    def __init__(self, role: str, content: str, sender_name: str):
         super().__init__()
         self.role = role
         self.initial_content = content
         self.sender_name = sender_name
         self.content_str = content
-        self.is_reasoning = is_reasoning
 
         self.current_widget: ToolCallWidget | NormalContentWidget | None = None
         # 当前行，可能以换行符结尾，特别注意以```开头的行
@@ -534,13 +562,16 @@ class MessageWidget(Static):
 
         self.set_timer(5, stop_timer)
 
+    def feed_string(self, new_content: str):
+        """追加内容到消息"""
+        self.append_content(new_content)
+
     def append_content(self, new_content: str):
         if self.current_widget is None:
             self.current_widget = NormalContentWidget(
                 self.role,
                 "",
                 self.sender_name,
-                self.is_reasoning,
             )
             self.mount(self.current_widget)
             self.append_content(self.initial_content)
@@ -560,7 +591,7 @@ class MessageWidget(Static):
             if not self.current_line.endswith("\n"):
                 return "", None
             if isinstance(self.current_widget, NormalContentWidget):
-                if self.current_line == "```json toolcall\n" and not self.is_reasoning:
+                if self.current_line == "```json toolcall\n":
                     self.current_line = ""
                     return "", ToolCallWidget("")
                 else:
@@ -574,7 +605,6 @@ class MessageWidget(Static):
                     self.role,
                     "" if whole_line == "```\n" else whole_line,
                     self.sender_name,
-                    self.is_reasoning,
                 )
         else:
             if self.current_line.endswith("\n"):
