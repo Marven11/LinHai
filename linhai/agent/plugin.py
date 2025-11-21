@@ -167,28 +167,6 @@ class BadMultiToolCall(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class MarkdownSyntaxPlugin(Plugin):
-    """Markdown语法检查Plugin。"""
-
-    async def after_message_generation(
-        self, _answer: Answer, full_response, _tool_calls
-    ):
-        """检查markdown语法是否正确。"""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        # 计算代码块分隔符的数量
-        code_block_count = full_response.count("\n```")
-        if code_block_count % 2 != 0:
-            agent.message_processor.append_message(
-                RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
-            )
-
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
-
-
 class StopFastAgentPlugin(Plugin):
     """禁止minimax m2/glm 4.6疯狂调用工具的插件"""
 
