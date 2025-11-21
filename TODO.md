@@ -3,7 +3,10 @@
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
 - [ ] 使用https://github.com/darrenburns/textual-autocomplete为当前CLI加上自动补全
+  - 你可能需要将输入框从text area改成input组件
   - 支持自动获取@和/的补全列表
+  - 必须启动linhai测试!
+  - 运行所有unittest保证没有破坏性更改
 
 注意：一定记得参考历史 commit|git commit|勾上 TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
