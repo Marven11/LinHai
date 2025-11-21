@@ -8,8 +8,8 @@ import mistune
 repr_obj = Repr()
 repr_obj.maxstring = 50
 
-class ParseError(Exception):
-    ...
+
+class ParseError(Exception): ...
 
 
 class CodeBlockRenderer(mistune.HTMLRenderer):
@@ -85,14 +85,7 @@ def extract_tool_calls_with_errors(
         if block["language"].lower() == "json toolcall":
             try:
                 # 检查是否是合法的JSON
-                try:
-                    data = json.loads(block["content"])
-                except json.JSONDecodeError as e:
-                    errors.append(
-                        f"工具调用解析出错：第{i+1}个code block中的JSON格式无效: {str(e)}\n"
-                        f"内容: {repr_obj.repr(block['content'])}"
-                    )
-                    continue
+                data = json.loads(block["content"])
 
                 # 检查是否是object（字典类型）
                 if not isinstance(data, dict):
@@ -120,7 +113,12 @@ def extract_tool_calls_with_errors(
 
                 # 所有检查通过，添加到tool_calls
                 tool_calls.append(data)
-
+            except json.JSONDecodeError as e:
+                errors.append(
+                    f"工具调用解析出错：第{i+1}个code block中的JSON格式无效: {str(e)}\n"
+                    f"内容: {repr_obj.repr(block['content'])}"
+                )
+                continue
             except Exception as e:  # pylint: disable=broad-exception-caught
                 errors.append(
                     f"工具调用解析出错：第{i+1}个code block解析时发生未知错误: {str(e)}\n"

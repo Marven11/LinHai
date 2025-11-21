@@ -132,13 +132,17 @@ class PyteTerminal:
 
 @terminal_toolset.register_tool(
     name="create_terminal",
-    desc="新建虚拟终端，返回终端对应的ID，调用这个工具后需要**立即等待**才能调用其他终端工具操控终端！",
+    desc="新建虚拟终端，返回终端对应的ID，这个工具不能和其他工具一起调用！",
     args={
         "columns": ToolArgInfo(desc="终端列数，默认80", type="int"),
         "lines": ToolArgInfo(desc="终端行数，默认24", type="int"),
     },
     required_args=[],
-    conflict_with=["send_keys_to_terminal", "send_string_to_terminal", "read_terminal_screen", "close_terminal"],
+    conflict_with=[
+        "send_keys_to_terminal",
+        "send_string_to_terminal",
+        "read_terminal_screen",
+    ],
 )
 def create_terminal(columns: int = 80, lines: int = 24) -> str:
     """新建虚拟终端

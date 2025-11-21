@@ -2,11 +2,11 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 修复所有unittest
+- [ ] 将输入框的逻辑改成回车发送，Ctrl+回车换行
 
-注意：一定记得参考历史 commit|git commit|勾上 TODO - 一定在你的任务规划中显式规划读取历史 commit|git commit|勾上 TODO
+注意：一定记得参考历史 commit|git commit|勾上 TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
-注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件，并且需要至少给定 30 秒的等待时间
+注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
 
 # 暂时搁置
 

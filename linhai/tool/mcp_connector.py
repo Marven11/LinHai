@@ -101,12 +101,17 @@ class MCPConnector:
     async def call_tool_raw(
         self, server_name: str, tool_name: str, args: dict[str, Any]
     ):
-        data = await self.get_server(server_name).call_tool(tool_name, arguments=args)
-        result = f"{data.meta=}\n"
-        for content in data.content:
-            if content.type == "text":
-                result += content.text
-        return result
+        try:
+            data = await self.get_server(server_name).call_tool(
+                tool_name, arguments=args
+            )
+            result = f"{data.meta=}\n"
+            for content in data.content:
+                if content.type == "text":
+                    result += content.text
+            return result
+        except Exception as e:
+            return ToolErrorMessage(f"调用时发生错误：{type(e)} {e!r}")
 
     def init_connector_toolset(self):
         connector_toolset = ToolSet()

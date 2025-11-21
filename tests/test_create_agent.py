@@ -27,7 +27,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
         
         group_chat = GroupChat()
-        config_path = Path(__file__).parent / "config.toml"
+        config_path = Path(__file__).parent / "test_config.toml"
         
         # 调用create_agent应该成功返回agent
         result = asyncio.run(create_agent(group_chat, Path(config_path)))
@@ -56,7 +56,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
         
         group_chat = GroupChat()
-        config_path = Path(__file__).parent / "config.toml"
+        config_path = Path(__file__).parent / "test_config.toml"
         
         # 使用llm_name参数
         result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="test"))
@@ -69,7 +69,7 @@ class TestCreateAgent(unittest.TestCase):
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""
         group_chat = GroupChat()
-        config_path = Path(__file__).parent / "config.toml"
+        config_path = Path(__file__).parent / "test_config.toml"
         
         # 使用无效的llm_name应该抛出ValueError
         with self.assertRaises(ValueError) as context:

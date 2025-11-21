@@ -1,0 +1,11 @@
+[[llm]]
+name = "test"
+api_key = "test-key"
+base_url = "https://api.openai.com/v1"
+model = "gpt-3.5-turbo"
+
+[tools]
+max_output_length = 50000
+
+[memory]
+file_path = "memory.md"
