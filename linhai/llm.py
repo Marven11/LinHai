@@ -490,7 +490,9 @@ class OpenAi:
         self.compatibility = compatibility
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
-        self.previous_update_callback = previous_update_callback or self._default_previous_update_callback
+        self.previous_update_callback = (
+            previous_update_callback or self._default_previous_update_callback
+        )
 
     def _default_previous_update_callback(self, input_tokens: int):
         """默认的previous_input_tokens更新回调。"""
@@ -587,7 +589,7 @@ class OpenAi:
         if self.tools:
             params["tools"] = self.tools
 
-        retry_delay = 20  # 重试延迟，秒
+        retry_delay = 5
 
         answer = None
         while True:
@@ -602,6 +604,8 @@ class OpenAi:
                 break
             except (asyncio.TimeoutError, OpenAIError):
                 await asyncio.sleep(retry_delay)
+                retry_delay *= 1.5
+                retry_delay = min(retry_delay, 300)
 
         if answer is not None:
             self.previous_history = history
