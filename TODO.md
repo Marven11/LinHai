@@ -5,7 +5,7 @@
 - [ ] 修改思考消息时的显示样式，如果一行超出了当前内容则用省略号省略，不要换行
   - 让普通消息按字符换行，让思考消息不换行
   - 你需要为思考消息创建一个新的 widget，顺便简化当前消息 widget 的实现
-- [ ] 增强CLI中使用的Markdown Lexer
+- [x] 增强CLI中使用的Markdown Lexer (Commit changes before rebase)
     - 抄/Users/cube/Code/Python/LinHai/.venv/lib/python3.13/site-packages/pygments/lexers/markup.py
     - 添加对四个或更多反引号的支持
     - 编写测试 (Update TODO)

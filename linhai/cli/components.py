@@ -11,6 +11,7 @@ from textual.reactive import reactive
 from textual.timer import Timer
 from rich import box
 from rich.syntax import Syntax
+from linhai.cli.markdown_lexer import EnhancedMarkdownLexer
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
@@ -332,7 +333,7 @@ class ToolCallWidget(Static):
             panel = Panel(
                 Syntax(
                     self.json_str,
-                    "markdown",
+                    lexer=EnhancedMarkdownLexer(),
                     theme="nord-darker",
                     background_color="#2E3440",
                     word_wrap=True,
@@ -399,7 +400,7 @@ class ToolCallWidget(Static):
                 panel = Panel(
                     Syntax(
                         self.current_content.strip(),
-                        "markdown",
+                        lexer=EnhancedMarkdownLexer(),
                         theme="nord-darker",
                         background_color="#2E3440",
                         word_wrap=True,
@@ -522,7 +523,7 @@ class NormalContentWidget(Static):
         panel = Panel(
             Syntax(
                 content_to_display,
-                "markdown",
+                lexer=EnhancedMarkdownLexer(),
                 theme="nord-darker",
                 background_color="#2E3440",
                 word_wrap=True,  # 按字符换行
