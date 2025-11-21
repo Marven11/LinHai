@@ -194,6 +194,10 @@ class StopFastAgentPlugin(Plugin):
 
     MAX_TOOLCALL_COUNT = 5
 
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.speeding_counter = 0
+
     async def before_message_generation(
         self, _enable_compress: bool, _disable_waiting_user_warning: bool
     ):
@@ -219,9 +223,15 @@ class StopFastAgentPlugin(Plugin):
             return False
         agent.message_processor.append_message(
             RuntimeMessage(
-                f"你现在是{model.compatibility}，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+                f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
             )
         )
+        if model.compatibility == "glm":
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    "你现在是GLM，必须打开思考模式，仔细思考！"
+                )
+            )
 
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
@@ -238,10 +248,19 @@ class StopFastAgentPlugin(Plugin):
             return False
 
         if current_content.count("```json toolcall") > self.MAX_TOOLCALL_COUNT:
+            extra_message = ""
+            if self.speeding_counter:
+                extra_message = (
+                    "从刚刚开始就一直在调用大量工具，你疯了？？？？"
+                    + "？！？！" * self.speeding_counter
+                )
             await agent.interrupt(
                 f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+                + extra_message
             )
+            self.speeding_counter += 1
             return True
+        self.speeding_counter = 0
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
