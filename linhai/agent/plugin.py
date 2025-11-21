@@ -119,32 +119,6 @@ class BadMultiToolCall(Plugin):
 {"name": "read_file", "arguments": {"filepath": "./example.txt"}}
 ```"""
 
-    async def during_message_generation(
-        self, _answer: Answer, current_content: str
-    ) -> bool:
-        agent = self.group_chat.get_members("agent", linhai_agent.Agent)
-        agent_messages = [
-            msg
-            for msg in agent.message_processor.get_messages()
-            if isinstance(msg, ChatMessage) and msg.role == "assistant"
-        ]
-        is_start_message = len(agent_messages) <= 2
-        if not is_start_message:
-            return False
-        pattern = r"```\n+```json toolcall"
-        tool_call_count = current_content.count("```json toolcall")
-        has_no_reason = re.search(pattern, current_content) is not None
-        if tool_call_count > 1 and has_no_reason:
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
-                    + self.example
-                )
-            )
-            await agent.interrupt("错误：必须同时调用工具且在中间加上原因！")
-            return True
-        return False
-
     async def after_message_generation(
         self,
         _answer: Answer,
@@ -180,11 +154,14 @@ class BadMultiToolCall(Plugin):
             agent.message_processor.append_message(
                 RuntimeMessage("不要在原因中加上箭头！")
             )
+        if re.search(r"```\n+[^\n]+同时调用：[^\n]+\n+```json toolcall", pattern) is not None:
+            agent.message_processor.append_message(
+                RuntimeMessage("不需要在原因中加上“同时调用：”，很丑")
+            )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
-        lifecycle.register_during_message_generation(self.during_message_generation)
 
 
 class MarkdownSyntaxPlugin(Plugin):

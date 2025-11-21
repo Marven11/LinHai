@@ -98,11 +98,13 @@ class CLIApp(App):
         padding-right: 1;
         overflow: hidden;
         text-overflow: ellipsis;
+        text-wrap: nowrap;
         border: solid grey;
     }
 
     .reasoning-widget-expanded {
         text-overflow: fold;
+        text-wrap: wrap;
     }
     """
 

@@ -2,13 +2,7 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 修改思考消息时的显示样式，如果一行超出了当前内容则用省略号省略，不要换行
-  - 让普通消息按字符换行，让思考消息不换行
-  - 你需要为思考消息创建一个新的 widget，顺便简化当前消息 widget 的实现
-- [x] 增强CLI中使用的Markdown Lexer (Commit changes before rebase)
-    - 抄/Users/cube/Code/Python/LinHai/.venv/lib/python3.13/site-packages/pygments/lexers/markup.py
-    - 添加对四个或更多反引号的支持
-    - 编写测试 (Update TODO)
+- [ ] 修复所有unittest
 
 注意：一定记得参考历史 commit|git commit|勾上 TODO - 一定在你的任务规划中显式规划读取历史 commit|git commit|勾上 TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
