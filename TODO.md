@@ -2,7 +2,8 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 先彻底删除现在的自动补全功能
+- [ ] 使用https://github.com/darrenburns/textual-autocomplete为当前CLI加上自动补全
+  - 支持自动获取@和/的补全列表
 
 注意：一定记得参考历史 commit|git commit|勾上 TODO
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
