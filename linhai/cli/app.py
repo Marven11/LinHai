@@ -27,11 +27,9 @@ from .components import (
     RuntimeMessageWidget,
     MessageWidget,
     ReasoningContentWidget,
-    CandidateList,
 )
 
 # Import new managers
-from .completion import CompletionManager
 from .token_manager import TokenManager
 
 ASCII_ART = r"""
@@ -134,14 +132,12 @@ class CLIApp(App):
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
 
         # 初始化管理器
-        self.completion_manager = CompletionManager(group_chat)
         self.token_manager = TokenManager()
 
         # 自动滚动状态
         self.is_user_scroll_to_end = False
 
-        # 候选列表组件
-        self.candidate_list: Optional[CandidateList] = None
+
 
         # SubAgent当前消息引用
         self.subagent_current_messages: dict[str, Union[MessageWidget, ReasoningContentWidget]] = {}
@@ -154,8 +150,7 @@ class CLIApp(App):
                     for msg in self.messages:
                         yield msg
 
-                # 候选列表初始隐藏，根据需要显示（放在输入框上方）
-                yield Static("", id="candidate-list-container")
+
                 yield TextArea(
                     placeholder="输入消息...", id="input", language="markdown"
                 )
@@ -165,44 +160,9 @@ class CLIApp(App):
                 with VerticalScroll(id="subagent-container"):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
 
-    def show_completion_list(self, prefix: str, candidates: list[str]) -> None:
-        """显示候选列表"""
-        if not candidates:
-            self.hide_completion_list()
-            return
 
-        self.completion_manager.completion_prefix = prefix
-        self.completion_manager.completion_candidates = candidates
-        self.completion_manager.completion_active = True
 
-        # 创建或更新候选列表组件
-        if self.candidate_list:
-            self.candidate_list.candidates = candidates
-            self.candidate_list.prefix = prefix
-            self.candidate_list.selected_index = 0
-            self.candidate_list.update_display()
-        else:
-            self.candidate_list = CandidateList(candidates, prefix)
-            self.query_one("#candidate-list-container").mount(self.candidate_list)
 
-    def hide_completion_list(self) -> None:
-        """隐藏候选列表"""
-        self.completion_manager.completion_active = False
-        if self.candidate_list:
-            self.candidate_list.remove()
-            self.candidate_list = None
-
-    def on_text_area_changed(self, event: TextArea.Changed) -> None:
-        """处理文本区域内容变化"""
-        value = event.text_area.text
-        candidates = self.completion_manager.handle_input_change(value)
-
-        if candidates is not None:
-            self.show_completion_list(
-                self.completion_manager.completion_prefix, candidates
-            )
-        else:
-            self.hide_completion_list()
 
     async def watch_agent_answer_queue(self):
         """监听agent_answer队列并处理Agent回答"""
@@ -524,14 +484,7 @@ class CLIApp(App):
             await self.agent_task
             raise RuntimeError("Agent task is dead!")
 
-        # 处理补全相关的键盘事件
-        if self.completion_manager.completion_active and self.candidate_list:
-            if event.key in ["up", "down", "tab", "enter", "escape"]:
-                if self.completion_manager.handle_key_event(
-                    event.key, cast(TextArea, self.query_one("#input"))
-                ):
-                    event.stop()
-                    return
+
 
         # 处理ctrl+enter发送消息
         if event.key == "ctrl+enter":
@@ -583,14 +536,7 @@ class CLIApp(App):
         text_area = cast(TextArea, self.query_one("#input"))
         message_text = text_area.text.strip()
 
-        # 如果补全列表处于激活状态，不处理提交事件
-        if self.completion_manager.completion_active:
-            return
 
-        # 如果刚刚完成候选选择，忽略此次提交事件并清除标志
-        if self.completion_manager.just_completed_candidate:
-            self.completion_manager.just_completed_candidate = False
-            return
 
         if self.current_tool_call:
             # 处理工具确认响应
