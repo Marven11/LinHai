@@ -80,7 +80,7 @@ class Lifecycle:
         from .plugin import (
             WaitingUserPlugin,
             WrongEndPlugin,
-            GuideMinimaxPlugin,
+            StopFastAgentPlugin,
             WeirdEndOfSentencePlugin,
             BadMultiToolCall,
             MarkdownSyntaxPlugin,
@@ -92,7 +92,7 @@ class Lifecycle:
         plugins = [
             WaitingUserPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
-            GuideMinimaxPlugin(self.group_chat),
+            StopFastAgentPlugin(self.group_chat),
             WeirdEndOfSentencePlugin(self.group_chat),
             BadMultiToolCall(self.group_chat),
             MarkdownSyntaxPlugin(self.group_chat),

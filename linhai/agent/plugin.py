@@ -154,7 +154,10 @@ class BadMultiToolCall(Plugin):
             agent.message_processor.append_message(
                 RuntimeMessage("不要在原因中加上箭头！")
             )
-        if re.search(r"```\n+[^\n]+同时调用：[^\n]+\n+```json toolcall", pattern) is not None:
+        if (
+            re.search(r"```\n+[^\n]+同时调用：[^\n]+\n+```json toolcall", pattern)
+            is not None
+        ):
             agent.message_processor.append_message(
                 RuntimeMessage("不需要在原因中加上“同时调用：”，很丑")
             )
@@ -175,7 +178,7 @@ class MarkdownSyntaxPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
         # 计算代码块分隔符的数量
-        code_block_count = full_response.count("```")
+        code_block_count = full_response.count("\n```")
         if code_block_count % 2 != 0:
             agent.message_processor.append_message(
                 RuntimeMessage("输出markdown语法有误，可能会导致工具调用无效")
@@ -186,8 +189,39 @@ class MarkdownSyntaxPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class GuideMinimaxPlugin(Plugin):
-    """禁止minimax m2疯狂调用工具的插件"""
+class StopFastAgentPlugin(Plugin):
+    """禁止minimax m2/glm 4.6疯狂调用工具的插件"""
+
+    MAX_TOOLCALL_COUNT = 5
+
+    async def before_message_generation(
+        self, _enable_compress: bool, _disable_waiting_user_warning: bool
+    ):
+        """在消息生成前检查目录是否更改。"""
+        from linhai.agent import Agent
+        from linhai.llm import OpenAi
+
+        agent = self.group_chat.get_members("agent", Agent)
+        # 检查是否是第一个回复：消息历史中没有之前的agent消息
+        has_previous_agent_message = any(
+            msg.role == "assistant"
+            for msg in agent.message_processor.get_messages()
+            if hasattr(msg, "role")
+        )
+        if not has_previous_agent_message:
+            return
+
+        model = await agent.get_current_model()
+        if not isinstance(model, OpenAi) or model.compatibility not in [
+            "minimax",
+            "glm",
+        ]:
+            return False
+        agent.message_processor.append_message(
+            RuntimeMessage(
+                f"你现在是{model.compatibility}，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+            )
+        )
 
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
@@ -197,11 +231,16 @@ class GuideMinimaxPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
-        if not isinstance(model, OpenAi) or model.compatibility != "minimax":
+        if not isinstance(model, OpenAi) or model.compatibility not in [
+            "minimax",
+            "glm",
+        ]:
             return False
 
-        if current_content.count("```json toolcall") > 5:
-            await agent.interrupt("错误：你现在是Minimax，禁止使用超过5个工具！")
+        if current_content.count("```json toolcall") > self.MAX_TOOLCALL_COUNT:
+            await agent.interrupt(
+                f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+            )
             return True
         return False
 
@@ -332,8 +371,8 @@ class SingleToolCallReminderPlugin(Plugin):
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
 
-            # 如果连续5次都只调用1个工具，提醒agent
-            if self.single_tool_call_count >= 5:
+            # 如果连续2次都只调用1个工具，提醒agent
+            if self.single_tool_call_count >= 2:
                 agent.message_processor.append_message(
                     RuntimeMessage(
                         f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
