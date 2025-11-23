@@ -12,6 +12,7 @@ from textual.timer import Timer
 from rich import box
 from rich.syntax import Syntax
 from linhai.cli.markdown_lexer import EnhancedMarkdownLexer
+from rich.markup import escape
 from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
@@ -180,7 +181,7 @@ class AnimatedWelcomeWidget(Static):
 
             self.update(self._render_daily_quote())
         elif self.animation_stage == 1:  # 乱码阶段
-            self.update(self._render_glitch())
+            self.update(escape(self._render_glitch()))
         else:  # 版本信息阶段
             self.update(self._render_version_info())
             if self.timer:
@@ -452,7 +453,7 @@ class ReasoningContentWidget(Static):
             content_to_display = "\n".join(lines[-2:])
 
         # 直接使用Textual的Static组件显示文本，让CSS处理省略号
-        self.update(content_to_display)
+        self.update(escape(content_to_display))
 
 
 class NormalContentWidget(Static):
