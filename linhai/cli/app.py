@@ -5,7 +5,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static, TextArea, TabbedContent, TabPane
+from textual.widgets import Static, Input, TabbedContent, TabPane
 from textual import events
 from linhai.llm import (
     ChatMessage,
@@ -137,10 +137,10 @@ class CLIApp(App):
         # 自动滚动状态
         self.is_user_scroll_to_end = False
 
-
-
         # SubAgent当前消息引用
-        self.subagent_current_messages: dict[str, Union[MessageWidget, ReasoningContentWidget]] = {}
+        self.subagent_current_messages: dict[
+            str, Union[MessageWidget, ReasoningContentWidget]
+        ] = {}
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -150,16 +150,12 @@ class CLIApp(App):
                     for msg in self.messages:
                         yield msg
 
-
-                yield TextArea(
-                    placeholder="输入消息...", id="input", language="markdown"
-                )
+                yield Input(placeholder="输入消息...", id="input")
                 yield Static("", id="token-usage")
 
             with TabPane("SubAgent", id="subagent-tab"):
                 with VerticalScroll(id="subagent-container"):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
-
 
     async def watch_agent_answer_queue(self):
         """监听agent_answer队列并处理Agent回答"""
@@ -176,7 +172,9 @@ class CLIApp(App):
                 if not content:
                     continue
 
-                if current_message and (isinstance(current_message, ReasoningContentWidget) != is_reasoning):
+                if current_message and (
+                    isinstance(current_message, ReasoningContentWidget) != is_reasoning
+                ):
                     current_message.update_display()
                     current_message = None
 
@@ -481,8 +479,6 @@ class CLIApp(App):
             await self.agent_task
             raise RuntimeError("Agent task is dead!")
 
-
-
         # 处理ctrl+enter发送消息
         if event.key == "ctrl+enter" or event.key == "enter":
             await self._handle_message_submission()
@@ -530,10 +526,8 @@ class CLIApp(App):
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
-        text_area = cast(TextArea, self.query_one("#input"))
-        message_text = text_area.text.strip()
-
-
+        input_element = cast(Input, self.query_one("#input"))
+        message_text = input_element.value.strip()
 
         if self.current_tool_call:
             # 处理工具确认响应
@@ -544,8 +538,8 @@ class CLIApp(App):
                 confirmed = False
             else:
                 # 无效输入，提示重新输入
-                text_area.text = ""
-                text_area.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
+                input_element.value = ""
+                input_element.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
                 return
 
             # 发送确认消息
@@ -555,8 +549,8 @@ class CLIApp(App):
 
             # 重置当前工具请求
             self.current_tool_call = None
-            text_area.text = ""
-            text_area.placeholder = "输入消息..."
+            input_element.value = ""
+            input_element.placeholder = "输入消息..."
             return
 
         if message_text:
@@ -576,7 +570,7 @@ class CLIApp(App):
                 )
             )
             await self.group_chat.send("user_message", user_msg)
-            text_area.text = ""
+            input_element.value = ""
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.mount(widget)
