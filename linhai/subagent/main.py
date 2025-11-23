@@ -206,8 +206,11 @@ class SubAgent:
 class SubAgentManager:
     """SubAgent管理器，负责创建和管理所有SubAgent。"""
 
-    def __init__(self, group_chat: GroupChat):
+    def __init__(self, group_chat: GroupChat, subagent_config = None, llms = None, llm_names = None):
         self.group_chat = group_chat
+        self.subagent_config = subagent_config
+        self.llms = llms or []
+        self.llm_names = llm_names or []
         self.subagents: dict[str, tuple[SubAgent, asyncio.Task | None]] = {}
         group_chat.register_member("subagent_manager", self)
 
@@ -218,11 +221,21 @@ class SubAgentManager:
         if name in self.subagents:
             return f"错误: SubAgent {name} 已存在"
 
+        # 使用subagent配置中的default_llm，如果没有配置则使用传入的llm
+        from linhai.llm import LanguageModel
+        subagent_llm: LanguageModel = llm
+        
+        if self.subagent_config and hasattr(self.subagent_config, 'default_llm'):
+            default_llm_name = self.subagent_config.default_llm
+            if default_llm_name in self.llm_names:
+                llm_index = self.llm_names.index(default_llm_name)
+                subagent_llm = self.llms[llm_index]
+
         context: SubAgentContext = {
             "type": agent_type,
             "name": name,
             "task_message": task_message,
-            "llm": llm,
+            "llm": subagent_llm,
         }
 
         subagent = SubAgent(context, self.group_chat)

@@ -117,6 +117,16 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_output_length={self.max_output_length})"
 
 
+class SubAgentConfig(BaseModel):
+    """SubAgent配置类型定义。"""
+
+    default_llm: str = Field(default="deepseek", min_length=1)
+
+    def __str__(self) -> str:
+        """返回SubAgent配置的字符串表示"""
+        return f"SubAgentConfig(default_llm={self.default_llm})"
+
+
 class Config(BaseModel):
     """主配置类型定义。"""
 
@@ -124,11 +134,12 @@ class Config(BaseModel):
     agent: Optional[AgentConfig] = None
     memory: Optional[MemoryConfig] = None
     tools: Optional[ToolConfig] = None
+    subagent: Optional[SubAgentConfig] = None
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
-        return f"Config(llms={llm_names}, agent={self.agent is not None}, memory={self.memory is not None}, tools={self.tools is not None})"
+        return f"Config(llms={llm_names}, agent={self.agent is not None}, memory={self.memory is not None}, tools={self.tools is not None}, subagent={self.subagent is not None})"
 
 
 def load_config(config_path: Union[str, Path]) -> Config:

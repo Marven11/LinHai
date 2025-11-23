@@ -376,5 +376,49 @@ model = "test_model"
             os.unlink(temp_file)
 
 
+    def test_load_config_with_subagent(self):
+        """Test loading a config with subagent configuration."""
+        config_content = '''[[llm]]
+name = "deepseek"
+base_url = "https://api.deepseek.com/v1"
+api_key = "test_key"
+model = "deepseek-chat"
+
+[[llm]]
+name = "qwen"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+api_key = "test_key_2"
+model = "qwen-plus"
+
+[subagent]
+default_llm = "qwen"
+'''
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsInstance(config, Config)
+            self.assertIsNotNone(config.subagent)
+            assert config.subagent is not None
+            self.assertEqual(config.subagent.default_llm, "qwen")
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_subagent_default(self):
+        """Test loading a config without subagent uses default."""
+        config_content = '''[[llm]]
+name = "deepseek"
+base_url = "https://api.deepseek.com/v1"
+api_key = "test_key"
+model = "deepseek-chat"
+'''
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsInstance(config, Config)
+            self.assertIsNone(config.subagent)
+        finally:
+            os.unlink(temp_file)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -57,8 +57,11 @@ async def create_agent(
     tool_config = config.tools if config.tools else ToolConfig()
     tool_manager = await _create_tool_manager(group_chat, tool_config, agent_config.mcp, mcp_basedir=config_path.parent)
 
+    # 获取subagent配置
+    subagent_config = config.subagent if config.subagent else None
+
     # 创建SubAgentManager并注册subagent工具
-    subagent_manager = SubAgentManager(group_chat)
+    subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
     subagent_toolset = create_subagent_toolset(subagent_manager)
     tool_manager.add_toolset(subagent_toolset)
 

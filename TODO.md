@@ -2,10 +2,10 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 修改lifecycle系统，支持工具调用失败时的回调
+- [x] 修改lifecycle系统，支持工具调用失败时的回调
   - 支持获取agent当前的回答
   - 添加unittest测试
-- [ ] 添加config项[subagent]，支持设置subagent使用的llm，运行时通过名字寻找llm，如
+- [x] 添加config项[subagent]，支持设置subagent使用的llm，运行时通过名字寻找llm，如
 ```toml
 [subagent]
 default_llm = "deepseek"
