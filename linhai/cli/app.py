@@ -161,9 +161,6 @@ class CLIApp(App):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
 
 
-
-
-
     async def watch_agent_answer_queue(self):
         """监听agent_answer队列并处理Agent回答"""
         current_message = None
@@ -487,7 +484,7 @@ class CLIApp(App):
 
 
         # 处理ctrl+enter发送消息
-        if event.key == "ctrl+enter":
+        if event.key == "ctrl+enter" or event.key == "enter":
             await self._handle_message_submission()
             event.stop()
             return
