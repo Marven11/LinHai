@@ -273,7 +273,7 @@ class AgentToolcall:
             if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
                 # 触发工具调用后的生命周期事件（失败）
                 await self.agent.lifecycle.trigger_after_tool_call(
-                    tool_call, tool_result, False
+                    self.agent, tool_call, tool_result, False
                 )
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
@@ -282,7 +282,7 @@ class AgentToolcall:
 
             # 触发工具调用后的生命周期事件（成功）
             await self.agent.lifecycle.trigger_after_tool_call(
-                tool_call, tool_result, True
+                self.agent, tool_call, tool_result, True
             )
 
             # 处理工具结果
@@ -290,7 +290,7 @@ class AgentToolcall:
             return False  # 不需要早期返回
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
             # 触发工具调用后的生命周期事件（失败）
-            await self.agent.lifecycle.trigger_after_tool_call(tool_call, e, False)
+            await self.agent.lifecycle.trigger_after_tool_call(self.agent, tool_call, e, False)
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
             self.agent.message_processor.append_message(RuntimeMessage(msg))

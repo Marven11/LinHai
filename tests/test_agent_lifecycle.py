@@ -140,15 +140,15 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
 
         # 触发回调
         await self.lifecycle.trigger_after_tool_call(
-            self.mock_tool_call, self.mock_tool_result, True
+            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
         )
 
         # 验证回调被调用
         callback1.assert_called_once_with(
-            self.mock_tool_call, self.mock_tool_result, True
+            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
         )
         callback2.assert_called_once_with(
-            self.mock_tool_call, self.mock_tool_result, True
+            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
         )
 
     async def test_callback_order(self):
@@ -214,7 +214,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
                 self.mock_tool_call
             )
             await self.lifecycle.trigger_after_tool_call(
-                self.mock_tool_call, self.mock_tool_result, True
+                self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
             )
         except (RuntimeError, asyncio.CancelledError):
             self.fail("Triggering empty callbacks should not throw exceptions")

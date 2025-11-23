@@ -42,10 +42,11 @@ BeforeToolCallCallback: TypeAlias = Callable[
 
 AfterToolCallCallback: TypeAlias = Callable[
     [
+        "Agent",
         ToolCallMessage,
         Any,
         bool,
-    ],  # tool_call, tool_result, success
+    ],  # agent, tool_call, tool_result, success
     Awaitable[None],
 ]
 
@@ -169,10 +170,11 @@ class Lifecycle:
 
     async def trigger_after_tool_call(
         self,
+        agent: "Agent",
         tool_call: ToolCallMessage,
         tool_result: Any,
         success: bool,
     ):
         """触发工具调用后的事件。"""
         for callback in self._after_tool_call_callbacks:
-            await callback(tool_call, tool_result, success)
+            await callback(agent, tool_call, tool_result, success)

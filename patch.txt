@@ -1,0 +1,178 @@
+diff --git a/linhai/cli/app.py b/linhai/cli/app.py
+index d795145..f6ac190 100644
+--- a/linhai/cli/app.py
++++ b/linhai/cli/app.py
+@@ -5,8 +5,9 @@ import asyncio
+ 
+ from textual.app import App, ComposeResult
+ from textual.containers import VerticalScroll
+-from textual.widgets import Static, TextArea, TabbedContent, TabPane
++from textual.widgets import Static, Input, TabbedContent, TabPane
+ from textual import events
++from textual_autocomplete import AutoComplete, DropdownItem
+ from linhai.llm import (
+     ChatMessage,
+     AnswerToken,
+@@ -150,9 +151,14 @@ class CLIApp(App):
+                     for msg in self.messages:
+                         yield msg
+ 
+-
+-                yield TextArea(
+-                    placeholder="输入消息...", id="input", language="markdown"
++                # 创建输入框
++                input_widget = Input(placeholder="输入消息...", id="input")
++                yield input_widget
++                
++                # 添加自动补全组件
++                yield AutoComplete(
++                    input_widget,
++                    candidates=self._get_autocomplete_candidates,
+                 )
+                 yield Static("", id="token-usage")
+ 
+@@ -484,10 +490,8 @@ class CLIApp(App):
+             await self.agent_task
+             raise RuntimeError("Agent task is dead!")
+ 
+-
+-
+         # 处理ctrl+enter发送消息
+-        if event.key == "ctrl+enter":
++        if event.key == "ctrl+enter" or event.key == "enter":
+             await self._handle_message_submission()
+             event.stop()
+             return
+@@ -508,9 +512,8 @@ class CLIApp(App):
+         self.current_tool_confirmation = None
+         self.current_tool_call = tool_call
+         # 显示确认提示
+-        self.query_one("#input").placeholder = (  # type: ignore
+-            f"确认执行工具 {tool_call.function_name} 吗？(y/n)"
+-        )
++        input_widget = cast(Input, self.query_one("#input"))
++        input_widget.placeholder = f"确认执行工具 {tool_call.function_name} 吗？(y/n)"
+         # 等待用户输入（通过 on_input_submitted 处理）
+         while self.current_tool_confirmation is None:
+             await asyncio.sleep(0.01)
+@@ -533,8 +536,8 @@ class CLIApp(App):
+ 
+     async def _handle_message_submission(self) -> None:
+         """处理消息提交"""
+-        text_area = cast(TextArea, self.query_one("#input"))
+-        message_text = text_area.text.strip()
++        input_widget = cast(Input, self.query_one("#input"))
++        message_text = input_widget.value.strip()
+ 
+ 
+ 
+@@ -547,8 +550,9 @@ class CLIApp(App):
+                 confirmed = False
+             else:
+                 # 无效输入，提示重新输入
+-                text_area.text = ""
+-                text_area.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
++                input_widget = cast(Input, self.query_one("#input"))
++                input_widget.value = ""
++                input_widget.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
+                 return
+ 
+             # 发送确认消息
+@@ -558,8 +562,9 @@ class CLIApp(App):
+ 
+             # 重置当前工具请求
+             self.current_tool_call = None
+-            text_area.text = ""
+-            text_area.placeholder = "输入消息..."
++            input_widget = cast(Input, self.query_one("#input"))
++            input_widget.value = ""
++            input_widget.placeholder = "输入消息..."
+             return
+ 
+         if message_text:
+@@ -579,10 +584,83 @@ class CLIApp(App):
+                 )
+             )
+             await self.group_chat.send("user_message", user_msg)
+-            text_area.text = ""
++            input_widget = cast(Input, self.query_one("#input"))
++            input_widget.value = ""
+             # 更新UI
+             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
+             container.mount(widget)
+             widget.update_display()
+             self.is_user_scroll_to_end = True
+             container.scroll_end(animate=False)
++
++    def _get_autocomplete_candidates(self, state) -> list[DropdownItem]:
++        """获取自动补全候选词，支持@和/的补全"""
++        text = state.text
++        cursor_position = state.cursor_position
++        
++        # 获取当前单词（从光标位置向前查找）
++        current_word = ""
++        for i in range(cursor_position - 1, -1, -1):
++            if text[i] in [" ", "\n", "\t"]:
++                break
++            current_word = text[i] + current_word
++        
++        candidates = []
++        
++        # @补全：LLM名称（从已加载的LLM配置中获取）
++        if current_word.startswith("@"):
++            prefix = current_word[1:].lower()
++            # 从已加载的LLM配置中获取实际的LLM名称
++            llm_names = []
++            try:
++                # 尝试从agent的LLM管理器中获取LLM名称
++                agent = self.group_chat.get_members("agent", Agent)
++                if hasattr(agent, 'llm_manager') and agent.llm_manager:
++                    llm_names = list(agent.llm_manager.llms.keys())
++                elif hasattr(agent, 'available_llms'):
++                    llm_names = list(agent.available_llms.keys())
++                else:
++                    # 如果无法从agent获取，尝试从配置文件中获取
++                    from linhai.config import load_config
++                    import os
++                    config_path = os.getenv('LINHAI_CONFIG', 'config.toml')
++                    if os.path.exists(config_path):
++                        config = load_config(config_path)
++                        if "llm" in config:
++                            for llm_config in config["llm"]:
++                                if "name" in llm_config:
++                                    llm_names.append(llm_config["name"])
++            except Exception:
++                # 如果任何步骤失败，返回空列表
++                llm_names = []
++            
++            for llm in llm_names:
++                if llm.lower().startswith(prefix):
++                    candidates.append(DropdownItem(main=f"@{llm}"))
++        
++        # /补全：命令（从配置动态加载）
++        elif current_word.startswith("/"):
++            prefix = current_word[1:].lower()
++            # 从配置中获取实际的命令列表
++            commands = self._get_available_commands()
++            for cmd in commands:
++                if cmd.lower().startswith(prefix):
++                    candidates.append(DropdownItem(main=f"/{cmd}"))
++        
++        return candidates
++
++    def _get_available_commands(self) -> list[str]:
++        """获取可用的命令列表"""
++        # 返回系统实际支持的命令列表
++        return [
++            "help",
++            "exit", 
++            "clear",
++            "history",
++            "config",
++            "tools",
++            "memory",
++            "test",
++            "run",
++            "debug"
++        ]
+\ No newline at end of file
