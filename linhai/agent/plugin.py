@@ -478,20 +478,6 @@ class SubAgentCollaborationPlugin(Plugin):
     在工具调用失败时启动subagent，检查agent是否违反了多个工具的调用规则。
     """
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.agent_answer_cache = None
-
-    async def after_message_generation(
-        self, answer: Answer, full_response: str, _tool_calls
-    ):
-        """缓存agent的当前回答，供subagent使用。"""
-        self.agent_answer_cache = {
-            "answer": answer,
-            "full_response": full_response,
-            "tool_calls": _tool_calls,
-        }
-
     async def after_tool_call(
         self,
         _agent: "linhai_agent.Agent",
@@ -510,15 +496,16 @@ class SubAgentCollaborationPlugin(Plugin):
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
         from linhai.subagent import SubAgentManager
+        from linhai.agent import Agent
 
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager
         )
-
+        agent = self.group_chat.get_members("agent", Agent)
+        assert agent.current_answer is not None
         # 获取agent当前回答的详细信息
-        full_response = (
-            self.agent_answer_cache["full_response"] if self.agent_answer_cache else ""
-        )
+        
+        full_response = agent.current_answer.get_current_content()
 
         # 创建检查任务，不阻塞当前agent
         asyncio.create_task(
@@ -581,7 +568,6 @@ class SubAgentCollaborationPlugin(Plugin):
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到lifecycle回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
         lifecycle.register_after_tool_call(self.after_tool_call)
 
 
