@@ -125,6 +125,12 @@ class ToolSet:
 
     def has_tool(self, name: str):
         return name in self.tools
+    def add_toolset(self, toolset: "ToolSet") -> None:
+        """将另一个ToolSet中的所有工具添加到当前ToolSet中。"""
+        for tool_name, tool in toolset.tools.items():
+            if tool_name in self.tools:
+                raise ValueError(f"Tool {tool_name} already exists in this ToolSet")
+            self.tools[tool_name] = tool
 
 
 class ToolResultMessage(Message):

@@ -5,7 +5,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static, Input, TabbedContent, TabPane
+from textual.widgets import Static, TabbedContent, TabPane, Input
 from textual import events
 from linhai.llm import (
     ChatMessage,
@@ -104,6 +104,11 @@ class CLIApp(App):
         text-overflow: fold;
         text-wrap: wrap;
     }
+    AutoComplete {
+        & AutoCompleteList {
+            max-height: 2;
+        }
+    }
     """
 
     MAX_MESSAGES = 1000
@@ -141,6 +146,11 @@ class CLIApp(App):
         self.subagent_current_messages: dict[
             str, Union[MessageWidget, ReasoningContentWidget]
         ] = {}
+
+        # 自动补全列表
+        self.completions = self._generate_dynamic_completions()
+        self.command_completions = self._generate_command_completions()
+        self.autocomplete = None
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -274,7 +284,22 @@ class CLIApp(App):
                 subagent_container = self.query_one("#subagent-container")
 
                 if message_type == "token":
-                    # 流式token输出
+                    if (
+                        isinstance(
+                            self.subagent_current_messages.get(subagent_name),
+                            ReasoningContentWidget,
+                        )
+                        and not is_reasoning
+                    ):
+                        del self.subagent_current_messages[subagent_name]
+                    if (
+                        isinstance(
+                            self.subagent_current_messages.get(subagent_name),
+                            MessageWidget,
+                        )
+                        and is_reasoning
+                    ):
+                        del self.subagent_current_messages[subagent_name]
                     if subagent_name not in self.subagent_current_messages:
                         # 创建新消息
                         if is_reasoning:
@@ -360,6 +385,23 @@ class CLIApp(App):
                     else Exception("Task failed without exception")
                 )
 
+    def _generate_dynamic_completions(self) -> list[str]:
+        """动态生成@补全列表"""
+        try:
+            from linhai.agent import Agent
+            agent = self.group_chat.get_members("agent", Agent)
+            if agent:
+                # 获取当前配置的所有LLM名称
+                llm_names = agent.context.get("llm_names", [])
+                return [f"@{name}" for name in llm_names]
+        except Exception:
+            pass
+        return []
+
+    def _generate_command_completions(self) -> list[str]:
+        """动态生成/命令补全列表"""
+        return ["/queue", "/help", "/status"]  # 动态命令列表
+
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
@@ -408,6 +450,21 @@ class CLIApp(App):
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
         )
+
+        # 设置自动补全
+        input_element = self.query_one("#input")
+        assert isinstance(input_element, Input)
+        from textual_autocomplete import AutoComplete, DropdownItem
+
+        self.autocomplete = AutoComplete(
+            target=input_element,
+            candidates=lambda _state: [
+                DropdownItem(item)
+                for item in self._generate_dynamic_completions()
+                + self._generate_command_completions()
+            ],
+        )
+        self.mount(self.autocomplete)
 
         cliapp_tool = ToolSet()
 
@@ -526,8 +583,8 @@ class CLIApp(App):
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
-        input_element = cast(Input, self.query_one("#input"))
-        message_text = input_element.value.strip()
+        input_element = self.query_one("#input")
+        message_text = input_element.value.strip()  # type: ignore
 
         if self.current_tool_call:
             # 处理工具确认响应
@@ -538,8 +595,8 @@ class CLIApp(App):
                 confirmed = False
             else:
                 # 无效输入，提示重新输入
-                input_element.value = ""
-                input_element.placeholder = "请输入 'y' 或 'n' 来确认工具调用"
+                input_element.value = ""  # type: ignore
+                input_element.placeholder = "请输入 'y' 或 'n' 来确认工具调用"  # type: ignore
                 return
 
             # 发送确认消息
@@ -549,8 +606,8 @@ class CLIApp(App):
 
             # 重置当前工具请求
             self.current_tool_call = None
-            input_element.value = ""
-            input_element.placeholder = "输入消息..."
+            input_element.value = ""  # type: ignore
+            input_element.placeholder = "输入消息..."  # type: ignore
             return
 
         if message_text:
@@ -570,7 +627,7 @@ class CLIApp(App):
                 )
             )
             await self.group_chat.send("user_message", user_msg)
-            input_element.value = ""
+            input_element.value = ""  # type: ignore
             # 更新UI
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.mount(widget)

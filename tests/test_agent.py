@@ -86,6 +86,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 注意：Agent会在初始化时注册agent_user_input队列，但需要cli_agent_output队列用于输出
         self.group_chat.register_queue("agent_answer")
 
+        # 创建ClarificationManager（在Agent之前）
+        from linhai.clarification import ClarificationManager
+        self.clarification_manager = ClarificationManager(self.group_chat)
+
         # 创建真实的ToolManager实例
         from linhai.config import ToolConfig
         self.tool_manager = ToolManager(

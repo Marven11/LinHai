@@ -78,7 +78,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
-        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(tool_call, mock_result, True)
+        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(self.mock_agent, tool_call, mock_result, True)
 
     async def test_call_tool_without_confirmation_failure(self):
         """测试无需确认的工具调用失败。"""
@@ -102,7 +102,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
-        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(tool_call, mock_error, False)
+        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(self.mock_agent, tool_call, mock_error, False)
 
     async def test_call_tool_with_whitelist(self):
         """测试白名单工具调用。"""

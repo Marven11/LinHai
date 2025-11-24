@@ -667,6 +667,7 @@ dependencies = [
     { name = "requests" },
     { name = "selenium" },
     { name = "textual" },
+    { name = "textual-autocomplete" },
 ]
 
 [package.optional-dependencies]
@@ -692,6 +693,7 @@ requires-dist = [
     { name = "requests" },
     { name = "selenium" },
     { name = "textual" },
+    { name = "textual-autocomplete" },
 ]
 provides-extras = ["dev"]
 
@@ -1487,6 +1489,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/23/6c/565521dc6dd00fa857845483ae0c070575fda1f9a56d92d732554fecfea4/textual-6.4.0.tar.gz", hash = "sha256:f40df9165a001c10249698d532f2f5a71708b70f0e4ef3fce081a9dd93ffeaaa", size = 1573599, upload-time = "2025-10-22T17:29:51.357Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/20/6eed0e55bdd2576475e9cea49cc71c47f8e56ab54f04cbe04b2fb56440de/textual-6.4.0-py3-none-any.whl", hash = "sha256:b346dbb8e12f17cefb33ddfdf7f19bdc9e66c29daf82fc981a8db6b7d985e115", size = 711663, upload-time = "2025-10-22T17:29:49.346Z" },
+]
+
+[[package]]
+name = "textual-autocomplete"
+version = "4.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "textual" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1e/3a/80411bc7b94969eb116ad1b18db90f8dce8a1de441278c4a81fee55a27ca/textual_autocomplete-4.0.6.tar.gz", hash = "sha256:2ba2f0d767be4480ecacb3e4b130cf07340e033c3500fc424fed9125d27a4586", size = 97967, upload-time = "2025-09-24T21:19:20.213Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/66/ebe744d79c87f25a42d2654dddbd09462edd595f2ded715245a51a546461/textual_autocomplete-4.0.6-py3-none-any.whl", hash = "sha256:bff69c19386e2cbb4a007503b058dc37671d480a4fa2ddb3959c15ceb4aff9b5", size = 16499, upload-time = "2025-09-24T21:19:18.489Z" },
 ]
 
 [[package]]

@@ -4,7 +4,6 @@ import asyncio
 import logging
 import json
 from reprlib import Repr
-from typing import TypedDict
 from datetime import datetime
 
 from linhai.llm import (
@@ -20,27 +19,27 @@ from linhai.tool.base import ToolSet, ToolArgInfo, to_tools_info
 from linhai.tool.tools.command import sleep_tool
 from linhai.agent.base import RuntimeMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.utils import CliRuntimeNotice
 from linhai.prompt import SUBAGENT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 reprobj = Repr(maxstring=50)
 
 
-class SubAgentContext(TypedDict):
-    """SubAgent配置参数"""
-
-    type: str
-    name: str
-    task_message: str
-    llm: LanguageModel
-
-
 class SubAgent:
     """SubAgent类，简化版Agent，无用户交互，执行单一任务后退出。"""
 
-    def __init__(self, context: SubAgentContext, group_chat: GroupChat):
-        self.context = context
+    def __init__(
+        self,
+        agent_type: str,
+        name: str,
+        task_message: str,
+        llm: LanguageModel,
+        group_chat: GroupChat,
+    ):
+        self.agent_type = agent_type
+        self.name = name
+        self.task_message = task_message
+        self.llm = llm
         self.group_chat = group_chat
         self.state: str = "running"
         self.exit_reason: str | None = None
@@ -61,7 +60,7 @@ class SubAgent:
                     ),
                 ),
             ),
-            ChatMessage(role="user", message=context["task_message"]),
+            ChatMessage(role="user", message=self.task_message),
         ]
 
     def _register_subagent_tools(self):
@@ -85,11 +84,23 @@ class SubAgent:
         def subagent_exit(reason: str) -> str:
             self.exit_reason = reason
             self.state = "exited"
-            return f"SubAgent {self.context['name']} 已退出: {reason}"
+            return f"SubAgent {self.name} 已退出: {reason}"
+
+        # 注册澄清工具
+        from linhai.clarification import ClarificationManager
+        from .clarification_tools import create_clarification_toolset
+
+        clarification_manager = self.group_chat.get_members(
+            "clarification_manager", ClarificationManager
+        )
+        clarification_toolset = create_clarification_toolset(
+            clarification_manager, self.name
+        )
+        self.toolset.add_toolset(clarification_toolset)
 
     async def _generate_response(self) -> str:
         """生成LLM响应并返回完整内容，支持流式输出。"""
-        answer: Answer = await self.context["llm"].answer_stream(self.messages)
+        answer: Answer = await self.llm.answer_stream(self.messages)
 
         full_response = ""
         async for token in answer:
@@ -99,22 +110,10 @@ class SubAgent:
                 await self.group_chat.send_if_exists(
                     "subagent_message",
                     {
-                        "subagent_name": self.context['name'],
+                        "subagent_name": self.name,
                         "content": token.content,
                         "type": "token",
                         "is_reasoning": token.reasoning_content is not None,
-                    },
-                )
-            elif isinstance(token, str):
-                full_response += token
-                # 对于字符串token，也发送
-                await self.group_chat.send_if_exists(
-                    "subagent_message",
-                    {
-                        "subagent_name": self.context['name'],
-                        "content": token,
-                        "type": "token",
-                        "is_reasoning": False,
                     },
                 )
 
@@ -122,9 +121,9 @@ class SubAgent:
         await self.group_chat.send_if_exists(
             "subagent_message",
             {
-                "subagent_name": self.context['name'],
+                "subagent_name": self.name,
                 "content": full_response,
-                "type": "message_complete"
+                "type": "message_complete",
             },
         )
 
@@ -180,25 +179,23 @@ class SubAgent:
 
     async def run(self) -> None:
         """运行SubAgent，执行任务直到退出。"""
-        logger.info("SubAgent %s 启动", self.context["name"])
+        logger.info("SubAgent %s 启动", self.name)
 
         while self.state == "running":
             should_continue = await self._handle_execution_cycle()
             if not should_continue:
                 break
 
-        logger.info(
-            "SubAgent %s 结束运行，原因: %s", self.context["name"], self.exit_reason
-        )
-        
+        logger.info("SubAgent %s 结束运行，原因: %s", self.name, self.exit_reason)
+
         # 发送退出通知到subagent标签页
         await self.group_chat.send_if_exists(
             "subagent_message",
             {
-                "subagent_name": self.context['name'],
-                "content": f"SubAgent {self.context['name']} 已退出: {self.exit_reason}",
+                "subagent_name": self.name,
+                "content": f"SubAgent {self.name} 已退出: {self.exit_reason}",
                 "type": "runtime_notice",
-                "level": "INFO"
+                "level": "INFO",
             },
         )
 
@@ -206,7 +203,9 @@ class SubAgent:
 class SubAgentManager:
     """SubAgent管理器，负责创建和管理所有SubAgent。"""
 
-    def __init__(self, group_chat: GroupChat, subagent_config = None, llms = None, llm_names = None):
+    def __init__(
+        self, group_chat: GroupChat, subagent_config=None, llms=None, llm_names=None
+    ):
         self.group_chat = group_chat
         self.subagent_config = subagent_config
         self.llms = llms or []
@@ -215,30 +214,30 @@ class SubAgentManager:
         group_chat.register_member("subagent_manager", self)
 
     async def create_subagent(
-        self, agent_type: str, name: str, task_message: str, llm: LanguageModel
+        self, agent_type: str, name: str, task_message: str
     ) -> str:
         """创建并启动一个SubAgent。"""
         if name in self.subagents:
             return f"错误: SubAgent {name} 已存在"
 
         # 使用subagent配置中的default_llm，如果没有配置则使用传入的llm
-        from linhai.llm import LanguageModel
-        subagent_llm: LanguageModel = llm
-        
-        if self.subagent_config and hasattr(self.subagent_config, 'default_llm'):
+        subagent_llm: LanguageModel | None = None
+
+        if self.subagent_config:
             default_llm_name = self.subagent_config.default_llm
             if default_llm_name in self.llm_names:
                 llm_index = self.llm_names.index(default_llm_name)
                 subagent_llm = self.llms[llm_index]
+        if subagent_llm is None:
+            from linhai.agent import Agent  # 避免循环导入
 
-        context: SubAgentContext = {
-            "type": agent_type,
-            "name": name,
-            "task_message": task_message,
-            "llm": subagent_llm,
-        }
+            _, subagent_llm = self.group_chat.get_members(
+                "agent", Agent
+            ).get_current_llm_info()
 
-        subagent = SubAgent(context, self.group_chat)
+        subagent = SubAgent(
+            agent_type, name, task_message, subagent_llm, self.group_chat
+        )
 
         # 安全地创建任务（检查是否有运行的事件循环）
         try:

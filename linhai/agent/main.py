@@ -89,6 +89,8 @@ class Agent:
         # 初始化queued_messages实例变量（如果不存在）
         self.queued_messages: list = []
 
+        # 澄清管理器引用 - 不保存为实例属性，使用时动态获取
+
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
             return None
@@ -445,8 +447,7 @@ class Agent:
                 break
             await asyncio.sleep(0)
 
-        # 只有在MCP连接器存在时才断开连接
-        if self.group_chat.has_member("mcp_connector"):
-            await self.group_chat.get_members(
-                "mcp_connector", MCPConnector
-            ).disconnect_all_mcp_servers()
+        # 断开MCP连接
+        await self.group_chat.get_members(
+            "mcp_connector", MCPConnector
+        ).disconnect_all_mcp_servers()

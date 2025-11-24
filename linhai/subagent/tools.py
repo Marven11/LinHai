@@ -3,6 +3,7 @@
 from linhai.tool.base import ToolSet, ToolArgInfo
 from .main import SubAgentManager
 
+
 def create_subagent_toolset(subagent_manager: SubAgentManager) -> ToolSet:
     """创建并返回SubAgent管理工具的ToolSet。"""
     toolset = ToolSet()
@@ -11,16 +12,18 @@ def create_subagent_toolset(subagent_manager: SubAgentManager) -> ToolSet:
         name="create_subagent",
         desc="创建并启动一个SubAgent执行任务",
         args={
-            "agent_type": ToolArgInfo(desc="SubAgent类型，目前只支持'dummy'", type="str"),
+            "agent_type": ToolArgInfo(
+                desc="SubAgent类型，目前只支持'dummy'", type="str"
+            ),
             "name": ToolArgInfo(desc="SubAgent名称", type="str"),
             "task_message": ToolArgInfo(desc="任务描述消息", type="str"),
         },
         required_args=["agent_type", "name", "task_message"],
     )
-    async def create_subagent_tool(agent_type: str, name: str, task_message: str) -> str:
+    async def create_subagent_tool(
+        agent_type: str, name: str, task_message: str
+    ) -> str:
         """创建并启动一个SubAgent。"""
-        if agent_type != "dummy":
-            return f"错误: 不支持的SubAgent类型 {agent_type}，目前只支持'dummy'"
 
         # 获取当前LLM实例
         from linhai.agent.main import Agent
@@ -30,9 +33,7 @@ def create_subagent_toolset(subagent_manager: SubAgentManager) -> ToolSet:
         if not agent:
             return "错误: 无法获取Agent实例"
 
-        llm_name, llm_instance = agent.get_current_llm_info()
-
-        return await subagent_manager.create_subagent(agent_type, name, task_message, llm_instance)
+        return await subagent_manager.create_subagent(agent_type, name, task_message)
 
     @toolset.register_tool(
         name="check_subagent",

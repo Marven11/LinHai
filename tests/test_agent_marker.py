@@ -94,10 +94,16 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock()
         self.tool_manager.get_workflow.return_value = None
 
+        # 创建模拟的 ClarificationManager
+        self.clarification_manager = MagicMock()
+        self.clarification_manager.has_unanswered_clarifications.return_value = False
+
         # 设置 group_chat.get_members 根据参数返回不同的值
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
+            elif member_type == "clarification_manager":
+                return self.clarification_manager
             else:
                 return self.tool_manager
 

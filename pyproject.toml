@@ -21,6 +21,7 @@ dependencies = [
     "mcp",
     "pyte>=0.8.2",
     "pydantic",
+    "textual-autocomplete",
 ]
 requires-python = ">=3.10"
 

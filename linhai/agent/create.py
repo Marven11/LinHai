@@ -13,6 +13,8 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from .base import GlobalMemory, AgentContext
 from linhai.subagent.tools import create_subagent_toolset
 from linhai.subagent import SubAgentManager
+from linhai.clarification import ClarificationManager
+from .clarification_tools import create_clarification_toolset as create_agent_clarification_toolset
 
 
 async def create_agent(
@@ -78,6 +80,11 @@ async def create_agent(
         group_chat=group_chat,
         init_messages=init_messages,
     )
+
+    # 创建ClarificationManager并注册澄清工具（在Agent之后，因为AgentMessage在Agent的__init__中注册）
+    clarification_manager = ClarificationManager(group_chat)
+    agent_clarification_toolset = create_agent_clarification_toolset(clarification_manager)
+    tool_manager.add_toolset(agent_clarification_toolset)
 
     return agent
 

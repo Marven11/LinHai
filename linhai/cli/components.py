@@ -181,7 +181,7 @@ class AnimatedWelcomeWidget(Static):
 
             self.update(self._render_daily_quote())
         elif self.animation_stage == 1:  # 乱码阶段
-            self.update(escape(self._render_glitch()))
+            self.update(self._render_glitch())
         else:  # 版本信息阶段
             self.update(self._render_version_info())
             if self.timer:
@@ -198,9 +198,11 @@ class AnimatedWelcomeWidget(Static):
         import random
 
         text = Text()
-        glitch_text = "".join(
-            random.choice("!@#$%^&*()_+-=[]{}|;:,.<>?/~`")
-            for _ in range(max(len(self.daily_quote), len(self.version_info)))
+        glitch_text = escape(
+            "".join(
+                random.choice("!@#$%^&*()_+-=[]{}|;:,.<>?/~`")
+                for _ in range(max(len(self.daily_quote), len(self.version_info)))
+            )
         )
         # 从0.2 ~ 1.2秒
         saturation = max(0, 1.2 - self.elapsed_time)
@@ -244,9 +246,6 @@ class RuntimeMessageWidget(Static):
         message_text.append(f" {self.content}")
 
         yield Static(message_text)
-
-
-
 
 
 class ToolCallWidget(Static):
@@ -438,7 +437,6 @@ class ReasoningContentWidget(Static):
             self.add_class("reasoning-widget-expanded")
 
         self.border_title = self.calculate_border_title()
-
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""

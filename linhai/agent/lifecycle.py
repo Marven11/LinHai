@@ -7,12 +7,15 @@ from typing import (
     TypeAlias,
 )
 import logging
-
+import typing
 
 from linhai.llm import (
     Answer,
     ToolCallMessage,
 )
+
+if typing.TYPE_CHECKING:
+    from linhai.agent import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +90,9 @@ class Lifecycle:
             EndThinkPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
+            ClarificationBlockingPlugin,
+            SubAgentCollaborationPlugin,
+            GitBlockingPlugin,
         )
 
         plugins = [
@@ -98,6 +104,9 @@ class Lifecycle:
             EndThinkPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
+            ClarificationBlockingPlugin(self.group_chat),
+            SubAgentCollaborationPlugin(self.group_chat),
+            GitBlockingPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

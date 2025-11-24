@@ -1,17 +1,28 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
+from typing import Any
+import asyncio
+import logging
+import shlex
+import os
+
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from linhai.llm import Answer, ChatMessage
+from ..llm import Answer, ToolCallMessage
+from ..utils import CliRuntimeNotice
 import linhai.agent as linhai_agent
-import random
+from linhai.group_chat import GroupChat
+from linhai.utils import generate_id
+import linhai.subagent as linhai_subagent
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
-    def __init__(self, group_chat):
+    def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
     @abstractmethod
@@ -181,14 +192,14 @@ class StopFastAgentPlugin(Plugin):
     ):
         """在消息生成前检查目录是否更改。"""
         from linhai.agent import Agent
-        from linhai.llm import OpenAi
+        from linhai.llm import OpenAi, ChatMessage
 
         agent = self.group_chat.get_members("agent", Agent)
         # 检查是否是第一个回复：消息历史中没有之前的agent消息
         has_previous_agent_message = any(
             msg.role == "assistant"
             for msg in agent.message_processor.get_messages()
-            if hasattr(msg, "role")
+            if isinstance(msg, ChatMessage)
         )
         if not has_previous_agent_message:
             return
@@ -206,9 +217,7 @@ class StopFastAgentPlugin(Plugin):
         )
         if model.compatibility == "glm":
             agent.message_processor.append_message(
-                RuntimeMessage(
-                    "你现在是GLM，必须打开思考模式，仔细思考！"
-                )
+                RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
             )
 
     async def during_message_generation(
@@ -374,6 +383,7 @@ class SingleToolCallReminderPlugin(Plugin):
                     RuntimeMessage(
                         f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
                         "除开特殊原因不要每次只调用一个工具！"
+                        + "！！！" * self.single_tool_call_count
                     )
                 )
         else:
@@ -397,6 +407,7 @@ class PreventToolOutputPlugin(Plugin):
     ):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         from linhai.agent import Agent
+        from linhai.llm import ChatMessage
 
         agent = self.group_chat.get_members("agent", Agent)
 
@@ -404,7 +415,7 @@ class PreventToolOutputPlugin(Plugin):
         has_previous_agent_message = any(
             msg.role == "assistant"
             for msg in agent.message_processor.get_messages()
-            if hasattr(msg, "role")
+            if isinstance(msg, ChatMessage)
         )
 
         # 如果是第一个回复且有一行的开头是`**tool**`，则打断
@@ -425,3 +436,220 @@ class PreventToolOutputPlugin(Plugin):
     def register(self, lifecycle):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+
+
+class ClarificationBlockingPlugin(Plugin):
+    """阻止Agent在有未解答澄清时停下等待用户的Plugin。"""
+
+    async def after_message_generation(
+        self, _answer: Answer, full_response: str, _tool_calls
+    ):
+        """检查是否有未解答的澄清，如果有则阻止使用等待用户标记。"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 检查是否有未解答的澄清（动态获取clarification_manager）
+        from linhai.clarification import ClarificationManager
+        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+        if (
+            clarification_manager
+            and clarification_manager.has_unanswered_clarifications()
+        ):
+            # 如果有未解答的澄清，检查是否使用了等待用户标记
+            if WAITING_USER_MARKER in full_response:
+                agent.message_processor.append_message(
+                    RuntimeMessage(
+                        f"错误：有未解答的澄清问题，禁止使用{WAITING_USER_MARKER!r}等待用户。"
+                        "请先回复所有SubAgent的澄清问题。"
+                    )
+                )
+                # 将状态重置为working，阻止等待用户
+                agent.state = "working"
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class SubAgentCollaborationPlugin(Plugin):
+    """基于lifecycle事件驱动subagent协作的Plugin。
+
+    在工具调用失败时启动subagent，检查agent是否违反了多个工具的调用规则。
+    """
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.agent_answer_cache = None
+
+    async def after_message_generation(
+        self, answer: Answer, full_response: str, _tool_calls
+    ):
+        """缓存agent的当前回答，供subagent使用。"""
+        self.agent_answer_cache = {
+            "answer": answer,
+            "full_response": full_response,
+            "tool_calls": _tool_calls,
+        }
+
+    async def after_tool_call(
+        self,
+        _agent: "linhai_agent.Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> None:
+        """在工具调用失败时启动subagent检查规则违反。"""
+        if success:
+            return
+
+        # 工具调用失败，启动subagent检查
+        interrupt_msg = CliRuntimeNotice(
+            level="WARNING", content="启动SubAgent检查工具调用"
+        )
+        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+
+        from linhai.subagent import SubAgentManager
+
+        subagent_manager = self.group_chat.get_members(
+            "subagent_manager", SubAgentManager
+        )
+
+        # 获取agent当前回答的详细信息
+        full_response = (
+            self.agent_answer_cache["full_response"] if self.agent_answer_cache else ""
+        )
+
+        # 创建检查任务，不阻塞当前agent
+        asyncio.create_task(
+            self._check_violations(
+                subagent_manager, full_response, tool_call, tool_result
+            )
+        )
+
+    async def _check_violations(
+        self,
+        subagent_manager: "linhai_subagent.SubAgentManager",
+        full_response: str,
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+    ) -> None:
+        """在后台任务中检查agent是否违反规则。"""
+        from linhai.agent import Agent
+
+
+        # 使用工具调用规则常量
+        from linhai.prompt import SUBAGENT_CHECKLIST
+
+        tool_rules = SUBAGENT_CHECKLIST
+
+        task_message = f"""你是一名规则检查员，负责检查Agent的工具调用是否违反规则。
+
+**Agent的当前完整回答:**
+```
+{full_response}
+```
+
+**失败的工具调用详情:**
+- 工具名称: {tool_call.function_name}
+- 工具参数: {tool_call.function_arguments}
+- 工具结果: {tool_result}
+
+**你的任务:**
+仔细检查Agent的上述回答，判断其是否违反了以下任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
+
+**工具调用规则:**
+{tool_rules}
+
+**执行步骤:**
+
+1. 逐一检查上述每条规则
+2. 如果发现任何违反，调用request_clarification工具，提问格式:
+"规则违反: [规则名称]。在Agent的回答中，你[具体违反行为]。请解释为什么要这样做？"
+
+3. 如果没有发现任何违反，调用exit工具退出，原因写"未发现规则违反"
+
+**重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
+
+        # 启动subagent进行检查
+        await subagent_manager.create_subagent(
+            agent_type="violation_checker",
+            name=generate_id("violation_checker"),
+            task_message=task_message,
+        )
+
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到lifecycle回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.register_after_tool_call(self.after_tool_call)
+
+
+class GitBlockingPlugin(Plugin):
+    """阻止Agent在有未解答澄清时使用git命令的Plugin。"""
+
+    async def before_tool_call(self, tool_call: ToolCallMessage):
+        """检查是否有未解答的澄清，如果有则阻止使用git命令。"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 检查是否有未解答的澄清（动态获取clarification_manager）
+        from linhai.clarification import ClarificationManager
+        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+        if (
+            clarification_manager
+            and clarification_manager.has_unanswered_clarifications()
+        ):
+            # 检查工具调用是否包含git命令
+            tool_name = tool_call.function_name
+            arguments = tool_call.function_arguments
+
+            # 检查是否是run_simple_command或run_complex_command
+            if tool_name in ["run_simple_command", "run_complex_command"]:
+                command = arguments.get("command", "")
+                # 使用更精确的git命令检测
+                if self._is_git_command(command):
+                    agent.message_processor.append_message(
+                        RuntimeMessage(
+                            f"错误：有未解答的澄清问题，禁止使用git命令。"
+                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。"
+                        )
+                    )
+                    # 抛出异常阻止工具调用
+                    raise ValueError("有未解答的澄清，禁止使用git命令")
+
+    def _is_git_command(self, command: str) -> bool:
+        """精确检测是否为git命令"""
+
+        
+        try:
+            # 解析命令
+            parts = shlex.split(command.strip())
+            if not parts:
+                return False
+            
+            # 检查命令是否为git或git开头的命令
+            cmd = parts[0]
+            
+            # 直接匹配git
+            if cmd == "git":
+                return True
+            
+            # 匹配以git开头的命令（如git commit, git push等）
+            if cmd.startswith("git-"):
+                return True
+            
+            # 检查是否包含git作为独立命令（处理路径中的git）
+            # 使用os.path.basename来获取命令的基名
+            basename = os.path.basename(cmd)
+            if basename == "git" or basename == "git.exe":
+                return True
+            
+            return False
+        except Exception:
+            return False
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到before_tool_call回调。"""
+        lifecycle.register_before_tool_call(self.before_tool_call)
