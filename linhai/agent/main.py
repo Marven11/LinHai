@@ -86,7 +86,6 @@ class Agent:
         # 为兼容性添加messages属性，代理到message_processor
         self.messages = self.message_processor.get_messages()
 
-        # 初始化queued_messages实例变量（如果不存在）
         self.queued_messages: list = []
 
         # 澄清管理器引用 - 不保存为实例属性，使用时动态获取
@@ -165,24 +164,38 @@ class Agent:
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
             self.state = "working"
 
+    async def receive_one_user_message(self):
+        msg = await self.group_chat.receive("user_message")
+        assert isinstance(msg, ChatMessage)
+        await self.handle_user_message(msg)
+        self.state = "working"
+        return msg
+
     async def state_waiting_user(self):
         """
         处理等待用户状态。
 
         在这个状态下，Agent会等待用户输入消息，然后处理这些消息。
         """
-        logger.info("Agent进入等待用户状态")
+        if self.is_last_message_user():
+            self.state = "working"
+            return
 
-        if not self.is_last_message_user():
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
+        )
+        while self.group_chat.is_empty("user_message") and self.state == "waiting_user":
+            await asyncio.sleep(0.01)
+        if self.state != "waiting_user":
             await self.group_chat.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
+                CliRuntimeNotice(
+                    level="INFO", content="Agent在等待用户时被切换状态"
+                ),
             )
-            msg = await self.group_chat.receive("user_message")
-            assert isinstance(msg, ChatMessage)
-            self.handle_user_message(msg)
-            # 接收到用户消息后直接转为working状态
-            self.state = "working"
+            return
+        await self.receive_one_user_message()
 
         await self.generate_response()
 
@@ -197,9 +210,7 @@ class Agent:
         # 直接处理用户输入消息
         if not self.group_chat.is_empty("user_message"):
             try:
-                msg = await self.group_chat.receive("user_message")
-                assert isinstance(msg, ChatMessage)
-                self.handle_user_message(msg)
+                await self.receive_one_user_message()
                 await self.generate_response()
             except RuntimeError as e:
                 raise RuntimeError("处理消息时出错") from e
@@ -225,7 +236,7 @@ class Agent:
         msg = self.message_processor.get_messages()[-1]
         return isinstance(msg, ChatMessage) and msg.role == "user"
 
-    def handle_user_message(self, msg: Message):
+    async def handle_user_message(self, msg: ChatMessage):
         """处理并加入用户的消息"""
         assert isinstance(msg, ChatMessage) and msg.role == "user"
 
@@ -252,7 +263,14 @@ class Agent:
                     )
                 )
 
-        self.message_processor.append_message(msg)
+        if parsed_input.command == "queue":
+            # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
+            self.queued_messages.append(msg)
+        elif parsed_input.command in ["quit", "exit"]:
+            # 以/quit或/exit开头，直接退出程序
+            await self.group_chat.send("exit_signal", {"return_code": 0})
+        else:
+            self.message_processor.append_message(msg)
 
     async def get_current_model(self) -> LanguageModel:
         """
@@ -317,28 +335,16 @@ class Agent:
                 return answer
 
             if not self.group_chat.is_empty("user_message"):
-                msg = await self.group_chat.receive("user_message")
+                msg = await self.receive_one_user_message()
                 assert isinstance(msg, ChatMessage)
                 parsed_input = parse_user_input(msg.message.strip())
-                if parsed_input.command == "queue":
-                    # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
-                    self.queued_messages.append(msg)
-                elif parsed_input.command in ["quit", "exit"]:
-                    # 以/quit或/exit开头，直接退出程序
-                    await self.group_chat.send("agent_answer", answer)
-                    chat_message = cast(ChatMessage, answer.get_message())
-                    self.message_processor.append_message(chat_message)
-                    # 发送退出信号
-                    await self.group_chat.send("exit_signal", {"return_code": 0})
-                    answer.interrupt()
-                    return answer
-                else:
+                if parsed_input.command is None:
                     # 正常打断
                     await self.group_chat.send("agent_answer", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.message_processor.append_message(chat_message)
                     await self.interrupt("Agent被用户打断")
-                    self.handle_user_message(msg)
+                    await self.handle_user_message(msg)
                     return answer
 
         await self.group_chat.send("agent_answer", answer)
@@ -348,7 +354,10 @@ class Agent:
         self.message_processor.append_message(chat_message)
 
         # 将排队消息添加到消息列表，放在agent输出后面
-        if hasattr(self, "queued_messages") and self.queued_messages:
+        if self.queued_messages:
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+            )
             self.message_processor.append_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
@@ -427,8 +436,7 @@ class Agent:
         user_input_found = False
         await self.toolcall_processor.postinit()
         while not self.group_chat.is_empty("user_message"):
-            msg = await self.group_chat.receive("user_message")
-            self.handle_user_message(msg)
+            await self.receive_one_user_message()
             user_input_found = True
         if user_input_found:
             await self.generate_response()

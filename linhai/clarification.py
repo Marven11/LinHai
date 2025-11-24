@@ -65,6 +65,11 @@ class ClarificationManager:
             )
         )
 
+        from linhai.agent.main import Agent
+        agent = self.group_chat.get_members("agent", Agent)
+        if agent.state == "waiting_user":
+            agent.state = "working"
+
     async def request_clarification(
         self, clarification_id: str, question: str, from_subagent: str
     ) -> None:
