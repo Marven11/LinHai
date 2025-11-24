@@ -23,15 +23,8 @@ def create_clarification_toolset(
         clarification_id = generate_id("clarification")
 
         # 添加澄清到管理器
-        await clarification_manager.add_clarification(
+        await clarification_manager.request_clarification(
             clarification_id, question, subagent_name
-        )
-
-        await clarification_manager.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO", content=f"SubAgent添加了澄清请求: {question}"
-            ),
         )
 
         # 等待Agent回复
