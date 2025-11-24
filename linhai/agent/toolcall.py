@@ -230,6 +230,9 @@ class AgentToolcall:
                     content=f"工具调用冲突: {tool_call.function_name}",
                 ),
             )
+            await self.agent.lifecycle.trigger_after_tool_call(
+                self.agent, tool_call, None, False
+            )
             logger.warning(conflict_msg)
             self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
             self.early_return = True
