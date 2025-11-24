@@ -11,7 +11,7 @@ def create_clarification_toolset(
 
     @toolset.register_tool(
         name="respond_clarification",
-        desc="回复SubAgent的澄清问题",
+        desc="回复SubAgent的澄清问题，这个工具可以安全地和其他工具一起调用",
         args={
             "clarification_id": ToolArgInfo(
                 desc="澄清问题的ID", type="str"

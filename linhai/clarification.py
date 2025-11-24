@@ -49,19 +49,13 @@ class ClarificationManager:
             "answer": None,
         }
         self._response_events[clarification_id] = asyncio.Event()
-        logger.info(
-            "添加澄清 %s 来自 SubAgent %s: %s",
-            clarification_id,
-            from_subagent,
-            question,
-        )
         
         # 直接添加RuntimeMessage到Agent的消息队列
         from linhai.agent.message import AgentMessage
         agent_message = self.group_chat.get_members("agent_message", AgentMessage)
         agent_message.append_message(
             RuntimeMessage(
-                f"来自 {from_subagent} 的澄清问题{clarification_id}: {question}"
+                f"收到来自 {from_subagent} 的澄清问题，请尽快回答: {question}"
             )
         )
 
