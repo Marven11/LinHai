@@ -1,6 +1,6 @@
 """Command-line interface for LinHai agent."""
 
-from typing import List, Optional, Union, cast
+from typing import List, Optional, Union
 import asyncio
 
 from textual.app import App, ComposeResult
@@ -332,17 +332,7 @@ class CLIApp(App):
                     widget = RuntimeMessageWidget(level=level, content=content)
                     subagent_container.mount(widget)
                 else:
-                    # 完整消息（向后兼容）
-                    widget = MessageWidget(
-                        role="assistant",
-                        content=content,
-                        sender_name=subagent_name,
-                    )
-                    subagent_container.mount(widget)
-                    widget.update_display()
-
-                # 自动滚动到底部
-                subagent_container.scroll_end(animate=False)
+                    assert False, f"Unsupported Type: {message_type}"
             else:
                 raise RuntimeError(
                     f"Unknown Type in subagent_message: {type(output)=} {output=}"
