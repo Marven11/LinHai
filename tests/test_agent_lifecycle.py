@@ -216,8 +216,39 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_after_tool_call(
                 self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
             )
+            await self.lifecycle.trigger_before_waiting_user(
+                self.mock_agent
+            )
+            await self.lifecycle.trigger_tool_success(
+                self.mock_agent, self.mock_tool_call, self.mock_tool_result
+            )
+            await self.lifecycle.trigger_tool_failure(
+                self.mock_agent, self.mock_tool_call, "test error"
+            )
+            await self.lifecycle.trigger_tool_parse_error(
+                self.mock_agent, "parse error message"
+            )
+            await self.lifecycle.trigger_tool_conflict(
+                self.mock_agent, self.mock_tool_call, ["tool1", "tool2"]
+            )
         except (RuntimeError, asyncio.CancelledError):
             self.fail("Triggering empty callbacks should not throw exceptions")
+
+    async def test_register_and_trigger_before_waiting_user(self):
+        """Test registering and triggering before waiting user callbacks."""
+        callback1 = AsyncMock()
+        callback2 = AsyncMock()
+
+        # 注册回调
+        self.lifecycle.register_before_waiting_user(callback1)
+        self.lifecycle.register_before_waiting_user(callback2)
+
+        # 触发回调
+        await self.lifecycle.trigger_before_waiting_user(self.mock_agent)
+
+        # 验证回调被调用
+        callback1.assert_called_once_with(self.mock_agent)
+        callback2.assert_called_once_with(self.mock_agent)
 
 
 if __name__ == "__main__":

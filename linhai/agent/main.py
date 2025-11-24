@@ -181,6 +181,9 @@ class Agent:
             self.state = "working"
             return
 
+        # 触发等待用户前的生命周期事件
+        await self.lifecycle.trigger_before_waiting_user(self)
+
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),

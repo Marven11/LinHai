@@ -230,8 +230,9 @@ class AgentToolcall:
                     content=f"工具调用冲突: {tool_call.function_name}",
                 ),
             )
-            await self.agent.lifecycle.trigger_after_tool_call(
-                self.agent, tool_call, None, False
+            # 触发工具冲突回调
+            await self.agent.lifecycle.trigger_tool_conflict(
+                self.agent, tool_call, self.called_tools_in_round
             )
             logger.warning(conflict_msg)
             self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
@@ -274,26 +275,28 @@ class AgentToolcall:
             from linhai.tool.base import ToolErrorMessage
 
             if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
-                # 触发工具调用后的生命周期事件（失败）
-                await self.agent.lifecycle.trigger_after_tool_call(
-                    self.agent, tool_call, tool_result, False
+                # 触发工具失败回调
+                await self.agent.lifecycle.trigger_tool_failure(
+                    self.agent, tool_call, tool_result
                 )
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
                 self.agent.message_processor.append_message(RuntimeMessage(msg))
                 return True  # 需要早期返回，中止其他工具调用
 
-            # 触发工具调用后的生命周期事件（成功）
-            await self.agent.lifecycle.trigger_after_tool_call(
-                self.agent, tool_call, tool_result, True
+            # 触发工具成功回调
+            await self.agent.lifecycle.trigger_tool_success(
+                self.agent, tool_call, tool_result
             )
 
             # 处理工具结果
             await self._handle_tool_result(tool_call, tool_result)
             return False  # 不需要早期返回
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-            # 触发工具调用后的生命周期事件（失败）
-            await self.agent.lifecycle.trigger_after_tool_call(self.agent, tool_call, e, False)
+            # 触发工具失败回调
+            await self.agent.lifecycle.trigger_tool_failure(
+                self.agent, tool_call, e
+            )
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
             self.agent.message_processor.append_message(RuntimeMessage(msg))

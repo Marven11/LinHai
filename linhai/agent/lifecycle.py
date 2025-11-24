@@ -58,6 +58,36 @@ DuringMessageGenerationCallback: TypeAlias = Callable[
     Awaitable[bool],  # 返回True表示中断，False表示继续
 ]
 
+BeforeUserMessageCallback: TypeAlias = Callable[
+    ["Agent"],  # agent
+    Awaitable[bool],  # 返回True表示中断消息处理，False表示继续
+]
+
+BeforeWaitingUserCallback: TypeAlias = Callable[
+    ["Agent"],  # agent
+    Awaitable[None],  # 无返回值，仅用于执行前置操作
+]
+
+ToolSuccessCallback: TypeAlias = Callable[
+    ["Agent", ToolCallMessage, Any],  # agent, tool_call, tool_result
+    Awaitable[None],
+]
+
+ToolFailureCallback: TypeAlias = Callable[
+    ["Agent", ToolCallMessage, Any],  # agent, tool_call, error
+    Awaitable[None],
+]
+
+ToolParseErrorCallback: TypeAlias = Callable[
+    ["Agent", str],  # agent, error_message
+    Awaitable[None],
+]
+
+ToolConflictCallback: TypeAlias = Callable[
+    ["Agent", ToolCallMessage, list[str]],  # agent, tool_call, conflicting_tools
+    Awaitable[None],
+]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -75,6 +105,11 @@ class Lifecycle:
         self._during_message_generation_callbacks: list[
             DuringMessageGenerationCallback
         ] = []
+        self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
+        self._tool_success_callbacks: list[ToolSuccessCallback] = []
+        self._tool_failure_callbacks: list[ToolFailureCallback] = []
+        self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
+        self._tool_conflict_callbacks: list[ToolConflictCallback] = []
 
         # 初始化默认插件
         self._plugins = self._register_default_plugins()
@@ -93,6 +128,7 @@ class Lifecycle:
             ClarificationBlockingPlugin,
             SubAgentCollaborationPlugin,
             GitBlockingPlugin,
+            ClarificationWaitingUserPlugin,
         )
 
         plugins = [
@@ -107,6 +143,7 @@ class Lifecycle:
             ClarificationBlockingPlugin(self.group_chat),
             SubAgentCollaborationPlugin(self.group_chat),
             GitBlockingPlugin(self.group_chat),
+            ClarificationWaitingUserPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
@@ -139,6 +176,26 @@ class Lifecycle:
     ):
         """注册消息生成中的回调。"""
         self._during_message_generation_callbacks.append(callback)
+
+    def register_before_waiting_user(self, callback: BeforeWaitingUserCallback):
+        """注册等待用户前的回调。"""
+        self._before_waiting_user_callbacks.append(callback)
+
+    def register_tool_success(self, callback: ToolSuccessCallback):
+        """注册工具成功回调。"""
+        self._tool_success_callbacks.append(callback)
+
+    def register_tool_failure(self, callback: ToolFailureCallback):
+        """注册工具失败回调。"""
+        self._tool_failure_callbacks.append(callback)
+
+    def register_tool_parse_error(self, callback: ToolParseErrorCallback):
+        """注册工具解析错误回调。"""
+        self._tool_parse_error_callbacks.append(callback)
+
+    def register_tool_conflict(self, callback: ToolConflictCallback):
+        """注册工具冲突回调。"""
+        self._tool_conflict_callbacks.append(callback)
 
     async def trigger_during_message_generation(
         self, answer: Answer, current_content: str
@@ -187,3 +244,28 @@ class Lifecycle:
         """触发工具调用后的事件。"""
         for callback in self._after_tool_call_callbacks:
             await callback(agent, tool_call, tool_result, success)
+
+    async def trigger_before_waiting_user(self, agent: "Agent"):
+        """触发等待用户前的事件。"""
+        for callback in self._before_waiting_user_callbacks:
+            await callback(agent)
+
+    async def trigger_tool_success(self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any):
+        """触发工具成功事件。"""
+        for callback in self._tool_success_callbacks:
+            await callback(agent, tool_call, tool_result)
+
+    async def trigger_tool_failure(self, agent: "Agent", tool_call: ToolCallMessage, error: Any):
+        """触发工具失败事件。"""
+        for callback in self._tool_failure_callbacks:
+            await callback(agent, tool_call, error)
+
+    async def trigger_tool_parse_error(self, agent: "Agent", error_message: str):
+        """触发工具解析错误事件。"""
+        for callback in self._tool_parse_error_callbacks:
+            await callback(agent, error_message)
+
+    async def trigger_tool_conflict(self, agent: "Agent", tool_call: ToolCallMessage, conflicting_tools: list[str]):
+        """触发工具冲突事件。"""
+        for callback in self._tool_conflict_callbacks:
+            await callback(agent, tool_call, conflicting_tools)

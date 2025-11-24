@@ -475,20 +475,16 @@ class ClarificationBlockingPlugin(Plugin):
 class SubAgentCollaborationPlugin(Plugin):
     """基于lifecycle事件驱动subagent协作的Plugin。
 
-    在工具调用失败时启动subagent，检查agent是否违反了多个工具的调用规则。
+    在工具失败、工具冲突时启动subagent，检查agent是否违反了多个工具的调用规则。
     """
 
-    async def after_tool_call(
+    async def tool_failure(
         self,
-        _agent: "linhai_agent.Agent",
+        agent: "linhai_agent.Agent",
         tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
+        error: Any,
     ) -> None:
         """在工具调用失败时启动subagent检查规则违反。"""
-        if success:
-            return
-
         # 工具调用失败，启动subagent检查
         interrupt_msg = CliRuntimeNotice(
             level="WARNING", content="启动SubAgent检查工具调用"
@@ -496,12 +492,10 @@ class SubAgentCollaborationPlugin(Plugin):
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
         from linhai.subagent import SubAgentManager
-        from linhai.agent import Agent
 
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager
         )
-        agent = self.group_chat.get_members("agent", Agent)
         assert agent.current_answer is not None
         # 获取agent当前回答的详细信息
         
@@ -510,7 +504,37 @@ class SubAgentCollaborationPlugin(Plugin):
         # 创建检查任务，不阻塞当前agent
         asyncio.create_task(
             self._check_violations(
-                subagent_manager, full_response, tool_call, tool_result
+                subagent_manager, full_response, tool_call, error
+            )
+        )
+
+    async def tool_conflict(
+        self,
+        agent: "linhai_agent.Agent",
+        tool_call: ToolCallMessage,
+        conflicting_tools: list[str],
+    ) -> None:
+        """在工具调用冲突时启动subagent检查规则违反。"""
+        # 工具调用冲突，启动subagent检查
+        interrupt_msg = CliRuntimeNotice(
+            level="WARNING", content="启动SubAgent检查工具冲突"
+        )
+        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+
+        from linhai.subagent import SubAgentManager
+
+        subagent_manager = self.group_chat.get_members(
+            "subagent_manager", SubAgentManager
+        )
+        assert agent.current_answer is not None
+        # 获取agent当前回答的详细信息
+        
+        full_response = agent.current_answer.get_current_content()
+
+        # 创建检查任务，不阻塞当前agent
+        asyncio.create_task(
+            self._check_conflict_violations(
+                subagent_manager, full_response, tool_call, conflicting_tools
             )
         )
 
@@ -519,11 +543,10 @@ class SubAgentCollaborationPlugin(Plugin):
         subagent_manager: "linhai_subagent.SubAgentManager",
         full_response: str,
         tool_call: ToolCallMessage,
-        tool_result: Any,
+        error: Any,
     ) -> None:
         """在后台任务中检查agent是否违反规则。"""
         from linhai.agent import Agent
-
 
         # 使用工具调用规则常量
         from linhai.prompt import SUBAGENT_CHECKLIST
@@ -540,7 +563,57 @@ class SubAgentCollaborationPlugin(Plugin):
 **失败的工具调用详情:**
 - 工具名称: {tool_call.function_name}
 - 工具参数: {tool_call.function_arguments}
-- 工具结果: {tool_result}
+- 错误信息: {error}
+
+**你的任务:**
+仔细检查Agent的上述回答，判断其是否违反了以下任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
+
+**工具调用规则:**
+{tool_rules}
+
+**执行步骤:**
+
+1. 逐一检查上述每条规则
+2. 如果发现任何违反，调用request_clarification工具，提问格式:
+"规则违反: [规则名称]。在Agent的回答中，你[具体违反行为]。请解释为什么要这样做？"
+
+3. 如果没有发现任何违反，调用exit工具退出，原因写"未发现规则违反"
+
+**重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
+
+        # 启动subagent进行检查
+        await subagent_manager.create_subagent(
+            agent_type="violation_checker",
+            name=generate_id("violation_checker"),
+            task_message=task_message,
+        )
+
+    async def _check_conflict_violations(
+        self,
+        subagent_manager: "linhai_subagent.SubAgentManager",
+        full_response: str,
+        tool_call: ToolCallMessage,
+        conflicting_tools: list[str],
+    ) -> None:
+        """在后台任务中检查agent是否违反规则（工具冲突情况）。"""
+        from linhai.agent import Agent
+
+        # 使用工具调用规则常量
+        from linhai.prompt import SUBAGENT_CHECKLIST
+
+        tool_rules = SUBAGENT_CHECKLIST
+
+        task_message = f"""你是一名规则检查员，负责检查Agent的工具调用是否违反规则。
+
+**Agent的当前完整回答:**
+```
+{full_response}
+```
+
+**工具冲突详情:**
+- 冲突工具名称: {tool_call.function_name}
+- 工具参数: {tool_call.function_arguments}
+- 与以下工具冲突: {', '.join(conflicting_tools)}
 
 **你的任务:**
 仔细检查Agent的上述回答，判断其是否违反了以下任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
@@ -568,7 +641,8 @@ class SubAgentCollaborationPlugin(Plugin):
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到lifecycle回调。"""
-        lifecycle.register_after_tool_call(self.after_tool_call)
+        lifecycle.register_tool_failure(self.tool_failure)
+        lifecycle.register_tool_conflict(self.tool_conflict)
 
 
 class GitBlockingPlugin(Plugin):
@@ -639,3 +713,29 @@ class GitBlockingPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到before_tool_call回调。"""
         lifecycle.register_before_tool_call(self.before_tool_call)
+
+
+class ClarificationWaitingUserPlugin(Plugin):
+    """阻止Agent在有未解答澄清时进入等待用户状态的Plugin。"""
+
+    async def before_waiting_user(self, agent: "linhai_agent.Agent"):
+        """检查是否有未解答的澄清，如果有则阻止进入等待用户状态。"""
+        # 检查是否有未解答的澄清（动态获取clarification_manager）
+        from linhai.clarification import ClarificationManager
+        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+        if (
+            clarification_manager
+            and clarification_manager.has_unanswered_clarifications()
+        ):
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    "错误：有未解答的澄清问题，禁止进入等待用户状态。"
+                    "请先回复所有SubAgent的澄清问题。"
+                )
+            )
+            # 将状态重置为working，阻止等待用户
+            agent.state = "working"
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到before_waiting_user回调。"""
+        lifecycle.register_before_waiting_user(self.before_waiting_user)
