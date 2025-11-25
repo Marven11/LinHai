@@ -36,7 +36,6 @@ class AgentMessage:
         self.garbage_message_ids: set[str] = set()
         self.last_threshold_state: Optional[str] = None
 
-        # 记录消息变化导致缓存失效的次数
         self.cache_invalidate_count = 0
 
     def handle_user_message(self, msg: ChatMessage) -> None:
@@ -50,9 +49,7 @@ class AgentMessage:
         content = msg.message.strip()
         parsed_input = parse_user_input(content)
 
-        # 处理以@开头的消息（用于切换LLM）
         if parsed_input.switch_model:
-            # 这个逻辑需要Agent上下文，所以这里只记录消息，具体处理在Agent中
             self.messages.append(msg)
             return
 
@@ -159,7 +156,6 @@ class AgentMessage:
                 not_found_ids.append(message_id)
                 continue
 
-            # 检查消息是否已经被标记为垃圾
             if message_id in self.garbage_message_ids:
                 already_marked_ids.append(message_id)
                 continue
@@ -167,7 +163,6 @@ class AgentMessage:
             self.garbage_message_ids.add(message_id)
             marked_ids.append(message_id)
 
-        # 构建结果消息
         result_parts = []
         if marked_ids:
             result_parts.append(f"已成功标记 {len(marked_ids)} 条消息为垃圾消息")
@@ -243,7 +238,6 @@ class AgentMessage:
             range(5, len(self.messages)), len(self.messages) // 2
         )
 
-        # 删除指定索引的消息
         self.messages = [
             msg for idx, msg in enumerate(self.messages) if idx not in indices_to_delete
         ]
@@ -266,7 +260,6 @@ class AgentMessage:
         if threshold_info:
             _soft, hard, used, _remaining, taken = threshold_info
 
-            # 确定当前状态
             current_state = None
             if taken < 0.4:
                 current_state = "绿灯"
@@ -277,27 +270,24 @@ class AgentMessage:
             else:
                 current_state = "红灯"
 
-            # 不重复提醒绿灯状态
             if current_state == "绿灯" and self.last_threshold_state == "绿灯":
                 return
 
             self.last_threshold_state = current_state
 
-            # 构建状态提示消息
             if current_state == "绿灯":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯状态）。当前已有{len(self.messages)}条消息。可以顺手标记大消息，无需担心token限制。"
             elif current_state == "绿灯闪烁":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（绿灯闪烁状态）。当前已有{len(self.messages)}条消息。应该积极标记大消息，可以顺手删除一些实在和当前任务无关的消息。"
             elif current_state == "黄灯":
                 message_content = f"当前Token用量为{used}，硬限制为{hard}，当前使用{taken*100:.1f}%（黄灯状态）。当前已有{len(self.messages)}条消息。积极考虑删除和当前任务无关的消息，也可以使用历史压缩删除之前任务的消息。"
-            else:  # 红灯
-                # 获取大消息信息
+            else:
+
                 large_messages_info = ""
                 if large_messages:
                     large_message_ids = list(large_messages.keys())[:3]
                     large_messages_info = f"当前已有{len(large_messages)}条大消息。前3个大消息ID: {', '.join(large_message_ids)}。"
 
-                # 检查垃圾消息数量
                 garbage_count = len(self.garbage_message_ids)
                 if garbage_count >= 5:
                     action_guide = "当前有至少5条垃圾消息，建议调用message_garbage_clean清理垃圾消息。"

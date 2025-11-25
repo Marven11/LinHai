@@ -132,7 +132,6 @@ class MCPConnector:
                 "disconnect_mcp_server",
                 "disconnect_all_mcp_servers",
                 "list_mcp_servers",
-                # 必须先查询chrome再启动
                 "run_simple_command",
                 "run_complex_command",
             ],

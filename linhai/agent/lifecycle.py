@@ -26,7 +26,7 @@ BeforeMessageGenerationCallback: TypeAlias = Callable[
     [
         bool,
         bool,
-    ],  # enable_compress, disable_waiting_user_warning
+    ],
     Awaitable[None],
 ]
 
@@ -35,13 +35,11 @@ AfterMessageGenerationCallback: TypeAlias = Callable[
         Answer,
         str,
         list[dict],
-    ],  # answer, full_response, tool_calls
+    ],
     Awaitable[None],
 ]
 
-BeforeToolCallCallback: TypeAlias = Callable[
-    [ToolCallMessage], Awaitable[bool]  # tool_call, 返回True表示阻止工具调用
-]
+BeforeToolCallCallback: TypeAlias = Callable[[ToolCallMessage], Awaitable[bool]]
 
 AfterToolCallCallback: TypeAlias = Callable[
     [
@@ -49,42 +47,42 @@ AfterToolCallCallback: TypeAlias = Callable[
         ToolCallMessage,
         Any,
         bool,
-    ],  # agent, tool_call, tool_result, success
+    ],
     Awaitable[None],
 ]
 
 DuringMessageGenerationCallback: TypeAlias = Callable[
-    [Answer, str],  # answer, current_content
-    Awaitable[bool],  # 返回True表示中断，False表示继续
+    [Answer, str],
+    Awaitable[bool],
 ]
 
 BeforeUserMessageCallback: TypeAlias = Callable[
-    ["Agent"],  # agent
-    Awaitable[bool],  # 返回True表示中断消息处理，False表示继续
+    ["Agent"],
+    Awaitable[bool],
 ]
 
 BeforeWaitingUserCallback: TypeAlias = Callable[
-    ["Agent"],  # agent
-    Awaitable[None],  # 无返回值，仅用于执行前置操作
+    ["Agent"],
+    Awaitable[None],
 ]
 
 ToolSuccessCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, Any],  # agent, tool_call, tool_result
+    ["Agent", ToolCallMessage, Any],
     Awaitable[None],
 ]
 
 ToolFailureCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, Any],  # agent, tool_call, error
+    ["Agent", ToolCallMessage, Any],
     Awaitable[None],
 ]
 
 ToolParseErrorCallback: TypeAlias = Callable[
-    ["Agent", str],  # agent, error_message
+    ["Agent", str],
     Awaitable[None],
 ]
 
 ToolConflictCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, list[str]],  # agent, tool_call, conflicting_tools
+    ["Agent", ToolCallMessage, list[str]],
     Awaitable[None],
 ]
 
@@ -111,7 +109,6 @@ class Lifecycle:
         self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
         self._tool_conflict_callbacks: list[ToolConflictCallback] = []
 
-        # 初始化默认插件
         self._plugins = self._register_default_plugins()
 
     def _register_default_plugins(self):

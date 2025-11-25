@@ -23,17 +23,16 @@ def safe_calculator(expression: str) -> str:
     Returns:
         计算结果字符串或错误消息
     """
-    # 验证表达式只包含安全字符
-    safe_pattern = r"^[0-9+\-*/().%><\s]+$"  # 允许数字、运算符、括号、点、空格
+
+    safe_pattern = r"^[0-9+\-*/().%><\s]+$"
     if not re.match(safe_pattern, expression):
         return "错误: 表达式包含不安全字符。只允许数字、加减乘除(+ - * /)、乘方(**)、取模(%)、大于小于(> <)、括号和空格。"
 
-    # 检查表达式是否为空或只包含空格
     if not expression.strip():
         return "错误: 表达式不能为空。"
 
     try:
-        # 使用eval计算表达式，但捕获异常
+
         result = eval(expression, {"__builtins__": {}}, {})  # pylint: disable=eval-used
         return str(result)
     except (ValueError, ZeroDivisionError, SyntaxError) as e:

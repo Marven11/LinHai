@@ -23,12 +23,10 @@ class AgentToolcall:
         self.group_chat = agent.group_chat
         self.context = agent.context
 
-        # 工具管理器
         self.tool_manager: ToolManager = self.group_chat.get_members(
             "tool_manager", ToolManager
         )
 
-        # 工具确认配置
         tool_confirmation_config = self.context.get("tool_confirmation", {})
         self.skip_confirmation = tool_confirmation_config.get(
             "skip_confirmation", False
@@ -36,11 +34,9 @@ class AgentToolcall:
         self.whitelist = tool_confirmation_config.get("whitelist", [])
         self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
 
-        # 工具调用冲突检查
         self.called_tools_in_round: list[str] = []
         self.early_return = False
 
-        # 注册默认工具集
         self._register_default_toolsets()
 
     def _check_tool_conflict(self, tool_name: str) -> bool:
@@ -52,7 +48,7 @@ class AgentToolcall:
         Returns:
             bool: 是否存在冲突
         """
-        # 获取工具定义
+
         tool_def = None
         for toolset in self.tool_manager.toolsets:
             if toolset.has_tool(tool_name):
@@ -62,13 +58,11 @@ class AgentToolcall:
         if not tool_def:
             return False
 
-        # 检查当前工具是否与已调用工具有冲突
         for called_tool in self.called_tools_in_round:
-            # 检查当前工具的conflict_with是否包含已调用工具
+
             if called_tool in tool_def["conflict_with"]:
                 return True
 
-            # 检查已调用工具的conflict_with是否包含当前工具
             called_tool_def = None
             for toolset in self.tool_manager.toolsets:
                 if toolset.has_tool(called_tool):
@@ -219,7 +213,6 @@ class AgentToolcall:
             )
             return
 
-        # 检查工具调用冲突
         if self._check_tool_conflict(tool_call.function_name):
             conflict_msg = f"工具调用冲突: {tool_call.function_name} 与已调用的工具存在冲突，已阻止调用，剩余工具调用已忽略"
 
@@ -230,7 +223,7 @@ class AgentToolcall:
                     content=f"工具调用冲突: {tool_call.function_name}",
                 ),
             )
-            # 触发工具冲突回调
+
             await self.agent.lifecycle.trigger_tool_conflict(
                 self.agent, tool_call, self.called_tools_in_round
             )
@@ -239,10 +232,8 @@ class AgentToolcall:
             self.early_return = True
             return
 
-        # 记录已调用工具
         self.called_tools_in_round.append(tool_call.function_name)
 
-        # 统一设置compress_tool_called_in_last_response
         compress_tools = [
             "compress_history_range",
             "mark_messages_as_garbage",
@@ -253,13 +244,11 @@ class AgentToolcall:
             tool_call.function_name in compress_tools
         )
 
-        # 触发工具调用前的生命周期事件
         should_block = await self.agent.lifecycle.trigger_before_tool_call(tool_call)
         if should_block:
             self.early_return = True
-            return True  # 需要早期返回
+            return True
 
-        # 使用存储的tool_confirmation配置
         result = False
         if self.skip_confirmation or tool_call.function_name in self.whitelist:
             result = await self._call_tool_without_confirmation(tool_call)
@@ -274,32 +263,27 @@ class AgentToolcall:
         try:
             tool_result = await self.tool_manager.process_tool_call(tool_call)
 
-            # 检查工具结果，如果是ToolErrorMessage且assert_success为True，则中止
             from linhai.tool.base import ToolErrorMessage
 
             if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
-                # 触发工具失败回调
+
                 await self.agent.lifecycle.trigger_tool_failure(
                     self.agent, tool_call, tool_result
                 )
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
                 self.agent.message_processor.append_message(RuntimeMessage(msg))
-                return True  # 需要早期返回，中止其他工具调用
+                return True
 
-            # 触发工具成功回调
             await self.agent.lifecycle.trigger_tool_success(
                 self.agent, tool_call, tool_result
             )
 
-            # 处理工具结果
             await self._handle_tool_result(tool_call, tool_result)
-            return False  # 不需要早期返回
+            return False
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-            # 触发工具失败回调
-            await self.agent.lifecycle.trigger_tool_failure(
-                self.agent, tool_call, e
-            )
+
+            await self.agent.lifecycle.trigger_tool_failure(self.agent, tool_call, e)
             msg = f"工具调用失败: {str(e)} {repr(e)}"
             logger.error(msg)
             self.agent.message_processor.append_message(RuntimeMessage(msg))
@@ -318,19 +302,17 @@ class AgentToolcall:
             )
         )
 
-        # 检查确认消息是否匹配当前工具调用
         if confirmation.tool_call.function_name != tool_call.function_name:
             self.agent.message_processor.append_message(
                 RuntimeMessage("错误：收到的确认消息不匹配当前工具调用")
             )
             return False
 
-        # 根据确认状态执行或取消
         if confirmation.confirmed:
             try:
                 tool_result = await self.tool_manager.process_tool_call(tool_call)
                 await self._handle_tool_result(tool_call, tool_result)
-                return False  # 不需要早期返回
+                return False
             except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
                 msg = f"工具调用失败: {str(e)} {repr(e)}"
                 logger.error(msg)
@@ -345,7 +327,6 @@ class AgentToolcall:
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""
 
-        # 检查工具结果大小，如果大于8000字符则记录ID
         tool_result_content = str(tool_result)
         if len(tool_result_content) > 8000:
             message_id = generate_id("largemessage")

@@ -32,7 +32,7 @@ async def execute_command(
     if timeout > 3600:
         return ToolErrorMessage("Timeout value exceeds maximum limit of 3600 seconds")
     try:
-        # 设置EDITOR环境变量为输出错误并退出
+
         env = os.environ.copy()
         msg = "using env EDITOR failed, please use other tools."
         env["EDITOR"] = f"sh -c 'echo {msg!r}; exit 1'"
@@ -55,7 +55,8 @@ async def execute_command(
             try:
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
             except ProcessLookupError:
-                pass  # 进程已经结束
+                pass
+
             await process.wait()
             return ToolErrorMessage(
                 f"Command timed out after {timeout} seconds, "

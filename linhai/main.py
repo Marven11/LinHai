@@ -46,8 +46,12 @@ def main():
         default="~/.config/linhai/config.toml",
         help="配置文件路径",
     )
-    parser.add_argument("-m", "--message", type=str, action="append", help="初始用户消息")
-    parser.add_argument("-f", "--file", type=Path, action="append", help="从文件中读取初始用户消息")
+    parser.add_argument(
+        "-m", "--message", type=str, action="append", help="初始用户消息"
+    )
+    parser.add_argument(
+        "-f", "--file", type=Path, action="append", help="从文件中读取初始用户消息"
+    )
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
     args = parser.parse_args()
@@ -61,8 +65,12 @@ def main():
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
-                    init_messages.append(f"用户使用-f选项指定了文件路径: {str(file_path)}")
-                    init_messages.append(f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}")
+                    init_messages.append(
+                        f"用户使用-f选项指定了文件路径: {str(file_path)}"
+                    )
+                    init_messages.append(
+                        f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}"
+                    )
             except FileNotFoundError:
                 print(f"错误: 文件 {file_path} 未找到")
                 sys.exit(1)
@@ -72,6 +80,7 @@ def main():
 
     return_code = asyncio.run(run(args, init_messages))
     sys.exit(return_code)
+
 
 if __name__ == "__main__":
     main()

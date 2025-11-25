@@ -45,7 +45,9 @@ class CompressRangeRequest(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         return cls(
@@ -71,7 +73,9 @@ class RuntimeMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
         return cls(message=data["message"])
@@ -96,7 +100,9 @@ class DestroyedRuntimeMessage(Message):
         return json.dumps({})
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
         return cls()
 
 
@@ -157,7 +163,9 @@ class GlobalMemory:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
         """
         从JSON字符串反序列化全局记忆对象。
 
@@ -229,7 +237,9 @@ class PathMemory:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):  # pylint: disable=unused-argument
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
         """
         从JSON字符串反序列化路径记忆对象。
 
@@ -251,11 +261,11 @@ class AgentContext(TypedDict):
     """Agent配置参数"""
 
     system_prompt: str
-    llms: list  # 多个LLM实例
-    llm_names: list[str]  # LLM名称列表
-    current_llm_index: int  # 当前使用的LLM索引
+    llms: list
+    llm_names: list[str]
+    current_llm_index: int
     compress_threshold_soft: int | float
     compress_threshold_hard: int | float
-    memory: NotRequired[dict]  # 可选 memory 字段
-    tool_confirmation: NotRequired[dict]  # 可选 tool_confirmation 字段
-    enable_directory_change_detection: NotRequired[bool]  # 是否启用目录更改检测
+    memory: NotRequired[dict]
+    tool_confirmation: NotRequired[dict]
+    enable_directory_change_detection: NotRequired[bool]

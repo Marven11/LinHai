@@ -156,7 +156,7 @@ class ChatMessage:
 
         data = {
             "role": self.role,
-            "message": self.message,  # 保存原始消息，不是包装后的消息
+            "message": self.message,
             "name": self.name,
         }
         return json.dumps(data)
@@ -224,7 +224,7 @@ class AnswerTokenUsage(BaseModel):
     input_tokens: int
     output_tokens: int
     total_tokens: int
-    cached_input_tokens: int | None = None  # 估算的缓存输入token数量，可为None
+    cached_input_tokens: int | None = None
 
 
 @runtime_checkable
@@ -337,7 +337,7 @@ class OpenAiAnswer:
             raise StopAsyncIteration
 
         try:
-            # 获取下一个chunk
+
             chunk = cast(ChatCompletionChunk, await self.stream.__anext__())
 
             if self.interrupted:
@@ -347,7 +347,7 @@ class OpenAiAnswer:
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = chunk.usage
-                # 直接访问usage对象的属性，如果属性不存在则使用0
+
                 self.input_tokens = (
                     usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
                 )
@@ -366,7 +366,7 @@ class OpenAiAnswer:
                         total_tokens=self.total_tokens,
                     )
                 )
-                # 使用callback更新previous_input_tokens为实际值
+
                 if self.previous_update_callback is not None:
                     self.previous_update_callback(self.input_tokens)
             if len(chunk.choices) == 0:
@@ -375,7 +375,6 @@ class OpenAiAnswer:
             content = delta.content or ""
             self.content += content
 
-            # 处理OpenAI格式的reasoning_content
             reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
@@ -385,8 +384,6 @@ class OpenAiAnswer:
                     else reasoning_content
                 )
 
-            # 处理minimax格式的reasoning_details
-            # https://platform.minimaxi.com/docs/api-reference/text-openai-api
             reasoning_details = (
                 getattr(delta, "reasoning_details", None)
                 if self.compatibility == "minimax"
@@ -402,8 +399,6 @@ class OpenAiAnswer:
                             else self.reasoning_content + reasoning_content
                         )
 
-            # 有时候会出现reasoning_content is None and content == ""的情况
-            # API返回的数据如此，我们应该原样yield
             token = AnswerToken(
                 reasoning_content=reasoning_content,
                 content=content,
@@ -524,7 +519,6 @@ class OpenAi:
             msg.to_llm_message().get("content", "") for msg in current_history
         )
 
-        # 按64字符块对比相同前缀
         same_prefix_chars = 0
         block_size = 64
 
@@ -568,7 +562,6 @@ class OpenAi:
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
-        # 计算输入token缓存估算 - 只在有上一次实际input tokens时计算
         cached_input_tokens = 0
         if self.previous_input_tokens is not None:
             cached_input_tokens = self._estimate_cached_input_tokens(history)
@@ -613,6 +606,4 @@ class OpenAi:
             self.previous_history = history
             return answer
         else:
-            raise RuntimeError(
-                "Failed to create OpenAI answer after retries"
-            )  # 这行可能永远不会执行，但保留
+            raise RuntimeError("Failed to create OpenAI answer after retries")

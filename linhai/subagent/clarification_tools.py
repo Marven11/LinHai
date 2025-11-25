@@ -21,12 +21,10 @@ def create_clarification_toolset(
         """向Agent请求澄清并等待回复。"""
         clarification_id = generate_id("clarification")
 
-        # 添加澄清到管理器
         await clarification_manager.request_clarification(
             clarification_id, question, subagent_name
         )
 
-        # 等待Agent回复
         answer = await clarification_manager.wait_for_response(clarification_id)
 
         return f"Agent回复澄清: {answer}"

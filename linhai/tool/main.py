@@ -54,9 +54,6 @@ class ToolManager:
         self._toolsets = toolsets
 
     async def ensure_mcp_connector(self):
-
-        # MCP Connector只能在同一个async Task中关闭
-        # 只能在这里连接
         if self.mcp_connector is not None:
             return
         self.mcp_connector = MCPConnector(self.group_chat)
@@ -112,7 +109,6 @@ class ToolManager:
             if toolset.has_tool(tool_call.function_name):
                 target_toolset = toolset
         if target_toolset is None:
-            # 发送错误消息
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -130,9 +126,7 @@ class ToolManager:
             else:
                 result = await asyncio.to_thread(func, **kwargs)
 
-            # 检查工具返回结果，如果是ToolErrorMessage则发送失败通知
             if isinstance(result, ToolErrorMessage):
-                # 发送工具调用失败消息
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -141,7 +135,6 @@ class ToolManager:
                     ),
                 )
             else:
-                # 发送工具调用成功消息
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -150,7 +143,6 @@ class ToolManager:
                 )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            # 发送工具调用失败消息
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -163,11 +155,9 @@ class ToolManager:
         if isinstance(result, Awaitable):
             result = await result
 
-        # 如果工具返回的是 Message 实例，直接返回
         if isinstance(result, Message):
             return result
 
-        # 否则，用 ToolResultMessage 包装，使用配置的max_output_length或默认值
         if self.config and self.config.max_output_length is not None:
             max_output_length = self.config.max_output_length
         else:

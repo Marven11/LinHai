@@ -59,11 +59,13 @@ def is_whitespace(c: str) -> bool:
     """检查字符是否为空白字符"""
     return c in " \n\t\r"
 
+
 def wrapped_json_loads(s: str):
     try:
         return json.loads(s)
     except json.decoder.JSONDecodeError as e:
         raise RuntimeError("decode error") from e
+
 
 class StreamJsonStringParser:
     """解析JSON字符串双引号内的数据，处理转义字符"""
@@ -176,23 +178,19 @@ class StreamJsonParser:
         assert len(c) == 1
         current_top = self.stack[-1] if self.stack else None
 
-        # 处理括号
         if c in "{}[]":
             self._handle_brackets(c)
             return
 
-        # 处理空白字符
         if is_whitespace(c):
             return
 
         self.started = True
         second_top = self.stack[-2] if len(self.stack) >= 2 else None
 
-        # 处理逗号
         if c == "," and (current_top == "{" or second_top == "["):
             return
 
-        # 处理对象中的冒号
         if (
             c == ":"
             and isinstance(current_top, str)
@@ -201,13 +199,11 @@ class StreamJsonParser:
         ):
             return
 
-        # 处理键
         if current_top == "{" and c == '"':
             self.payload += c
             self.state = ParserState.KEY
             return
 
-        # 处理数组中的值
         if second_top == "[":
             assert isinstance(current_top, int)
             if c == '"':
@@ -221,7 +217,6 @@ class StreamJsonParser:
                 raise RuntimeError(f"数组值起始字符无效: {c!r}")
             return
 
-        # 处理对象内部的值
         is_inside_object = (
             len(self.stack) >= 2
             and self.stack[-2] == "{"
@@ -230,7 +225,7 @@ class StreamJsonParser:
         if is_inside_object:
             self._handle_inside_object_value(c)
             return
-        
+
         original_state = self.state
         self.state = ParserState.INVALID
         raise RuntimeError(f"无法识别字符: {c!r} 在状态 {original_state.value}")
@@ -376,7 +371,7 @@ def example2():
 
 def main():
     example1()
-    # example2()
+
 
 if __name__ == "__main__":
     main()

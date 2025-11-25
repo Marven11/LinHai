@@ -15,31 +15,29 @@ from selenium import webdriver
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
     """分析HTTP响应内容，返回是否为二进制和检测到的编码。
-    
+
     通过Content-Type和chardet编码检测综合判断，避免重复检测。
     """
-    # 根据Content-Type判断
     if (
-        content_type.startswith('image/')
-        or content_type.startswith('application/octet-stream')
-        or content_type.startswith('application/pdf')
-        or content_type.startswith('application/zip')
-        or content_type.startswith('audio/')
-        or content_type.startswith('video/')
-        or 'binary' in content_type
-        or content_type.startswith('font/')
-        or content_type.startswith('application/vnd.')
+        content_type.startswith("image/")
+        or content_type.startswith("application/octet-stream")
+        or content_type.startswith("application/pdf")
+        or content_type.startswith("application/zip")
+        or content_type.startswith("audio/")
+        or content_type.startswith("video/")
+        or "binary" in content_type
+        or content_type.startswith("font/")
+        or content_type.startswith("application/vnd.")
     ):
         return True, None
-    
-    # 使用chardet检测内容编码
+
     detected = chardet.detect(content)
-    encoding = detected['encoding']
-    
+    encoding = detected["encoding"]
+
     if encoding is None:
-        return True, None  # 无法检测到编码，认为是二进制
-    
-    return False, encoding  # 文本内容，返回编码
+        return True, None
+
+    return False, encoding
 
 
 @global_tools.register_tool(
@@ -68,8 +66,10 @@ async def http_request(
     """
     if headers is None:
         headers = {}
-    headers.setdefault("User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)")
-    
+    headers.setdefault(
+        "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
+    )
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.request(
@@ -81,18 +81,18 @@ async def http_request(
                 data=data,  # type: ignore[arg-type]
                 timeout=10.0,
             )
-            
-            content_type = response.headers.get('content-type', '').lower()
-            
+
+            content_type = response.headers.get("content-type", "").lower()
+
             is_binary, encoding = analyze_content(content_type, response.content)
-            
+
             if is_binary:
-                # 保存二进制内容到临时文件
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as tmp_file:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".bin"
+                ) as tmp_file:
                     tmp_file.write(response.content)
                     return tmp_file.name
             else:
-                # 文本内容，使用检测到的编码
                 if encoding:
                     try:
                         return response.content.decode(encoding)
@@ -100,7 +100,7 @@ async def http_request(
                         return f"ToolErrorMessage: 无法使用编码 {encoding} 解码响应内容"
                 else:
                     try:
-                        return response.text  # 回退到 httpx 的自动解码
+                        return response.text
                     except UnicodeDecodeError:
                         return "ToolErrorMessage: 无法解码响应内容，可能是二进制数据"
     except httpx.RequestError as e:
@@ -127,13 +127,11 @@ def fetch_article(url: str) -> str:
         with webdriver.Firefox(options=options) as driver:
             driver.get(url)
 
-            # 删除javascript:链接
             soup = BeautifulSoup(driver.page_source, "html.parser")
         for a in soup.find_all("a", href=True):
             if a["href"].startswith("javascript:"):  # type: ignore
                 a.decompose()
 
-        # 删除无用image元素
         for img in soup.find_all("img", src=True):
             src = img.get("src", "")  # type: ignore
             if len(str(src)) > 400:
@@ -144,8 +142,6 @@ def fetch_article(url: str) -> str:
 
         with open(output_html, "w", encoding="utf-8") as f:
             f.write(str(soup))
-
-        # 转换为Markdown
         if shutil.which("pandoc") is None:
             return "错误：pandoc未安装，请先安装pandoc"
 
@@ -235,11 +231,9 @@ async def search_web(query: str, max_results: int = 5) -> str:
                 title = link_elem.get_text(strip=True)  # type: ignore
                 link = link_elem.get("href", "")  # type: ignore
 
-                # 跳过广告结果
                 if link and "y.js" in link:
                     continue
 
-                # 清理DuckDuckGo重定向URL
                 if link and str(link).startswith("//duckduckgo.com/l/?uddg="):
                     link = urllib.parse.unquote(
                         str(link).split("uddg=")[1].split("&")[0]
@@ -263,7 +257,7 @@ async def search_web(query: str, max_results: int = 5) -> str:
             if not results:
                 return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
 
-            # 格式化结果
+            output = []
             output = []
             output.append(f"找到 {len(results)} 个搜索结果：\n")
 

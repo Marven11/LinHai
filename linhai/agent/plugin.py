@@ -42,7 +42,6 @@ class WaitingUserPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
-        # 检查是否同时调用工具和等待用户
         if not agent.current_disable_waiting_user_warning:
             if tool_calls and has_waiting_marker:
                 agent.message_processor.append_message(
@@ -61,7 +60,6 @@ class WaitingUserPlugin(Plugin):
                 )
                 return
 
-        # 如果存在等待用户标记，检查位置并设置状态
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
@@ -71,7 +69,6 @@ class WaitingUserPlugin(Plugin):
                     )
                 )
             else:
-                # 所有检查通过，设置等待用户状态
                 agent.state = "waiting_user"
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -195,7 +192,7 @@ class StopFastAgentPlugin(Plugin):
         from linhai.llm import OpenAi, ChatMessage
 
         agent = self.group_chat.get_members("agent", Agent)
-        # 检查是否是第一个回复：消息历史中没有之前的agent消息
+
         has_previous_agent_message = any(
             msg.role == "assistant"
             for msg in agent.message_processor.get_messages()
@@ -265,10 +262,8 @@ class WeirdEndOfSentencePlugin(Plugin):
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
-        # 正则表达式匹配：一行中有<｜end▁of▁[a-z]+｜>，且前面都是汉字（不限制标记位置）
         pattern = r"^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>"
 
-        # 检查每一行
         for line in current_content.split("\n"):
             if re.search(pattern, line):
                 await agent.interrupt(
@@ -291,7 +286,6 @@ class EndThinkPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查每一行是否只有'</think>'
         lines = current_content.split("\n")
         for line in lines:
             if line.strip() == "</think>":
@@ -323,7 +317,6 @@ class DirectoryChangePlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查是否启用了目录更改检测
         enable_directory_change_detection = agent.context.get(
             "enable_directory_change_detection", False
         )
@@ -332,19 +325,16 @@ class DirectoryChangePlugin(Plugin):
 
         current_directory = Path.cwd().resolve()
 
-        # 如果目录没有变化，直接返回
         if self.last_directory == current_directory:
             return
 
-        # 更新目录记录
         self.last_directory = current_directory
 
-        # 检查特定文件
         target_files = ["LINHAI.md", "AGENTS.md", "CLAUDE.md"]
         for filename in target_files:
             filepath = current_directory / filename
             if filepath.exists():
-                # 检查是否已经存在相同路径的GlobalMemory或PathMemory
+
                 has_duplicate = any(
                     message.filepath.resolve() == filepath.resolve()
                     for message in agent.message_processor.get_messages()
@@ -373,11 +363,9 @@ class SingleToolCallReminderPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查tool_calls长度是否为1
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
 
-            # 如果连续2次都只调用1个工具，提醒agent
             if self.single_tool_call_count >= 2:
                 agent.message_processor.append_message(
                     RuntimeMessage(
@@ -387,7 +375,6 @@ class SingleToolCallReminderPlugin(Plugin):
                     )
                 )
         else:
-            # 重置计数器
             self.single_tool_call_count = 0
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -451,16 +438,14 @@ class PreventToolOutputPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查是否是第一个回复：消息历史中没有之前的agent消息
         has_previous_agent_message = any(
             msg.role == "assistant"
             for msg in agent.message_processor.get_messages()
             if isinstance(msg, ChatMessage)
         )
 
-        # 如果是第一个回复且有一行的开头是`**tool**`，则打断
         if not has_previous_agent_message:
-            # 检查是否有一行的开头是`**tool**`
+
             lines = current_content.split("\n")
             for line in lines:
                 if line.strip().startswith("**tool**"):
@@ -489,7 +474,6 @@ class ClarificationBlockingPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查是否有未解答的澄清（动态获取clarification_manager）
         from linhai.clarification import ClarificationManager
 
         clarification_manager = self.group_chat.get_members(
@@ -499,7 +483,7 @@ class ClarificationBlockingPlugin(Plugin):
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()
         ):
-            # 如果有未解答的澄清，检查是否使用了等待用户标记
+
             if WAITING_USER_MARKER in full_response:
                 agent.message_processor.append_message(
                     RuntimeMessage(
@@ -507,7 +491,6 @@ class ClarificationBlockingPlugin(Plugin):
                         "请先回复所有SubAgent的澄清问题。"
                     )
                 )
-                # 将状态重置为working，阻止等待用户
                 agent.state = "working"
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -529,7 +512,6 @@ class SubAgentCollaborationPlugin(Plugin):
     ) -> None:
         """在工具调用失败时启动subagent检查规则违反。"""
         assert agent.current_answer is not None
-        # 获取agent当前回答的详细信息
 
         full_response = agent.current_answer.get_current_content()
         if full_response.count("```json toolcall") <= 1:
@@ -546,7 +528,6 @@ class SubAgentCollaborationPlugin(Plugin):
             "subagent_manager", SubAgentManager
         )
 
-        # 创建检查任务，不阻塞当前agent
         asyncio.create_task(
             self._check_violations(subagent_manager, full_response, tool_call, error)
         )
@@ -569,11 +550,9 @@ class SubAgentCollaborationPlugin(Plugin):
             "subagent_manager", SubAgentManager
         )
         assert agent.current_answer is not None
-        # 获取agent当前回答的详细信息
 
         full_response = agent.current_answer.get_current_content()
 
-        # 创建检查任务，不阻塞当前agent
         asyncio.create_task(
             self._check_conflict_violations(
                 subagent_manager, full_response, tool_call, conflicting_tools
@@ -590,7 +569,6 @@ class SubAgentCollaborationPlugin(Plugin):
         """在后台任务中检查agent是否违反规则。"""
         from linhai.agent import Agent
 
-        # 使用工具调用规则常量
         from linhai.prompt import SUBAGENT_CHECKLIST
 
         tool_rules = SUBAGENT_CHECKLIST
@@ -623,7 +601,6 @@ class SubAgentCollaborationPlugin(Plugin):
 
 **重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
 
-        # 启动subagent进行检查
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
             name=generate_id("violation_subagent"),
@@ -641,7 +618,6 @@ class SubAgentCollaborationPlugin(Plugin):
         """在后台任务中检查agent是否违反规则（工具冲突情况）。"""
         from linhai.agent import Agent
 
-        # 使用工具调用规则常量
         from linhai.prompt import SUBAGENT_CHECKLIST
 
         tool_rules = SUBAGENT_CHECKLIST
@@ -674,7 +650,6 @@ class SubAgentCollaborationPlugin(Plugin):
 
 **重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
 
-        # 启动subagent进行检查
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
             name=generate_id("violation_subagent"),
@@ -697,7 +672,6 @@ class GitBlockingPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 检查是否有未解答的澄清（动态获取clarification_manager）
         from linhai.clarification import ClarificationManager
 
         clarification_manager = self.group_chat.get_members(
@@ -707,14 +681,13 @@ class GitBlockingPlugin(Plugin):
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()
         ):
-            # 检查工具调用是否包含git命令
+
             tool_name = tool_call.function_name
             arguments = tool_call.function_arguments
 
-            # 检查是否是run_simple_command或run_complex_command
             if tool_name in ["run_simple_command", "run_complex_command"]:
                 command = arguments.get("command", "")
-                # 使用更精确的git命令检测
+
                 if self._is_git_command(command):
                     agent.message_processor.append_message(
                         RuntimeMessage(
@@ -722,7 +695,7 @@ class GitBlockingPlugin(Plugin):
                             f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。"
                         )
                     )
-                    # 返回True阻止工具调用
+
                     return True
         return False
 
@@ -730,24 +703,18 @@ class GitBlockingPlugin(Plugin):
         """精确检测是否为git命令"""
 
         try:
-            # 解析命令
             parts = shlex.split(command.strip())
             if not parts:
                 return False
 
-            # 检查命令是否为git或git开头的命令
             cmd = parts[0]
 
-            # 直接匹配git
             if cmd == "git":
                 return True
 
-            # 匹配以git开头的命令（如git commit, git push等）
             if cmd.startswith("git-"):
                 return True
 
-            # 检查是否包含git作为独立命令（处理路径中的git）
-            # 使用os.path.basename来获取命令的基名
             basename = os.path.basename(cmd)
             if basename == "git" or basename == "git.exe":
                 return True
@@ -766,7 +733,7 @@ class ClarificationWaitingUserPlugin(Plugin):
 
     async def before_waiting_user(self, agent: "linhai_agent.Agent"):
         """检查是否有未解答的澄清，如果有则阻止进入等待用户状态。"""
-        # 检查是否有未解答的澄清（动态获取clarification_manager）
+
         from linhai.clarification import ClarificationManager
 
         clarification_manager = self.group_chat.get_members(
@@ -782,7 +749,6 @@ class ClarificationWaitingUserPlugin(Plugin):
                     "请先回复所有SubAgent的澄清问题。"
                 )
             )
-            # 将状态重置为working，阻止等待用户
             agent.state = "working"
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):

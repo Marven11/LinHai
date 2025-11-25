@@ -30,8 +30,10 @@ def parse_user_input(user_input: str) -> ParsedInput:
         result.command = user_input.split().pop(0)[1:]
     if user_input.startswith("@"):
         result.switch_model = user_input.split().pop(0)[1:]
-    result.mentioned = list(dict.fromkeys(
-        result.group(1) for result in re.finditer("@([a-zA-Z-_]+)", user_input[1:])
-    ))
+    result.mentioned = list(
+        dict.fromkeys(
+            result.group(1) for result in re.finditer("@([a-zA-Z-_]+)", user_input[1:])
+        )
+    )
 
     return result

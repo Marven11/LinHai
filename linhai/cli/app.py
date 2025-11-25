@@ -136,18 +136,14 @@ class CLIApp(App):
         self.current_tool_call: Optional[ToolCallMessage] = None
         self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
 
-        # 初始化管理器
         self.token_manager = TokenManager()
 
-        # 自动滚动状态
         self.is_user_scroll_to_end = False
 
-        # SubAgent当前消息引用
         self.subagent_current_messages: dict[
             str, Union[MessageWidget, ReasoningContentWidget]
         ] = {}
 
-        # 自动补全列表
         self.completions = self._generate_dynamic_completions()
         self.command_completions = self._generate_command_completions()
         self.autocomplete = None
@@ -191,7 +187,7 @@ class CLIApp(App):
                 container = self.query_one("#chat-container")
 
                 if current_message is None:
-                    # 获取当前LLM名字
+
                     agent = self.group_chat.get_members("agent", Agent)
                     llm_name, _llm = agent.get_current_llm_info()
                     if is_reasoning:
@@ -213,18 +209,17 @@ class CLIApp(App):
                     self._trim_messages_if_needed()
                 else:
                     current_message.feed_string(content)
-                # 自动滚动到底部
+
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
             elif isinstance(output, AnswerTokenUsage):
                 self.token_manager.current_token_usage = output
             elif isinstance(output, Answer):
-                # 获取并累加token使用量
+
                 token_usage = output.get_token_usage()
                 if token_usage is not None:
                     self.token_manager.update_cumulative_usage(token_usage)
                     self.token_manager.current_token_usage = None
-                    # 传入当前回答的token长度
                     self.update_token_display(token_usage.total_tokens)
 
                 if current_message:
@@ -241,14 +236,14 @@ class CLIApp(App):
             output = await self.group_chat.receive("ui_log")
 
             if isinstance(output, CliRuntimeNotice):
-                # 处理运行时消息
+
                 container = self.query_one("#chat-container")
                 widget = RuntimeMessageWidget(
                     level=output.level, content=output.content
                 )
                 container.mount(widget)
                 self._trim_messages_if_needed()
-                # 自动滚动到底部
+
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
             else:
@@ -262,7 +257,7 @@ class CLIApp(App):
             if isinstance(output, dict) and "return_code" in output:
                 return_code = output["return_code"]
                 self.exit(return_code=return_code)
-                return  # 立即返回，不再处理其他消息
+                return
             else:
                 raise RuntimeError(
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
@@ -274,13 +269,12 @@ class CLIApp(App):
             output = await self.group_chat.receive("subagent_message")
 
             if isinstance(output, dict) and "subagent_name" in output:
-                # 处理SubAgent消息
+
                 subagent_name = output["subagent_name"]
                 content = output["content"]
                 message_type = output.get("type", "message")
                 is_reasoning = output.get("is_reasoning", False)
 
-                # 在SubAgent标签页显示消息
                 subagent_container = self.query_one("#subagent-container")
 
                 if message_type == "token":
@@ -301,7 +295,7 @@ class CLIApp(App):
                     ):
                         del self.subagent_current_messages[subagent_name]
                     if subagent_name not in self.subagent_current_messages:
-                        # 创建新消息
+
                         if is_reasoning:
                             current_message = ReasoningContentWidget(
                                 role="assistant",
@@ -318,16 +312,14 @@ class CLIApp(App):
                         subagent_container.mount(current_message)
                         current_message.update_display()
                     else:
-                        # 追加到现有消息
+
                         current_message = self.subagent_current_messages[subagent_name]
                         current_message.append_content(content)
                 elif message_type == "message_complete":
-                    # 消息完成，清除当前消息引用
                     if subagent_name in self.subagent_current_messages:
                         self.subagent_current_messages[subagent_name].update_display()
                         del self.subagent_current_messages[subagent_name]
                 elif message_type == "runtime_notice":
-                    # 运行时通知消息
                     level = output.get("level", "INFO")
                     widget = RuntimeMessageWidget(level=level, content=content)
                     subagent_container.mount(widget)
@@ -340,19 +332,17 @@ class CLIApp(App):
 
     async def watch_output_queue(self):
         """启动四个独立的任务分别监听不同的队列"""
-        # 创建四个独立的任务
+
         agent_answer_task = asyncio.create_task(self.watch_agent_answer_queue())
         ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
         exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
         subagent_message_task = asyncio.create_task(self.watch_subagent_message_queue())
 
-        # 等待任一任务完成（通常是因为退出信号或异常）
         done, pending = await asyncio.wait(
             [agent_answer_task, ui_log_task, exit_signal_task, subagent_message_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
 
-        # 取消其他未完成的任务
         for task in pending:
             task.cancel()
             try:
@@ -360,12 +350,9 @@ class CLIApp(App):
             except asyncio.CancelledError:
                 pass
 
-        # 如果是退出任务，确保正确退出
         if exit_signal_task in done:
-            # exit_signal_task已经处理了退出逻辑
             return
 
-        # 如果其他任务出现异常，重新抛出
         for task in done:
             if task.exception():
                 exception = task.exception()
@@ -379,9 +366,10 @@ class CLIApp(App):
         """动态生成@补全列表"""
         try:
             from linhai.agent import Agent
+
             agent = self.group_chat.get_members("agent", Agent)
             if agent:
-                # 获取当前配置的所有LLM名称
+
                 llm_names = agent.context.get("llm_names", [])
                 return [f"@{name}" for name in llm_names]
         except Exception:
@@ -390,13 +378,12 @@ class CLIApp(App):
 
     def _generate_command_completions(self) -> list[str]:
         """动态生成/命令补全列表"""
-        return ["/queue", "/help", "/status"]  # 动态命令列表
+        return ["/queue", "/help", "/status"]
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
 
-        # 如果有初始消息，自动发送
         if self.init_messages:
             for init_message in self.init_messages:
                 user_msg = ChatMessage(role="user", message=init_message)
@@ -408,7 +395,7 @@ class CLIApp(App):
                     )
                 )
                 await self.group_chat.send("user_message", user_msg)
-                # 更新UI
+
                 agent = self.group_chat.get_members("agent", Agent)
                 widget = MessageWidget(
                     user_msg.role, user_msg.message, sender_name="user"
@@ -416,23 +403,20 @@ class CLIApp(App):
                 container = self.query_one("#chat-container")
                 container.mount(widget)
                 widget.update_display()
-                # 自动滚动到底部
+
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
         else:
-            # 显示欢迎消息（如果没有初始消息）
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
 
             container = self.query_one("#chat-container")
 
-            # 创建彩虹ASCII艺术组件
             rainbow_art = RainbowAsciiArt(ASCII_ART)
             rainbow_art.add_class("welcome-message")
             container.mount(rainbow_art)
 
-            # 显示动画欢迎信息
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
             animated_welcome.add_class("welcome-message")
             container.mount(animated_welcome)
@@ -441,7 +425,6 @@ class CLIApp(App):
             self.group_chat.get_members("agent", Agent).run()
         )
 
-        # 设置自动补全
         input_element = self.query_one("#input")
         assert isinstance(input_element, Input)
         from textual_autocomplete import AutoComplete, DropdownItem
@@ -492,7 +475,6 @@ class CLIApp(App):
         if self.agent_task:
             self.agent_task.cancel()
 
-        # 关闭所有终端
         from linhai.tool.tools.terminal import close_all_terminals
 
         close_all_terminals()
@@ -526,14 +508,12 @@ class CLIApp(App):
             await self.agent_task
             raise RuntimeError("Agent task is dead!")
 
-        # 处理ctrl+enter发送消息
         if event.key == "ctrl+enter" or event.key == "enter":
             await self._handle_message_submission()
             event.stop()
             return
 
         if event.key == "ctrl+c":
-            # 先关闭所有终端，然后退出应用
             from linhai.tool.tools.terminal import close_all_terminals
             from linhai.tool.mcp_connector import MCPConnector
 
@@ -547,11 +527,10 @@ class CLIApp(App):
         """向用户确认是否需要调用工具"""
         self.current_tool_confirmation = None
         self.current_tool_call = tool_call
-        # 显示确认提示
         self.query_one("#input").placeholder = (  # type: ignore
             f"确认执行工具 {tool_call.function_name} 吗？(y/n)"
         )
-        # 等待用户输入（通过 on_input_submitted 处理）
+
         while self.current_tool_confirmation is None:
             await asyncio.sleep(0.01)
         return self.current_tool_confirmation
@@ -577,37 +556,32 @@ class CLIApp(App):
         message_text = input_element.value.strip()  # type: ignore
 
         if self.current_tool_call:
-            # 处理工具确认响应
+
             user_input = message_text.strip().lower()
             if user_input in ["y", "yes", "是"]:
                 confirmed = True
             elif user_input in ["n", "no", "否"]:
                 confirmed = False
             else:
-                # 无效输入，提示重新输入
                 input_element.value = ""  # type: ignore
                 input_element.placeholder = "请输入 'y' 或 'n' 来确认工具调用"  # type: ignore
                 return
 
-            # 发送确认消息
             self.current_tool_confirmation = ToolConfirmationMessage(
                 tool_call=self.current_tool_call, confirmed=confirmed
             )
 
-            # 重置当前工具请求
             self.current_tool_call = None
             input_element.value = ""  # type: ignore
             input_element.placeholder = "输入消息..."  # type: ignore
             return
 
         if message_text:
-            # 隐藏欢迎消息
             container = self.query_one("#chat-container")
             welcome_widgets = container.query(".welcome-message")
             for widget in welcome_widgets:
                 widget.remove()
 
-            # 添加用户消息
             user_msg = ChatMessage(role="user", message=message_text)
             self.messages.append(
                 MessageWidget(
@@ -618,7 +592,7 @@ class CLIApp(App):
             )
             await self.group_chat.send("user_message", user_msg)
             input_element.value = ""  # type: ignore
-            # 更新UI
+
             widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
             container.mount(widget)
             widget.update_display()

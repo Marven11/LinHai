@@ -84,10 +84,9 @@ def extract_tool_calls_with_errors(
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == "json toolcall":
             try:
-                # 检查是否是合法的JSON
+
                 data = json.loads(block["content"])
 
-                # 检查是否是object（字典类型）
                 if not isinstance(data, dict):
                     errors.append(
                         f"工具调用解析出错：第{i+1}个code block中的JSON不是对象类型，"
@@ -96,7 +95,6 @@ def extract_tool_calls_with_errors(
                     )
                     continue
 
-                # 检查是否有name和arguments参数
                 if "name" not in data:
                     errors.append(
                         f"工具调用解析出错：第{i+1}个code block缺少必需的'name'字段\n"
@@ -111,7 +109,6 @@ def extract_tool_calls_with_errors(
                     )
                     continue
 
-                # 所有检查通过，添加到tool_calls
                 tool_calls.append(data)
             except json.JSONDecodeError as e:
                 errors.append(
@@ -119,7 +116,7 @@ def extract_tool_calls_with_errors(
                     f"内容: {repr_obj.repr(block['content'])}"
                 )
                 continue
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 errors.append(
                     f"工具调用解析出错：第{i+1}个code block解析时发生未知错误: {str(e)}\n"
                     f"内容: {repr_obj.repr(block['content'])}"

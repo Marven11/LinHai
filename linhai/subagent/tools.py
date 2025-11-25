@@ -25,15 +25,15 @@ def create_subagent_toolset(subagent_manager: SubAgentManager) -> ToolSet:
     ) -> str:
         """创建并启动一个SubAgent。"""
 
-        # 获取当前LLM实例
         from linhai.agent.main import Agent
 
-        # 通过group_chat获取当前agent实例
         agent = subagent_manager.group_chat.get_members("agent", Agent)
         if not agent:
             return "错误: 无法获取Agent实例"
 
-        return await subagent_manager.create_subagent(agent_type, name, task_message, max_answer_times=None)
+        return await subagent_manager.create_subagent(
+            agent_type, name, task_message, max_answer_times=None
+        )
 
     @toolset.register_tool(
         name="check_subagent",

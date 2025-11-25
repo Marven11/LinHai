@@ -66,7 +66,9 @@ class MCPConfig(BaseModel):
 
     def __str__(self) -> str:
         """返回MCP配置的字符串表示"""
-        return f"MCPConfig(name={self.name}, server_script_path={self.server_script_path})"
+        return (
+            f"MCPConfig(name={self.name}, server_script_path={self.server_script_path})"
+        )
 
 
 class AgentConfig(BaseModel):
@@ -150,21 +152,20 @@ def load_config(config_path: Union[str, Path]) -> Config:
     if isinstance(config_path, str):
         config_path = Path(config_path)
 
-    # 使用上下文管理器确保文件正确关闭
     with config_path.open("rb") as f:
         config_data = tomllib.load(f)
 
-    # 使用pydantic验证配置，捕获ValidationError并转换为ConfigValidationError
     try:
         config = Config(**config_data)
     except Exception as e:
         raise ConfigValidationError(f"配置验证失败: {str(e)}") from e
 
-    # 将MCP服务器的相对路径转换为绝对路径（基于配置文件所在目录）
     config_dir = config_path.parent
     if config.agent and config.agent.mcp:
         for mcp_config in config.agent.mcp:
             if not os.path.isabs(mcp_config.server_script_path):
-                mcp_config.server_script_path = str(config_dir / mcp_config.server_script_path)
+                mcp_config.server_script_path = str(
+                    config_dir / mcp_config.server_script_path
+                )
 
     return config

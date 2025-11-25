@@ -74,9 +74,7 @@ class AssistantMessage(TypedDict, total=False):
     audio: Optional[Audio]
 
 
-LanguageModelMessage: TypeAlias = Union[
-    SystemMessage, UserMessage, AssistantMessage
-]
+LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage]
 
 __all__ = [
     "SystemMessage",

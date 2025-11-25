@@ -60,48 +60,37 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
-        # 使用AgentMessage类管理消息
         self.message_processor = AgentMessage(group_chat, init_messages)
         self.toolcall_processor = AgentToolcall(self)
 
         self.last_token_usage = None
         self.current_enable_compress = True
-        self.soft_compress_triggered = False  # 软压缩限制触发标志
-        self.large_messages = {}  # 大消息存储
+        self.soft_compress_triggered = False
+        self.large_messages = {}
 
-        # Plugin使用的变量
-        self.compress_tool_called_in_last_response = (
-            False  # 记录是否在最近响应中调用了压缩工具
-        )
+        self.compress_tool_called_in_last_response = False
         self.current_disable_waiting_user_warning = False
 
-        self.last_threshold_state = None  # 用于跟踪上次的阈值状态
+        self.last_threshold_state = None
 
-        # 当前Answer实例，用于plugin打断
         self.current_answer: Answer | None = None
 
-        # 生命周期回调管理器
         self.lifecycle = Lifecycle(self.group_chat)
 
-        # 为兼容性添加messages属性，代理到message_processor
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
-
-        # 澄清管理器引用 - 不保存为实例属性，使用时动态获取
 
     def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
         if not self.last_token_usage:
             return None
 
-        # 获取当前LLM的token_limit
         current_llm = self.context["llms"][self.context["current_llm_index"]]
         token_limit = getattr(current_llm, "token_limit", None)
-        # 如果token_limit为None，使用默认值65536
+
         if token_limit is None:
             token_limit = 65536
 
-        # 动态计算阈值：如果是float则乘以token_limit，如果是int则直接使用
         soft_config = self.context.get("compress_threshold_soft", 0.5)
         hard_config = self.context.get("compress_threshold_hard", 0.8)
 
@@ -126,11 +115,11 @@ class Agent:
         )
         remaining = compress_threshold_hard - self.last_token_usage
         return (
-            compress_threshold_soft,  # 软阈值（token数）
-            compress_threshold_hard,  # 硬阈值（token数）
-            self.last_token_usage,  # 当前已经使用（token数）
-            remaining,  # 到硬阈值的token数
-            taken,  # 当前已经使用（比例）
+            compress_threshold_soft,
+            compress_threshold_hard,
+            self.last_token_usage,
+            remaining,
+            taken,
         )
 
     async def interrupt(self, custom_message: str | None = None):
@@ -144,7 +133,6 @@ class Agent:
             self.current_answer.interrupt()
             await self.group_chat.send("agent_answer", self.current_answer)
 
-            # 发送插件打断消息到运行时输出
             if custom_message:
                 interrupt_msg = CliRuntimeNotice(
                     level="WARNING", content=custom_message
@@ -181,7 +169,6 @@ class Agent:
             self.state = "working"
             return
 
-        # 触发等待用户前的生命周期事件
         await self.lifecycle.trigger_before_waiting_user(self)
 
         await self.group_chat.send_if_exists(
@@ -193,9 +180,7 @@ class Agent:
         if self.state != "waiting_user":
             await self.group_chat.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
-                    level="INFO", content="Agent在等待用户时被切换状态"
-                ),
+                CliRuntimeNotice(level="INFO", content="Agent在等待用户时被切换状态"),
             )
             return
         await self.receive_one_user_message()
@@ -210,7 +195,6 @@ class Agent:
         同时监控token使用量并在需要时触发压缩。
         """
         logger.info("Agent进入自动运行状态")
-        # 直接处理用户输入消息
         if not self.group_chat.is_empty("user_message"):
             try:
                 await self.receive_one_user_message()
@@ -220,7 +204,6 @@ class Agent:
         else:
             await self.generate_response()
 
-        # 如果最近没有调用压缩工具，才检查软限制并提醒
         threshold_info = self.get_threshold_info()
         if not self.compress_tool_called_in_last_response and threshold_info:
             self.message_processor.add_soft_threshold_notification(
@@ -245,10 +228,8 @@ class Agent:
 
         content = msg.message.strip()
 
-        # 使用input_parser解析用户输入
         parsed_input = parse_user_input(content)
 
-        # 处理以@开头的消息（用于切换LLM）
         if parsed_input.switch_model:
             llm_name = parsed_input.switch_model
             if llm_name in self.context["llm_names"]:
@@ -259,7 +240,7 @@ class Agent:
                     RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
                 )
             else:
-                # 添加错误消息
+
                 self.message_processor.append_message(
                     RuntimeMessage(
                         f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点"
@@ -267,10 +248,8 @@ class Agent:
                 )
 
         if parsed_input.command == "queue":
-            # 以/queue开头，不打断，将消息添加到排队列表，继续生成响应
             self.queued_messages.append(msg)
         elif parsed_input.command in ["quit", "exit"]:
-            # 以/quit或/exit开头，直接退出程序
             await self.group_chat.send("exit_signal", {"return_code": 0})
         else:
             self.message_processor.append_message(msg)
@@ -297,7 +276,6 @@ class Agent:
         返回:
             Answer: 生成的回答对象
         """
-        # Check if the last message is from assistant, add empty user message if so
         if self.message_processor.get_message_count() > 0:
             last_msg = self.message_processor.get_messages()[-1]
             if isinstance(last_msg, ChatMessage):
@@ -309,28 +287,23 @@ class Agent:
         self.current_enable_compress = enable_compress
         self.current_disable_waiting_user_warning = disable_waiting_user_warning
 
-        # 触发消息生成前的生命周期事件
         await self.lifecycle.trigger_before_message_generation(
             enable_compress, disable_waiting_user_warning
         )
 
-        # 选择模型
         model = await self.get_current_model()
 
         answer: Answer = await model.answer_stream(
             self.message_processor.get_messages()
         )
 
-        # 设置当前Answer用于plugin打断
         self.current_answer = answer
 
         async for token in answer:
             await self.group_chat.send("agent_answer", token)
 
-            # 实时检查工具调用量（通过lifecycle回调处理）
             current_content = answer.get_current_content()
 
-            # 触发消息生成中的生命周期事件
             interrupted = await self.lifecycle.trigger_during_message_generation(
                 answer, current_content
             )
@@ -342,7 +315,6 @@ class Agent:
                 assert isinstance(msg, ChatMessage)
                 parsed_input = parse_user_input(msg.message.strip())
                 if parsed_input.command is None:
-                    # 正常打断
                     await self.group_chat.send("agent_answer", answer)
                     chat_message = cast(ChatMessage, answer.get_message())
                     self.message_processor.append_message(chat_message)
@@ -356,7 +328,6 @@ class Agent:
         full_response = chat_message.message
         self.message_processor.append_message(chat_message)
 
-        # 将排队消息添加到消息列表，放在agent输出后面
         if self.queued_messages:
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
@@ -365,24 +336,22 @@ class Agent:
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
             self.message_processor.get_messages().extend(self.queued_messages)
-            self.queued_messages = []  # 清空排队消息
+            self.queued_messages = []
 
         try:
             tool_calls, errors = extract_tool_calls_with_errors(full_response)
         except ParseError:
-            # 正常打断
             interrupt_msg = CliRuntimeNotice(
                 level="WARNING", content="工具调用格式出错"
             )
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-            # 添加RuntimeMessage到消息队列
+
             self.message_processor.append_message(RuntimeMessage("工具调用格式出错"))
             return answer
 
         for error in errors:
             self.message_processor.append_message(RuntimeMessage(error))
 
-        # 开始新一轮工具调用
         self.toolcall_processor.start_new_tool_call_round()
 
         for call in tool_calls:
@@ -399,15 +368,12 @@ class Agent:
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
 
-        # 触发消息生成后的生命周期事件
         await self.lifecycle.trigger_after_message_generation(
             answer, full_response, tool_calls
         )
 
-        # 保存对话历史
         await self.save_conversation_history()
 
-        # 清除当前Answer引用
         self.current_answer = None
         return answer
 
@@ -424,7 +390,6 @@ class Agent:
 
     async def save_conversation_history(self):
         """保存对话历史到文件。"""
-        # 委托给message_processor处理，确保使用统一的保存逻辑
         await self.message_processor.save_conversation_history()
 
     async def run(self):
@@ -458,7 +423,6 @@ class Agent:
                 break
             await asyncio.sleep(0)
 
-        # 断开MCP连接
         await self.group_chat.get_members(
             "mcp_connector", MCPConnector
         ).disconnect_all_mcp_servers()

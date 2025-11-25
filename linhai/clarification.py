@@ -49,9 +49,9 @@ class ClarificationManager:
             "answer": None,
         }
         self._response_events[clarification_id] = asyncio.Event()
-        
-        # 直接添加RuntimeMessage到Agent的消息队列
+
         from linhai.agent.message import AgentMessage
+
         agent_message = self.group_chat.get_members("agent_message", AgentMessage)
         agent_message.append_message(
             RuntimeMessage(
@@ -60,6 +60,7 @@ class ClarificationManager:
         )
 
         from linhai.agent.main import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         if agent.state == "waiting_user":
             agent.state = "working"
@@ -96,7 +97,6 @@ class ClarificationManager:
         clarification["answered"] = True
         clarification["answer"] = answer
 
-        # 触发事件，通知等待的SubAgent
         if clarification_id in self._response_events:
             self._response_events[clarification_id].set()
 

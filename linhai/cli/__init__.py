@@ -10,7 +10,7 @@ from .app import CLIApp
 
 __all__ = [
     "RainbowAsciiArt",
-    "AnimatedWelcomeWidget", 
+    "AnimatedWelcomeWidget",
     "RuntimeMessageWidget",
     "MessageWidget",
     "CLIApp",

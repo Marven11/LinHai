@@ -47,11 +47,9 @@ class SubAgent:
         self.start_time = datetime.now()
         self.max_answer_times = max_answer_times
 
-        # SubAgent专用工具集
         self.toolset = ToolSet()
         self._register_subagent_tools()
 
-        # 初始化消息
         self.messages: list[Message] = [
             SubagentSystemMessage(
                 CLARIFIER_SUBAGENT_PROMPT.replace(
@@ -88,14 +86,13 @@ class SubAgent:
             self.state = "exited"
             return f"SubAgent {self.name} 已退出: {reason}"
 
-        # 注册澄清工具
         from linhai.clarification import ClarificationManager
         from .clarification_tools import create_clarification_toolset
 
         clarification_manager = self.group_chat.get_members(
             "clarification_manager", ClarificationManager
         )
-        # 确保clarification_manager是单个对象而不是元组
+
         if isinstance(clarification_manager, tuple):
             clarification_manager = clarification_manager[0]
         clarification_toolset = create_clarification_toolset(
@@ -111,7 +108,7 @@ class SubAgent:
         async for token in answer:
             if isinstance(token, AnswerToken):
                 full_response += token.content
-                # 发送流式token到队列
+
                 await self.group_chat.send_if_exists(
                     "subagent_message",
                     {
@@ -122,7 +119,6 @@ class SubAgent:
                     },
                 )
 
-        # 发送完成消息
         await self.group_chat.send_if_exists(
             "subagent_message",
             {
@@ -174,7 +170,6 @@ class SubAgent:
 
         await self._execute_tool_calls(tool_calls)
 
-        # 如果没有工具调用，添加提示继续
         if not tool_calls:
             self.messages.append(
                 ChatMessage(role="user", message="请使用工具完成任务并调用exit退出")
@@ -184,8 +179,8 @@ class SubAgent:
 
     async def run(self) -> None:
         """运行SubAgent，执行任务直到退出。"""
-        # 在测试环境中，直接返回而不执行任何操作
-        if hasattr(self.group_chat, '_test_mode'):
+
+        if hasattr(self.group_chat, "_test_mode"):
             logger.info("SubAgent %s 在测试模式中跳过运行", self.name)
             return
 
@@ -202,7 +197,6 @@ class SubAgent:
 
         logger.info("SubAgent %s 结束运行，原因: %s", self.name, self.exit_reason)
 
-        # 发送退出通知到subagent标签页
         await self.group_chat.send_if_exists(
             "subagent_message",
             {
@@ -238,7 +232,6 @@ class SubAgentManager:
         if name in self.subagents:
             return f"错误: SubAgent {name} 已存在"
 
-        # 使用subagent配置中的default_llm，如果没有配置则使用Agent的LLM
         subagent_llm: LanguageModel | None = None
 
         if self.subagent_config:
@@ -247,11 +240,9 @@ class SubAgentManager:
                 llm_index = self.llm_names.index(default_llm_name)
                 subagent_llm = self.llms[llm_index]
         if subagent_llm is None:
-            from linhai.agent import Agent  # 避免循环导入
 
             agent = self.group_chat.get_members("agent", Agent)
-            
-            # 安全地获取LLM信息，避免await问题
+
             _, subagent_llm = agent.get_current_llm_info()
 
         subagent = SubAgent(

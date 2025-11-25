@@ -67,21 +67,19 @@ def validate_file(file_path: Path) -> str:
     if not file_path.is_file():
         return f"路径{file_path.as_posix()!r}不是文件"
 
-    # 检查文件大小
     file_size = file_path.stat().st_size
-    if isinstance(file_size, int) and file_size > 1024 * 1024:  # 1MB
+    if isinstance(file_size, int) and file_size > 1024 * 1024:
         return f"文件{file_path.as_posix()!r}过大（{file_size}字节），超过1MB限制"
 
-    # 检查是否为纯文本：尝试读取文件并检查编码
     try:
-        _ = file_path.read_text(encoding="utf-8")  # Unused variable content
-        # 如果成功读取，则认为是文本文件
+        _ = file_path.read_text(encoding="utf-8")
+
     except UnicodeDecodeError:
         return f"文件{file_path.as_posix()!r}不是纯文本文件（UTF-8编码错误）"
     except OSError as exc:
         return f"读取文件时发生错误: {exc!r}"
 
-    return ""  # 验证通过
+    return ""
 
 
 @global_tools.register_tool(
@@ -92,7 +90,13 @@ def validate_file(file_path: Path) -> str:
         "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),
     },
     required_args=["filepath"],
-    conflict_with=["write_file", "append_file", "replace_file_content", "modify_file_with_sed", "insert_at_line"],
+    conflict_with=[
+        "write_file",
+        "append_file",
+        "replace_file_content",
+        "modify_file_with_sed",
+        "insert_at_line",
+    ],
 )
 def read_file(
     filepath: str, show_line_numbers: bool = False
@@ -117,7 +121,7 @@ def read_file(
         return ToolErrorMessage(f"发生错误: {exc!r}")
 
     if show_line_numbers:
-        # 添加行号
+
         lines = content.splitlines()
         numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
         formatted_content = "\n".join(numbered_lines)
@@ -142,7 +146,12 @@ def read_file(
         "override": ToolArgInfo(desc="是否覆盖已有文件", type="bool"),
     },
     required_args=["filepath", "content"],
-    conflict_with=["read_file", "list_files", "get_absolute_path", "run_sed_expression"],
+    conflict_with=[
+        "read_file",
+        "list_files",
+        "get_absolute_path",
+        "run_sed_expression",
+    ],
 )
 def write_file(
     filepath: str, content: str, override: bool = False
@@ -269,12 +278,10 @@ def replace_file_content(
                 f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
             )
 
-        # 检查匹配次数
         count = content.count(old)
 
-        # 参数验证逻辑
         if replace_times is None:
-            # 没有提供参数时，验证旧内容只出现一次
+
             if count != 1:
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
@@ -283,7 +290,7 @@ def replace_file_content(
                 )
             replace_count = 1
         elif replace_times > 0:
-            # 提供数字n>0时，验证旧内容出现次数不超过n
+
             if count < replace_times:
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
@@ -292,20 +299,19 @@ def replace_file_content(
                 )
             replace_count = replace_times
         elif replace_times == -1:
-            # 提供-1时，验证旧内容至少出现2次
+
             if count < 2:
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
                     f"但要求替换所有匹配（至少需要2次匹配）。"
                     f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
                 )
-            replace_count = -1  # 表示替换所有
+            replace_count = -1
         else:
             return ToolErrorMessage(
                 f"无效的replace_times参数值: {replace_times}，应为正数或-1"
             )
 
-        # 根据replace_count决定替换方式
         if replace_count == -1:
             new_content = content.replace(old, new)
             actual_replace_count = count
@@ -346,7 +352,7 @@ def format_file_size(size: int) -> str:
             size_str = f"{current_size:.1f}{unit}" if i > 0 else f"{current_size}B"
             return size_str
         current_size /= 1024.0
-    return f"{size}B"  # 备用
+    return f"{size}B"
 
 
 def get_file_info(file_path: Path) -> str:
@@ -354,20 +360,17 @@ def get_file_info(file_path: Path) -> str:
     try:
         stat_info = file_path.stat()
 
-        # 文件类型和权限
         mode = stat_info.st_mode
         file_type = "d" if file_path.is_dir() else "-"
         permissions = format_permissions(mode)
 
-        # 文件大小（人类可读格式）
         size_str = format_file_size(stat_info.st_size)
 
-        # 修改时间
         mtime = time.strftime("%b %d %H:%M", time.localtime(stat_info.st_mtime))
 
         return f"{file_type}{permissions} {stat_info.st_nlink:>2} {stat_info.st_uid:>4} {stat_info.st_gid:>4} {size_str:>8} {mtime} {file_path.name}"
     except OSError:
-        # 如果无法获取详细信息，返回基本名称
+
         file_type = "d" if file_path.is_dir() else "-"
         return (
             f"{file_type}?????????  ?    ?    ?         ? ??? ?? ???? {file_path.name}"
@@ -397,12 +400,11 @@ def list_files(dirpath: str) -> ToolResultMessage | ToolErrorMessage:
     if not dir_path.is_dir():
         return ToolErrorMessage(f"路径{dir_path.as_posix()!r}不是文件夹")
     try:
-        # 获取所有文件和文件夹的详细信息
+
         items = []
         for item in dir_path.iterdir():
             items.append(get_file_info(item))
 
-        # 按名称排序
         items.sort()
 
         items_str = "\n".join(items)
@@ -507,17 +509,13 @@ def modify_file_with_sed(
     if validation_error:
         return ToolErrorMessage(validation_error)
     try:
-        # 检测操作系统处理-i选项差异
-        system = platform.system()
-        if system == "Darwin":  # macOS
-            cmd = ["sed", "-i", "", expression, file_path.as_posix()]
-        else:  # Linux或其他
-            cmd = ["sed", "-i", expression, file_path.as_posix()]
-        _ = subprocess.run(
-            cmd, capture_output=True, text=True, check=True
-        )  # Unused variable result
 
-        # 检查表达式是否使用行号匹配
+        system = platform.system()
+        if system == "Darwin":
+            cmd = ["sed", "-i", "", expression, file_path.as_posix()]
+        else:
+            cmd = ["sed", "-i", expression, file_path.as_posix()]
+        _ = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
         line_number_pattern = r"^\d+"
         result_text = f"文件{file_path.as_posix()!r}已使用sed表达式修改"
@@ -567,7 +565,7 @@ def insert_at_line(
         return ToolErrorMessage(validation_error)
     try:
         current_content = file_path.read_text(encoding="utf-8")
-        lines = current_content.splitlines(keepends=True)  # 保留换行符
+        lines = current_content.splitlines(keepends=True)
         num_lines = len(lines)
 
         if line_number < 1 or line_number > num_lines + 1:
@@ -575,7 +573,6 @@ def insert_at_line(
                 f"行号{line_number}无效，有效范围是1到{num_lines + 1}"
             )
 
-        # 验证当前行内容是否匹配预期
         if line_number <= num_lines:
             current_line = lines[line_number - 1].rstrip("\n")
             if current_line != expected_line_content:
@@ -584,7 +581,7 @@ def insert_at_line(
                     "你可能需要重新读取文件"
                 )
         elif line_number == num_lines + 1:
-            # 对于文件末尾的情况，预期内容应为空（因为插入到末尾之后）
+
             if expected_line_content != "":
                 return ToolErrorMessage(
                     f"预期行内容不匹配：文件末尾应无内容，但预期为'{expected_line_content}'"
@@ -595,7 +592,6 @@ def insert_at_line(
                 f"行号{line_number}超出范围，无法验证" "你可能需要重新读取文件"
             )
 
-        # 如果内容不以换行符结尾，添加一个换行符使其成为完整行
         content_to_insert = content
         if not content.endswith("\n"):
             content_to_insert = content + "\n"

@@ -17,19 +17,19 @@ import linhai
 class ToolArgInfo(TypedDict):
     """工具参数信息"""
 
-    desc: str  # 参数描述
-    type: str | dict[str, Any]  # 参数类型字符串或者JSON Schema
+    desc: str
+    type: str | dict[str, Any]
 
 
 class Tool(TypedDict):
     """工具定义"""
 
-    name: str  # 工具名称
-    desc: str  # 工具描述
-    args: dict[str, ToolArgInfo]  # 参数信息
-    required: list[str]  # 必填参数列表
-    func: Callable  # 工具函数
-    conflict_with: list[str]  # 不能同时调用的工具名称列表
+    name: str
+    desc: str
+    args: dict[str, ToolArgInfo]
+    required: list[str]
+    func: Callable
+    conflict_with: list[str]
 
 
 def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
@@ -50,7 +50,7 @@ def to_tools_info(tools: dict[str, Tool]) -> list[dict]:
         }
 
         for arg_name, arg_info in tool["args"].items():
-            # 直接使用类型字符串作为OpenAI格式的type字段
+
             properties[arg_name] = {
                 "description": arg_info["desc"],
                 "type": arg_info["type"],
@@ -125,6 +125,7 @@ class ToolSet:
 
     def has_tool(self, name: str):
         return name in self.tools
+
     def add_toolset(self, toolset: "ToolSet") -> None:
         """将另一个ToolSet中的所有工具添加到当前ToolSet中。"""
         for tool_name, tool in toolset.tools.items():
@@ -137,7 +138,7 @@ class ToolResultMessage(Message):
     """工具成功结果消息"""
 
     def __init__(self, content: Any, max_output_length: int = 50000):
-        # 在内部处理转换逻辑
+
         if isinstance(content, str):
             content_str = content
         else:
@@ -146,50 +147,51 @@ class ToolResultMessage(Message):
             except (TypeError, ValueError):
                 content_str = str(content)
 
-        # 检查内容长度是否超过max_output_length字符
         if len(content_str) > max_output_length:
-            # 计算行数
+
             line_count = content_str.count("\n") + 1
-            
-            # 根据行数决定分块策略
+
             if line_count > 1000:
-                # 按行分块：每800行一个文件
-                lines = content_str.split('\n')
+
+                lines = content_str.split("\n")
                 file_paths = []
                 for i in range(0, len(lines), 800):
-                    chunk_lines = lines[i:i+800]
-                    chunk_content = '\n'.join(chunk_lines)
+                    chunk_lines = lines[i : i + 800]
+                    chunk_content = "\n".join(chunk_lines)
                     start_line = i + 1
                     end_line = min(i + 800, len(lines))
-                    
+
                     with tempfile.NamedTemporaryFile(
-                        mode="w", suffix=f"_lines_{start_line}-{end_line}.txt", delete=False, encoding="utf-8"
+                        mode="w",
+                        suffix=f"_lines_{start_line}-{end_line}.txt",
+                        delete=False,
+                        encoding="utf-8",
                     ) as temp_file:
                         temp_file.write(chunk_content)
                         file_paths.append(temp_file.name)
-                
-                # 生成文件列表信息
+
                 file_info = "\n".join([f"- {path}" for path in file_paths])
                 message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按行分块保存到以下临时文件（每800行一个文件）：\n{file_info}"
             else:
-                # 按字符分块：每10000字符一个文件
+
                 file_paths = []
                 for i in range(0, len(content_str), 10000):
-                    chunk_content = content_str[i:i+10000]
+                    chunk_content = content_str[i : i + 10000]
                     start_char = i + 1
                     end_char = min(i + 10000, len(content_str))
-                    
+
                     with tempfile.NamedTemporaryFile(
-                        mode="w", suffix=f"_chars_{start_char}-{end_char}.txt", delete=False, encoding="utf-8"
+                        mode="w",
+                        suffix=f"_chars_{start_char}-{end_char}.txt",
+                        delete=False,
+                        encoding="utf-8",
                     ) as temp_file:
                         temp_file.write(chunk_content)
                         file_paths.append(temp_file.name)
-                
-                # 生成文件列表信息
+
                 file_info = "\n".join([f"- {path}" for path in file_paths])
                 message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按字符分块保存到以下临时文件（每10000字符一个文件）：\n{file_info}"
-            
-            # 添加预览信息
+
             r = reprlib.Repr()
             r.maxstring = 500
             preview = r.repr(content_str)

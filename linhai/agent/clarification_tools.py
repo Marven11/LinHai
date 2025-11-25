@@ -1,4 +1,5 @@
 """Agent的澄清相关工具。"""
+
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.clarification import ClarificationManager
 
@@ -13,9 +14,7 @@ def create_clarification_toolset(
         name="respond_clarification",
         desc="回复SubAgent的澄清问题，这个工具可以安全地和其他工具一起调用",
         args={
-            "clarification_id": ToolArgInfo(
-                desc="澄清问题的ID", type="str"
-            ),
+            "clarification_id": ToolArgInfo(desc="澄清问题的ID", type="str"),
             "answer": ToolArgInfo(desc="对澄清问题的回答", type="str"),
         },
         required_args=["clarification_id", "answer"],
@@ -37,17 +36,17 @@ def create_clarification_toolset(
     def list_clarifications() -> str:
         """列出所有未解答的澄清问题。"""
         unanswered = clarification_manager.get_unanswered_clarifications()
-        
+
         if not unanswered:
             return "当前没有未解答的澄清问题。"
-        
+
         result = "未解答的澄清问题:\n"
         for clarification in unanswered:
             result += f"\nID: {clarification['id']}\n"
             result += f"来自: {clarification['from_subagent']}\n"
             result += f"问题: {clarification['question']}\n"
             result += "-" * 3
-        
+
         return result
 
     return toolset

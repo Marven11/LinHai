@@ -20,7 +20,6 @@ from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 
 # 常用文件后缀名到语法高亮类型的映射
 EXTENSION_TO_TYPE = {
-    # 编程语言
     ".py": "python",
     ".js": "javascript",
     ".ts": "typescript",
@@ -43,7 +42,6 @@ EXTENSION_TO_TYPE = {
     ".bash": "bash",
     ".zsh": "bash",
     ".fish": "bash",
-    # 标记语言
     ".html": "html",
     ".htm": "html",
     ".xml": "xml",
@@ -58,20 +56,16 @@ EXTENSION_TO_TYPE = {
     ".conf": "ini",
     ".csv": "csv",
     ".tsv": "tsv",
-    # 配置文件
     ".dockerfile": "dockerfile",
     ".gitignore": "gitignore",
     ".gitattributes": "gitattributes",
     ".dockerignore": "dockerignore",
-    # 样式文件
     ".css": "css",
     ".scss": "scss",
     ".sass": "sass",
     ".less": "less",
-    # SQL
     ".sql": "sql",
     ".psql": "sql",
-    # 其他
     ".txt": "text",
     ".log": "text",
 }
@@ -104,10 +98,10 @@ class RainbowAsciiArt(Static):
         num_colors = 256
         styles = []
         for i in range(num_colors):
-            # 色相从0到1循环，对应彩虹颜色
+
             hue = i / num_colors
             rgb = colorsys.hls_to_rgb(hue, 0.5, 0.8)
-            # 将RGB值从0-1范围转换为0-255范围
+
             r = int(rgb[0] * 255)
             g = int(rgb[1] * 255)
             b = int(rgb[2] * 255)
@@ -124,7 +118,6 @@ class RainbowAsciiArt(Static):
         """更新动画时间索引并重新渲染"""
         self.time_index += 1
 
-        # if it is slow for whatever reason, stop
         if time.perf_counter() - self.last_call_time > 0.2:
             self.slow_counter += 1
 
@@ -142,7 +135,7 @@ class RainbowAsciiArt(Static):
         lines = self.ascii_art.splitlines()
         for row, line in enumerate(lines):
             for col, char in enumerate(line):
-                # 计算颜色索引：斜向渐变，使用 (row + col + time_index) % len(rainbow_colors)
+
                 color_index = (
                     (row + col + self.time_index) // 2 % len(self.rainbow_colors)
                 )
@@ -160,7 +153,7 @@ class AnimatedWelcomeWidget(Static):
         super().__init__()
         self.version = version
         self.llm_name = llm_name
-        self.animation_stage = 0  # 0: 每日一言, 1: 乱码, 2: 版本信息
+        self.animation_stage = 0
         self.elapsed_time = 0.0
         self.daily_quote = "/time set 0"
         self.version_info = f"{self.version} | LLM: {self.llm_name}"
@@ -177,12 +170,12 @@ class AnimatedWelcomeWidget(Static):
             self.animation_stage = 1
         if self.elapsed_time >= 1.0:
             self.animation_stage = 2
-        if self.animation_stage == 0:  # 每日一言阶段
+        if self.animation_stage == 0:
 
             self.update(self._render_daily_quote())
-        elif self.animation_stage == 1:  # 乱码阶段
+        elif self.animation_stage == 1:
             self.update(self._render_glitch())
-        else:  # 版本信息阶段
+        else:
             self.update(self._render_version_info())
             if self.timer:
                 self.timer.stop()
@@ -204,12 +197,11 @@ class AnimatedWelcomeWidget(Static):
                 for _ in range(max(len(self.daily_quote), len(self.version_info)))
             )
         )
-        # 从0.2 ~ 1.2秒
+
         saturation = max(0, 1.2 - self.elapsed_time)
         lightness = 0.5
         hue = 50.59 / 360
 
-        # 将HSL转换为RGB
         rgb = colorsys.hls_to_rgb(hue, lightness, saturation)
         r = int(rgb[0] * 255)
         g = int(rgb[1] * 255)
@@ -235,12 +227,11 @@ class RuntimeMessageWidget(Static):
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
-        # 设置样式
+
         level_style = {"INFO": "#4C566A", "WARNING": "#EBCB8B", "ERROR": "#BF616A"}.get(
             self.level, "#4C566A"
         )
 
-        # 创建消息文本
         message_text = Text()
         message_text.append(f"[{self.level[0]}]", style=level_style)
         message_text.append(f" {self.content}")
@@ -271,7 +262,7 @@ class ToolCallWidget(Static):
             self.json_str += new_content
             self.parser.feed_string(new_content)
         except RuntimeError as e:
-            # 捕获feed_string过程中的RuntimeError
+
             self.has_error = True
             self.error_message = str(e)
 
@@ -281,7 +272,7 @@ class ToolCallWidget(Static):
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
         self.timer = self.set_interval(0.1, self.update_display)
-        # 喂入JSON字符串到解析器
+
         try:
             self.parser.feed_string(self.json_str)
         except RuntimeError as e:
@@ -292,7 +283,7 @@ class ToolCallWidget(Static):
         """更新显示"""
 
         if self.has_error:
-            # 如果已经发生错误，显示错误消息和原始JSON
+
             panel = Panel(
                 Syntax(
                     self.json_str,
@@ -302,7 +293,7 @@ class ToolCallWidget(Static):
                     word_wrap=True,
                 ),
                 box=box.SQUARE,
-                border_style="red",  # 使用红色边框表示错误
+                border_style="red",
                 title="tool call (解析错误)",
                 title_align="left",
                 expand=True,
@@ -336,7 +327,7 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                         )
                     else:
-                        # 没有换行时使用单个反引号
+
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{final_value}`\n"
@@ -354,7 +345,7 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}"
                         )
                     else:
-                        # 没有换行时使用单个反引号
+
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{self.current_value}"
@@ -369,7 +360,7 @@ class ToolCallWidget(Static):
                         word_wrap=True,
                     ),
                     box=box.SQUARE,
-                    border_style="#B48EAD",  # 调整后的紫色
+                    border_style="#B48EAD",
                     title="tool call",
                     title_align="left",
                     expand=True,
@@ -377,10 +368,10 @@ class ToolCallWidget(Static):
                 )
                 self.update(panel)
         except RuntimeError as e:
-            # 捕获RuntimeError，记录错误并标记
+
             self.has_error = True
             self.error_message = str(e)
-            # 立即更新显示以显示错误
+
             self.update_display()
 
     def get_backtick_count(self, text: str) -> int:
@@ -450,7 +441,6 @@ class ReasoningContentWidget(Static):
             lines = [line for line in content_to_display.splitlines() if line]
             content_to_display = "\n".join(lines[-2:])
 
-        # 直接使用Textual的Static组件显示文本，让CSS处理省略号
         self.update(escape(content_to_display))
 
 
@@ -479,8 +469,8 @@ class NormalContentWidget(Static):
         """更新普通消息显示，按字符换行"""
         content_to_display = self.content_str.strip()
         border_color = {
-            "user": "#A3BE8C",  # 调整后的绿色
-            "assistant": "#81A1C1",  # nord primary 蓝色
+            "user": "#A3BE8C",
+            "assistant": "#81A1C1",
         }.get(self.role, "grey50")
         panel = Panel(
             Syntax(
@@ -488,7 +478,7 @@ class NormalContentWidget(Static):
                 lexer=EnhancedMarkdownLexer(),
                 theme="nord-darker",
                 background_color="#2E3440",
-                word_wrap=True,  # 按字符换行
+                word_wrap=True,
             ),
             box=box.SQUARE,
             border_style=border_color,
@@ -512,7 +502,7 @@ class MessageWidget(Static):
         self.content_str = content
 
         self.current_widget: ToolCallWidget | NormalContentWidget | None = None
-        # 当前行，可能以换行符结尾，特别注意以```开头的行
+
         self.current_line = ""
 
     def update_display(self):

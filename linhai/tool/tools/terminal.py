@@ -47,7 +47,6 @@ KEY_MAPPINGS = {
     "f10": "\x1b[21~",
     "f11": "\x1b[23~",
     "f12": "\x1b[24~",
-    # 控制字符
     "ctrl+c": "\x03",
     "ctrl+d": "\x04",
     "ctrl+z": "\x1a",
@@ -281,7 +280,7 @@ def close_all_terminals() -> str:
     Returns:
         关闭结果消息
     """
-    # global terminals  # No assignment done
+
     count = len(terminals)
     for terminal_id in list(terminals.keys()):
         terminal = terminals[terminal_id]
