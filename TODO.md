@@ -2,7 +2,7 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 修改 http_request
+- [x] 修改 http_request
   - 添加默认 User Agent，声明自己为 Chrome 兼容的 LinHai
   - 在响应为二进制内容时将内容保存到临时文件，并返回临时文件的路径
     - 看 Content-Type 和 chardet 编码检测

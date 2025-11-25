@@ -1,17 +1,45 @@
 """HTTP工具模块，提供发送HTTP请求的功能。"""
 
 from typing import Optional
-# import requests  # Unused import
 import httpx
+import chardet
 
 from linhai.tool.base import global_tools
 
-# import os  # Unused import
 import tempfile
 import subprocess
 import shutil
 from bs4 import BeautifulSoup
 from selenium import webdriver
+
+
+def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
+    """分析HTTP响应内容，返回是否为二进制和检测到的编码。
+    
+    通过Content-Type和chardet编码检测综合判断，避免重复检测。
+    """
+    # 根据Content-Type判断
+    if (
+        content_type.startswith('image/')
+        or content_type.startswith('application/octet-stream')
+        or content_type.startswith('application/pdf')
+        or content_type.startswith('application/zip')
+        or content_type.startswith('audio/')
+        or content_type.startswith('video/')
+        or 'binary' in content_type
+        or content_type.startswith('font/')
+        or content_type.startswith('application/vnd.')
+    ):
+        return True, None
+    
+    # 使用chardet检测内容编码
+    detected = chardet.detect(content)
+    encoding = detected['encoding']
+    
+    if encoding is None:
+        return True, None  # 无法检测到编码，认为是二进制
+    
+    return False, encoding  # 文本内容，返回编码
 
 
 @global_tools.register_tool(
@@ -36,8 +64,12 @@ async def http_request(
     follow_redirects: bool = True,
 ) -> str:
     """
-    发送HTTP请求并返回响应内容
+    发送HTTP请求并返回响应内容或文件路径
     """
+    if headers is None:
+        headers = {}
+    headers.setdefault("User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)")
+    
     try:
         async with httpx.AsyncClient() as client:
             response = await client.request(
@@ -49,7 +81,28 @@ async def http_request(
                 data=data,  # type: ignore[arg-type]
                 timeout=10.0,
             )
-            return response.text
+            
+            content_type = response.headers.get('content-type', '').lower()
+            
+            is_binary, encoding = analyze_content(content_type, response.content)
+            
+            if is_binary:
+                # 保存二进制内容到临时文件
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as tmp_file:
+                    tmp_file.write(response.content)
+                    return tmp_file.name
+            else:
+                # 文本内容，使用检测到的编码
+                if encoding:
+                    try:
+                        return response.content.decode(encoding)
+                    except UnicodeDecodeError:
+                        return f"ToolErrorMessage: 无法使用编码 {encoding} 解码响应内容"
+                else:
+                    try:
+                        return response.text  # 回退到 httpx 的自动解码
+                    except UnicodeDecodeError:
+                        return "ToolErrorMessage: 无法解码响应内容，可能是二进制数据"
     except httpx.RequestError as e:
         return f"请求失败: {str(e)}"
 
