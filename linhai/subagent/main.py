@@ -241,6 +241,8 @@ class SubAgentManager:
                 subagent_llm = self.llms[llm_index]
         if subagent_llm is None:
 
+            from linhai.agent.main import Agent
+
             agent = self.group_chat.get_members("agent", Agent)
 
             _, subagent_llm = agent.get_current_llm_info()

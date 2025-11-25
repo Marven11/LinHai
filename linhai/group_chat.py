@@ -43,6 +43,14 @@ class GroupChat:
         self.members[name] = obj
 
     def get_members(self, name: LiteralString, t: Type[T]) -> T:
+        """注意：t用来动态检测类型，保证拿到的数据类型正确
+        
+        这个函数用来解决循环引用的问题和交叉持有带来的无法初始化的问题
+
+        这个函数的正确用法是：
+            - 有必要的话，在函数内import对应的类型传给t参数
+            - 每次使用数据都动态获取，而不是保存在属性中！
+        """
         if name not in self.members:
             raise RuntimeError(f"{name!r} not exists")
         if not isinstance(self.members[name], t):
