@@ -61,6 +61,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.lifecycle = Lifecycle(self.group_chat)
         self.mock_agent = MagicMock()
         self.mock_agent.state = "waiting_user"
+        self.mock_agent.current_disable_waiting_user_warning = False
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_answer = MagicMock()
@@ -68,8 +69,20 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_call = MagicMock()
         self.mock_tool_result = MagicMock()
         
-        # 模拟group_chat.get_members返回有效的agent
-        self.group_chat.get_members = MagicMock(return_value=self.mock_agent)
+        # 模拟clarification_manager
+        self.mock_clarification_manager = MagicMock()
+        self.mock_clarification_manager.has_unanswered_clarifications.return_value = False
+        
+        # 模拟group_chat.get_members根据参数返回不同的Mock（同步返回）
+        def get_members_side_effect(member_type, member_class=None):
+            if member_type == "agent":
+                return self.mock_agent
+            elif member_type == "clarification_manager":
+                return self.mock_clarification_manager
+            else:
+                return None
+        
+        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
 
     async def test_register_and_trigger_before_message_generation(self):
         """Test registering and triggering before message generation callbacks."""
@@ -231,6 +244,14 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_tool_parse_error(
                 self.mock_agent, "parse error message"
             )
+            # 模拟subagent_manager
+            mock_subagent_manager = MagicMock()
+            mock_subagent_manager.create_subagent = AsyncMock()
+            self.group_chat.get_members.side_effect = lambda member_type, member_class=None: {
+                "agent": self.mock_agent,
+                "clarification_manager": self.mock_clarification_manager,
+                "subagent_manager": mock_subagent_manager
+            }.get(member_type)
             await self.lifecycle.trigger_tool_conflict(
                 self.mock_agent, self.mock_tool_call, ["tool1", "tool2"]
             )

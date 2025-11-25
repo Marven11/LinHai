@@ -15,13 +15,24 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.agent = AsyncMock()
-        self.agent.message_processor = AsyncMock()
-        self.agent.message_processor.get_messages = AsyncMock(return_value=[])
-        self.agent.message_processor.append_message = AsyncMock()
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages.return_value = []
+        self.agent.message_processor.append_message = MagicMock()
         
-        self.group_chat = AsyncMock()
-        self.group_chat.get_members = AsyncMock(return_value=self.agent)
+        # 模拟subagent_manager
+        self.mock_subagent_manager = MagicMock()
+        self.mock_subagent_manager.create_subagent = AsyncMock()
+        
+        self.group_chat = MagicMock()
+        # 根据成员类型返回不同的Mock
+        def get_members_side_effect(member_type, member_class=None):
+            if member_type == "subagent_manager":
+                return self.mock_subagent_manager
+            else:
+                return self.agent
+        
+        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
         self.group_chat.send_if_exists = AsyncMock()
         
         self.plugin = SubAgentCollaborationPlugin(self.group_chat)
@@ -50,10 +61,23 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
         mock_subagent_manager.create_subagent = AsyncMock()
         self.group_chat.get_members.return_value = mock_subagent_manager
         
-        # 模拟agent
+        # 模拟agent，确保包含多个工具调用块以触发subagent启动
         mock_agent = MagicMock()
         mock_agent.current_answer = MagicMock()
-        mock_agent.current_answer.get_current_content = MagicMock(return_value="测试回答内容")
+        # 返回包含多个工具调用块的内容
+        mock_agent.current_answer.get_current_content = MagicMock(
+            return_value="""首先调用一个工具
+
+```json toolcall
+{"name": "list_files", "arguments": {"dirpath": "."}}
+```
+
+然后调用另一个工具
+
+```json toolcall
+{"name": "read_file", "arguments": {"filepath": "test.txt"}}
+```"""
+        )
         
         # 工具调用失败，应该启动subagent
         await self.plugin.tool_failure(mock_agent, tool_call, error)
@@ -93,7 +117,7 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_check_violations_success(self):
         """测试规则检查成功启动subagent。"""
-        mock_subagent_manager = MagicMock()
+        mock_subagent_manager = AsyncMock()
         mock_subagent_manager.create_subagent = AsyncMock()
         
         full_response = "测试回答内容"
@@ -137,9 +161,8 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
         call_args = mock_subagent_manager.create_subagent.call_args
         self.assertEqual(call_args[1]["agent_type"], "violation_checker")
 
-    @patch("logging.Logger.error")
-    async def test_check_violations_exception_handling(self, mock_log_error):
-        """测试规则检查异常处理。"""
+    async def test_check_violations_exception_propagation(self):
+        """测试规则检查异常传播（fail fast）。"""
         mock_subagent_manager = MagicMock()
         mock_subagent_manager.create_subagent = AsyncMock(side_effect=Exception("测试异常"))
         
@@ -150,13 +173,14 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
         )
         error = "测试错误"
         
-        # 执行检查，应该捕获异常而不抛出
-        await self.plugin._check_violations(
-            mock_subagent_manager, full_response, tool_call, error
-        )
+        # 执行检查，异常应该直接抛出（fail fast）
+        with self.assertRaises(Exception) as context:
+            await self.plugin._check_violations(
+                mock_subagent_manager, full_response, tool_call, error
+            )
         
-        # 验证错误被记录
-        mock_log_error.assert_called_once()
+        # 验证异常信息
+        self.assertEqual(str(context.exception), "测试异常")
 
 
 if __name__ == "__main__":

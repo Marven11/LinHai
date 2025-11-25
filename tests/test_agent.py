@@ -135,7 +135,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Test
-        self.agent.handle_user_message(test_msg)
+        await self.agent.handle_user_message(test_msg)
         await self.agent.generate_response()
 
         # 验证 cli_agent_output 队列收到了正确的 tokens 和最终 Answer
