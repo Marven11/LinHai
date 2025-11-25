@@ -395,6 +395,44 @@ class SingleToolCallReminderPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class ClarificationCheckPlugin(Plugin):
+    """提醒agent需要立马回复clarification的工具"""
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.without_clarification_counter = 0
+
+    async def after_message_generation(
+        self, _answer: Answer, _full_response: str, tool_calls
+    ):
+        """检查是否连续多次只调用了一个工具。"""
+        from linhai.clarification import ClarificationManager
+        from linhai.agent import Agent
+
+        clarification_manager = self.group_chat.get_members(
+            "clarification_manager", ClarificationManager
+        )
+        agent = self.group_chat.get_members("agent", Agent)
+
+        if clarification_manager.has_unanswered_clarifications():
+            self.without_clarification_counter += 1
+
+            if self.without_clarification_counter >= 2:
+                agent.message_processor.append_message(
+                    RuntimeMessage(
+                        f"注意：你连续{self.without_clarification_counter}次没有回复Clarification，"
+                        "你需要立即回复！"
+                        + "！！！" * self.without_clarification_counter
+                    )
+                )
+        else:
+            self.without_clarification_counter = 0
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class PreventToolOutputPlugin(Plugin):
     """防止agent错误输出工具调用内容的插件。
 
@@ -451,7 +489,10 @@ class ClarificationBlockingPlugin(Plugin):
 
         # 检查是否有未解答的澄清（动态获取clarification_manager）
         from linhai.clarification import ClarificationManager
-        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+
+        clarification_manager = self.group_chat.get_members(
+            "clarification_manager", ClarificationManager
+        )
         if (
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()
@@ -485,7 +526,13 @@ class SubAgentCollaborationPlugin(Plugin):
         error: Any,
     ) -> None:
         """在工具调用失败时启动subagent检查规则违反。"""
-        # 工具调用失败，启动subagent检查
+        assert agent.current_answer is not None
+        # 获取agent当前回答的详细信息
+
+        full_response = agent.current_answer.get_current_content()
+        if full_response.count("```json toolcall") <= 1:
+            return
+
         interrupt_msg = CliRuntimeNotice(
             level="WARNING", content="启动SubAgent检查工具调用"
         )
@@ -496,16 +543,10 @@ class SubAgentCollaborationPlugin(Plugin):
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager
         )
-        assert agent.current_answer is not None
-        # 获取agent当前回答的详细信息
-        
-        full_response = agent.current_answer.get_current_content()
 
         # 创建检查任务，不阻塞当前agent
         asyncio.create_task(
-            self._check_violations(
-                subagent_manager, full_response, tool_call, error
-            )
+            self._check_violations(subagent_manager, full_response, tool_call, error)
         )
 
     async def tool_conflict(
@@ -515,7 +556,6 @@ class SubAgentCollaborationPlugin(Plugin):
         conflicting_tools: list[str],
     ) -> None:
         """在工具调用冲突时启动subagent检查规则违反。"""
-        # 工具调用冲突，启动subagent检查
         interrupt_msg = CliRuntimeNotice(
             level="WARNING", content="启动SubAgent检查工具冲突"
         )
@@ -528,7 +568,7 @@ class SubAgentCollaborationPlugin(Plugin):
         )
         assert agent.current_answer is not None
         # 获取agent当前回答的详细信息
-        
+
         full_response = agent.current_answer.get_current_content()
 
         # 创建检查任务，不阻塞当前agent
@@ -584,8 +624,9 @@ class SubAgentCollaborationPlugin(Plugin):
         # 启动subagent进行检查
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
-            name=generate_id("violation_checker"),
+            name=generate_id("violation_subagent"),
             task_message=task_message,
+            max_answer_times=1,
         )
 
     async def _check_conflict_violations(
@@ -634,10 +675,10 @@ class SubAgentCollaborationPlugin(Plugin):
         # 启动subagent进行检查
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
-            name=generate_id("violation_checker"),
+            name=generate_id("violation_subagent"),
             task_message=task_message,
+            max_answer_times=1,
         )
-
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到lifecycle回调。"""
@@ -648,7 +689,7 @@ class SubAgentCollaborationPlugin(Plugin):
 class GitBlockingPlugin(Plugin):
     """阻止Agent在有未解答澄清时使用git命令的Plugin。"""
 
-    async def before_tool_call(self, tool_call: ToolCallMessage):
+    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
         """检查是否有未解答的澄清，如果有则阻止使用git命令。"""
         from linhai.agent import Agent
 
@@ -656,7 +697,10 @@ class GitBlockingPlugin(Plugin):
 
         # 检查是否有未解答的澄清（动态获取clarification_manager）
         from linhai.clarification import ClarificationManager
-        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+
+        clarification_manager = self.group_chat.get_members(
+            "clarification_manager", ClarificationManager
+        )
         if (
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()
@@ -676,36 +720,36 @@ class GitBlockingPlugin(Plugin):
                             f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。"
                         )
                     )
-                    # 抛出异常阻止工具调用
-                    raise ValueError("有未解答的澄清，禁止使用git命令")
+                    # 返回True阻止工具调用
+                    return True
+        return False
 
     def _is_git_command(self, command: str) -> bool:
         """精确检测是否为git命令"""
 
-        
         try:
             # 解析命令
             parts = shlex.split(command.strip())
             if not parts:
                 return False
-            
+
             # 检查命令是否为git或git开头的命令
             cmd = parts[0]
-            
+
             # 直接匹配git
             if cmd == "git":
                 return True
-            
+
             # 匹配以git开头的命令（如git commit, git push等）
             if cmd.startswith("git-"):
                 return True
-            
+
             # 检查是否包含git作为独立命令（处理路径中的git）
             # 使用os.path.basename来获取命令的基名
             basename = os.path.basename(cmd)
             if basename == "git" or basename == "git.exe":
                 return True
-            
+
             return False
         except Exception:
             return False
@@ -722,7 +766,10 @@ class ClarificationWaitingUserPlugin(Plugin):
         """检查是否有未解答的澄清，如果有则阻止进入等待用户状态。"""
         # 检查是否有未解答的澄清（动态获取clarification_manager）
         from linhai.clarification import ClarificationManager
-        clarification_manager = self.group_chat.get_members("clarification_manager", ClarificationManager)
+
+        clarification_manager = self.group_chat.get_members(
+            "clarification_manager", ClarificationManager
+        )
         if (
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()

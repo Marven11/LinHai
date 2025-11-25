@@ -40,7 +40,7 @@ AfterMessageGenerationCallback: TypeAlias = Callable[
 ]
 
 BeforeToolCallCallback: TypeAlias = Callable[
-    [ToolCallMessage], Awaitable[None]  # tool_call
+    [ToolCallMessage], Awaitable[bool]  # tool_call, 返回True表示阻止工具调用
 ]
 
 AfterToolCallCallback: TypeAlias = Callable[
@@ -127,6 +127,7 @@ class Lifecycle:
             SingleToolCallReminderPlugin,
             ClarificationBlockingPlugin,
             SubAgentCollaborationPlugin,
+            ClarificationCheckPlugin,
             GitBlockingPlugin,
             ClarificationWaitingUserPlugin,
         )
@@ -142,6 +143,7 @@ class Lifecycle:
             SingleToolCallReminderPlugin(self.group_chat),
             ClarificationBlockingPlugin(self.group_chat),
             SubAgentCollaborationPlugin(self.group_chat),
+            ClarificationCheckPlugin(self.group_chat),
             GitBlockingPlugin(self.group_chat),
             ClarificationWaitingUserPlugin(self.group_chat),
         ]
@@ -229,10 +231,14 @@ class Lifecycle:
         for callback in self._after_message_generation_callbacks:
             await callback(answer, full_response, tool_calls)
 
-    async def trigger_before_tool_call(self, tool_call: ToolCallMessage):
+    async def trigger_before_tool_call(self, tool_call: ToolCallMessage) -> bool:
         """触发工具调用前的事件。"""
+        should_block = False
         for callback in self._before_tool_call_callbacks:
-            await callback(tool_call)
+            result = await callback(tool_call)
+            if result:
+                should_block = True
+        return should_block
 
     async def trigger_after_tool_call(
         self,
@@ -250,12 +256,16 @@ class Lifecycle:
         for callback in self._before_waiting_user_callbacks:
             await callback(agent)
 
-    async def trigger_tool_success(self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any):
+    async def trigger_tool_success(
+        self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any
+    ):
         """触发工具成功事件。"""
         for callback in self._tool_success_callbacks:
             await callback(agent, tool_call, tool_result)
 
-    async def trigger_tool_failure(self, agent: "Agent", tool_call: ToolCallMessage, error: Any):
+    async def trigger_tool_failure(
+        self, agent: "Agent", tool_call: ToolCallMessage, error: Any
+    ):
         """触发工具失败事件。"""
         for callback in self._tool_failure_callbacks:
             await callback(agent, tool_call, error)
@@ -265,7 +275,9 @@ class Lifecycle:
         for callback in self._tool_parse_error_callbacks:
             await callback(agent, error_message)
 
-    async def trigger_tool_conflict(self, agent: "Agent", tool_call: ToolCallMessage, conflicting_tools: list[str]):
+    async def trigger_tool_conflict(
+        self, agent: "Agent", tool_call: ToolCallMessage, conflicting_tools: list[str]
+    ):
         """触发工具冲突事件。"""
         for callback in self._tool_conflict_callbacks:
             await callback(agent, tool_call, conflicting_tools)

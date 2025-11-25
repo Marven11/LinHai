@@ -132,7 +132,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if error message was added
@@ -167,7 +167,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if error message was added
@@ -193,7 +193,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.agent.state = "working"
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if warning message was added
@@ -215,7 +215,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added
@@ -247,7 +247,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added
@@ -273,7 +273,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added

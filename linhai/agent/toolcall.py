@@ -254,7 +254,10 @@ class AgentToolcall:
         )
 
         # 触发工具调用前的生命周期事件
-        await self.agent.lifecycle.trigger_before_tool_call(tool_call)
+        should_block = await self.agent.lifecycle.trigger_before_tool_call(tool_call)
+        if should_block:
+            self.early_return = True
+            return True  # 需要早期返回
 
         # 使用存储的tool_confirmation配置
         result = False

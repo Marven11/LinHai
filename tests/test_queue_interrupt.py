@@ -45,7 +45,7 @@ class MockAnswer:
 class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
     """测试队列消息不打断功能"""
 
-    async def asyncSetUp(self):
+    def setUp(self):
         """设置测试环境"""
         self.group_chat = GroupChat()
         
@@ -69,8 +69,6 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         # 创建Agent配置
         self.config: AgentContext = {
             "system_prompt": "测试系统提示",
-            
-            
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -80,6 +78,21 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         # 初始化消息
         self.init_messages = []
+        
+        # 注册clarification_manager（仅在未注册时注册）
+        from linhai.clarification import ClarificationManager
+        try:
+            self.group_chat.get_members("clarification_manager", ClarificationManager)
+        except RuntimeError:
+            try:
+                clarification_manager = ClarificationManager(self.group_chat)
+                self.group_chat.register_member("clarification_manager", clarification_manager)
+            except RuntimeError as e:
+                if "exists" in str(e):
+                    # 如果已经存在，忽略这个错误
+                    pass
+                else:
+                    raise
         
         # 创建Agent实例
         self.agent = Agent(

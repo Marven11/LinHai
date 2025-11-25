@@ -22,8 +22,13 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        # 注册模拟的agent_message以避免运行时错误
+        # 注册模拟的agent和agent_message以避免运行时错误
+        from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
+        from unittest.mock import Mock
+        self.agent = Mock(spec=Agent)
+        self.agent.state = "working"  # 添加state属性
+        self.group_chat.register_member("agent", self.agent)
         self.agent_message = AgentMessage(self.group_chat)
         self.manager = ClarificationManager(self.group_chat)
 
@@ -97,8 +102,13 @@ class TestClarificationAsync(unittest.TestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        # 注册模拟的agent_message以避免运行时错误
+        # 注册模拟的agent和agent_message以避免运行时错误
+        from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
+        from unittest.mock import Mock
+        self.agent = Mock(spec=Agent)
+        self.agent.state = "working"  # 添加state属性
+        self.group_chat.register_member("agent", self.agent)
         self.agent_message = AgentMessage(self.group_chat)
         self.manager = ClarificationManager(self.group_chat)
 
@@ -163,8 +173,13 @@ file_path = "memory.md"
         self.config = load_config(self.config_path)
         self.group_chat = GroupChat()
         
-        # 注册模拟的agent_message以避免运行时错误
+        # 注册模拟的agent和agent_message以避免运行时错误
+        from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
+        from unittest.mock import Mock
+        self.agent = Mock(spec=Agent)
+        self.agent.state = "working"  # 添加state属性
+        self.group_chat.register_member("agent", self.agent)
         self.agent_message = AgentMessage(self.group_chat)
 
     def tearDown(self):

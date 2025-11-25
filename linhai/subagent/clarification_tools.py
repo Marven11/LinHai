@@ -1,9 +1,8 @@
 """SubAgent的澄清相关工具。"""
 
-import uuid
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.clarification import ClarificationManager
-from linhai.utils import CliRuntimeNotice, generate_id
+from linhai.utils import generate_id
 
 
 def create_clarification_toolset(

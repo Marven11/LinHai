@@ -33,7 +33,7 @@ def create_subagent_toolset(subagent_manager: SubAgentManager) -> ToolSet:
         if not agent:
             return "错误: 无法获取Agent实例"
 
-        return await subagent_manager.create_subagent(agent_type, name, task_message)
+        return await subagent_manager.create_subagent(agent_type, name, task_message, max_answer_times=None)
 
     @toolset.register_tool(
         name="check_subagent",

@@ -75,7 +75,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         user_message = ChatMessage(role="user", message="@llm2 你好")
 
         # 调用handle_message，这会更新current_llm_index
-        self.agent.handle_user_message(user_message)
+        await self.agent.handle_user_message(user_message)
 
         # 调用get_current_model
         selected_model = await self.agent.get_current_model()
@@ -89,7 +89,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         user_message = ChatMessage(role="user", message="@invalid_llm 你好")
 
         # 调用handle_message，这会添加错误消息
-        self.agent.handle_user_message(user_message)
+        await self.agent.handle_user_message(user_message)
 
         # 调用get_current_model
         selected_model = await self.agent.get_current_model()

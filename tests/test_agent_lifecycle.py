@@ -222,6 +222,9 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_tool_success(
                 self.mock_agent, self.mock_tool_call, self.mock_tool_result
             )
+            # 模拟agent.current_answer.get_current_content返回字符串而不是MagicMock
+            self.mock_agent.current_answer = MagicMock()
+            self.mock_agent.current_answer.get_current_content = MagicMock(return_value="")
             await self.lifecycle.trigger_tool_failure(
                 self.mock_agent, self.mock_tool_call, "test error"
             )

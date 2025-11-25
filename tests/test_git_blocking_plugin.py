@@ -71,10 +71,9 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             function_arguments={"command": "git status"}
         )
         
-        with self.assertRaises(ValueError) as context:
-            await self.plugin.before_tool_call(tool_call)
-        
-        self.assertEqual(str(context.exception), "有未解答的澄清，禁止使用git命令")
+        # 应该返回True阻止工具调用
+        result = await self.plugin.before_tool_call(tool_call)
+        self.assertTrue(result)
         self.agent.message_processor.append_message.assert_called_once()
 
     async def test_allow_git_command_without_unanswered_clarifications(self):
@@ -86,19 +85,21 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             function_arguments={"command": "git status"}
         )
         
-        # 不应该抛出异常
-        await self.plugin.before_tool_call(tool_call)
+        # 应该返回False允许工具调用
+        result = await self.plugin.before_tool_call(tool_call)
+        self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()
 
     async def test_ignore_non_command_tools(self):
         """测试忽略非命令工具。"""
-        self.agent.clarification_manager.has_unanswered_clarifications.return_value = True
+        self.clarification_manager.has_unanswered_clarifications.return_value = True
         
         tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": "test.txt"}
         )
         
-        # 不应该抛出异常
-        await self.plugin.before_tool_call(tool_call)
+        # 应该返回False允许工具调用
+        result = await self.plugin.before_tool_call(tool_call)
+        self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()

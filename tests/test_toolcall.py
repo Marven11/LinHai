@@ -23,8 +23,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock()
-        self.mock_agent.lifecycle.trigger_after_tool_call = AsyncMock()
+        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(return_value=False)
+        self.mock_agent.lifecycle.trigger_tool_success = AsyncMock()
+        self.mock_agent.lifecycle.trigger_tool_failure = AsyncMock()
+        self.mock_agent.lifecycle.trigger_tool_conflict = AsyncMock()
         
         # Mock tool manager
         self.mock_tool_manager = Mock()
@@ -78,7 +80,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
-        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(self.mock_agent, tool_call, mock_result, True)
+        self.mock_agent.lifecycle.trigger_tool_success.assert_called_once_with(self.mock_agent, tool_call, mock_result)
 
     async def test_call_tool_without_confirmation_failure(self):
         """测试无需确认的工具调用失败。"""
@@ -102,7 +104,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
-        self.mock_agent.lifecycle.trigger_after_tool_call.assert_called_once_with(self.mock_agent, tool_call, mock_error, False)
+        self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once_with(self.mock_agent, tool_call, mock_error)
 
     async def test_call_tool_with_whitelist(self):
         """测试白名单工具调用。"""
@@ -177,6 +179,28 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         
         # 验证状态已改变
         self.assertEqual(self.mock_agent.state, "working")
+
+    async def test_call_tool_blocked_by_before_tool_call(self):
+        """测试before_tool_call返回True时阻止工具调用。"""
+        # 设置mock
+        self.toolcall_processor.skip_confirmation = True
+        
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=False
+        )
+        
+        # 设置before_tool_call返回True，表示应该阻止工具调用
+        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(return_value=True)
+        
+        # 调用方法
+        result = await self.toolcall_processor.call_tool(tool_call)
+        
+        # 验证结果：应该返回True表示需要早期返回，且工具没有被调用
+        self.assertTrue(result)
+        self.mock_tool_manager.process_tool_call.assert_not_called()
+        self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
 
 if __name__ == "__main__":
     unittest.main()

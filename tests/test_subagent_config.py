@@ -12,17 +12,28 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = Mock()
+        self.group_chat = AsyncMock()
         self.group_chat.register_member = Mock()
+        self.group_chat.send_if_exists = AsyncMock()
+        self.group_chat.receive = AsyncMock()
+        self.group_chat.is_empty = Mock(return_value=True)
+        self.group_chat._test_mode = True  # 标记为测试模式，防止SubAgent实际运行
         
-        # 创建模拟的LLM
-        self.mock_llm1 = Mock()
+        # 创建模拟的LLM - 使用AsyncMock以便可以await
+        self.mock_llm1 = AsyncMock()
         self.mock_llm1.name = "deepseek"
-        self.mock_llm2 = Mock()
+        self.mock_llm1.answer_stream = AsyncMock()
+        self.mock_llm2 = AsyncMock()
         self.mock_llm2.name = "qwen"
+        self.mock_llm2.answer_stream = AsyncMock()
         
         self.llms = [self.mock_llm1, self.mock_llm2]
         self.llm_names = ["deepseek", "qwen"]
+        
+        # 设置group_chat.get_members返回正确的格式（单个对象）
+        self.mock_agent = AsyncMock()
+        self.mock_agent.get_current_llm_info = AsyncMock(return_value=(None, self.mock_llm1))
+        self.group_chat.get_members = AsyncMock(return_value=self.mock_agent)
 
     async def test_create_subagent_with_config_default_llm(self):
         """测试使用配置中的default_llm创建SubAgent。"""
@@ -36,13 +47,17 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
             self.llms, 
             self.llm_names
         )
+        # 设置manager的group_chat.get_members返回正确的agent（单个对象）
+        mock_agent = AsyncMock()
+        mock_agent.get_current_llm_info = AsyncMock(return_value=(None, self.mock_llm2))
+        manager.group_chat.get_members = AsyncMock(return_value=mock_agent)
         
         # 创建SubAgent
         result = await manager.create_subagent(
             agent_type="test",
             name="test_agent",
             task_message="测试任务",
-            llm=self.mock_llm1  # 传入的llm将被配置覆盖
+            max_answer_times=None
         )
         
         # 验证结果
@@ -67,7 +82,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
             agent_type="test",
             name="test_agent",
             task_message="测试任务",
-            llm=self.mock_llm1
+            max_answer_times=None
         )
         
         # 验证结果
@@ -75,6 +90,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 验证SubAgent使用了传入的LLM
         subagent, _ = manager.subagents["test_agent"]
+        # 由于使用了agent.get_current_llm_info，这里应该验证返回的LLM
         self.assertEqual(subagent.llm, self.mock_llm1)
 
     async def test_create_subagent_with_invalid_default_llm(self):
@@ -89,13 +105,17 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
             self.llms, 
             self.llm_names
         )
+        # 设置manager的group_chat.get_members返回正确的agent（单个对象）
+        mock_agent = AsyncMock()
+        mock_agent.get_current_llm_info = AsyncMock(return_value=(None, self.mock_llm2))
+        manager.group_chat.get_members = AsyncMock(return_value=mock_agent)
         
         # 创建SubAgent
         result = await manager.create_subagent(
             agent_type="test",
             name="test_agent",
             task_message="测试任务",
-            llm=self.mock_llm1
+            max_answer_times=None
         )
         
         # 验证结果
@@ -103,40 +123,52 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 验证SubAgent使用了传入的LLM（因为配置的LLM不存在）
         subagent, _ = manager.subagents["test_agent"]
-        self.assertEqual(subagent.llm, self.mock_llm1)
+        # 由于我们修改了逻辑，当配置的default_llm不存在时，会使用agent.get_current_llm_info返回的LLM
+        self.assertEqual(subagent.llm, self.mock_llm2)
 
     async def test_create_duplicate_subagent(self):
         """测试创建重复的SubAgent。"""
-        manager = SubAgentManager(self.group_chat)
+        # 创建配置，确保使用直接传递的LLM
+        subagent_config = SubAgentConfig(default_llm="deepseek")
+        manager = SubAgentManager(self.group_chat, subagent_config, self.llms, self.llm_names)
         
-        # 第一次创建
-        result1 = await manager.create_subagent(
-            agent_type="test",
-            name="test_agent",
-            task_message="测试任务",
-            llm=self.mock_llm1
-        )
-        self.assertIn("成功创建SubAgent test_agent", result1)
+        # 手动添加一个模拟的SubAgent到manager.subagents中，测试重复创建逻辑
+        mock_subagent = type('MockSubAgent', (), {
+            'agent_type': 'test',
+            'name': 'test_agent',
+            'task_message': '测试任务',
+            'llm': None,
+            'group_chat': self.group_chat,
+            'state': 'running',
+            'exit_reason': None,
+            'start_time': datetime.now(),
+            'max_answer_times': None
+        })()
+        manager.subagents['test_agent'] = (mock_subagent, None)
         
-        # 第二次创建相同名称的SubAgent
-        result2 = await manager.create_subagent(
+        # 尝试创建相同名称的SubAgent
+        result = await manager.create_subagent(
             agent_type="test",
             name="test_agent",
             task_message="另一个任务",
-            llm=self.mock_llm2
+            max_answer_times=None
         )
-        self.assertIn("错误: SubAgent test_agent 已存在", result2)
+        self.assertIn("错误: SubAgent test_agent 已存在", result)
 
     async def test_check_subagent_status(self):
         """测试检查SubAgent状态。"""
         manager = SubAgentManager(self.group_chat)
+        # 设置manager的group_chat.get_members返回正确的agent（单个对象）
+        mock_agent = AsyncMock()
+        mock_agent.get_current_llm_info = AsyncMock(return_value=(None, self.mock_llm1))
+        manager.group_chat.get_members = AsyncMock(return_value=mock_agent)
         
         # 创建SubAgent
         await manager.create_subagent(
             agent_type="test",
             name="test_agent",
             task_message="测试任务",
-            llm=self.mock_llm1
+            max_answer_times=None
         )
         
         # 检查状态

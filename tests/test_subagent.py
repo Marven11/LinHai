@@ -60,12 +60,15 @@ file_path = "memory.md"
             # 创建Agent（会自动创建SubAgentManager并注册工具）
             agent = await self._create_agent()
             
-            # 获取SubAgentManager
+            # 获取SubAgentManager（注意get_members返回单个对象）
             from linhai.subagent import SubAgentManager
             manager = self.group_chat.get_members("subagent_manager", SubAgentManager)
+            # 确保manager是单个对象而不是元组
+            if isinstance(manager, tuple):
+                manager = manager[0]
             
             # 创建SubAgent
-            result = await manager.create_subagent("dummy", "test-agent", "睡眠5秒然后退出", agent.context["llms"][0])
+            result = await manager.create_subagent("dummy", "test-agent", "睡眠5秒然后退出", max_answer_times=None)
             self.assertIn("成功创建SubAgent test-agent", result)
             self.assertIn("test-agent", manager.subagents)
             
@@ -89,15 +92,18 @@ file_path = "memory.md"
             # 创建Agent（会自动创建SubAgentManager并注册工具）
             agent = await self._create_agent()
             
-            # 获取SubAgentManager
+            # 获取SubAgentManager（注意get_members返回单个对象）
             from linhai.subagent import SubAgentManager
             manager = self.group_chat.get_members("subagent_manager", SubAgentManager)
+            # 确保manager是单个对象而不是元组
+            if isinstance(manager, tuple):
+                manager = manager[0]
             
             # 创建第一个
-            await manager.create_subagent("dummy", "duplicate", "任务", agent.context["llms"][0])
+            await manager.create_subagent("dummy", "duplicate", "任务", max_answer_times=None)
             
             # 尝试创建第二个同名
-            result = await manager.create_subagent("dummy", "duplicate", "任务", agent.context["llms"][0])
+            result = await manager.create_subagent("dummy", "duplicate", "任务", max_answer_times=None)
             self.assertIn("已存在", result)
         
         asyncio.run(run_test())
