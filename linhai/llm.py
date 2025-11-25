@@ -341,6 +341,8 @@ class OpenAiAnswer:
             chunk = cast(ChatCompletionChunk, await self.stream.__anext__())
 
             if self.interrupted:
+                await self.stream.close()
+
                 raise StopAsyncIteration
 
             if hasattr(chunk, "usage") and chunk.usage:
