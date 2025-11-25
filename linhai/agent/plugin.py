@@ -366,7 +366,7 @@ class SingleToolCallReminderPlugin(Plugin):
         self.single_tool_call_count = 0
 
     async def after_message_generation(
-        self, _answer: Answer, _full_response: str, tool_calls
+        self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
         from linhai.agent import Agent
@@ -403,7 +403,7 @@ class ClarificationCheckPlugin(Plugin):
         self.without_clarification_counter = 0
 
     async def after_message_generation(
-        self, _answer: Answer, _full_response: str, tool_calls
+        self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
         from linhai.clarification import ClarificationManager
@@ -414,7 +414,9 @@ class ClarificationCheckPlugin(Plugin):
         )
         agent = self.group_chat.get_members("agent", Agent)
 
-        if clarification_manager.has_unanswered_clarifications():
+        if clarification_manager.has_unanswered_clarifications() and all(
+            item.get("name") != "respond_clarification" for item in tool_calls
+        ):
             self.without_clarification_counter += 1
 
             if self.without_clarification_counter >= 2:
