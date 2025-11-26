@@ -4,7 +4,7 @@
 
 # 任务
 
-你需要查看 diff.patch，根据要求编写 REPORT_CODE_REVIEW.md
+你需要查看 diff.patch，根据要求编写 REPORT_CODE_REVIEW.md, 编写完成后退出自己
 
 # 要求
 
