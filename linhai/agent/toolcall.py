@@ -230,7 +230,7 @@ class AgentToolcall:
             logger.warning(conflict_msg)
             self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
             self.early_return = True
-            return
+            return True
 
         self.called_tools_in_round.append(tool_call.function_name)
 
@@ -265,15 +265,15 @@ class AgentToolcall:
 
             from linhai.tool.base import ToolErrorMessage
 
-            if isinstance(tool_result, ToolErrorMessage) and tool_call.assert_success:
-
+            if isinstance(tool_result, ToolErrorMessage):
                 await self.agent.lifecycle.trigger_tool_failure(
                     self.agent, tool_call, tool_result
                 )
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
                 self.agent.message_processor.append_message(RuntimeMessage(msg))
-                return True
+                if tool_call.assert_success:
+                    return True
 
             await self.agent.lifecycle.trigger_tool_success(
                 self.agent, tool_call, tool_result

@@ -2,7 +2,7 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] assert_success选项貌似是坏的，设置为False不起作用，修一下并添加unittest
+- [x] assert_success选项貌似是坏的，设置为False不起作用，修一下并添加unittest
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
