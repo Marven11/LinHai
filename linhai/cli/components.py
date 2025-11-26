@@ -342,13 +342,13 @@ class ToolCallWidget(Static):
                         backticks = "`" * backtick_count
                         self.current_content = (
                             self.content_before_current_value
-                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}"
+                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
                         )
                     else:
 
                         self.current_content = (
                             self.content_before_current_value
-                            + f"{self.current_key}: `{self.current_value}"
+                            + f"{self.current_key}: `{self.current_value}`"
                         )
 
                 panel = Panel(
