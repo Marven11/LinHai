@@ -439,7 +439,8 @@ class ReasoningContentWidget(Static):
 
         if not self.is_expanded:
             lines = [line for line in content_to_display.splitlines() if line]
-            content_to_display = "\n".join(lines[-2:])
+            # [TODO] 使用正确的反转义措施
+            content_to_display = "\n".join(lines[-2:]).replace("\\", "")
 
         self.update(escape(content_to_display))
 
