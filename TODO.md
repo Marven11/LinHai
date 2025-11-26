@@ -2,7 +2,7 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 重构subagent系统
+- [x] 重构subagent系统
   - 支持在配置中开关subagent，默认打开
   - 在subagent被开启时才注册相关的plugin和subagentmanager
     - 将plugin的实现和注册plugin的相关代码等都移动到linhai/subagent中

@@ -1,7 +1,7 @@
 """Agent的澄清相关工具。"""
 
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.clarification import ClarificationManager
+from linhai.subagent.clarification import ClarificationManager
 
 
 def create_clarification_toolset(

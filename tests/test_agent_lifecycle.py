@@ -247,11 +247,14 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             # 模拟subagent_manager
             mock_subagent_manager = MagicMock()
             mock_subagent_manager.create_subagent = AsyncMock()
-            self.group_chat.get_members.side_effect = lambda member_type, member_class=None: {
-                "agent": self.mock_agent,
-                "clarification_manager": self.mock_clarification_manager,
-                "subagent_manager": mock_subagent_manager
-            }.get(member_type)
+            def get_members_side_effect(member_type, member_class=None):
+                members = {
+                    "agent": self.mock_agent,
+                    "clarification_manager": self.mock_clarification_manager,
+                    "subagent_manager": mock_subagent_manager
+                }
+                return members.get(member_type)
+            self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
             await self.lifecycle.trigger_tool_conflict(
                 self.mock_agent, self.mock_tool_call, ["tool1", "tool2"]
             )

@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.agent.plugin import GitBlockingPlugin
+from linhai.subagent.plugin import GitBlockingPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import ToolCallMessage
 

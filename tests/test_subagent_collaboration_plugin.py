@@ -4,7 +4,7 @@ import unittest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from linhai.agent.plugin import SubAgentCollaborationPlugin
+from linhai.subagent.plugin import SubAgentCollaborationPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import ToolCallMessage, Answer
 from linhai.utils import CliRuntimeNotice

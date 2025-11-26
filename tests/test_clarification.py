@@ -7,7 +7,7 @@ import tempfile
 import shutil
 import time
 
-from linhai.clarification import ClarificationManager, Clarification
+from linhai.subagent.clarification import ClarificationManager, Clarification
 from linhai.group_chat import GroupChat
 from linhai.subagent.clarification_tools import create_clarification_toolset
 from linhai.agent.clarification_tools import create_clarification_toolset as create_agent_clarification_toolset

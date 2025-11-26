@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.agent.plugin import ClarificationBlockingPlugin
+from linhai.subagent.plugin import ClarificationBlockingPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import Answer
 

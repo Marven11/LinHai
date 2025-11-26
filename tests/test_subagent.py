@@ -33,6 +33,10 @@ max_output_length = 50000
 
 [memory]
 file_path = "memory.md"
+
+[subagent]
+enable = true
+default_llm = "test"
 '''
         self.config_path.write_text(config_content)
         

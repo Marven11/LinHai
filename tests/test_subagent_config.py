@@ -141,7 +141,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
             'start_time': datetime.now(),
             'max_answer_times': None
         })()
-        manager.subagents['test_agent'] = (mock_subagent, None)
+        manager.subagents['test_agent'] = (mock_subagent, None)  # type: ignore
         
         # 尝试创建相同名称的SubAgent
         result = await manager.create_subagent(

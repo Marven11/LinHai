@@ -80,7 +80,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.init_messages = []
         
         # 注册clarification_manager（仅在未注册时注册）
-        from linhai.clarification import ClarificationManager
+        from linhai.subagent.clarification import ClarificationManager
         try:
             self.group_chat.get_members("clarification_manager", ClarificationManager)
         except RuntimeError:

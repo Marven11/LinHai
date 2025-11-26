@@ -87,7 +87,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("agent_answer")
 
         # 创建ClarificationManager（在Agent之前）
-        from linhai.clarification import ClarificationManager
+        from linhai.subagent.clarification import ClarificationManager
         self.clarification_manager = ClarificationManager(self.group_chat)
 
         # 创建真实的ToolManager实例

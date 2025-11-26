@@ -86,7 +86,7 @@ class SubAgent:
             self.state = "exited"
             return f"SubAgent {self.name} 已退出: {reason}"
 
-        from linhai.clarification import ClarificationManager
+        from linhai.subagent.clarification import ClarificationManager
         from .clarification_tools import create_clarification_toolset
 
         clarification_manager = self.group_chat.get_members(

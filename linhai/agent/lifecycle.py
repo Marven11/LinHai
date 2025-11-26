@@ -122,11 +122,7 @@ class Lifecycle:
             EndThinkPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
-            ClarificationBlockingPlugin,
-            SubAgentCollaborationPlugin,
             ClarificationCheckPlugin,
-            GitBlockingPlugin,
-            ClarificationWaitingUserPlugin,
         )
 
         plugins = [
@@ -138,17 +134,33 @@ class Lifecycle:
             EndThinkPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
-            ClarificationBlockingPlugin(self.group_chat),
-            SubAgentCollaborationPlugin(self.group_chat),
             ClarificationCheckPlugin(self.group_chat),
-            GitBlockingPlugin(self.group_chat),
-            ClarificationWaitingUserPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
             plugin.register(self)
 
         return plugins
+
+    def register_subagent_plugins(self):
+        """注册SubAgent相关的插件。"""
+        from linhai.subagent.plugin import (
+            SubAgentCollaborationPlugin,
+            GitBlockingPlugin,
+            ClarificationWaitingUserPlugin,
+            ClarificationBlockingPlugin,
+        )
+        
+        plugins = [
+            SubAgentCollaborationPlugin(self.group_chat),
+            GitBlockingPlugin(self.group_chat),
+            ClarificationWaitingUserPlugin(self.group_chat),
+            ClarificationBlockingPlugin(self.group_chat),
+        ]
+        
+        for plugin in plugins:
+            plugin.register(self)
+            self._plugins.append(plugin)
 
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback

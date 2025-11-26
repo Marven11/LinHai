@@ -13,7 +13,10 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from .base import GlobalMemory, AgentContext
 from linhai.subagent.tools import create_subagent_toolset
 from linhai.subagent import SubAgentManager
-from linhai.clarification import ClarificationManager
+from linhai.subagent.clarification_tools import (
+    create_clarification_toolset as create_subagent_clarification_toolset,
+)
+from linhai.subagent.clarification import ClarificationManager
 from .clarification_tools import (
     create_clarification_toolset as create_agent_clarification_toolset,
 )
@@ -61,10 +64,6 @@ async def create_agent(
 
     subagent_config = config.subagent if config.subagent else None
 
-    subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
-    subagent_toolset = create_subagent_toolset(subagent_manager)
-    tool_manager.add_toolset(subagent_toolset)
-
     memory_file_path = (
         (config_path.parent / config.memory.file_path) if config.memory else None
     )
@@ -79,6 +78,13 @@ async def create_agent(
         group_chat=group_chat,
         init_messages=init_messages,
     )
+
+    if config.subagent_enabled:
+        subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
+        subagent_toolset = create_subagent_toolset(subagent_manager)
+        tool_manager.add_toolset(subagent_toolset)
+        
+        agent.lifecycle.register_subagent_plugins()
 
     clarification_manager = ClarificationManager(group_chat)
     agent_clarification_toolset = create_agent_clarification_toolset(

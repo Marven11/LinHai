@@ -60,7 +60,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
 
         # 注册必要的成员以通过Agent初始化
-        from linhai.clarification import ClarificationManager
+        from linhai.subagent.clarification import ClarificationManager
         
         self.clarification_manager = ClarificationManager(self.group_chat)
 
