@@ -2,16 +2,32 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [x] assert_success选项貌似是坏的，设置为False不起作用，修一下并添加unittest
+- [ ] 添加一个subagent插件: git diff审查
+  - 在agent使用#LINHAI_WAITING_USER时并且当前目录是git仓库时启动
+  - 将当前的git diff保存成字符串并传给subagent，同时把当前所有用户消息传给subagent
+  - 检查标准使用./CODE_REVIEW.md，需要将里面的内容输出到prompt.py中而不是在运行时读取文件
+  - 你需要修改subagent架构，根据subagent的type获取对应的prompt
+- [ ] 将register_subagent_plugins移动到SubAgentManager中，然后在create agent的时候调用以注册
+  - 需要使用group_chat获得Lifecycle
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
 
 # 暂时搁置
 
-- [ ] 添加一个subagent插件: git diff审查
-  - 在agent使用#LINHAI_WAITING_USER时并且当前目录是git仓库时启动
-  - 将当前的git diff保存成字符串并传给subagent
+- [ ] 我发现EnhancedMarkdownLexer的实现有问题，即使反斜杠数量不匹配也会识别成一个代码块
+  - 完全删除这个类的使用，并且清理对应代码
+- [ ] 上一个问题中的lexer本意是想解决嵌套代码块以及代码块中包含```的问题，通过其他方式缓解
+  - 修改get_backtick_count使其只检测在一行开头的反斜杠，你只需要修改正则，可能需要更pythonic的代码
+- [ ] 在agent在思考时“调用工具”时提醒agent
+  - 有时agent会在思考内容中输出工具调用，然后在实际输出中说自己“已经调用了工具”
+  - 这是因为agent模糊了什么是思考内容，什么是实际输出
+  - 需要在agent在思考内容中包含工具调用时警告agent在思考内容中调用了什么工具，工具名称是什么
+    - 保持消息简洁，不要包含工具的参数等内容，这些内容太大了
+- [ ] 重构PyteTerminal使其使用asyncio.Task在循环中动态读取并更新，避免在update函数中才读取所有内容喂给pyte
+  - 我们需要在循环的每个iteration读取一段数据并喂给pyte让其更新终端内容
+  - 记得await asyncio.sleep(0)以避免这个CPU bound的循环卡住其他协程
+  - 编写测试
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent
   - 避免拍马屁
