@@ -10,6 +10,7 @@ from linhai.llm import ToolCallMessage, Answer
 from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.agent.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
+from linhai.prompt import get_subagent_prompt
 
 if TYPE_CHECKING:
     import linhai.agent
@@ -87,39 +88,14 @@ class SubAgentCollaborationPlugin(Plugin):
         error: Any,
     ) -> None:
         """在后台任务中检查agent是否违反规则。"""
-        from linhai.agent import Agent
-
-        from linhai.prompt import SUBAGENT_CHECKLIST
-
-        tool_rules = SUBAGENT_CHECKLIST
-
-        task_message = f"""你是一名规则检查员，负责检查Agent的工具调用是否违反规则。
-
-**Agent的当前完整回答:**
-```
-{full_response}
-```
-
-**失败的工具调用详情:**
+        check_context = f"""**失败的工具调用详情:**
 - 工具名称: {tool_call.function_name}
 - 工具参数: {tool_call.function_arguments}
-- 错误信息: {error}
+- 错误信息: {error}"""
 
-**你的任务:**
-仔细检查Agent的上述回答，判断其是否违反了以下任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
-
-**工具调用规则:**
-{tool_rules}
-
-**执行步骤:**
-
-1. 逐一检查上述每条规则
-2. 如果发现任何违反，调用request_clarification工具，提问格式:
-"规则违反: [规则名称]。在Agent的回答中，你[具体违反行为]。请解释为什么要这样做？"
-
-3. 如果没有发现任何违反，调用exit工具退出，原因写"未发现规则违反"
-
-**重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
+        task_message = get_subagent_prompt("violation_checker").format(
+            agent_full_response=full_response, check_context=check_context
+        )
 
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
@@ -136,39 +112,14 @@ class SubAgentCollaborationPlugin(Plugin):
         conflicting_tools: list[str],
     ) -> None:
         """在后台任务中检查agent是否违反规则（工具冲突情况）。"""
-        from linhai.agent import Agent
-
-        from linhai.prompt import SUBAGENT_CHECKLIST
-
-        tool_rules = SUBAGENT_CHECKLIST
-
-        task_message = f"""你是一名规则检查员，负责检查Agent的工具调用是否违反规则。
-
-**Agent的当前完整回答:**
-```
-{full_response}
-```
-
-**工具冲突详情:**
+        check_context = f"""**工具冲突详情:**
 - 冲突工具名称: {tool_call.function_name}
 - 工具参数: {tool_call.function_arguments}
-- 与以下工具冲突: {', '.join(conflicting_tools)}
+- 与以下工具冲突: {', '.join(conflicting_tools)}"""
 
-**你的任务:**
-仔细检查Agent的上述回答，判断其是否违反了以下任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
-
-**工具调用规则:**
-{tool_rules}
-
-**执行步骤:**
-
-1. 逐一检查上述每条规则
-2. 如果发现任何违反，调用request_clarification工具，提问格式:
-"规则违反: [规则名称]。在Agent的回答中，你[具体违反行为]。请解释为什么要这样做？"
-
-3. 如果没有发现任何违反，调用exit工具退出，原因写"未发现规则违反"
-
-**重要:** 你必须严格按上述规则检查，不能遗漏任何一条。如果发现问题，必须提出澄清。"""
+        task_message = get_subagent_prompt("violation_checker").format(
+            agent_full_response=full_response, check_context=check_context
+        )
 
         await subagent_manager.create_subagent(
             agent_type="violation_checker",
