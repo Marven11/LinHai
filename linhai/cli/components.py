@@ -7,11 +7,9 @@ import re
 
 from textual.app import ComposeResult
 from textual.widgets import Static
-from textual.reactive import reactive
 from textual.timer import Timer
 from rich import box
 from rich.syntax import Syntax
-from linhai.cli.markdown_lexer import EnhancedMarkdownLexer
 from rich.markup import escape
 from rich.panel import Panel
 from rich.text import Text
@@ -287,7 +285,7 @@ class ToolCallWidget(Static):
             panel = Panel(
                 Syntax(
                     self.json_str,
-                    lexer=EnhancedMarkdownLexer(),
+                    lexer="text",
                     theme="nord-darker",
                     background_color="#2E3440",
                     word_wrap=True,
@@ -354,7 +352,7 @@ class ToolCallWidget(Static):
                 panel = Panel(
                     Syntax(
                         self.current_content.strip(),
-                        lexer=EnhancedMarkdownLexer(),
+                        lexer="text",
                         theme="nord-darker",
                         background_color="#2E3440",
                         word_wrap=True,
@@ -376,7 +374,7 @@ class ToolCallWidget(Static):
 
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
-        matches = re.findall(r"`+", text)
+        matches = re.findall(r"^`+", text, re.MULTILINE)
         if matches:
             max_count = max(len(match) for match in matches)
         else:
@@ -476,7 +474,7 @@ class NormalContentWidget(Static):
         panel = Panel(
             Syntax(
                 content_to_display,
-                lexer=EnhancedMarkdownLexer(),
+                lexer="text",
                 theme="nord-darker",
                 background_color="#2E3440",
                 word_wrap=True,
