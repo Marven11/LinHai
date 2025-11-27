@@ -539,7 +539,7 @@ class CLIApp(App):
         container = self.query_one("#chat-container")
         return (
             self.is_user_scroll_to_end
-            and container.scroll_y >= container.max_scroll_y - 5
+            and container.scroll_y >= container.max_scroll_y - 7
         )
 
     def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
