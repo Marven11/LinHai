@@ -1,0 +1,130 @@
+"""测试ToolCallInReasoningPlugin插件。"""
+
+import unittest
+from unittest.mock import AsyncMock, MagicMock, patch
+import re
+
+from linhai.agent.plugin import ToolCallInReasoningPlugin
+from linhai.llm import Answer, AnswerToken, AnswerTokenUsage
+from linhai.utils import CliRuntimeNotice
+
+
+class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试ToolCallInReasoningPlugin插件。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.group_chat = MagicMock()
+        self.plugin = ToolCallInReasoningPlugin(self.group_chat)
+        
+        # 模拟agent
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.append_message = MagicMock()
+        
+        # 模拟group_chat.get_members返回agent
+        self.group_chat.get_members.return_value = self.agent
+        self.group_chat.send_if_exists = AsyncMock()
+
+    def test_plugin_initialization(self):
+        """测试插件初始化。"""
+        self.assertIsInstance(self.plugin, ToolCallInReasoningPlugin)
+        self.assertEqual(self.plugin.group_chat, self.group_chat)
+
+    async def test_during_message_generation_with_tool_call_in_reasoning(self):
+        """测试思考内容中包含工具调用时发出警告。"""
+        # 模拟answer
+        answer = MagicMock(spec=Answer)
+        reasoning_content = """
+        我需要调用工具来完成任务。
+        ```json toolcall
+        {"name": "read_file", "arguments": {"filepath": "test.txt"}}
+        ```
+        然后调用另一个工具。
+        ```json toolcall
+        {"name": "list_files", "arguments": {"dirpath": "."}}
+        ```
+        """
+        answer.get_reasoning_message.return_value = reasoning_content
+        
+        # 执行测试
+        result = await self.plugin.during_message_generation(answer, "当前实际输出内容")
+        
+        # 验证
+        self.assertFalse(result)  # 不应该中断
+        answer.get_reasoning_message.assert_called_once()
+        
+        # 验证警告消息发送 - 检查消息内容而不依赖具体顺序
+        self.group_chat.send_if_exists.assert_called_once()
+        call_args = self.group_chat.send_if_exists.call_args
+        self.assertEqual(call_args[0][0], "ui_log")
+        self.assertEqual(call_args[0][1].level, "WARNING")
+        self.assertIn("read_file", call_args[0][1].content)
+        self.assertIn("list_files", call_args[0][1].content)
+        self.assertIn("警告：你在思考内容中调用了工具，但思考内容中的工具调用不会实际执行！", call_args[0][1].content)
+        self.agent.message_processor.append_message.assert_called_once()
+
+    async def test_during_message_generation_without_reasoning_content(self):
+        """测试没有思考内容时不做任何操作。"""
+        answer = MagicMock(spec=Answer)
+        answer.get_reasoning_message.return_value = None
+        
+        result = await self.plugin.during_message_generation(answer, "当前实际输出内容")
+        
+        self.assertFalse(result)
+        answer.get_reasoning_message.assert_called_once()
+        self.group_chat.send_if_exists.assert_not_called()
+        self.agent.message_processor.append_message.assert_not_called()
+
+    async def test_during_message_generation_with_reasoning_but_no_tool_calls(self):
+        """测试思考内容中没有工具调用时不做任何操作。"""
+        answer = MagicMock(spec=Answer)
+        reasoning_content = "我只是在思考，没有工具调用。"
+        answer.get_reasoning_message.return_value = reasoning_content
+        
+        result = await self.plugin.during_message_generation(answer, "当前实际输出内容")
+        
+        self.assertFalse(result)
+        answer.get_reasoning_message.assert_called_once()
+        self.group_chat.send_if_exists.assert_not_called()
+        self.agent.message_processor.append_message.assert_not_called()
+
+    async def test_during_message_generation_with_duplicate_tool_names(self):
+        """测试重复工具名称时去重。"""
+        answer = MagicMock(spec=Answer)
+        reasoning_content = """
+        ```json toolcall
+        {"name": "read_file", "arguments": {"filepath": "test1.txt"}}
+        ```
+        ```json toolcall
+        {"name": "read_file", "arguments": {"filepath": "test2.txt"}}
+        ```
+        """
+        answer.get_reasoning_message.return_value = reasoning_content
+        
+        result = await self.plugin.during_message_generation(answer, "当前实际输出内容")
+        
+        self.assertFalse(result)
+        
+        # 验证警告消息中工具名称去重
+        self.group_chat.send_if_exists.assert_called_once()
+        call_args = self.group_chat.send_if_exists.call_args
+        self.assertEqual(call_args[0][0], "ui_log")
+        self.assertEqual(call_args[0][1].level, "WARNING")
+        self.assertIn("read_file", call_args[0][1].content)
+        # 检查去重：只出现一次read_file
+        self.assertEqual(call_args[0][1].content.count("read_file"), 1)
+        self.assertIn("警告：你在思考内容中调用了工具，但思考内容中的工具调用不会实际执行！", call_args[0][1].content)
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        lifecycle.register_during_message_generation = MagicMock()
+        
+        self.plugin.register(lifecycle)
+        
+        lifecycle.register_during_message_generation.assert_called_once_with(self.plugin.during_message_generation)
+
+
+if __name__ == "__main__":
+    unittest.main()

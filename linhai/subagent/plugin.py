@@ -167,6 +167,14 @@ class GitBlockingPlugin(Plugin):
                             f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。"
                         )
                     )
+                    
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="ERROR", 
+                            content=f"Git命令被阻止: {command}"
+                        )
+                    )
 
                     return True
         return False

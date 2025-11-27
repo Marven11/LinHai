@@ -422,6 +422,55 @@ class ClarificationCheckPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class ToolCallInReasoningPlugin(Plugin):
+    """检测思考内容中工具调用的插件。
+
+    当agent在思考内容中包含工具调用时警告agent，
+    提醒agent思考内容中的工具调用不会实际执行。
+    """
+
+    async def after_message_generation(
+        self, answer: Answer, _full_response: str, _tool_calls
+    ):
+        """检查推理内容中是否包含工具调用。"""
+        from linhai.agent import Agent
+        from linhai.markdown_parser import extract_tool_calls
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 使用get_reasoning_message获取推理内容
+        reasoning_content = answer.get_reasoning_message()
+        
+        if reasoning_content:
+            tool_calls_in_reasoning = extract_tool_calls(reasoning_content)
+            if tool_calls_in_reasoning:
+                tool_names = [tool_call.get("name", "未知工具") for tool_call in tool_calls_in_reasoning]
+                unique_tool_names = list(set(tool_names))
+                
+                if len(unique_tool_names) == 1:
+                    agent_warning_message = f"警告：你在推理内容中调用了工具'{unique_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
+                    ui_warning_message = f"推理内容中检测到工具调用: {unique_tool_names[0]}"
+                else:
+                    agent_warning_message = f"警告：你在推理内容中调用了工具{unique_tool_names}，但推理内容中的工具调用不会实际执行！"
+                    ui_warning_message = f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
+                
+                agent.message_processor.append_message(
+                    RuntimeMessage(agent_warning_message)
+                )
+                
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING", 
+                        content=ui_warning_message
+                    )
+                )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class PreventToolOutputPlugin(Plugin):
     """防止agent错误输出工具调用内容的插件。
 

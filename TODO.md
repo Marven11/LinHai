@@ -2,25 +2,18 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] subagent好像在调用退出工具之后还会运行，直到达到max_answer_times的限制
-  - 写一个unittest测试一下
-- [ ] 在agent在思考时“调用工具”时提醒agent
-  - 有时agent会在思考内容中输出工具调用，然后在实际输出中说自己“已经调用了工具”
-  - 这是因为agent模糊了什么是思考内容，什么是实际输出
-  - 需要在agent在思考内容中包含工具调用时警告agent在思考内容中调用了什么工具，工具名称是什么
-    - 保持消息简洁，不要包含工具的参数等内容，这些内容太大了
-- [ ] 在包含git的工具调用被插件打断时没有发送CliRuntimeNotice，加上
+- [ ] 重构PyteTerminal使其使用asyncio.Task在循环中动态读取并更新，避免在update函数中才读取所有内容喂给pyte
+  - 我们需要在循环的每个iteration读取一段数据并喂给pyte让其更新终端内容
+  - 记得await asyncio.sleep(0)以避免这个CPU bound的循环卡住其他协程
+  - 编写测试
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
 
 # 暂时搁置
 
-
-- [ ] 重构PyteTerminal使其使用asyncio.Task在循环中动态读取并更新，避免在update函数中才读取所有内容喂给pyte
-  - 我们需要在循环的每个iteration读取一段数据并喂给pyte让其更新终端内容
-  - 记得await asyncio.sleep(0)以避免这个CPU bound的循环卡住其他协程
-  - 编写测试
+- [ ] 现在ReasoningContentWidget使用了错误的方法处理反转义，这个问题的原因是无论怎么escape都会导致rich库崩溃
+  - 你需要让这个widget和其他widget一样使用Syntax渲染内容，在折叠时渲染为text，展开时将思考内容渲染为markdown
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent
   - 避免拍马屁
