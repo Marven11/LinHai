@@ -52,6 +52,9 @@
               selenium
               mcp
               pyte
+              pydantic
+              textual-autocomplete
+              chardet
               pkgs.nodejs # for MCPs like `npx -y chrome-devtools-mcp@latest`
             ];
 
