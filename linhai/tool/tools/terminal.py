@@ -1,12 +1,12 @@
 """终端控制工具模块，提供虚拟终端操作功能。"""
 
-import time
-import pyte
-import pty
+import asyncio
 import os
-import select
+import pty
 import signal
 import subprocess
+import time
+import pyte
 
 from typing import List
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -83,20 +83,28 @@ class PyteTerminal:
             start_new_session=True,
         )
 
+        self.loop = None
+        self._stop_reading = False
+
+    async def start_reading(self):
+        """启动异步读取循环"""
+        assert self.loop is None, "Reading loop already started"
+        self._stop_reading = False
+        self.loop = asyncio.get_running_loop()
+        self.loop.add_reader(self.master, self._handle_read)
+
+    def _handle_read(self):
+        """处理读取事件"""
+        data = os.read(self.master, 1024)
+        if data:
+            text = data.decode("utf-8", errors="ignore")
+            self.stream.feed(text)
+
     def send(self, data: str | bytes):
         """发送数据到终端"""
         if isinstance(data, str):
             data = data.encode("utf-8")
         os.write(self.master, data)
-
-    def update(self):
-        """更新屏幕状态"""
-        while select.select([self.master], [], [], 0.1)[0]:
-            try:
-                data = os.read(self.master, 1024).decode("utf-8", errors="ignore")
-                self.stream.feed(data)
-            except (OSError, UnicodeDecodeError):
-                break
 
     def get_screen(self) -> str:
         """获取当前屏幕内容"""
@@ -111,10 +119,14 @@ class PyteTerminal:
 
     def close(self):
         """关闭终端"""
+        self._stop_reading = True
+        if self.loop and self.master:
+            self.loop.remove_reader(self.master)
+
         try:
             os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
             self.process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired, ProcessLookupError):
             pass
         try:
             if self.process.poll() is None:
@@ -143,7 +155,7 @@ class PyteTerminal:
         "read_terminal_screen",
     ],
 )
-def create_terminal(columns: int = 80, lines: int = 24) -> str:
+async def create_terminal(columns: int = 80, lines: int = 24) -> str:
     """新建虚拟终端
 
     Args:
@@ -156,6 +168,7 @@ def create_terminal(columns: int = 80, lines: int = 24) -> str:
     term_id = generate_id("terminal")
     terminal = PyteTerminal(columns=columns, lines=lines)
     terminals[term_id] = terminal
+    await terminal.start_reading()
     return term_id
 
 
@@ -170,7 +183,7 @@ def create_terminal(columns: int = 80, lines: int = 24) -> str:
     },
     required_args=["terminal_id", "keys"],
 )
-def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
+async def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
     """发送按键列表到终端
 
     Args:
@@ -193,7 +206,6 @@ def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
         else:
             return f"未知按键: {key!r}, 所有按键: {list(KEY_MAPPINGS.keys())}"
 
-    terminal.update()
     return f"已发送按键: {keys}"
 
 
@@ -210,7 +222,7 @@ def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
     },
     required_args=["terminal_id", "string"],
 )
-def send_string_to_terminal(
+async def send_string_to_terminal(
     terminal_id: str, string: str, wait_seconds: float = 0.3, with_enter=True
 ) -> str:
     if terminal_id not in terminals:
@@ -220,9 +232,7 @@ def send_string_to_terminal(
     terminal.send(string)
     if with_enter:
         terminal.send_key("enter")
-    terminal.update()
-    time.sleep(wait_seconds)
-    terminal.update()
+    await asyncio.sleep(wait_seconds)
     content = terminal.get_screen()
     return f"已发送: {string}, 当前内容:\n" + content
 
@@ -233,7 +243,7 @@ def send_string_to_terminal(
     args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
     required_args=["terminal_id"],
 )
-def read_terminal_screen(terminal_id: str) -> str:
+async def read_terminal_screen(terminal_id: str) -> str:
     """读取终端屏幕内容
 
     Args:
@@ -246,7 +256,6 @@ def read_terminal_screen(terminal_id: str) -> str:
         return f"错误：未找到终端 {terminal_id}"
 
     terminal = terminals[terminal_id]
-    terminal.update()
     return terminal.get_screen()
 
 
@@ -256,7 +265,7 @@ def read_terminal_screen(terminal_id: str) -> str:
     args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
     required_args=["terminal_id"],
 )
-def close_terminal(terminal_id: str) -> str:
+async def close_terminal(terminal_id: str) -> str:
     """关闭终端
 
     Args:
