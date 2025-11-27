@@ -178,7 +178,7 @@ class SubAgent:
 
         if not tool_calls:
             self.messages.append(
-                ChatMessage(role="user", message="请使用工具完成任务并调用exit退出")
+                ChatMessage(role="user", message="请调用工具！")
             )
 
         return self.state == "running"

@@ -2,26 +2,20 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并进行 git commit，消息参考历史
 
-- [ ] 添加一个subagent插件: git diff审查
-  - 在agent使用#LINHAI_WAITING_USER时并且当前目录是git仓库时启动
-  - 将当前的git diff保存成字符串并传给subagent，同时把当前所有用户消息传给subagent
-  - 检查标准使用./CODE_REVIEW.md，需要将里面的内容输出到prompt.py中而不是在运行时读取文件
-  - 你需要修改subagent架构，根据subagent的type获取对应的prompt
-  - 同时包含新增文件的内容，使用--porcelain获取列表并解析
-- [ ] 将register_subagent_plugins移动到SubAgentManager中，然后在create agent的时候调用以注册
-  - 需要使用group_chat获得Lifecycle
-
-注意：你没法直接使用你修改/新增的功能（因为你没有重启）
-注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
-
-# 暂时搁置
-
 - [ ] 我发现EnhancedMarkdownLexer的实现有问题，即使反斜杠数量不匹配也会识别成一个代码块
   - 完全删除这个类的使用，并且清理对应代码
 - [ ] 修改violation_checker的prompt，添加以下注意内容
   - 禁止无关检查：不要检查列表外的问题，不要使用“但是”、“然而”、“不过”、“除了这些之外”、“等等”
 - [ ] 上一个问题中的lexer本意是想解决嵌套代码块以及代码块中包含```的问题，通过其他方式缓解
   - 修改get_backtick_count使其只检测在一行开头的反斜杠，你只需要修改正则，可能需要更pythonic的代码
+
+注意：你没法直接使用你修改/新增的功能（因为你没有重启）
+注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
+
+# 暂时搁置
+
+- [ ] subagent好像在调用退出工具之后还会运行，直到达到max_answer_times的限制
+  - 写一个unittest测试一下
 - [ ] 在agent在思考时“调用工具”时提醒agent
   - 有时agent会在思考内容中输出工具调用，然后在实际输出中说自己“已经调用了工具”
   - 这是因为agent模糊了什么是思考内容，什么是实际输出
