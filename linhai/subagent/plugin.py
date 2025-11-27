@@ -274,6 +274,12 @@ class ClarificationBlockingPlugin(Plugin):
 class GitDiffReviewPlugin(Plugin):
     """在Agent使用#LINHAI_WAITING_USER且当前目录是git仓库时启动git diff审查的Plugin。"""
 
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self._last_git_diff = None
+        self._last_new_files_content = None
+        self._last_deleted_files_list = None
+
     def _get_git_diff(self) -> str | None:
         """获取git diff内容，如果失败返回None。"""
         if not os.path.exists(".git"):
@@ -346,6 +352,38 @@ class GitDiffReviewPlugin(Plugin):
 
         return "\n\n".join(new_files_content) if new_files_content else ""
 
+    def _get_deleted_files_list(self) -> str:
+        """获取删除文件的列表，包括暂存区和工作区删除。"""
+        if not os.path.exists(".git"):
+            return ""
+
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            status_lines = result.stdout.strip().split("\n")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return ""
+
+        deleted_files = []
+        for line in status_lines:
+            if not line:
+                continue
+            status = line[:2]
+            filename = line[3:].strip().strip('"')
+
+            # 精确检查删除状态：包括工作区删除(' D')、暂存区删除('D ')、重命名删除('RD')等
+            # 参考git status文档：https://git-scm.com/docs/git-status
+            if status in [" D", "D ", "RD", "AD"]:
+                deleted_files.append(filename)
+
+        if deleted_files:
+            return "**删除文件列表:**\n" + "\n".join(f"- {filename}" for filename in deleted_files)
+        return ""
+
     async def before_waiting_user(self, agent: "linhai.agent.Agent"):
         """在Agent进入等待用户状态前检查是否需要启动git diff审查。"""
         git_diff = self._get_git_diff()
@@ -353,6 +391,24 @@ class GitDiffReviewPlugin(Plugin):
             return
 
         new_files_content = self._get_new_files_content()
+        deleted_files_list = self._get_deleted_files_list()
+
+        # 检查是否与上一次完全相同
+        if (self._last_git_diff == git_diff and 
+            self._last_new_files_content == new_files_content and
+            self._last_deleted_files_list == deleted_files_list):
+            # 没有变化，发送UI消息通知用户
+            no_change_msg = CliRuntimeNotice(
+                level="INFO", 
+                content="未触发SubAgent审核：检测到与上一次完全相同的git更改，无需重复审查"
+            )
+            await self.group_chat.send_if_exists("ui_log", no_change_msg)
+            return  # 完全没有变化，不启动SubAgent
+
+        # 更新缓存
+        self._last_git_diff = git_diff
+        self._last_new_files_content = new_files_content
+        self._last_deleted_files_list = deleted_files_list
 
         interrupt_msg = CliRuntimeNotice(
             level="INFO", content="检测到未提交的更改，启动Git diff审查SubAgent"
@@ -375,6 +431,8 @@ class GitDiffReviewPlugin(Plugin):
         full_diff_content = git_diff
         if new_files_content:
             full_diff_content += f"\n\n# 新增文件\n\n{new_files_content}"
+        if deleted_files_list:
+            full_diff_content += f"\n\n# 删除文件\n\n{deleted_files_list}"
 
         task_message = get_subagent_prompt("git_diff_reviewer").format(
             git_diff=full_diff_content
