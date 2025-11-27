@@ -2,18 +2,6 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [x] 我发现EnhancedMarkdownLexer的实现有问题，即使反斜杠数量不匹配也会识别成一个代码块
-  - 完全删除这个类的使用，并且清理对应代码
-- [x] 修改violation_checker的prompt，添加以下注意内容
-  - 禁止无关检查：不要检查列表外的问题，不要使用“但是”、“然而”、“不过”、“除了这些之外”、“等等”、“发现潜在问题”
-- [x] 上一个问题中的lexer本意是想解决嵌套代码块以及代码块中包含```的问题，通过其他方式缓解
-  - 修改get_backtick_count使其只检测在一行开头的反斜杠，你只需要修改正则，可能需要更pythonic的代码
-
-注意：你没法直接使用你修改/新增的功能（因为你没有重启）
-注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
-
-# 暂时搁置
-
 - [ ] subagent好像在调用退出工具之后还会运行，直到达到max_answer_times的限制
   - 写一个unittest测试一下
 - [ ] 在agent在思考时“调用工具”时提醒agent
@@ -21,6 +9,14 @@
   - 这是因为agent模糊了什么是思考内容，什么是实际输出
   - 需要在agent在思考内容中包含工具调用时警告agent在思考内容中调用了什么工具，工具名称是什么
     - 保持消息简洁，不要包含工具的参数等内容，这些内容太大了
+- [ ] 在包含git的工具调用被插件打断时没有发送CliRuntimeNotice，加上
+
+注意：你没法直接使用你修改/新增的功能（因为你没有重启）
+注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
+
+# 暂时搁置
+
+
 - [ ] 重构PyteTerminal使其使用asyncio.Task在循环中动态读取并更新，避免在update函数中才读取所有内容喂给pyte
   - 我们需要在循环的每个iteration读取一段数据并喂给pyte让其更新终端内容
   - 记得await asyncio.sleep(0)以避免这个CPU bound的循环卡住其他协程
