@@ -285,7 +285,7 @@ class ToolCallWidget(Static):
             panel = Panel(
                 Syntax(
                     self.json_str,
-                    lexer="text",
+                    lexer="markdown",
                     theme="nord-darker",
                     background_color="#2E3440",
                     word_wrap=True,
@@ -352,7 +352,7 @@ class ToolCallWidget(Static):
                 panel = Panel(
                     Syntax(
                         self.current_content.strip(),
-                        lexer="text",
+                        lexer="markdown",
                         theme="nord-darker",
                         background_color="#2E3440",
                         word_wrap=True,
@@ -438,7 +438,7 @@ class ReasoningContentWidget(Static):
         if not self.is_expanded:
             lines = [line for line in content_to_display.splitlines() if line]
             # [TODO] 使用正确的反转义措施
-            content_to_display = "\n".join(lines[-2:]).replace("\\", "")
+            content_to_display = "\n".join(lines[-2:]).replace("\\", "").replace("[", "")
 
         self.update(escape(content_to_display))
 
@@ -474,7 +474,7 @@ class NormalContentWidget(Static):
         panel = Panel(
             Syntax(
                 content_to_display,
-                lexer="text",
+                lexer="markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
                 word_wrap=True,
