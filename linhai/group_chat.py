@@ -44,7 +44,7 @@ class GroupChat:
 
     def get_members(self, name: LiteralString, t: Type[T]) -> T:
         """注意：t用来动态检测类型，保证拿到的数据类型正确
-        
+
         这个函数用来解决循环引用的问题和交叉持有带来的无法初始化的问题
 
         这个函数的正确用法是：

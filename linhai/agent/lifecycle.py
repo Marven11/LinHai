@@ -92,6 +92,9 @@ class Lifecycle:
 
     def __init__(self, group_chat):
         self.group_chat = group_chat
+        # 在初始化时注册自己到group_chat
+        self.group_chat.register_member("lifecycle", self)
+
         self._before_message_generation_callbacks: list[
             BeforeMessageGenerationCallback
         ] = []
@@ -141,26 +144,6 @@ class Lifecycle:
             plugin.register(self)
 
         return plugins
-
-    def register_subagent_plugins(self):
-        """注册SubAgent相关的插件。"""
-        from linhai.subagent.plugin import (
-            SubAgentCollaborationPlugin,
-            GitBlockingPlugin,
-            ClarificationWaitingUserPlugin,
-            ClarificationBlockingPlugin,
-        )
-        
-        plugins = [
-            SubAgentCollaborationPlugin(self.group_chat),
-            GitBlockingPlugin(self.group_chat),
-            ClarificationWaitingUserPlugin(self.group_chat),
-            ClarificationBlockingPlugin(self.group_chat),
-        ]
-        
-        for plugin in plugins:
-            plugin.register(self)
-            self._plugins.append(plugin)
 
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback

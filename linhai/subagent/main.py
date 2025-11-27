@@ -5,6 +5,7 @@ import logging
 import json
 from reprlib import Repr
 from datetime import datetime
+from typing import Sequence
 
 from linhai.llm import (
     Message,
@@ -36,6 +37,7 @@ class SubAgent:
         llm: LanguageModel,
         group_chat: GroupChat,
         max_answer_times: int | None,
+        initial_messages: Sequence[Message] | None = None,
     ):
         self.agent_type = agent_type
         self.name = name
@@ -60,8 +62,12 @@ class SubAgent:
                     ),
                 ),
             ),
-            ChatMessage(role="user", message=self.task_message),
         ]
+
+        if initial_messages:
+            self.messages.extend(initial_messages)
+
+        self.messages.append(ChatMessage(role="user", message=self.task_message))
 
     def _register_subagent_tools(self):
         """注册SubAgent可用的工具。"""
@@ -227,6 +233,7 @@ class SubAgentManager:
         name: str,
         task_message: str,
         max_answer_times: int | None,
+        initial_messages: Sequence[Message] | None = None,
     ) -> str:
         """创建并启动一个SubAgent。"""
         if name in self.subagents:
@@ -254,6 +261,7 @@ class SubAgentManager:
             subagent_llm,
             self.group_chat,
             max_answer_times=max_answer_times,
+            initial_messages=initial_messages,
         )
 
         task = asyncio.create_task(subagent.run())
@@ -286,3 +294,28 @@ class SubAgentManager:
         for _, task in self.subagents.values():
             if task and task.done():
                 await task
+
+    def register_plugins(self) -> None:
+        """注册SubAgent相关的插件。"""
+        from linhai.agent import Lifecycle
+
+        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+
+        from .plugin import (
+            SubAgentCollaborationPlugin,
+            GitBlockingPlugin,
+            ClarificationWaitingUserPlugin,
+            ClarificationBlockingPlugin,
+            GitDiffReviewPlugin,
+        )
+
+        plugins = [
+            SubAgentCollaborationPlugin(self.group_chat),
+            GitBlockingPlugin(self.group_chat),
+            ClarificationWaitingUserPlugin(self.group_chat),
+            ClarificationBlockingPlugin(self.group_chat),
+            GitDiffReviewPlugin(self.group_chat),
+        ]
+
+        for plugin in plugins:
+            plugin.register(lifecycle)

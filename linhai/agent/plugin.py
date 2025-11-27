@@ -461,6 +461,3 @@ class PreventToolOutputPlugin(Plugin):
     def register(self, lifecycle):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
-
-
-

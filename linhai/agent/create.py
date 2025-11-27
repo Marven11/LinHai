@@ -83,8 +83,8 @@ async def create_agent(
         subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
         subagent_toolset = create_subagent_toolset(subagent_manager)
         tool_manager.add_toolset(subagent_toolset)
-        
-        agent.lifecycle.register_subagent_plugins()
+
+        subagent_manager.register_plugins()
 
     clarification_manager = ClarificationManager(group_chat)
     agent_clarification_toolset = create_agent_clarification_toolset(
