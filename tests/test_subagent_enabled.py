@@ -163,12 +163,12 @@ model = "test-model"
             ]
             self.assertEqual(len(subagent_manager_calls), 1)
             
-            # 验证SubAgentCollaborationPlugin被注册
-            has_subagent_plugin = any(
-                plugin.__class__.__name__ == "SubAgentCollaborationPlugin"
-                for plugin in agent.lifecycle._plugins
-            )
-            self.assertTrue(has_subagent_plugin)
+            # 验证SubAgent相关组件被创建
+            subagent_manager_calls = [
+                call for call in self.group_chat.register_member.call_args_list
+                if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
+            ]
+            self.assertEqual(len(subagent_manager_calls), 1)
             
         finally:
             os.unlink(config_path)

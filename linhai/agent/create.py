@@ -13,9 +13,6 @@ from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from .base import GlobalMemory, AgentContext
 from linhai.subagent.tools import create_subagent_toolset
 from linhai.subagent import SubAgentManager
-from linhai.subagent.clarification_tools import (
-    create_clarification_toolset as create_subagent_clarification_toolset,
-)
 from linhai.subagent.clarification import ClarificationManager
 from .clarification_tools import (
     create_clarification_toolset as create_agent_clarification_toolset,

@@ -35,43 +35,43 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试思考内容中包含工具调用时发出警告。"""
         # 模拟answer
         answer = MagicMock(spec=Answer)
-        reasoning_content = """
-        我需要调用工具来完成任务。
-        ```json toolcall
-        {"name": "read_file", "arguments": {"filepath": "test.txt"}}
-        ```
-        然后调用另一个工具。
-        ```json toolcall
-        {"name": "list_files", "arguments": {"dirpath": "."}}
-        ```
-        """
+        reasoning_content = """我需要调用工具来完成任务。
+```json toolcall
+{"name": "read_file", "arguments": {"filepath": "test.txt"}}
+```
+然后调用另一个工具。
+```json toolcall
+{"name": "list_files", "arguments": {"dirpath": "."}}
+```
+"""
         answer.get_reasoning_message.return_value = reasoning_content
         # 确保Answer对象有reasoning_message属性
         answer.reasoning_message = reasoning_content
         
-        # 使用patch确保group_chat.get_members返回正确的agent
-        with patch.object(self.plugin.group_chat, 'get_members', return_value=self.agent):
-            # 执行测试
-            result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-            
-            # 验证
-            self.assertFalse(result)  # 不应该中断
-            answer.get_reasoning_message.assert_called_once()
-            
-            # 验证警告消息发送
-            self.agent.message_processor.append_message.assert_called_once()
-            call_args = self.agent.message_processor.append_message.call_args
-            self.assertIn("read_file", call_args[0][0].message)
-            self.assertIn("list_files", call_args[0][0].message)
-            self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
-            
-            # 检查UI日志消息
-            self.group_chat.send_if_exists.assert_called_once()
-            ui_call_args = self.group_chat.send_if_exists.call_args
-            self.assertEqual(ui_call_args[0][0], "ui_log")
-            self.assertEqual(ui_call_args[0][1].level, "WARNING")
-            self.assertIn("read_file", ui_call_args[0][1].content)
-            self.assertIn("list_files", ui_call_args[0][1].content)
+        # 确保group_chat.get_members返回正确的agent
+        # 在setUp中已经设置self.group_chat.get_members.return_value = self.agent
+        # 所以不需要额外的patch
+        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
+        
+        # 验证
+        self.assertFalse(result)  # 不应该中断
+        answer.get_reasoning_message.assert_called_once()
+        
+        # 验证警告消息发送 - 确保append_message被调用
+        self.agent.message_processor.append_message.assert_called_once()
+        call_args = self.agent.message_processor.append_message.call_args
+        self.assertIsNotNone(call_args)
+        self.assertIn("read_file", call_args[0][0].message)
+        self.assertIn("list_files", call_args[0][0].message)
+        self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
+        
+        # 检查UI日志消息
+        self.group_chat.send_if_exists.assert_called_once()
+        ui_call_args = self.group_chat.send_if_exists.call_args
+        self.assertEqual(ui_call_args[0][0], "ui_log")
+        self.assertEqual(ui_call_args[0][1].level, "WARNING")
+        self.assertIn("read_file", ui_call_args[0][1].content)
+        self.assertIn("list_files", ui_call_args[0][1].content)
 
     async def test_after_message_generation_without_reasoning_content(self):
         """测试没有思考内容时不做任何操作。"""
@@ -103,37 +103,38 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_message_generation_with_duplicate_tool_names(self):
         """测试重复工具名称时去重。"""
         answer = MagicMock(spec=Answer)
-        reasoning_content = """
-        ```json toolcall
-        {"name": "read_file", "arguments": {"filepath": "test1.txt"}}
-        ```
-        ```json toolcall
-        {"name": "read_file", "arguments": {"filepath": "test2.txt"}}
-        ```
-        """
+        reasoning_content = """```json toolcall
+{"name": "read_file", "arguments": {"filepath": "test1.txt"}}
+```
+```json toolcall
+{"name": "read_file", "arguments": {"filepath": "test2.txt"}}
+```
+"""
         answer.get_reasoning_message.return_value = reasoning_content
         
-        with patch.object(self.plugin.group_chat, 'get_members', return_value=self.agent):
-            result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-            
-            self.assertFalse(result)
-            
-            # 验证警告消息中工具名称去重
-            self.agent.message_processor.append_message.assert_called_once()
-            call_args = self.agent.message_processor.append_message.call_args
-            self.assertIn("read_file", call_args[0][0].message)
-            # 检查去重：只出现一次read_file
-            self.assertEqual(call_args[0][0].message.count("read_file"), 1)
-            self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
-            
-            # 检查UI日志消息
-            self.group_chat.send_if_exists.assert_called_once()
-            ui_call_args = self.group_chat.send_if_exists.call_args
-            self.assertEqual(ui_call_args[0][0], "ui_log")
-            self.assertEqual(ui_call_args[0][1].level, "WARNING")
-            self.assertIn("read_file", ui_call_args[0][1].content)
-            # UI消息中工具名称也应该去重
-            self.assertEqual(ui_call_args[0][1].content.count("read_file"), 1)
+        # 确保group_chat.get_members返回正确的agent
+        # 在setUp中已经设置self.group_chat.get_members.return_value = self.agent
+        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
+        
+        self.assertFalse(result)
+        
+        # 验证警告消息中工具名称去重 - 确保append_message被调用
+        self.agent.message_processor.append_message.assert_called_once()
+        call_args = self.agent.message_processor.append_message.call_args
+        self.assertIsNotNone(call_args)
+        self.assertIn("read_file", call_args[0][0].message)
+        # 检查去重：只出现一次read_file
+        self.assertEqual(call_args[0][0].message.count("read_file"), 1)
+        self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
+        
+        # 检查UI日志消息
+        self.group_chat.send_if_exists.assert_called_once()
+        ui_call_args = self.group_chat.send_if_exists.call_args
+        self.assertEqual(ui_call_args[0][0], "ui_log")
+        self.assertEqual(ui_call_args[0][1].level, "WARNING")
+        self.assertIn("read_file", ui_call_args[0][1].content)
+        # UI消息中工具名称也应该去重
+        self.assertEqual(ui_call_args[0][1].content.count("read_file"), 1)
 
     def test_register(self):
         """测试插件注册。"""

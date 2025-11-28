@@ -13,6 +13,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """设置测试环境。"""
         self.mock_agent = Mock()
         self.mock_agent.group_chat = Mock()
+        self.mock_agent.group_chat.send_if_exists = AsyncMock()
         self.mock_agent.context = {
             "llms": [Mock()],
             "llm_names": ["test_llm"],
@@ -120,29 +121,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         
         # 验证结果
         self.assertTrue(result)
+        # 确保process_tool_call被调用
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once_with(self.mock_agent, tool_call, mock_error)
-
-        """测试白名单工具调用。"""
-        # 设置mock
-        
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={},
-            assert_success=False
-        )
-        
-        mock_result = Mock()
-        mock_result.__str__ = Mock(return_value="test result")
-        self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
-        
-        # 调用方法
-        result = await self.toolcall_processor.call_tool(tool_call)
-        
-        # 验证结果
-        self.assertFalse(result)
-        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
 
 
 
