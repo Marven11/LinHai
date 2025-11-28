@@ -51,7 +51,7 @@ class TestTerminalTools(unittest.TestCase):
 
             # 发送字符串
             send_string_func = terminal_toolset.get_tool("send_string_to_terminal")
-            result = await send_string_func(terminal_id, "echo hello")
+            result = await send_string_func(terminal_id, "echo hello", with_enter=True)
             self.assertIn("已发送", result)
 
             # 读取屏幕
@@ -140,7 +140,7 @@ class TestTerminalTools(unittest.TestCase):
 
             # 测试发送字符串到不存在的终端
             send_string_func = terminal_toolset.get_tool("send_string_to_terminal")
-            result = await send_string_func("invalid-id", "ls")
+            result = await send_string_func("invalid-id", "ls", with_enter=True)
             self.assertIn("错误：未找到终端", result)
 
             # 测试发送按键到不存在的终端

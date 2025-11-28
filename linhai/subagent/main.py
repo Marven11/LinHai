@@ -20,7 +20,6 @@ from linhai.tool.base import ToolSet, ToolArgInfo, to_tools_info
 from linhai.tool.tools.command import sleep_tool
 from linhai.agent.base import RuntimeMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.prompt import CLARIFIER_SUBAGENT_PROMPT
 
 logger = logging.getLogger(__name__)
 reprobj = Repr(maxstring=50)
@@ -54,13 +53,7 @@ class SubAgent:
 
         self.messages: list[Message] = [
             SubagentSystemMessage(
-                CLARIFIER_SUBAGENT_PROMPT.replace(
-                    "{|TOOLS|}",
-                    json.dumps(
-                        to_tools_info(self.toolset.get_tools()),
-                        ensure_ascii=False,
-                    ),
-                ),
+                self.get_system_message_prompt()
             ),
         ]
 
@@ -68,6 +61,9 @@ class SubAgent:
             self.messages.extend(initial_messages)
 
         self.messages.append(ChatMessage(role="user", message=self.task_message))
+
+    def get_system_message_prompt(self):
+        raise NotImplementedError()
 
     def _register_subagent_tools(self):
         """注册SubAgent可用的工具。"""
@@ -254,12 +250,27 @@ class SubAgentManager:
 
             _, subagent_llm = agent.get_current_llm_info()
 
-        subagent = SubAgent(
-            agent_type,
-            name,
-            task_message,
-            subagent_llm,
-            self.group_chat,
+        from .types import (
+            ViolationCheckerSubAgent,
+            GitDiffReviewerSubAgent,
+            ClarifierSubAgent,
+        )
+        
+        SUBAGENT_CREATORS = {
+            "violation_checker": ViolationCheckerSubAgent,
+            "git_diff_reviewer": GitDiffReviewerSubAgent,
+            "clarifier": ClarifierSubAgent,
+        }
+        
+        if agent_type not in SUBAGENT_CREATORS:
+            raise ValueError(f"未知的SubAgent类型: {agent_type}")
+        
+        subagent_class = SUBAGENT_CREATORS[agent_type]
+        subagent = subagent_class(
+            name=name,
+            task_message=task_message,
+            llm=subagent_llm,
+            group_chat=self.group_chat,
             max_answer_times=max_answer_times,
             initial_messages=initial_messages,
         )
@@ -302,19 +313,19 @@ class SubAgentManager:
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
 
         from .plugin import (
-            SubAgentCollaborationPlugin,
             GitBlockingPlugin,
             ClarificationWaitingUserPlugin,
             ClarificationBlockingPlugin,
-            GitDiffReviewPlugin,
         )
+        from .types.violation_checker import ViolationCheckerPlugin
+        from .types.git_diff_reviewer import GitDiffReviewPlugin
 
         plugins = [
-            SubAgentCollaborationPlugin(self.group_chat),
+            ViolationCheckerPlugin(self.group_chat),
+            GitDiffReviewPlugin(self.group_chat),
             GitBlockingPlugin(self.group_chat),
             ClarificationWaitingUserPlugin(self.group_chat),
             ClarificationBlockingPlugin(self.group_chat),
-            GitDiffReviewPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

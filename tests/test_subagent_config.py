@@ -55,7 +55,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 创建SubAgent
         result = await manager.create_subagent(
-            agent_type="test",
+            agent_type="clarifier",
             name="test_agent",
             task_message="测试任务",
             max_answer_times=None
@@ -80,7 +80,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 创建SubAgent
         result = await manager.create_subagent(
-            agent_type="test",
+            agent_type="clarifier",
             name="test_agent",
             task_message="测试任务",
             max_answer_times=None
@@ -109,7 +109,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 创建SubAgent
         result = await manager.create_subagent(
-            agent_type="test",
+            agent_type="clarifier",
             name="test_agent",
             task_message="测试任务",
             max_answer_times=None
@@ -145,7 +145,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 尝试创建相同名称的SubAgent
         result = await manager.create_subagent(
-            agent_type="test",
+            agent_type="clarifier",
             name="test_agent",
             task_message="另一个任务",
             max_answer_times=None
@@ -162,7 +162,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         
         # 创建SubAgent
         await manager.create_subagent(
-            agent_type="test",
+            agent_type="clarifier",
             name="test_agent",
             task_message="测试任务",
             max_answer_times=None

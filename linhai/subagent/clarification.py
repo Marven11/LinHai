@@ -55,7 +55,7 @@ class ClarificationManager:
         agent_message = self.group_chat.get_members("agent_message", AgentMessage)
         agent_message.append_message(
             RuntimeMessage(
-                f"收到来自SubAgent的澄清问题{clarification_id}，请尽快使用工具回答: {question}"
+                f"收到来自SubAgent(@{from_subagent})的澄清问题，ID为{clarification_id}，请尽快使用工具回答: {question}"
             )
         )
 

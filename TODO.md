@@ -2,17 +2,12 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] 将send_string_to_terminal的with_enter改成必须参数
-  - 记得同时修改unittest
-- [ ] 修改“收到来自SubAgent的澄清问题...”为“收到来自SubAgent(@xxx)的澄清问题，ID为yyy....”，其中xxx是SubAgent的ID, yyy为澄清问题的ID
-  - 让Agent明白SubAgent的ID是什么，澄清问题的ID又是什么
-- [ ] 将每类subagent的启动、运行等都独立到单独的文件中，而不是像现在这样
-  - 现在启动subagent的逻辑散落在plugin中，运行
-  - 你需要重构代码，为每类subagent单独开一个文件（甚至文件夹），包含插件、启动逻辑等，只有完全通用的逻辑才能放在外面
-  - 最终的效果是
-    - 只需要指定类型等少量信息就可以启动一个subagent
-    - 添加一个subagent几乎不需要修改公共代码
-  - 顺便把prompt.py中的subagent prompt也移动一下
+- [ ] 你上一个commit重构错误：
+  - 不应该保留CLARIFIER，只应该保留violation checker和git diff reviewer
+  - 而且violation checker+git diff reviewer的system prompt和user message prompt混在一起了
+    - system prompt保留和checker本身相关的内容，user message prompt保留和当前任务相关的内容
+- [ ] GitDiffReviewPlugin的_get_new_files_content没有处理新增文件夹的情况
+  - 尊重.gitignore: 可能需要通过git查看新文件内容以尊重.gitignore，次解为使用第三方库解析.gitignore, 不要手动解析！
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -20,8 +15,7 @@
 
 # 暂时搁置
 
-- [ ] GitDiffReviewPlugin的_get_new_files_content没有处理新增文件夹的情况
-  - 尊重.gitignore: 可能需要通过git查看新文件内容以尊重.gitignore，次解为使用第三方库解析.gitignore, 不要手动解析！
+- [ ] 清理pylint警告
 - [ ] 修改架构，现在的Answer只能被打断生成，但是不能被截断
   - 我们需要添加一个架构让Answer支持截断，相当于提前帮LLM结束输出
   - 作用：有时候LLM会调用大量工具，但是我们希望让其在调用5个工具之后停下来，我们可以通过提前截断手动停下LLM输出
@@ -47,6 +41,7 @@
     - 警告内容包括工具的名字，不包括工具的参数（太长了）
     - 弹一条UI消息
   - 你需要修改extract_tool_calls_with_errors添加参数，以重用代码
+- [ ] 在“错误：有未解答的澄清问题，禁止使用”后面加上澄清问题的ID和内容，避免agent手动调用工具，产生多余工具调用
 - [ ] OpenAiAnswer的estimated_usage会在哪里被用到？没有用则删除
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent

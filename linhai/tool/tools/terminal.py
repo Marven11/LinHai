@@ -215,15 +215,15 @@ async def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
     args={
         "terminal_id": ToolArgInfo(desc="终端ID", type="str"),
         "string": ToolArgInfo(desc="要发送的字符串", type="str"),
+        "with_enter": ToolArgInfo(desc="是否发送enter", type="bool"),
         "wait_seconds": ToolArgInfo(
             desc="等待一段时间后读取最新画面，默认等待0.3秒", type="float"
         ),
-        "with_enter": ToolArgInfo(desc="是否发送enter，默认为True", type="bool"),
     },
-    required_args=["terminal_id", "string"],
+    required_args=["terminal_id", "string", "with_enter"],
 )
 async def send_string_to_terminal(
-    terminal_id: str, string: str, wait_seconds: float = 0.3, with_enter=True
+    terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
 ) -> str:
     if terminal_id not in terminals:
         return f"错误：未找到终端 {terminal_id}"

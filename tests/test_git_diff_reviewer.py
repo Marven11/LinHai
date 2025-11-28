@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, patch
 import asyncio
 
-from linhai.subagent.plugin import GitDiffReviewPlugin
+from linhai.subagent.types.git_diff_reviewer import GitDiffReviewPlugin
 from linhai.group_chat import GroupChat
 
 

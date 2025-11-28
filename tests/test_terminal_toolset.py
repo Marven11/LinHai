@@ -34,7 +34,7 @@ class TestTerminalToolset(unittest.TestCase):
         send_string = tools["send_string_to_terminal"]["func"]
         self.assertIsNotNone(send_string, "send_string_to_terminal工具未找到")
         
-        result = self.loop.run_until_complete(send_string(term_id, "echo '114514'"))
+        result = self.loop.run_until_complete(send_string(term_id, "echo '114514'", with_enter=True))
         self.assertIn("114514", result)
 
         # 读取屏幕内容
@@ -72,8 +72,8 @@ class TestTerminalToolset(unittest.TestCase):
         term2 = self.loop.run_until_complete(create_terminal())
 
         # 在每个终端中执行不同命令
-        self.loop.run_until_complete(send_string(term1, "echo '李田所'"))
-        self.loop.run_until_complete(send_string(term2, "echo '人类有三大欲望'"))
+        self.loop.run_until_complete(send_string(term1, "echo '李田所'", with_enter=True))
+        self.loop.run_until_complete(send_string(term2, "echo '人类有三大欲望'", with_enter=True))
 
         # 验证每个终端的内容
         content1 = self.loop.run_until_complete(read_screen(term1))
@@ -96,7 +96,7 @@ class TestTerminalToolset(unittest.TestCase):
         close_terminal = tools["close_terminal"]["func"]
 
         # 测试不存在的终端
-        result = self.loop.run_until_complete(send_string("nonexistent", "echo test"))
+        result = self.loop.run_until_complete(send_string("nonexistent", "echo test", with_enter=True))
         self.assertIn("错误：未找到终端", result)
 
         result = self.loop.run_until_complete(read_screen("nonexistent"))

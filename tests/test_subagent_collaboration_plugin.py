@@ -4,14 +4,14 @@ import unittest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from linhai.subagent.plugin import SubAgentCollaborationPlugin
+from linhai.subagent.types.violation_checker import ViolationCheckerPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import ToolCallMessage, Answer
 from linhai.utils import CliRuntimeNotice
 
 
-class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
-    """测试SubAgentCollaborationPlugin类。"""
+class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试ViolationCheckerPlugin类。"""
 
     def setUp(self):
         """设置测试环境。"""
@@ -35,7 +35,7 @@ class TestSubAgentCollaborationPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
         self.group_chat.send_if_exists = AsyncMock()
         
-        self.plugin = SubAgentCollaborationPlugin(self.group_chat)
+        self.plugin = ViolationCheckerPlugin(self.group_chat)
 
     async def test_register(self):
         """测试插件注册。"""
