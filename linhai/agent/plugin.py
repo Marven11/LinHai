@@ -1,20 +1,14 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
-from typing import Any
-import asyncio
 import logging
-import shlex
-import os
+import re
 
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from ..llm import Answer, ToolCallMessage
+from ..llm import Answer
 from ..utils import CliRuntimeNotice
 import linhai.agent as linhai_agent
 from linhai.group_chat import GroupChat
-from linhai.utils import generate_id
-import linhai.subagent as linhai_subagent
-import re
 
 logger = logging.getLogger(__name__)
 

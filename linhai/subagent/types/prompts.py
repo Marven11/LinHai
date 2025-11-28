@@ -144,9 +144,6 @@ GIT_DIFF_REVIEWER_PROMPT = """# 情景
 
 你在本次对话中的历史消息如下，请结合这些消息分析代码变更是否满足用户需求：
 
-## 工具列表
-
-{|TOOLS|}
 
 # Git Diff
 
@@ -162,4 +159,4 @@ GIT_DIFF_REVIEWER_PROMPT = """# 情景
 4. 调用exit工具退出，原因写"代码审查完成"
 
 **重要:** 你必须严格按上述要求检查，不能遗漏任何一条。如果发现问题，必须使用request_clarification工具质问。
-"""
+""" + TOOLCALL_PROMPT

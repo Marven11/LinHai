@@ -116,9 +116,9 @@ def extract_tool_calls_with_errors(
                     f"内容: {repr_obj.repr(block['content'])}"
                 )
                 continue
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 errors.append(
-                    f"工具调用解析出错：第{i+1}个code block解析时发生未知错误: {str(e)}\n"
+                    f"工具调用解析出错：第{i+1}个code block解析时发生错误: {str(e)}\n"
                     f"内容: {repr_obj.repr(block['content'])}"
                 )
 

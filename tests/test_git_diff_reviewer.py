@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch, mock_open
 import asyncio
+from typing import cast
 
 from linhai.subagent.types.git_diff_reviewer import GitDiffReviewPlugin
 from linhai.group_chat import GroupChat
@@ -292,7 +293,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         )
         
         # 模拟文件读取
-        with patch("builtins.open", mock_open(read_data="file content")) as mock_file:
+        with patch("builtins.open", mock_open(read_data="file content")):
             result = self.plugin._get_new_files_content()
             
             # 验证调用了git ls-files命令
@@ -304,10 +305,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             )
             
             # 验证结果包含所有文件
-            self.assertIn("**新增文件: new_file.py**", result)
-            self.assertIn("**新增文件: folder/another_file.py**", result)
-            self.assertIn("**新增文件: subdir/test.txt**", result)
-            self.assertIn("file content", result)
+            self.assertIsInstance(result, str)
+            result_str = cast(str, result)  # 使用cast明确类型
+            self.assertIn("**新增文件: new_file.py**", result_str)
+            self.assertIn("**新增文件: folder/another_file.py**", result_str)
+            self.assertIn("**新增文件: subdir/test.txt**", result_str)
+            self.assertIn("file content", result_str)
 
     @patch("subprocess.run")
     @patch("os.path.exists")
@@ -329,7 +332,9 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         )
         
         # 验证返回空字符串
-        self.assertEqual(result, "")
+        self.assertIsInstance(result, str)
+        result_str = cast(str, result)  # 使用cast明确类型
+        self.assertEqual(result_str, "")
 
     @patch("subprocess.run")
     @patch("os.path.exists")
@@ -345,8 +350,10 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             result = self.plugin._get_new_files_content()
             
             # 验证结果包含无法读取的提示
-            self.assertIn("**新增文件: unreadable_file.bin**", result)
-            self.assertIn("(无法读取文件内容)", result)
+            self.assertIsInstance(result, str)
+            result_str = cast(str, result)  # 使用cast明确类型
+            self.assertIn("**新增文件: unreadable_file.bin**", result_str)
+            self.assertIn("(无法读取文件内容)", result_str)
 
 
 if __name__ == "__main__":

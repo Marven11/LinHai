@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-import json
-from reprlib import Repr
 from datetime import datetime
 from typing import Sequence
 
@@ -16,13 +14,12 @@ from linhai.llm import (
     AnswerToken,
 )
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolSet, ToolArgInfo, to_tools_info
+from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.command import sleep_tool
 from linhai.agent.base import RuntimeMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
 
 logger = logging.getLogger(__name__)
-reprobj = Repr(maxstring=50)
 
 
 class SubAgent:

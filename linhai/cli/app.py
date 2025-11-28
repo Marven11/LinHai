@@ -12,7 +12,6 @@ from linhai.llm import (
     AnswerToken,
     AnswerTokenUsage,
     Answer,
-    ToolCallMessage,
 )
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
