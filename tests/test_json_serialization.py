@@ -8,7 +8,6 @@ from linhai.llm import (
     SystemMessage,
     ChatMessage,
     ToolCallMessage,
-    ToolConfirmationMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
 

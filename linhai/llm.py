@@ -192,27 +192,6 @@ class ToolCallMessage:
             f"assert_success={self.assert_success!r})"
         )
 
-
-class ToolConfirmationMessage:
-    """工具确认消息类，用于表示用户对工具调用的确认消息。"""
-
-    def __init__(
-        self,
-        tool_call: ToolCallMessage,
-        confirmed: bool,
-    ):
-        """初始化工具确认消息。"""
-        self.tool_call = tool_call
-        self.confirmed = confirmed
-
-    def __repr__(self) -> str:
-        """返回消息的字符串表示。"""
-        return (
-            f"ToolConfirmationMessage(tool_call={self.tool_call!r}, "
-            f"confirmed={self.confirmed!r})"
-        )
-
-
 class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""
 

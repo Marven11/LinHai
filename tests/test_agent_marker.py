@@ -72,11 +72,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800,
-            "tool_confirmation": {
-                "skip_confirmation": True,
-                "whitelist": ["add_numbers"],
-            },
+            "compress_threshold_hard": 800
         }
 
         # 创建模拟的 GroupChat

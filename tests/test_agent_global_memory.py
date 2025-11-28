@@ -63,10 +63,6 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             mock_agent_config = AgentConfig(
                 compress_threshold_hard=60000,
                 compress_threshold_soft=30000,
-                tool_confirmation={
-                    "skip_confirmation": True,
-                    "whitelist": [],
-                },
             )
             _ = Config(llm=[mock_llm_config], agent=mock_agent_config)  # pylint: disable=unused-variable
 

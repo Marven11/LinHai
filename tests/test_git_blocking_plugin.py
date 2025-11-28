@@ -66,22 +66,25 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         """测试有未解答澄清时阻止git命令。"""
         self.clarification_manager.has_unanswered_clarifications.return_value = True
         
+        # 模拟异步的send_if_exists方法
+        self.group_chat.send_if_exists = AsyncMock()
+        
         tool_call = ToolCallMessage(
-            function_name="run_simple_command",
+            function_name="run_command",
             function_arguments={"command": "git status"}
         )
         
         # 应该返回True阻止工具调用
         result = await self.plugin.before_tool_call(tool_call)
         self.assertTrue(result)
-        self.agent.message_processor.append_message.assert_called_once()
+        self.group_chat.send_if_exists.assert_called_once()
 
     async def test_allow_git_command_without_unanswered_clarifications(self):
         """测试没有未解答澄清时允许git命令。"""
         self.clarification_manager.has_unanswered_clarifications.return_value = False
         
         tool_call = ToolCallMessage(
-            function_name="run_simple_command", 
+            function_name="run_command", 
             function_arguments={"command": "git status"}
         )
         

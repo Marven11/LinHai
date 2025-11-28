@@ -27,13 +27,6 @@ class AgentToolcall:
             "tool_manager", ToolManager
         )
 
-        tool_confirmation_config = self.context.get("tool_confirmation", {})
-        self.skip_confirmation = tool_confirmation_config.get(
-            "skip_confirmation", False
-        )
-        self.whitelist = tool_confirmation_config.get("whitelist", [])
-        self.timeout_seconds = tool_confirmation_config.get("timeout_seconds", 30)
-
         self.called_tools_in_round: list[str] = []
         self.early_return = False
 
@@ -249,17 +242,13 @@ class AgentToolcall:
             self.early_return = True
             return True
 
-        result = False
-        if self.skip_confirmation or tool_call.function_name in self.whitelist:
-            result = await self._call_tool_without_confirmation(tool_call)
-        else:
-            result = await self._call_tool_with_confirmation(tool_call)
+        result = await self._call_tool(tool_call)
         if result:
             self.early_return = True
         return result
 
-    async def _call_tool_without_confirmation(self, tool_call: ToolCallMessage) -> bool:
-        """无需确认直接调用工具。"""
+    async def _call_tool(self, tool_call: ToolCallMessage) -> bool:
+        """调用工具。"""
         try:
             tool_result = await self.tool_manager.process_tool_call(tool_call)
 
@@ -289,40 +278,7 @@ class AgentToolcall:
             self.agent.message_processor.append_message(RuntimeMessage(msg))
             return False
 
-    async def _call_tool_with_confirmation(self, tool_call: ToolCallMessage) -> bool:
-        """需要用户确认的工具调用。"""
-        from linhai.cli import CLIApp
 
-        confirmation = await self.group_chat.get_members(
-            "cli_app", CLIApp
-        ).confirm_tool_request(tool_call)
-        self.agent.message_processor.append_message(
-            RuntimeMessage(
-                f"已发送工具调用请求: {tool_call.function_name}，等待用户确认..."
-            )
-        )
-
-        if confirmation.tool_call.function_name != tool_call.function_name:
-            self.agent.message_processor.append_message(
-                RuntimeMessage("错误：收到的确认消息不匹配当前工具调用")
-            )
-            return False
-
-        if confirmation.confirmed:
-            try:
-                tool_result = await self.tool_manager.process_tool_call(tool_call)
-                await self._handle_tool_result(tool_call, tool_result)
-                return False
-            except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-                msg = f"工具调用失败: {str(e)} {repr(e)}"
-                logger.error(msg)
-                self.agent.message_processor.append_message(RuntimeMessage(msg))
-                return False
-        else:
-            self.agent.message_processor.append_message(
-                RuntimeMessage(f"用户取消了工具调用: {tool_call.function_name}")
-            )
-            return False
 
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""

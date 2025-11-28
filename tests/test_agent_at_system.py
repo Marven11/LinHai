@@ -61,7 +61,6 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold_hard": 1000,
             "compress_threshold_soft": 500,
-            "tool_confirmation": {"skip_confirmation": True},
         }
 
         # 创建Agent实例

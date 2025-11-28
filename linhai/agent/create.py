@@ -43,17 +43,12 @@ async def create_agent(
 
     llms = await _create_llm_instances(config.llm)
 
-    tool_confirmation_config = {}
-    if config.agent and config.agent.tool_confirmation:
-        tool_confirmation_config = config.agent.tool_confirmation
-
     llm_names = [llm_config.name for llm_config in config.llm]
     agent_config = config.agent if config.agent else AgentConfig()
     agent_context = await _create_agent_context(
         llms=llms,
         llm_names=llm_names,
         llm_name=llm_name,
-        tool_confirmation_config=tool_confirmation_config,
         agent_config=agent_config,
     )
 
@@ -124,7 +119,6 @@ async def _create_agent_context(
     llms: list[LanguageModel],
     llm_names: list[str],
     llm_name: str | None,
-    tool_confirmation_config: dict,
     agent_config: AgentConfig,
 ) -> AgentContext:
     """创建AgentConfig字典
@@ -164,7 +158,6 @@ async def _create_agent_context(
         "current_llm_index": current_llm_index,
         "compress_threshold_hard": compress_threshold_hard,
         "compress_threshold_soft": compress_threshold_soft,
-        "tool_confirmation": tool_confirmation_config,
         "enable_directory_change_detection": (
             agent_config.enable_directory_change_detection if agent_config else False
         ),

@@ -26,11 +26,6 @@ class TestToolConflict(unittest.TestCase):
         self.mock_group_chat.get_members.return_value = self.mock_tool_manager
         
         self.mock_context = {
-            "tool_confirmation": {
-                "skip_confirmation": True,
-                "whitelist": [],
-                "timeout_seconds": 30
-            },
             "llms": [],
             "llm_names": [],
             "current_llm_index": 0

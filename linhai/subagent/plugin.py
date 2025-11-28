@@ -157,7 +157,7 @@ class GitBlockingPlugin(Plugin):
             tool_name = tool_call.function_name
             arguments = tool_call.function_arguments
 
-            if tool_name in ["run_simple_command", "run_complex_command"]:
+            if tool_name in ["run_command"]:
                 command = arguments.get("command", "")
 
                 if self._is_git_command(command):

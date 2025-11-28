@@ -132,8 +132,7 @@ class MCPConnector:
                 "disconnect_mcp_server",
                 "disconnect_all_mcp_servers",
                 "list_mcp_servers",
-                "run_simple_command",
-                "run_complex_command",
+                "run_command",
             ],
         )
         async def connect_mcp_server(name: str, command: str):

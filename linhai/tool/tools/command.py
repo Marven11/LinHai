@@ -1,11 +1,10 @@
-"""命令执行工具模块，提供安全命令执行功能。"""
+"""命令执行工具模块，提供命令执行功能。"""
 
 from datetime import datetime
 import asyncio
 import os
 import signal
 import subprocess
-import re
 from linhai.tool.base import (
     global_tools,
     ToolArgInfo,
@@ -13,8 +12,6 @@ from linhai.tool.base import (
     ToolErrorMessage,
 )
 import platform
-
-VALIDATE_COMMAND_REGEX = re.compile(r'^[-a-zA-Z0-9_ /*=+\'"<> \.]+$')
 
 
 async def execute_command(
@@ -83,51 +80,9 @@ Stderr:
         return ToolErrorMessage(f"Command failed with error: {str(e)}")
 
 
-def validate_simple_command(command: str) -> bool:
-    """验证命令是否简单安全（白名单验证）
-
-    Args:
-        command: 命令字符串
-
-    Returns:
-        True如果命令安全，False如果包含危险模式
-    """
-    return VALIDATE_COMMAND_REGEX.fullmatch(command) is not None
-
-
 @global_tools.register_tool(
-    name="run_simple_command",
-    desc=f"执行简单系统命令（白名单验证）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时不要损坏用户的电脑。",
-    args={
-        "command": ToolArgInfo(desc="要执行的命令字符串，如 'ls -l'", type="str"),
-        "timeout": ToolArgInfo(desc="超时时间（秒），默认30秒", type="float"),
-    },
-    required_args=["command"],
-)
-async def run_simple_command(
-    command: str, timeout: float = 30.0
-) -> ToolResultMessage | ToolErrorMessage:
-    """执行简单系统命令（白名单验证），只允许安全命令
-
-    Args:
-        command: 要执行的命令字符串，如 "ls -l"
-        timeout: 超时时间（秒），默认30秒
-
-    Returns:
-        命令执行的输出结果或错误信息
-    """
-    if not validate_simple_command(command):
-        return ToolErrorMessage(
-            f"错误：命令包含不允许的字符，应符合这个正则{VALIDATE_COMMAND_REGEX.pattern}"
-            "如果需要使用其他字符，请使用run_complex_command工具。"
-        )
-
-    return await execute_command(command, timeout)
-
-
-@global_tools.register_tool(
-    name="run_complex_command",
-    desc=f"执行复杂系统命令（可能包含危险操作）。当前系统：{platform.system()}。可以执行常见的shell命令，但使用时务必谨慎，避免损坏用户电脑。",
+    name="run_command",
+    desc=f"执行系统命令。当前系统：{platform.system()}。可以执行shell命令，但使用时务必谨慎，避免损坏用户电脑。",
     args={
         "command": ToolArgInfo(
             desc="要执行的命令字符串，如 'ls | grep test'", type="str"
@@ -136,10 +91,10 @@ async def run_simple_command(
     },
     required_args=["command"],
 )
-async def run_complex_command(
+async def run_command(
     command: str, timeout: float = 30.0
 ) -> ToolResultMessage | ToolErrorMessage:
-    """执行复杂系统命令（可能包含危险操作，请谨慎使用）
+    """执行系统命令
 
     Args:
         command: 要执行的命令字符串，如 "ls | grep test"

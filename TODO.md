@@ -2,9 +2,9 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] 合并run_simple_command和run_complex_command，并且完全清理工具调用确认机制
-  - 删除对应的配置项、代码、函数、测试
-  - 我们的目标是让Linhai总是YOLO运行: You Only Look Once, 完全不需要用户确认工具调用
+- [ ] 修复所有unittest
+  - 尝试在失败时打印更多消息
+  - 你可以编写临时脚本，临时修改代码，但是需要在用完之后清理！
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -24,6 +24,10 @@
   - 记得同时修改unittest
 - [ ] 修改“收到来自SubAgent的澄清问题...”为“收到来自SubAgent(@xxx)的澄清问题，ID为yyy....”，其中xxx是SubAgent的ID, yyy为澄清问题的ID
   - 让Agent明白SubAgent的ID是什么，澄清问题的ID又是什么
+- [ ] 将每类subagent的启动、运行等都独立到单独的文件中，而不是像现在这样
+  - 现在启动subagent的逻辑散落在plugin中，运行
+- [ ] 支持配置每类subagent的开关
+- [ ] 让compress_history_range在启动时显示一个ui_log，报告当前共有几条消息
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent
   - 避免拍马屁

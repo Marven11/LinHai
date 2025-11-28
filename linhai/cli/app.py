@@ -13,7 +13,6 @@ from linhai.llm import (
     AnswerTokenUsage,
     Answer,
     ToolCallMessage,
-    ToolConfirmationMessage,
 )
 from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -133,8 +132,6 @@ class CLIApp(App):
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
         self.agent_task: Optional[asyncio.Task] = None
-        self.current_tool_call: Optional[ToolCallMessage] = None
-        self.current_tool_confirmation: Optional[ToolConfirmationMessage] = None
 
         self.token_manager = TokenManager()
 
@@ -523,17 +520,7 @@ class CLIApp(App):
             ).disconnect_all_mcp_servers()
             self.app.exit()
 
-    async def confirm_tool_request(self, tool_call: ToolCallMessage):
-        """向用户确认是否需要调用工具"""
-        self.current_tool_confirmation = None
-        self.current_tool_call = tool_call
-        self.query_one("#input").placeholder = (  # type: ignore
-            f"确认执行工具 {tool_call.function_name} 吗？(y/n)"
-        )
 
-        while self.current_tool_confirmation is None:
-            await asyncio.sleep(0.01)
-        return self.current_tool_confirmation
 
     def should_auto_scroll(self):
         container = self.query_one("#chat-container")
@@ -555,26 +542,7 @@ class CLIApp(App):
         input_element = self.query_one("#input")
         message_text = input_element.value.strip()  # type: ignore
 
-        if self.current_tool_call:
 
-            user_input = message_text.strip().lower()
-            if user_input in ["y", "yes", "是"]:
-                confirmed = True
-            elif user_input in ["n", "no", "否"]:
-                confirmed = False
-            else:
-                input_element.value = ""  # type: ignore
-                input_element.placeholder = "请输入 'y' 或 'n' 来确认工具调用"  # type: ignore
-                return
-
-            self.current_tool_confirmation = ToolConfirmationMessage(
-                tool_call=self.current_tool_call, confirmed=confirmed
-            )
-
-            self.current_tool_call = None
-            input_element.value = ""  # type: ignore
-            input_element.placeholder = "输入消息..."  # type: ignore
-            return
 
         if message_text:
             container = self.query_one("#chat-container")

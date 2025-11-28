@@ -17,7 +17,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             "llms": [Mock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "tool_confirmation": {}
         }
         self.mock_agent.large_messages = {}
         self.mock_agent.message_processor = Mock()
@@ -40,8 +39,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.toolcall_processor.agent, self.mock_agent)
         self.assertEqual(self.toolcall_processor.group_chat, self.mock_agent.group_chat)
         self.assertEqual(self.toolcall_processor.context, self.mock_agent.context)
-        self.assertEqual(self.toolcall_processor.skip_confirmation, False)
-        self.assertEqual(self.toolcall_processor.whitelist, [])
 
     def test_register_llm_toolset(self):
         """测试LLM工具集注册。"""
@@ -61,7 +58,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_call_tool_without_confirmation_success(self):
         """测试无需确认的工具调用成功。"""
         # 设置mock
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -85,7 +81,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_call_tool_without_confirmation_failure_with_assert_success_false(self):
         """测试无需确认的工具调用失败且assert_success=False时不中断。"""
         # 设置mock
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -109,7 +104,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_call_tool_without_confirmation_failure(self):
         """测试无需确认的工具调用失败。"""
         # 设置mock
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -130,11 +124,8 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(tool_call)
         self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once_with(self.mock_agent, tool_call, mock_error)
 
-    async def test_call_tool_with_whitelist(self):
         """测试白名单工具调用。"""
         # 设置mock
-        self.toolcall_processor.skip_confirmation = False
-        self.toolcall_processor.whitelist = ["test_tool"]
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -153,42 +144,11 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
 
-    async def test_call_tool_with_confirmation(self):
-        """测试需要确认的工具调用。"""
-        # 设置mock
-        self.toolcall_processor.skip_confirmation = False
-        self.toolcall_processor.whitelist = []
-        
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={},
-            assert_success=False
-        )
-        
-        # Mock CLIApp确认
-        mock_cli_app = Mock()
-        mock_confirmation = Mock()
-        mock_confirmation.tool_call.function_name = "test_tool"
-        mock_confirmation.confirmed = True
-        mock_cli_app.confirm_tool_request = AsyncMock(return_value=mock_confirmation)
-        self.mock_agent.group_chat.get_members.return_value = mock_cli_app
-        
-        mock_result = Mock()
-        mock_result.__str__ = Mock(return_value="test result")
-        self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
-        
-        # 调用方法
-        result = await self.toolcall_processor.call_tool(tool_call)
-        
-        # 验证结果
-        self.assertFalse(result)
-        mock_cli_app.confirm_tool_request.assert_called_once_with(tool_call)
-        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
+
 
     async def test_call_tool_state_change(self):
         """测试工具调用时状态改变。"""
         self.mock_agent.state = "waiting_user"
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -207,7 +167,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_call_tool_blocked_by_before_tool_call(self):
         """测试before_tool_call返回True时阻止工具调用。"""
         # 设置mock
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -228,7 +187,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
     async def test_multiple_tool_calls_with_mixed_results(self):
         """测试多个工具调用混合成功和失败的情况。"""
-        self.toolcall_processor.skip_confirmation = True
         
         # 第一个工具调用成功
         tool_call1 = ToolCallMessage(
@@ -278,7 +236,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_call_with_exception_handling(self):
         """测试工具调用异常处理。"""
-        self.toolcall_processor.skip_confirmation = True
         
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -295,35 +252,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once()
 
-    async def test_tool_call_with_confirmation_cancelled(self):
-        """测试用户取消工具确认的情况。"""
-        self.toolcall_processor.skip_confirmation = False
-        self.toolcall_processor.whitelist = []
-        
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={},
-            assert_success=True
-        )
-        
-        # Mock CLIApp确认返回取消
-        mock_cli_app = Mock()
-        mock_confirmation = Mock()
-        mock_confirmation.tool_call.function_name = "test_tool"
-        mock_confirmation.confirmed = False
-        mock_cli_app.confirm_tool_request = AsyncMock(return_value=mock_confirmation)
-        self.mock_agent.group_chat.get_members.return_value = mock_cli_app
-        
-        result = await self.toolcall_processor.call_tool(tool_call)
-        
-        # 验证返回False（不中断）
-        self.assertFalse(result)
-        mock_cli_app.confirm_tool_request.assert_called_once_with(tool_call)
-        self.mock_tool_manager.process_tool_call.assert_not_called()
+
 
     async def test_tool_conflict_detection(self):
         """测试工具冲突检测。"""
-        self.toolcall_processor.skip_confirmation = True
         
         # Mock send_if_exists to avoid await issues
         self.mock_agent.group_chat.send_if_exists = AsyncMock()
@@ -396,7 +328,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
     async def test_compress_tool_flag_setting(self):
         """测试压缩工具标志设置。"""
-        self.toolcall_processor.skip_confirmation = True
         
         # 调用压缩工具
         tool_call = ToolCallMessage(

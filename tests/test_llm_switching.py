@@ -30,11 +30,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,
             "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800,
-            "tool_confirmation": {
-                "skip_confirmation": True,
-                "whitelist": [],
-            },
+            "compress_threshold_hard": 800
         }
 
         # 使用GroupChat架构

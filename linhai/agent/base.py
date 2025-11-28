@@ -267,5 +267,4 @@ class AgentContext(TypedDict):
     compress_threshold_soft: int | float
     compress_threshold_hard: int | float
     memory: NotRequired[dict]
-    tool_confirmation: NotRequired[dict]
     enable_directory_change_detection: NotRequired[bool]

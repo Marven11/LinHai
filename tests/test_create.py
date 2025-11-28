@@ -37,7 +37,6 @@ class TestCreateAgent(unittest.TestCase):
         mock_config = Mock()
         mock_config.llm = [Mock(name='test_llm')]
         mock_config.agent = Mock()
-        mock_config.agent.tool_confirmation = {'test_tool': True}
         mock_config.tools = Mock()
         mock_config.memory = Mock()
         mock_config.memory.file_path = 'memory.md'
@@ -57,7 +56,6 @@ class TestCreateAgent(unittest.TestCase):
             'current_llm_index': 0,
             'compress_threshold_hard': 0.8,
             'compress_threshold_soft': 0.5,
-            'tool_confirmation': {'test_tool': True},
             'enable_directory_change_detection': False,
         }
         mock_tool_manager.return_value = Mock()
@@ -84,7 +82,6 @@ class TestCreateAgent(unittest.TestCase):
         mock_config = Mock()
         mock_config.llm = [Mock(name='llm1'), Mock(name='llm2')]
         mock_config.agent = Mock()
-        mock_config.agent.tool_confirmation = {}
         mock_config.tools = Mock()
         mock_config.memory = Mock()
         mock_config.memory.file_path = 'memory.md'
@@ -109,7 +106,6 @@ class TestCreateAgent(unittest.TestCase):
                 'current_llm_index': 1,
                 'compress_threshold_hard': 0.8,
                 'compress_threshold_soft': 0.5,
-                'tool_confirmation': {},
                 'enable_directory_change_detection': False,
             }
             mock_tool_manager.return_value = Mock()
@@ -162,7 +158,6 @@ class TestCreateAgentContext(unittest.TestCase):
         """测试创建默认Agent上下文"""
         llms = [Mock()]
         llm_names = ['test_llm']
-        tool_confirmation_config = {'test_tool': True}
         agent_config = AgentConfig()
 
         import asyncio
@@ -170,15 +165,12 @@ class TestCreateAgentContext(unittest.TestCase):
             llms=llms,  # type: ignore
             llm_names=llm_names,
             llm_name=None,
-            tool_confirmation_config=tool_confirmation_config,
             agent_config=agent_config,
         ))
 
         self.assertEqual(result['llms'], llms)
         self.assertEqual(result['llm_names'], llm_names)
         self.assertEqual(result['current_llm_index'], 0)
-        # 检查tool_confirmation配置
-        self.assertEqual(result.get('tool_confirmation'), tool_confirmation_config)
         self.assertEqual(result['compress_threshold_hard'], 0.8)
         self.assertEqual(result['compress_threshold_soft'], 0.5)
 
@@ -186,7 +178,6 @@ class TestCreateAgentContext(unittest.TestCase):
         """测试指定LLM名称创建Agent上下文"""
         llms = [Mock(), Mock()]
         llm_names = ['llm1', 'llm2']
-        tool_confirmation_config = {}
         agent_config = AgentConfig()
 
         import asyncio
@@ -194,7 +185,6 @@ class TestCreateAgentContext(unittest.TestCase):
             llms=llms,  # type: ignore
             llm_names=llm_names,
             llm_name='llm2',
-            tool_confirmation_config=tool_confirmation_config,
             agent_config=agent_config,
         ))
 
@@ -204,7 +194,6 @@ class TestCreateAgentContext(unittest.TestCase):
         """测试无效LLM名称抛出异常"""
         llms = [Mock()]
         llm_names = ['llm1']
-        tool_confirmation_config = {}
         agent_config = AgentConfig()
 
         import asyncio
@@ -213,7 +202,6 @@ class TestCreateAgentContext(unittest.TestCase):
                 llms=llms,  # type: ignore
                 llm_names=llm_names,
                 llm_name='invalid_llm',
-                tool_confirmation_config=tool_confirmation_config,
                 agent_config=agent_config,
             ))
 
