@@ -435,12 +435,21 @@ class ReasoningContentWidget(Static):
         """更新思考消息显示"""
         content_to_display = self.content_str.strip()
 
-        if not self.is_expanded:
+        if self.is_expanded:
+            # 展开状态：直接使用Syntax渲染markdown，不使用Panel
+            syntax = Syntax(
+                content_to_display,
+                lexer="markdown",
+                theme="nord-darker",
+                background_color="#2E3440",
+                word_wrap=True,
+            )
+            self.update(syntax)
+        else:
             lines = [line for line in content_to_display.splitlines() if line]
-            # [TODO] 使用正确的反转义措施
-            content_to_display = "\n".join(lines[-2:]).replace("\\", "").replace("[", "")
-
-        self.update(escape(content_to_display))
+            truncated_content = "\n".join(lines[-2:]) if lines else ""
+            text = Text(truncated_content)
+            self.update(text)
 
 
 class NormalContentWidget(Static):
