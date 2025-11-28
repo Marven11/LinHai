@@ -72,7 +72,7 @@ default_llm = "test"
                 manager = manager[0]
             
             # 创建SubAgent
-            result = await manager.create_subagent("clarifier", "test-agent", "睡眠5秒然后退出", max_answer_times=None)
+            result = await manager.create_subagent("violation_checker", "test-agent", "睡眠5秒然后退出", max_answer_times=None)
             self.assertIn("成功创建SubAgent test-agent", result)
             self.assertIn("test-agent", manager.subagents)
             
@@ -104,10 +104,10 @@ default_llm = "test"
                 manager = manager[0]
             
             # 创建第一个
-            await manager.create_subagent("clarifier", "duplicate", "任务", max_answer_times=None)
+            await manager.create_subagent("violation_checker", "duplicate", "任务", max_answer_times=None)
             
             # 尝试创建第二个同名
-            result = await manager.create_subagent("dummy", "duplicate", "任务", max_answer_times=None)
+            result = await manager.create_subagent("git_diff_reviewer", "duplicate", "任务", max_answer_times=None)
             self.assertIn("已存在", result)
         
         asyncio.run(run_test())

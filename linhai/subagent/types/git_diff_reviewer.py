@@ -99,47 +99,50 @@ class GitDiffReviewPlugin(Plugin):
 
         return None
 
-    def _get_new_files_content(self) -> str:
-        """获取新增文件的内容，使用--porcelain获取列表并解析。"""
+    def _read_single_file_content(self, filename: str) -> str | None:
+        """读取单个文件内容，返回格式化字符串或None（如果跳过）。"""
+        # 跳过文件夹路径，确保不尝试读取文件夹
+        if os.path.isdir(filename):
+            return None
+        
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                content = f.read()
+            return f"**新增文件: {filename}**\n```\n{content}\n```"
+        except (OSError, UnicodeDecodeError):
+            return f"**新增文件: {filename}**\n(无法读取文件内容)"
+
+    def _get_new_files_content(self) -> str | None:
+        """获取新增文件的内容，使用git ls-files来尊重.gitignore。"""
         if not os.path.exists(".git"):
-            return ""
+            return None
 
         try:
+            # 获取所有未跟踪且未被忽略的文件（包括文件夹中的文件）
             result = subprocess.run(
-                ["git", "status", "--porcelain"],
+                ["git", "ls-files", "--others", "--exclude-standard"],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-            status_lines = result.stdout.strip().split("\n")
+            files = result.stdout.strip().split("\n")
         except (subprocess.CalledProcessError, FileNotFoundError):
-            return ""
+            return None
 
         new_files_content = []
-        for line in status_lines:
-            if not line:
+        for filename in files:
+            if not filename:  # 跳过空行
                 continue
-            status = line[:2]
-            filename = line[3:].strip().strip('"')
+            content = self._read_single_file_content(filename)
+            if content:
+                new_files_content.append(content)
 
-            if status == "??":
-                try:
-                    with open(filename, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        new_files_content.append(
-                            f"**新增文件: {filename}**\n```\n{content}\n```"
-                        )
-                except (OSError, UnicodeDecodeError):
-                    new_files_content.append(
-                        f"**新增文件: {filename}**\n(无法读取文件内容)"
-                    )
+        return "\n\n".join(new_files_content)
 
-        return "\n\n".join(new_files_content) if new_files_content else ""
-
-    def _get_deleted_files_list(self) -> str:
+    def _get_deleted_files_list(self) -> str | None:
         """获取删除文件的列表，包括暂存区和工作区删除。"""
         if not os.path.exists(".git"):
-            return ""
+            return None
 
         try:
             result = subprocess.run(
@@ -150,7 +153,7 @@ class GitDiffReviewPlugin(Plugin):
             )
             status_lines = result.stdout.strip().split("\n")
         except (subprocess.CalledProcessError, FileNotFoundError):
-            return ""
+            return None
 
         deleted_files = []
         for line in status_lines:
@@ -218,9 +221,15 @@ class GitDiffReviewPlugin(Plugin):
         if deleted_files_list:
             full_diff_content += f"\n\n# 删除文件\n\n{deleted_files_list}"
 
-        task_message = GIT_DIFF_REVIEWER_PROMPT.format(
-            git_diff=full_diff_content
-        )
+        task_message = f"""# Git Diff审查任务
+
+请审查以下git diff内容，检查代码变更是否符合要求：
+
+```diff
+{full_diff_content}
+```
+
+请根据系统提示中的要求进行审查，发现问题时使用request_clarification工具质问。"""
 
         asyncio.create_task(
             subagent_manager.create_subagent(

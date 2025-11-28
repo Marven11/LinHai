@@ -253,13 +253,11 @@ class SubAgentManager:
         from .types import (
             ViolationCheckerSubAgent,
             GitDiffReviewerSubAgent,
-            ClarifierSubAgent,
         )
         
         SUBAGENT_CREATORS = {
             "violation_checker": ViolationCheckerSubAgent,
             "git_diff_reviewer": GitDiffReviewerSubAgent,
-            "clarifier": ClarifierSubAgent,
         }
         
         if agent_type not in SUBAGENT_CREATORS:

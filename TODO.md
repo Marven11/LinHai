@@ -2,12 +2,8 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] 你上一个commit重构错误：
-  - 不应该保留CLARIFIER，只应该保留violation checker和git diff reviewer
-  - 而且violation checker+git diff reviewer的system prompt和user message prompt混在一起了
-    - system prompt保留和checker本身相关的内容，user message prompt保留和当前任务相关的内容
-- [ ] GitDiffReviewPlugin的_get_new_files_content没有处理新增文件夹的情况
-  - 尊重.gitignore: 可能需要通过git查看新文件内容以尊重.gitignore，次解为使用第三方库解析.gitignore, 不要手动解析！
+- [ ] 清理pyright和pylint警告，修复所有unittest
+  - 你可能需要对架构进行一些改动
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -15,7 +11,6 @@
 
 # 暂时搁置
 
-- [ ] 清理pylint警告
 - [ ] 修改架构，现在的Answer只能被打断生成，但是不能被截断
   - 我们需要添加一个架构让Answer支持截断，相当于提前帮LLM结束输出
   - 作用：有时候LLM会调用大量工具，但是我们希望让其在调用5个工具之后停下来，我们可以通过提前截断手动停下LLM输出
@@ -42,6 +37,7 @@
     - 弹一条UI消息
   - 你需要修改extract_tool_calls_with_errors添加参数，以重用代码
 - [ ] 在“错误：有未解答的澄清问题，禁止使用”后面加上澄清问题的ID和内容，避免agent手动调用工具，产生多余工具调用
+- [ ] 在“与已调用的工具存在冲突，已阻止调用”加上是和什么工具冲突
 - [ ] OpenAiAnswer的estimated_usage会在哪里被用到？没有用则删除
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent

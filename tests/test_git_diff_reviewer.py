@@ -1,7 +1,7 @@
 """测试Git diff审查插件。"""
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 import asyncio
 
 from linhai.subagent.types.git_diff_reviewer import GitDiffReviewPlugin
@@ -35,20 +35,20 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.group_chat.register_member("subagent_manager", subagent_manager)
         return subagent_manager
 
-    def _setup_git_mocks(self, mock_exists, mock_run, git_diff=None, status_output=None):
+    def _setup_git_mocks(self, mock_exists, mock_run, git_diff=None, ls_files_output=None):
         """设置git相关命令的mock。"""
         mock_exists.return_value = True
         
         # 默认的mock返回值
         if git_diff is None:
             git_diff = self.mock_git_diff
-        if status_output is None:
-            status_output = self.mock_status_empty
+        if ls_files_output is None:
+            ls_files_output = ""
             
         mock_run.side_effect = [
             Mock(stdout=git_diff, returncode=0),      # git diff --cached
             Mock(stdout=self.mock_empty, returncode=0), # git diff
-            Mock(stdout=status_output, returncode=0)   # git status --porcelain
+            Mock(stdout=ls_files_output, returncode=0)  # git ls-files --others --exclude-standard
         ]
 
     def test_plugin_initialization(self):
@@ -262,7 +262,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         
         # 第二次调用：删除文件列表变化，应该重新启动审查
         changed_status = " D deleted_file.py\n D another_deleted_file.py"
-        self._setup_git_mocks(mock_exists, mock_run, status_output=changed_status)
+        self._setup_git_mocks(mock_exists, mock_run, ls_files_output=changed_status)
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -277,6 +277,76 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         lifecycle.register_before_waiting_user.assert_called_once_with(
             self.plugin.before_waiting_user
         )
+
+
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_get_new_files_content_with_folder(self, mock_exists, mock_run):
+        """测试_get_new_files_content方法处理新增文件夹。"""
+        mock_exists.return_value = True
+        
+        # 模拟git ls-files返回多个文件（包括文件夹中的文件）
+        mock_run.return_value = Mock(
+            stdout="new_file.py\nfolder/another_file.py\nsubdir/test.txt\n",
+            returncode=0
+        )
+        
+        # 模拟文件读取
+        with patch("builtins.open", mock_open(read_data="file content")) as mock_file:
+            result = self.plugin._get_new_files_content()
+            
+            # 验证调用了git ls-files命令
+            mock_run.assert_called_once_with(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # 验证结果包含所有文件
+            self.assertIn("**新增文件: new_file.py**", result)
+            self.assertIn("**新增文件: folder/another_file.py**", result)
+            self.assertIn("**新增文件: subdir/test.txt**", result)
+            self.assertIn("file content", result)
+
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_get_new_files_content_respects_gitignore(self, mock_exists, mock_run):
+        """测试_get_new_files_content方法尊重.gitignore。"""
+        mock_exists.return_value = True
+        
+        # 模拟git ls-files返回空（所有文件都被.gitignore忽略）
+        mock_run.return_value = Mock(stdout="", returncode=0)
+        
+        result = self.plugin._get_new_files_content()
+        
+        # 验证调用了git ls-files命令
+        mock_run.assert_called_once_with(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        # 验证返回空字符串
+        self.assertEqual(result, "")
+
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_get_new_files_content_with_unreadable_files(self, mock_exists, mock_run):
+        """测试_get_new_files_content方法处理无法读取的文件。"""
+        mock_exists.return_value = True
+        
+        # 模拟git ls-files返回文件
+        mock_run.return_value = Mock(stdout="unreadable_file.bin\n", returncode=0)
+        
+        # 模拟文件读取失败
+        with patch("builtins.open", side_effect=OSError("Permission denied")):
+            result = self.plugin._get_new_files_content()
+            
+            # 验证结果包含无法读取的提示
+            self.assertIn("**新增文件: unreadable_file.bin**", result)
+            self.assertIn("(无法读取文件内容)", result)
 
 
 if __name__ == "__main__":

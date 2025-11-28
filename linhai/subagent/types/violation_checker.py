@@ -8,7 +8,7 @@ from linhai.llm import ToolCallMessage
 from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.agent.plugin import Plugin
 from linhai.subagent.main import SubAgent
-from .prompts import VIOLATION_CHECKER_PROMPT
+from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PROMPT
 
 if TYPE_CHECKING:
     import linhai.agent
@@ -47,7 +47,7 @@ class ViolationCheckerSubAgent(SubAgent):
             to_tools_info(self.toolset.get_tools()),
             ensure_ascii=False,
         )
-        return VIOLATION_CHECKER_PROMPT.replace("{|TOOLS|}", tools_json)
+        return VIOLATION_CHECKER_SYSTEM_PROMPT.replace("{|TOOLS|}", tools_json)
 
 
 class ViolationCheckerPlugin(Plugin):
@@ -121,7 +121,7 @@ class ViolationCheckerPlugin(Plugin):
 - 工具参数: {tool_call.function_arguments}
 - 错误信息: {error}"""
 
-        task_message = VIOLATION_CHECKER_PROMPT.format(
+        task_message = VIOLATION_CHECKER_USER_PROMPT.format(
             agent_full_response=full_response, check_context=check_context
         )
 
@@ -145,7 +145,7 @@ class ViolationCheckerPlugin(Plugin):
 - 工具参数: {tool_call.function_arguments}
 - 与以下工具冲突: {', '.join(conflicting_tools)}"""
 
-        task_message = VIOLATION_CHECKER_PROMPT.format(
+        task_message = VIOLATION_CHECKER_USER_PROMPT.format(
             agent_full_response=full_response, check_context=check_context
         )
 
