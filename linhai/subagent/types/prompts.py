@@ -8,6 +8,23 @@ TOOLCALL_PROMPT = """
   - 不要使用诸如"工具输出应为"、"准备/示例调用工具"、"工具的用法应为"、"你需要我调用...吗"等语句
 - 作为SubAgent你只能每次调用一个工具
 
+# TOOL USE
+
+## 工具调用格式
+
+使用Markdown JSON代码块调用工具：
+- 为了和普通的JSON数据做区分，代码块的语言标记为`json toolcall`，普通的JSON代码块使用`json`
+- 一个JSON代码块中只能有一个JSON对象，不兼容JSON line!
+
+```json toolcall
+{"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2"}}
+```
+
+作为SubAgent，你每次只能调用一个工具
+
+# 所有工具
+
+{|TOOLS|}
 
 # 工具调用规则
 
