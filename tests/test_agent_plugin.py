@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin, StopFastAgentPlugin, PreventToolOutputPlugin
+from linhai.agent.plugin import BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin, PromptFastAgentPlugin, PreventToolOutputPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import OpenAi, ChatMessage
 import pathlib
@@ -472,8 +472,8 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         # 不应该添加警告消息
         self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
-class TestStopFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
-    """测试StopFastAgentPlugin类。"""
+class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PromptFastAgentPlugin类。"""
 
     def setUp(self):
         """设置测试环境。"""
@@ -484,7 +484,7 @@ class TestStopFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
-        self.plugin = StopFastAgentPlugin(self.group_chat)
+        self.plugin = PromptFastAgentPlugin(self.group_chat)
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
         self.tool_calls = []

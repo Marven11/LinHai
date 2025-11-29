@@ -5,7 +5,7 @@ import os
 import pty
 import signal
 import subprocess
-import time
+
 import pyte
 
 from typing import List

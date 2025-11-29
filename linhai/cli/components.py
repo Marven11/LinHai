@@ -571,3 +571,56 @@ class MessageWidget(Static):
             if self.current_line.endswith("\n"):
                 self.current_line = ""
             return line, None
+
+
+class FooterWidget(Static):
+    """CLI底栏组件，自动刷新显示token和消息统计信息"""
+
+    DEFAULT_CSS = """
+    FooterWidget {
+        color: #474e5b;
+    }
+    """
+
+    def __init__(self, group_chat, token_manager, use_nerd_font=False):
+        super().__init__("")
+        self.group_chat = group_chat
+        self.token_manager = token_manager
+        self.use_nerd_font = use_nerd_font
+        self.current_answer_token = 0
+        self.timer = None
+
+    def on_mount(self):
+        """组件挂载时启动定时刷新"""
+        self.timer = self.set_interval(1.0, self.update_display)
+
+    def on_unmount(self):
+        """组件卸载时停止定时器，避免内存泄漏"""
+        if self.timer:
+            self.timer.stop()
+
+    def update_token_info(self, current_answer_token: int):
+        """更新当前answer的token用量"""
+        self.current_answer_token = current_answer_token
+
+    def update_display(self):
+        """
+        更新底栏显示内容。
+
+        自动获取当前token用量和消息统计信息，并在没有token信息时显示默认消息。
+        优化刷新逻辑，只在需要时更新显示。
+        """
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 遵循fail fast原则，但提供更优雅的错误处理
+        if agent is None:
+            self.update("Agent未初始化")
+            return
+
+        display_text = self.token_manager.get_token_display_text(
+            agent, self.current_answer_token, self.use_nerd_font
+        )
+
+        self.update(display_text)

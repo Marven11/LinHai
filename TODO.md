@@ -2,21 +2,24 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] 在SubAgent._execute_tool_calls执行工具失败的时候弹一条UI消息到SubAgent Tab
+- [x] 在SubAgent._execute_tool_calls执行工具失败的时候弹一条UI消息到SubAgent Tab
   - 你可能需要修改当前架构，让TUI支持接受对应消息
   - 消息样式和Agent Tab相同
-- [ ] 让compress_history_range在启动时显示一个ui_log，报告当前共有几条消息
-- [ ] 重构CLI的底栏
+- [x] 让compress_history_range在启动时显示一个ui_log，报告当前共有几条消息
+- [x] 重构CLI的底栏
   - 应该抽象为一个Widget自己刷新自己
   - 这个Widget每0.5秒刷新一次，自动获取当前的message量
   - 每个Answer的token用量等信息由CLIApp传给这个Widget
-- [ ] 给一个配置让CLI底栏使用nerd font中的icon
+- [x] 给一个配置让CLI底栏使用nerd font中的icon
   - 默认关闭，用户可以通过`[cli]`中的配置项打开
   - https://www.nerdfonts.com/cheat-sheet
     - 图标\uf49b代表缓存
     - 图标\uf27a代表消息
     - 图标\uf063代表in
     - 图标\uf062代表out
+- [x] 限制subagent可以提出的clarifier数量
+  - 默认每个subagent最多提出两个
+- [x] 删除没被使用的exception
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -40,7 +43,6 @@
 - [ ] 修改GitDiffReviewPlugin
   - 如果Agent没有使用修改文件相关的工具则不启动subagent检查（因为git修改不是agent产生的）
     - 记得弹一条UI消息
-  - 明确指示“在质问中加上‘除非现在以及未来都完全不需要修改，否则立即修改并报告已经完成！’”
 - [ ] 添加假设颠覆法
 - [ ] 添加响应式 SubAgent
   - 避免拍马屁

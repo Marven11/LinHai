@@ -175,6 +175,16 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
     然后删除指定范围内的消息。
     """
 
+    from linhai.utils import CliRuntimeNotice
+
+    current_message_count = len(agent.message_processor.messages)
+    await agent.group_chat.send_if_exists(
+        "ui_log",
+        CliRuntimeNotice(
+            level="INFO", content=f"启动历史压缩，当前共有{current_message_count}条消息"
+        ),
+    )
+
     passed, error_msg = _check_token_threshold(agent)
     if not passed:
         agent.message_processor.append_message(RuntimeMessage(error_msg))

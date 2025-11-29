@@ -1,13 +1,10 @@
 """测试SubAgentCollaborationPlugin"""
 
 import unittest
-import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
 from linhai.subagent.types.violation_checker import ViolationCheckerPlugin
-from linhai.agent.base import RuntimeMessage
-from linhai.llm import ToolCallMessage, Answer
-from linhai.utils import CliRuntimeNotice
+from linhai.llm import ToolCallMessage
 
 
 class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
@@ -27,6 +24,7 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat = MagicMock()
         # 根据成员类型返回不同的Mock
         def get_members_side_effect(member_type, member_class=None):
+            _ = member_class  # 使用参数以消除警告
             if member_type == "subagent_manager":
                 return self.mock_subagent_manager
             else:
@@ -141,6 +139,7 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.create_task")
     async def test_check_violations_success_with_patch(self, mock_create_task):
         """测试规则检查成功启动subagent（使用patch）。"""
+        _ = mock_create_task  # 使用参数以消除警告
         mock_subagent_manager = MagicMock()
         mock_subagent_manager.create_subagent = AsyncMock()
         

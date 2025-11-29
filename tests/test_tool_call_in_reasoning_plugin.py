@@ -2,11 +2,9 @@
 
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
-import re
 
 from linhai.agent.plugin import ToolCallInReasoningPlugin
-from linhai.llm import Answer, AnswerToken, AnswerTokenUsage
-from linhai.utils import CliRuntimeNotice
+from linhai.llm import Answer
 
 
 class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):

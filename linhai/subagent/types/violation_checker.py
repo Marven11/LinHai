@@ -43,6 +43,7 @@ class ViolationCheckerSubAgent(SubAgent):
         """返回违规检查专用的系统消息prompt。"""
         import json
         from linhai.tool.base import to_tools_info
+
         tools_json = json.dumps(
             to_tools_info(self.toolset.get_tools()),
             ensure_ascii=False,
@@ -160,4 +161,3 @@ class ViolationCheckerPlugin(Plugin):
         """注册到lifecycle回调。"""
         lifecycle.register_tool_failure(self.tool_failure)
         lifecycle.register_tool_conflict(self.tool_conflict)
-

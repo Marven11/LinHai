@@ -1,8 +1,7 @@
 """测试token缓存估算功能。"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock
-from linhai.llm import OpenAi, ChatMessage, SystemMessage, AnswerTokenUsage
+from linhai.llm import OpenAi, ChatMessage, AnswerTokenUsage
 
 
 class TestTokenCache(unittest.TestCase):

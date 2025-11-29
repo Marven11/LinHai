@@ -17,17 +17,17 @@ from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
+from linhai.config import CLIConfig
 
-# Import components from the components module
 from .components import (
     RainbowAsciiArt,
     AnimatedWelcomeWidget,
     RuntimeMessageWidget,
     MessageWidget,
     ReasoningContentWidget,
+    FooterWidget,
 )
 
-# Import new managers
 from .token_manager import TokenManager
 
 ASCII_ART = r"""
@@ -76,7 +76,7 @@ class CLIApp(App):
         background: #2E3440;
         border: solid $primary;
     }
-    #token-usage {
+    FooterWidget {
         width: 100%;
         height: 1;
         background: #101520;
@@ -114,6 +114,7 @@ class CLIApp(App):
     def __init__(
         self,
         group_chat: GroupChat,
+        cli_config: CLIConfig,
         init_messages: list[str] | None = None,
     ):
         super().__init__()
@@ -144,6 +145,8 @@ class CLIApp(App):
         self.command_completions = self._generate_command_completions()
         self.autocomplete = None
 
+        self.cli_config = cli_config
+
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
@@ -153,7 +156,11 @@ class CLIApp(App):
                         yield msg
 
                 yield Input(placeholder="输入消息...", id="input")
-                yield Static("", id="token-usage")
+                yield FooterWidget(
+                    self.group_chat,
+                    self.token_manager,
+                    use_nerd_font=self.cli_config.use_nerd_font,
+                )
 
             with TabPane("SubAgent", id="subagent-tab"):
                 with VerticalScroll(id="subagent-container"):
@@ -315,12 +322,14 @@ class CLIApp(App):
                     if subagent_name in self.subagent_current_messages:
                         self.subagent_current_messages[subagent_name].update_display()
                         del self.subagent_current_messages[subagent_name]
-                elif message_type == "runtime_notice":
-                    level = output.get("level", "INFO")
-                    widget = RuntimeMessageWidget(level=level, content=content)
-                    subagent_container.mount(widget)
                 else:
                     assert False, f"Unsupported Type: {message_type}"
+            elif isinstance(output, CliRuntimeNotice):
+                subagent_container = self.query_one("#subagent-container")
+                widget = RuntimeMessageWidget(
+                    level=output.level, content=output.content
+                )
+                subagent_container.mount(widget)
             else:
                 raise RuntimeError(
                     f"Unknown Type in subagent_message: {type(output)=} {output=}"
@@ -477,14 +486,8 @@ class CLIApp(App):
 
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""
-        agent = self.group_chat.get_members("agent", Agent)
-        display_text = self.token_manager.get_token_display_text(
-            agent, current_answer_token
-        )
-
-        token_display = self.query_one("#token-usage")
-        assert isinstance(token_display, Static)
-        token_display.update(display_text)
+        footer_widget = self.query_one(FooterWidget)
+        footer_widget.update_token_info(current_answer_token)
 
     def _trim_messages_if_needed(self) -> None:
         """如果消息数量超过阈值，修剪旧消息"""
@@ -519,8 +522,6 @@ class CLIApp(App):
             ).disconnect_all_mcp_servers()
             self.app.exit()
 
-
-
     def should_auto_scroll(self):
         container = self.query_one("#chat-container")
         return (
@@ -540,8 +541,6 @@ class CLIApp(App):
         """处理消息提交"""
         input_element = self.query_one("#input")
         message_text = input_element.value.strip()  # type: ignore
-
-
 
         if message_text:
             container = self.query_one("#chat-container")

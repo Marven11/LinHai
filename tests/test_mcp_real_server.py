@@ -4,7 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from linhai.agent import create_agent, Agent
+from linhai.agent.create import create_agent_from_config
+from linhai.agent import Agent
+from linhai.config import load_config
 from linhai.group_chat import GroupChat
 
 
@@ -51,7 +53,8 @@ server_script_path = "{server_path}"
         config_path = self.create_test_config(config_content)
         
         # Create agent with real MCP server
-        agent = await create_agent(self.group_chat, config_path)
+        config = load_config(config_path)
+        agent = await create_agent_from_config(self.group_chat, config)
         
         # Verify agent was created successfully
         self.assertIsInstance(agent, Agent)

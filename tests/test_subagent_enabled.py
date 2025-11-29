@@ -1,14 +1,13 @@
 """测试SubAgent开关功能。"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
 import tempfile
 import os
 
-from linhai.config import load_config, Config
-from linhai.agent.create import create_agent
-from linhai.group_chat import GroupChat
+from linhai.config import load_config
+from linhai.agent.create import create_agent_from_config
 
 
 class TestSubAgentEnabled(unittest.IsolatedAsyncioTestCase):
@@ -121,7 +120,8 @@ model = "test-model"
         
         try:
             # 创建Agent
-            agent = await create_agent(self.group_chat, config_path, None)
+            config = load_config(config_path)
+            agent = await create_agent_from_config(self.group_chat, config, None)
             
             # 验证SubAgent相关组件没有被创建
             # SubAgentManager不应该被注册到group_chat
@@ -153,7 +153,8 @@ model = "test-model"
         
         try:
             # 创建Agent
-            agent = await create_agent(self.group_chat, config_path, None)
+            config = load_config(config_path)
+            agent = await create_agent_from_config(self.group_chat, config, None)
             
             # 验证SubAgent相关组件被创建
             # SubAgentManager应该被注册到group_chat

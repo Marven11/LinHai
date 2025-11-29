@@ -118,6 +118,16 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_output_length={self.max_output_length})"
 
 
+class CLIConfig(BaseModel):
+    """CLI配置类型定义。"""
+
+    use_nerd_font: bool = Field(default=False)
+
+    def __str__(self) -> str:
+        """返回CLI配置的字符串表示"""
+        return f"CLIConfig(use_nerd_font={self.use_nerd_font})"
+
+
 class SubAgentConfig(BaseModel):
     """SubAgent配置类型定义。"""
 
@@ -137,6 +147,7 @@ class Config(BaseModel):
     memory: Optional[MemoryConfig] = None
     tools: Optional[ToolConfig] = None
     subagent: Optional[SubAgentConfig] = None
+    cli: CLIConfig = Field(default_factory=CLIConfig)
 
     @property
     def subagent_enabled(self) -> bool:
@@ -161,10 +172,7 @@ def load_config(config_path: Union[str, Path]) -> Config:
     with config_path.open("rb") as f:
         config_data = tomllib.load(f)
 
-    try:
-        config = Config(**config_data)
-    except Exception as e:
-        raise ConfigValidationError(f"配置验证失败: {str(e)}") from e
+    config = Config(**config_data)
 
     config_dir = config_path.parent
     if config.agent and config.agent.mcp:

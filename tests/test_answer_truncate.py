@@ -1,9 +1,8 @@
 """测试Answer的truncate功能。"""
 
 import unittest
-from unittest.mock import MagicMock, AsyncMock, patch
-from linhai.llm import OpenAiAnswer, AnswerToken, AnswerTokenUsage
-import asyncio
+from unittest.mock import MagicMock, AsyncMock
+from linhai.llm import OpenAiAnswer
 
 
 class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):

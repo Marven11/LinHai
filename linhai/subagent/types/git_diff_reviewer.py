@@ -45,6 +45,7 @@ class GitDiffReviewerSubAgent(SubAgent):
         """返回Git diff审查专用的系统消息prompt。"""
         import json
         from linhai.tool.base import to_tools_info
+
         tools_json = json.dumps(
             to_tools_info(self.toolset.get_tools()),
             ensure_ascii=False,
@@ -53,15 +54,17 @@ class GitDiffReviewerSubAgent(SubAgent):
 
     async def _handle_execution_cycle(self) -> bool:
         result = await super()._handle_execution_cycle()
-        self.messages.append(RuntimeMessage("""
+        self.messages.append(
+            RuntimeMessage(
+                """
 请按照以下要求回复agent:
 
 - 如果agent说某个功能因为改动太大等原因不需要在现在更改，质问“这是用户自己的要求还是你编造的？”，并要求“立即修改！”
 - 如果agent说某个修改会破坏前向兼容性，质问“这会修改外部行为吗？必须重构内部函数！”
-"""))
+"""
+            )
+        )
         return result
-
-
 
 
 class GitDiffReviewPlugin(Plugin):
@@ -113,7 +116,7 @@ class GitDiffReviewPlugin(Plugin):
         # 跳过文件夹路径，确保不尝试读取文件夹
         if os.path.isdir(filename):
             return None
-        
+
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -177,7 +180,9 @@ class GitDiffReviewPlugin(Plugin):
                 deleted_files.append(filename)
 
         if deleted_files:
-            return "**删除文件列表:**\n" + "\n".join(f"- {filename}" for filename in deleted_files)
+            return "**删除文件列表:**\n" + "\n".join(
+                f"- {filename}" for filename in deleted_files
+            )
         return ""
 
     async def before_waiting_user(self, agent: "linhai.agent.Agent"):
@@ -190,13 +195,15 @@ class GitDiffReviewPlugin(Plugin):
         deleted_files_list = self._get_deleted_files_list()
 
         # 检查是否与上一次完全相同
-        if (self._last_git_diff == git_diff and 
-            self._last_new_files_content == new_files_content and
-            self._last_deleted_files_list == deleted_files_list):
+        if (
+            self._last_git_diff == git_diff
+            and self._last_new_files_content == new_files_content
+            and self._last_deleted_files_list == deleted_files_list
+        ):
             # 没有变化，发送UI消息通知用户
             no_change_msg = CliRuntimeNotice(
-                level="INFO", 
-                content="未触发SubAgent审核：检测到与上一次完全相同的git更改，无需重复审查"
+                level="INFO",
+                content="未触发SubAgent审核：检测到与上一次完全相同的git更改，无需重复审查",
             )
             await self.group_chat.send_if_exists("ui_log", no_change_msg)
             return  # 完全没有变化，不启动SubAgent

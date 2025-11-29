@@ -10,7 +10,7 @@ import argparse
 import unittest
 import sys
 
-from linhai.agent.main import create_agent
+
 from linhai.cli import CLIApp
 from linhai.group_chat import GroupChat
 
@@ -24,14 +24,43 @@ def run_tests():
     return result.wasSuccessful()
 
 
+async def _create_agent_from_config(
+    group_chat: GroupChat, config, llm_name: str | None = None
+):
+    """从配置对象创建Agent
+
+    Args:
+        group_chat: GroupChat实例
+        config: 配置对象
+        llm_name: 指定的LLM名称（可选）
+
+    Returns:
+        Agent实例
+    """
+    from linhai.agent.create import create_agent_from_config
+
+    return await create_agent_from_config(group_chat, config, llm_name)
+
+
 async def run(args, init_messages: list[str] | None):
+    """运行LinHai应用"""
+    from linhai.config import load_config
 
     group_chat = GroupChat()
-    _agent = await create_agent(group_chat, args.config.expanduser(), args.llm)
+
+    # 读取配置
+    config = load_config(args.config.expanduser())
+
+    # 创建Agent
+    _agent = await _create_agent_from_config(group_chat, config, args.llm)
+
+    # 创建CLIApp
     app = CLIApp(
         group_chat=group_chat,
         init_messages=init_messages,
+        cli_config=config.cli,
     )
+
     await app.run_async()
     return app.return_code
 

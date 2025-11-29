@@ -51,10 +51,12 @@ class TokenManager:
                 return formatted[:-3] + "b"
             return formatted
 
-    def get_token_display_text(self, agent: Agent, current_answer_token: int) -> str:
+    def get_token_display_text(
+        self, agent: Agent, current_answer_token: int, use_nerd_font: bool = False
+    ) -> str:
         """获取token使用量显示文本"""
         if self.cumulative_token_usage is None:
-            return "Token usage: Not available"
+            return ""
 
         input_tokens = self.cumulative_token_usage["input_tokens"]
         output_tokens = self.cumulative_token_usage["output_tokens"]
@@ -71,19 +73,34 @@ class TokenManager:
 
         message_count = len(agent.message_processor.messages)
 
+        if use_nerd_font:
+            msg_piece = f"\uf27a {message_count}"
+            cache_symbol = " \uf49b "
+            in_symbol = "\uf063 "
+            out_symbol = "\uf062 "
+        else:
+            msg_piece = f"{message_count} msg"
+            cache_symbol = " cached"
+            in_symbol = " in "
+            out_symbol = " out "
+
         display_text_pieces = [
-            f"{message_count} msgs",
+            (msg_piece),
         ]
 
         if input_tokens > 0 and cached_input_tokens > 0:
             cache_percentage = int((cached_input_tokens / input_tokens) * 100)
             display_text_pieces.append(
-                f"in {self._format_token_number(input_tokens)} (~{cache_percentage}% cached)"
+                f"{in_symbol}{self._format_token_number(input_tokens)}(~{cache_percentage}%{cache_symbol})"
             )
         else:
-            display_text_pieces.append(f"in {self._format_token_number(input_tokens)}")
+            display_text_pieces.append(
+                f"{in_symbol}{self._format_token_number(input_tokens)}"
+            )
 
-        display_text_pieces.append(f"out {self._format_token_number(output_tokens)}")
+        display_text_pieces.append(
+            f"{out_symbol}{self._format_token_number(output_tokens)}"
+        )
 
         if token_limit and token_limit > 0:
             percentage = (current_answer_token / token_limit) * 100

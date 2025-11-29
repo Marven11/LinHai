@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.agent.create import (
-    create_agent,
+    create_agent_from_config,
     _create_llm_instances,
     _create_agent_context,
     _create_tool_manager,
@@ -24,23 +24,35 @@ class TestCreateAgent(unittest.TestCase):
         self.group_chat = Mock(spec=GroupChat)
         self.config_path = Path("test_config.toml")
 
-    @patch('linhai.agent.create.load_config')
     @patch('linhai.agent.create._create_llm_instances')
     @patch('linhai.agent.create._create_agent_context')
     @patch('linhai.agent.create._create_tool_manager')
     @patch('linhai.agent.create._create_init_messages')
     @patch('linhai.agent.main.Agent')
     def test_create_agent_success(self, mock_agent, mock_init_messages, mock_tool_manager, 
-                                      mock_agent_context, mock_llm_instances, mock_load_config):
+                                      mock_agent_context, mock_llm_instances):
         """测试成功创建Agent"""
-        # 模拟配置
+        # 模拟配置对象
         mock_config = Mock()
-        mock_config.llm = [Mock(name='test_llm')]
+        mock_llm_config = Mock()
+        mock_llm_config.name = "test_llm"
+        mock_llm_config.base_url = "http://test.com"
+        mock_llm_config.api_key = "test_key"
+        mock_llm_config.model = "test-model"
+        mock_llm_config.model_dump.return_value = {
+            "client_options": {},
+            "completion_options": {},
+            "token_limit": 1000,
+            "compatibility": "openai"
+        }
+        
+        mock_config.llm = [mock_llm_config]
         mock_config.agent = Mock()
         mock_config.tools = Mock()
         mock_config.memory = Mock()
-        mock_config.memory.file_path = 'memory.md'
-        mock_load_config.return_value = mock_config
+        mock_config.memory.file_path = "memory.md"
+        mock_config.subagent = Mock()
+        mock_config.cli = Mock()
 
         # 模拟返回值
         from linhai.llm import OpenAi
@@ -65,27 +77,54 @@ class TestCreateAgent(unittest.TestCase):
 
         # 调用函数
         import asyncio
-        result = asyncio.run(create_agent(self.group_chat, self.config_path))
+        result = asyncio.run(create_agent_from_config(self.group_chat, mock_config))
 
         # 验证调用
-        mock_load_config.assert_called_once_with(self.config_path)
-        mock_llm_instances.assert_called_once_with(mock_config.llm)
+        # 注意：现在使用create_agent_from_config直接传入config对象，不需要调用load_config
+        mock_llm_instances.assert_called_once()
         mock_agent_context.assert_called_once()
         mock_tool_manager.assert_called_once()
         mock_init_messages.assert_called_once()
         mock_agent.assert_called_once()
         self.assertEqual(result, mock_agent_instance)
 
-    @patch('linhai.agent.create.load_config')
-    def test_create_agent_with_llm_name(self, mock_load_config):
+    def test_create_agent_with_llm_name(self):
         """测试指定LLM名称创建Agent"""
+        # 模拟配置对象
         mock_config = Mock()
-        mock_config.llm = [Mock(name='llm1'), Mock(name='llm2')]
+        
+        # 创建两个LLM配置Mock
+        mock_llm_config1 = Mock()
+        mock_llm_config1.name = "llm1"
+        mock_llm_config1.base_url = "http://test1.com"
+        mock_llm_config1.api_key = "test_key1"
+        mock_llm_config1.model = "test-model1"
+        mock_llm_config1.model_dump.return_value = {
+            "client_options": {},
+            "completion_options": {},
+            "token_limit": 1000,
+            "compatibility": "openai"
+        }
+        
+        mock_llm_config2 = Mock()
+        mock_llm_config2.name = "llm2"
+        mock_llm_config2.base_url = "http://test2.com"
+        mock_llm_config2.api_key = "test_key2"
+        mock_llm_config2.model = "test-model2"
+        mock_llm_config2.model_dump.return_value = {
+            "client_options": {},
+            "completion_options": {},
+            "token_limit": 1000,
+            "compatibility": "openai"
+        }
+        
+        mock_config.llm = [mock_llm_config1, mock_llm_config2]
         mock_config.agent = Mock()
         mock_config.tools = Mock()
         mock_config.memory = Mock()
-        mock_config.memory.file_path = 'memory.md'
-        mock_load_config.return_value = mock_config
+        mock_config.memory.file_path = "memory.md"
+        mock_config.subagent = Mock()
+        mock_config.cli = Mock()
 
         with patch('linhai.agent.create._create_llm_instances') as mock_llm_instances, \
              patch('linhai.agent.create._create_agent_context') as mock_agent_context, \
@@ -114,7 +153,7 @@ class TestCreateAgent(unittest.TestCase):
 
             # 调用函数指定LLM名称
             import asyncio
-            asyncio.run(create_agent(self.group_chat, self.config_path, 'llm2'))
+            asyncio.run(create_agent_from_config(self.group_chat, mock_config, 'llm2'))
 
             # 验证agent_context调用包含正确的llm_name
             call_args = mock_agent_context.call_args

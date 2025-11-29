@@ -116,8 +116,9 @@ class SubagentSystemMessage:
         return json.dumps({"msg": self.msg})
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
-
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
         data = json.loads(json_str)
 
         return cls(
@@ -165,7 +166,7 @@ class ChatMessage:
     def from_json(
         cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
     ):  # pylint: disable=unused-argument
-
+        _ = group_chat  # 使用参数以消除警告
         data = json.loads(json_str)
         return cls(role=data["role"], message=data["message"], name=data.get("name"))
 
@@ -191,6 +192,7 @@ class ToolCallMessage:
             f"function_arguments={self.function_arguments!r}, "
             f"assert_success={self.assert_success!r})"
         )
+
 
 class AnswerToken(BaseModel):
     """LLM回答的token表示，包含推理内容和普通内容。"""

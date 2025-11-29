@@ -7,7 +7,6 @@ from unittest.mock import Mock
 from linhai.llm import (
     SystemMessage,
     ChatMessage,
-    ToolCallMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
 

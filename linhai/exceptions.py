@@ -12,16 +12,8 @@ class LinHaiError(Exception):
         super().__init__(message)
 
 
-class NetworkError(LinHaiError):
-    """网络连接错误"""
-
-
-class LLMResponseError(LinHaiError):
-    """LLM输出格式错误"""
-
-
 class ConfigValidationError(LinHaiError):
     """配置验证失败异常"""
 
 
-__all__ = ["LinHaiError", "NetworkError", "LLMResponseError", "ConfigValidationError"]
+__all__ = ["LinHaiError", "ConfigValidationError"]

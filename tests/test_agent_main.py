@@ -3,12 +3,11 @@
 """
 
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat
 from linhai.agent.base import AgentContext
-from linhai.llm import ChatMessage
 
 
 class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):

@@ -278,8 +278,6 @@ class AgentToolcall:
             self.agent.message_processor.append_message(RuntimeMessage(msg))
             return False
 
-
-
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""
 

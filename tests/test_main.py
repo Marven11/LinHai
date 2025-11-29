@@ -5,12 +5,13 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 from pathlib import Path
 from linhai.main import main
+from linhai.config import Config
 
 
 class TestMainCommandLine(unittest.TestCase):
     """测试main.py的命令行参数"""
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     def test_agent_command_with_message_option(
@@ -43,11 +44,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
-        # 应该被调用为 create_agent(group_chat, config_path)
+        # 应该被调用为 create_agent(group_chat, config)
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
 
 
 
@@ -62,7 +63,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证CLIApp.run_async()被调用
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     def test_agent_command_without_message_option(
@@ -95,11 +96,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
-        # 应该被调用为 create_agent(group_chat, config_path)
+        # 应该被调用为 create_agent(group_chat, config)
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
 
 
 
@@ -114,7 +115,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证CLIApp.run_async()被调用
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     @patch("builtins.open")
@@ -158,11 +159,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
-        # 应该被调用为 create_agent(group_chat, config_path)
+        # 应该被调用为 create_agent(group_chat, config)
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
 
 
 
@@ -181,7 +182,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证CLIApp.run_async()被调用
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     @patch("builtins.open")
@@ -225,11 +226,11 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证 create_agent 被调用，参数为 group_chat 和 config
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
-        # 应该被调用为 create_agent(group_chat, config_path)
+        # 应该被调用为 create_agent(group_chat, config)
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
 
 
 
@@ -249,7 +250,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证CLIApp.run_async()被调用
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("builtins.open")
     def test_agent_command_with_file_option_file_not_found(
@@ -281,7 +282,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证程序以错误代码退出
         mock_exit.assert_called_once_with(1)
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("builtins.open")
     def test_agent_command_with_file_option_read_error(
@@ -311,7 +312,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证程序以错误代码退出
         mock_exit.assert_called_once_with(1)
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     def test_agent_command_with_llm_option(
@@ -348,7 +349,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
 
@@ -364,7 +365,7 @@ class TestMainCommandLine(unittest.TestCase):
         # 验证CLIApp.run_async()被调用
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.main.create_agent")
+    @patch("linhai.main._create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     def test_agent_command_with_llm_and_message_options(
@@ -401,7 +402,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             call_args[0][0], mock_group_chat_instance
         )  # 第一个参数是 group_chat
-        self.assertIsInstance(call_args[0][1], Path)  # 第二个参数是 config path
+        self.assertIsInstance(call_args[0][1], Config)  # 第二个参数是 config object
         self.assertEqual(call_args[0][2], "test_llm")  # 第三个参数是 llm_name
 
 

@@ -21,9 +21,11 @@ def create_clarification_toolset(
         """向Agent请求澄清并等待回复。"""
         clarification_id = generate_id("clarification")
 
-        await clarification_manager.request_clarification(
+        error_message = await clarification_manager.request_clarification(
             clarification_id, question, subagent_name
         )
+        if error_message:
+            return f"请求澄清失败: {error_message}"
 
         answer = await clarification_manager.wait_for_response(clarification_id)
 

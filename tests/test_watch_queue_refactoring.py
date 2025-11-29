@@ -1,12 +1,10 @@
 """测试watch_output_queue重构后的功能"""
 
 import unittest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from linhai.cli.app import CLIApp
 from linhai.group_chat import GroupChat
-from linhai.utils import CliRuntimeNotice
-from linhai.llm import AnswerToken, Answer, AnswerTokenUsage
+from linhai.config import CLIConfig
 
 
 class TestWatchQueueRefactoring(unittest.TestCase):
@@ -15,7 +13,7 @@ class TestWatchQueueRefactoring(unittest.TestCase):
     def setUp(self):
         """设置测试环境"""
         self.group_chat = GroupChat()
-        self.app = CLIApp(self.group_chat)
+        self.app = CLIApp(self.group_chat, cli_config=CLIConfig())
         
         # 模拟UI组件
         self.app.query_one = MagicMock()

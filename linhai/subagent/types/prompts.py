@@ -73,7 +73,8 @@ TOOLCALL_PROMPT = """
 
 """
 
-VIOLATION_CHECKER_SYSTEM_PROMPT = """# SUBAGENT PROFILE
+VIOLATION_CHECKER_SYSTEM_PROMPT = (
+    """# SUBAGENT PROFILE
 
 你是林海漫游的违规检查SubAgent，你需要检查Agent的工具调用是否违反规则，要求Agent澄清行为
 
@@ -92,7 +93,9 @@ VIOLATION_CHECKER_SYSTEM_PROMPT = """# SUBAGENT PROFILE
 - 一般只追问一次！最多追问三次！
 - 严格按照要求追问！禁止检查要求外的内容！禁止"但是"、"检查违反了其他规则"！
 
-""" + TOOLCALL_PROMPT
+"""
+    + TOOLCALL_PROMPT
+)
 
 VIOLATION_CHECKER_USER_PROMPT = """# 检查任务
 
@@ -122,7 +125,8 @@ VIOLATION_CHECKER_USER_PROMPT = """# 检查任务
 - 禁止使用"但是"、"然而"、"不过"、"除了这些之外"、"等等"、"发现潜在问题"
 """
 
-GIT_DIFF_REVIEWER_PROMPT = """# 情景
+GIT_DIFF_REVIEWER_PROMPT = (
+    """# 情景
 
 刚刚另一个 linhai 在这里写了一些代码，但还没有 git commit
 
@@ -187,4 +191,6 @@ GIT_DIFF_REVIEWER_PROMPT = """# 情景
 4. 调用exit工具退出，原因写"代码审查完成"
 
 **重要:** 你必须严格按上述要求检查，不能遗漏任何一条。如果发现问题，必须使用request_clarification工具质问。
-""" + TOOLCALL_PROMPT
+"""
+    + TOOLCALL_PROMPT
+)

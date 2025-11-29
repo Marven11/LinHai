@@ -82,6 +82,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test the compress_history_range function with mock data."""
         # Create a mock agent
         mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         # Setup mock messages
         mock_messages = [
@@ -129,6 +137,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_workflow_with_invalid_range(self):
         """Test compress_history_range with invalid range parameters."""
         mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
         # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
@@ -157,6 +174,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_workflow_with_small_range(self):
         """Test compress_history_range with range smaller than minimum."""
         mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
         # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
@@ -246,6 +272,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test that user messages are protected during history compression."""
         # Create a mock agent
         mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         # Setup mock messages with user messages that should be protected
         # Use ChatMessage for user messages to properly simulate role="user"
@@ -345,6 +379,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_compress_history_range_small_delete_ratio(self):
         """Test compress_history_range with delete ratio less than 30%."""
         mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        
         # Create 36 messages to test delete ratio (10/36 = 27.8% < 30%)
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(36)]
         # 修复filter_messages的异步mock
@@ -409,56 +452,70 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
 
 
+
+    async def test_compress_history_range_sends_ui_log_message(self):
+        """Test that compress_history_range sends UI log message with current message count."""
+        # Create a mock agent
+        mock_agent = MagicMock()
+        mock_group_chat = MagicMock()
+        mock_agent.group_chat = mock_group_chat
+        
+        # Mock send_if_exists as async function
+        async def mock_send_if_exists(queue_name, message):
+            _ = queue_name  # 使用参数以消除警告
+            _ = message     # 使用参数以消除警告
+        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+
+        # Setup mock messages
+        mock_messages = [
+            RuntimeMessage("System message"),
+            RuntimeMessage("User message 1"),
+            RuntimeMessage("User message 2"),
+            RuntimeMessage("User message 3"),
+        ]
+        mock_agent.message_processor.messages = mock_messages
+        mock_agent.message_processor.filter_messages = AsyncMock()
+
+        # Mock get_threshold_info to return valid data
+        mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
+
+        # Mock generate_response to return a response with JSON block
+        mock_response = MagicMock()
+        mock_response.get_message.return_value = ChatMessage(
+            role="assistant",
+            message="""
+            ```json
+            {"start_id": 1, "end_id": 2}
+            ```
+            """,
+        )
+        mock_agent.generate_response = AsyncMock(return_value=mock_response)
+
+        # Mock delete and insert operations
+        mock_agent.message_processor.delete_message_range = AsyncMock(return_value=mock_messages[1:3])
+        mock_agent.message_processor.insert_message = AsyncMock()
+
+        # Call function
+        result = await compress_history_range(mock_agent)
+
+        # Verify that send_if_exists was called with UI log message
+        mock_group_chat.send_if_exists.assert_called_once()
+        call_args = mock_group_chat.send_if_exists.call_args
+        
+        # Check call arguments
+        self.assertEqual(call_args[0][0], "ui_log")  # First positional argument should be "ui_log"
+        
+        # Check CliRuntimeNotice object
+        ui_message = call_args[0][1]
+        from linhai.utils import CliRuntimeNotice
+        self.assertIsInstance(ui_message, CliRuntimeNotice)
+        self.assertEqual(ui_message.level, "INFO")
+        self.assertIn("启动历史压缩", ui_message.content)
+        self.assertIn("当前共有4条消息", ui_message.content)  # 4 messages in mock_messages
+
+        # Verify function completed successfully
+        self.assertTrue(result)
+
+
 if __name__ == "__main__":
     unittest.main()
-
-    async def test_dynamic_threshold_calculation(self):
-        """Test that compress thresholds are dynamically calculated based on current LLM."""
-        # Create mock LLMs with different token limits
-        mock_llm1 = MagicMock()
-        mock_llm1.token_limit = 32000
-        mock_llm1.answer_stream = AsyncMock()
-        
-        mock_llm2 = MagicMock()
-        mock_llm2.token_limit = 128000
-        mock_llm2.answer_stream = AsyncMock()
-        
-        # Update agent context with two LLMs and float thresholds
-        self.agent.context["llms"] = [mock_llm1, mock_llm2]
-        self.agent.context["llm_names"] = ["llm1", "llm2"]
-        self.agent.context["compress_threshold_soft"] = 0.5  # 50% as float
-        self.agent.context["compress_threshold_hard"] = 0.8  # 80% as float
-        
-        # Test with first LLM (32k token limit)
-        self.agent.context["current_llm_index"] = 0
-        self.agent.last_token_usage = 10000
-        
-        threshold_info = self.agent.get_threshold_info()
-        self.assertIsNotNone(threshold_info)
-        soft, hard, _, _, _ = threshold_info
-        
-        # Should be 50% and 80% of 32000
-        self.assertEqual(soft, 16000)  # 32000 * 0.5
-        self.assertEqual(hard, 25600)  # 32000 * 0.8
-        
-        # Test with second LLM (128k token limit)
-        self.agent.context["current_llm_index"] = 1
-        threshold_info = self.agent.get_threshold_info()
-        self.assertIsNotNone(threshold_info)
-        soft, hard, _, _, _ = threshold_info
-        
-        # Should be 50% and 80% of 128000
-        self.assertEqual(soft, 64000)  # 128000 * 0.5
-        self.assertEqual(hard, 102400)  # 128000 * 0.8
-        
-        # Test with integer thresholds (backward compatibility)
-        self.agent.context["compress_threshold_soft"] = 30000
-        self.agent.context["compress_threshold_hard"] = 50000
-        
-        threshold_info = self.agent.get_threshold_info()
-        self.assertIsNotNone(threshold_info)
-        soft, hard, _, _, _ = threshold_info
-        
-        # Should use integer values directly
-        self.assertEqual(soft, 30000)
-        self.assertEqual(hard, 50000)

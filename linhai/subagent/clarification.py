@@ -28,6 +28,7 @@ class ClarificationManager:
 
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
+        self.subagent_request_count: dict[str, int] = {}
         self.clarifications: dict[str, Clarification] = {}
         self._response_events: dict[str, asyncio.Event] = {}
         group_chat.register_member("clarification_manager", self)
@@ -67,8 +68,15 @@ class ClarificationManager:
 
     async def request_clarification(
         self, clarification_id: str, question: str, from_subagent: str
-    ) -> None:
-        """请求澄清并通知Agent。"""
+    ) -> str | None:
+        """请求澄清并通知Agent，返回错误信息"""
+        if from_subagent not in self.subagent_request_count:
+            self.subagent_request_count[from_subagent] = 0
+
+        if self.subagent_request_count[from_subagent] >= 2:
+            return "请求澄清超过2次，禁止请求！"
+
+        self.subagent_request_count[from_subagent] += 1
         await self.add_clarification(clarification_id, question, from_subagent)
 
         await self.group_chat.send_if_exists(

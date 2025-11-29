@@ -28,9 +28,6 @@ from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
 from linhai.tool.mcp_connector import MCPConnector
 
-# 导入create_agent函数， suppressed pylint warning for unused-import since it's used dynamically
-from .create import create_agent  # pylint: disable=unused-import
-
 from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 from linhai.utils import CliRuntimeNotice

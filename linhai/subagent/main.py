@@ -49,9 +49,7 @@ class SubAgent:
         self._register_subagent_tools()
 
         self.messages: list[Message] = [
-            SubagentSystemMessage(
-                self.get_system_message_prompt()
-            ),
+            SubagentSystemMessage(self.get_system_message_prompt()),
         ]
 
         if initial_messages:
@@ -80,7 +78,7 @@ class SubAgent:
             args={"reason": ToolArgInfo(desc="退出原因", type="str")},
             required_args=["reason"],
         )
-        def subagent_exit(reason: str) -> str:
+        async def subagent_exit(reason: str) -> str:
             self.exit_reason = reason
             self.state = "exited"
             return f"SubAgent {self.name} 已退出: {reason}"
@@ -149,10 +147,18 @@ class SubAgent:
                             )
                         )
                     except Exception as e:  # pylint: disable=broad-exception-caught
+                        error_msg = f"工具 {tool_name} 执行失败: {e}"
                         self.messages.append(
-                            ChatMessage(
-                                role="user", message=f"工具 {tool_name} 执行失败: {e}"
-                            )
+                            ChatMessage(role="user", message=error_msg)
+                        )
+                        from linhai.utils import CliRuntimeNotice
+
+                        await self.group_chat.send_if_exists(
+                            "subagent_message",
+                            CliRuntimeNotice(
+                                level="ERROR",
+                                content=f"SubAgent {self.name} 工具 {tool_name} 执行失败: {error_msg}",
+                            ),
                         )
                 else:
                     self.messages.append(
@@ -170,9 +176,7 @@ class SubAgent:
         await self._execute_tool_calls(tool_calls)
 
         if not tool_calls:
-            self.messages.append(
-                ChatMessage(role="user", message="请调用工具！")
-            )
+            self.messages.append(ChatMessage(role="user", message="请调用工具！"))
 
         return self.state == "running"
 
@@ -196,14 +200,14 @@ class SubAgent:
 
         logger.info("SubAgent %s 结束运行，原因: %s", self.name, self.exit_reason)
 
+        # 发送SubAgent退出通知到UI
+        from linhai.utils import CliRuntimeNotice
+
         await self.group_chat.send_if_exists(
             "subagent_message",
-            {
-                "subagent_name": self.name,
-                "content": f"SubAgent {self.name} 已退出: {self.exit_reason}",
-                "type": "runtime_notice",
-                "level": "INFO",
-            },
+            CliRuntimeNotice(
+                level="INFO", content=f"SubAgent {self.name} 已退出: {self.exit_reason}"
+            ),
         )
 
 
@@ -251,15 +255,15 @@ class SubAgentManager:
             ViolationCheckerSubAgent,
             GitDiffReviewerSubAgent,
         )
-        
+
         SUBAGENT_CREATORS = {
             "violation_checker": ViolationCheckerSubAgent,
             "git_diff_reviewer": GitDiffReviewerSubAgent,
         }
-        
+
         if agent_type not in SUBAGENT_CREATORS:
             raise ValueError(f"未知的SubAgent类型: {agent_type}")
-        
+
         subagent_class = SUBAGENT_CREATORS[agent_type]
         subagent = subagent_class(
             name=name,

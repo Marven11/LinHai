@@ -1,13 +1,11 @@
 """测试CLI的标签页功能"""
 
 import unittest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import patch
 import asyncio
-from pathlib import Path
-from textual.pilot import Pilot
 from linhai.cli.app import CLIApp
 from linhai.group_chat import GroupChat
-from linhai.config import load_config
+from linhai.config import CLIConfig
 
 
 class TestCLITabs(unittest.TestCase):
@@ -21,7 +19,7 @@ class TestCLITabs(unittest.TestCase):
         
         group_chat = GroupChat()
         
-        app = CLIApp(group_chat=group_chat, init_messages=None)
+        app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
         
         async def _run_test():
             async with app.run_test() as pilot:
@@ -54,7 +52,7 @@ class TestCLITabs(unittest.TestCase):
         
         group_chat = GroupChat()
         
-        app = CLIApp(group_chat=group_chat, init_messages=None)
+        app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
         
         async with app.run_test() as pilot:
             # 初始应该显示Agent对话标签页

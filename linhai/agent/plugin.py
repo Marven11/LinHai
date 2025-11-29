@@ -169,7 +169,7 @@ class BadMultiToolCall(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
-class StopFastAgentPlugin(Plugin):
+class PromptFastAgentPlugin(Plugin):
     """禁止minimax m2/glm 4.6疯狂调用工具的插件"""
 
     MAX_TOOLCALL_COUNT = 5
@@ -186,26 +186,34 @@ class StopFastAgentPlugin(Plugin):
         from linhai.llm import OpenAi, ChatMessage
 
         agent = self.group_chat.get_members("agent", Agent)
+        model = await agent.get_current_model()
+
+        if not isinstance(model, OpenAi) or model.compatibility not in [
+            "minimax",
+            "glm",
+        ]:
+            return
 
         has_previous_agent_message = any(
             msg.role == "assistant"
             for msg in agent.message_processor.get_messages()
             if isinstance(msg, ChatMessage)
         )
-        if not has_previous_agent_message:
-            return
 
-        model = await agent.get_current_model()
-        if not isinstance(model, OpenAi) or model.compatibility not in [
-            "minimax",
-            "glm",
-        ]:
-            return False
-        agent.message_processor.append_message(
-            RuntimeMessage(
-                f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+        if not has_previous_agent_message:
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+                )
             )
-        )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content=f"针对性优化: {model.compatibility}禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具",
+                ),
+            )
+
         if model.compatibility == "glm":
             agent.message_processor.append_message(
                 RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
@@ -238,6 +246,13 @@ class StopFastAgentPlugin(Plugin):
                     + extra_message
                 )
             )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content=f"针对性优化: 阻止{model.compatibility}调用巨量工具",
+                ),
+            )
             answer.truncate()
             self.speeding_counter += 1
             return True
@@ -246,6 +261,7 @@ class StopFastAgentPlugin(Plugin):
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_during_message_generation(self.during_message_generation)
 
 
@@ -437,30 +453,34 @@ class ToolCallInReasoningPlugin(Plugin):
 
         # 使用get_reasoning_message获取推理内容
         reasoning_content = answer.get_reasoning_message()
-        
+
         if reasoning_content:
             tool_calls_in_reasoning = extract_tool_calls(reasoning_content)
             if tool_calls_in_reasoning:
-                tool_names = [tool_call.get("name", "未知工具") for tool_call in tool_calls_in_reasoning]
+                tool_names = [
+                    tool_call.get("name", "未知工具")
+                    for tool_call in tool_calls_in_reasoning
+                ]
                 unique_tool_names = list(set(tool_names))
-                
+
                 if len(unique_tool_names) == 1:
                     agent_warning_message = f"警告：你在推理内容中调用了工具'{unique_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
-                    ui_warning_message = f"推理内容中检测到工具调用: {unique_tool_names[0]}"
+                    ui_warning_message = (
+                        f"推理内容中检测到工具调用: {unique_tool_names[0]}"
+                    )
                 else:
                     agent_warning_message = f"警告：你在推理内容中调用了工具{unique_tool_names}，但推理内容中的工具调用不会实际执行！"
-                    ui_warning_message = f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
-                
+                    ui_warning_message = (
+                        f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
+                    )
+
                 agent.message_processor.append_message(
                     RuntimeMessage(agent_warning_message)
                 )
-                
+
                 await self.group_chat.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", 
-                        content=ui_warning_message
-                    )
+                    CliRuntimeNotice(level="WARNING", content=ui_warning_message),
                 )
 
     def register(self, lifecycle):
@@ -501,6 +521,12 @@ class PreventToolOutputPlugin(Plugin):
                             "工具调用内容（如`**tool**`）是系统内部使用的标签，"
                             "你不应该直接输出这些内容。"
                         )
+                    )
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING", content="LLM错误输出了**tool**，已截断"
+                        ),
                     )
                     answer.truncate()
                     return True

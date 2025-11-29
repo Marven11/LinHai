@@ -5,7 +5,7 @@ import datetime
 
 from linhai.group_chat import GroupChat
 from linhai.llm import Message, SystemMessage, LanguageModel, OpenAi
-from linhai.config import load_config, ToolConfig, MCPConfig, AgentConfig
+from linhai.config import ToolConfig, MCPConfig, AgentConfig, Config
 from linhai.tool.main import ToolManager
 from linhai.tool.tools.terminal import terminal_toolset
 from linhai.tool.base import global_tools
@@ -19,29 +19,31 @@ from .clarification_tools import (
 )
 
 
-async def create_agent(
+async def create_agent_from_config(
     group_chat: GroupChat,
-    config_path: Path,
+    config: Config,
     llm_name: str | None = None,
+    config_basedir: Path | None = None,
 ):
-    """创建Agent实例
+    """创建Agent实例（从配置对象）
 
     Args:
         group_chat: GroupChat实例
-        config_path: 配置文件路径
+        config: 配置对象
         llm_name: 指定的LLM名称（可选）
+        config_basedir: 配置文件所在目录（用于解析相对路径）
 
     Returns:
         Agent实例
     """
     from .main import Agent  # 避免循环导入
 
-    config = load_config(config_path)
+    agent_config = config.agent if config.agent else AgentConfig()
+    tools_config = config.tools if config.tools else ToolConfig()
 
     llms = await _create_llm_instances(config.llm)
 
     llm_names = [llm_config.name for llm_config in config.llm]
-    agent_config = config.agent if config.agent else AgentConfig()
     agent_context = await _create_agent_context(
         llms=llms,
         llm_names=llm_names,
@@ -49,16 +51,17 @@ async def create_agent(
         agent_config=agent_config,
     )
 
-    tool_config = config.tools if config.tools else ToolConfig()
     tool_manager = await _create_tool_manager(
-        group_chat, tool_config, agent_config.mcp, mcp_basedir=config_path.parent
+        group_chat,
+        tools_config,
+        agent_config.mcp if agent_config else [],
+        mcp_basedir=config_basedir or Path.cwd(),
     )
 
-    subagent_config = config.subagent if config.subagent else None
+    memory_file_path = None
+    if config.memory and config_basedir:
+        memory_file_path = config_basedir / config.memory.file_path
 
-    memory_file_path = (
-        (config_path.parent / config.memory.file_path) if config.memory else None
-    )
     init_messages = await _create_init_messages(
         group_chat=group_chat,
         system_prompt=agent_context["system_prompt"],
@@ -71,8 +74,9 @@ async def create_agent(
         init_messages=init_messages,
     )
 
-    if config.subagent_enabled:
-        subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
+    subagent_enabled = config.subagent.enable if config.subagent and hasattr(config.subagent, 'enable') else False
+    if subagent_enabled:
+        subagent_manager = SubAgentManager(group_chat, config.subagent, llms, llm_names)
         subagent_toolset = create_subagent_toolset(subagent_manager)
         tool_manager.add_toolset(subagent_toolset)
 

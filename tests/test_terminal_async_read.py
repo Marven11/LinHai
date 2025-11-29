@@ -2,7 +2,6 @@
 
 import unittest
 import asyncio
-import time
 from linhai.tool.tools.terminal import PyteTerminal
 
 

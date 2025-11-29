@@ -11,8 +11,10 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.group_chat import GroupChat
-from linhai.agent import create_agent, Agent
+from linhai.agent.create import create_agent_from_config
+from linhai.agent import Agent
 from linhai.tool.main import ToolManager
+from linhai.config import load_config
 
 
 class TestCreateAgent(unittest.TestCase):
@@ -29,8 +31,9 @@ class TestCreateAgent(unittest.TestCase):
         group_chat = GroupChat()
         config_path = Path(__file__).parent / "test_config.toml"
         
-        # 调用create_agent应该成功返回agent
-        result = asyncio.run(create_agent(group_chat, Path(config_path)))
+        # 调用create_agent_from_config应该成功返回agent
+        config = load_config(Path(config_path))
+        result = asyncio.run(create_agent_from_config(group_chat, config))
         self.assertIsInstance(result, Agent)
         
         # 检查group_chat中是否注册了agent成员
@@ -59,7 +62,8 @@ class TestCreateAgent(unittest.TestCase):
         config_path = Path(__file__).parent / "test_config.toml"
         
         # 使用llm_name参数
-        result = asyncio.run(create_agent(group_chat, Path(config_path), llm_name="test"))
+        config = load_config(Path(config_path))
+        result = asyncio.run(create_agent_from_config(group_chat, config, llm_name="test"))
         self.assertIsInstance(result, Agent)
         
         # 检查agent配置中的当前LLM索引
@@ -72,8 +76,10 @@ class TestCreateAgent(unittest.TestCase):
         config_path = Path(__file__).parent / "test_config.toml"
         
         # 使用无效的llm_name应该抛出ValueError
+        from linhai.config import load_config
+        config = load_config(Path(config_path))
         with self.assertRaises(ValueError) as context:
-            asyncio.run(create_agent(group_chat, Path(config_path), llm_name="invalid_llm"))
+            asyncio.run(create_agent_from_config(group_chat, config, llm_name="invalid_llm"))
         
         self.assertIn("LLM名称 'invalid_llm' 不存在", str(context.exception))
 

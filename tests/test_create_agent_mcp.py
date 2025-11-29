@@ -11,7 +11,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.group_chat import GroupChat
-from linhai.agent import create_agent, Agent
+from linhai.agent.create import create_agent_from_config
+from linhai.agent import Agent
+from linhai.config import load_config
 
 
 class TestCreateAgentMCP(unittest.TestCase):
@@ -61,8 +63,9 @@ server_script_path = "{server_script_path}"
 """
         config_path = self.create_test_config(config_content)
         
-        # 调用create_agent
-        result = asyncio.run(create_agent(self.group_chat, config_path))
+        # 调用create_agent_from_config
+        config = load_config(config_path)
+        result = asyncio.run(create_agent_from_config(self.group_chat, config))
         
         # 验证结果 - create_agent返回的是Agent对象
         self.assertIsInstance(result, Agent)
@@ -94,8 +97,9 @@ compress_threshold_hard = 80000
 """
         config_path = self.create_test_config(config_content)
         
-        # 调用create_agent
-        result = asyncio.run(create_agent(self.group_chat, config_path))
+        # 调用create_agent_from_config
+        config = load_config(config_path)
+        result = asyncio.run(create_agent_from_config(self.group_chat, config))
         
         # 验证结果 - create_agent返回的是Agent对象
         self.assertIsInstance(result, Agent)
