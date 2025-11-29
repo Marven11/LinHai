@@ -17,7 +17,7 @@ from linhai.tool.base import global_tools
 from linhai.llm import SystemMessage, OpenAi
 
 
-# 定义模拟的 AnswerToken 和 Answer
+
 class MockAnswerToken(TypedDict):
     """Mock implementation of AnswerToken for testing."""
 

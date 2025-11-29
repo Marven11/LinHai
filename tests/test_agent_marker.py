@@ -12,7 +12,7 @@ from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
 from linhai.llm import ChatMessage, SystemMessage
 from linhai.tool.main import ToolResultMessage
 
-# 创建自定义repr函数，限制长度为200字符
+
 r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr

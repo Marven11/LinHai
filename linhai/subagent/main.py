@@ -13,6 +13,7 @@ from linhai.llm import (
     Answer,
     AnswerToken,
 )
+from linhai.config import SubAgentConfig
 from linhai.group_chat import GroupChat
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.command import sleep_tool
@@ -215,7 +216,11 @@ class SubAgentManager:
     """SubAgent管理器，负责创建和管理所有SubAgent。"""
 
     def __init__(
-        self, group_chat: GroupChat, subagent_config=None, llms=None, llm_names=None
+        self,
+        group_chat: GroupChat,
+        subagent_config: SubAgentConfig,
+        llms=None,
+        llm_names=None,
     ):
         self.group_chat = group_chat
         self.subagent_config = subagent_config
@@ -320,12 +325,18 @@ class SubAgentManager:
         from .types.git_diff_reviewer import GitDiffReviewPlugin
 
         plugins = [
-            ViolationCheckerPlugin(self.group_chat),
-            GitDiffReviewPlugin(self.group_chat),
             GitBlockingPlugin(self.group_chat),
             ClarificationWaitingUserPlugin(self.group_chat),
             ClarificationBlockingPlugin(self.group_chat),
         ]
+        enabled_agent_types = self.subagent_config.enabled_agent_types
+
+        if enabled_agent_types and enabled_agent_types.violation_checker:
+            plugins.append(
+                ViolationCheckerPlugin(self.group_chat)
+            )
+        if enabled_agent_types and enabled_agent_types.git_diff_reviewer:
+            plugins.append(GitDiffReviewPlugin(self.group_chat))
 
         for plugin in plugins:
             plugin.register(lifecycle)

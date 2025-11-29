@@ -3,7 +3,7 @@
 
 from mcp.server.fastmcp import FastMCP
 
-# Initialize FastMCP server
+
 mcp = FastMCP("real-mcp-test-server")
 
 @mcp.tool()

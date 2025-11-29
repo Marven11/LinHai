@@ -14,7 +14,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
 from linhai.group_chat import GroupChat
 
-# 创建自定义repr函数，限制长度为200字符
+
 r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr

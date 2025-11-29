@@ -21,20 +21,41 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.agent.message_processor = Mock()
         self.agent.message_processor.get_messages = Mock(return_value=[])
         
+        self.plugin._agent_used_file_modification_tools = False
+        
         # 设置通用的mock返回值
         self.mock_git_diff = "diff --git a/test.py b/test.py\n+print('hello')"
         self.mock_empty = ""
         self.mock_status_empty = ""
         self.mock_status_deleted = " D deleted_file.py"
+        
+        # 默认设置subagent_manager，避免测试环境出错
+        from linhai.subagent import SubAgentManager
+        self.subagent_manager = Mock(spec=SubAgentManager)
+        self.subagent_manager.subagent_config = None  # 默认不启用
+        self.group_chat.register_member("subagent_manager", self.subagent_manager)
 
     def _setup_subagent_manager(self):
         """设置SubAgentManager的mock。"""
         from linhai.subagent import SubAgentManager
-        subagent_manager = Mock(spec=SubAgentManager)
+        from linhai.config import SubAgentConfig
+        try:
+            subagent_manager = self.group_chat.get_members("subagent_manager", SubAgentManager)
+        except RuntimeError:
+            subagent_manager = Mock(spec=SubAgentManager)
+            self.group_chat.register_member("subagent_manager", subagent_manager)
+        # 设置一个启用的subagent_config
+        subagent_config = Mock(spec=SubAgentConfig)
+        subagent_config.enable = True
+        subagent_config.enabled_agent_types = {"git_diff_reviewer": True}  # 启用git_diff_reviewer
+        subagent_manager.subagent_config = subagent_config
         # 使用普通Mock而不是AsyncMock来避免警告
         subagent_manager.create_subagent = Mock(return_value="success")
-        self.group_chat.register_member("subagent_manager", subagent_manager)
         return subagent_manager
+
+    def _setup_for_review(self):
+        """设置审查条件：Agent使用了文件修改工具。"""
+        self.plugin._agent_used_file_modification_tools = True
 
     def _setup_git_mocks(self, mock_exists, mock_run, git_diff=None, ls_files_output=None):
         """设置git相关命令的mock。"""
@@ -56,12 +77,15 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """测试插件初始化。"""
         self.assertIsInstance(self.plugin, GitDiffReviewPlugin)
         self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin._agent_used_file_modification_tools, False)
 
     @patch("subprocess.run")
     @patch("os.path.exists")
     def test_before_waiting_user_no_git_repo(self, mock_exists, mock_run):
         """测试不在git仓库时不启动审查。"""
         mock_exists.return_value = False
+        
+        self._setup_subagent_manager()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
@@ -74,6 +98,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """测试没有git diff时不启动审查。"""
         mock_exists.return_value = True
         mock_run.return_value = Mock(stdout="", returncode=0)
+        
+        self._setup_subagent_manager()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
@@ -92,11 +118,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout="", returncode=0)
         ]
         
-        from linhai.subagent import SubAgentManager
-        subagent_manager = Mock(spec=SubAgentManager)
-        # 使用普通Mock而不是AsyncMock来避免警告
-        subagent_manager.create_subagent = Mock(return_value="success")
-        self.group_chat.register_member("subagent_manager", subagent_manager)
+        self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
@@ -111,6 +134,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         # 第一次调用：会启动审查
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -132,6 +156,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         # 第一次调用：会启动审查
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -164,11 +189,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout=" D deleted_file.py", returncode=0)
         ]
         
-        from linhai.subagent import SubAgentManager
-        subagent_manager = Mock(spec=SubAgentManager)
-        # 使用普通Mock而不是AsyncMock来避免警告
-        subagent_manager.create_subagent = Mock(return_value="success")
-        self.group_chat.register_member("subagent_manager", subagent_manager)
+        self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
@@ -188,11 +210,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout="D  staged_deleted_file.py", returncode=0)
         ]
         
-        from linhai.subagent import SubAgentManager
-        subagent_manager = Mock(spec=SubAgentManager)
-        # 使用普通Mock而不是AsyncMock来避免警告
-        subagent_manager.create_subagent = Mock(return_value="success")
-        self.group_chat.register_member("subagent_manager", subagent_manager)
+        self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
@@ -208,6 +227,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -230,6 +250,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -254,6 +275,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
+        self._setup_for_review()
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
@@ -271,14 +293,17 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     def test_register(self):
         """测试插件注册。"""
         lifecycle = Mock()
+        lifecycle.register_after_message_generation = Mock()
         lifecycle.register_before_waiting_user = Mock()
         
         self.plugin.register(lifecycle)
         
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
         lifecycle.register_before_waiting_user.assert_called_once_with(
             self.plugin.before_waiting_user
         )
-
 
     @patch("subprocess.run")
     @patch("os.path.exists")
@@ -354,6 +379,125 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             result_str = cast(str, result)  # 使用cast明确类型
             self.assertIn("**新增文件: unreadable_file.bin**", result_str)
             self.assertIn("(无法读取文件内容)", result_str)
+
+    def test_after_message_generation_records_tool_use(self):
+        """测试after_message_generation方法记录工具使用。"""
+        self.plugin._agent_used_file_modification_tools = False
+        
+        mock_answer = Mock()
+        tool_calls = [{"name": "write_file", "arguments": {"filepath": "test.py", "content": "print('hello')", "override": True}}]
+        asyncio.run(self.plugin.after_message_generation(mock_answer, "", tool_calls))
+        
+        self.assertTrue(self.plugin._agent_used_file_modification_tools)
+
+    def test_after_message_generation_ignores_non_file_tools(self):
+        """测试after_message_generation方法忽略非文件修改工具。"""
+        self.plugin._agent_used_file_modification_tools = False
+        
+        mock_answer = Mock()
+        tool_calls = [{"name": "run_command", "arguments": {"command": "ls -la"}}]
+        asyncio.run(self.plugin.after_message_generation(mock_answer, "", tool_calls))
+        
+        self.assertFalse(self.plugin._agent_used_file_modification_tools)
+
+    def test_before_waiting_user_without_tool_use(self):
+        """测试Agent没有使用文件修改工具时不启动审查。"""
+        # 设置Agent没有使用文件修改工具
+        self.plugin._agent_used_file_modification_tools = False
+        
+        self._setup_subagent_manager()
+        
+        # 模拟有git diff
+        with patch.object(self.plugin, '_get_git_diff') as mock_git_diff:
+            mock_git_diff.return_value = "diff --git a/test.py b/test.py\n+print('hello')"
+            
+            # 模拟UI消息发送
+            with patch.object(self.plugin.group_chat, 'send_if_exists') as mock_send:
+                asyncio.run(self.plugin.before_waiting_user(self.agent))
+                
+                # 验证发送了未触发审查的UI消息
+                mock_send.assert_called_once()
+                call_args = mock_send.call_args
+                self.assertEqual(call_args[0][0], "ui_log")
+                self.assertEqual(call_args[0][1].content, "未触发SubAgent审核：Agent没有使用文件修改工具")
+
+    @patch("asyncio.create_task")
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_before_waiting_user_no_subagent_manager(self, mock_exists, mock_run, mock_create_task):
+        """测试subagent_manager不存在时抛出RuntimeError。"""
+        mock_exists.return_value = True
+        mock_run.side_effect = [
+            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
+            Mock(stdout="", returncode=0),
+            Mock(stdout="", returncode=0)
+        ]
+        
+        # 创建一个新的GroupChat实例，其中没有注册subagent_manager
+        from linhai.group_chat import GroupChat
+        new_group_chat = GroupChat()
+        self.plugin.group_chat = new_group_chat
+        
+        self._setup_for_review()
+        
+        # 应该抛出RuntimeError
+        with self.assertRaises(RuntimeError):
+            asyncio.run(self.plugin.before_waiting_user(self.agent))
+        
+        # 验证没有启动审查任务
+        mock_create_task.assert_not_called()
+
+    @patch("asyncio.create_task")
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_before_waiting_user_no_subagent_config(self, mock_exists, mock_run, mock_create_task):
+        """测试subagent_manager存在但subagent_config为None时抛出AttributeError。"""
+        mock_exists.return_value = True
+        mock_run.side_effect = [
+            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
+            Mock(stdout="", returncode=0),
+            Mock(stdout="", returncode=0)
+        ]
+        
+        # 使用setUp中已注册的subagent_manager，但设置subagent_config为None
+        self.subagent_manager.subagent_config = None  # 关键：配置为None
+        
+        self._setup_for_review()
+        
+        # 应该抛出AttributeError
+        with self.assertRaises(AttributeError):
+            asyncio.run(self.plugin.before_waiting_user(self.agent))
+        
+        # 验证没有启动审查任务
+        mock_create_task.assert_not_called()
+
+    @patch("asyncio.create_task")
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_before_waiting_user_subagent_disabled(self, mock_exists, mock_run, mock_create_task):
+        """测试subagent配置禁用时不启动审查。"""
+        mock_exists.return_value = True
+        mock_run.side_effect = [
+            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
+            Mock(stdout="", returncode=0),
+            Mock(stdout="", returncode=0)
+        ]
+        
+        # 使用setUp中已注册的subagent_manager，设置配置启用但git_diff_reviewer类型禁用
+        from linhai.config import SubAgentConfig
+        
+        subagent_config = Mock(spec=SubAgentConfig)
+        subagent_config.enable = True
+        subagent_config.enabled_agent_types = {"git_diff_reviewer": False}  # git_diff_reviewer禁用
+        self.subagent_manager.subagent_config = subagent_config
+        
+        self._setup_for_review()
+        
+        # 应该正常执行而不启动审查
+        asyncio.run(self.plugin.before_waiting_user(self.agent))
+        
+        # 验证没有启动审查任务
+        mock_create_task.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -6,11 +6,12 @@ import logging
 import os
 import subprocess
 
-from linhai.llm import ChatMessage
-from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.plugin import Plugin
 from linhai.subagent.main import SubAgent
+from linhai.subagent import SubAgentManager
+from linhai.utils import CliRuntimeNotice, generate_id
+from linhai.llm import Answer, ChatMessage
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
 
 if TYPE_CHECKING:
@@ -70,11 +71,20 @@ class GitDiffReviewerSubAgent(SubAgent):
 class GitDiffReviewPlugin(Plugin):
     """在Agent使用#LINHAI_WAITING_USER且当前目录是git仓库时启动git diff审查的Plugin。"""
 
+    FILE_MODIFICATION_TOOLS: set[str] = {
+        "write_file",
+        "replace_file_content",
+        "append_file",
+        "modify_file_with_sed",
+        "insert_at_line",
+    }
+
     def __init__(self, group_chat):
         super().__init__(group_chat)
-        self._last_git_diff = None
-        self._last_new_files_content = None
-        self._last_deleted_files_list = None
+        self._last_git_diff: str | None = None
+        self._last_new_files_content: str | None = None
+        self._last_deleted_files_list: str | None = None
+        self._agent_used_file_modification_tools: bool = False
 
     def _get_git_diff(self) -> str | None:
         """获取git diff内容，如果失败返回None。"""
@@ -187,6 +197,10 @@ class GitDiffReviewPlugin(Plugin):
 
     async def before_waiting_user(self, agent: "linhai.agent.Agent"):
         """在Agent进入等待用户状态前检查是否需要启动git diff审查。"""
+        subagent_manager = self.group_chat.get_members(
+            "subagent_manager", SubAgentManager
+        )
+
         git_diff = self._get_git_diff()
         if git_diff is None:
             return
@@ -200,13 +214,21 @@ class GitDiffReviewPlugin(Plugin):
             and self._last_new_files_content == new_files_content
             and self._last_deleted_files_list == deleted_files_list
         ):
-            # 没有变化，发送UI消息通知用户
             no_change_msg = CliRuntimeNotice(
                 level="INFO",
                 content="未触发SubAgent审核：检测到与上一次完全相同的git更改，无需重复审查",
             )
             await self.group_chat.send_if_exists("ui_log", no_change_msg)
-            return  # 完全没有变化，不启动SubAgent
+            return
+
+        # 检查Agent是否使用了文件修改工具
+        if not self._agent_used_file_modification_tools:
+            no_relevant_msg = CliRuntimeNotice(
+                level="WARNING",
+                content="未触发SubAgent审核：Agent没有使用文件修改工具",
+            )
+            await self.group_chat.send_if_exists("ui_log", no_relevant_msg)
+            return
 
         # 更新缓存
         self._last_git_diff = git_diff
@@ -217,12 +239,6 @@ class GitDiffReviewPlugin(Plugin):
             level="INFO", content="检测到未提交的更改，启动Git diff审查SubAgent"
         )
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-
-        from linhai.subagent import SubAgentManager
-
-        subagent_manager = self.group_chat.get_members(
-            "subagent_manager", SubAgentManager
-        )
 
         messages = agent.message_processor.get_messages()
         user_messages = [
@@ -257,6 +273,17 @@ class GitDiffReviewPlugin(Plugin):
             )
         )
 
+    async def after_message_generation(
+        self, _answer: Answer, _full_response: str, tool_calls: list[dict]
+    ):
+        """在Agent生成消息后记录使用的工具。"""
+        if any(
+            tool_call.get("name") in self.FILE_MODIFICATION_TOOLS
+            for tool_call in tool_calls
+        ):
+            self._agent_used_file_modification_tools = True
+
     def register(self, lifecycle: "linhai.agent.Lifecycle"):
         """注册到before_waiting_user回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
         lifecycle.register_before_waiting_user(self.before_waiting_user)

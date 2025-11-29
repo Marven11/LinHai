@@ -74,9 +74,9 @@ async def create_agent_from_config(
         init_messages=init_messages,
     )
 
-    subagent_enabled = config.subagent.enable if config.subagent and hasattr(config.subagent, 'enable') else False
-    if subagent_enabled:
-        subagent_manager = SubAgentManager(group_chat, config.subagent, llms, llm_names)
+    subagent_config = config.subagent
+    if subagent_config and subagent_config.enable:
+        subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
         subagent_toolset = create_subagent_toolset(subagent_manager)
         tool_manager.add_toolset(subagent_toolset)
 

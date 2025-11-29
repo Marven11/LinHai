@@ -186,4 +186,4 @@ class TestFileValidation(unittest.TestCase):
         self.assertIn("不是纯文本文件", result)
 
 
-# TestToolResultMessage类已更新使用新API
+

@@ -62,6 +62,21 @@ def extract_tool_calls(markdown_text: str) -> List[Dict[str, Any]]:
     return tool_calls
 
 
+def _extract_json_error_context(error: json.JSONDecodeError, content: str) -> str:
+    error_line, error_col = error.lineno, error.colno
+    content_lines = content.split('\n')
+    start_line, end_line = max(0, error_line - 2), min(len(content_lines), error_line + 2)
+    
+    context_with_marker = [
+        line for line in content_lines[start_line:end_line]
+    ]
+    if error_line <= end_line:
+        marker = ' ' * (error_col - 1) + '^' + f' (line {error_line}, column {error_col})'
+        context_with_marker.insert(error_line - start_line + 1, marker)
+    
+    return '\n'.join(context_with_marker)
+
+
 def extract_tool_calls_with_errors(
     markdown_text: str,
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -84,7 +99,6 @@ def extract_tool_calls_with_errors(
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == "json toolcall":
             try:
-
                 data = json.loads(block["content"])
 
                 if not isinstance(data, dict):
@@ -111,9 +125,11 @@ def extract_tool_calls_with_errors(
 
                 tool_calls.append(data)
             except json.JSONDecodeError as e:
+                context_str = _extract_json_error_context(e, block['content'])
                 errors.append(
                     f"工具调用解析出错：第{i+1}个code block中的JSON格式无效: {str(e)}\n"
-                    f"内容: {repr_obj.repr(block['content'])}"
+                    f"错误位置: 第{e.lineno}行, 第{e.colno}列\n"
+                    f"错误附近内容:\n{context_str}\n"
                 )
                 continue
             except (ValueError, TypeError) as e:

@@ -2,13 +2,18 @@
 
 import os
 import re
-from typing import Optional, Union
+import logging
+from typing import Optional, Union, TypedDict
 import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator
 
 from .exceptions import ConfigValidationError
+
+
+
+logger = logging.getLogger(__name__)
 
 
 class LLMConfig(BaseModel):
@@ -128,15 +133,22 @@ class CLIConfig(BaseModel):
         return f"CLIConfig(use_nerd_font={self.use_nerd_font})"
 
 
+class EnabledAgentTypes(BaseModel):
+    """Enabled subagent types configuration."""
+    violation_checker: bool = False
+    git_diff_reviewer: bool = False
+
+
 class SubAgentConfig(BaseModel):
     """SubAgent配置类型定义。"""
 
-    enable: bool = Field(default=True)
-    default_llm: str = Field(default="deepseek", min_length=1)
+    enable: bool = True
+    default_llm: str
+    enabled_agent_types: Optional[EnabledAgentTypes] = None  # None表示默认不开启
 
     def __str__(self) -> str:
         """返回SubAgent配置的字符串表示"""
-        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm})"
+        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm}, enabled_types={self.enabled_agent_types})"
 
 
 class Config(BaseModel):
