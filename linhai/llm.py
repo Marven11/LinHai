@@ -239,6 +239,15 @@ class Answer(Protocol):
         """
         raise NotImplementedError
 
+    def truncate(self) -> None:
+        """
+        截断当前回答的生成，相当于提前帮LLM结束输出
+        与interrupt的区别：
+        - interrupt是中断输出，本次输出失败，其中的工具调用等信息都不会被处理
+        - truncate是提前结束输出，流程继续，就像LLM正常停止输出一样
+        """
+        raise NotImplementedError
+
     def get_current_content(self) -> str:
         """
         获取当前累积的回答内容
@@ -293,6 +302,7 @@ class OpenAiAnswer:
         self.content = ""
         self.stream = stream
         self.interrupted = False
+        self.truncated = False
         self.compatibility = compatibility
         self.total_tokens = 0
         self.input_tokens = 0
@@ -312,7 +322,7 @@ class OpenAiAnswer:
 
     async def update_toyield(self):
         """获取下一个token。"""
-        if self.interrupted:
+        if self.interrupted or self.truncated:
             raise StopAsyncIteration
 
         try:
@@ -408,6 +418,12 @@ class OpenAiAnswer:
     def interrupt(self):
         """中断当前回答的生成。"""
         self.interrupted = True
+        self.toyield.clear()
+
+    def truncate(self):
+        """截断当前回答的生成。"""
+        self.truncated = True
+        self.toyield.clear()
 
     def get_current_content(self) -> str:
         """获取当前累积的回答内容。"""

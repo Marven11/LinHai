@@ -8,6 +8,7 @@ import subprocess
 
 from linhai.llm import ChatMessage
 from linhai.utils import CliRuntimeNotice, generate_id
+from linhai.agent.base import RuntimeMessage
 from linhai.agent.plugin import Plugin
 from linhai.subagent.main import SubAgent
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
@@ -50,7 +51,15 @@ class GitDiffReviewerSubAgent(SubAgent):
         )
         return GIT_DIFF_REVIEWER_PROMPT.replace("{|TOOLS|}", tools_json)
 
+    async def _handle_execution_cycle(self) -> bool:
+        result = await super()._handle_execution_cycle()
+        self.messages.append(RuntimeMessage("""
+请按照以下要求回复agent:
 
+- 如果agent说某个功能因为改动太大等原因不需要在现在更改，质问“这是用户自己的要求还是你编造的？”，并要求“立即修改！”
+- 如果agent说某个修改会破坏前向兼容性，质问“这会修改外部行为吗？必须重构内部函数！”
+"""))
+        return result
 
 
 

@@ -232,10 +232,13 @@ class StopFastAgentPlugin(Plugin):
                     "从刚刚开始就一直在调用大量工具，你疯了？？？？"
                     + "？！？！" * self.speeding_counter
                 )
-            await agent.interrupt(
-                f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
-                + extra_message
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+                    + extra_message
+                )
             )
+            answer.truncate()
             self.speeding_counter += 1
             return True
         self.speeding_counter = 0
@@ -492,11 +495,14 @@ class PreventToolOutputPlugin(Plugin):
             lines = current_content.split("\n")
             for line in lines:
                 if line.strip().startswith("**tool**"):
-                    await agent.interrupt(
-                        "错误：请不要输出工具调用的内容！"
-                        "工具调用内容（如`**tool**`）是系统内部使用的标签，"
-                        "你不应该直接输出这些内容。"
+                    agent.message_processor.append_message(
+                        RuntimeMessage(
+                            "错误：请不要输出工具调用的内容！"
+                            "工具调用内容（如`**tool**`）是系统内部使用的标签，"
+                            "你不应该直接输出这些内容。"
+                        )
                     )
+                    answer.truncate()
                     return True
 
         return False

@@ -14,6 +14,15 @@ from linhai.tool.base import (
 import platform
 
 
+def get_current_shell() -> str:
+    """获取当前shell路径"""
+    system = platform.system()
+    if system == "Windows":
+        return os.environ.get("COMSPEC", "cmd.exe")
+    else:
+        return os.environ.get("SHELL", "/bin/sh")
+
+
 async def execute_command(
     command: str, timeout: float = 30.0
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -82,7 +91,7 @@ Stderr:
 
 @global_tools.register_tool(
     name="run_command",
-    desc=f"执行系统命令。当前系统：{platform.system()}。可以执行shell命令，但使用时务必谨慎，避免损坏用户电脑。",
+    desc=f"执行系统命令。当前系统：{platform.system()}，当前shell：{get_current_shell()}。可以执行shell命令，但使用时务必谨慎，避免损坏用户电脑。",
     args={
         "command": ToolArgInfo(
             desc="要执行的命令字符串，如 'ls | grep test'", type="str"

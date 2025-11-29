@@ -2,8 +2,9 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin
+from linhai.agent.plugin import BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin, StopFastAgentPlugin, PreventToolOutputPlugin
 from linhai.agent.base import RuntimeMessage
+from linhai.llm import OpenAi, ChatMessage
 import pathlib
 
 
@@ -470,3 +471,171 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         
         # 不应该添加警告消息
         self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
+
+class TestStopFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试StopFastAgentPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+        self.agent.interrupt = AsyncMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = StopFastAgentPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.answer.truncate = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_during_message_generation.assert_called_once_with(
+            self.plugin.during_message_generation
+        )
+
+    async def test_during_message_generation_with_too_many_tool_calls(self):
+        """测试工具调用超过限制时使用truncate。"""
+        # 模拟minimax模型
+        mock_model = MagicMock(spec=OpenAi)
+        mock_model.compatibility = "minimax"
+        self.agent.get_current_model = AsyncMock(return_value=mock_model)
+        
+        # 模拟有之前的assistant消息
+        self.agent.message_processor.get_messages.return_value = [
+            ChatMessage(role="assistant", message="previous message")
+        ]
+        
+        # 模拟超过5个工具调用
+        current_content = """
+```json toolcall
+{"name": "tool1", "arguments": {}}
+```
+```json toolcall
+{"name": "tool2", "arguments": {}}
+```
+```json toolcall
+{"name": "tool3", "arguments": {}}
+```
+```json toolcall
+{"name": "tool4", "arguments": {}}
+```
+```json toolcall
+{"name": "tool5", "arguments": {}}
+```
+```json toolcall
+{"name": "tool6", "arguments": {}}
+```
+"""
+        
+        result = await self.plugin.during_message_generation(
+            self.answer, current_content
+        )
+        
+        # 应该返回True表示需要中断
+        self.assertTrue(result)
+        
+        # 应该添加警告消息
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("禁止超速", call_args[0].message)
+        self.assertIn("minimax", call_args[0].message)
+        
+        # 应该调用truncate而不是interrupt
+        self.answer.truncate.assert_called_once()
+        self.agent.interrupt.assert_not_called()
+
+
+class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PreventToolOutputPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.append_message = MagicMock()
+        self.agent.interrupt = AsyncMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = PreventToolOutputPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.answer.truncate = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_during_message_generation.assert_called_once_with(
+            self.plugin.during_message_generation
+        )
+
+    async def test_during_message_generation_with_tool_output(self):
+        """测试检测到工具输出时使用truncate。"""
+        # 模拟没有之前的assistant消息（第一条消息）
+        self.agent.message_processor.get_messages.return_value = []
+        
+        current_content = """**tool** 返回了结果
+这是工具调用的内容"""
+        
+        result = await self.plugin.during_message_generation(
+            self.answer, current_content
+        )
+        
+        # 应该返回True表示需要中断
+        self.assertTrue(result)
+        
+        # 应该添加警告消息
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("请不要输出工具调用的内容", call_args[0].message)
+        
+        # 应该调用truncate而不是interrupt
+        self.answer.truncate.assert_called_once()
+        self.agent.interrupt.assert_not_called()
+
+    async def test_during_message_generation_without_tool_output(self):
+        """测试没有工具输出时不应该中断。"""
+        # 模拟没有之前的assistant消息（第一条消息）
+        self.agent.message_processor.get_messages.return_value = []
+        
+        current_content = """这是正常的回复内容
+没有工具调用的标记"""
+        
+        result = await self.plugin.during_message_generation(
+            self.answer, current_content
+        )
+        
+        # 应该返回False表示不需要中断
+        self.assertFalse(result)
+        
+        # 不应该调用truncate或interrupt
+        self.answer.truncate.assert_not_called()
+        self.agent.interrupt.assert_not_called()
+
+    async def test_during_message_generation_with_previous_message(self):
+        """测试有之前的assistant消息时不检查工具输出。"""
+        # 模拟有之前的assistant消息
+        self.agent.message_processor.get_messages.return_value = [
+            ChatMessage(role="assistant", message="previous message")
+        ]
+        
+        current_content = """**tool** 返回了结果
+这是工具调用的内容"""
+        
+        result = await self.plugin.during_message_generation(
+            self.answer, current_content
+        )
+        
+        # 应该返回False表示不需要中断
+        self.assertFalse(result)
+        
+        # 不应该调用truncate或interrupt
+        self.answer.truncate.assert_not_called()
+        self.agent.interrupt.assert_not_called()
