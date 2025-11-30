@@ -4,6 +4,7 @@ import time
 import json
 import colorsys
 import re
+from typing import Union
 
 from textual.app import ComposeResult
 from textual.widgets import Static
@@ -15,6 +16,9 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.style import Style
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
+
+# 类型别名，用于标识支持stop方法的widget类型
+StoppableWidget = Union['ToolCallWidget', 'NormalContentWidget', 'ReasoningContentWidget']
 
 # 常用文件后缀名到语法高亮类型的映射
 EXTENSION_TO_TYPE = {
@@ -255,6 +259,12 @@ class ToolCallWidget(Static):
         self.has_error = False
         self.error_message = ""
 
+    def stop(self) -> None:
+        """停止组件的timer"""
+        if self.timer is not None:
+            self.timer.stop()
+            self.timer = None
+
     def feed_string(self, new_content: str):
         try:
             self.json_str += new_content
@@ -395,6 +405,7 @@ class ToolCallWidget(Static):
 
 class ReasoningContentWidget(Static):
     """思考消息显示组件，不换行并用省略号省略超出行"""
+    BORDER_COLOR = "grey50"
 
     def __init__(self, role: str, content: str, sender_name: str):
         super().__init__()
@@ -402,9 +413,9 @@ class ReasoningContentWidget(Static):
         self.content_str = content
         self.is_expanded = False
         self.timer: Timer | None = None
-        self.add_class("reasoning-widget")
         self.sender_name = sender_name
         self.border_title = self.calculate_border_title()
+        self.add_class("reasoning-widget")
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -431,25 +442,39 @@ class ReasoningContentWidget(Static):
         """组件挂载时开始显示"""
         self.timer = self.set_interval(0.1, self.update_display)
 
+    def stop(self) -> None:
+        """停止组件的timer"""
+        if self.timer is not None:
+            self.timer.stop()
+            self.timer = None
+
     def update_display(self) -> None:
         """更新思考消息显示"""
         content_to_display = self.content_str.strip()
-
+        
         if self.is_expanded:
-            # 展开状态：直接使用Syntax渲染markdown，不使用Panel
-            syntax = Syntax(
+            renderable = Syntax(
                 content_to_display,
                 lexer="markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
                 word_wrap=True,
             )
-            self.update(syntax)
         else:
             lines = [line for line in content_to_display.splitlines() if line]
             truncated_content = "\n".join(lines[-2:]) if lines else ""
-            text = Text(truncated_content)
-            self.update(text)
+            renderable = Text(truncated_content)
+        
+        panel = Panel(
+            renderable,
+            box=box.SQUARE,
+            border_style=self.BORDER_COLOR,
+            title=self.border_title,
+            title_align="left",
+            expand=True,
+            style="on #2E3440",
+        )
+        self.update(panel)
 
 
 class NormalContentWidget(Static):
@@ -462,6 +487,12 @@ class NormalContentWidget(Static):
         self.role = role
         self.timer: Timer | None = None
         self._content_static: Static | None = None
+
+    def stop(self) -> None:
+        """停止组件的timer"""
+        if self.timer is not None:
+            self.timer.stop()
+            self.timer = None
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -515,6 +546,27 @@ class MessageWidget(Static):
 
     def update_display(self):
         self.append_content("")
+
+    def stop(self) -> None:
+        """停止组件的timer"""
+        stoppable_types = (ToolCallWidget, NormalContentWidget, ReasoningContentWidget)
+        
+        # 停止当前widget的timer
+        if self.current_widget and isinstance(self.current_widget, stoppable_types):
+            timer = self.current_widget.timer
+            if timer:
+                timer.stop()
+                self.current_widget.timer = None
+        
+        # 停止所有子widget的timer
+        for widget in self.children:
+            if isinstance(widget, stoppable_types):
+                timer = widget.timer
+                if timer:
+                    timer.stop()
+                    widget.timer = None
+
+
 
     def stop_old_widget(self, old_widget: ToolCallWidget | NormalContentWidget):
         def stop_timer():

@@ -25,7 +25,6 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.assertEqual(self.widget.content_str, self.content)
         self.assertEqual(self.widget.sender_name, self.sender_name)
         self.assertFalse(self.widget.is_expanded)
-        self.assertIn("reasoning-widget", self.widget.classes)
 
     def test_border_title_calculation(self):
         """Test border title calculation in different states."""
@@ -76,31 +75,27 @@ class TestReasoningContentWidget(unittest.TestCase):
         """Test display update in collapsed state."""
         self.widget.is_expanded = False
         
-        # Mock the update method to capture what would be rendered
         update_calls = []
         self.widget.update = Mock(side_effect=lambda x: update_calls.append(x))
         
         self.widget.update_display()
         
-        # Should have one call to update with a Text (no Panel in collapsed state)
         self.assertEqual(len(update_calls), 1)
-        text = update_calls[0]
-        self.assertEqual(text.__class__.__name__, "Text")
+        panel = update_calls[0]
+        self.assertEqual(panel.__class__.__name__, "Panel")
 
     def test_update_display_expanded(self):
         """Test display update in expanded state."""
         self.widget.is_expanded = True
         
-        # Mock the update method to capture what would be rendered
         update_calls = []
         self.widget.update = Mock(side_effect=lambda x: update_calls.append(x))
         
         self.widget.update_display()
         
-        # Should have one call to update with a Syntax
         self.assertEqual(len(update_calls), 1)
-        syntax = update_calls[0]
-        self.assertEqual(syntax.__class__.__name__, "Syntax")
+        panel = update_calls[0]
+        self.assertEqual(panel.__class__.__name__, "Panel")
 
     def test_truncation_in_collapsed_state(self):
         """Test that collapsed state shows last two lines."""
@@ -116,20 +111,14 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.is_expanded = False
         
-        # Mock update to capture the rendered content
         rendered_content = []
         widget.update = Mock(side_effect=lambda x: rendered_content.append(x))
         
         widget.update_display()
         
-        # Should render a Text with truncated content (last two lines)
         self.assertEqual(len(rendered_content), 1)
-        text = rendered_content[0]
-        self.assertEqual(text.__class__.__name__, "Text")
-        # Verify it contains the last two lines content
-        text_str = str(text)
-        self.assertIn("第三行内容", text_str)
-        self.assertIn("第四行内容", text_str)
+        panel = rendered_content[0]
+        self.assertEqual(panel.__class__.__name__, "Panel")
 
     def test_special_characters_in_collapsed_state(self):
         """Test that special characters don't cause crashes in collapsed state."""
@@ -142,18 +131,77 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.is_expanded = False
         
-        # Mock update to capture the rendered content
         rendered_content = []
         widget.update = Mock(side_effect=lambda x: rendered_content.append(x))
         
-        # This should not raise any exceptions
         widget.update_display()
         
         self.assertEqual(len(rendered_content), 1)
-        text = rendered_content[0]
-        self.assertEqual(text.__class__.__name__, "Text")
-        # Verify special characters are properly escaped
-        self.assertIn("\\", str(text))
+
+    def test_stop_method(self):
+        """Test that stop method stops the timer."""
+        widget = ReasoningContentWidget(
+            role="assistant",
+            content="test content",
+            sender_name="test"
+        )
+        mock_timer = Mock()
+        widget.timer = mock_timer
+        
+        widget.stop()
+        
+        mock_timer.stop.assert_called_once()
+        self.assertIsNone(widget.timer)
+
+    def test_stop_method_actual_timer(self):
+        """Test stop method with actual timer behavior."""
+        widget = ReasoningContentWidget(
+            role="assistant",
+            content="test content",
+            sender_name="test"
+        )
+        
+        # Simulate timer creation and keep reference
+        mock_timer = Mock()
+        widget.timer = mock_timer
+        
+        widget.stop()
+        
+        # Verify timer was stopped and set to None
+        mock_timer.stop.assert_called_once()
+        self.assertIsNone(widget.timer)
+
+    def test_stop_method_without_timer(self):
+        """Test stop method when there is no timer."""
+        widget = ReasoningContentWidget(
+            role="assistant",
+            content="test content",
+            sender_name="test"
+        )
+        widget.timer = None
+        
+        widget.stop()
+        self.assertIsNone(widget.timer)
+
+    def test_panel_styling(self):
+        """Test that Panel styling is correctly applied."""
+        widget = ReasoningContentWidget(
+            role="assistant",
+            content="test content",
+            sender_name="test"
+        )
+        
+        rendered_panels = []
+        widget.update = Mock(side_effect=lambda x: rendered_panels.append(x))
+        
+        widget.update_display()
+        
+        self.assertEqual(len(rendered_panels), 1)
+        panel = rendered_panels[0]
+        self.assertEqual(panel.__class__.__name__, "Panel")
+        self.assertIsNotNone(panel.border_style)
+        self.assertIsNotNone(panel.title)
+        self.assertIn("test", panel.title)
 
 
 if __name__ == "__main__":

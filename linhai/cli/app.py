@@ -29,6 +29,9 @@ from .components import (
 )
 
 from .token_manager import TokenManager
+from linhai.tool.tools.terminal import close_all_terminals
+from linhai.tool.mcp_connector import MCPConnector
+from textual_autocomplete import AutoComplete, DropdownItem
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
@@ -90,12 +93,9 @@ class CLIApp(App):
 
     .reasoning-widget {
         width: 100%;
-        padding-left: 1;
-        padding-right: 1;
         overflow: hidden;
         text-overflow: ellipsis;
         text-wrap: nowrap;
-        border: solid grey;
     }
 
     .reasoning-widget-expanded {
@@ -109,7 +109,6 @@ class CLIApp(App):
     }
     """
 
-    MAX_MESSAGES = 1000
 
     def __init__(
         self,
@@ -166,7 +165,7 @@ class CLIApp(App):
                 with VerticalScroll(id="subagent-container"):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
 
-    async def watch_agent_answer_queue(self):
+    async def watch_agent_answer_queue(self) -> None:
         """监听agent_answer队列并处理Agent回答"""
         current_message = None
         while True:
@@ -185,6 +184,7 @@ class CLIApp(App):
                     isinstance(current_message, ReasoningContentWidget) != is_reasoning
                 ):
                     current_message.update_display()
+                    current_message.stop()
                     current_message = None
 
                 container = self.query_one("#chat-container")
@@ -209,7 +209,6 @@ class CLIApp(App):
                     container.mount(current_message)
                     self.messages.append(current_message)
                     current_message.update_display()
-                    self._trim_messages_if_needed()
                 else:
                     current_message.feed_string(content)
 
@@ -227,13 +226,14 @@ class CLIApp(App):
 
                 if current_message:
                     current_message.update_display()
+                    current_message.stop()
                 current_message = None
             else:
                 raise RuntimeError(
                     f"Unknown Type in agent_answer: {type(output)=} {output=}"
                 )
 
-    async def watch_ui_log_queue(self):
+    async def watch_ui_log_queue(self) -> None:
         """监听ui_log队列并处理运行时日志"""
         while True:
             output = await self.group_chat.receive("ui_log")
@@ -245,14 +245,13 @@ class CLIApp(App):
                     level=output.level, content=output.content
                 )
                 container.mount(widget)
-                self._trim_messages_if_needed()
 
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
             else:
                 raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
 
-    async def watch_exit_signal_queue(self):
+    async def watch_exit_signal_queue(self) -> None:
         """监听exit_signal队列并处理退出信号"""
         while True:
             output = await self.group_chat.receive("exit_signal")
@@ -266,7 +265,7 @@ class CLIApp(App):
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
                 )
 
-    async def watch_subagent_message_queue(self):
+    async def watch_subagent_message_queue(self) -> None:
         """监听subagent_message队列并处理SubAgent消息"""
         while True:
             output = await self.group_chat.receive("subagent_message")
@@ -335,7 +334,7 @@ class CLIApp(App):
                     f"Unknown Type in subagent_message: {type(output)=} {output=}"
                 )
 
-    async def watch_output_queue(self):
+    async def watch_output_queue(self) -> None:
         """启动四个独立的任务分别监听不同的队列"""
 
         agent_answer_task = asyncio.create_task(self.watch_agent_answer_queue())
@@ -432,7 +431,6 @@ class CLIApp(App):
 
         input_element = self.query_one("#input")
         assert isinstance(input_element, Input)
-        from textual_autocomplete import AutoComplete, DropdownItem
 
         self.autocomplete = AutoComplete(
             target=input_element,
@@ -480,7 +478,13 @@ class CLIApp(App):
         if self.agent_task:
             self.agent_task.cancel()
 
-        from linhai.tool.tools.terminal import close_all_terminals
+        # 停止所有消息widget的timer
+        for message in self.messages:
+            message.stop()
+
+        # 停止所有SubAgent消息widget的timer
+        for message in self.subagent_current_messages.values():
+            message.stop()
 
         close_all_terminals()
 
@@ -489,14 +493,7 @@ class CLIApp(App):
         footer_widget = self.query_one(FooterWidget)
         footer_widget.update_token_info(current_answer_token)
 
-    def _trim_messages_if_needed(self) -> None:
-        """如果消息数量超过阈值，修剪旧消息"""
 
-        message_widgets = self.query_one("#chat-container").query(MessageWidget)
-        if len(message_widgets) < self.MAX_MESSAGES:
-            return
-        for i in range(self.MAX_MESSAGES - len(message_widgets)):
-            message_widgets[i].remove()
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
@@ -513,16 +510,13 @@ class CLIApp(App):
             return
 
         if event.key == "ctrl+c":
-            from linhai.tool.tools.terminal import close_all_terminals
-            from linhai.tool.mcp_connector import MCPConnector
-
             close_all_terminals()
             await self.group_chat.get_members(
                 "mcp_connector", MCPConnector
             ).disconnect_all_mcp_servers()
             self.app.exit()
 
-    def should_auto_scroll(self):
+    def should_auto_scroll(self) -> bool:
         container = self.query_one("#chat-container")
         return (
             self.is_user_scroll_to_end
