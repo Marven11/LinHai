@@ -109,7 +109,7 @@ class TokenManager:
             empty_bars = 10 - filled_bars
             progress_bar = "█" * filled_bars + "▒" * empty_bars
             display_text_pieces.append(
-                f"{progress_bar} {percentage:.0f}% of {self._format_token_number(token_limit)}"
+                f"{progress_bar} {percentage:.0f}%"
             )
 
         return " | ".join(display_text_pieces)
