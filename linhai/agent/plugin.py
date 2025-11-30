@@ -5,10 +5,11 @@ import logging
 import re
 
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from ..llm import Answer
+from ..llm import Answer, OpenAi
 from ..utils import CliRuntimeNotice
 import linhai.agent as linhai_agent
 from linhai.group_chat import GroupChat
+from linhai.markdown_parser import extract_tool_calls_with_errors
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,7 @@ class BadMultiToolCall(Plugin):
             is not None
         ):
             agent.message_processor.append_message(
-                RuntimeMessage("不需要在原因中加上“同时调用：”，很丑")
+                RuntimeMessage('不需要在原因中加上"同时调用："，很丑')
             )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -255,7 +256,7 @@ class PromptFastAgentPlugin(Plugin):
             )
             answer.truncate()
             self.speeding_counter += 1
-            return True
+            return False
         self.speeding_counter = 0
         return False
 
@@ -265,23 +266,31 @@ class PromptFastAgentPlugin(Plugin):
         lifecycle.register_during_message_generation(self.during_message_generation)
 
 
-class WeirdEndOfSentencePlugin(Plugin):
-    """错误结束标记检查Plugin。"""
+class WeirdTokenPlugin(Plugin):
+    """错误标记检查Plugin。"""
 
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
-        """检查是否有一行内容有`<｜end▁of▁[a-z]+｜>`且前面都是汉字。"""
+        """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
         pattern = r"^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>"
+        model = await agent.get_current_model()
 
         for line in current_content.split("\n"):
             if re.search(pattern, line):
                 await agent.interrupt(
                     "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已打断输出"
                 )
+                return True
+            if (
+                isinstance(model, OpenAi)
+                and model.compatibility == "minimax"
+                and line == "<tool_call>"
+            ):
+                await agent.interrupt("检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！")
                 return True
         return False
 
@@ -529,10 +538,48 @@ class PreventToolOutputPlugin(Plugin):
                         ),
                     )
                     answer.truncate()
-                    return True
+                    return False
 
         return False
 
     def register(self, lifecycle):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+
+
+class JsonCodeBlockPlugin(Plugin):
+    """检测agent误用`json`而非`json toolcall`代码块的插件。"""
+
+    async def after_message_generation(
+        self, _answer: Answer, full_response: str, _tool_calls
+    ):
+        """检查是否有json代码块包含有效的工具调用。"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        # 使用extract_tool_calls_with_errors检测json代码块
+        json_tool_calls, json_errors = extract_tool_calls_with_errors(
+            full_response, language="json"
+        )
+
+        if json_tool_calls and not json_errors:
+            # 提取工具名（不包含参数）
+            tool_names = [call.get("name", "未知工具") for call in json_tool_calls]
+            unique_tool_names = list(set(tool_names))
+
+            if len(unique_tool_names) == 1:
+                warning_msg = f"警告：你使用了`json`代码块而非`json toolcall`代码块调用了工具'{unique_tool_names[0]}'，请使用`json toolcall`代码块！"
+                ui_msg = f"检测到json代码块中的工具调用: {unique_tool_names[0]}"
+            else:
+                warning_msg = f"警告：你使用了`json`代码块而非`json toolcall`代码块调用了工具{unique_tool_names}，请使用`json toolcall`代码块！"
+                ui_msg = f"检测到json代码块中的工具调用: {', '.join(unique_tool_names)}"
+
+            agent.message_processor.append_message(RuntimeMessage(warning_msg))
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
+            )
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)

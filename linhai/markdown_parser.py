@@ -78,13 +78,14 @@ def _extract_json_error_context(error: json.JSONDecodeError, content: str) -> st
 
 
 def extract_tool_calls_with_errors(
-    markdown_text: str,
+    markdown_text: str, language: str = "json toolcall"
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
     """
     从Markdown文本中提取JSON格式的工具调用，并返回错误消息列表
 
     Args:
         markdown_text: 要解析的Markdown文本
+        language: 要提取的代码块语言，默认为"json toolcall"
 
     Returns:
         tuple[list[dict], list[str]]: 工具调用列表和错误消息列表
@@ -97,7 +98,7 @@ def extract_tool_calls_with_errors(
     errors = []
 
     for i, block in enumerate(renderer.code_blocks):
-        if block["language"].lower() == "json toolcall":
+        if block["language"].lower() == language.lower():
             try:
                 data = json.loads(block["content"])
 

@@ -120,26 +120,28 @@ class Lifecycle:
             WaitingUserPlugin,
             WrongEndPlugin,
             PromptFastAgentPlugin,
-            WeirdEndOfSentencePlugin,
+            WeirdTokenPlugin,
             BadMultiToolCall,
             EndThinkPlugin,
             ToolCallInReasoningPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
             ClarificationCheckPlugin,
+            JsonCodeBlockPlugin,
         )
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
             PromptFastAgentPlugin(self.group_chat),
-            WeirdEndOfSentencePlugin(self.group_chat),
+            WeirdTokenPlugin(self.group_chat),
             BadMultiToolCall(self.group_chat),
             EndThinkPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
             ClarificationCheckPlugin(self.group_chat),
+            JsonCodeBlockPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

@@ -2,19 +2,16 @@
 
 依次完成以下任务，逐个完成后钩上前面的标记`[ ]`并暂停
 
-- [ ] OpenAiAnswer的estimated_usage会在哪里被用到？没有用则删除
-- [ ] 在“错误：有未解答的澄清问题，禁止使用”后面加上澄清问题的ID和内容，避免agent手动调用工具，产生多余工具调用
-- [ ] 在“与已调用的工具存在冲突，已阻止调用”加上是和什么工具冲突
-- [ ] 有时agent会误用`json`而非`json toolcall`的代码块调用，写一个插件在此时警告Agent
-  - 检测`json`代码块，看看是否可以获得正确的工具调用
-  - 如果agent确实将工具调用放在json而非json toolcall中，警告：
-    - 警告内容包括工具的名字，不包括工具的参数（太长了）
-    - 弹一条UI消息
-  - 你需要修改extract_tool_calls_with_errors添加参数，以重用代码
-    - 让其支持自定义参数，默认json toolcall可以改成`json`
-    - 然后在插件里使用这个参数检测json块
-- [ ] 修复截断逻辑
-  - 让插件在截断后不返回True，True代表打断agent
+- [ ] 修改架构，改进CLI样式和性能
+  - 现在ReasoningContentWidget的边框是由CSS设置的, MessageWidget各个子component的边框是由Panel设置的
+    - 需要修改ReasoningContentWidget使用panel以统一
+  - MessageWidget在更新完毕被app.py丢弃（不为current_message后）之后没有stop子widget的timer
+    - 将stop_old_widget改成stop current widget并让app.py在丢弃（不为current_message后）前调用
+  - ReasoningContentWidget也是，没有在被app.py丢弃（不为current_message后）之后暂停
+    - 需要让app.py在丢弃前调用ReasoningContentWidget的函数stop current widget让其停止自己的timer
+  - 修改发现的重大性能问题
+    - 现在的表现是在只有几条消息时内容正常刷新：每0.1秒刷新一次，在有几百条消息时就变得非常卡顿: 1秒刷新一次
+    - 不要修改：不会造成个这个量级影响的问题
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

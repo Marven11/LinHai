@@ -64,7 +64,7 @@ class ToolManager:
             )
 
     @property
-    def toolsets(self):
+    def toolsets(self) -> list[ToolSet]:
         toolsets = self._toolsets.copy()
         if self.mcp_connector:
             toolsets += self.mcp_connector.get_toolsets()

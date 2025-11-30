@@ -42,10 +42,15 @@ class GitBlockingPlugin(Plugin):
                 command = arguments.get("command", "")
 
                 if self._is_git_command(command):
+                    unanswered = clarification_manager.get_unanswered_clarifications()
+                    clarification_info = "\n".join(
+                        [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+                    )
                     agent.message_processor.append_message(
                         RuntimeMessage(
                             f"错误：有未解答的澄清问题，禁止使用git命令。"
-                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。"
+                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。\n"
+                            f"未解答的澄清问题:\n{clarification_info}"
                         )
                     )
 
@@ -103,10 +108,14 @@ class ClarificationWaitingUserPlugin(Plugin):
             clarification_manager
             and clarification_manager.has_unanswered_clarifications()
         ):
+            unanswered = clarification_manager.get_unanswered_clarifications()
+            clarification_info = "\n".join(
+                [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+            )
             agent.message_processor.append_message(
                 RuntimeMessage(
-                    "错误：有未解答的澄清问题，禁止进入等待用户状态。"
-                    "请先回复所有SubAgent的澄清问题。"
+                    f"错误：有未解答的澄清问题，禁止进入等待用户状态。\n"
+                    f"未解答的澄清问题:\n{clarification_info}"
                 )
             )
             agent.state = "working"
@@ -138,10 +147,14 @@ class ClarificationBlockingPlugin(Plugin):
         ):
 
             if WAITING_USER_MARKER in full_response:
+                unanswered = clarification_manager.get_unanswered_clarifications()
+                clarification_info = "\n".join(
+                    [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+                )
                 agent.message_processor.append_message(
                     RuntimeMessage(
-                        f"错误：有未解答的澄清问题，禁止使用{WAITING_USER_MARKER!r}等待用户。"
-                        "请先使用工具回复所有SubAgent的澄清问题。"
+                        f"错误：有未解答的澄清问题，禁止使用{WAITING_USER_MARKER!r}等待用户。\n"
+                        f"未解答的澄清问题:\n{clarification_info}"
                     )
                 )
                 agent.state = "working"

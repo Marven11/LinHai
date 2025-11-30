@@ -32,14 +32,14 @@ class AgentToolcall:
 
         self._register_default_toolsets()
 
-    def _check_tool_conflict(self, tool_name: str) -> bool:
-        """检查工具调用冲突
+    def _check_tool_conflict(self, tool_name: str) -> str | None:
+        """检查工具调用冲突，返回冲突工具的名字，没有冲突返回None
 
         Args:
             tool_name: 要调用的工具名称
 
         Returns:
-            bool: 是否存在冲突
+            str | None: 冲突工具的名字，没有冲突返回None
         """
 
         tool_def = None
@@ -49,12 +49,12 @@ class AgentToolcall:
                 break
 
         if not tool_def:
-            return False
+            return None
 
         for called_tool in self.called_tools_in_round:
 
             if called_tool in tool_def["conflict_with"]:
-                return True
+                return called_tool
 
             called_tool_def = None
             for toolset in self.tool_manager.toolsets:
@@ -63,9 +63,10 @@ class AgentToolcall:
                     break
 
             if called_tool_def and tool_name in called_tool_def["conflict_with"]:
-                return True
+                return called_tool
+        return None
 
-        return False
+
 
     def _register_default_toolsets(self):
         """注册默认工具集（LLM切换、虚拟工具、工作流工具）。"""
@@ -206,14 +207,15 @@ class AgentToolcall:
             )
             return
 
-        if self._check_tool_conflict(tool_call.function_name):
-            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与已调用的工具存在冲突，已阻止调用，剩余工具调用已忽略"
+        conflict_tool = self._check_tool_conflict(tool_call.function_name)
+        if conflict_tool:
+            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool} 存在冲突，已阻止调用，剩余工具调用已忽略"
 
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
-                    content=f"工具调用冲突: {tool_call.function_name}",
+                    content=f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool}",
                 ),
             )
 

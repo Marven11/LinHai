@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import BadMultiToolCall, WeirdEndOfSentencePlugin, DirectoryChangePlugin, PromptFastAgentPlugin, PreventToolOutputPlugin
+from linhai.agent.plugin import BadMultiToolCall, WeirdTokenPlugin, DirectoryChangePlugin, PromptFastAgentPlugin, PreventToolOutputPlugin
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import OpenAi, ChatMessage
 import pathlib
@@ -252,7 +252,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt = AsyncMock(side_effect=lambda msg=None: self.agent.message_processor.append_message(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
-        self.plugin = WeirdEndOfSentencePlugin(self.group_chat)
+        self.plugin = WeirdTokenPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
 

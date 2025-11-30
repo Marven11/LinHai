@@ -294,7 +294,6 @@ class OpenAiAnswer:
         self,
         stream,
         compatibility: str | None = None,
-        estimated_usage: AnswerTokenUsage | None = None,
         cached_input_tokens: int = 0,
         previous_update_callback: Callable[[int], None] | None = None,
     ):
@@ -312,11 +311,6 @@ class OpenAiAnswer:
         self.cached_input_tokens = cached_input_tokens
         self.toyield: list[AnswerToken | AnswerTokenUsage] = []
         self.previous_update_callback = previous_update_callback
-        if estimated_usage:
-            self.toyield.append(estimated_usage)
-            self.input_tokens = estimated_usage.input_tokens
-            self.output_tokens = estimated_usage.output_tokens
-            self.total_tokens = estimated_usage.total_tokens
 
     def __aiter__(self):
         """返回异步迭代器。"""
