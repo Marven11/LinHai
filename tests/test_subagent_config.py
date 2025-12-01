@@ -70,10 +70,12 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
 
     async def test_create_subagent_without_config(self):
         """测试没有配置时使用传入的LLM创建SubAgent。"""
-        # 创建SubAgentManager（没有配置）
+        # 创建配置（使用默认LLM）
+        subagent_config = SubAgentConfig(default_llm="deepseek")
+        # 创建SubAgentManager
         manager = SubAgentManager(
             self.group_chat, 
-            None, 
+            subagent_config, 
             self.llms, 
             self.llm_names
         )
@@ -154,7 +156,9 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
 
     async def test_check_subagent_status(self):
         """测试检查SubAgent状态。"""
-        manager = SubAgentManager(self.group_chat)
+        # 创建配置
+        subagent_config = SubAgentConfig(default_llm="deepseek")
+        manager = SubAgentManager(self.group_chat, subagent_config)
         # 设置manager的group_chat.get_members返回正确的agent（单个对象）
         mock_agent = MagicMock()
         mock_agent.get_current_llm_info = Mock(return_value=(None, self.mock_llm1))

@@ -59,5 +59,9 @@
   - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
 - [ ] 改进检测思考中的工具调用功能，只在思考了但是没有调用时提醒
   - 如果思考中的工具在实际输出中被调用则忽略（因为agent已经实际调用了，不需要提醒）
+- [ ] 让NormalContentWidget在被stop后还没有实际内容时unmount自己
+  - NormalContentWidget被stop后其再也不会接收到新内容，此时如果还是空的话可以直接从CLI中隐藏
+- [ ] 调整clarification相关的prompt
+  - 在agent接收到clarification时提醒“仔细思考问题是否合理、是否漏掉了某些信息”
 - [ ] 添加假设颠覆法
 

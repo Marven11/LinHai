@@ -1,24 +1,28 @@
 """CLI UI components for LinHai agent."""
 
-import time
-import json
 import colorsys
+import json
 import re
+import time
 from typing import Union
 
-from textual.app import ComposeResult
-from textual.widgets import Static
-from textual.timer import Timer
 from rich import box
-from rich.syntax import Syntax
 from rich.markup import escape
 from rich.panel import Panel
-from rich.text import Text
 from rich.style import Style
+from rich.syntax import Syntax
+from rich.text import Text
+from textual.app import ComposeResult
+from textual.timer import Timer
+from textual.widgets import Static
+
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
+from linhai.tool.tools.todolist import TodolistItem
 
 # 类型别名，用于标识支持stop方法的widget类型
-StoppableWidget = Union['ToolCallWidget', 'NormalContentWidget', 'ReasoningContentWidget']
+StoppableWidget = Union[
+    "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
+]
 
 # 常用文件后缀名到语法高亮类型的映射
 EXTENSION_TO_TYPE = {
@@ -74,18 +78,26 @@ EXTENSION_TO_TYPE = {
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
- ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███ 
-  ▒███        ▒███  ▒███▒███ ▒███  ▒███    ▒███  ▒███    ▒███  ▒███ 
-  ▒███        ▒███  ▒███▒▒███▒███  ▒███████████  ▒███████████  ▒███ 
-  ▒███        ▒███  ▒███ ▒▒██████  ▒███▒▒▒▒▒███  ▒███▒▒▒▒▒███  ▒███ 
-  ▒███      █ ▒███  ▒███  ▒▒█████  ▒███    ▒███  ▒███    ▒███  ▒███ 
+ ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███
+  ▒███        ▒███  ▒███▒███ ▒███  ▒███    ▒███  ▒███    ▒███  ▒███
+  ▒███        ▒███  ▒███▒▒███▒███  ▒███████████  ▒███████████  ▒███
+  ▒███        ▒███  ▒███ ▒▒██████  ▒███▒▒▒▒▒███  ▒███▒▒▒▒▒███  ▒███
+  ▒███      █ ▒███  ▒███  ▒▒█████  ▒███    ▒███  ▒███    ▒███  ▒███
   ███████████ █████ █████  ▒▒█████ █████   █████ █████   █████ █████
- ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒ 
+ ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒
 """
 
 
 class RainbowAsciiArt(Static):
     """显示斜向彩虹渐变色ASCII艺术的组件"""
+
+    DEFAULT_CSS = """
+    RainbowAsciiArt {
+        width: 100%;
+        text-align: center;
+        content-align: center middle;
+    }
+    """
 
     def __init__(self, ascii_art: str):
         super().__init__()
@@ -150,6 +162,14 @@ class RainbowAsciiArt(Static):
 
 class AnimatedWelcomeWidget(Static):
     """动画欢迎信息组件"""
+
+    DEFAULT_CSS = """
+    AnimatedWelcomeWidget {
+        width: 100%;
+        text-align: center;
+        content-align: center middle;
+    }
+    """
 
     def __init__(self, version: str, llm_name: str):
         super().__init__()
@@ -221,6 +241,13 @@ class AnimatedWelcomeWidget(Static):
 
 class RuntimeMessageWidget(Static):
     """运行时消息显示组件"""
+
+    DEFAULT_CSS = """
+    RuntimeMessageWidget {
+        width: auto;
+        height: auto;
+    }
+    """
 
     def __init__(self, level: str, content: str):
         super().__init__()
@@ -335,7 +362,6 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                         )
                     else:
-
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{final_value}`\n"
@@ -353,7 +379,6 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
                         )
                     else:
-
                         self.current_content = (
                             self.content_before_current_value
                             + f"{self.current_key}: `{self.current_value}`"
@@ -405,6 +430,22 @@ class ToolCallWidget(Static):
 
 class ReasoningContentWidget(Static):
     """思考消息显示组件，不换行并用省略号省略超出行"""
+
+    DEFAULT_CSS = """
+    ReasoningContentWidget {
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-wrap: nowrap;
+    }
+
+    ReasoningContentWidget.reasoning-widget-expanded {
+        height: auto;
+        text-overflow: fold;
+        text-wrap: wrap;
+    }
+    """
+
     BORDER_COLOR = "grey50"
 
     def __init__(self, role: str, content: str, sender_name: str):
@@ -415,7 +456,6 @@ class ReasoningContentWidget(Static):
         self.timer: Timer | None = None
         self.sender_name = sender_name
         self.border_title = self.calculate_border_title()
-        self.add_class("reasoning-widget")
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -451,7 +491,7 @@ class ReasoningContentWidget(Static):
     def update_display(self) -> None:
         """更新思考消息显示"""
         content_to_display = self.content_str.strip()
-        
+
         if self.is_expanded:
             renderable = Syntax(
                 content_to_display,
@@ -463,8 +503,8 @@ class ReasoningContentWidget(Static):
         else:
             lines = [line for line in content_to_display.splitlines() if line]
             truncated_content = "\n".join(lines[-2:]) if lines else ""
-            renderable = Text(truncated_content)
-        
+            renderable = Text(truncated_content, overflow="ellipsis")
+
         panel = Panel(
             renderable,
             box=box.SQUARE,
@@ -550,23 +590,19 @@ class MessageWidget(Static):
     def stop(self) -> None:
         """停止组件的timer"""
         stoppable_types = (ToolCallWidget, NormalContentWidget, ReasoningContentWidget)
-        
-        # 停止当前widget的timer
+
         if self.current_widget and isinstance(self.current_widget, stoppable_types):
             timer = self.current_widget.timer
             if timer:
                 timer.stop()
                 self.current_widget.timer = None
-        
-        # 停止所有子widget的timer
+
         for widget in self.children:
             if isinstance(widget, stoppable_types):
                 timer = widget.timer
                 if timer:
                     timer.stop()
                     widget.timer = None
-
-
 
     def stop_old_widget(self, old_widget: ToolCallWidget | NormalContentWidget):
         def stop_timer():
@@ -676,3 +712,69 @@ class FooterWidget(Static):
         )
 
         self.update(display_text)
+
+
+class TodolistWidget(Static):
+    """Todolist显示widget。"""
+
+    DEFAULT_CSS = """
+    TodolistWidget {
+        width: auto;
+        height: auto;
+        background: #3B4252;
+        border: solid #88C0D0;
+        border-title-color: #88C0D0;
+        border-title-background: #3B4252;
+        padding: 1;
+        margin: 1 0;
+    }
+
+    .todolist-title {
+        width: 100%;
+        text-align: center;
+        color: #88C0D0;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+
+    .todolist-item {
+        width: 100%;
+        padding: 0 1;
+        margin: 0;
+        color: #E5E9F0;
+    }
+
+    .todolist-separator {
+        width: 100%;
+        height: 1;
+        background: #4C566A;
+        margin: 1 0;
+    }
+
+    .todolist-empty {
+        width: 100%;
+        text-align: center;
+        color: #81A1C1;
+        padding: 1;
+    }
+    """
+
+    def __init__(self, todolists: list[TodolistItem]) -> None:
+        super().__init__()
+        self.todolists = todolists
+        self.border_title = "Todolist List"
+
+    def compose(self) -> ComposeResult:
+        if not self.todolists:
+            yield Static("当前没有todolist。", classes="todolist-empty")
+            return
+
+        for i, todolist in enumerate(self.todolists):
+            if i > 0:
+                yield Static(classes="todolist-separator")
+            yield Static(
+                f"{todolist['id']}: {todolist['content']}", classes="todolist-item"
+            )
+
+    def on_mount(self) -> None:
+        self.add_class("todolist-widget")

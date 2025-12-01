@@ -6,7 +6,7 @@ TOOLCALL_PROMPT = """
 
 - 不要确认是否需要调用工具
   - 不要使用诸如"工具输出应为"、"准备/示例调用工具"、"工具的用法应为"、"你需要我调用...吗"等语句
-- 作为SubAgent你只能每次调用一个工具
+- 作为SubAgent你可以调用多个工具，但需要确保工具调用合理且不冲突
 
 # TOOL USE
 
@@ -20,7 +20,7 @@ TOOLCALL_PROMPT = """
 {"name": "工具名称", "arguments": {"参数1": "值1", "参数2": "值2"}}
 ```
 
-作为SubAgent，你每次只能调用一个工具
+作为SubAgent，你可以调用多个工具，但需要确保工具调用合理且不冲突
 
 # 所有工具
 
@@ -161,6 +161,9 @@ GIT_DIFF_REVIEWER_PROMPT = (
     - 必须标记list/dict等容器类型的item类型
       - 对于复杂的dict必须使用TypedDict或Pydantic等正确标注每个value的类型
     - 禁止使用Any
+  - 多余副作用：存在满足以下两点的，明显可以重写的函数
+    - 返回None
+    - 通过副作用改变外部状态
 
 每条质问是一小段话，用 markdown 分点列出
 
@@ -188,9 +191,22 @@ GIT_DIFF_REVIEWER_PROMPT = (
 1. 仔细分析上述git diff内容
 2. 根据"要求"中的检查标准，逐一检查代码变更
 3. 使用工具质问发现的问题
-4. 调用exit工具退出，原因写"代码审查完成"
+4. 如果Agent回复了你的clarification，根据回复内容继续追问直到问题完全解决
+5. 调用exit工具退出，原因写"代码审查完成"
 
 **重要:** 你必须严格按上述要求检查，不能遗漏任何一条。如果发现问题，必须使用request_clarification工具质问。
+
+**追问规则:**
+- 如果Agent回复了你的clarification，仔细分析回复内容
+- 如果回复不完整、不满意或没有解决问题，继续追问直到问题完全解决
+- 追问时要明确指出回复中的不足之处
+- 只有当所有问题都得到满意解决后才能退出
+
+**Todolist工具权限:**
+- 作为SubAgent，你可以使用所有todolist工具：
+  - `todolist_add`: 添加todolist
+  - `todolist_list`: 列出所有todolist
+  - `todolist_delete`: 删除todolist（在审查git diff时，如果发现todolist功能已完成，必须使用此工具删除对应的todolist）
 """
     + TOOLCALL_PROMPT
 )

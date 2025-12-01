@@ -8,6 +8,10 @@ from linhai.llm import Message, SystemMessage, LanguageModel, OpenAi
 from linhai.config import ToolConfig, MCPConfig, AgentConfig, Config
 from linhai.tool.main import ToolManager
 from linhai.tool.tools.terminal import terminal_toolset
+from linhai.tool.tools.todolist import (
+    TodolistManager,
+    create_agent_todolist_toolset,
+)
 from linhai.tool.base import global_tools
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from .base import GlobalMemory, AgentContext
@@ -57,6 +61,10 @@ async def create_agent_from_config(
         agent_config.mcp if agent_config else [],
         mcp_basedir=config_basedir or Path.cwd(),
     )
+
+    todolist_manager = TodolistManager(group_chat)
+    todolist_toolset = create_agent_todolist_toolset(todolist_manager)
+    tool_manager.add_toolset(todolist_toolset)
 
     memory_file_path = None
     if config.memory and config_basedir:

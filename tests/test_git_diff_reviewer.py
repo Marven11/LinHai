@@ -34,6 +34,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.subagent_manager = Mock(spec=SubAgentManager)
         self.subagent_manager.subagent_config = None  # 默认不启用
         self.group_chat.register_member("subagent_manager", self.subagent_manager)
+        
+        # 注册todolist_manager成员，避免before_waiting_user方法出错
+        from linhai.tool.tools.todolist import TodolistManager
+        self.todolist_manager = Mock(spec=TodolistManager)
+        self.todolist_manager.list_todolists = Mock(return_value=[])
+        self.group_chat.register_member("todolist_manager", self.todolist_manager)
 
     def _setup_subagent_manager(self):
         """设置SubAgentManager的mock。"""
@@ -451,7 +457,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("subprocess.run")
     @patch("os.path.exists")
     def test_before_waiting_user_no_subagent_config(self, mock_exists, mock_run, mock_create_task):
-        """测试subagent_manager存在但subagent_config为None时抛出AttributeError。"""
+        """测试subagent_manager存在但subagent_config为None时不启动审查。"""
         mock_exists.return_value = True
         mock_run.side_effect = [
             Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
@@ -464,9 +470,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         
         self._setup_for_review()
         
-        # 应该抛出AttributeError
-        with self.assertRaises(AttributeError):
-            asyncio.run(self.plugin.before_waiting_user(self.agent))
+        # 应该正常执行而不启动审查
+        asyncio.run(self.plugin.before_waiting_user(self.agent))
         
         # 验证没有启动审查任务
         mock_create_task.assert_not_called()

@@ -54,7 +54,7 @@ default_llm = "test"
 
     def test_subagent_manager_creation(self):
         """测试SubAgentManager创建。"""
-        manager = SubAgentManager(self.group_chat)
+        manager = SubAgentManager(self.group_chat, self.config.subagent)
         self.assertIsNotNone(manager)
         self.assertEqual(len(manager.subagents), 0)
 
@@ -85,7 +85,7 @@ default_llm = "test"
     def test_check_nonexistent_subagent(self):
         """测试检查不存在的SubAgent。"""
         async def run_test():
-            manager = SubAgentManager(self.group_chat)
+            manager = SubAgentManager(self.group_chat, self.config.subagent)
             result = await manager.check_subagent("nonexistent")
             self.assertIn("不存在", result)
         asyncio.run(run_test())

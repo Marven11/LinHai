@@ -1,23 +1,27 @@
 """Command-line interface for LinHai agent."""
 
-from typing import List, Optional, Union
 import asyncio
+from typing import List, Optional, Union
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, TabbedContent, TabPane, Input
 from textual import events
+from textual_autocomplete import AutoComplete, DropdownItem
+
+from linhai.agent import Agent
+from linhai.config import CLIConfig
+from linhai.group_chat import GroupChat
 from linhai.llm import (
-    ChatMessage,
+    Answer,
     AnswerToken,
     AnswerTokenUsage,
-    Answer,
+    ChatMessage,
 )
-from linhai.agent import Agent
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.group_chat import GroupChat
+from linhai.tool.tools.terminal import close_all_terminals
+from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
-from linhai.config import CLIConfig
 
 from .components import (
     RainbowAsciiArt,
@@ -27,21 +31,18 @@ from .components import (
     ReasoningContentWidget,
     FooterWidget,
 )
-
 from .token_manager import TokenManager
-from linhai.tool.tools.terminal import close_all_terminals
-from linhai.tool.mcp_connector import MCPConnector
-from textual_autocomplete import AutoComplete, DropdownItem
+from .command_handler import CommandHandler
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
- ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███ 
-  ▒███        ▒███  ▒███▒███ ▒███  ▒███    ▒███  ▒███    ▒███  ▒███ 
-  ▒███        ▒███  ▒███▒▒███▒███  ▒███████████  ▒███████████  ▒███ 
-  ▒███        ▒███  ▒███ ▒▒██████  ▒███▒▒▒▒▒███  ▒███▒▒▒▒▒███  ▒███ 
-  ▒███      █ ▒███  ▒███  ▒▒█████  ▒███    ▒███  ▒███    ▒███  ▒███ 
+ ▒▒███       ▒▒███ ▒▒██████ ▒▒███ ▒▒███   ▒▒███   ███▒▒▒▒▒███ ▒▒███
+  ▒███        ▒███  ▒███▒███ ▒███  ▒███    ▒███  ▒███    ▒███  ▒███
+  ▒███        ▒███  ▒███▒▒███▒███  ▒███████████  ▒███████████  ▒███
+  ▒███        ▒███  ▒███ ▒▒██████  ▒███▒▒▒▒▒███  ▒███▒▒▒▒▒███  ▒███
+  ▒███      █ ▒███  ▒███  ▒▒█████  ▒███    ▒███  ▒███    ▒███  ▒███
   ███████████ █████ █████  ▒▒█████ █████   █████ █████   █████ █████
- ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒ 
+ ▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒ ▒▒▒▒▒
 """
 
 
@@ -79,36 +80,12 @@ class CLIApp(App):
         background: #2E3440;
         border: solid $primary;
     }
-    FooterWidget {
-        width: 100%;
-        height: 1;
-        background: #101520;
-        color: #474e5b;
-    }
-    .welcome-message {
-        width: 100%;
-        text-align: center;
-        content-align: center middle;
-    }
-
-    .reasoning-widget {
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        text-wrap: nowrap;
-    }
-
-    .reasoning-widget-expanded {
-        text-overflow: fold;
-        text-wrap: wrap;
-    }
     AutoComplete {
         & AutoCompleteList {
             max-height: 2;
         }
     }
     """
-
 
     def __init__(
         self,
@@ -140,11 +117,12 @@ class CLIApp(App):
             str, Union[MessageWidget, ReasoningContentWidget]
         ] = {}
 
-        self.completions = self._generate_dynamic_completions()
+        self.completions = []  # 初始化为空，等待agent注册后再生成
         self.command_completions = self._generate_command_completions()
         self.autocomplete = None
 
         self.cli_config = cli_config
+        self.command_handler = CommandHandler(self.group_chat)
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -376,16 +354,26 @@ class CLIApp(App):
 
                 llm_names = agent.context.get("llm_names", [])
                 return [f"@{name}" for name in llm_names]
-        except Exception:
+        except OSError:
             pass
         return []
 
     def _generate_command_completions(self) -> list[str]:
         """动态生成/命令补全列表"""
-        return ["/queue", "/help", "/status"]
+        return [
+            "/queue",
+            "/help",
+            "/status",
+            "/todolist_list",
+            "/todolist_add",
+            "/todolist_delete",
+        ]
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
+        # 生成动态补全列表（此时agent应该已经注册）
+        self.completions = self._generate_dynamic_completions()
+        
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
 
         if self.init_messages:
@@ -436,8 +424,7 @@ class CLIApp(App):
             target=input_element,
             candidates=lambda _state: [
                 DropdownItem(item)
-                for item in self._generate_dynamic_completions()
-                + self._generate_command_completions()
+                for item in self.completions + self._generate_command_completions()
             ],
         )
         self.mount(self.autocomplete)
@@ -493,8 +480,6 @@ class CLIApp(App):
         footer_widget = self.query_one(FooterWidget)
         footer_widget.update_token_info(current_answer_token)
 
-
-
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
         if self.output_watcher_task and self.output_watcher_task.done():
@@ -531,30 +516,48 @@ class CLIApp(App):
     def on_mouse_scroll_up(self, _event: events.MouseScrollUp) -> None:
         self.is_user_scroll_to_end = False
 
+    async def _handle_regular_message(self, message_text: str) -> None:
+        """处理普通消息，发送到agent。"""
+        container = self.query_one("#chat-container")
+        input_element = self.query_one("#input")
+
+        user_msg = ChatMessage(role="user", message=message_text)
+        self.messages.append(
+            MessageWidget(
+                role="user",
+                content=message_text,
+                sender_name="user",
+            )
+        )
+        await self.group_chat.send("user_message", user_msg)
+        input_element.value = ""  # type: ignore
+
+        widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
+        container.mount(widget)
+        widget.update_display()
+        self.is_user_scroll_to_end = True
+        container.scroll_end(animate=False)
+
+    async def _process_todolist_command(self, message_text: str) -> bool:
+        assert self.command_handler is not None
+        return await self.command_handler.handle_command(message_text)
+
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
         input_element = self.query_one("#input")
         message_text = input_element.value.strip()  # type: ignore
 
-        if message_text:
-            container = self.query_one("#chat-container")
-            welcome_widgets = container.query(".welcome-message")
-            for widget in welcome_widgets:
-                widget.remove()
+        if not message_text:
+            return
 
-            user_msg = ChatMessage(role="user", message=message_text)
-            self.messages.append(
-                MessageWidget(
-                    role="user",
-                    content=message_text,
-                    sender_name="user",
-                )
-            )
-            await self.group_chat.send("user_message", user_msg)
-            input_element.value = ""  # type: ignore
+        container = self.query_one("#chat-container")
+        welcome_widgets = container.query("RainbowAsciiArt, AnimatedWelcomeWidget")
+        for widget in welcome_widgets:
+            widget.remove()
 
-            widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
-            container.mount(widget)
-            widget.update_display()
-            self.is_user_scroll_to_end = True
-            container.scroll_end(animate=False)
+        # 直接处理三个todolist命令，不发送给agent
+        if await self._process_todolist_command(message_text):
+            return
+
+        # 其他消息发送给agent
+        await self._handle_regular_message(message_text)

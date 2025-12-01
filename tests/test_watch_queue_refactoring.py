@@ -13,6 +13,11 @@ class TestWatchQueueRefactoring(unittest.TestCase):
     def setUp(self):
         """设置测试环境"""
         self.group_chat = GroupChat()
+        # 注册agent成员以避免CLIApp初始化时出错
+        from linhai.agent import Agent
+        mock_agent = MagicMock(spec=Agent)
+        self.group_chat.register_member("agent", mock_agent)
+        
         self.app = CLIApp(self.group_chat, cli_config=CLIConfig())
         
         # 模拟UI组件

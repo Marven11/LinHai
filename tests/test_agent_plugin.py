@@ -250,6 +250,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
         self.agent.interrupt = AsyncMock(side_effect=lambda msg=None: self.agent.message_processor.append_message(RuntimeMessage(msg or "Agent被插件打断")))  # 添加interrupt mock并模拟添加消息
+        self.agent.get_current_model = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = WeirdTokenPlugin(self.group_chat)
@@ -482,8 +483,10 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.append_message = MagicMock()
         self.agent.interrupt = AsyncMock()
+        self.agent.get_current_model = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.group_chat.send_if_exists = AsyncMock()
         self.plugin = PromptFastAgentPlugin(self.group_chat)
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
@@ -535,8 +538,8 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, current_content
         )
         
-        # 应该返回True表示需要中断
-        self.assertTrue(result)
+        # 应该返回False表示被打断而非终端
+        self.assertFalse(result)
         
         # 应该添加警告消息
         self.assertTrue(self.agent.message_processor.append_message.called)
@@ -562,6 +565,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.group_chat.send_if_exists = AsyncMock()
         self.plugin = PreventToolOutputPlugin(self.group_chat)
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
@@ -587,8 +591,8 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, current_content
         )
         
-        # 应该返回True表示需要中断
-        self.assertTrue(result)
+        # 应该返回False表示被打断而非终端
+        self.assertFalse(result)
         
         # 应该添加警告消息
         self.assertTrue(self.agent.message_processor.append_message.called)

@@ -2,12 +2,12 @@
 
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from typing import TypedDict
-from datetime import datetime
 
+from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
-from linhai.agent.base import RuntimeMessage
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,14 @@ class ClarificationManager:
             raise ValueError(f"澄清 {clarification_id} 不存在")
 
         clarification = self.clarifications[clarification_id]
+
+        time_since_creation = datetime.now() - clarification["created_at"]
+        if time_since_creation < timedelta(minutes=2):
+            raise ValueError(
+                "新的clarification在两分钟内禁止回答。你需要注意prompt中的要求，先完成相关任务，再回答。"
+                "如果确实要回答，就使用sleep工具等待两分钟后再回答。"
+            )
+
         clarification["answered"] = True
         clarification["answer"] = answer
 

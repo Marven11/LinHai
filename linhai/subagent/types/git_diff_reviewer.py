@@ -1,17 +1,18 @@
 """Git diff审查SubAgent类型实现，包含专用插件。"""
 
-from typing import TYPE_CHECKING
 import asyncio
 import logging
 import os
 import subprocess
+from typing import TYPE_CHECKING
 
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.plugin import Plugin
-from linhai.subagent.main import SubAgent
-from linhai.subagent import SubAgentManager
-from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.llm import Answer, ChatMessage
+from linhai.subagent import SubAgentManager
+from linhai.subagent.main import SubAgent
+from linhai.tool.tools.todolist import TodolistManager, TodolistItem
+from linhai.utils import CliRuntimeNotice, generate_id
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
 
 if TYPE_CHECKING:
@@ -60,8 +61,8 @@ class GitDiffReviewerSubAgent(SubAgent):
                 """
 请按照以下要求回复agent:
 
-- 如果agent说某个功能因为改动太大等原因不需要在现在更改，质问“这是用户自己的要求还是你编造的？”，并要求“立即修改！”
-- 如果agent说某个修改会破坏前向兼容性，质问“这会修改外部行为吗？必须重构内部函数！”
+- 如果agent说某个功能因为改动太大等原因不需要在现在更改，质问"这是用户自己的要求还是你编造的？"，并要求"立即修改！"
+- 如果agent说某个修改会破坏前向兼容性，质问"这会修改外部行为吗？必须重构内部函数！"
 """
             )
         )
@@ -253,6 +254,16 @@ class GitDiffReviewPlugin(Plugin):
         if deleted_files_list:
             full_diff_content += f"\n\n# 删除文件\n\n{deleted_files_list}"
 
+        todolist_content = ""
+        todolist_manager = self.group_chat.get_members(
+            "todolist_manager", TodolistManager
+        )
+        todolist_items: list[TodolistItem] = todolist_manager.list_todolists()
+        if todolist_items:
+            todolist_content = "\n\n# 当前Todolist\n\n" + "\n".join(
+                f"{item['id']}: {item['content']}" for item in todolist_items
+            )
+
         task_message = f"""# Git Diff审查任务
 
 请审查以下git diff内容，检查代码变更是否符合要求：
@@ -261,7 +272,11 @@ class GitDiffReviewPlugin(Plugin):
 {full_diff_content}
 ```
 
-请根据系统提示中的要求进行审查，发现问题时使用request_clarification工具质问。"""
+{todolist_content}
+
+请根据系统提示中的要求进行审查，发现问题时使用request_clarification工具质问。
+
+**重要：请同时审查todolist的功能是否已经完成。如果代码变更已经完成了某个todolist项的功能，请使用todolist_delete工具删除对应的todolist。**"""
 
         asyncio.create_task(
             subagent_manager.create_subagent(

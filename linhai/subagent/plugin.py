@@ -44,7 +44,10 @@ class GitBlockingPlugin(Plugin):
                 if self._is_git_command(command):
                     unanswered = clarification_manager.get_unanswered_clarifications()
                     clarification_info = "\n".join(
-                        [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+                        [
+                            f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
+                            for c in unanswered
+                        ]
                     )
                     agent.message_processor.append_message(
                         RuntimeMessage(
@@ -110,7 +113,10 @@ class ClarificationWaitingUserPlugin(Plugin):
         ):
             unanswered = clarification_manager.get_unanswered_clarifications()
             clarification_info = "\n".join(
-                [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+                [
+                    f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
+                    for c in unanswered
+                ]
             )
             agent.message_processor.append_message(
                 RuntimeMessage(
@@ -149,7 +155,10 @@ class ClarificationBlockingPlugin(Plugin):
             if WAITING_USER_MARKER in full_response:
                 unanswered = clarification_manager.get_unanswered_clarifications()
                 clarification_info = "\n".join(
-                    [f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}" for c in unanswered]
+                    [
+                        f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
+                        for c in unanswered
+                    ]
                 )
                 agent.message_processor.append_message(
                     RuntimeMessage(

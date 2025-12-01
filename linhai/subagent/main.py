@@ -5,20 +5,20 @@ import logging
 from datetime import datetime
 from typing import Sequence
 
-from linhai.llm import (
-    Message,
-    ChatMessage,
-    SubagentSystemMessage,
-    LanguageModel,
-    Answer,
-    AnswerToken,
-)
+from linhai.agent.base import RuntimeMessage
 from linhai.config import SubAgentConfig
 from linhai.group_chat import GroupChat
+from linhai.llm import (
+    Answer,
+    AnswerToken,
+    ChatMessage,
+    LanguageModel,
+    Message,
+    SubagentSystemMessage,
+)
+from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.command import sleep_tool
-from linhai.agent.base import RuntimeMessage
-from linhai.markdown_parser import extract_tool_calls_with_errors
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,31 @@ class SubAgent:
             clarification_manager, self.name
         )
         self.toolset.add_toolset(clarification_toolset)
+
+        # 注册SubAgent专用的todolist_delete工具
+        from linhai.tool.tools.todolist import TodolistManager
+
+        todolist_manager = self.group_chat.get_members(
+            "todolist_manager", TodolistManager
+        )
+
+        @self.toolset.register_tool(
+            name="todolist_delete",
+            desc="根据ID删除todolist（仅SubAgent可用）",
+            args={
+                "todolist_id": ToolArgInfo(desc="要删除的todolist ID", type="str"),
+            },
+            required_args=["todolist_id"],
+        )
+        async def subagent_todolist_delete(todolist_id: str) -> str:
+            """根据ID删除todolist（仅SubAgent可用）。"""
+            # 先检查todolist是否存在
+            todolist = todolist_manager.get_todolist_by_id(todolist_id)
+            if todolist is None:
+                raise ValueError(f"Todolist with ID {todolist_id} does not exist")
+
+            todolist_manager.delete_todolist(todolist_id)
+            return f"成功删除todolist: {todolist_id} ({todolist['content']})"
 
     async def _generate_response(self) -> str:
         """生成LLM响应并返回完整内容，支持流式输出。"""
@@ -218,10 +243,11 @@ class SubAgentManager:
     def __init__(
         self,
         group_chat: GroupChat,
-        subagent_config: SubAgentConfig,
+        subagent_config: SubAgentConfig | None,
         llms=None,
         llm_names=None,
     ):
+        assert subagent_config is not None, "subagent_config不能为None"
         self.group_chat = group_chat
         self.subagent_config = subagent_config
         self.llms = llms or []
@@ -243,17 +269,16 @@ class SubAgentManager:
 
         subagent_llm: LanguageModel | None = None
 
-        if self.subagent_config:
+        if self.subagent_config and self.subagent_config.default_llm:
             default_llm_name = self.subagent_config.default_llm
             if default_llm_name in self.llm_names:
                 llm_index = self.llm_names.index(default_llm_name)
                 subagent_llm = self.llms[llm_index]
-        if subagent_llm is None:
 
+        if subagent_llm is None:
             from linhai.agent.main import Agent
 
             agent = self.group_chat.get_members("agent", Agent)
-
             _, subagent_llm = agent.get_current_llm_info()
 
         from .types import (
@@ -329,12 +354,12 @@ class SubAgentManager:
             ClarificationWaitingUserPlugin(self.group_chat),
             ClarificationBlockingPlugin(self.group_chat),
         ]
-        enabled_agent_types = self.subagent_config.enabled_agent_types
+        enabled_agent_types = (
+            self.subagent_config.enabled_agent_types if self.subagent_config else None
+        )
 
         if enabled_agent_types and enabled_agent_types.violation_checker:
-            plugins.append(
-                ViolationCheckerPlugin(self.group_chat)
-            )
+            plugins.append(ViolationCheckerPlugin(self.group_chat))
         if enabled_agent_types and enabled_agent_types.git_diff_reviewer:
             plugins.append(GitDiffReviewPlugin(self.group_chat))
 

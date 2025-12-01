@@ -48,13 +48,10 @@ async def run(args, init_messages: list[str] | None):
 
     group_chat = GroupChat()
 
-    # 读取配置
     config = load_config(args.config.expanduser())
 
-    # 创建Agent
     _agent = await _create_agent_from_config(group_chat, config, args.llm)
 
-    # 创建CLIApp
     app = CLIApp(
         group_chat=group_chat,
         init_messages=init_messages,

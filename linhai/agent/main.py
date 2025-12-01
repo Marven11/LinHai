@@ -27,10 +27,9 @@ from linhai.llm import (
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
 from linhai.tool.mcp_connector import MCPConnector
-
+from linhai.utils import CliRuntimeNotice
 from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-from linhai.utils import CliRuntimeNotice
 
 logger = logging.getLogger(__name__)
 

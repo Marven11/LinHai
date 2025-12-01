@@ -1,11 +1,12 @@
 """测试CLI的标签页功能"""
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import asyncio
 from linhai.cli.app import CLIApp
 from linhai.group_chat import GroupChat
 from linhai.config import CLIConfig
+from linhai.agent.main import Agent
 
 
 class TestCLITabs(unittest.TestCase):
@@ -18,6 +19,9 @@ class TestCLITabs(unittest.TestCase):
         mock_on_mount.return_value = None
         
         group_chat = GroupChat()
+        # 注册agent成员以避免CLIApp初始化时出错
+        mock_agent = Mock(spec=Agent)
+        group_chat.register_member("agent", mock_agent)
         
         app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
         
@@ -51,6 +55,9 @@ class TestCLITabs(unittest.TestCase):
         mock_on_mount.return_value = None
         
         group_chat = GroupChat()
+        # 注册agent成员以避免CLIApp初始化时出错
+        mock_agent = Mock(spec=Agent)
+        group_chat.register_member("agent", mock_agent)
         
         app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
         

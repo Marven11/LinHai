@@ -64,6 +64,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.current_disable_waiting_user_warning = False
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.get_messages.return_value = []
+        self.mock_agent.get_current_model = AsyncMock()
         self.mock_answer = MagicMock()
         self.mock_answer.get_reasoning_message.return_value = None
         self.mock_tool_call = MagicMock()

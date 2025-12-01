@@ -1,7 +1,7 @@
 """用户输入解析模块，用于统一解析用户的各种输入格式。"""
 
-from typing import Optional
 import re
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -11,6 +11,7 @@ class ParsedInput(BaseModel):
 
     switch_model: Optional[str] = None
     command: Optional[str] = None
+    arguments: list[str] = []
     mentioned: list[str] = []
 
 
@@ -27,7 +28,9 @@ def parse_user_input(user_input: str) -> ParsedInput:
     result = ParsedInput()
 
     if user_input.startswith("/"):
-        result.command = user_input.split().pop(0)[1:]
+        parts = user_input.split()
+        result.command = parts[0][1:]
+        result.arguments = parts[1:] if len(parts) > 1 else []
     if user_input.startswith("@"):
         result.switch_model = user_input.split().pop(0)[1:]
     result.mentioned = list(

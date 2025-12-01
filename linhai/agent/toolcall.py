@@ -66,8 +66,6 @@ class AgentToolcall:
                 return called_tool
         return None
 
-
-
     def _register_default_toolsets(self):
         """注册默认工具集（LLM切换、虚拟工具、工作流工具）。"""
         self._register_llm_toolset()

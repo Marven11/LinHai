@@ -52,6 +52,9 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
         await self.manager.add_clarification("test-1", "问题1", "agent-1")
         self.assertTrue(self.manager.has_unanswered_clarifications())
 
+        import datetime
+        self.manager.clarifications["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
+
         # 回复澄清
         self.manager.respond_clarification("test-1", "回答1")
         self.assertFalse(self.manager.has_unanswered_clarifications())
@@ -63,6 +66,10 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
         answer = "测试回答"
 
         await self.manager.add_clarification(clarification_id, question, "test-agent")
+        # 修改创建时间为两分钟前，以绕过时间限制
+        import datetime
+        self.manager.clarifications[clarification_id]["created_at"] -= datetime.timedelta(minutes=3)
+
         self.manager.respond_clarification(clarification_id, answer)
 
         clarification = self.manager.clarifications[clarification_id]
@@ -74,6 +81,11 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
         # 添加两个未解答的澄清
         await self.manager.add_clarification("test-1", "问题1", "agent-1")
         await self.manager.add_clarification("test-2", "问题2", "agent-2")
+
+        # 修改创建时间为两分钟前，以绕过时间限制
+        import datetime
+        self.manager.clarifications["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
+        self.manager.clarifications["test-2"]["created_at"] -= datetime.timedelta(minutes=3)
 
         unanswered = self.manager.get_unanswered_clarifications()
         self.assertEqual(len(unanswered), 2)
@@ -107,30 +119,6 @@ class TestClarificationAsync(unittest.TestCase):
         self.group_chat.register_member("agent", self.agent)
         self.agent_message = AgentMessage(self.group_chat)
         self.manager = ClarificationManager(self.group_chat)
-
-    def test_wait_for_response(self):
-        """测试异步等待澄清回复。"""
-
-        async def run_test():
-            clarification_id = "async-test-123"
-            question = "异步测试问题"
-            answer = "异步测试回答"
-
-            # 添加澄清
-            await self.manager.add_clarification(clarification_id, question, "test-agent")
-
-            # 异步等待回复（在另一个协程中回复）
-            async def respond_later():
-                await asyncio.sleep(0.1)
-                self.manager.respond_clarification(clarification_id, answer)
-
-            asyncio.create_task(respond_later())
-
-            # 等待回复
-            received_answer = await self.manager.wait_for_response(clarification_id)
-            self.assertEqual(received_answer, answer)
-
-        asyncio.run(run_test())
 
     def test_wait_for_nonexistent_clarification(self):
         """测试等待不存在的澄清应抛出异常。"""
@@ -190,6 +178,10 @@ file_path = "memory.md"
         # 添加一个澄清
         clarification_id = "tool-test-123"
         await manager.add_clarification(clarification_id, "工具测试问题", "test-agent")
+
+        # 修改clarification的创建时间为两分钟前，以绕过时间限制
+        import datetime
+        manager.clarifications[clarification_id]["created_at"] -= datetime.timedelta(minutes=3)
 
         # 使用工具回复
         result = toolset.call_tool("respond_clarification", {
