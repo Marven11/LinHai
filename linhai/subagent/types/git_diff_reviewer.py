@@ -202,6 +202,35 @@ class GitDiffReviewPlugin(Plugin):
             "subagent_manager", SubAgentManager
         )
 
+        # 检查subagent配置
+        subagent_config = subagent_manager.subagent_config
+        if subagent_config is None:
+            # 没有配置，不启动审查
+            return
+        if not subagent_config.enable:
+            # 全局禁用subagent，不启动审查
+            return
+
+        # 检查git_diff_reviewer是否启用，支持字典和EnabledAgentTypes对象两种格式
+        enabled_agent_types = subagent_config.enabled_agent_types
+        if enabled_agent_types is None:
+            # 未配置enabled_agent_types，默认不开启
+            return
+
+        git_diff_reviewer_enabled = False
+        if isinstance(enabled_agent_types, dict):
+            # 字典格式
+            git_diff_reviewer_enabled = enabled_agent_types.get(
+                "git_diff_reviewer", False
+            )
+        else:
+            # EnabledAgentTypes对象
+            git_diff_reviewer_enabled = enabled_agent_types.git_diff_reviewer
+
+        if not git_diff_reviewer_enabled:
+            # git_diff_reviewer类型被禁用，不启动审查
+            return
+
         git_diff = self._get_git_diff()
         if git_diff is None:
             return

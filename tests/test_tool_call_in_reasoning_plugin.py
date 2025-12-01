@@ -29,8 +29,8 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(self.plugin, ToolCallInReasoningPlugin)
         self.assertEqual(self.plugin.group_chat, self.group_chat)
 
-    async def test_after_message_generation_with_tool_call_in_reasoning(self):
-        """测试思考内容中包含工具调用时发出警告。"""
+    async def test_after_message_generation_with_tool_call_in_reasoning_and_no_actual_tool_calls(self):
+        """测试思考内容中包含工具调用但实际输出中没有工具调用时发出警告。"""
         # 模拟answer
         answer = MagicMock(spec=Answer)
         reasoning_content = """我需要调用工具来完成任务。
@@ -70,6 +70,37 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
         self.assertIn("read_file", ui_call_args[0][1].content)
         self.assertIn("list_files", ui_call_args[0][1].content)
+    
+    async def test_after_message_generation_with_tool_call_in_reasoning_and_actual_tool_calls(self):
+        """测试思考内容中包含工具调用且实际输出中也调用了工具时不发出警告。"""
+        # 模拟answer
+        answer = MagicMock(spec=Answer)
+        reasoning_content = """我需要调用工具来完成任务。
+```json toolcall
+{"name": "read_file", "arguments": {"filepath": "test.txt"}}
+```
+然后调用另一个工具。
+```json toolcall
+{"name": "list_files", "arguments": {"dirpath": "."}}
+```
+"""
+        answer.get_reasoning_message.return_value = reasoning_content
+        answer.reasoning_message = reasoning_content
+        
+        # 模拟实际输出中有工具调用
+        actual_tool_calls = [
+            {"name": "read_file", "arguments": {"filepath": "test.txt"}},
+            {"name": "list_files", "arguments": {"dirpath": "."}}
+        ]
+        
+        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", actual_tool_calls)
+        
+        # 验证
+        self.assertFalse(result)
+        answer.get_reasoning_message.assert_called_once()
+        # 应该没有发出警告，因为实际输出中调用了工具
+        self.agent.message_processor.append_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_reasoning_content(self):
         """测试没有思考内容时不做任何操作。"""

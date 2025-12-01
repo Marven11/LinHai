@@ -79,7 +79,7 @@ class Agent:
             return None
 
         current_llm = self.context["llms"][self.context["current_llm_index"]]
-        token_limit = getattr(current_llm, "token_limit", None)
+        token_limit = current_llm.get_token_limit()
 
         if token_limit is None:
             token_limit = 65536

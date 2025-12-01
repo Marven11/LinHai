@@ -123,11 +123,13 @@ class Lifecycle:
             WeirdTokenPlugin,
             BadMultiToolCall,
             EndThinkPlugin,
+            OnlyReasoningPlugin,
             ToolCallInReasoningPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
             ClarificationCheckPlugin,
             JsonCodeBlockPlugin,
+            RuntimeImitationPlugin,
         )
 
         plugins = [
@@ -137,11 +139,13 @@ class Lifecycle:
             WeirdTokenPlugin(self.group_chat),
             BadMultiToolCall(self.group_chat),
             EndThinkPlugin(self.group_chat),
+            OnlyReasoningPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
             ClarificationCheckPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),
+            RuntimeImitationPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

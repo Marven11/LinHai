@@ -477,6 +477,8 @@ class ReasoningContentWidget(Static):
             self.add_class("reasoning-widget-expanded")
 
         self.border_title = self.calculate_border_title()
+        # 手动调用update_display以确保界面更新，尤其是被stop后timer不再自动更新
+        self.update_display()
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
@@ -498,12 +500,12 @@ class ReasoningContentWidget(Static):
                 lexer="markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
-                word_wrap=True,
+                word_wrap=False,
             )
         else:
             lines = [line for line in content_to_display.splitlines() if line]
             truncated_content = "\n".join(lines[-2:]) if lines else ""
-            renderable = Text(truncated_content, overflow="ellipsis")
+            renderable = Text(truncated_content, overflow="ellipsis", no_wrap=True)
 
         panel = Panel(
             renderable,
@@ -529,10 +531,13 @@ class NormalContentWidget(Static):
         self._content_static: Static | None = None
 
     def stop(self) -> None:
-        """停止组件的timer"""
+        """停止组件的timer，如果内容为空则unmount自己"""
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
+        # 如果被stop后还没有实际内容，则从CLI中隐藏
+        if not self.content_str.strip():
+            self.remove()
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""

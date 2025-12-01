@@ -3,13 +3,26 @@
 from abc import ABC, abstractmethod
 import logging
 import re
+from pathlib import Path
+from typing import Dict, List, Union, TypeAlias
+
+
+import linhai.agent as linhai_agent
+from linhai.agent import Agent
+from linhai.agent.base import GlobalMemory, PathMemory
+from linhai.group_chat import GroupChat
+from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
+from linhai.subagent.clarification import ClarificationManager
+
 
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from ..llm import Answer, OpenAi
+from ..llm import Answer, ChatMessage, OpenAi
 from ..utils import CliRuntimeNotice
-import linhai.agent as linhai_agent
-from linhai.group_chat import GroupChat
-from linhai.markdown_parser import extract_tool_calls_with_errors
+
+
+JsonValue: TypeAlias = Union[
+    str, int, float, bool, List["JsonValue"], Dict[str, "JsonValue"], None
+]
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +45,6 @@ class WaitingUserPlugin(Plugin):
         self, _answer: Answer, full_response, tool_calls
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
@@ -80,8 +91,6 @@ class WrongEndPlugin(Plugin):
         full_response: str,
         _tool_calls,
     ):
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
@@ -183,9 +192,6 @@ class PromptFastAgentPlugin(Plugin):
         self, _enable_compress: bool, _disable_waiting_user_warning: bool
     ):
         """在消息生成前检查目录是否更改。"""
-        from linhai.agent import Agent
-        from linhai.llm import OpenAi, ChatMessage
-
         agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
 
@@ -223,9 +229,6 @@ class PromptFastAgentPlugin(Plugin):
     async def during_message_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
-        from linhai.agent import Agent
-        from linhai.llm import OpenAi
-
         agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
         if not isinstance(model, OpenAi) or model.compatibility not in [
@@ -273,8 +276,6 @@ class WeirdTokenPlugin(Plugin):
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
         pattern = r"^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>"
         model = await agent.get_current_model()
@@ -306,8 +307,6 @@ class EndThinkPlugin(Plugin):
 
     async def during_message_generation(self, _answer: Answer, current_content: str):
         """检查是否有一行只有'</think>'。"""
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
 
         lines = current_content.split("\n")
@@ -335,9 +334,6 @@ class DirectoryChangePlugin(Plugin):
         self, _enable_compress: bool, _disable_waiting_user_warning: bool
     ):
         """在消息生成前检查目录是否更改。"""
-        from linhai.agent.main import Agent
-        from linhai.agent.base import GlobalMemory, PathMemory
-        from pathlib import Path
 
         agent = self.group_chat.get_members("agent", Agent)
 
@@ -383,8 +379,6 @@ class SingleToolCallReminderPlugin(Plugin):
         self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
 
         if len(tool_calls) == 1:
@@ -417,9 +411,6 @@ class ClarificationCheckPlugin(Plugin):
         self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
-        from linhai.subagent.clarification import ClarificationManager
-        from linhai.agent import Agent
-
         clarification_manager = self.group_chat.get_members(
             "clarification_manager", ClarificationManager
         )
@@ -446,53 +437,98 @@ class ClarificationCheckPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class OnlyReasoningPlugin(Plugin):
+    """针对deepseek v3.2检测是否只思考不输出"""
+
+    async def after_message_generation(
+        self,
+        answer: Answer,
+        full_response: str,
+        _tool_calls: List[Dict[str, JsonValue]],
+    ):
+        agent = self.group_chat.get_members("agent", Agent)
+        model = await agent.get_current_model()
+
+        if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
+            return
+
+        reasoning_content = answer.get_reasoning_message()
+
+        if reasoning_content and not full_response:
+            agent.message_processor.append_message(
+                RuntimeMessage(
+                    "错误：不要只思考，不输出！你需要输出内容以调用工具或回复用户！"
+                )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING", content="模型只思考不输出，已提醒模型"
+                ),
+            )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class ToolCallInReasoningPlugin(Plugin):
     """检测思考内容中工具调用的插件。
 
     当agent在思考内容中包含工具调用时警告agent，
-    提醒agent思考内容中的工具调用不会实际执行。
+    但如果在实际输出中调用了工具，则不提醒（因为已经实际调用了）。
     """
 
     async def after_message_generation(
-        self, answer: Answer, _full_response: str, _tool_calls
+        self,
+        answer: Answer,
+        _full_response: str,
+        tool_calls: List[Dict[str, JsonValue]],
     ):
-        """检查推理内容中是否包含工具调用。"""
-        from linhai.agent import Agent
-        from linhai.markdown_parser import extract_tool_calls
+        """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
 
         agent = self.group_chat.get_members("agent", Agent)
 
         # 使用get_reasoning_message获取推理内容
         reasoning_content = answer.get_reasoning_message()
+        if not reasoning_content:
+            return
 
-        if reasoning_content:
-            tool_calls_in_reasoning = extract_tool_calls(reasoning_content)
-            if tool_calls_in_reasoning:
-                tool_names = [
-                    tool_call.get("name", "未知工具")
-                    for tool_call in tool_calls_in_reasoning
-                ]
-                unique_tool_names = list(set(tool_names))
+        tool_calls_in_reasoning = extract_tool_calls(reasoning_content)
+        if not tool_calls_in_reasoning:
+            return
 
-                if len(unique_tool_names) == 1:
-                    agent_warning_message = f"警告：你在推理内容中调用了工具'{unique_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
-                    ui_warning_message = (
-                        f"推理内容中检测到工具调用: {unique_tool_names[0]}"
-                    )
-                else:
-                    agent_warning_message = f"警告：你在推理内容中调用了工具{unique_tool_names}，但推理内容中的工具调用不会实际执行！"
-                    ui_warning_message = (
-                        f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
-                    )
 
-                agent.message_processor.append_message(
-                    RuntimeMessage(agent_warning_message)
-                )
+        reasoning_tool_names = {
+            str(tool_call.get("name", "未知工具"))
+            for tool_call in tool_calls_in_reasoning
+        }
+        actual_tool_names = {
+            str(tool_call.get("name", "未知工具")) for tool_call in tool_calls
+        }
 
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(level="WARNING", content=ui_warning_message),
-                )
+        if not reasoning_tool_names.isdisjoint(actual_tool_names):
+            return
+
+        tool_names = [
+            tool_call.get("name", "未知工具") for tool_call in tool_calls_in_reasoning
+        ]
+        unique_tool_names = list(set(tool_names))
+
+        if len(unique_tool_names) == 1:
+            agent_warning_message = f"警告：你在推理内容中调用了工具'{unique_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
+            ui_warning_message = f"推理内容中检测到工具调用: {unique_tool_names[0]}"
+        else:
+            agent_warning_message = f"警告：你在推理内容中调用了工具{unique_tool_names}，但推理内容中的工具调用不会实际执行！"
+            ui_warning_message = (
+                f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
+            )
+
+        agent.message_processor.append_message(RuntimeMessage(agent_warning_message))
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(level="WARNING", content=ui_warning_message),
+        )
 
     def register(self, lifecycle):
         """注册到after_message_generation回调。"""
@@ -510,9 +546,6 @@ class PreventToolOutputPlugin(Plugin):
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
-        from linhai.agent import Agent
-        from linhai.llm import ChatMessage
-
         agent = self.group_chat.get_members("agent", Agent)
 
         has_previous_agent_message = any(
@@ -556,8 +589,6 @@ class JsonCodeBlockPlugin(Plugin):
         self, _answer: Answer, full_response: str, _tool_calls
     ):
         """检查是否有json代码块包含有效的工具调用。"""
-        from linhai.agent import Agent
-
         agent = self.group_chat.get_members("agent", Agent)
 
         # 使用extract_tool_calls_with_errors检测json代码块
@@ -585,3 +616,29 @@ class JsonCodeBlockPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class RuntimeImitationPlugin(Plugin):
+    """阻断deepseek模型模仿runtime输出的插件。"""
+
+    async def during_message_generation(
+        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+    ):
+        """检查deepseek是否在模仿runtime输出并阻断。"""
+        agent = self.group_chat.get_members("agent", Agent)
+        model = await agent.get_current_model()
+
+        # [TODO] 在将工具输出格式改为<tool>包裹后同样支持阻断工具输出（用户需求：以后可以支持阻断工具输出，但是工具输出的格式还没有改成<tool>这样的格式，先加一个注释TODO提示一下）
+        if (
+            isinstance(model, OpenAi)
+            and model.compatibility == "deepseek"
+            and current_content.lstrip().startswith("<runtime>")
+            and "</runtime>" in current_content
+        ):
+            await agent.interrupt("不要模仿runtime输出！")
+            return True
+        return False
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到during_message_generation回调。"""
+        lifecycle.register_during_message_generation(self.during_message_generation)

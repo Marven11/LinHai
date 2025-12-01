@@ -26,12 +26,14 @@ class CommandHandler:
         return False
 
     async def _handle_todolist_list(self) -> bool:
-        todolist_manager = self.group_chat.get_members("todolist_manager", TodolistManager)
+        todolist_manager = self.group_chat.get_members(
+            "todolist_manager", TodolistManager
+        )
         assert todolist_manager is not None
-        
+
         todolists = todolist_manager.list_todolists()
         widget = TodolistWidget(todolists)
-        
+
         await self._mount_widget(widget)
         return True
 
@@ -42,9 +44,11 @@ class CommandHandler:
             return True
 
         content = " ".join(arguments)
-        todolist_manager = self.group_chat.get_members("todolist_manager", TodolistManager)
+        todolist_manager = self.group_chat.get_members(
+            "todolist_manager", TodolistManager
+        )
         assert todolist_manager is not None
-        
+
         todolist_id = todolist_manager.add_todolist(content)
         await self._show_success_message(f"成功添加todolist，ID: {todolist_id}")
         return True
@@ -56,19 +60,21 @@ class CommandHandler:
             return True
 
         todolist_id = arguments[0]
-        todolist_manager = self.group_chat.get_members("todolist_manager", TodolistManager)
+        todolist_manager = self.group_chat.get_members(
+            "todolist_manager", TodolistManager
+        )
         assert todolist_manager is not None
-        
+
         result = todolist_manager.delete_todolist(todolist_id)
         await self._show_success_message(result)
         return True
 
     async def _mount_widget(self, widget) -> None:
         from linhai.cli.app import CLIApp
-        
+
         cli_app = self.group_chat.get_members("cli_app", CLIApp)
         assert cli_app is not None
-        
+
         container = cli_app.query_one("#chat-container")
         container.mount(widget)
 
@@ -83,10 +89,10 @@ class CommandHandler:
 
     async def _show_runtime_message(self, level: str, content: str) -> None:
         from linhai.cli.app import CLIApp
-        
+
         cli_app = self.group_chat.get_members("cli_app", CLIApp)
         assert cli_app is not None
-        
+
         container = cli_app.query_one("#chat-container")
         widget = RuntimeMessageWidget(level=level, content=content)
         container.mount(widget)

@@ -204,6 +204,7 @@ class CLIApp(App):
 
                 if current_message:
                     current_message.update_display()
+                    # app.py调用stop表示没有新内容传入，此时widget必须关闭timer以避免性能开销
                     current_message.stop()
                 current_message = None
             else:
@@ -373,7 +374,7 @@ class CLIApp(App):
         """应用挂载时启动输出队列监听"""
         # 生成动态补全列表（此时agent应该已经注册）
         self.completions = self._generate_dynamic_completions()
-        
+
         self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
 
         if self.init_messages:
