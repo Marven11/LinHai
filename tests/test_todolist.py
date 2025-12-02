@@ -39,7 +39,6 @@ class TestTodolistManager(unittest.TestCase):
         todolists = self.manager.list_todolists()
         
         self.assertEqual(len(todolists), 2)
-        # 检查字典列表中包含预期的字典
         expected_dict1 = {"id": id1, "content": content1}
         expected_dict2 = {"id": id2, "content": content2}
         self.assertIn(expected_dict1, todolists)
@@ -69,7 +68,6 @@ class TestAgentTodolistToolset(unittest.TestCase):
         self.mock_group_chat = Mock()
         self.manager = TodolistManager(self.mock_group_chat)
         self.toolset = ToolSet()
-        # 模拟注册过程，创建工具集但不实际注册到tool_manager
         
         @self.toolset.register_tool(
             name="todolist_add",
@@ -95,7 +93,6 @@ class TestAgentTodolistToolset(unittest.TestCase):
             todolists = self.manager.list_todolists()
             if not todolists:
                 return "当前没有todolist。"
-            # 将字典列表转换为字符串格式：{id}: {content}
             return "\n".join(f"{item['id']}: {item['content']}" for item in todolists)
 
     def test_todolist_add_tool(self):
@@ -135,7 +132,6 @@ class TestSubagentTodolistToolset(unittest.TestCase):
         self.mock_group_chat = Mock()
         self.manager = TodolistManager(self.mock_group_chat)
         self.toolset = ToolSet()
-        # 模拟注册过程，创建工具集但不实际注册到tool_manager
         
         @self.toolset.register_tool(
             name="todolist_add",
@@ -161,7 +157,6 @@ class TestSubagentTodolistToolset(unittest.TestCase):
             todolists = self.manager.list_todolists()
             if not todolists:
                 return "当前没有todolist。"
-            # 将字典列表转换为字符串格式：{id}: {content}
             return "\n".join(f"{item['id']}: {item['content']}" for item in todolists)
 
         @self.toolset.register_tool(

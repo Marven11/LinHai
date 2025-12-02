@@ -7,9 +7,12 @@ from typing import (
     cast,
     runtime_checkable,
     Callable,
+    Awaitable,
+    Literal,
 )
 import asyncio
 import json
+import logging
 
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -497,6 +500,7 @@ class OpenAi:
         token_limit: int | None = None,
         compatibility: str | None = None,
         previous_update_callback: Callable[[int], None] | None = None,
+        notification_callback: Callable[[Literal["INFO", "WARNING", "ERROR"], str], Awaitable[None]] | None = None,
     ):
         """初始化OpenAI语言模型。
 
@@ -508,6 +512,8 @@ class OpenAi:
             tools: 可用工具列表
             token_limit: token限制数量
             compatibility: API兼容性模式，支持minimax、kimi等
+            previous_update_callback: 更新previous_input_tokens的回调
+            notification_callback: 发送通知的回调，接受level和content两个参数
         """
         self.model = model
         self.openai = AsyncOpenAI(
@@ -522,6 +528,7 @@ class OpenAi:
         self.previous_update_callback = (
             previous_update_callback or self._default_previous_update_callback
         )
+        self.notification_callback = notification_callback
 
     def _default_previous_update_callback(self, input_tokens: int):
         """默认的previous_input_tokens更新回调。"""
@@ -630,6 +637,11 @@ class OpenAi:
                 )
                 break
             except (asyncio.TimeoutError, OpenAIError):
+                if self.notification_callback:
+                    await self.notification_callback(
+                        "WARNING",
+                        f"API调用失败，将在约{retry_delay:.1f}秒后重试",
+                    )
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 1.5
                 retry_delay = min(retry_delay, 300)

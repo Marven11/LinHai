@@ -18,6 +18,9 @@ GroupChat通信框架，实现多个单例之间的通信，解耦设计
         - 函数调用：获得单例并调用
     - 在需要处理单例之间的通信时优先使用GroupChat！
         - 不要使用循环持有引用或者其他更糟的设计模式！
+
+在传输数据时，尽量使用自定义类（dataclass/pydantic）以减少心智负担，避免使用字典。
+例如，SubAgent现在使用wrapper类（SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper）来传输消息。
 """
 
 from typing import Any, TypeVar, Type, LiteralString

@@ -18,7 +18,6 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        # 注册模拟的agent和agent_message以避免运行时错误
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
@@ -45,17 +44,14 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_has_unanswered_clarifications(self):
         """测试检查未解答澄清。"""
-        # 初始时没有澄清
         self.assertFalse(self.manager.has_unanswered_clarifications())
 
-        # 添加未解答的澄清
         await self.manager.add_clarification("test-1", "问题1", "agent-1")
         self.assertTrue(self.manager.has_unanswered_clarifications())
 
         import datetime
         self.manager.clarifications["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
 
-        # 回复澄清
         self.manager.respond_clarification("test-1", "回答1")
         self.assertFalse(self.manager.has_unanswered_clarifications())
 
@@ -66,7 +62,6 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
         answer = "测试回答"
 
         await self.manager.add_clarification(clarification_id, question, "test-agent")
-        # 修改创建时间为两分钟前，以绕过时间限制
         import datetime
         self.manager.clarifications[clarification_id]["created_at"] -= datetime.timedelta(minutes=3)
 
@@ -78,11 +73,9 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_unanswered_clarifications(self):
         """测试获取未解答澄清列表。"""
-        # 添加两个未解答的澄清
         await self.manager.add_clarification("test-1", "问题1", "agent-1")
         await self.manager.add_clarification("test-2", "问题2", "agent-2")
 
-        # 修改创建时间为两分钟前，以绕过时间限制
         import datetime
         self.manager.clarifications["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
         self.manager.clarifications["test-2"]["created_at"] -= datetime.timedelta(minutes=3)
@@ -90,7 +83,6 @@ class TestClarificationManager(unittest.IsolatedAsyncioTestCase):
         unanswered = self.manager.get_unanswered_clarifications()
         self.assertEqual(len(unanswered), 2)
 
-        # 回复其中一个
         self.manager.respond_clarification("test-1", "回答1")
 
         unanswered = self.manager.get_unanswered_clarifications()
@@ -110,7 +102,6 @@ class TestClarificationAsync(unittest.TestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        # 注册模拟的agent和agent_message以避免运行时错误
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
@@ -139,7 +130,6 @@ class TestClarificationTools(unittest.IsolatedAsyncioTestCase):
         self.test_dir = Path(tempfile.mkdtemp())
         self.config_path = self.test_dir / "config.toml"
 
-        # 创建测试配置
         config_content = """
 [[llm]]
 name = "test"
@@ -157,7 +147,6 @@ file_path = "memory.md"
         self.config = load_config(self.config_path)
         self.group_chat = GroupChat()
         
-        # 注册模拟的agent和agent_message以避免运行时错误
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
@@ -175,15 +164,12 @@ file_path = "memory.md"
         manager = ClarificationManager(self.group_chat)
         toolset = create_agent_clarification_toolset(manager)
 
-        # 添加一个澄清
         clarification_id = "tool-test-123"
         await manager.add_clarification(clarification_id, "工具测试问题", "test-agent")
 
-        # 修改clarification的创建时间为两分钟前，以绕过时间限制
         import datetime
         manager.clarifications[clarification_id]["created_at"] -= datetime.timedelta(minutes=3)
 
-        # 使用工具回复
         result = toolset.call_tool("respond_clarification", {
             "clarification_id": clarification_id,
             "answer": "工具测试回答"

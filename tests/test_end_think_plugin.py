@@ -17,58 +17,43 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer = Mock(spec=Answer)
         self.agent = Mock()
         
-        # 模拟group_chat.get_members返回agent
         self.group_chat.get_members.return_value = self.agent
         
-        # 模拟agent的group_chat.send方法
         self.agent.group_chat = Mock()
         self.agent.group_chat.send = AsyncMock()
         
-        # 模拟agent的interrupt方法
         self.agent.interrupt = AsyncMock()
         
-        # 模拟agent的message_processor
         self.agent.message_processor = Mock()
         self.agent.message_processor.get_messages.return_value = []
 
     async def test_detect_end_think_alone(self):
         """测试检测到单独一行的</think>。"""
-        # 设置包含单独</think>的内容
         current_content = """这是一些内容
 </think>
 其他内容"""
         
-        # 调用插件方法
         result = await self.plugin.during_message_generation(self.answer, current_content)
         
-        # 验证结果 - 根据重构，插件可能返回True表示检测到问题
-        # 但不一定调用interrupt方法
         self.assertTrue(result)
 
     async def test_detect_end_think_with_whitespace(self):
         """测试检测到带空格的</think>。"""
-        # 设置包含带空格的</think>的内容
         current_content = """这是一些内容
    </think>   
 其他内容"""
         
-        # 调用插件方法
         result = await self.plugin.during_message_generation(self.answer, current_content)
         
-        # 验证结果 - 根据重构，插件可能返回True表示检测到问题
-        # 但不一定调用interrupt方法
         self.assertTrue(result)
 
     async def test_ignore_end_think_in_context(self):
         """测试忽略上下文中的</think>。"""
-        # 设置包含在上下文中的</think>的内容
         current_content = """这是一些内容包含</think>标记
 但不是单独一行"""
         
-        # 调用插件方法
         result = await self.plugin.during_message_generation(self.answer, current_content)
         
-        # 验证结果
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
@@ -76,14 +61,11 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_end_think(self):
         """测试没有</think>的情况。"""
-        # 设置不包含</think>的内容
         current_content = """这是一些正常的内容
 没有任何问题"""
         
-        # 调用插件方法
         result = await self.plugin.during_message_generation(self.answer, current_content)
         
-        # 验证结果
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
@@ -93,10 +75,8 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = Mock()
         
-        # 调用注册方法
         self.plugin.register(lifecycle)
         
-        # 验证注册了正确的回调
         lifecycle.register_during_message_generation.assert_called_once_with(
             self.plugin.during_message_generation
         )

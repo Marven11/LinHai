@@ -23,7 +23,6 @@ class TestCreateAgent(unittest.TestCase):
     @patch('linhai.tool.mcp_connector.MCPConnector')
     def test_create_agent_basic_functionality(self, mock_mcp_connector):
         """测试create_agent基本功能：创建agent并返回group_chat"""
-        # 模拟MCP连接器
         mock_mcp_instance = AsyncMock()
         mock_mcp_instance.get_toolsets.return_value = []
         mock_mcp_connector.return_value = mock_mcp_instance
@@ -31,19 +30,16 @@ class TestCreateAgent(unittest.TestCase):
         group_chat = GroupChat()
         config_path = Path(__file__).parent / "test_config.toml"
         
-        # 调用create_agent_from_config应该成功返回agent
         config = load_config(Path(config_path))
         result = asyncio.run(create_agent_from_config(group_chat, config))
         self.assertIsInstance(result, Agent)
         
-        # 检查group_chat中是否注册了agent成员
         try:
             agent = group_chat.get_members("agent", Agent)
             self.assertIsNotNone(agent)
         except RuntimeError:
             self.fail("agent成员未在group_chat中注册")
         
-        # 检查group_chat中是否注册了tool_manager成员
         try:
             tool_manager = group_chat.get_members("tool_manager", ToolManager)
             self.assertIsNotNone(tool_manager)
@@ -53,7 +49,6 @@ class TestCreateAgent(unittest.TestCase):
     @patch('linhai.tool.mcp_connector.MCPConnector')
     def test_create_agent_with_llm_name(self, mock_mcp_connector):
         """测试使用llm_name参数创建agent"""
-        # 模拟MCP连接器
         mock_mcp_instance = AsyncMock()
         mock_mcp_instance.get_toolsets.return_value = []
         mock_mcp_connector.return_value = mock_mcp_instance
@@ -61,12 +56,10 @@ class TestCreateAgent(unittest.TestCase):
         group_chat = GroupChat()
         config_path = Path(__file__).parent / "test_config.toml"
         
-        # 使用llm_name参数
         config = load_config(Path(config_path))
         result = asyncio.run(create_agent_from_config(group_chat, config, llm_name="test"))
         self.assertIsInstance(result, Agent)
         
-        # 检查agent配置中的当前LLM索引
         agent = group_chat.get_members("agent", Agent)
         self.assertEqual(agent.context["current_llm_index"], 0)  # test是第一个LLM
 
@@ -75,7 +68,6 @@ class TestCreateAgent(unittest.TestCase):
         group_chat = GroupChat()
         config_path = Path(__file__).parent / "test_config.toml"
         
-        # 使用无效的llm_name应该抛出ValueError
         from linhai.config import load_config
         config = load_config(Path(config_path))
         with self.assertRaises(ValueError) as context:

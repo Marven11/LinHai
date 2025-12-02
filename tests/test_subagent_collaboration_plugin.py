@@ -17,12 +17,10 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = []
         self.agent.message_processor.append_message = MagicMock()
         
-        # 模拟subagent_manager
         self.mock_subagent_manager = MagicMock()
         self.mock_subagent_manager.create_subagent = AsyncMock()
         
         self.group_chat = MagicMock()
-        # 根据成员类型返回不同的Mock
         def get_members_side_effect(member_type, member_class=None):
             _ = member_class  # 使用参数以消除警告
             if member_type == "subagent_manager":
@@ -54,15 +52,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         error = "测试错误"
         
-        # 模拟subagent_manager
         mock_subagent_manager = AsyncMock()
         mock_subagent_manager.create_subagent = AsyncMock()
         self.group_chat.get_members.return_value = mock_subagent_manager
         
-        # 模拟agent，确保包含多个工具调用块以触发subagent启动
         mock_agent = MagicMock()
         mock_agent.current_answer = MagicMock()
-        # 返回包含多个工具调用块的内容
         mock_agent.current_answer.get_current_content = MagicMock(
             return_value="""首先调用一个工具
 
@@ -77,10 +72,8 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 ```"""
         )
         
-        # 工具调用失败，应该启动subagent
         await self.plugin.tool_failure(mock_agent, tool_call, error)
         
-        # 验证发送了subagent启动通知
         self.group_chat.send_if_exists.assert_called_once()
         call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
@@ -94,20 +87,16 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         conflicting_tools = ["conflicting_tool1", "conflicting_tool2"]
         
-        # 模拟subagent_manager
         mock_subagent_manager = AsyncMock()
         mock_subagent_manager.create_subagent = AsyncMock()
         self.group_chat.get_members.return_value = mock_subagent_manager
         
-        # 模拟agent
         mock_agent = MagicMock()
         mock_agent.current_answer = MagicMock()
         mock_agent.current_answer.get_current_content = MagicMock(return_value="测试回答内容")
         
-        # 工具调用冲突，应该启动subagent
         await self.plugin.tool_conflict(mock_agent, tool_call, conflicting_tools)
         
-        # 验证发送了subagent启动通知
         self.group_chat.send_if_exists.assert_called_once()
         call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
@@ -125,12 +114,10 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         error = "测试错误"
         
-        # 执行检查
         await self.plugin._check_violations(
             mock_subagent_manager, full_response, tool_call, error
         )
         
-        # 验证subagent被创建
         mock_subagent_manager.create_subagent.assert_called_once()
         call_args = mock_subagent_manager.create_subagent.call_args
         self.assertEqual(call_args[1]["agent_type"], "violation_checker")
@@ -150,12 +137,10 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         error = "测试错误"
         
-        # 执行检查
         await self.plugin._check_violations(
             mock_subagent_manager, full_response, tool_call, error
         )
         
-        # 验证subagent被创建
         mock_subagent_manager.create_subagent.assert_called_once()
         call_args = mock_subagent_manager.create_subagent.call_args
         self.assertEqual(call_args[1]["agent_type"], "violation_checker")
@@ -172,13 +157,11 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
         error = "测试错误"
         
-        # 执行检查，异常应该直接抛出（fail fast）
         with self.assertRaises(Exception) as context:
             await self.plugin._check_violations(
                 mock_subagent_manager, full_response, tool_call, error
             )
         
-        # 验证异常信息
         self.assertEqual(str(context.exception), "测试异常")
 
 

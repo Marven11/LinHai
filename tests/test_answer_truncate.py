@@ -13,13 +13,10 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
         mock_stream = MagicMock()
         answer = OpenAiAnswer(mock_stream)
         
-        # 调用truncate
         answer.truncate()
         
-        # 验证truncated被设置
         self.assertTrue(answer.truncated)
         
-        # 验证interrupted没有被设置
         self.assertFalse(answer.interrupted)
 
     async def test_interrupt_sets_interrupted_flag(self):
@@ -27,10 +24,8 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
         mock_stream = MagicMock()
         answer = OpenAiAnswer(mock_stream)
         
-        # 调用interrupt
         answer.interrupt()
         
-        # 验证interrupted被设置
         self.assertTrue(answer.interrupted)
 
     async def test_truncate_preserves_content(self):
@@ -50,23 +45,18 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
         
         answer = OpenAiAnswer(mock_stream)
         
-        # 获取一些token
         tokens = []
         async for token in answer:
             tokens.append(token)
             if len(tokens) >= 2:
                 break
         
-        # 验证已经获取了内容
         self.assertEqual(answer.get_current_content(), "test content")
         
-        # 调用truncate
         answer.truncate()
         
-        # 验证内容仍然被保留
         self.assertEqual(answer.get_current_content(), "test content")
         
-        # 验证truncated被设置
         self.assertTrue(answer.truncated)
 
     async def test_truncate_stops_further_generation(self):
@@ -90,33 +80,26 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
         
         answer = OpenAiAnswer(mock_stream)
         
-        # 获取前两个token（工具调用）
         tokens = []
         async for token in answer:
             tokens.append(token)
             if len(tokens) >= 2:
                 break
         
-        # 验证已经获取了工具调用内容
         self.assertIn('```json toolcall', answer.get_current_content())
         self.assertIn('test_tool', answer.get_current_content())
         
-        # 调用truncate
         answer.truncate()
         
-        # 验证内容被保留
         self.assertIn('```json toolcall', answer.get_current_content())
         self.assertIn('test_tool', answer.get_current_content())
         self.assertNotIn('不应该出现的后续内容', answer.get_current_content())
         
-        # 验证truncated被设置
         self.assertTrue(answer.truncated)
         
-        # 验证后续迭代会立即触发StopAsyncIteration
         with self.assertRaises(StopAsyncIteration):
             await answer.__anext__()
         
-        # 验证interrupted没有被设置
         self.assertFalse(answer.interrupted)
 
 

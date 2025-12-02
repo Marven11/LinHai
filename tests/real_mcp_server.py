@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """A real MCP server for testing with calculator tools."""
 
 from mcp.server.fastmcp import FastMCP

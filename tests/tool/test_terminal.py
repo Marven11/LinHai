@@ -45,21 +45,17 @@ class TestTerminalTools(unittest.TestCase):
         """测试发送字符串和读取屏幕"""
 
         async def test():
-            # 创建终端
             create_func = terminal_toolset.get_tool("create_terminal")
             terminal_id = await create_func()
 
-            # 发送字符串
             send_string_func = terminal_toolset.get_tool("send_string_to_terminal")
             result = await send_string_func(terminal_id, "echo hello", with_enter=True)
             self.assertIn("已发送", result)
 
-            # 读取屏幕
             read_func = terminal_toolset.get_tool("read_terminal_screen")
             screen_content = await read_func(terminal_id)
             self.assertIsInstance(screen_content, str)
 
-            # 关闭终端
             close_func = terminal_toolset.get_tool("close_terminal")
             close_result = await close_func(terminal_id)
             self.assertIn("已关闭终端", close_result)
@@ -70,16 +66,13 @@ class TestTerminalTools(unittest.TestCase):
         """测试发送字符串但不发送enter键"""
 
         async def test():
-            # 创建终端
             create_func = terminal_toolset.get_tool("create_terminal")
             terminal_id = await create_func()
 
-            # 发送字符串但不发送enter
             send_string_func = terminal_toolset.get_tool("send_string_to_terminal")
             result = await send_string_func(terminal_id, "echo hello", with_enter=False)
             self.assertIn("已发送", result)
 
-            # 关闭终端
             close_func = terminal_toolset.get_tool("close_terminal")
             await close_func(terminal_id)
 
@@ -89,11 +82,9 @@ class TestTerminalTools(unittest.TestCase):
         """测试发送按键"""
 
         async def test():
-            # 创建终端
             create_func = terminal_toolset.get_tool("create_terminal")
             terminal_id = await create_func()
 
-            # 发送按键
             send_keys_func = terminal_toolset.get_tool("send_keys_to_terminal")
             result = await send_keys_func(
                 terminal_id,
@@ -101,7 +92,6 @@ class TestTerminalTools(unittest.TestCase):
             )
             self.assertIn("已发送按键", result)
 
-            # 关闭终端
             close_func = terminal_toolset.get_tool("close_terminal")
             await close_func(terminal_id)
 
@@ -111,11 +101,9 @@ class TestTerminalTools(unittest.TestCase):
         """测试发送特殊按键"""
 
         async def test():
-            # 创建终端
             create_func = terminal_toolset.get_tool("create_terminal")
             terminal_id = await create_func()
 
-            # 发送特殊按键
             send_keys_func = terminal_toolset.get_tool("send_keys_to_terminal")
             result = await send_keys_func(
                 terminal_id,
@@ -123,7 +111,6 @@ class TestTerminalTools(unittest.TestCase):
             )
             self.assertIn("已发送按键", result)
 
-            # 关闭终端
             close_func = terminal_toolset.get_tool("close_terminal")
             await close_func(terminal_id)
 
@@ -133,22 +120,18 @@ class TestTerminalTools(unittest.TestCase):
         """测试无效终端id"""
 
         async def test():
-            # 测试读取不存在的终端
             read_func = terminal_toolset.get_tool("read_terminal_screen")
             result = await read_func("invalid-id")
             self.assertIn("错误：未找到终端", result)
 
-            # 测试发送字符串到不存在的终端
             send_string_func = terminal_toolset.get_tool("send_string_to_terminal")
             result = await send_string_func("invalid-id", "ls", with_enter=True)
             self.assertIn("错误：未找到终端", result)
 
-            # 测试发送按键到不存在的终端
             send_keys_func = terminal_toolset.get_tool("send_keys_to_terminal")
             result = await send_keys_func("invalid-id", ["a"])
             self.assertIn("错误：未找到终端", result)
 
-            # 测试关闭不存在的终端
             close_func = terminal_toolset.get_tool("close_terminal")
             result = await close_func("invalid-id")
             self.assertIn("错误：未找到终端", result)
@@ -159,16 +142,13 @@ class TestTerminalTools(unittest.TestCase):
         """测试无效按键"""
 
         async def test():
-            # 创建终端
             create_func = terminal_toolset.get_tool("create_terminal")
             terminal_id = await create_func()
 
-            # 发送无效按键
             send_keys_func = terminal_toolset.get_tool("send_keys_to_terminal")
             result = await send_keys_func(terminal_id, ["invalid_key"])
             self.assertIn("未知按键", result)
 
-            # 关闭终端
             close_func = terminal_toolset.get_tool("close_terminal")
             await close_func(terminal_id)
 

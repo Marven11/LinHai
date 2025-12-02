@@ -1,6 +1,7 @@
 """Agent基础模块，包含运行时消息和全局记忆类。"""
 
 import hashlib
+import re
 import json
 from pathlib import Path
 from reprlib import Repr
@@ -62,7 +63,6 @@ class CompressRangeRequest(Message):
 class RuntimeMessage(Message):
     """运行时消息，用于向LLM传递运行时信息。"""
 
-    # pylint: disable=too-few-public-methods
 
     def __init__(self, message: str, source: str | None = None):
         self.message = message
@@ -92,7 +92,6 @@ class RuntimeMessage(Message):
 class GlobalMemory:
     """全局记忆类，用于读取和呈现全局记忆文件内容。"""
 
-    # pylint: disable=too-few-public-methods
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
@@ -155,7 +154,6 @@ class GlobalMemory:
 class PathMemory:
     """路径记忆类，用于检测和呈现特定路径的文件内容。"""
 
-    # pylint: disable=too-few-public-methods
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
@@ -234,9 +232,7 @@ class FileContentMessage(Message):
     def __init__(self, filepath: str, content: str):
         self.filepath = filepath
         self.content = content
-        # 计算内容哈希以提高比较性能
         self._content_hash = hashlib.md5(content.encode()).hexdigest()
-        # 解析路径以进行规范化比较
         self._resolved_path = Path(filepath).resolve()
 
     def to_llm_message(self) -> LanguageModelMessage:
@@ -273,10 +269,8 @@ class FileContentMessage(Message):
             return False
         if self._resolved_path != other._resolved_path:
             return False
-        # 如果内容完全相同（包括行号），直接返回True
         if self.content == other.content:
             return True
-        # 否则比较标准化后的内容（移除行号前缀）
         return self._normalize_content(self.content) == self._normalize_content(
             other.content
         )
@@ -288,14 +282,10 @@ class FileContentMessage(Message):
         匹配read_file工具添加的行号格式：行首的数字后跟冒号和空格。
         例如：'1: content' -> 'content'
         """
-        import re
-
-        # 匹配行首的数字+冒号+空格，只移除这种格式
         return re.sub(r"^\d+: ", "", content, flags=re.MULTILINE)
 
     def __hash__(self) -> int:
         """哈希支持，用于set比较。基于标准化内容（忽略行号）计算哈希。"""
-        # 计算标准化内容的哈希
         normalized_content = self._normalize_content(self.content)
         normalized_hash = hash(normalized_content)
         return hash((self._resolved_path, normalized_hash))

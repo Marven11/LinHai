@@ -6,14 +6,11 @@ class TestInsertAtLineTool(unittest.TestCase):
     """Test cases for the insert_at_line tool."""
 
     def setUp(self):
-        # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
 
         self.toolset = ToolSet()
-        # 使用register_tool装饰器注册insert_at_line工具
         from linhai.tool.tools.file import insert_at_line
 
-        # 直接调用装饰器函数来注册现有工具
         self.toolset.register_tool(
             name="insert_at_line",
             desc="将内容插入到文件的指定行号位置",
@@ -28,13 +25,11 @@ class TestInsertAtLineTool(unittest.TestCase):
     @unittest.mock.patch("linhai.tool.tools.file.Path")
     def test_insert_at_line_success(self, mock_path):
         """测试成功插入内容到指定行"""
-        # 模拟文件存在且是文件
         mock_file = mock_path.return_value
         mock_file.exists.return_value = True
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
-        # 调用工具
         result = self.toolset.call_tool(
             "insert_at_line",
             {
@@ -45,7 +40,6 @@ class TestInsertAtLineTool(unittest.TestCase):
             },
         )
 
-        # 验证写入的内容
         mock_file.write_text.assert_called_once_with(
             "line1\ninserted line\nline2\nline3", encoding="utf-8"
         )
@@ -59,7 +53,6 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
-        # 行号太小
         result = self.toolset.call_tool(
             "insert_at_line",
             {
@@ -71,7 +64,6 @@ class TestInsertAtLineTool(unittest.TestCase):
         )
         self.assertIn("行号0无效", result)
 
-        # 行号太大
         result = self.toolset.call_tool(
             "insert_at_line",
             {
@@ -171,7 +163,6 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.is_file.return_value = True
         mock_file.read_text.return_value = "line1\nline2\nline3"
 
-        # 有效情况：预期内容为空
         result = self.toolset.call_tool(
             "insert_at_line",
             {
@@ -186,7 +177,6 @@ class TestInsertAtLineTool(unittest.TestCase):
         )
         self.assertIn("成功在文件", result)
 
-        # 无效情况：预期内容不为空
         mock_file.write_text.reset_mock()
         result = self.toolset.call_tool(
             "insert_at_line",

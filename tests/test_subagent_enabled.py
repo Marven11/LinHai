@@ -49,13 +49,11 @@ default_llm = "test_llm"
         try:
             config = load_config(config_path)
             
-            # 验证配置加载正确
             self.assertTrue(config.subagent_enabled)
             self.assertIsNotNone(config.subagent)
             assert config.subagent is not None  # 确保pyright知道subagent不为None
             self.assertTrue(config.subagent.enable)
             
-            # 验证字符串表示包含enabled信息
             config_str = str(config)
             self.assertIn("subagent_enabled=True", config_str)
             
@@ -69,13 +67,11 @@ default_llm = "test_llm"
         try:
             config = load_config(config_path)
             
-            # 验证配置加载正确
             self.assertFalse(config.subagent_enabled)
             self.assertIsNotNone(config.subagent)
             assert config.subagent is not None  # 确保pyright知道subagent不为None
             self.assertFalse(config.subagent.enable)
             
-            # 验证字符串表示包含enabled信息
             config_str = str(config)
             self.assertIn("subagent_enabled=False", config_str)
             
@@ -98,11 +94,9 @@ model = "test-model"
         try:
             config = load_config(path)
             
-            # 验证subagent为None
             self.assertIsNone(config.subagent)
             self.assertFalse(config.subagent_enabled)
             
-            # 验证字符串表示包含enabled信息
             config_str = str(config)
             self.assertIn("subagent_enabled=False", config_str)
             
@@ -119,20 +113,15 @@ model = "test-model"
         config_path = self.create_test_config(subagent_enabled=False)
         
         try:
-            # 创建Agent
             config = load_config(config_path)
             agent = await create_agent_from_config(self.group_chat, config, None)
             
-            # 验证SubAgent相关组件没有被创建
-            # SubAgentManager不应该被注册到group_chat
             subagent_manager_calls = [
                 call for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
             ]
             self.assertEqual(len(subagent_manager_calls), 0)
             
-            # 验证SubAgentCollaborationPlugin没有被注册
-            # 检查lifecycle的plugins列表
             has_subagent_plugin = any(
                 plugin.__class__.__name__ == "SubAgentCollaborationPlugin"
                 for plugin in agent.lifecycle._plugins
@@ -152,19 +141,15 @@ model = "test-model"
         config_path = self.create_test_config(subagent_enabled=True)
         
         try:
-            # 创建Agent
             config = load_config(config_path)
             agent = await create_agent_from_config(self.group_chat, config, None)
             
-            # 验证SubAgent相关组件被创建
-            # SubAgentManager应该被注册到group_chat
             subagent_manager_calls = [
                 call for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
             ]
             self.assertEqual(len(subagent_manager_calls), 1)
             
-            # 验证SubAgent相关组件被创建
             subagent_manager_calls = [
                 call for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"

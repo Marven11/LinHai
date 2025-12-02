@@ -11,7 +11,6 @@ class TestStreamJsonArrayIndexing(unittest.TestCase):
         parser = StreamJsonParser()
         json_str = '{"arr": ["a", "b"]}'
         
-        # 分块输入JSON字符串
         results = []
         for i in range(0, len(json_str), 2):
             parser.feed_string(json_str[i:i+2])
@@ -19,7 +18,6 @@ class TestStreamJsonArrayIndexing(unittest.TestCase):
                 if isinstance(value, Value):  # 只处理完整的Value对象
                     results.append((value.index_key, value.value))
         
-        # 验证数组元素的索引键
         expected_keys = ["arr.0", "arr.1"]
         actual_keys = [key for key, value in results if key.startswith("arr.")]
         
@@ -38,7 +36,6 @@ class TestStreamJsonArrayIndexing(unittest.TestCase):
                 if isinstance(value, Value):  # 只处理完整的Value对象
                     results.append((value.index_key, value.value))
         
-        # 验证嵌套数组元素的索引键
         expected_keys = ["nested.inner_arr.0", "nested.inner_arr.1", "nested.inner_arr.2"]
         actual_keys = [key for key, value in results if key.startswith("nested.inner_arr.")]
         
@@ -57,7 +54,6 @@ class TestStreamJsonArrayIndexing(unittest.TestCase):
                 if isinstance(value, Value):  # 只处理完整的Value对象
                     results.append((value.index_key, value.value))
         
-        # 验证混合结构的索引键
         expected_keys = ["data.0.name", "data.1.age"]
         actual_keys = [key for key, value in results if "." in key and not key.endswith("data")]
         
@@ -82,7 +78,6 @@ class TestStreamJsonNumberSupport(unittest.TestCase):
                 if isinstance(value, Value):
                     results.append((value.index_key, value.value))
         
-        # 验证负数解析
         expected = ("negative", -114514)
         actual = next(((k, v) for k, v in results if k == "negative"), None)
         self.assertEqual(actual, expected, f"负数解析失败，期望{expected}，实际得到{actual}")
@@ -99,7 +94,6 @@ class TestStreamJsonNumberSupport(unittest.TestCase):
                 if isinstance(value, Value):
                     results.append((value.index_key, value.value))
         
-        # 验证小数解析
         expected = ("float", 3.14159)
         actual = next(((k, v) for k, v in results if k == "float"), None)
         self.assertEqual(actual, expected, f"小数解析失败，期望{expected}，实际得到{actual}")
@@ -116,7 +110,6 @@ class TestStreamJsonNumberSupport(unittest.TestCase):
                 if isinstance(value, Value):
                     results.append((value.index_key, value.value))
         
-        # 验证负小数解析
         expected = ("neg_float", -2.718)
         actual = next(((k, v) for k, v in results if k == "neg_float"), None)
         self.assertEqual(actual, expected, f"负小数解析失败，期望{expected}，实际得到{actual}")
@@ -133,7 +126,6 @@ class TestStreamJsonNumberSupport(unittest.TestCase):
                 if isinstance(value, Value):
                     results.append((value.index_key, value.value))
         
-        # 验证混合数字解析
         expected_values = [114, -514, 3.14, -2.718]
         actual_values = [v for k, v in results if k.startswith("numbers.")]
         self.assertEqual(actual_values, expected_values, 

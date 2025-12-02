@@ -22,7 +22,6 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# 生命周期回调类型定义
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[
     [
@@ -94,7 +93,6 @@ class Lifecycle:
 
     def __init__(self, group_chat):
         self.group_chat = group_chat
-        # 在初始化时注册自己到group_chat
         self.group_chat.register_member("lifecycle", self)
 
         self._before_message_generation_callbacks: list[
@@ -132,8 +130,9 @@ class Lifecycle:
             ClarificationCheckPlugin,
             JsonCodeBlockPlugin,
             RuntimeImitationPlugin,
+            DuplicateFileReadPlugin,
+            UnnecessarySedReadPlugin,
         )
-        from .plugin import DuplicateFileReadPlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
@@ -150,6 +149,7 @@ class Lifecycle:
             JsonCodeBlockPlugin(self.group_chat),
             RuntimeImitationPlugin(self.group_chat),
             DuplicateFileReadPlugin(self.group_chat),
+            UnnecessarySedReadPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

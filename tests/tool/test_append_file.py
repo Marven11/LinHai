@@ -21,7 +21,6 @@ class TestAppendFile(unittest.TestCase):
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")
@@ -38,7 +37,6 @@ class TestAppendFile(unittest.TestCase):
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")
@@ -55,7 +53,6 @@ class TestAppendFile(unittest.TestCase):
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容包含警告
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("警告：原文件末尾没有换行，原最后一行被修改！", content)
@@ -73,7 +70,6 @@ class TestAppendFile(unittest.TestCase):
             result = append_file(temp_path, "Line 3", assume_empty_line=False)
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容直接拼接
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2Line 3")
@@ -83,14 +79,12 @@ class TestAppendFile(unittest.TestCase):
     def test_append_file_to_new_file(self):
         """测试追加内容到新文件。"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
-            # 创建空文件
             temp_path = temp_file.name
         
         try:
             result = append_file(temp_path, "Line 1")
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1")
@@ -107,7 +101,6 @@ class TestAppendFile(unittest.TestCase):
             result = append_file(temp_path, "\nLine 3")  # 新内容以换行符开头
             self.assertIn("成功写入文件", result.content)
             
-            # 验证文件内容
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")

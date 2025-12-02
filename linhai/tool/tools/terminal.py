@@ -12,13 +12,10 @@ import pyte
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.utils import generate_id
 
-# 创建新的工具集，不注册到global tools
 terminal_toolset = ToolSet()
 
-# 存储终端实例的字典
 terminals = {}
 
-# 按键映射
 KEY_MAPPINGS = {
     "enter": "\r",
     "esc": "\x1b",

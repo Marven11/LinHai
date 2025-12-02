@@ -1,10 +1,10 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
-import hashlib
 import logging
 from pathlib import Path
 import re
+import time
 from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from linhai.agent import Agent
@@ -516,7 +516,6 @@ class ToolCallInReasoningPlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 使用get_reasoning_message获取推理内容
         reasoning_content = answer.get_reasoning_message()
         if not reasoning_content:
             return
@@ -618,13 +617,11 @@ class JsonCodeBlockPlugin(Plugin):
         """检查是否有json代码块包含有效的工具调用。"""
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 使用extract_tool_calls_with_errors检测json代码块
         json_tool_calls, json_errors = extract_tool_calls_with_errors(
             full_response, language="json"
         )
 
         if json_tool_calls and not json_errors:
-            # 提取工具名（不包含参数）
             tool_names = [call.get("name", "未知工具") for call in json_tool_calls]
             unique_tool_names = list(set(tool_names))
 
@@ -655,7 +652,6 @@ class RuntimeImitationPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
 
-        # [TODO] 在将工具输出格式改为<tool>包裹后同样支持阻断工具输出（用户需求：以后可以支持阻断工具输出，但是工具输出的格式还没有改成<tool>这样的格式，先加一个注释TODO提示一下）
         if (
             isinstance(model, OpenAi)
             and model.compatibility == "deepseek"
@@ -664,7 +660,6 @@ class RuntimeImitationPlugin(Plugin):
             await agent.interrupt("不要模仿tag内的输出！")
             return True
 
-        # 即使没有提示deepseek，其也会在<tool>中输出JSON
         if (
             isinstance(model, OpenAi)
             and model.compatibility == "deepseek"
@@ -719,3 +714,79 @@ class DuplicateFileReadPlugin(Plugin):
                 )
 
         return None
+
+
+class UnnecessarySedReadPlugin(Plugin):
+    """拦截不必要的sed调用插件。
+
+    判断规则 - 在一分钟内出现两次读取同一个文件的工具调用：
+        - 对应文件行数少于1600行
+        - 使用run_sed_expression
+        - 工具返回结果小于10000个字符
+    """
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.unnecessary_history: Dict[str, float] = {}
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_after_tool_call(self._after_tool_call)
+
+    async def _after_tool_call(
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        """工具调用后回调，检查是否不必要的小块读取。"""
+
+        if not success or tool_call.function_name != "run_sed_expression":
+            return None
+
+        filepath = tool_call.function_arguments.get("filepath")
+        if not filepath:
+            return None
+
+        from linhai.tool.base import ToolResultMessage
+
+        if not isinstance(tool_result, ToolResultMessage) or len(tool_result.content) >= 10000:
+            return None
+
+        path = Path(filepath)
+        if not path.is_file():
+            return None
+
+        line_count = await self._get_file_line_count(filepath)
+        if line_count is None or line_count >= 1600:
+            return None
+
+        last_history = self.unnecessary_history.get(filepath)
+        self.unnecessary_history[filepath] = time.time()
+
+        if last_history and self.unnecessary_history[filepath] - last_history < 60:
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="模型多次小块读取代码文件，已阻止",
+                ),
+            )
+            return RuntimeMessage(
+                "错误：一分钟内多次小块读取代码文件\n"
+                "违反：优先使用read_file的要求\n"
+                "后果：难以理解文件内容、生成多条消息导致重复计费\n"
+                "为什么无法省下token: 1. 最终还是需要读取所有文件内容 2. 多次发送回答会导致多次计费token\n"
+                "为什么不能提升认知：文件不完整会带来认知负担、遗漏内容导致行为出错\n"
+                "建议：优先带上行号读取整个文件！如果必须只读取对应行号则先sleep一分钟！"
+            )
+        return None
+
+    async def _get_file_line_count(self, filepath: str) -> Optional[int]:
+        """获取原始文件的完整行数。使用高效纯Python实现，确保跨平台兼容性。"""
+        try:
+            with open(filepath, "rb") as f:
+                return f.read(32 * 1024).count(b"\n")
+        except (FileNotFoundError, PermissionError, OSError):
+            return None

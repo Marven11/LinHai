@@ -11,7 +11,6 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
     """Test cases for the LLM classes."""
 
     def setUp(self):
-        # 创建模拟的OpenAi实例
         self.llm = OpenAi(
             api_key="test_key",
             base_url="https://test.com",
@@ -29,10 +28,8 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
     async def test_openai_answer_stream(self):
         """Test basic functionality of answer_stream."""
-        # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
-        # 创建模拟的流响应 - 创建一个真正的异步迭代器
         class MockStream:
             """Mock stream for testing OpenAI answer stream."""
             def __init__(self):
@@ -57,22 +54,17 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
                     raise StopAsyncIteration
                 chunk = self.chunks[self.index]
                 self.index += 1
-                # 模拟异步延迟
                 await asyncio.sleep(0.001)
                 return chunk
 
-        # 配置mock客户端返回我们的模拟流
         mock_client.chat.completions.create = AsyncMock(return_value=MockStream())
 
-        # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
-            # 运行测试，添加超时控制
             history = [UserMessage(message="Hi")]
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0
             )
 
-            # 验证流式响应
             content = ""
             tokens = []
             async for token in answer:
@@ -85,10 +77,8 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
     async def test_openai_answer_interrupt(self):
         """Test interrupt functionality of answer_stream."""
-        # 创建完全mock的OpenAI客户端
         mock_client = MagicMock()
 
-        # 创建模拟的流响应 - 创建一个真正的异步迭代器
         class MockStream:
             """Mock stream for testing OpenAI answer stream."""
             def __init__(self):
@@ -113,22 +103,17 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
                     raise StopAsyncIteration
                 chunk = self.chunks[self.index]
                 self.index += 1
-                # 模拟异步延迟
                 await asyncio.sleep(0.001)
                 return chunk
 
-        # 配置mock客户端返回我们的模拟流
         mock_client.chat.completions.create = AsyncMock(return_value=MockStream())
 
-        # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
-            # 运行测试，添加超时控制
             history = [UserMessage(message="Hi")]
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0
             )
 
-            # 收集流式响应并在中途中断
             content = ""
             token_count = 0
             async for token in answer:
@@ -157,7 +142,6 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(Exception):
             history = [UserMessage(message="Hi")]
-            # 添加超时控制
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0
             )
@@ -166,19 +150,16 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
 
     def test_answer_token(self):
         """Test AnswerToken class with pydantic."""
-        # Test AnswerToken with reasoning content
         token1 = AnswerToken(
             reasoning_content="Let me think...", content="The answer is 42"
         )
         self.assertEqual(token1.reasoning_content, "Let me think...")
         self.assertEqual(token1.content, "The answer is 42")
 
-        # Test AnswerToken without reasoning content
         token2 = AnswerToken(content="Hello world")
         self.assertIsNone(token2.reasoning_content)
         self.assertEqual(token2.content, "Hello world")
 
-        # Test AnswerToken with empty content
         token3 = AnswerToken(reasoning_content="Thinking...", content="")
         self.assertEqual(token3.reasoning_content, "Thinking...")
         self.assertEqual(token3.content, "")

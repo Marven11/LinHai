@@ -8,3 +8,4 @@ config.toml
 .venv
 .vscode
 .*_cache
+conversations/

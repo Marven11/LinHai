@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """A simple MCP server example using FastMCP."""
 
 from mcp.server.fastmcp import FastMCP

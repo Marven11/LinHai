@@ -2,6 +2,8 @@
 
 from pathlib import Path
 import datetime
+import logging
+from typing import Literal
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
@@ -17,6 +19,7 @@ from linhai.tool.tools.todolist import (
     TodolistManager,
     create_agent_todolist_toolset,
 )
+from linhai.utils import CliRuntimeNotice
 
 from .base import AgentContext, GlobalMemory
 from .clarification_tools import (
@@ -46,7 +49,7 @@ async def create_agent_from_config(
     agent_config = config.agent if config.agent else AgentConfig()
     tools_config = config.tools if config.tools else ToolConfig()
 
-    llms = await _create_llm_instances(config.llm)
+    llms = await _create_llm_instances(config.llm, group_chat)
 
     llm_names = [llm_config.name for llm_config in config.llm]
     agent_context = await _create_agent_context(
@@ -100,15 +103,27 @@ async def create_agent_from_config(
     return agent
 
 
-async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
+async def _create_llm_instances(llm_configs: list, group_chat: GroupChat) -> list[LanguageModel]:
     """创建LLM实例列表
 
     Args:
         llm_configs: LLM配置列表
+        group_chat: GroupChat实例，用于发送通知
 
     Returns:
         LLM实例列表
     """
+    
+    logger = logging.getLogger(__name__)
+    
+    async def notification_callback(level: Literal["INFO", "WARNING", "ERROR"], content: str) -> None:
+        """发送通知到ui_log队列"""
+        try:
+            notice = CliRuntimeNotice(level=level, content=content)
+            await group_chat.send_if_exists("ui_log", notice)
+        except Exception:
+            logger.warning(f"通知发送失败: {content}")
+    
     llms = []
     for llm_config in llm_configs:
         llm_config_dict = llm_config.model_dump()
@@ -120,6 +135,7 @@ async def _create_llm_instances(llm_configs: list) -> list[LanguageModel]:
             chat_completion_kwargs=llm_config_dict.get("completion_options", {}),
             token_limit=llm_config_dict.get("token_limit"),
             compatibility=llm_config_dict.get("compatibility"),
+            notification_callback=notification_callback,
         )
         llms.append(llm)
     return llms

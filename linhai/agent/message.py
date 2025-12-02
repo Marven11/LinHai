@@ -204,13 +204,11 @@ class AgentMessage:
             message: 消息内容，如果为None则移除对应source的消息
             source: 消息来源标识符，用于区分不同的appending messages
         """
-        # 移除相同source的旧消息
         self.appending_messages = {
             msg for msg in self.appending_messages if msg.source != source
         }
 
         if message is not None:
-            # 添加新消息
             runtime_message = RuntimeMessage(message=message, source=source)
             self.appending_messages.add(runtime_message)
 

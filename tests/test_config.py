@@ -19,7 +19,6 @@ class TestConfig(unittest.TestCase):
 
     def test_load_config_valid(self):
         """Test loading a valid config."""
-        # 创建临时配置文件
         with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
             f.write('''[[llm]]
 name = "primary"
@@ -38,7 +37,6 @@ model = "test_model"
             self.assertEqual(config.llm[0].api_key, "test_key")
             self.assertEqual(config.llm[0].model, "test_model")
         finally:
-            # 清理临时文件
             os.unlink(temp_file)
 
     def test_load_config_invalid_url(self):
@@ -180,7 +178,6 @@ model = "test_model"
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
-            # 检查默认值
             self.assertIsNone(config.agent)
             self.assertIsNone(config.memory)
             self.assertIsNone(config.tools)
@@ -207,13 +204,11 @@ model = "test_model_2"
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 2)
 
-            # 验证第一个LLM
             self.assertEqual(config.llm[0].name, "primary")
             self.assertEqual(config.llm[0].base_url, "https://api.example.com")
             self.assertEqual(config.llm[0].api_key, "test_key_1")
             self.assertEqual(config.llm[0].model, "test_model_1")
 
-            # 验证第二个LLM
             self.assertEqual(config.llm[1].name, "secondary")
             self.assertEqual(config.llm[1].base_url, "https://api.example.org")
             self.assertEqual(config.llm[1].api_key, "test_key_2")
@@ -251,11 +246,9 @@ max_output_length = 2000
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 2)
 
-            # 验证LLMs
             self.assertEqual(config.llm[0].name, "main")
             self.assertEqual(config.llm[1].name, "backup")
 
-            # 验证可选字段
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
             self.assertEqual(config.agent.compress_threshold_soft, 0.5)
@@ -340,14 +333,12 @@ model = "gpt-4"
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 2)
             
-            # 验证第一个LLM (minimax)
             self.assertEqual(config.llm[0].name, "minimax")
             self.assertEqual(config.llm[0].type, "openai")
             self.assertEqual(config.llm[0].compatibility, "minimax")
             self.assertEqual(config.llm[0].base_url, "https://api.minimaxi.com/v1")
             self.assertEqual(config.llm[0].model, "MiniMax-M2")
             
-            # 验证第二个LLM (openai)
             self.assertEqual(config.llm[1].name, "openai")
             self.assertEqual(config.llm[1].type, "openai")
             self.assertIsNone(config.llm[1].compatibility)
@@ -369,7 +360,6 @@ model = "test_model"
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 1)
-            # 检查默认值
             self.assertEqual(config.llm[0].type, "openai")
             self.assertIsNone(config.llm[0].compatibility)
         finally:

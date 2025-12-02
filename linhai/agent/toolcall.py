@@ -261,8 +261,6 @@ class AgentToolcall:
                 msg = f"工具调用失败: {tool_result.content}"
                 logger.error(msg)
                 self.agent.message_processor.append_message(RuntimeMessage(msg))
-                # 在ToolErrorMessage情况下，已经添加了RuntimeMessage，不需要再调用_handle_tool_result
-                # ToolErrorMessage本身不会被添加到消息列表，但错误信息已通过RuntimeMessage传达
                 if tool_call.assert_success:
                     return True
                 else:
@@ -272,7 +270,6 @@ class AgentToolcall:
                 self.agent, tool_call, tool_result
             )
 
-            # 触发after_tool_call回调，并检查是否返回了替换消息
             replacement_message = await self.agent.lifecycle.trigger_after_tool_call(
                 self.agent, tool_call, tool_result, True
             )

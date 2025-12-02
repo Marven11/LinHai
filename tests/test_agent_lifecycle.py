@@ -70,11 +70,9 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_call = MagicMock()
         self.mock_tool_result = MagicMock()
         
-        # 模拟clarification_manager
         self.mock_clarification_manager = MagicMock()
         self.mock_clarification_manager.has_unanswered_clarifications.return_value = False
         
-        # 模拟group_chat.get_members根据参数返回不同的Mock（同步返回）
         def get_members_side_effect(member_type, member_class=None):
             if member_type == "agent":
                 return self.mock_agent
@@ -90,16 +88,13 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        # 注册回调
         self.lifecycle.register_before_message_generation(callback1)
         self.lifecycle.register_before_message_generation(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_before_message_generation(
             True, False
         )
 
-        # 验证回调被调用
         callback1.assert_called_once_with(True, False)
         callback2.assert_called_once_with(True, False)
 
@@ -108,16 +103,13 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        # 注册回调
         self.lifecycle.register_after_message_generation(callback1)
         self.lifecycle.register_after_message_generation(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_after_message_generation(
             self.mock_answer, "test response", []
         )
 
-        # 验证回调被调用
         callback1.assert_called_once_with(
             self.mock_answer, "test response", []
         )
@@ -130,16 +122,13 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        # 注册回调
         self.lifecycle.register_before_tool_call(callback1)
         self.lifecycle.register_before_tool_call(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_before_tool_call(
             self.mock_tool_call
         )
 
-        # 验证回调被调用
         callback1.assert_called_once_with(self.mock_tool_call)
         callback2.assert_called_once_with(self.mock_tool_call)
 
@@ -148,16 +137,13 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        # 注册回调
         self.lifecycle.register_after_tool_call(callback1)
         self.lifecycle.register_after_tool_call(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_after_tool_call(
             self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
         )
 
-        # 验证回调被调用
         callback1.assert_called_once_with(
             self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
         )
@@ -175,16 +161,13 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         async def callback2(_enable_compress, _disable_waiting_user_warning):
             call_order.append(2)
 
-        # 注册回调
         self.lifecycle.register_before_message_generation(callback1)
         self.lifecycle.register_before_message_generation(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_before_message_generation(
             True, False
         )
 
-        # 验证回调顺序
         self.assertEqual(call_order, [1, 2])
 
     async def test_callback_exception_handling(self):
@@ -200,23 +183,18 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         ):
             pass
 
-        # 注册回调
         self.lifecycle.register_before_message_generation(failing_callback)
         self.lifecycle.register_before_message_generation(succeeding_callback)
 
-        # 触发回调 - 根据重构，异常应该被传播
         with self.assertRaises(RuntimeError) as cm:
             await self.lifecycle.trigger_before_message_generation(
                 True, False
             )
         self.assertEqual(str(cm.exception), "Callback failed")
 
-        # 验证第二个回调仍然被调用
-        # 由于是mock测试，我们主要验证没有异常抛出
 
     async def test_empty_callbacks(self):
         """Test triggering when no callbacks are registered."""
-        # 触发没有注册回调的事件 - 应该不会抛出异常
         try:
             await self.lifecycle.trigger_before_message_generation(
                 True, False
@@ -236,7 +214,6 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_tool_success(
                 self.mock_agent, self.mock_tool_call, self.mock_tool_result
             )
-            # 模拟agent.current_answer.get_current_content返回字符串而不是MagicMock
             self.mock_agent.current_answer = MagicMock()
             self.mock_agent.current_answer.get_current_content = MagicMock(return_value="")
             await self.lifecycle.trigger_tool_failure(
@@ -245,7 +222,6 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_tool_parse_error(
                 self.mock_agent, "parse error message"
             )
-            # 模拟subagent_manager
             mock_subagent_manager = MagicMock()
             mock_subagent_manager.create_subagent = AsyncMock()
             def get_members_side_effect(member_type, member_class=None):
@@ -267,14 +243,11 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        # 注册回调
         self.lifecycle.register_before_waiting_user(callback1)
         self.lifecycle.register_before_waiting_user(callback2)
 
-        # 触发回调
         await self.lifecycle.trigger_before_waiting_user(self.mock_agent)
 
-        # 验证回调被调用
         callback1.assert_called_once_with(self.mock_agent)
         callback2.assert_called_once_with(self.mock_agent)
 

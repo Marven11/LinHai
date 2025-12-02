@@ -14,17 +14,14 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat = MagicMock(spec=GroupChat)
         self.plugin = OnlyReasoningPlugin(self.group_chat)
         
-        # 模拟agent
         self.mock_agent = MagicMock()
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.append_message = MagicMock()
         self.mock_agent.message_processor.update_appending_message = MagicMock()
         self.mock_agent.get_current_model = AsyncMock()
         
-        # 模拟get_members返回agent
         self.group_chat.get_members = MagicMock(return_value=self.mock_agent)
         
-        # 模拟send_if_exists
         self.group_chat.send_if_exists = AsyncMock()
 
     def test_plugin_initialization(self):
@@ -34,32 +31,26 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_only_reasoning_deepseek(self):
         """测试deepseek模型只有推理内容没有实际输出时发出警告。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟只有推理内容没有实际输出
         result = await self.plugin.after_message_generation(answer, "", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.update_appending_message.assert_called_once()
         self.group_chat.send_if_exists.assert_called_once()
         
-        # 检查警告消息内容
         call_args = self.mock_agent.message_processor.update_appending_message.call_args
         warning_message = call_args[0][0]
         self.assertIsInstance(warning_message, str)
         self.assertIn("不要只思考，不输出", warning_message)
         
-        # 检查UI日志
         ui_call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertIsInstance(ui_call_args[0][1], CliRuntimeNotice)
@@ -68,19 +59,15 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_reasoning_and_content_deepseek(self):
         """测试deepseek模型既有推理内容又有实际输出时不发出警告。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟有推理内容也有实际输出
         result = await self.plugin.after_message_generation(answer, "这是实际输出", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
@@ -89,19 +76,15 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_without_reasoning_deepseek(self):
         """测试deepseek模型没有推理内容时不发出警告。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
         
-        # 模拟没有推理内容
         result = await self.plugin.after_message_generation(answer, "", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
@@ -110,19 +93,15 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_content_only_deepseek(self):
         """测试deepseek模型只有实际输出没有推理内容时不发出警告。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
         
-        # 模拟只有实际输出
         result = await self.plugin.after_message_generation(answer, "这是实际输出", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
@@ -131,19 +110,15 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_whitespace_content_deepseek(self):
         """测试deepseek模型推理内容有但实际输出只有空白字符时发出警告。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟实际输出只有空白字符
         result = await self.plugin.after_message_generation(answer, "   \n\t  ", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
@@ -152,19 +127,15 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_non_deepseek_model(self):
         """测试非deepseek模型时不检查只思考不输出。"""
-        # 模拟非deepseek模型（如minimax）
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "minimax"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟只有推理内容没有实际输出，但因为是minimax模型，不应该警告
         result = await self.plugin.after_message_generation(answer, "", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()
@@ -173,18 +144,14 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_non_openai_model(self):
         """测试非OpenAi模型时不检查只思考不输出。"""
-        # 模拟非OpenAi模型
         mock_model = MagicMock()  # 不是OpenAi实例
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟只有推理内容没有实际输出
         result = await self.plugin.after_message_generation(answer, "", [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()  # 因为模型检查失败，提前返回
@@ -193,22 +160,18 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_deepseek_with_tool_calls(self):
         """测试deepseek模型有工具调用时不发出警告（因为full_response不为空）。"""
-        # 模拟deepseek模型
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
         
-        # 模拟answer
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = "这是推理内容"
         
-        # 模拟有工具调用内容
         tool_call_content = '''```json toolcall
 {"name": "read_file", "arguments": {"filepath": "test.txt"}}
 ```'''
         result = await self.plugin.after_message_generation(answer, tool_call_content, [])
         
-        # 验证
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()

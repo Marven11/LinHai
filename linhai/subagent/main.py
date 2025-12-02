@@ -16,6 +16,7 @@ from linhai.llm import (
     SubagentSystemMessage,
     UserMessage,
 )
+from .message_wrapper import SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.command import sleep_tool
@@ -98,7 +99,6 @@ class SubAgent:
         )
         self.toolset.add_toolset(clarification_toolset)
 
-        # 注册SubAgent专用的todolist_delete工具
         from linhai.tool.tools.todolist import TodolistManager
 
         todolist_manager = self.group_chat.get_members(
@@ -115,7 +115,6 @@ class SubAgent:
         )
         async def subagent_todolist_delete(todolist_id: str) -> str:
             """根据ID删除todolist（仅SubAgent可用）。"""
-            # 先检查todolist是否存在
             todolist = todolist_manager.get_todolist_by_id(todolist_id)
             if todolist is None:
                 raise ValueError(f"Todolist with ID {todolist_id} does not exist")
@@ -131,24 +130,23 @@ class SubAgent:
         async for token in answer:
             if isinstance(token, AnswerToken):
                 full_response += token.content
-
+                
+                wrapper = SubAgentAnswerTokenWrapper(
+                    subagent_name=self.name,
+                    token=token
+                )
                 await self.group_chat.send_if_exists(
                     "subagent_message",
-                    {
-                        "subagent_name": self.name,
-                        "content": token.content,
-                        "type": "token",
-                        "is_reasoning": token.reasoning_content is not None,
-                    },
+                    wrapper,
                 )
 
+        wrapper = SubAgentAnswerCompleteWrapper(
+            subagent_name=self.name,
+            answer=answer
+        )
         await self.group_chat.send_if_exists(
             "subagent_message",
-            {
-                "subagent_name": self.name,
-                "content": full_response,
-                "type": "message_complete",
-            },
+            wrapper,
         )
 
         return full_response
@@ -220,7 +218,6 @@ class SubAgent:
 
         logger.info("SubAgent %s 结束运行，原因: %s", self.name, self.exit_reason)
 
-        # 发送SubAgent退出通知到UI
         from linhai.utils import CliRuntimeNotice
 
         await self.group_chat.send_if_exists(

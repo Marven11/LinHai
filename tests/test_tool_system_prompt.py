@@ -33,10 +33,8 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
         self.group_chat.register_queue("agent_answer")
 
-        # 创建ClarificationManager（在Agent之前）
         self.clarification_manager = ClarificationManager(self.group_chat)
 
-        # 创建真实的ToolManager实例
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,
             toolsets=[global_tools],
@@ -45,7 +43,6 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        # 创建初始消息列表
         init_messages = [
             SystemMessage(
                 template="Test system prompt",
@@ -125,47 +122,35 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
 
     def test_agent_can_access_tool_definitions(self):
         """测试Agent可以通过message_processor访问工具定义"""
-        # 检查message_processor属性
         self.assertTrue(hasattr(self.agent, 'message_processor'))
         
-        # 检查message_processor的方法
         messages = self.agent.message_processor.get_messages()
         self.assertIsInstance(messages, list)
         
-        # 检查是否有系统消息
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
         
-        # 检查是否可以通过消息处理器访问工具相关的信息
-        # 这里我们检查Agent是否能够处理工具调用，而不是检查具体的工具名称
         self.assertTrue(hasattr(self.agent, 'toolcall_processor'))
 
     def test_agent_can_see_tool_names_in_system_prompt(self):
         """测试Agent在系统提示中能看到工具名称"""
-        # 从消息处理器中获取系统消息
         messages = self.agent.message_processor.get_messages()
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
         
-        # 检查系统消息内容
         system_prompt = system_messages[0].template
         self.assertIsInstance(system_prompt, str)
         self.assertGreater(len(system_prompt), 0)
         
-        # 跳过工具关键词检查，因为测试环境中的系统提示不包含工具定义
-        # 我们已经在其他测试中验证了Agent可以访问工具定义
 
     def test_tool_manager_has_accessible_tools(self):
         """测试ToolManager有可访问的工具"""
-        # 检查ToolManager是否有工具集
         self.assertTrue(hasattr(self.tool_manager, 'toolsets'))
         self.assertIsInstance(self.tool_manager.toolsets, list)
         
-        # 检查是否能获取工具信息
         tools_info = self.tool_manager.get_tools_info()
         self.assertIsInstance(tools_info, list)
         
-        # 检查工具定义是否包含必要字段（注意工具信息结构）
         for tool_info in tools_info:
             self.assertIn('type', tool_info)
             self.assertEqual(tool_info['type'], 'function')

@@ -59,16 +59,13 @@ class TestHttpRequestTool(unittest.TestCase):
             "http_request", {"method": "GET", "url": "http://example.com/image.png"}
         ))
 
-        # 结果应该是临时文件路径
         self.assertTrue(os.path.exists(result))
         self.assertTrue(result.endswith(".bin"))
         
-        # 验证文件内容
         with open(result, "rb") as f:
             content = f.read()
             self.assertEqual(content, mock_response.content)
         
-        # 清理临时文件
         os.unlink(result)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -84,7 +81,6 @@ class TestHttpRequestTool(unittest.TestCase):
             "http_request", {"method": "GET", "url": "http://example.com"}
         ))
 
-        # 验证请求中包含了User-Agent
         call_args = mock_request.call_args
         self.assertIn("headers", call_args.kwargs)
         self.assertIn("User-Agent", call_args.kwargs["headers"])
@@ -115,9 +111,7 @@ class TestHttpRequestTool(unittest.TestCase):
 
         call_args = mock_request.call_args
         self.assertIn("headers", call_args.kwargs)
-        # 自定义header应该保留
         self.assertEqual(call_args.kwargs["headers"]["Authorization"], "Bearer token123")
-        # User-Agent也应该存在
         self.assertIn("User-Agent", call_args.kwargs["headers"])
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -125,7 +119,6 @@ class TestHttpRequestTool(unittest.TestCase):
         """测试编码检测"""
         mock_response = unittest.mock.Mock()
         mock_response.headers = {"content-type": "text/html"}
-        # GBK编码的内容
         gbk_text = "Test Encoding"
         gbk_content = gbk_text.encode("gbk")
         mock_response.content = gbk_content
@@ -135,7 +128,6 @@ class TestHttpRequestTool(unittest.TestCase):
             "http_request", {"method": "GET", "url": "http://example.com"}
         ))
 
-        # 应该正确解码GBK内容
         self.assertIn("Test Encoding", result)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -163,7 +155,6 @@ class TestHttpRequestTool(unittest.TestCase):
             "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
         ))
 
-        # 应该是临时文件路径
         self.assertTrue(os.path.exists(result))
         self.assertTrue(result.endswith(".bin"))
         os.unlink(result)

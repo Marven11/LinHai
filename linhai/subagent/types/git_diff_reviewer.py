@@ -124,17 +124,14 @@ class GitDiffReviewPlugin(Plugin):
 
     def _read_single_file_content(self, filename: str) -> str | None:
         """读取单个文件内容，返回格式化字符串或None（如果跳过）。"""
-        # 跳过文件夹路径，确保不尝试读取文件夹
         if os.path.isdir(filename):
             return None
 
-        # 检查文件大小，大于32KB时只返回路径
         try:
             file_size = os.path.getsize(filename)
             if file_size > 32 * 1024:  # 32KB
                 return f"**新增文件: {filename}**\n(文件大小为{file_size}字节，大于32KB，跳过内容)"
         except (OSError, FileNotFoundError):
-            # 如果无法获取文件大小，继续尝试读取内容
             pass
 
         try:
@@ -150,7 +147,6 @@ class GitDiffReviewPlugin(Plugin):
             return None
 
         try:
-            # 获取所有未跟踪且未被忽略的文件（包括文件夹中的文件）
             result = subprocess.run(
                 ["git", "ls-files", "--others", "--exclude-standard"],
                 capture_output=True,
@@ -194,8 +190,6 @@ class GitDiffReviewPlugin(Plugin):
             status = line[:2]
             filename = line[3:].strip().strip('"')
 
-            # 精确检查删除状态：包括工作区删除(' D')、暂存区删除('D ')、重命名删除('RD')等
-            # 参考git status文档：https://git-scm.com/docs/git-status
             if status in [" D", "D ", "RD", "AD"]:
                 deleted_files.append(filename)
 
@@ -211,33 +205,25 @@ class GitDiffReviewPlugin(Plugin):
             "subagent_manager", SubAgentManager
         )
 
-        # 检查subagent配置
         subagent_config = subagent_manager.subagent_config
         if subagent_config is None:
-            # 没有配置，不启动审查
             return
         if not subagent_config.enable:
-            # 全局禁用subagent，不启动审查
             return
 
-        # 检查git_diff_reviewer是否启用，支持字典和EnabledAgentTypes对象两种格式
         enabled_agent_types = subagent_config.enabled_agent_types
         if enabled_agent_types is None:
-            # 未配置enabled_agent_types，默认不开启
             return
 
         git_diff_reviewer_enabled = False
         if isinstance(enabled_agent_types, dict):
-            # 字典格式
             git_diff_reviewer_enabled = enabled_agent_types.get(
                 "git_diff_reviewer", False
             )
         else:
-            # EnabledAgentTypes对象
             git_diff_reviewer_enabled = enabled_agent_types.git_diff_reviewer
 
         if not git_diff_reviewer_enabled:
-            # git_diff_reviewer类型被禁用，不启动审查
             return
 
         git_diff = self._get_git_diff()
@@ -247,7 +233,6 @@ class GitDiffReviewPlugin(Plugin):
         new_files_content = self._get_new_files_content()
         deleted_files_list = self._get_deleted_files_list()
 
-        # 检查是否与上一次完全相同
         if (
             self._last_git_diff == git_diff
             and self._last_new_files_content == new_files_content
@@ -260,7 +245,6 @@ class GitDiffReviewPlugin(Plugin):
             await self.group_chat.send_if_exists("ui_log", no_change_msg)
             return
 
-        # 检查Agent是否使用了文件修改工具
         if not self._agent_used_file_modification_tools:
             no_relevant_msg = CliRuntimeNotice(
                 level="WARNING",
@@ -269,7 +253,6 @@ class GitDiffReviewPlugin(Plugin):
             await self.group_chat.send_if_exists("ui_log", no_relevant_msg)
             return
 
-        # 更新缓存
         self._last_git_diff = git_diff
         self._last_new_files_content = new_files_content
         self._last_deleted_files_list = deleted_files_list

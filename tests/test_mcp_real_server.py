@@ -31,7 +31,6 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
 
     async def test_mcp_real_server_integration(self):
         """Test full integration with real MCP server."""
-        # Create config with real server - use absolute path from project root
         project_root = Path(__file__).parent.parent.parent
         server_path = project_root / "linhai" / "tests" / "real_mcp_server.py"
         
@@ -52,19 +51,12 @@ server_script_path = "{server_path}"
 '''
         config_path = self.create_test_config(config_content)
         
-        # Create agent with real MCP server
         config = load_config(config_path)
         agent = await create_agent_from_config(self.group_chat, config)
         
-        # Verify agent was created successfully
         self.assertIsInstance(agent, Agent)
         
-        # Verify agent was created successfully with MCP configuration
         self.assertIsInstance(agent, Agent)
         
-        # Check if agent was created successfully with MCP configuration
         self.assertIsInstance(agent, Agent)
         
-        # For integration tests, we verify agent creation
-        # Actual MCP tool testing requires a running server
-        # This test validates the configuration loading and agent initialization

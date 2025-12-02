@@ -28,13 +28,11 @@ class TestReasoningContentWidget(unittest.TestCase):
 
     def test_border_title_calculation(self):
         """Test border title calculation in different states."""
-        # Collapsed state
         self.widget.is_expanded = False
         title = self.widget.calculate_border_title()
         self.assertIn("[点击展开]", title)
         self.assertIn(self.sender_name, title)
 
-        # Expanded state
         self.widget.is_expanded = True
         title = self.widget.calculate_border_title()
         self.assertIn("[点击隐藏]", title)
@@ -66,7 +64,6 @@ class TestReasoningContentWidget(unittest.TestCase):
         
         self.assertNotEqual(self.widget.is_expanded, initial_state)
         
-        # Toggle again
         self.widget.on_click()
         
         self.assertEqual(self.widget.is_expanded, initial_state)
@@ -161,13 +158,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             sender_name="test"
         )
         
-        # Simulate timer creation and keep reference
         mock_timer = Mock()
         widget.timer = mock_timer
         
         widget.stop()
         
-        # Verify timer was stopped and set to None
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
@@ -219,9 +214,6 @@ class TestReasoningContentWidget(unittest.TestCase):
         
         self.assertEqual(len(rendered_panels), 1)
         panel = rendered_panels[0]
-        # 检查Panel的renderable是否设置了no_wrap=True
-        # 注意：这里需要检查renderable的属性，但由于Text对象是内部创建的，
-        # 我们可以通过检查整体功能来确认样式正确应用
         self.assertEqual(panel.__class__.__name__, "Panel")
         
     def test_truncated_content_no_wrap(self):

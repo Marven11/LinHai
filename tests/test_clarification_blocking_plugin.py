@@ -22,7 +22,6 @@ class TestClarificationBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.clarification_manager.has_unanswered_clarifications.return_value = False
         
         self.group_chat = MagicMock()
-        # 设置get_members根据参数返回不同的对象
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
@@ -51,9 +50,7 @@ class TestClarificationBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response, []
         )
         
-        # 应该添加错误消息
         self.agent.message_processor.append_message.assert_called_once()
-        # 状态应该重置为working
         self.assertEqual(self.agent.state, "working")
 
     async def test_with_unanswered_clarifications_no_waiting_marker(self):
@@ -65,7 +62,6 @@ class TestClarificationBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response, []
         )
         
-        # 不应该添加错误消息
         self.agent.message_processor.append_message.assert_not_called()
 
     async def test_without_unanswered_clarifications(self):
@@ -77,7 +73,5 @@ class TestClarificationBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, full_response, []
         )
         
-        # 不应该添加错误消息
         self.agent.message_processor.append_message.assert_not_called()
-        # 状态不应该改变
         self.assertEqual(self.agent.state, "working")

@@ -78,7 +78,6 @@ def create_agent_todolist_toolset(
         todolists = todolist_manager.list_todolists()
         if not todolists:
             return "当前没有todolist。"
-        # 将字典列表转换为字符串格式：{id}: {content}
         return "\n".join(f"{item['id']}: {item['content']}" for item in todolists)
 
     return toolset

@@ -9,7 +9,6 @@ class TestToolFunctions(unittest.TestCase):
     """Test cases for tool functions."""
 
     def setUp(self):
-        # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
 
         self.toolset = ToolSet()
@@ -17,7 +16,6 @@ class TestToolFunctions(unittest.TestCase):
     def test_register_and_call_tool(self):
         """测试工具注册和调用"""
 
-        # 使用正确的register_tool装饰器注册测试工具
         @self.toolset.register_tool(
             name="add_numbers",
             desc="Add two numbers",
@@ -30,14 +28,12 @@ class TestToolFunctions(unittest.TestCase):
         def add_numbers(a, b):
             return a + b
 
-        # 测试工具调用
         result = self.toolset.call_tool("add_numbers", {"a": 2, "b": 3})
         self.assertEqual(result, 5)
 
     def test_get_tools_info(self):
         """测试获取工具信息"""
 
-        # 使用正确的register_tool装饰器注册测试工具
         @self.toolset.register_tool(
             name="multiply_numbers",
             desc="Multiply two numbers",
@@ -50,7 +46,6 @@ class TestToolFunctions(unittest.TestCase):
         def multiply(x, y):
             return x * y
 
-        # 获取工具信息 - 使用to_tools_info函数
         from linhai.tool.base import to_tools_info
 
         tools_info = to_tools_info(self.toolset.get_tools())

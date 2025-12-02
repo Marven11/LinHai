@@ -21,7 +21,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.clarification_manager.has_unanswered_clarifications.return_value = False
         
         self.group_chat = MagicMock()
-        # 设置get_members根据参数返回不同的对象
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
@@ -42,7 +41,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_git_command_detection(self):
         """测试git命令检测。"""
-        # 测试各种git命令
         test_cases = [
             ("git status", True),
             ("git commit -m 'test'", True),
@@ -65,7 +63,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         """测试有未解答澄清时阻止git命令。"""
         self.clarification_manager.has_unanswered_clarifications.return_value = True
         
-        # 模拟异步的send_if_exists方法
         self.group_chat.send_if_exists = AsyncMock()
         
         tool_call = ToolCallMessage(
@@ -73,7 +70,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             function_arguments={"command": "git status"}
         )
         
-        # 应该返回True阻止工具调用
         result = await self.plugin.before_tool_call(tool_call)
         self.assertTrue(result)
         self.group_chat.send_if_exists.assert_called_once()
@@ -87,7 +83,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             function_arguments={"command": "git status"}
         )
         
-        # 应该返回False允许工具调用
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()
@@ -101,7 +96,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             function_arguments={"filepath": "test.txt"}
         )
         
-        # 应该返回False允许工具调用
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()

@@ -212,14 +212,12 @@ class ToolResultMessage(Message):
         )
 
     def to_json(self) -> str:
-        # 保存原始内容，而不是包装后的内容，以确保序列化一致性
         data = {"content": self.content}
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
-        # 直接使用保存的原始内容
         return cls(content=data["content"])
 
 
@@ -240,14 +238,12 @@ class ToolErrorMessage(Message):
         )
 
     def to_json(self) -> str:
-        # 保存原始内容，而不是包装后的内容，以确保序列化一致性
         data = {"content": self.content}
         return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
-        # 直接使用保存的原始内容
         return cls(content=data["content"])
 
 

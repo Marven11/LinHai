@@ -19,12 +19,10 @@ from textual.widgets import Static
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.tool.tools.todolist import TodolistItem
 
-# 类型别名，用于标识支持stop方法的widget类型
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
 ]
 
-# 常用文件后缀名到语法高亮类型的映射
 EXTENSION_TO_TYPE = {
     ".py": "python",
     ".js": "javascript",
@@ -477,7 +475,6 @@ class ReasoningContentWidget(Static):
             self.add_class("reasoning-widget-expanded")
 
         self.border_title = self.calculate_border_title()
-        # 手动调用update_display以确保界面更新，尤其是被stop后timer不再自动更新
         self.update_display()
 
     def on_mount(self) -> None:
@@ -535,7 +532,6 @@ class NormalContentWidget(Static):
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
-        # 如果被stop后还没有实际内容，则从CLI中隐藏
         if not self.content_str.strip():
             self.remove()
 
@@ -708,7 +704,6 @@ class FooterWidget(Static):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        # 遵循fail fast原则，但提供更优雅的错误处理
         if agent is None:
             self.update("Agent未初始化")
             return

@@ -1,6 +1,5 @@
 """Unit tests for agent workflow functionality."""
 
-# pylint: disable=import-outside-toplevel
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
@@ -55,7 +54,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        # 注册必要的成员以通过Agent初始化
         from linhai.subagent.clarification import ClarificationManager
         
         self.clarification_manager = ClarificationManager(self.group_chat)
@@ -68,11 +66,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
     async def test_workflow_as_regular_tool(self):
         """Test that compress_history_range is now a regular tool, not a workflow."""
-        # Get tools info - should include compress_history_range as a regular tool
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
         
-        # Check that compress_history_range is now a regular tool
         self.assertIn("compress_history_range", tool_names)
 
     async def test_compress_history_range_as_tool(self):
@@ -80,18 +76,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
     async def test_compress_history_range_functionality(self):
         """Test the compress_history_range function with mock data."""
-        # Create a mock agent
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
-        # Setup mock messages
         mock_messages = [
             RuntimeMessage("System message"),
             RuntimeMessage("User message 1"),
@@ -106,13 +99,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage("User message 10"),
         ]
         mock_agent.message_processor.messages = mock_messages
-        # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock generate_response to return a response with JSON block
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
@@ -124,10 +114,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Call the function
         result = await compress_history_range(mock_agent)
 
-        # Verify the function completed successfully
         self.assertTrue(result)
 
     async def test_compress_threshold_trigger(self):
@@ -139,20 +127,16 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
         
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(20)]
-        # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock response with invalid range (start_id > end_id)
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             
@@ -164,10 +148,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Call the function
         result = await compress_history_range(mock_agent)
 
-        # Should return True but not modify messages due to validation error
         self.assertTrue(result)
 
     async def test_workflow_with_small_range(self):
@@ -176,20 +158,16 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
         
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(15)]
-        # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock response with small range
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             
@@ -201,41 +179,31 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Call the function
         result = await compress_history_range(mock_agent)
 
-        # Should return True but not modify messages due to validation error
         self.assertTrue(result)
 
     async def test_tool_manager_has_no_workflow_methods(self):
         """Test that ToolManager no longer has workflow-specific methods."""
-        # Verify that get_workflow method doesn't exist
         self.assertFalse(hasattr(self.tool_manager, "get_workflow"))
         
-        # Verify that register_workflow method doesn't exist  
         self.assertFalse(hasattr(self.tool_manager, "register_workflow"))
         
-        # Verify that workflows attribute doesn't exist
         self.assertFalse(hasattr(self.tool_manager, "workflows"))
 
     async def test_tools_info_includes_compress_history_range(self):
         """Test that get_tools_info includes compress_history_range as a regular tool."""
-        # Get tools info
         tools_info = self.tool_manager.get_tools_info()
 
-        # Check that compress_history_range is included as a regular tool
         workflow_names = [tool["function"]["name"] for tool in tools_info]
         self.assertIn("compress_history_range", workflow_names)
 
-        # Also check that some global tools are present
         self.assertTrue(any("safe_calculator" in name for name in workflow_names))
 
     async def test_compress_history_range_tool_structure(self):
         """Test that compress_history_range tool has correct structure."""
-        # Get tools info
         tools_info = self.tool_manager.get_tools_info()
 
-        # Find compress_history_range tool
         compress_tool = None
         for tool in tools_info:
             if tool["function"]["name"] == "compress_history_range":
@@ -244,22 +212,17 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNotNone(compress_tool)
         
-        # Check structure
         json_blocks = []
         _ = json_blocks[0] if json_blocks else {}  # pylint: disable=unused-variable
 
 
     async def test_compress_history_range_integration(self):
         """Test that compress_history_range integrates properly with agent."""
-        # Test that compress_history_range can be called as a regular tool
-        # through the normal tool calling mechanism
         
-        # Verify that the tool is available in tools_info
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
         self.assertIn("compress_history_range", tool_names)
         
-        # Verify it's a proper tool, not a workflow
         compress_tool = next(
             (tool for tool in tools_info if tool["function"]["name"] == "compress_history_range"),
             None
@@ -269,18 +232,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
     async def test_compress_history_range_user_message_protection(self):
         """Test that user messages are protected during history compression."""
-        # Create a mock agent
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
-        # Setup mock messages with user messages that should be protected
         mock_messages = [
             RuntimeMessage("System message"),
             UserMessage(message="Important user input 1"),
@@ -311,18 +271,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             AssistantMessage(message="Assistant response x"),
         ]
         mock_agent.message_processor.messages = mock_messages
-        # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock generate_response to return a response with JSON block for compression range
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             
             message="""
-## 用户输入
 - 目标：用户要求完成TODO.md中的内容，这是重要输入
 - 建议：用户强烈建议处理历史压缩问题
 
@@ -333,28 +289,21 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Mock delete_message_range to actually modify the messages array
         async def delete_message_range_side_effect(start, end):
             deleted = mock_agent.message_processor.messages[start:end + 1]
             mock_agent.message_processor.messages[start:end + 1] = []
             return deleted
         
-        # Mock insert_message to actually insert into the messages array
         def insert_message_side_effect(index, message):
             mock_agent.message_processor.messages.insert(index, message)
         
         mock_agent.message_processor.delete_message_range.side_effect = delete_message_range_side_effect
         mock_agent.message_processor.insert_message = AsyncMock(side_effect=insert_message_side_effect)
 
-        # Call the function
         result = await compress_history_range(mock_agent)
 
-        # Verify the function completed successfully
         self.assertTrue(result)
 
-        # Verify that user messages were protected by checking if a runtime summary was added
-        # After compression, there should be a runtime message summarizing the deleted user messages
-        # Check that the runtime message contains a summary of user inputs
         runtime_messages = [
             msg
             for msg in mock_agent.message_processor.messages
@@ -368,7 +317,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             + repr(mock_agent.message_processor.messages),
         )
 
-        # Verify the summary contains key user inputs
         summary_message = runtime_messages[0].message
         self.assertIn("Complete TODO.md tasks", summary_message)
         self.assertIn("Important user input", summary_message)
@@ -378,21 +326,16 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
         
-        # Create 36 messages to test delete ratio (10/36 = 27.8% < 30%)
         mock_agent.message_processor.messages = [RuntimeMessage(f"Message {i}") for i in range(36)]
-        # 修复filter_messages的异步mock
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock response with range of 10 messages out of 36 = 27.8% < 30%
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             
@@ -402,17 +345,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Mock delete_message_range as async function
         async def delete_message_range_side_effect(start, end):
             deleted = mock_agent.message_processor.messages[start:end + 1]
             del mock_agent.message_processor.messages[start:end + 1]
             return deleted
         
-        # Mock filter_messages to actually filter the list
         def filter_messages_side_effect(filter_func):
             mock_agent.message_processor.messages[:] = [msg for msg in mock_agent.message_processor.messages if filter_func(msg)]
         
-        # Mock append_message to actually add messages to the list
         def append_message_side_effect(message):
             mock_agent.message_processor.messages.append(message)
         
@@ -421,13 +361,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.filter_messages = AsyncMock(side_effect=filter_messages_side_effect)
         mock_agent.message_processor.append_message = MagicMock(side_effect=append_message_side_effect)
 
-        # Call the function
         result = await compress_history_range(mock_agent)
 
-        # Verify the function completed successfully
         self.assertTrue(result)
         
-        # Verify that a warning message was added about small delete ratio
         warning_messages = [
             msg
             for msg in mock_agent.message_processor.messages
@@ -440,7 +377,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             f"No warning message about small delete ratio was found in {len(mock_agent.message_processor.messages)} messages",
         )
 
-        # Verify the warning contains correct ratio information
         warning_message = warning_messages[0].message
         self.assertIn("27.8%", warning_message)  # 10/36 = 27.8% (36 messages before compression)
         self.assertIn("30%", warning_message)
@@ -451,18 +387,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
     async def test_compress_history_range_sends_ui_log_message(self):
         """Test that compress_history_range sends UI log message with current message count."""
-        # Create a mock agent
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
         
-        # Mock send_if_exists as async function
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  # 使用参数以消除警告
             _ = message     # 使用参数以消除警告
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
-        # Setup mock messages
         mock_messages = [
             RuntimeMessage("System message"),
             RuntimeMessage("User message 1"),
@@ -472,10 +405,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
 
-        # Mock get_threshold_info to return valid data
         mock_agent.get_threshold_info.return_value = (500, 800, 600, 200, 0.75)
 
-        # Mock generate_response to return a response with JSON block
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             
@@ -487,21 +418,16 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        # Mock delete and insert operations
         mock_agent.message_processor.delete_message_range = AsyncMock(return_value=mock_messages[1:3])
         mock_agent.message_processor.insert_message = AsyncMock()
 
-        # Call function
         result = await compress_history_range(mock_agent)
 
-        # Verify that send_if_exists was called with UI log message
         mock_group_chat.send_if_exists.assert_called_once()
         call_args = mock_group_chat.send_if_exists.call_args
         
-        # Check call arguments
         self.assertEqual(call_args[0][0], "ui_log")  # First positional argument should be "ui_log"
         
-        # Check CliRuntimeNotice object
         ui_message = call_args[0][1]
         from linhai.utils import CliRuntimeNotice
         self.assertIsInstance(ui_message, CliRuntimeNotice)
@@ -509,7 +435,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("启动历史压缩", ui_message.content)
         self.assertIn("当前共有4条消息", ui_message.content)  # 4 messages in mock_messages
 
-        # Verify function completed successfully
         self.assertTrue(result)
 
 

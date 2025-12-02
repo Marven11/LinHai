@@ -23,19 +23,16 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         
         self.plugin._agent_used_file_modification_tools = False
         
-        # 设置通用的mock返回值
         self.mock_git_diff = "diff --git a/test.py b/test.py\n+print('hello')"
         self.mock_empty = ""
         self.mock_status_empty = ""
         self.mock_status_deleted = " D deleted_file.py"
         
-        # 默认设置subagent_manager，避免测试环境出错
         from linhai.subagent import SubAgentManager
         self.subagent_manager = Mock(spec=SubAgentManager)
         self.subagent_manager.subagent_config = None  # 默认不启用
         self.group_chat.register_member("subagent_manager", self.subagent_manager)
         
-        # 注册todolist_manager成员，避免before_waiting_user方法出错
         from linhai.tool.tools.todolist import TodolistManager
         self.todolist_manager = Mock(spec=TodolistManager)
         self.todolist_manager.list_todolists = Mock(return_value=[])
@@ -50,12 +47,10 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         except RuntimeError:
             subagent_manager = Mock(spec=SubAgentManager)
             self.group_chat.register_member("subagent_manager", subagent_manager)
-        # 设置一个启用的subagent_config
         subagent_config = Mock(spec=SubAgentConfig)
         subagent_config.enable = True
         subagent_config.enabled_agent_types = {"git_diff_reviewer": True}  # 启用git_diff_reviewer
         subagent_manager.subagent_config = subagent_config
-        # 使用普通Mock而不是AsyncMock来避免警告
         subagent_manager.create_subagent = Mock(return_value="success")
         return subagent_manager
 
@@ -67,7 +62,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """设置git相关命令的mock。"""
         mock_exists.return_value = True
         
-        # 默认的mock返回值
         if git_diff is None:
             git_diff = self.mock_git_diff
         if ls_files_output is None:
@@ -137,7 +131,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.exists")
     def test_before_waiting_user_no_change(self, mock_exists, mock_run, mock_create_task):
         """测试git diff没有变化时不启动审查。"""
-        # 第一次调用：会启动审查
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
         self._setup_for_review()
@@ -145,10 +138,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
         
-        # 重置mock
         mock_create_task.reset_mock()
         
-        # 第二次调用相同内容，不应该启动审查
         self._setup_git_mocks(mock_exists, mock_run)  # 重新设置mock
         
         asyncio.run(self.plugin.before_waiting_user(self.agent))
@@ -159,7 +150,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.exists")
     def test_before_waiting_user_no_change_ui_message(self, mock_exists, mock_run, mock_create_task):
         """测试没有变化时发送UI消息。"""
-        # 第一次调用：会启动审查
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
         self._setup_for_review()
@@ -167,17 +157,13 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
         
-        # 重置mock
         mock_create_task.reset_mock()
         
-        # 第二次调用相同内容，不应该启动审查但应该发送UI消息
         self._setup_git_mocks(mock_exists, mock_run)  # 重新设置mock
         
-        # 模拟UI消息发送
         with patch.object(self.plugin.group_chat, 'send_if_exists') as mock_send:
             asyncio.run(self.plugin.before_waiting_user(self.agent))
             mock_create_task.assert_not_called()
-            # 验证UI消息被发送
             mock_send.assert_called_once()
             call_args = mock_send.call_args
             self.assertEqual(call_args[0][0], "ui_log")
@@ -230,7 +216,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.exists")
     def test_before_waiting_user_git_diff_changed(self, mock_exists, mock_run, mock_create_task):
         """测试git diff变化时重新启动审查。"""
-        # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
         self._setup_for_review()
@@ -238,10 +223,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
         
-        # 重置mock
         mock_create_task.reset_mock()
         
-        # 第二次调用：git diff变化，应该重新启动审查
         changed_git_diff = "diff --git a/test.py b/test.py\n+print('changed')"
         self._setup_git_mocks(mock_exists, mock_run, git_diff=changed_git_diff)
         
@@ -253,7 +236,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.exists")
     def test_before_waiting_user_new_files_changed(self, mock_exists, mock_run, mock_create_task):
         """测试新增文件内容变化时重新启动审查。"""
-        # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
         self._setup_for_review()
@@ -261,13 +243,9 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
         
-        # 重置mock
         mock_create_task.reset_mock()
         
-        # 第二次调用：新增文件内容变化，应该重新启动审查
-        # 重新设置git mock
         self._setup_git_mocks(mock_exists, mock_run)
-        # 模拟有新增文件的情况
         with patch.object(self.plugin, '_get_new_files_content') as mock_new_files:
             mock_new_files.return_value = "**新增文件: new_file.py**\n```\nchanged content\n```"
             asyncio.run(self.plugin.before_waiting_user(self.agent))
@@ -278,7 +256,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.exists")
     def test_before_waiting_user_deleted_files_changed(self, mock_exists, mock_run, mock_create_task):
         """测试删除文件列表变化时重新启动审查。"""
-        # 第一次调用：设置初始缓存
         self._setup_git_mocks(mock_exists, mock_run)
         self._setup_subagent_manager()
         self._setup_for_review()
@@ -286,10 +263,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         mock_create_task.assert_called_once()
         
-        # 重置mock
         mock_create_task.reset_mock()
         
-        # 第二次调用：删除文件列表变化，应该重新启动审查
         changed_status = " D deleted_file.py\n D another_deleted_file.py"
         self._setup_git_mocks(mock_exists, mock_run, ls_files_output=changed_status)
         
@@ -317,17 +292,14 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """测试_get_new_files_content方法处理新增文件夹。"""
         mock_exists.return_value = True
         
-        # 模拟git ls-files返回多个文件（包括文件夹中的文件）
         mock_run.return_value = Mock(
             stdout="new_file.py\nfolder/another_file.py\nsubdir/test.txt\n",
             returncode=0
         )
         
-        # 模拟文件读取
         with patch("builtins.open", mock_open(read_data="file content")):
             result = self.plugin._get_new_files_content()
             
-            # 验证调用了git ls-files命令
             mock_run.assert_called_once_with(
                 ["git", "ls-files", "--others", "--exclude-standard"],
                 capture_output=True,
@@ -335,7 +307,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
                 check=True
             )
             
-            # 验证结果包含所有文件
             self.assertIsInstance(result, str)
             result_str = cast(str, result)  # 使用cast明确类型
             self.assertIn("**新增文件: new_file.py**", result_str)
@@ -349,12 +320,10 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """测试_get_new_files_content方法尊重.gitignore。"""
         mock_exists.return_value = True
         
-        # 模拟git ls-files返回空（所有文件都被.gitignore忽略）
         mock_run.return_value = Mock(stdout="", returncode=0)
         
         result = self.plugin._get_new_files_content()
         
-        # 验证调用了git ls-files命令
         mock_run.assert_called_once_with(
             ["git", "ls-files", "--others", "--exclude-standard"],
             capture_output=True,
@@ -362,7 +331,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             check=True
         )
         
-        # 验证返回空字符串
         self.assertIsInstance(result, str)
         result_str = cast(str, result)  # 使用cast明确类型
         self.assertEqual(result_str, "")
@@ -373,14 +341,11 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         """测试_get_new_files_content方法处理无法读取的文件。"""
         mock_exists.return_value = True
         
-        # 模拟git ls-files返回文件
         mock_run.return_value = Mock(stdout="unreadable_file.bin\n", returncode=0)
         
-        # 模拟文件读取失败
         with patch("builtins.open", side_effect=OSError("Permission denied")):
             result = self.plugin._get_new_files_content()
             
-            # 验证结果包含无法读取的提示
             self.assertIsInstance(result, str)
             result_str = cast(str, result)  # 使用cast明确类型
             self.assertIn("**新增文件: unreadable_file.bin**", result_str)
@@ -408,20 +373,16 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
 
     def test_before_waiting_user_without_tool_use(self):
         """测试Agent没有使用文件修改工具时不启动审查。"""
-        # 设置Agent没有使用文件修改工具
         self.plugin._agent_used_file_modification_tools = False
         
         self._setup_subagent_manager()
         
-        # 模拟有git diff
         with patch.object(self.plugin, '_get_git_diff') as mock_git_diff:
             mock_git_diff.return_value = "diff --git a/test.py b/test.py\n+print('hello')"
             
-            # 模拟UI消息发送
             with patch.object(self.plugin.group_chat, 'send_if_exists') as mock_send:
                 asyncio.run(self.plugin.before_waiting_user(self.agent))
                 
-                # 验证发送了未触发审查的UI消息
                 mock_send.assert_called_once()
                 call_args = mock_send.call_args
                 self.assertEqual(call_args[0][0], "ui_log")
@@ -439,18 +400,15 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout="", returncode=0)
         ]
         
-        # 创建一个新的GroupChat实例，其中没有注册subagent_manager
         from linhai.group_chat import GroupChat
         new_group_chat = GroupChat()
         self.plugin.group_chat = new_group_chat
         
         self._setup_for_review()
         
-        # 应该抛出RuntimeError
         with self.assertRaises(RuntimeError):
             asyncio.run(self.plugin.before_waiting_user(self.agent))
         
-        # 验证没有启动审查任务
         mock_create_task.assert_not_called()
 
     @patch("asyncio.create_task")
@@ -465,15 +423,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout="", returncode=0)
         ]
         
-        # 使用setUp中已注册的subagent_manager，但设置subagent_config为None
         self.subagent_manager.subagent_config = None  # 关键：配置为None
         
         self._setup_for_review()
         
-        # 应该正常执行而不启动审查
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
-        # 验证没有启动审查任务
         mock_create_task.assert_not_called()
 
     @patch("asyncio.create_task")
@@ -488,7 +443,6 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             Mock(stdout="", returncode=0)
         ]
         
-        # 使用setUp中已注册的subagent_manager，设置配置启用但git_diff_reviewer类型禁用
         from linhai.config import SubAgentConfig
         
         subagent_config = Mock(spec=SubAgentConfig)
@@ -498,10 +452,8 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         
         self._setup_for_review()
         
-        # 应该正常执行而不启动审查
         asyncio.run(self.plugin.before_waiting_user(self.agent))
         
-        # 验证没有启动审查任务
         mock_create_task.assert_not_called()
 
 
@@ -510,15 +462,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.isdir")
     def test_read_single_file_content_large_file(self, mock_isdir, mock_open, mock_getsize):
         """测试_read_single_file_content方法处理大文件。"""
-        # 模拟不是文件夹
         mock_isdir.return_value = False
         
-        # 模拟文件大小大于32KB
         mock_getsize.return_value = 33 * 1024  # 33KB
         
         result = self.plugin._read_single_file_content("large_file.txt")
         
-        # 验证结果只包含路径，不包含内容
         self.assertIsNotNone(result)
         from typing import cast
         result_str = cast(str, result)
@@ -527,9 +476,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.assertIn("大于32KB", result_str)
         self.assertNotIn("```", result_str)  # 不应该有代码块
         
-        # 验证调用了getsize
         mock_getsize.assert_called_once_with("large_file.txt")
-        # 不应该尝试打开文件读取内容
         mock_open.assert_not_called()
     
     @patch("os.path.getsize")
@@ -537,15 +484,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     @patch("os.path.isdir")
     def test_read_single_file_content_small_file(self, mock_isdir, mock_getsize):
         """测试_read_single_file_content方法处理小文件。"""
-        # 模拟不是文件夹
         mock_isdir.return_value = False
         
-        # 模拟文件大小小于等于32KB
         mock_getsize.return_value = 30 * 1024  # 30KB
         
         result = self.plugin._read_single_file_content("small_file.txt")
         
-        # 验证结果包含内容和代码块
         self.assertIsNotNone(result)
         from typing import cast
         result_str = cast(str, result)
@@ -553,35 +497,26 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.assertIn("small content", result_str)
         self.assertIn("```", result_str)  # 应该有代码块
         
-        # 验证调用了getsize
         mock_getsize.assert_called_once_with("small_file.txt")
-        # 注意：mock_open是mock_open(read_data="small content")返回的mock对象
-        # 这里我们不需要断言，因为装饰器已经设置了mock
     
     @patch("os.path.getsize")
     @patch("os.path.isdir")
     def test_read_single_file_content_getsize_fails(self, mock_isdir, mock_getsize):
         """测试_read_single_file_content方法在获取文件大小失败时尝试读取内容。"""
-        # 模拟不是文件夹
         mock_isdir.return_value = False
         
-        # 模拟获取文件大小失败
         mock_getsize.side_effect = OSError("Permission denied")
         
-        # 模拟打开文件成功
         with patch("builtins.open", mock_open(read_data="test content")) as mock_file:
             result = self.plugin._read_single_file_content("test_file.txt")
             
-            # 验证结果包含内容
             self.assertIsNotNone(result)
             from typing import cast
             result_str = cast(str, result)
             self.assertIn("**新增文件: test_file.txt**", result_str)
             self.assertIn("test content", result_str)
             
-            # 验证尝试了getsize
             mock_getsize.assert_called_once_with("test_file.txt")
-            # 应该尝试打开文件读取内容
             mock_file.assert_called_once_with("test_file.txt", "r", encoding="utf-8")
 
 

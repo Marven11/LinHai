@@ -49,20 +49,16 @@ server_script_path = "../another_server.py"
 """
         config_path = self.create_test_config(config_content)
         
-        # 加载配置
         config = load_config(config_path)
         
-        # 验证路径转换
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 2)
         
-        # 第一个MCP服务器路径应该是绝对路径
         calculator_path = agent.mcp[0].server_script_path
         self.assertTrue(os.path.isabs(calculator_path))
         self.assertEqual(calculator_path, str(config_path.parent / "mcp_server_example.py"))
         
-        # 第二个MCP服务器路径也应该是绝对路径
         another_path = agent.mcp[1].server_script_path
         self.assertTrue(os.path.isabs(another_path))
         expected_path = os.path.normpath(str(config_path.parent.parent / "another_server.py"))
@@ -88,10 +84,8 @@ server_script_path = "{absolute_path}"
 """
         config_path = self.create_test_config(config_content)
         
-        # 加载配置
         config = load_config(config_path)
         
-        # 验证绝对路径保持不变
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 1)
@@ -112,10 +106,8 @@ compress_threshold_hard = 80000
 """
         config_path = self.create_test_config(config_content)
         
-        # 加载配置
         config = load_config(config_path)
         
-        # 验证没有MCP服务器
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 0)
@@ -139,7 +131,6 @@ server_script_path = "server.py"
 """
         config_path = self.create_test_config(config_content)
         
-        # 验证配置验证失败
         with self.assertRaises(ConfigValidationError):
             load_config(config_path)
 
@@ -154,10 +145,8 @@ model = "test-model"
 """
         config_path = self.create_test_config(config_content)
         
-        # 加载配置
         config = load_config(config_path)
         
-        # 验证agent为None
         self.assertIsNone(config.agent)
 
 

@@ -17,7 +17,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         from linhai.group_chat import GroupChat
 
         group_chat = GroupChat()
-        # 注册测试所需的queue
         self.init_messages = [
             SystemMessage(
                 template="System message",
@@ -47,7 +46,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         user_msg = UserMessage(message="@qwen Hello")
         self.message_processor.handle_user_message(user_msg)
 
-        # 带@的消息应该被添加，但具体处理在Agent中
         self.assertEqual(len(self.message_processor.messages), 3)
         self.assertEqual(self.message_processor.messages[-1], user_msg)
 
@@ -66,24 +64,20 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     def test_is_last_message_user(self):
         """测试检查最后一条消息是否为用户消息。"""
-        # 初始最后一条消息是用户消息
         self.assertTrue(self.message_processor.is_last_message_user())
 
-        # 添加助手消息
         assistant_msg = AssistantMessage(message="Assistant reply")
         self.message_processor.append_message(assistant_msg)
         self.assertFalse(self.message_processor.is_last_message_user())
 
     def test_mark_messages_as_garbage(self):
         """测试标记消息为垃圾。"""
-        # 记录一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         message_id = self.message_processor.record_large_message(
             large_msg, "large content"
         )
         self.message_processor.append_message(large_msg)
 
-        # 标记消息为垃圾
         result = self.message_processor.mark_messages_as_garbage([message_id])
 
         self.assertIn("成功标记 1 条消息", result)
@@ -129,7 +123,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     async def test_thanox_history(self):
         """测试随机删除历史消息。"""
-        # 添加更多消息以触发删除
         for i in range(10):
             self.message_processor.append_message(
                 UserMessage(message=f"Message {i}")
@@ -168,20 +161,17 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
             threshold_info, large_messages, True
         )
 
-        # 不应添加通知
         self.assertEqual(len(self.message_processor.messages), 2)
 
     @patch("linhai.agent.message.Path")
     @patch("linhai.agent.message.json")
     async def test_save_conversation_history(self, _mock_json, mock_path):
         """测试保存对话历史。"""
-        # 设置mock
         mock_home = Mock()
         mock_home.__truediv__ = Mock(return_value=mock_home)  # 链式调用返回自己
         mock_path.home.return_value = mock_home
         mock_home.mkdir.return_value = None
 
-        # 创建支持上下文管理器的mock
         mock_file = Mock()
         mock_file.__enter__ = Mock(return_value=mock_file)
         mock_file.__exit__ = Mock(return_value=None)
@@ -192,7 +182,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         with patch("builtins.open", mock_open):
             await self.message_processor.save_conversation_history()
 
-        # 验证目录创建和文件写入被调用
         mock_home.mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_open.assert_called_once()
 

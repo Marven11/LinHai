@@ -26,33 +26,28 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
 
     def test_linhai_md_in_current_directory(self):
         """Test that LINHAI.md in current directory is selected."""
-        # Mock file existence and content
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.return_value = True
             with patch("pathlib.Path.open") as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test LINHAI.md\nTest content"
 
-                # 直接测试GlobalMemory逻辑，不依赖agent创建
                 global_memory = GlobalMemory(Path("LINHAI.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
 
     def test_agent_md_in_current_directory(self):
         """Test that AGENT.md in current directory is selected when LINHAI.md is missing."""
-        # Mock file existence - only AGENT.md exists
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.side_effect = lambda path: path.name == "AGENT.md"
             with patch("pathlib.Path.open") as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = "# Test AGENT.md\nTest content"
 
-                # 直接测试GlobalMemory逻辑，不依赖agent创建
                 global_memory = GlobalMemory(Path("AGENT.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
                 self.assertEqual(global_memory.filepath, Path("AGENT.md"))
 
     def test_no_files_in_current_directory(self):
         """Test behavior when no memory files exist in current directory."""
-        # Mock no files exist
         with patch("pathlib.Path.exists", return_value=False):
             mock_llm_config = LLMConfig(
                 name="test_llm",
@@ -66,8 +61,6 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
             )
             _ = Config(llm=[mock_llm_config], agent=mock_agent_config)  # pylint: disable=unused-variable
 
-            # 直接测试GlobalMemory逻辑，不依赖agent创建
-            # 测试默认行为
             global_memory = GlobalMemory(Path("LINHAI.md"))
             self.assertIsInstance(global_memory, GlobalMemory)
             self.assertEqual(global_memory.filepath, Path("LINHAI.md"))

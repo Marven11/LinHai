@@ -25,7 +25,6 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="add_numbers", function_arguments={"a": 3, "b": 5}
         )
 
-        # 模拟工具存在和工具调用
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
@@ -33,10 +32,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         ) as mock_call:
             result = await self.manager.process_tool_call(mock_tool_call)
 
-            # 验证工具被正确调用
             mock_call.assert_called_once_with("add_numbers", {"a": 3, "b": 5})
 
-            # 验证返回结果
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertEqual(getattr(result, "content"), "8")
 
@@ -46,7 +43,6 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             function_name="invalid_tool", function_arguments={}
         )
 
-        # 模拟工具抛出异常
         with unittest.mock.patch(
             "linhai.tool.base.global_tools.call_tool",
             side_effect=ValueError("Tool not found"),
@@ -58,11 +54,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_async_tool_call(self):
         """测试异步工具调用"""
 
-        # 创建一个模拟的异步工具
         async def mock_async_tool(arg1: int, arg2: int) -> int:
             return arg1 + arg2
 
-        # 模拟工具存在和工具调用
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
@@ -75,10 +69,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             )
             result = await self.manager.process_tool_call(mock_tool_call)
 
-            # 验证工具被正确调用
             mock_call.assert_called_once_with("mock_async_tool", {"arg1": 2, "arg2": 3})
 
-            # 验证返回结果
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertEqual(getattr(result, "content"), "5")
 
@@ -92,7 +84,6 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ToolConfig,
         )
 
-        # 创建带配置的ToolManager，使用Pydantic模型
         config = Config(
             llm=[
                 LLMConfig(
@@ -120,13 +111,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        # 模拟工具调用返回长内容
         long_content = "A" * 1001  # 超过配置的1000字符限制
         mock_tool_call = ToolCallMessage(
             function_name="test_tool", function_arguments={}
         )
 
-        # 模拟工具存在和工具调用
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
@@ -134,10 +123,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         ) as mock_call:
             result = await manager_with_config.process_tool_call(mock_tool_call)
 
-            # 验证工具被正确调用
             mock_call.assert_called_once_with("test_tool", {})
 
-            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了1000字符限制）
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertIn("已保存到临时文件", getattr(result, "content"))
 
@@ -145,7 +132,6 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         """测试ToolManager使用配置但没有tools配置的情况"""
         from linhai.config import Config, LLMConfig, MemoryConfig, AgentConfig
 
-        # 创建带配置的ToolManager，但没有tools配置
         config = Config(
             llm=[
                 LLMConfig(
@@ -160,7 +146,6 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 compress_threshold_soft=30000,
                 compress_threshold_hard=60000,
             ),
-            # 不设置tools配置
         )
         from linhai.group_chat import GroupChat
 
@@ -173,13 +158,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        # 模拟工具调用返回长内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(
             function_name="test_tool", function_arguments={}
         )
 
-        # 模拟工具存在和工具调用
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
@@ -187,16 +170,13 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         ) as mock_call:
             result = await manager_with_config.process_tool_call(mock_tool_call)
 
-            # 验证工具被正确调用
             mock_call.assert_called_once_with("test_tool", {})
 
-            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了默认50000字符限制）
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertIn("已保存到临时文件", getattr(result, "content"))
 
     async def test_tool_manager_without_config(self):
         """测试ToolManager不使用配置的情况（使用默认值）"""
-        # 使用默认配置的ToolManager
         from linhai.group_chat import GroupChat
 
         group_chat = GroupChat()
@@ -208,13 +188,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        # 模拟工具调用返回刚好超过默认限制的内容
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(
             function_name="test_tool", function_arguments={}
         )
 
-        # 模拟工具存在和工具调用
         with unittest.mock.patch.object(
             global_tools, "has_tool", return_value=True
         ), unittest.mock.patch(
@@ -222,11 +200,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         ) as mock_call:
             result = await manager_without_config.process_tool_call(mock_tool_call)
 
-            # 验证工具被正确调用
             mock_call.assert_called_once_with("test_tool", {})
 
-            # 验证返回的是ToolResultMessage且内容包含文件信息（因为超过了50000字符限制）
             self.assertEqual(type(result).__name__, "ToolResultMessage")
             self.assertIn("已保存到临时文件", getattr(result, "content"))
 
-    # 移除manager_run_loop测试，因为ToolManager不再有run方法

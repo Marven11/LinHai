@@ -7,11 +7,9 @@ class TestFileValidation(unittest.TestCase):
     """Test cases for file validation in file operation tools."""
 
     def setUp(self):
-        # 为每个测试创建新的ToolSet实例
         from linhai.tool.base import ToolSet
 
         self.toolset = ToolSet()
-        # 注册文件操作工具
         from linhai.tool.tools.file import (
             read_file,
             write_file,
@@ -22,7 +20,6 @@ class TestFileValidation(unittest.TestCase):
             insert_at_line,
         )
 
-        # 使用正确的register_tool装饰器注册工具
         self.toolset.register_tool(
             name="read_file",
             desc="读取文件",
@@ -101,11 +98,9 @@ class TestFileValidation(unittest.TestCase):
 
     def test_write_file_rejects_binary_file_for_existing_file(self):
         """测试write_file在文件存在时拒绝二进制文件"""
-        # 首先创建一个文本文件
         with open("./linhai/tests/test_temp.txt", "w", encoding="utf-8") as f:
             f.write("test content")
         try:
-            # 尝试写入二进制文件路径（但write_file只验证现有文件，所以这里应该通过）
             result = self.toolset.call_tool(
                 "write_file",
                 {
@@ -113,15 +108,8 @@ class TestFileValidation(unittest.TestCase):
                     "content": "new content",
                 },
             )
-            # 由于文件是二进制，但write_file只检查现有文件，所以可能不会拒绝
-            # 但我们的验证逻辑在write_file中只针对现有文件，所以这里可能不会触发二进制检查
-            # 因此，我们需要测试当文件是二进制时，write_file的行为
-            # 实际上，write_file的验证只针对现有文件，所以对于新文件，它不会检查二进制
-            # 但为了安全，我们模拟一个现有二进制文件
-            # 由于测试复杂，暂时跳过详细测试
             pass
         finally:
-            # 清理
             import os
 
             if os.path.exists("./linhai/tests/test_temp.txt"):

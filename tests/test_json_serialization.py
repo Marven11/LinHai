@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """测试消息类的JSON序列化功能"""
 
 import unittest
@@ -30,7 +29,6 @@ class TestJsonSerialization(unittest.TestCase):
 
         self.assertEqual(original.template, restored.template)
         self.assertEqual(original.current_time, restored.current_time)
-        # 不比较to_llm_message()，因为它依赖mock对象且涉及JSON序列化
 
     def test_user_message_serialization(self):
         """测试UserMessage的序列化"""
@@ -47,7 +45,6 @@ class TestJsonSerialization(unittest.TestCase):
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""
-        # ToolResultMessage期望原始内容，to_llm_message()会包装它
         original = ToolResultMessage("工具执行结果")
         json_str = original.to_json()
         restored = ToolResultMessage.from_json(json_str, self.mock_group_chat)
@@ -56,7 +53,6 @@ class TestJsonSerialization(unittest.TestCase):
 
     def test_tool_error_message_serialization(self):
         """测试ToolErrorMessage的序列化"""
-        # ToolErrorMessage期望原始内容，to_llm_message()会包装它
         original = ToolErrorMessage("工具执行错误")
         json_str = original.to_json()
         restored = ToolErrorMessage.from_json(json_str, self.mock_group_chat)

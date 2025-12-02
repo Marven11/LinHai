@@ -32,7 +32,6 @@ class TestCreateAgent(unittest.TestCase):
     def test_create_agent_success(self, mock_agent, mock_init_messages, mock_tool_manager, 
                                       mock_agent_context, mock_llm_instances):
         """测试成功创建Agent"""
-        # 模拟配置对象
         mock_config = Mock()
         mock_llm_config = Mock()
         mock_llm_config.name = "test_llm"
@@ -54,7 +53,6 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.subagent = Mock()
         mock_config.cli = Mock()
 
-        # 模拟返回值
         from linhai.llm import OpenAi
         mock_llm = Mock(spec=OpenAi)
         mock_llm.model = 'test-model'
@@ -75,12 +73,9 @@ class TestCreateAgent(unittest.TestCase):
         mock_agent_instance = Mock()
         mock_agent.return_value = mock_agent_instance
 
-        # 调用函数
         import asyncio
         result = asyncio.run(create_agent_from_config(self.group_chat, mock_config))
 
-        # 验证调用
-        # 注意：现在使用create_agent_from_config直接传入config对象，不需要调用load_config
         mock_llm_instances.assert_called_once()
         mock_agent_context.assert_called_once()
         mock_tool_manager.assert_called_once()
@@ -90,10 +85,8 @@ class TestCreateAgent(unittest.TestCase):
 
     def test_create_agent_with_llm_name(self):
         """测试指定LLM名称创建Agent"""
-        # 模拟配置对象
         mock_config = Mock()
         
-        # 创建两个LLM配置Mock
         mock_llm_config1 = Mock()
         mock_llm_config1.name = "llm1"
         mock_llm_config1.base_url = "http://test1.com"
@@ -151,11 +144,9 @@ class TestCreateAgent(unittest.TestCase):
             mock_init_messages.return_value = [Mock()]
             mock_agent.return_value = Mock()
 
-            # 调用函数指定LLM名称
             import asyncio
             asyncio.run(create_agent_from_config(self.group_chat, mock_config, 'llm2'))
 
-            # 验证agent_context调用包含正确的llm_name
             call_args = mock_agent_context.call_args
             self.assertEqual(call_args[1]['llm_name'], 'llm2')
 
@@ -180,11 +171,11 @@ class TestCreateLLMInstances(unittest.TestCase):
         ]
 
         import asyncio
-        result = asyncio.run(_create_llm_instances(llm_configs))
+        mock_group_chat = Mock()
+        result = asyncio.run(_create_llm_instances(llm_configs, mock_group_chat))
 
         self.assertEqual(len(result), 1)
         llm = result[0]
-        # 检查OpenAI实例的属性
         self.assertEqual(llm.model, 'test-model')  # type: ignore
         self.assertEqual(llm.token_limit, 1000)  # type: ignore
         self.assertEqual(llm.compatibility, 'openai')  # type: ignore
@@ -273,7 +264,6 @@ class TestCreateInitMessages(unittest.TestCase):
         system_prompt = 'test_prompt'
         memory_file_path = Path('memory.md')
 
-        # 模拟文件存在
         mock_path.return_value.exists.return_value = True
         mock_system_message.return_value = Mock()
         mock_global_memory.return_value = Mock()
