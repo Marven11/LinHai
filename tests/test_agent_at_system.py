@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock
 
 from linhai.agent import Agent, AgentContext
 from linhai.group_chat import GroupChat
-from linhai.llm import ChatMessage
+from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
 
 
@@ -39,7 +39,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
                 def get_message(self):
                     """返回空消息。"""
-                    return ChatMessage(role="assistant", message="")
+                    return AssistantMessage(message="")
 
                 def get_current_content(self):
                     """返回空内容。"""
@@ -71,7 +71,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_system_valid(self):
         """测试有效的@系统调用。"""
         # 添加一个@llm2的用户消息
-        user_message = ChatMessage(role="user", message="@llm2 你好")
+        user_message = UserMessage(message="@llm2 你好")
 
         # 调用handle_message，这会更新current_llm_index
         await self.agent.handle_user_message(user_message)
@@ -85,7 +85,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_system_invalid(self):
         """测试无效的@系统调用。"""
         # 添加一个@invalid_llm的用户消息
-        user_message = ChatMessage(role="user", message="@invalid_llm 你好")
+        user_message = UserMessage(message="@invalid_llm 你好")
 
         # 调用handle_message，这会添加错误消息
         await self.agent.handle_user_message(user_message)
@@ -109,7 +109,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_without_at_system(self):
         """测试没有@系统的默认行为。"""
         # 添加一个普通用户消息
-        user_message = ChatMessage(role="user", message="你好")
+        user_message = UserMessage(message="你好")
         self.agent.message_processor.append_message(user_message)
 
         # 调用get_current_model
@@ -121,7 +121,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_in_middle(self):
         """测试消息中间包含@的情况。"""
         # 添加一个消息中间包含@的用户消息
-        user_message = ChatMessage(role="user", message="请@llm2回答这个问题")
+        user_message = UserMessage(message="请@llm2回答这个问题")
         self.agent.message_processor.append_message(user_message)
 
         # 调用get_current_model
@@ -133,7 +133,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_empty_at(self):
         """测试只有@的情况。"""
         # 添加一个只有@的用户消息
-        user_message = ChatMessage(role="user", message="@")
+        user_message = UserMessage(message="@")
         self.agent.message_processor.append_message(user_message)
 
         # 调用get_current_model

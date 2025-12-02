@@ -505,5 +505,85 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         mock_create_task.assert_not_called()
 
 
+    @patch("os.path.getsize")
+    @patch("builtins.open")
+    @patch("os.path.isdir")
+    def test_read_single_file_content_large_file(self, mock_isdir, mock_open, mock_getsize):
+        """测试_read_single_file_content方法处理大文件。"""
+        # 模拟不是文件夹
+        mock_isdir.return_value = False
+        
+        # 模拟文件大小大于32KB
+        mock_getsize.return_value = 33 * 1024  # 33KB
+        
+        result = self.plugin._read_single_file_content("large_file.txt")
+        
+        # 验证结果只包含路径，不包含内容
+        self.assertIsNotNone(result)
+        from typing import cast
+        result_str = cast(str, result)
+        self.assertIn("**新增文件: large_file.txt**", result_str)
+        self.assertIn("文件大小为", result_str)
+        self.assertIn("大于32KB", result_str)
+        self.assertNotIn("```", result_str)  # 不应该有代码块
+        
+        # 验证调用了getsize
+        mock_getsize.assert_called_once_with("large_file.txt")
+        # 不应该尝试打开文件读取内容
+        mock_open.assert_not_called()
+    
+    @patch("os.path.getsize")
+    @patch("builtins.open", mock_open(read_data="small content"))
+    @patch("os.path.isdir")
+    def test_read_single_file_content_small_file(self, mock_isdir, mock_getsize):
+        """测试_read_single_file_content方法处理小文件。"""
+        # 模拟不是文件夹
+        mock_isdir.return_value = False
+        
+        # 模拟文件大小小于等于32KB
+        mock_getsize.return_value = 30 * 1024  # 30KB
+        
+        result = self.plugin._read_single_file_content("small_file.txt")
+        
+        # 验证结果包含内容和代码块
+        self.assertIsNotNone(result)
+        from typing import cast
+        result_str = cast(str, result)
+        self.assertIn("**新增文件: small_file.txt**", result_str)
+        self.assertIn("small content", result_str)
+        self.assertIn("```", result_str)  # 应该有代码块
+        
+        # 验证调用了getsize
+        mock_getsize.assert_called_once_with("small_file.txt")
+        # 注意：mock_open是mock_open(read_data="small content")返回的mock对象
+        # 这里我们不需要断言，因为装饰器已经设置了mock
+    
+    @patch("os.path.getsize")
+    @patch("os.path.isdir")
+    def test_read_single_file_content_getsize_fails(self, mock_isdir, mock_getsize):
+        """测试_read_single_file_content方法在获取文件大小失败时尝试读取内容。"""
+        # 模拟不是文件夹
+        mock_isdir.return_value = False
+        
+        # 模拟获取文件大小失败
+        mock_getsize.side_effect = OSError("Permission denied")
+        
+        # 模拟打开文件成功
+        with patch("builtins.open", mock_open(read_data="test content")) as mock_file:
+            result = self.plugin._read_single_file_content("test_file.txt")
+            
+            # 验证结果包含内容
+            self.assertIsNotNone(result)
+            from typing import cast
+            result_str = cast(str, result)
+            self.assertIn("**新增文件: test_file.txt**", result_str)
+            self.assertIn("test content", result_str)
+            
+            # 验证尝试了getsize
+            mock_getsize.assert_called_once_with("test_file.txt")
+            # 应该尝试打开文件读取内容
+            mock_file.assert_called_once_with("test_file.txt", "r", encoding="utf-8")
+
+
 if __name__ == "__main__":
     unittest.main()

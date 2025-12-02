@@ -18,6 +18,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent = MagicMock()
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.append_message = MagicMock()
+        self.mock_agent.message_processor.update_appending_message = MagicMock()
         self.mock_agent.get_current_model = AsyncMock()
         
         # 模拟get_members返回agent
@@ -49,14 +50,14 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_called_once()
+        self.mock_agent.message_processor.update_appending_message.assert_called_once()
         self.group_chat.send_if_exists.assert_called_once()
         
         # 检查警告消息内容
-        call_args = self.mock_agent.message_processor.append_message.call_args
-        runtime_message = call_args[0][0]
-        self.assertIsInstance(runtime_message, RuntimeMessage)
-        self.assertIn("不要只思考，不输出", runtime_message.message)
+        call_args = self.mock_agent.message_processor.update_appending_message.call_args
+        warning_message = call_args[0][0]
+        self.assertIsInstance(warning_message, str)
+        self.assertIn("不要只思考，不输出", warning_message)
         
         # 检查UI日志
         ui_call_args = self.group_chat.send_if_exists.call_args
@@ -146,7 +147,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_called_once()
+        self.mock_agent.message_processor.update_appending_message.assert_called_once()
         self.group_chat.send_if_exists.assert_called_once()
 
     async def test_after_message_generation_non_deepseek_model(self):

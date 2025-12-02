@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.agent.plugin import BadMultiToolCall, WeirdTokenPlugin, DirectoryChangePlugin, PromptFastAgentPlugin, PreventToolOutputPlugin
 from linhai.agent.base import RuntimeMessage
-from linhai.llm import OpenAi, ChatMessage
+from linhai.llm import OpenAi, UserMessage, AssistantMessage
 import pathlib
 
 
@@ -47,17 +47,28 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.update_appending_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
         )
 
-        # 有多个工具调用但没有原因，应该添加警告消息
-        # 插件可能不再调用append_message，跳过此断言
-        args = self.agent.message_processor.append_message.call_args[0]
-        self.assertIsInstance(args[0], RuntimeMessage)
-        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", args[0].message)
+        # 有多个工具调用但没有原因，应该调用update_appending_message
+        # 插件会调用三次：一次设置警告消息，两次清除其他source的消息（传入None）
+        self.assertTrue(self.agent.message_processor.update_appending_message.called)
+        call_args_list = self.agent.message_processor.update_appending_message.call_args_list
+        # 找到 source 为 "bad_multi_tool_call" 的调用
+        warning_call = None
+        for call in call_args_list:
+            if getattr(call, 'kwargs', {}).get("source") == "bad_multi_tool_call":
+                warning_call = call
+                break
+        self.assertIsNotNone(warning_call, "没有找到source为'bad_multi_tool_call'的调用")
+        # 添加断言确保warning_call不为None
+        assert warning_call is not None
+        self.assertEqual(warning_call.args[0], "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
+                                      "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
+                                      + self.plugin.example)
 
     async def test_after_message_generation_with_good_multi_tool_call(self):
         """测试有正常分隔的工具调用块的情况。"""
@@ -199,17 +210,28 @@ class TestBadMultiToolCall(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.update_appending_message = MagicMock()
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
         )
 
-        # 有多个工具调用但没有原因，应该添加警告消息
-        # 插件可能不再调用append_message，跳过此断言
-        args = self.agent.message_processor.append_message.call_args[0]
-        self.assertIsInstance(args[0], RuntimeMessage)
-        self.assertIn("忘记在多个工具调用之间输出可以同时调用的原因", args[0].message)
+        # 有多个工具调用但没有原因，应该调用update_appending_message
+        # 插件会调用三次：一次设置警告消息，两次清除其他source的消息（传入None）
+        self.assertTrue(self.agent.message_processor.update_appending_message.called)
+        call_args_list = self.agent.message_processor.update_appending_message.call_args_list
+        # 找到 source 为 "bad_multi_tool_call" 的调用
+        warning_call = None
+        for call in call_args_list:
+            if getattr(call, 'kwargs', {}).get("source") == "bad_multi_tool_call":
+                warning_call = call
+                break
+        self.assertIsNotNone(warning_call, "没有找到source为'bad_multi_tool_call'的调用")
+        # 添加断言确保warning_call不为None
+        assert warning_call is not None
+        self.assertEqual(warning_call.args[0], "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
+                                      "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
+                                      + self.plugin.example)
 
     async def test_after_message_generation_with_multiple_tool_calls_and_reason(self):
         """测试有多个工具调用且输出了原因的情况。"""
@@ -412,7 +434,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.update_appending_message = MagicMock()
 
         # 连续调用5次，每次只调用1个工具
         for _ in range(5):
@@ -422,13 +444,21 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 第5次应该添加警告消息
         self.assertEqual(self.plugin.single_tool_call_count, 5)
-        args = self.agent.message_processor.append_message.call_args[0]
-        self.assertIsInstance(args[0], RuntimeMessage)
-        self.assertIn("连续5次仅调用一个工具", args[0].message)
+        # 检查 update_appending_message 是否被调用
+        call_args_list = self.agent.message_processor.update_appending_message.call_args_list
+        # 前4次调用时，update_appending_message 应该被调用，但传入 None（因为 single_tool_call_count < 2）
+        # 第5次调用时，single_tool_call_count >= 2，应该传入警告消息
+        # 我们检查最后一次调用
+        last_call_args = call_args_list[-1]
+        # 最后一次调用应该包含警告消息
+        self.assertIn("连续5次仅调用一个工具", last_call_args[0][0])
+        self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
     async def test_after_message_generation_with_multiple_tool_calls(self):
         """测试调用多个工具时重置计数器。"""
         full_response = "一些内容"
+        
+        self.agent.message_processor.update_appending_message = MagicMock()
         
         # 先连续调用4次单个工具
         for _ in range(4):
@@ -448,12 +478,16 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         
         self.assertEqual(self.plugin.single_tool_call_count, 0)
         
-        # 不应该添加警告消息
-        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
+        # 最后一次调用 update_appending_message 应该传入 None
+        last_call_args = self.agent.message_processor.update_appending_message.call_args
+        self.assertEqual(last_call_args[0][0], None)
+        self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
     async def test_after_message_generation_with_zero_tool_calls(self):
         """测试没有调用工具时重置计数器。"""
         full_response = "一些内容"
+        
+        self.agent.message_processor.update_appending_message = MagicMock()
         
         # 先连续调用3次单个工具
         for _ in range(3):
@@ -470,8 +504,10 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         
         self.assertEqual(self.plugin.single_tool_call_count, 0)
         
-        # 不应该添加警告消息
-        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
+        # 最后一次调用 update_appending_message 应该传入 None
+        last_call_args = self.agent.message_processor.update_appending_message.call_args
+        self.assertEqual(last_call_args[0][0], None)
+        self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
 class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
     """测试PromptFastAgentPlugin类。"""
@@ -509,7 +545,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         
         # 模拟有之前的assistant消息
         self.agent.message_processor.get_messages.return_value = [
-            ChatMessage(role="assistant", message="previous message")
+            AssistantMessage(message="previous message")
         ]
         
         # 模拟超过5个工具调用
@@ -627,7 +663,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         """测试有之前的assistant消息时不检查工具输出。"""
         # 模拟有之前的assistant消息
         self.agent.message_processor.get_messages.return_value = [
-            ChatMessage(role="assistant", message="previous message")
+            AssistantMessage(message="previous message")
         ]
         
         current_content = """**tool** 返回了结果

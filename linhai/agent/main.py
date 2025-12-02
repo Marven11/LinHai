@@ -18,7 +18,6 @@ from .toolcall import AgentToolcall
 from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
     Message,
-    ChatMessage,
     LanguageModel,
     Answer,
     OpenAiAnswer,
@@ -147,7 +146,9 @@ class Agent:
 
     async def receive_one_user_message(self):
         msg = await self.group_chat.receive("user_message")
-        assert isinstance(msg, ChatMessage)
+        from linhai.llm import UserMessage
+
+        assert isinstance(msg, UserMessage)
         await self.handle_user_message(msg)
         self.state = "working"
         return msg
@@ -213,11 +214,15 @@ class Agent:
         if not self.message_processor.get_messages():
             return False
         msg = self.message_processor.get_messages()[-1]
-        return isinstance(msg, ChatMessage) and msg.role == "user"
+        from linhai.llm import UserMessage
 
-    async def handle_user_message(self, msg: ChatMessage):
+        return isinstance(msg, UserMessage)
+
+    async def handle_user_message(self, msg: "Message"):
         """处理并加入用户的消息"""
-        assert isinstance(msg, ChatMessage) and msg.role == "user"
+        from linhai.llm import UserMessage
+
+        assert isinstance(msg, UserMessage)
 
         content = msg.message.strip()
 
@@ -271,7 +276,9 @@ class Agent:
         """
         if self.message_processor.get_message_count() > 0:
             last_msg = self.message_processor.get_messages()[-1]
-            if isinstance(last_msg, ChatMessage):
+            from linhai.llm import AssistantMessage
+
+            if isinstance(last_msg, AssistantMessage):
                 llm_msg = last_msg.to_llm_message()
                 if llm_msg.get("role") == "assistant":
                     empty_user_msg = RuntimeMessage("继续")
@@ -305,11 +312,13 @@ class Agent:
 
             if not self.group_chat.is_empty("user_message"):
                 msg = await self.receive_one_user_message()
-                assert isinstance(msg, ChatMessage)
+                from linhai.llm import UserMessage
+
+                assert isinstance(msg, UserMessage)
                 parsed_input = parse_user_input(msg.message.strip())
                 if parsed_input.command is None:
                     await self.group_chat.send("agent_answer", answer)
-                    chat_message = cast(ChatMessage, answer.get_message())
+                    chat_message = answer.get_message()
                     self.message_processor.append_message(chat_message)
                     await self.interrupt("Agent被用户打断")
                     await self.handle_user_message(msg)
@@ -317,7 +326,9 @@ class Agent:
 
         await self.group_chat.send("agent_answer", answer)
 
-        chat_message = cast(ChatMessage, answer.get_message())
+        from linhai.llm import AssistantMessage
+
+        chat_message = cast(AssistantMessage, answer.get_message())
         full_response = chat_message.message
         self.message_processor.append_message(chat_message)
 
@@ -328,7 +339,8 @@ class Agent:
             self.message_processor.append_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
-            self.message_processor.get_messages().extend(self.queued_messages)
+            for msg in self.queued_messages:
+                self.message_processor.append_message(msg)
             self.queued_messages = []
 
         try:

@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.agent import Agent, AgentContext
-from linhai.llm import ChatMessage, SystemMessage
+from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 
 
@@ -45,7 +45,7 @@ class TestConversationHistory(unittest.TestCase):
                 current_time="2025-10-26 17:00:00",  # 测试用固定时间
                 group_chat=self.group_chat,
             ),
-            ChatMessage("user", "测试用户消息"),
+            UserMessage("测试用户消息"),
         ]
 
         # 创建Agent实例
@@ -66,8 +66,8 @@ class TestConversationHistory(unittest.TestCase):
         mock_home.return_value = Path(self.temp_dir)
 
         # 添加一些测试消息
-        self.agent.message_processor.append_message(ChatMessage("user", "你好"))
-        self.agent.message_processor.append_message(ChatMessage("assistant", "你好！有什么可以帮助你的？"))
+        self.agent.message_processor.append_message(UserMessage("你好"))
+        self.agent.message_processor.append_message(AssistantMessage("你好！有什么可以帮助你的？"))
         self.agent.message_processor.append_message(RuntimeMessage("测试运行时消息"))
 
         # 调用保存方法

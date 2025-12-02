@@ -1,16 +1,16 @@
 """HTTP工具模块，提供发送HTTP请求的功能。"""
 
 from typing import Optional
-import httpx
-import chardet
-
-from linhai.tool.base import global_tools
-
-import tempfile
-import subprocess
 import shutil
+import subprocess
+import tempfile
+
+import chardet
+import httpx
 from bs4 import BeautifulSoup
 from selenium import webdriver
+
+from linhai.tool.base import global_tools
 
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:

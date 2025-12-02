@@ -11,10 +11,10 @@ from linhai.group_chat import GroupChat
 from linhai.llm import (
     Answer,
     AnswerToken,
-    ChatMessage,
     LanguageModel,
     Message,
     SubagentSystemMessage,
+    UserMessage,
 )
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -56,7 +56,7 @@ class SubAgent:
         if initial_messages:
             self.messages.extend(initial_messages)
 
-        self.messages.append(ChatMessage(role="user", message=self.task_message))
+        self.messages.append(UserMessage(message=self.task_message))
 
     def get_system_message_prompt(self):
         raise NotImplementedError()
@@ -168,15 +168,11 @@ class SubAgent:
                     try:
                         result = await self.toolset.call_tool(tool_name, tool_args)
                         self.messages.append(
-                            ChatMessage(
-                                role="user", message=f"工具 {tool_name} 返回: {result}"
-                            )
+                            UserMessage(message=f"工具 {tool_name} 返回: {result}")
                         )
                     except Exception as e:  # pylint: disable=broad-exception-caught
                         error_msg = f"工具 {tool_name} 执行失败: {e}"
-                        self.messages.append(
-                            ChatMessage(role="user", message=error_msg)
-                        )
+                        self.messages.append(UserMessage(message=error_msg))
                         from linhai.utils import CliRuntimeNotice
 
                         await self.group_chat.send_if_exists(
@@ -187,9 +183,7 @@ class SubAgent:
                             ),
                         )
                 else:
-                    self.messages.append(
-                        ChatMessage(role="user", message=f"未知工具: {tool_name}")
-                    )
+                    self.messages.append(UserMessage(message=f"未知工具: {tool_name}"))
 
     async def _handle_execution_cycle(self) -> bool:
         """执行一个完整的处理周期，返回是否应继续运行。"""
@@ -202,7 +196,7 @@ class SubAgent:
         await self._execute_tool_calls(tool_calls)
 
         if not tool_calls:
-            self.messages.append(ChatMessage(role="user", message="请调用工具！"))
+            self.messages.append(UserMessage(message="请调用工具！"))
 
         return self.state == "running"
 

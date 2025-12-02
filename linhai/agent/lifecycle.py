@@ -5,7 +5,9 @@ from typing import (
     Awaitable,
     Any,
     TypeAlias,
+    Optional,
 )
+from linhai.agent.base import RuntimeMessage
 import logging
 import typing
 
@@ -48,7 +50,7 @@ AfterToolCallCallback: TypeAlias = Callable[
         Any,
         bool,
     ],
-    Awaitable[None],
+    Awaitable[Optional["RuntimeMessage"]],
 ]
 
 DuringMessageGenerationCallback: TypeAlias = Callable[
@@ -131,6 +133,7 @@ class Lifecycle:
             JsonCodeBlockPlugin,
             RuntimeImitationPlugin,
         )
+        from .plugin import DuplicateFileReadPlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
@@ -146,6 +149,7 @@ class Lifecycle:
             ClarificationCheckPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),
             RuntimeImitationPlugin(self.group_chat),
+            DuplicateFileReadPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
@@ -246,10 +250,19 @@ class Lifecycle:
         tool_call: ToolCallMessage,
         tool_result: Any,
         success: bool,
-    ):
-        """触发工具调用后的事件。"""
+    ) -> Optional["RuntimeMessage"]:
+        """触发工具调用后的事件。
+
+        返回:
+            如果任何回调返回了RuntimeMessage，则返回该RuntimeMessage以替换原始工具结果，
+            否则返回None
+        """
+        replacement_message = None
         for callback in self._after_tool_call_callbacks:
-            await callback(agent, tool_call, tool_result, success)
+            result = await callback(agent, tool_call, tool_result, success)
+            if result is not None and isinstance(result, RuntimeMessage):
+                replacement_message = result
+        return replacement_message
 
     async def trigger_before_waiting_user(self, agent: "Agent"):
         """触发等待用户前的事件。"""

@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from linhai.llm import AnswerToken, ChatMessage, OpenAi
+from linhai.llm import AnswerToken, UserMessage, AssistantMessage, OpenAi
 
 
 class TestLLM(unittest.IsolatedAsyncioTestCase):
@@ -20,12 +20,12 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
             chat_completion_kwargs={},
         )
 
-    def test_chat_message_creation(self):
-        """Test ChatMessage creation and conversion."""
-        msg = ChatMessage(role="user", message="Hello")
+    def test_user_message_creation(self):
+        """Test UserMessage creation and conversion."""
+        msg = UserMessage(message="Hello")
         chat_msg = msg.to_llm_message()
         self.assertEqual(chat_msg.get("role"), "user")
-        self.assertEqual(chat_msg.get("content"), "<user>Hello</user>")
+        self.assertEqual(chat_msg.get("content"), "<<user>>Hello<<user>>")
 
     async def test_openai_answer_stream(self):
         """Test basic functionality of answer_stream."""
@@ -67,7 +67,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
             # 运行测试，添加超时控制
-            history = [ChatMessage(role="user", message="Hi")]
+            history = [UserMessage(message="Hi")]
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0
             )
@@ -123,7 +123,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         # 使用patch直接替换openai属性
         with patch.object(self.llm, "openai", mock_client):
             # 运行测试，添加超时控制
-            history = [ChatMessage(role="user", message="Hi")]
+            history = [UserMessage(message="Hi")]
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0
             )
@@ -156,7 +156,7 @@ class TestLLM(unittest.IsolatedAsyncioTestCase):
         mock_openai_class.return_value = mock_client
 
         with self.assertRaises(Exception):
-            history = [ChatMessage(role="user", message="Hi")]
+            history = [UserMessage(message="Hi")]
             # 添加超时控制
             answer = await asyncio.wait_for(
                 self.llm.answer_stream(history), timeout=5.0

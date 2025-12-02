@@ -202,22 +202,24 @@ class ToolResultMessage(Message):
         self.content = message_content
 
     def to_llm_message(self) -> LanguageModelMessage:
-
         return cast(
             LanguageModelMessage,
             {
                 "role": "user",
                 "name": "tool-result",
-                "content": self.content,
+                "content": f"<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{self.content}<<data>>\n<<tool>>",
             },
         )
 
     def to_json(self) -> str:
-        return json.dumps(self.to_llm_message())
+        # 保存原始内容，而不是包装后的内容，以确保序列化一致性
+        data = {"content": self.content}
+        return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
+        # 直接使用保存的原始内容
         return cls(content=data["content"])
 
 
@@ -233,16 +235,19 @@ class ToolErrorMessage(Message):
             {
                 "role": "user",
                 "name": "tool-error",
-                "content": self.content,
+                "content": f"<<tool>>\n<<message>>工具执行失败<<message>>\n<<error>>{self.content}<<error>>\n<<tool>>",
             },
         )
 
     def to_json(self) -> str:
-        return json.dumps(self.to_llm_message())
+        # 保存原始内容，而不是包装后的内容，以确保序列化一致性
+        data = {"content": self.content}
+        return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
+        # 直接使用保存的原始内容
         return cls(content=data["content"])
 
 

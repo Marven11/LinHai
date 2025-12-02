@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
-from linhai.llm import ChatMessage, SystemMessage
+from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolResultMessage
 
 
@@ -46,9 +46,9 @@ class MockAnswer:
         self.index += 1
         return token
 
-    def get_message(self) -> ChatMessage:
+    def get_message(self) -> AssistantMessage:
         """Get message from content."""
-        return ChatMessage(role="assistant", message=self.content)
+        return AssistantMessage(message=self.content)
 
     def get_current_content(self) -> str:
         """Get current content."""
@@ -128,7 +128,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if error message was added
@@ -148,7 +148,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         # Mock LLM response with both tool calls and marker
         tool_call_data = {
             "name": "add_numbers",
-            "arguments": json.dumps({"a": 2, "b": 2}),
+            "arguments": {"a": 2, "b": 2},
         }
         tool_call_json = json.dumps(tool_call_data)
         response_content = (
@@ -163,14 +163,13 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if error message was added
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            6,  # System + user + assistant + empty user
-             # + runtime for tool call + tool result
+            4,  # System + user + assistant + error message
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         error_msg = self.agent.message_processor.get_messages()[-1]
@@ -189,7 +188,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.agent.state = "working"
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if warning message was added
@@ -211,7 +210,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added
@@ -243,14 +242,13 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            5,  # System + user + assistant
-             # + runtime for tool call + tool result
+            3,  # System + user + assistant (no tool calls processed in mock)
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         # Verify no error messages related to marker validation
@@ -269,7 +267,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         # Send user message to trigger processing
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Test"))
+        await self.agent.handle_user_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         # Check if no error message was added

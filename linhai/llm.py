@@ -126,37 +126,29 @@ class SubagentSystemMessage:
         )
 
 
-class ChatMessage:
-    """聊天消息类，用于表示用户或助理角色消息。"""
+class UserMessage:
+    """用户消息类，用于表示用户角色消息。"""
 
-    def __init__(self, role: str, message: str, name: str | None = None):
-        """初始化聊天消息。"""
-        if role == "system":
-            raise ValueError(
-                "System role is not supported in ChatMessage. Use SystemMessage instead."
-            )
-        self.role = role
+    def __init__(self, message: str, name: str | None = None):
+        """初始化用户消息。"""
         self.message = message
         self.name = name
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        content = self.message
-        if self.role == "user":
-            content = f"<user>{content}</user>"
-        msg = {"role": self.role, "content": content}
+        content = f"<<user>>{self.message}<<user>>"
+        msg = {"role": "user", "name": "user", "content": content}
         if self.name is not None:
             msg["name"] = self.name
         return cast(LanguageModelMessage, msg)
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
-        return f"ChatMessage(role={self.role!r}, message={self.message!r}, name={self.name!r})"
+        return f"UserMessage(message={self.message!r}, name={self.name!r})"
 
     def to_json(self) -> str:
-
         data = {
-            "role": self.role,
+            "role": "user",
             "message": self.message,
             "name": self.name,
         }
@@ -168,7 +160,54 @@ class ChatMessage:
     ):  # pylint: disable=unused-argument
         _ = group_chat  # 使用参数以消除警告
         data = json.loads(json_str)
-        return cls(role=data["role"], message=data["message"], name=data.get("name"))
+        return cls(message=data["message"], name=data.get("name"))
+
+
+class AssistantMessage:
+    """助理消息类，用于表示助理角色消息，支持reasoning content。"""
+
+    def __init__(
+        self,
+        message: str,
+        reasoning_message: str | None = None,
+        name: str | None = None,
+    ):
+        """初始化助理消息。"""
+        self.message = message
+        self.reasoning_message = reasoning_message
+        self.name = name
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
+        msg = {"role": "assistant", "name": "assistant", "content": self.message}
+        if self.name is not None:
+            msg["name"] = self.name
+        return cast(LanguageModelMessage, msg)
+
+    def __repr__(self) -> str:
+        """返回消息的字符串表示。"""
+        return f"AssistantMessage(message={self.message!r}, reasoning_message={self.reasoning_message!r}, name={self.name!r})"
+
+    def to_json(self) -> str:
+        data = {
+            "role": "assistant",
+            "message": self.message,
+            "reasoning_message": self.reasoning_message,
+            "name": self.name,
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
+        _ = group_chat  # 使用参数以消除警告
+        data = json.loads(json_str)
+        return cls(
+            message=data["message"],
+            reasoning_message=data.get("reasoning_message"),
+            name=data.get("name"),
+        )
 
 
 class ToolCallMessage:
@@ -405,7 +444,9 @@ class OpenAiAnswer:
 
     def get_message(self) -> Message:
         """获取完整的消息对象。"""
-        return ChatMessage(role="assistant", message=self.content)
+        return AssistantMessage(
+            message=self.content, reasoning_message=self.reasoning_content
+        )
 
     def get_reasoning_message(self) -> str | None:
         """获取推理消息（如果存在）。"""

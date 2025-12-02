@@ -1,7 +1,7 @@
 """测试token缓存估算功能。"""
 
 import unittest
-from linhai.llm import OpenAi, ChatMessage, AnswerTokenUsage
+from linhai.llm import OpenAi, UserMessage, AssistantMessage, AnswerTokenUsage
 
 
 class TestTokenCache(unittest.TestCase):
@@ -20,8 +20,8 @@ class TestTokenCache(unittest.TestCase):
     def test_calculate_cache_estimation(self):
         """测试缓存估算计算。"""
         # 创建测试消息
-        msg1 = ChatMessage(role="user", message="Hello")
-        msg2 = ChatMessage(role="assistant", message="Hi there")
+        msg1 = UserMessage(message="Hello")
+        msg2 = AssistantMessage(message="Hi there")
         
         # 设置上一个history和input_tokens
         self.openai.previous_history = [msg1, msg2]
@@ -65,11 +65,11 @@ class TestTokenCache(unittest.TestCase):
     def test_cache_estimation_with_different_history(self):
         """测试不同history的缓存估算。"""
         # 创建测试消息
-        prev_msg1 = ChatMessage(role="user", message="Hello")
-        prev_msg2 = ChatMessage(role="assistant", message="Hi there")
+        prev_msg1 = UserMessage(message="Hello")
+        prev_msg2 = AssistantMessage(message="Hi there")
         
-        current_msg1 = ChatMessage(role="user", message="Hello")
-        current_msg2 = ChatMessage(role="assistant", message="Different response")
+        current_msg1 = UserMessage(message="Hello")
+        current_msg2 = AssistantMessage(message="Different response")
         
         # 设置上一个history和input_tokens
         self.openai.previous_history = [prev_msg1, prev_msg2]

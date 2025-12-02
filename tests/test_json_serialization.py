@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 from linhai.llm import (
     SystemMessage,
-    ChatMessage,
+    UserMessage, AssistantMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
 
@@ -32,13 +32,12 @@ class TestJsonSerialization(unittest.TestCase):
         self.assertEqual(original.current_time, restored.current_time)
         # 不比较to_llm_message()，因为它依赖mock对象且涉及JSON序列化
 
-    def test_chat_message_serialization(self):
-        """测试ChatMessage的序列化"""
-        original = ChatMessage("user", "这是一条用户消息", "test_user")
+    def test_user_message_serialization(self):
+        """测试UserMessage的序列化"""
+        original = UserMessage("这是一条用户消息", "test_user")
         json_str = original.to_json()
-        restored = ChatMessage.from_json(json_str, self.mock_group_chat)
+        restored = UserMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.role, restored.role)
         self.assertEqual(original.message, restored.message)
         self.assertEqual(original.name, restored.name)
 
@@ -48,6 +47,7 @@ class TestJsonSerialization(unittest.TestCase):
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""
+        # ToolResultMessage期望原始内容，to_llm_message()会包装它
         original = ToolResultMessage("工具执行结果")
         json_str = original.to_json()
         restored = ToolResultMessage.from_json(json_str, self.mock_group_chat)
@@ -56,6 +56,7 @@ class TestJsonSerialization(unittest.TestCase):
 
     def test_tool_error_message_serialization(self):
         """测试ToolErrorMessage的序列化"""
+        # ToolErrorMessage期望原始内容，to_llm_message()会包装它
         original = ToolErrorMessage("工具执行错误")
         json_str = original.to_json()
         restored = ToolErrorMessage.from_json(json_str, self.mock_group_chat)

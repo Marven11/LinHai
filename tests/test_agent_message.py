@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 
 from linhai.agent.message import AgentMessage
-from linhai.llm import ChatMessage, SystemMessage
+from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 
 
@@ -24,7 +24,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
                 current_time="2025-10-26 17:00:00",
                 group_chat=group_chat,
             ),
-            ChatMessage(role="user", message="Initial message"),
+            UserMessage(message="Initial message"),
         ]
         self.message_processor = AgentMessage(group_chat, self.init_messages)
 
@@ -36,7 +36,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     def test_handle_user_message(self):
         """测试处理用户消息。"""
-        user_msg = ChatMessage(role="user", message="Hello")
+        user_msg = UserMessage(message="Hello")
         self.message_processor.handle_user_message(user_msg)
 
         self.assertEqual(len(self.message_processor.messages), 3)
@@ -44,7 +44,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     def test_handle_user_message_with_switch_model(self):
         """测试处理带@切换模型的消息。"""
-        user_msg = ChatMessage(role="user", message="@qwen Hello")
+        user_msg = UserMessage(message="@qwen Hello")
         self.message_processor.handle_user_message(user_msg)
 
         # 带@的消息应该被添加，但具体处理在Agent中
@@ -70,7 +70,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.message_processor.is_last_message_user())
 
         # 添加助手消息
-        assistant_msg = ChatMessage(role="assistant", message="Assistant reply")
+        assistant_msg = AssistantMessage(message="Assistant reply")
         self.message_processor.append_message(assistant_msg)
         self.assertFalse(self.message_processor.is_last_message_user())
 
@@ -132,7 +132,7 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         # 添加更多消息以触发删除
         for i in range(10):
             self.message_processor.append_message(
-                ChatMessage(role="user", message=f"Message {i}")
+                UserMessage(message=f"Message {i}")
             )
 
         original_count = len(self.message_processor.get_messages())

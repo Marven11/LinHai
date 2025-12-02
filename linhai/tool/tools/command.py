@@ -3,6 +3,7 @@
 from datetime import datetime
 import asyncio
 import os
+import platform
 import signal
 import subprocess
 from linhai.tool.base import (
@@ -11,7 +12,6 @@ from linhai.tool.base import (
     ToolResultMessage,
     ToolErrorMessage,
 )
-import platform
 
 
 def get_current_shell() -> str:

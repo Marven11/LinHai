@@ -9,7 +9,7 @@ from pathlib import Path
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
-from linhai.llm import ChatMessage
+from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolResultMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
@@ -42,10 +42,10 @@ class MockAnswer:
         self.index += 1
         return token
 
-    def get_message(self) -> ChatMessage:
+    def get_message(self) -> AssistantMessage:
         """Get the message content from the tokens."""
         content = "".join(token["content"] for token in self.tokens)
-        return ChatMessage(role="assistant", message=content)
+        return AssistantMessage(message=content)
 
     def get_tool_call(self) -> dict[str, Any] | None:
         """Get the tool call from the tokens, if any."""
@@ -119,7 +119,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_handle_messages(self):
         """Test message handling functionality."""
         # Setup
-        test_msg = ChatMessage(role="user", message="Hello", name="test_user")
+        test_msg = UserMessage(message="Hello", name="test_user")
 
         # 模拟 answer_stream 返回一个 MockAnswer
         mock_answer = MockAnswer(
@@ -164,7 +164,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_message_processing(self):
         """Test message processing functionality."""
         # Setup
-        user_msg = ChatMessage(role="user", message="Hi", name="user")
+        user_msg = UserMessage(message="Hi", name="user")
         tool_msg = ToolResultMessage(content="result")
 
         # 创建MockAnswer对象并设置LLM mock
@@ -185,7 +185,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             f"Messages: {[str(msg) for msg in messages]}",
         )  # 系统消息 + 用户消息 + 助手回复
         self.assertEqual(
-            messages[1].to_llm_message().get("content"), "<user>Hi</user>"
+            messages[1].to_llm_message().get("content"), "<<user>>Hi<<user>>"
         )
         self.assertEqual(
             messages[2].to_llm_message().get("content"), "Processing..."
@@ -219,7 +219,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )  # 系统消息 + 用户消息 + 助手回复 + 工具消息 + 助手回复
         # 工具消息被添加到末尾
         self.assertEqual(
-            messages[3].to_llm_message().get("content"), "result"
+            messages[3].to_llm_message().get("content"), "<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>"
         )
         # 验证工具处理后的回复
         self.assertEqual(
@@ -230,7 +230,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         """Test error handling functionality."""
         # Setup error
         self.mock_llm.answer_stream.side_effect = RuntimeError("Test error")
-        test_msg = ChatMessage(role="user", message="Error test", name="user")
+        test_msg = UserMessage(message="Error test", name="user")
 
         # Test and verify exception is raised
         with self.assertRaises(RuntimeError) as cm:
@@ -298,7 +298,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 发送用户消息触发处理
         await self.agent.handle_user_message(
-            ChatMessage(role="user", message="Calculate 2+2")
+            UserMessage(message="Calculate 2+2")
         )
         await self.agent.generate_response()
 
@@ -333,7 +333,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
                 def get_message(self):
                     """返回空消息。"""
-                    return ChatMessage(role="assistant", message="")
+                    return AssistantMessage(message="")
 
                 def get_current_content(self):
                     """返回空内容。"""
@@ -352,7 +352,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.context["current_llm_index"] = 0  # 默认使用第一个
 
         # 测试场景1: 有效的@qwen消息，应该更新索引到1
-        await self.agent.handle_user_message(ChatMessage(role="user", message="@qwen Hello"))
+        await self.agent.handle_user_message(UserMessage(message="@qwen Hello"))
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
         model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
@@ -360,7 +360,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 测试场景2: 无效的@invalid消息，索引不应更新，并添加错误消息
         self.agent.context["current_llm_index"] = 0  # 重置索引
         await self.agent.handle_user_message(
-            ChatMessage(role="user", message="@invalid command")
+            UserMessage(message="@invalid command")
         )
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
         model = await self.agent.get_current_model()
@@ -377,7 +377,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 测试场景3: 没有@消息，索引不应更新
         self.agent.context["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_user_message(ChatMessage(role="user", message="Hello world"))
+        await self.agent.handle_user_message(UserMessage(message="Hello world"))
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
         model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
@@ -385,16 +385,16 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         # 测试场景4: 多个消息，只有@消息更新索引
         self.agent.context["current_llm_index"] = 0  # 重置索引
         # 先发送一个@qwen消息
-        await self.agent.handle_user_message(ChatMessage(role="user", message="@qwen first"))
+        await self.agent.handle_user_message(UserMessage(message="@qwen first"))
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
         # 然后发送一个普通消息
         await self.agent.handle_user_message(
-            ChatMessage(role="user", message="Normal message")
+            UserMessage(message="Normal message")
         )
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引不变
         # 然后发送一个@deepseek-reasoning消息
         await self.agent.handle_user_message(
-            ChatMessage(role="user", message="@deepseek-reasoning second")
+            UserMessage(message="@deepseek-reasoning second")
         )
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引更新为0
         model = await self.agent.get_current_model()

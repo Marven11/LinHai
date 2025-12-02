@@ -6,7 +6,7 @@ from unittest.mock import Mock
 from linhai.agent import Agent, AgentContext
 
 from linhai.group_chat import GroupChat
-from linhai.llm import ChatMessage
+from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
 from linhai.tool.main import ToolManager
 
@@ -27,7 +27,7 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
             "compress_threshold_soft": 1000,
             "compress_threshold_hard": 2000,
         }
-        self.init_messages = [ChatMessage(role="user", message="Test")]
+        self.init_messages = [UserMessage(message="Test")]
         
         self.agent = Agent(
             context=self.config,

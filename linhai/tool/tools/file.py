@@ -4,17 +4,19 @@ from pathlib import Path
 import difflib
 import json
 import platform
+import re
 import stat
+import subprocess
 import time
+
 from linhai.llm import Message
+from linhai.agent.base import FileContentMessage
 from linhai.tool.base import (
     global_tools,
     ToolArgInfo,
     ToolResultMessage,
     ToolErrorMessage,
 )
-import subprocess
-import re
 
 
 def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
@@ -102,7 +104,7 @@ def validate_file(file_path: Path) -> str:
 )
 def read_file(
     filepath: str, show_line_numbers: bool = False
-) -> ToolResultMessage | ToolErrorMessage:
+) -> FileContentMessage | ToolErrorMessage:
     """读取文件内容。
 
     Args:
@@ -130,12 +132,7 @@ def read_file(
     else:
         formatted_content = content
 
-    return ToolResultMessage(
-        f"""\
-文件路径为: {file_path.as_posix()!r}
-文件内容如下，不要复读文件内容:
-{formatted_content}"""
-    )
+    return FileContentMessage(filepath=file_path.as_posix(), content=formatted_content)
 
 
 @global_tools.register_tool(

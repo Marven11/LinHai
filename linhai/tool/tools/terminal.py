@@ -5,10 +5,10 @@ import os
 import pty
 import signal
 import subprocess
+from typing import List
 
 import pyte
 
-from typing import List
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.utils import generate_id
 

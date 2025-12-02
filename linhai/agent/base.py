@@ -1,13 +1,15 @@
 """Agent基础模块，包含运行时消息和全局记忆类。"""
 
-from reprlib import Repr
-from pathlib import Path
+import hashlib
 import json
+from pathlib import Path
+from reprlib import Repr
+from typing import NotRequired, TypedDict
 
 import linhai
 from linhai.llm import (
-    Message,
     LanguageModelMessage,
+    Message,
 )
 
 from linhai.prompt import COMPRESS_RANGE_PROMPT
@@ -33,7 +35,8 @@ class CompressRangeRequest(Message):
         ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5)))
         return {
             "role": "user",
-            "content": f"<runtime>{prompt}</runtime>",
+            "name": "runtime",
+            "content": f"<<runtime>>{prompt}<<runtime>>",
         }
 
     def to_json(self) -> str:
@@ -61,15 +64,20 @@ class RuntimeMessage(Message):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, source: str | None = None):
         self.message = message
+        self.source = source
 
     def to_llm_message(self) -> LanguageModelMessage:
-        return {"role": "user", "content": f"<runtime>{self.message}</runtime>"}
+        return {
+            "role": "user",
+            "name": "runtime",
+            "content": f"<<runtime>>{self.message}<<runtime>>",
+        }
 
     def to_json(self) -> str:
 
-        data = {"role": "user", "message": self.message}
+        data = {"role": "user", "message": self.message, "source": self.source}
         return json.dumps(data)
 
     @classmethod
@@ -78,32 +86,7 @@ class RuntimeMessage(Message):
     ):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
-        return cls(message=data["message"])
-
-
-class DestroyedRuntimeMessage(Message):
-    """被截断的运行时消息，表示消息已被截断。"""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self):
-        pass
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {
-            "role": "user",
-            "content": "<destroyed><runtime>本条消息已被截断</runtime></destroyed>",
-        }
-
-    def to_json(self) -> str:
-
-        return json.dumps({})
-
-    @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
-    ):  # pylint: disable=unused-argument
-        return cls()
+        return cls(message=data["message"], source=data.get("source"))
 
 
 class GlobalMemory:
@@ -125,31 +108,20 @@ class GlobalMemory:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "content": f"""
-# 全局记忆
-
-文件位于{self.filepath.as_posix()!r}，内容如下
-
-{content}
-""",
+                "name": "global-memory",
+                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<global_memory>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "content": f"""
-# 全局记忆
-
-文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
-""",
+                "name": "global-memory",
+                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<global_memory>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "content": f"""
-# 全局记忆
-
-文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
-""",
+                "name": "global-memory",
+                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<global_memory>>",
             }
 
     def to_json(self) -> str:
@@ -199,31 +171,20 @@ class PathMemory:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "content": f"""
-# 路径记忆
-
-文件位于{self.filepath.as_posix()!r}，内容如下
-
-{content}
-""",
+                "name": "path-memory",
+                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_memory>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "content": f"""
-# 路径记忆
-
-文件位于{self.filepath.as_posix()!r}，但文件不存在或已被移动/删除
-""",
+                "name": "path-memory",
+                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_memory>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "content": f"""
-# 路径记忆
-
-文件位于{self.filepath.as_posix()!r}，读取时发生错误: {str(e)}
-""",
+                "name": "path-memory",
+                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_memory>>",
             }
 
     def to_json(self) -> str:
@@ -254,9 +215,6 @@ class PathMemory:
         return cls(filepath=Path(data["filepath"]))
 
 
-from typing import TypedDict, NotRequired
-
-
 class AgentContext(TypedDict):
     """Agent配置参数"""
 
@@ -268,3 +226,76 @@ class AgentContext(TypedDict):
     compress_threshold_hard: int | float
     memory: NotRequired[dict]
     enable_directory_change_detection: NotRequired[bool]
+
+
+class FileContentMessage(Message):
+    """文件内容消息，专门用于read_file工具返回的文件内容。"""
+
+    def __init__(self, filepath: str, content: str):
+        self.filepath = filepath
+        self.content = content
+        # 计算内容哈希以提高比较性能
+        self._content_hash = hashlib.md5(content.encode()).hexdigest()
+        # 解析路径以进行规范化比较
+        self._resolved_path = Path(filepath).resolve()
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
+        return {
+            "role": "user",
+            "name": "file-content",
+            "content": f"<<file_content>>\n<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{self.content}<<content>>\n<<file_content>>",
+        }
+
+    def to_json(self) -> str:
+        """转换为JSON字符串。"""
+        data = {"filepath": self.filepath, "content": self.content}
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
+        """从JSON字符串创建实例。"""
+        data = json.loads(json_str)
+        return cls(filepath=data["filepath"], content=data["content"])
+
+    def __eq__(self, other: object) -> bool:
+        """比较两个FileContentMessage是否相同，忽略行号差异。
+
+        参数:
+            other: 另一个对象
+
+        返回:
+            如果文件路径和内容（忽略行号）相同则返回True
+        """
+        if not isinstance(other, FileContentMessage):
+            return False
+        if self._resolved_path != other._resolved_path:
+            return False
+        # 如果内容完全相同（包括行号），直接返回True
+        if self.content == other.content:
+            return True
+        # 否则比较标准化后的内容（移除行号前缀）
+        return self._normalize_content(self.content) == self._normalize_content(
+            other.content
+        )
+
+    @staticmethod
+    def _normalize_content(content: str) -> str:
+        """标准化文件内容，移除行号前缀。
+
+        匹配read_file工具添加的行号格式：行首的数字后跟冒号和空格。
+        例如：'1: content' -> 'content'
+        """
+        import re
+
+        # 匹配行首的数字+冒号+空格，只移除这种格式
+        return re.sub(r"^\d+: ", "", content, flags=re.MULTILINE)
+
+    def __hash__(self) -> int:
+        """哈希支持，用于set比较。基于标准化内容（忽略行号）计算哈希。"""
+        # 计算标准化内容的哈希
+        normalized_content = self._normalize_content(self.content)
+        normalized_hash = hash(normalized_content)
+        return hash((self._resolved_path, normalized_hash))

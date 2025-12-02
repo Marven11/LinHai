@@ -44,6 +44,8 @@ class Message(Protocol):
 
 ## 消息类
 
+注：有大量消息最终会被转为role=user的消息，为了让llm可以区分这些消息，需要使用双尖括号标记
+
 ### SystemMessage
 
 系统消息，用于表示系统角色消息。包含模板和当前时间，在转换为 LLM 消息时会替换模板中的 `{|TOOLS|}` 和 `{|CURRENT_TIME|}` 占位符。
@@ -52,9 +54,15 @@ class Message(Protocol):
 
 SubAgent 系统消息，用于表示 SubAgent 的系统角色消息。与 `SystemMessage` 类似，但内容更简单。
 
-### ChatMessage
+### UserMessage
 
-聊天消息，用于表示用户或助理角色消息。不支持系统角色（系统角色应使用 `SystemMessage`）。在转换为 LLM 消息时，用户消息会被 `<user>` 标签包裹。
+用户消息，用于表示用户角色消息。在转换为 LLM 消息时，用户消息会被 `<<user>>` 标签包裹。
+
+### AssistantMessage
+
+助理消息，用于表示助理角色消息
+
+不需要使用双尖括号标记，因为其不是role=user的消息
 
 ### ToolCallMessage
 
@@ -62,11 +70,11 @@ SubAgent 系统消息，用于表示 SubAgent 的系统角色消息。与 `Syste
 
 ### RuntimeMessage
 
-运行时消息，用于表示运行时产生的消息（如错误、警告、信息等）。通常在 `linhai/agent/base.py` 中定义。
+运行时消息，用于表示运行时产生的消息（如错误、警告、信息等）。在转换为 LLM 消息时，使用 `<<runtime>>` 标签包裹。
 
 ### ToolResultMessage 和 ToolErrorMessage
 
-工具结果消息和工具错误消息，用于表示工具调用的结果或错误。通常在 `linhai/agent/base.py` 中定义。
+工具结果消息和工具错误消息，用于表示工具调用的结果或错误。在转换为 LLM 消息时，使用 `<<tool>>` 标签包裹，内部使用 `<<message>>`、`<<data>>`、`<<error>>` 等标签结构化内容。
 
 ## 消息传递与处理
 
@@ -86,6 +94,22 @@ SubAgent 系统消息，用于表示 SubAgent 的系统角色消息。与 `Syste
 2. `AgentMessage` 维护消息列表，并提供给 `LanguageModel` 生成回答。
 3. LLM 的回答通过 `Answer` 协议流式返回，包含普通内容和推理内容。
 4. 回答结束后，`ChatMessage` 被添加到消息列表中。
+
+## 消息标记格式
+
+LinHai 使用双尖括号标记来结构化传给assistand的消息。标记格式如下：
+
+- 外层标记：使用成对的 `<<marker>>` 标记消息类型，例如 `<<runtime>>`、`<<tool>>`、`<<user>>`
+- 内层标记：在工具消息内部，使用 `<<message>>`、`<<data>>`、`<<error>>` 等标记进一步结构化内容
+- 格式示例：
+  ```
+  <<runtime>>这是运行时消息<<runtime>>
+  
+  <<tool>>
+  <<message>>工具执行成功<<message>>
+  <<data>>工具输出内容<<data>>
+  <<tool>>
+  ```
 
 ## 消息缓存与序列化
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.workflow import compress_history_range
-from linhai.llm import ChatMessage
+from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
 from linhai.group_chat import GroupChat
@@ -114,8 +114,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock generate_response to return a response with JSON block
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
             message="""
             Here's the range to compress:
             ```json
@@ -155,8 +154,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock response with invalid range (start_id > end_id)
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
+            
             message="""
             ```json
             {"start_id": 10, "end_id": 5}
@@ -192,8 +191,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock response with small range
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
+            
             message="""
             ```json
             {"start_id": 6, "end_id": 8}
@@ -282,37 +281,34 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         # Setup mock messages with user messages that should be protected
-        # Use ChatMessage for user messages to properly simulate role="user"
         mock_messages = [
             RuntimeMessage("System message"),
-            ChatMessage(role="user", message="Important user input 1"),
-            ChatMessage(role="user", message="Important user input 2"),
-            ChatMessage("assistant", "Assistant response 1"),
-            ChatMessage(role="user", message="Important user input 3"),
-            ChatMessage("assistant", "Assistant response 2"),
+            UserMessage(message="Important user input 1"),
+            UserMessage(message="Important user input 2"),
+            AssistantMessage(message="Assistant response 1"),
+            UserMessage(message="Important user input 3"),
+            AssistantMessage(message="Assistant response 2"),
             RuntimeMessage("<runtime>Tool output</runtime>"),
-            ChatMessage(
-                role="user", message="Complete TODO.md tasks"
-            ),  # This should be protected
-            ChatMessage("assistant", "Assistant response 3"),
+            UserMessage(message="Complete TODO.md tasks"),  # This should be protected
+            AssistantMessage(message="Assistant response 3"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
-            ChatMessage("assistant", "Assistant response x"),
+            AssistantMessage(message="Assistant response x"),
         ]
         mock_agent.message_processor.messages = mock_messages
         # 修复filter_messages的异步mock
@@ -323,8 +319,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock generate_response to return a response with JSON block for compression range
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
+            
             message="""
 ## 用户输入
 - 目标：用户要求完成TODO.md中的内容，这是重要输入
@@ -398,8 +394,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock response with range of 10 messages out of 36 = 27.8% < 30%
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
+            
             message="""```json
 {"start_id": 10, "end_id": 19}
 ```""",
@@ -481,8 +477,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         # Mock generate_response to return a response with JSON block
         mock_response = MagicMock()
-        mock_response.get_message.return_value = ChatMessage(
-            role="assistant",
+        mock_response.get_message.return_value = AssistantMessage(
+            
             message="""
             ```json
             {"start_id": 1, "end_id": 2}

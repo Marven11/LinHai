@@ -16,7 +16,6 @@ from linhai.llm import (
     Answer,
     AnswerToken,
     AnswerTokenUsage,
-    ChatMessage,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.terminal import close_all_terminals
@@ -379,7 +378,9 @@ class CLIApp(App):
 
         if self.init_messages:
             for init_message in self.init_messages:
-                user_msg = ChatMessage(role="user", message=init_message)
+                from linhai.llm import UserMessage
+
+                user_msg = UserMessage(message=init_message)
                 self.messages.append(
                     MessageWidget(
                         role="user",
@@ -390,9 +391,7 @@ class CLIApp(App):
                 await self.group_chat.send("user_message", user_msg)
 
                 agent = self.group_chat.get_members("agent", Agent)
-                widget = MessageWidget(
-                    user_msg.role, user_msg.message, sender_name="user"
-                )
+                widget = MessageWidget("user", user_msg.message, sender_name="user")
                 container = self.query_one("#chat-container")
                 container.mount(widget)
                 widget.update_display()
@@ -522,7 +521,9 @@ class CLIApp(App):
         container = self.query_one("#chat-container")
         input_element = self.query_one("#input")
 
-        user_msg = ChatMessage(role="user", message=message_text)
+        from linhai.llm import UserMessage
+
+        user_msg = UserMessage(message=message_text)
         self.messages.append(
             MessageWidget(
                 role="user",
@@ -533,7 +534,7 @@ class CLIApp(App):
         await self.group_chat.send("user_message", user_msg)
         input_element.value = ""  # type: ignore
 
-        widget = MessageWidget(user_msg.role, user_msg.message, sender_name="user")
+        widget = MessageWidget("user", user_msg.message, sender_name="user")
         container.mount(widget)
         widget.update_display()
         self.is_user_scroll_to_end = True
@@ -545,8 +546,13 @@ class CLIApp(App):
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
+        from textual.widgets import Input
+
         input_element = self.query_one("#input")
-        message_text = input_element.value.strip()  # type: ignore
+        assert isinstance(
+            input_element, Input
+        ), f"Expected Input widget, got {type(input_element)}"
+        message_text = input_element.value.strip()
 
         if not message_text:
             return
@@ -558,6 +564,7 @@ class CLIApp(App):
 
         # 直接处理三个todolist命令，不发送给agent
         if await self._process_todolist_command(message_text):
+            input_element.value = ""  # 清除输入框
             return
 
         # 其他消息发送给agent

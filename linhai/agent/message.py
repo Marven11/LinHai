@@ -1,17 +1,18 @@
 """消息处理模块，负责管理Agent的消息队列和处理逻辑。"""
 
-import logging
-from typing import List, Optional, Sequence
-from pathlib import Path
-import json
 import datetime
+import json
+import logging
 import random
+from pathlib import Path
+from typing import List, Optional, Sequence
+
+from linhai.group_chat import GroupChat
+from linhai.input_parser import parse_user_input
+from linhai.llm import UserMessage
+from linhai.utils import CliRuntimeNotice, generate_id
 
 from .base import Message, RuntimeMessage
-from linhai.group_chat import GroupChat
-from linhai.llm import ChatMessage
-from linhai.input_parser import parse_user_input
-from linhai.utils import generate_id, CliRuntimeNotice
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class AgentMessage:
         self.group_chat.register_member("agent_message", self)
 
         self.messages: List[Message] = list(init_messages) if init_messages else []
+        self.appending_messages: set[RuntimeMessage] = set()
         self.large_messages: dict[str, Message] = {}
         self.queued_messages: List[Message] = []
         self.garbage_message_ids: set[str] = set()
@@ -38,22 +40,22 @@ class AgentMessage:
 
         self.cache_invalidate_count = 0
 
-    def handle_user_message(self, msg: ChatMessage) -> None:
+    def handle_user_message(self, msg: UserMessage) -> None:
         """处理用户消息。
 
         Args:
             msg: 用户消息
         """
-        assert isinstance(msg, ChatMessage) and msg.role == "user"
+        assert isinstance(msg, UserMessage)
 
         content = msg.message.strip()
         parsed_input = parse_user_input(content)
 
         if parsed_input.switch_model:
-            self.messages.append(msg)
+            self.append_message(msg)
             return
 
-        self.messages.append(msg)
+        self.append_message(msg)
 
     async def count_invalidate_cache(self):
         interrupt_msg = CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
@@ -63,18 +65,20 @@ class AgentMessage:
     def append_message(self, msg: Message) -> None:
         """添加消息到队列。
 
+        新消息插入在普通消息后，appending_messages前。
+
         Args:
             msg: 要添加的消息
         """
         self.messages.append(msg)
 
     def get_messages(self) -> List[Message]:
-        """获取当前所有消息。
+        """获取当前所有消息（包括appending_messages）。
 
         Returns:
             消息列表
         """
-        return self.messages
+        return self.messages + list(self.appending_messages)
 
     def get_message_count(self) -> int:
         """获取当前消息数量。
@@ -93,13 +97,13 @@ class AgentMessage:
         if not self.messages:
             return False
         msg = self.messages[-1]
-        return isinstance(msg, ChatMessage) and msg.role == "user"
+        return isinstance(msg, UserMessage)
 
     async def replace_messages(self, messages: List[Message]) -> None:
         """替换整个消息列表。
 
         Args:
-            messages: 新的消息列表
+            messages: 新的消息列表（不包含appending_messages）
         """
         await self.count_invalidate_cache()
         self.messages = messages
@@ -192,6 +196,23 @@ class AgentMessage:
         self.garbage_message_ids.clear()
 
         return "已清理所有消息"
+
+    def update_appending_message(self, message: str | None, source: str) -> None:
+        """更新或移除appending message。
+
+        Args:
+            message: 消息内容，如果为None则移除对应source的消息
+            source: 消息来源标识符，用于区分不同的appending messages
+        """
+        # 移除相同source的旧消息
+        self.appending_messages = {
+            msg for msg in self.appending_messages if msg.source != source
+        }
+
+        if message is not None:
+            # 添加新消息
+            runtime_message = RuntimeMessage(message=message, source=source)
+            self.appending_messages.add(runtime_message)
 
     def record_large_message(self, message: Message, _: str) -> str:
         """记录大消息并返回ID。

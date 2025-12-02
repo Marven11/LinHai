@@ -1,22 +1,20 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
+import hashlib
 import logging
-import re
 from pathlib import Path
-from typing import Dict, List, Union, TypeAlias
+import re
+from typing import Any, Dict, List, Optional, TypeAlias, Union
 
-
-import linhai.agent as linhai_agent
 from linhai.agent import Agent
-from linhai.agent.base import GlobalMemory, PathMemory
+import linhai.agent as linhai_agent
+from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
 from linhai.subagent.clarification import ClarificationManager
-
-
 from .base import RuntimeMessage, WAITING_USER_MARKER
-from ..llm import Answer, ChatMessage, OpenAi
+from ..llm import Answer, OpenAi, ToolCallMessage
 from ..utils import CliRuntimeNotice
 
 
@@ -145,33 +143,47 @@ class BadMultiToolCall(Plugin):
         has_no_reason = re.search(pattern, full_response) is not None
 
         if tool_call_count > 1 and has_no_reason:
-
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
-                    "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
-                    + self.example
-                )
+            agent.message_processor.update_appending_message(
+                "警告：你是不是忘记在多个工具调用之间输出可以同时调用的原因了？\n"
+                "你需要在两个code block中间输出上下两个工具调用可以同时进行的原因！\n"
+                + self.example,
+                source="bad_multi_tool_call",
             )
             self.last_message_had_reason = False
         elif tool_call_count > 1 and not has_no_reason:
             if not self.last_message_had_reason:
-                agent.message_processor.append_message(
-                    RuntimeMessage(
-                        "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因"
-                    )
+                agent.message_processor.update_appending_message(
+                    "你成功输出了'同时调用的原因'，以后注意在同时调用工具时都要输出原因",
+                    source="bad_multi_tool_call",
+                )
+            else:
+                agent.message_processor.update_appending_message(
+                    None, source="bad_multi_tool_call"
                 )
             self.last_message_had_reason = True
+        else:
+            agent.message_processor.update_appending_message(
+                None, source="bad_multi_tool_call"
+            )
         if re.search(r"```\n+[^\n]+<---[^\n]+\n+```json toolcall", pattern) is not None:
-            agent.message_processor.append_message(
-                RuntimeMessage("不要在原因中加上箭头！")
+            agent.message_processor.update_appending_message(
+                "不要在原因中加上箭头！", source="bad_multi_tool_call_arrow"
+            )
+        else:
+            agent.message_processor.update_appending_message(
+                None, source="bad_multi_tool_call_arrow"
             )
         if (
             re.search(r"```\n+[^\n]+同时调用：[^\n]+\n+```json toolcall", pattern)
             is not None
         ):
-            agent.message_processor.append_message(
-                RuntimeMessage('不需要在原因中加上"同时调用："，很丑')
+            agent.message_processor.update_appending_message(
+                '不需要在原因中加上"同时调用："，很丑',
+                source="bad_multi_tool_call_prefix",
+            )
+        else:
+            agent.message_processor.update_appending_message(
+                None, source="bad_multi_tool_call_prefix"
             )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -201,10 +213,11 @@ class PromptFastAgentPlugin(Plugin):
         ]:
             return
 
+        from linhai.llm import AssistantMessage
+
         has_previous_agent_message = any(
-            msg.role == "assistant"
+            isinstance(msg, AssistantMessage)
             for msg in agent.message_processor.get_messages()
-            if isinstance(msg, ChatMessage)
         )
 
         if not has_previous_agent_message:
@@ -385,15 +398,21 @@ class SingleToolCallReminderPlugin(Plugin):
             self.single_tool_call_count += 1
 
             if self.single_tool_call_count >= 2:
-                agent.message_processor.append_message(
-                    RuntimeMessage(
-                        f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
-                        "除开特殊原因不要每次只调用一个工具！"
-                        + "！！！" * self.single_tool_call_count
-                    )
+                agent.message_processor.update_appending_message(
+                    f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
+                    "除开特殊原因不要每次只调用一个工具！"
+                    + "！！！" * self.single_tool_call_count,
+                    source="single_tool_call_reminder",
+                )
+            else:
+                agent.message_processor.update_appending_message(
+                    None, source="single_tool_call_reminder"
                 )
         else:
             self.single_tool_call_count = 0
+            agent.message_processor.update_appending_message(
+                None, source="single_tool_call_reminder"
+            )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
@@ -422,15 +441,20 @@ class ClarificationCheckPlugin(Plugin):
             self.without_clarification_counter += 1
 
             if self.without_clarification_counter >= 2:
-                agent.message_processor.append_message(
-                    RuntimeMessage(
-                        f"注意：你连续{self.without_clarification_counter}次没有回复Clarification，"
-                        "你需要立即回复！"
-                        + "！！！" * self.without_clarification_counter
-                    )
+                agent.message_processor.update_appending_message(
+                    f"注意：你连续{self.without_clarification_counter}次没有回复Clarification，"
+                    "你需要立即回复！" + "！！！" * self.without_clarification_counter,
+                    source="clarification_check",
+                )
+            else:
+                agent.message_processor.update_appending_message(
+                    None, source="clarification_check"
                 )
         else:
             self.without_clarification_counter = 0
+            agent.message_processor.update_appending_message(
+                None, source="clarification_check"
+            )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到after_message_generation回调。"""
@@ -454,17 +478,20 @@ class OnlyReasoningPlugin(Plugin):
 
         reasoning_content = answer.get_reasoning_message()
 
-        if reasoning_content and not full_response:
-            agent.message_processor.append_message(
-                RuntimeMessage(
-                    "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
-                )
+        if reasoning_content and not full_response.strip():
+            agent.message_processor.update_appending_message(
+                "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！",
+                source="only_reasoning",
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING", content="模型只思考不输出，已提醒模型"
                 ),
+            )
+        else:
+            agent.message_processor.update_appending_message(
+                None, source="only_reasoning"
             )
 
     def register(self, lifecycle):
@@ -497,7 +524,6 @@ class ToolCallInReasoningPlugin(Plugin):
         tool_calls_in_reasoning = extract_tool_calls(reasoning_content)
         if not tool_calls_in_reasoning:
             return
-
 
         reasoning_tool_names = {
             str(tool_call.get("name", "未知工具"))
@@ -548,10 +574,11 @@ class PreventToolOutputPlugin(Plugin):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         agent = self.group_chat.get_members("agent", Agent)
 
+        from linhai.llm import AssistantMessage
+
         has_previous_agent_message = any(
-            msg.role == "assistant"
+            isinstance(msg, AssistantMessage)
             for msg in agent.message_processor.get_messages()
-            if isinstance(msg, ChatMessage)
         )
 
         if not has_previous_agent_message:
@@ -652,3 +679,41 @@ class RuntimeImitationPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到during_message_generation回调。"""
         lifecycle.register_during_message_generation(self.during_message_generation)
+
+
+class DuplicateFileReadPlugin(Plugin):
+    """重复文件读取拦截插件，仅拦截重复读取相同文件内容。
+
+    实现TODO.md中的要求：重复读取同一个文件而且文件内容完全相同则拦截。
+    通过查看agent的message是否有相同的FileContentMessage实现。
+    """
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_after_tool_call(self._after_tool_call)
+
+    async def _after_tool_call(
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        """工具调用后回调，检查是否重复读取文件。"""
+        if not success or tool_call.function_name != "read_file":
+            return None
+
+        if not isinstance(tool_result, FileContentMessage):
+            return None
+
+        # 检查agent的消息中是否有相同的FileContentMessage
+        for message in agent.message_processor.get_messages():
+            if isinstance(message, FileContentMessage) and message == tool_result:
+                return RuntimeMessage(
+                    f"重复文件读取拦截：重复读取文件{tool_result.filepath}，内容与之前相同，已拦截"
+                )
+
+        return None

@@ -7,7 +7,7 @@ import linhai
 from .base import RuntimeMessage, CompressRangeRequest, GlobalMemory
 from linhai.markdown_parser import extract_json_blocks
 from linhai.llm import (
-    ChatMessage,
+    AssistantMessage,
     SystemMessage,
 )
 
@@ -114,8 +114,10 @@ def _collect_deleted_user_messages(
 ) -> list[str]:
     """收集被删除的用户消息内容"""
     deleted_user_messages = []
+    from linhai.llm import UserMessage
+
     for msg in agent.message_processor.messages[start_id : end_id + 1]:
-        if isinstance(msg, ChatMessage) and msg.role == "user":
+        if isinstance(msg, UserMessage):
             content = msg.message
             if content:
                 deleted_user_messages.append(content)
@@ -205,8 +207,8 @@ async def compress_history_range(agent: "linhai.agent.Agent") -> str:
         answer = await agent.generate_response(
             enable_compress=False, disable_waiting_user_warning=True
         )
-        chat_message = cast(ChatMessage, answer.get_message())
-        full_response = chat_message.message
+        assistant_message = cast(AssistantMessage, answer.get_message())
+        full_response = assistant_message.message
 
         summary_message_index = len(agent.message_processor.messages) - 1
         summary_content = full_response

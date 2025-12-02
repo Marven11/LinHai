@@ -44,14 +44,15 @@ class TestFileTools(unittest.TestCase):
     def test_read_file(self):
         """测试读取文件"""
         result = read_file(str(self.test_file))
-        self.assertIn("文件路径为:", result.content)
-        self.assertIn("第一行内容", result.content)
+        # FileContentMessage只包含文件内容，不包含路径前缀
+        self.assertEqual(result.content, self.test_content)
 
     def test_read_file_with_line_numbers(self):
         """测试带行号的读取文件"""
         result = read_file(str(self.test_file), show_line_numbers=True)
-        self.assertIn("1: 第一行内容", result.content)
-        self.assertIn("2: 第二行内容", result.content)
+        # 带行号的文件内容
+        expected = "1: 第一行内容\n2: 第二行内容\n3: 第三行内容\n4: 重复内容\n5: 重复内容\n6: 重复内容\n7: 最后一行内容"
+        self.assertEqual(result.content, expected)
 
     def test_write_file(self):
         """测试写入文件"""

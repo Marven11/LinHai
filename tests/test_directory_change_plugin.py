@@ -30,7 +30,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         # 设置mock_agent的message_processor
         from linhai.agent.message import AgentMessage
-        from linhai.llm import ChatMessage, SystemMessage
+        from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 
         # 使用真正的GroupChat而不是Mock
         init_messages = [
@@ -39,7 +39,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
                 current_time="2025-10-26 17:00:00",
                 group_chat=self.group_chat,
             ),
-            ChatMessage(role="user", message="Initial message"),
+            UserMessage(message="Initial message"),
         ]
         self.mock_agent.message_processor = AgentMessage(self.group_chat, init_messages)
 

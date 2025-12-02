@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
-from linhai.llm import ChatMessage, SystemMessage
+from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -100,7 +100,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
                 return token
 
             def get_message(self):
-                return ChatMessage(role="assistant", message=self.content)
+                return AssistantMessage(message=self.content)
 
             def get_current_content(self):
                 return self.content
@@ -114,7 +114,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         self.tool_manager.process_tool_call = AsyncMock(return_value=RuntimeMessage("628"))
 
         await self.agent.handle_user_message(
-            ChatMessage(role="user", message="计算114+514")
+            UserMessage(message="计算114+514")
         )
         await self.agent.generate_response()
 

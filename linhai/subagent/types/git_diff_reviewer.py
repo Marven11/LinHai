@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.plugin import Plugin
-from linhai.llm import Answer, ChatMessage
+from linhai.llm import Answer, UserMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.main import SubAgent
 from linhai.tool.tools.todolist import TodolistManager, TodolistItem
@@ -127,6 +127,15 @@ class GitDiffReviewPlugin(Plugin):
         # 跳过文件夹路径，确保不尝试读取文件夹
         if os.path.isdir(filename):
             return None
+
+        # 检查文件大小，大于32KB时只返回路径
+        try:
+            file_size = os.path.getsize(filename)
+            if file_size > 32 * 1024:  # 32KB
+                return f"**新增文件: {filename}**\n(文件大小为{file_size}字节，大于32KB，跳过内容)"
+        except (OSError, FileNotFoundError):
+            # 如果无法获取文件大小，继续尝试读取内容
+            pass
 
         try:
             with open(filename, "r", encoding="utf-8") as f:
@@ -271,11 +280,7 @@ class GitDiffReviewPlugin(Plugin):
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
         messages = agent.message_processor.get_messages()
-        user_messages = [
-            msg
-            for msg in messages
-            if isinstance(msg, ChatMessage) and msg.role == "user"
-        ]
+        user_messages = [msg for msg in messages if isinstance(msg, UserMessage)]
 
         full_diff_content = git_diff
         if new_files_content:

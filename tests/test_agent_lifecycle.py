@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Lifecycle
-from linhai.llm import ChatMessage
+from linhai.llm import UserMessage, AssistantMessage
 
 
 
@@ -34,10 +34,10 @@ class MockAnswer:
         self.index += 1
         return token
 
-    def get_message(self) -> ChatMessage:
+    def get_message(self) -> AssistantMessage:
         """Get the message content from the tokens."""
         content = "".join(token["content"] for token in self.tokens)
-        return ChatMessage(role="assistant", message=content)
+        return AssistantMessage(message=content)
 
     def get_tool_call(self) -> dict[str, Any] | None:
         """Get the tool call from the tokens, if any."""

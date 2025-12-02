@@ -129,7 +129,7 @@ default_llm = "test"
             
             # 创建一个简单的测试SubAgent类，直接调用工具失败
             from linhai.subagent.main import SubAgent
-            from linhai.llm import ChatMessage
+            from linhai.llm import UserMessage, AssistantMessage
             
             class TestSubAgent(SubAgent):
                 def get_system_message_prompt(self):
