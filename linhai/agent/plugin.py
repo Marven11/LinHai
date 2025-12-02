@@ -659,10 +659,9 @@ class RuntimeImitationPlugin(Plugin):
         if (
             isinstance(model, OpenAi)
             and model.compatibility == "deepseek"
-            and current_content.lstrip().startswith("<runtime>")
-            and "</runtime>" in current_content
+            and re.match("^<<[a-z_]+>>", current_content) is not None
         ):
-            await agent.interrupt("不要模仿runtime输出！")
+            await agent.interrupt("不要模仿tag内的输出！")
             return True
 
         # 即使没有提示deepseek，其也会在<tool>中输出JSON
@@ -688,9 +687,6 @@ class DuplicateFileReadPlugin(Plugin):
     通过查看agent的message是否有相同的FileContentMessage实现。
     """
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-
     def register(self, lifecycle):
         """注册插件回调。"""
         lifecycle.register_after_tool_call(self._after_tool_call)
@@ -709,11 +705,17 @@ class DuplicateFileReadPlugin(Plugin):
         if not isinstance(tool_result, FileContentMessage):
             return None
 
-        # 检查agent的消息中是否有相同的FileContentMessage
         for message in agent.message_processor.get_messages():
             if isinstance(message, FileContentMessage) and message == tool_result:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="INFO",
+                        content="模型重复读取相同文件，已阻止",
+                    ),
+                )
                 return RuntimeMessage(
-                    f"重复文件读取拦截：重复读取文件{tool_result.filepath}，内容与之前相同，已拦截"
+                    f"错误：重复读取文件{tool_result.filepath}，内容和之前完全相同，不要重复读取文件！"
                 )
 
         return None

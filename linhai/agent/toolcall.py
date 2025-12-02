@@ -296,7 +296,7 @@ class AgentToolcall:
         if len(tool_result_content) > 8000:
             message_id = generate_id("largemessage")
             self.agent.large_messages[message_id] = tool_result
-            self.agent.message_processor.get_messages().append(
+            self.agent.message_processor.append_message(
                 RuntimeMessage(
                     f"为工具 {tool_call.function_name} 的消息分配了ID: {message_id}。"
                     "你可以在不需要此消息时使用 mark_messages_as_garbage 工具标记此消息为垃圾以节省token。"
@@ -308,9 +308,9 @@ class AgentToolcall:
                 )
             )
 
-        self.agent.message_processor.get_messages().append(
+        self.agent.message_processor.append_message(
             RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
         )
-        self.agent.message_processor.get_messages().append(tool_result)
+        self.agent.message_processor.append_message(tool_result)
         if self.agent.state == "waiting_user":
             self.agent.state = "working"
