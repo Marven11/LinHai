@@ -671,7 +671,8 @@ class FooterWidget(Static):
 
     DEFAULT_CSS = """
     FooterWidget {
-        color: #474e5b;
+        background: $background-darken-1;
+        color: $foreground-darken-3;
     }
     """
 

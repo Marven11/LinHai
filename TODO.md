@@ -75,5 +75,7 @@
 
 - [ ] 研究多subagent协作
   - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
+- [ ] terminal tab
+- [ ] llm.py调用api失败时发送CliRuntimeNotice警告“网络失败”等，将要在约几秒后重试，让用户知道发生了什么
 - [ ] 添加假设颠覆法
 
