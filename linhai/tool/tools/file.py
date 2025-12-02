@@ -84,7 +84,9 @@ def validate_file(file_path: Path) -> str:
 
 @global_tools.register_tool(
     name="read_file",
-    desc="读取文件",
+    desc="读取文件。"
+    "注意 - 优先于grep/sed：在需要读取文件时优先使用此工具带上行号读取整个文件，"
+    "只有在此工具无法读取所有内容时才考虑使用sed!",
     args={
         "filepath": ToolArgInfo(desc="文件路径", type="str"),
         "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),

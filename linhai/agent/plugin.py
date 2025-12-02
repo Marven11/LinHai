@@ -457,7 +457,7 @@ class OnlyReasoningPlugin(Plugin):
         if reasoning_content and not full_response:
             agent.message_processor.append_message(
                 RuntimeMessage(
-                    "错误：不要只思考，不输出！你需要输出内容以调用工具或回复用户！"
+                    "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
                 )
             )
             await self.group_chat.send_if_exists(
@@ -637,6 +637,16 @@ class RuntimeImitationPlugin(Plugin):
         ):
             await agent.interrupt("不要模仿runtime输出！")
             return True
+
+        # 即使没有提示deepseek，其也会在<tool>中输出JSON
+        if (
+            isinstance(model, OpenAi)
+            and model.compatibility == "deepseek"
+            and current_content.lstrip().startswith("<tool>{")
+        ):
+            await agent.interrupt("工具调用的格式是```json toolcall不是XML!")
+            return True
+
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):

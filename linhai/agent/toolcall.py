@@ -287,8 +287,13 @@ class AgentToolcall:
             self.agent.large_messages[message_id] = tool_result
             self.agent.message_processor.get_messages().append(
                 RuntimeMessage(
-                    f"工具 {tool_call.function_name} 返回的内容较大（{len(tool_result_content)} 字符），已分配ID: {message_id}。"
-                    "你可以使用 mark_messages_as_garbage 工具标记此消息为垃圾以节省token。"
+                    f"为工具 {tool_call.function_name} 的消息分配了ID: {message_id}。"
+                    "你可以在不需要此消息时使用 mark_messages_as_garbage 工具标记此消息为垃圾以节省token。"
+                    + (
+                        "注意：这个工具输出仍然远低于限制，仍然可以正常使用此工具，不要因为工具会输出较大内容就不使用工具！"
+                        if len(tool_result_content) < 80000
+                        else ""
+                    )
                 )
             )
 
