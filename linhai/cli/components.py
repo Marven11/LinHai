@@ -6,9 +6,7 @@ import re
 import time
 from typing import Union
 
-from rich import box
 from rich.markup import escape
-from rich.panel import Panel
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
@@ -269,6 +267,23 @@ class RuntimeMessageWidget(Static):
 class ToolCallWidget(Static):
     """工具调用显示组件，流式显示键值对表格"""
 
+    DEFAULT_CSS = """
+    ToolCallWidget {
+        width: 100%;
+        overflow: hidden;
+        padding-left: 1;
+        padding-right: 1;
+        border-title-align: left;
+        border-title-color: $accent;
+        border: solid $accent;
+    }
+
+    ToolCallWidget.error {
+        border-title-color: red;
+        border: solid red;
+    }
+    """
+
     def __init__(self, json_str: str):
         super().__init__()
         self.json_str = json_str
@@ -283,6 +298,8 @@ class ToolCallWidget(Static):
         self.current_value = ""
         self.has_error = False
         self.error_message = ""
+
+        self.border_title = "tool call"
 
     def stop(self) -> None:
         """停止组件的timer"""
@@ -317,22 +334,17 @@ class ToolCallWidget(Static):
 
         if self.has_error:
 
-            panel = Panel(
+            self.update(
                 Syntax(
                     self.json_str,
                     lexer="markdown",
                     theme="nord-darker",
                     background_color="#2E3440",
                     word_wrap=True,
-                ),
-                box=box.SQUARE,
-                border_style="red",
-                title="tool call (解析错误)",
-                title_align="left",
-                expand=True,
-                style="on #2E3440",
+                )
             )
-            self.update(panel)
+            self.border_title = "tool call (error)"
+            self.add_class("error")
             return
 
         try:
@@ -382,22 +394,15 @@ class ToolCallWidget(Static):
                             + f"{self.current_key}: `{self.current_value}`"
                         )
 
-                panel = Panel(
+                self.update(
                     Syntax(
                         self.current_content.strip(),
                         lexer="markdown",
                         theme="nord-darker",
                         background_color="#2E3440",
                         word_wrap=True,
-                    ),
-                    box=box.SQUARE,
-                    border_style="#B48EAD",
-                    title="tool call",
-                    title_align="left",
-                    expand=True,
-                    style="on #2E3440",
+                    )
                 )
-                self.update(panel)
         except RuntimeError as e:
 
             self.has_error = True
@@ -433,18 +438,24 @@ class ReasoningContentWidget(Static):
     ReasoningContentWidget {
         width: 100%;
         overflow: hidden;
+        border-title-color: grey;
+        border-title-align: left;
+        border: solid grey;
+        padding-left: 1;
+        padding-right: 1;
+    }
+
+    ReasoningContentWidget.reasoning-widget-collapsed {
         text-overflow: ellipsis;
         text-wrap: nowrap;
     }
-
+    
     ReasoningContentWidget.reasoning-widget-expanded {
         height: auto;
         text-overflow: fold;
         text-wrap: wrap;
     }
     """
-
-    BORDER_COLOR = "grey50"
 
     def __init__(self, role: str, content: str, sender_name: str):
         super().__init__()
@@ -454,6 +465,7 @@ class ReasoningContentWidget(Static):
         self.timer: Timer | None = None
         self.sender_name = sender_name
         self.border_title = self.calculate_border_title()
+        self.add_class("reasoning-widget-collapsed")
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -470,9 +482,11 @@ class ReasoningContentWidget(Static):
         if self.is_expanded:
             self.is_expanded = False
             self.remove_class("reasoning-widget-expanded")
+            self.add_class("reasoning-widget-collapsed")
         else:
             self.is_expanded = True
             self.add_class("reasoning-widget-expanded")
+            self.remove_class("reasoning-widget-collapsed")
 
         self.border_title = self.calculate_border_title()
         self.update_display()
@@ -497,27 +511,40 @@ class ReasoningContentWidget(Static):
                 lexer="markdown",
                 theme="nord-darker",
                 background_color="#2E3440",
-                word_wrap=False,
+                word_wrap=True,
             )
         else:
             lines = [line for line in content_to_display.splitlines() if line]
             truncated_content = "\n".join(lines[-2:]) if lines else ""
             renderable = Text(truncated_content, overflow="ellipsis", no_wrap=True)
 
-        panel = Panel(
-            renderable,
-            box=box.SQUARE,
-            border_style=self.BORDER_COLOR,
-            title=self.border_title,
-            title_align="left",
-            expand=True,
-            style="on #2E3440",
-        )
-        self.update(panel)
+        self.update(renderable)
 
 
 class NormalContentWidget(Static):
     """普通消息显示组件，按字符换行"""
+
+    DEFAULT_CSS = """
+    NormalContentWidget {
+        width: 100%;
+        overflow: hidden;
+        padding-left: 1;
+        padding-right: 1;
+        border-title-align: left;
+        border-title-color: grey;
+        border: solid grey;
+    }
+
+    NormalContentWidget.user-message {
+        border-title-color: #A3BE8C;
+        border: solid #A3BE8C;
+    }
+
+    NormalContentWidget.assistant-message {
+        border-title-color: $primary;
+        border: solid $primary;
+    }
+    """
 
     def __init__(self, role: str, content: str, sender_name: str):
         super().__init__()
@@ -526,6 +553,8 @@ class NormalContentWidget(Static):
         self.role = role
         self.timer: Timer | None = None
         self._content_static: Static | None = None
+        self.add_class(f"{self.role}-message")
+        self.border_title = self.display_name
 
     def stop(self) -> None:
         """停止组件的timer，如果内容为空则unmount自己"""
@@ -548,27 +577,17 @@ class NormalContentWidget(Static):
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
         content_to_display = self.content_str.strip()
-        border_color = {
-            "user": "#A3BE8C",
-            "assistant": "#81A1C1",
-        }.get(self.role, "grey50")
-        panel = Panel(
-            Syntax(
-                content_to_display,
-                lexer="markdown",
-                theme="nord-darker",
-                background_color="#2E3440",
-                word_wrap=True,
-            ),
-            box=box.SQUARE,
-            border_style=border_color,
-            title=self.display_name,
-            title_align="left",
-            expand=True,
-            style="on #2E3440",
-        )
+
         if self._content_static is not None:
-            self._content_static.update(panel)
+            self._content_static.update(
+                Syntax(
+                    content_to_display,
+                    lexer="markdown",
+                    theme="nord-darker",
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
+            )
 
 
 class MessageWidget(Static):
