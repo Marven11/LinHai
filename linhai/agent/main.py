@@ -6,7 +6,6 @@ from typing import (
 )
 
 import asyncio
-import logging
 
 from .base import (
     RuntimeMessage,
@@ -29,8 +28,6 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
-
-logger = logging.getLogger(__name__)
 
 
 class Agent:
@@ -187,7 +184,7 @@ class Agent:
         在这个状态下，Agent会自动处理消息并生成响应，
         同时监控token使用量并在需要时触发压缩。
         """
-        logger.info("Agent进入自动运行状态")
+
         if not self.group_chat.is_empty("user_message"):
             try:
                 await self.receive_one_user_message()
@@ -408,7 +405,6 @@ class Agent:
         并处理异常和取消事件。
         """
 
-        logger.info("Agent启动")
         user_input_found = False
         await self.toolcall_processor.postinit()
         while not self.group_chat.is_empty("user_message"):
@@ -424,7 +420,7 @@ class Agent:
                 elif self.state == "working":
                     await self.state_working()
                 else:
-                    logger.error("遇到未知状态: %s，退出运行循环", self.state)
+
                     break
 
             except asyncio.CancelledError:

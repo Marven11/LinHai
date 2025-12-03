@@ -8,7 +8,6 @@ from typing import (
     Optional,
 )
 from linhai.agent.base import RuntimeMessage
-import logging
 import typing
 
 from linhai.llm import (
@@ -18,8 +17,6 @@ from linhai.llm import (
 
 if typing.TYPE_CHECKING:
     from linhai.agent import Agent
-
-logger = logging.getLogger(__name__)
 
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[

@@ -2,7 +2,7 @@
 
 from typing import Any, TYPE_CHECKING
 import asyncio
-import logging
+
 
 from linhai.llm import ToolCallMessage
 from linhai.utils import CliRuntimeNotice, generate_id
@@ -13,8 +13,6 @@ from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PRO
 if TYPE_CHECKING:
     import linhai.agent
     import linhai.subagent
-
-logger = logging.getLogger(__name__)
 
 
 class ViolationCheckerSubAgent(SubAgent):

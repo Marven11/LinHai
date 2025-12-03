@@ -1,7 +1,7 @@
 """SubAgent通用插件实现。"""
 
 from typing import TYPE_CHECKING
-import logging
+
 import shlex
 import os
 
@@ -12,8 +12,6 @@ from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
 
 if TYPE_CHECKING:
     import linhai.agent
-
-logger = logging.getLogger(__name__)
 
 
 class GitBlockingPlugin(Plugin):

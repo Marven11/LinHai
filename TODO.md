@@ -15,6 +15,9 @@
     - 重构git diff reviewer，在没有指定这个选项时不启动subagent，并弹出CLI消息提示为什么不启动
     - 删除默认的代码规范要求
     - 你需要在linhai/main.py中将args注册到group chat中让git diff reviewer获取
+- [ ] 在CLI底栏消息数量旁边使用括号标明被标记为垃圾的消息数量
+  - 样式`xxx msg (xx marked) | in .....`
+  - 开启nerd fonts时使用图标\uea81代替单词marked
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -24,6 +27,19 @@
 
 - [ ] 研究多subagent协作
   - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
+- [ ] 在appending message中提供agent最近的思考内容
+  - 需要解决的问题
+    - agent每次生成消息都需要重新思考，生成reasoning content, 而在agent思考结束后
+  - 当前的appending message只支持RuntimeMessage，需要修改为支持任意类型的Message
+    - 需要检查传入的消息是否符合Message Protocol
+    - 不支持
+  - 创建新的Message: PreviousReasoningMessage
+    - 根据agent的message processor找到最近的agent的消息（最多三条），提取其中的reasoning content
+      - 注意需要在to_llm_message中动态获得agent的消息
+    - 格式为
+      - `<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>`
+  - 在模型支持思考时将PreviousReasoningMessage插入到appending message，否则移除
+    - 通过在after message generation后检测reasoning content是否为None实现
 - [ ] terminal tab和usage tab
 - [ ] 添加假设颠覆法
 

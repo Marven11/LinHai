@@ -1,7 +1,7 @@
 """Git diff审查SubAgent类型实现，包含专用插件。"""
 
 import asyncio
-import logging
+
 import os
 import subprocess
 from typing import TYPE_CHECKING
@@ -51,8 +51,6 @@ DEFAULT_CODE_STYLE = """
     - 返回None
     - 通过副作用改变外部状态
 """
-
-logger = logging.getLogger(__name__)
 
 
 class GitDiffReviewerSubAgent(SubAgent):

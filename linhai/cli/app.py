@@ -251,7 +251,7 @@ class CLIApp(App):
         while True:
             output = await self.group_chat.receive("subagent_message")
             await self._handle_subagent_message(output)
-    
+
     async def _handle_subagent_message(self, output) -> None:
         """处理单个SubAgent消息"""
         if isinstance(output, SubAgentAnswerTokenWrapper):
@@ -266,19 +266,21 @@ class CLIApp(App):
             raise RuntimeError(
                 f"Unknown Type in subagent_message: {type(output)=} {output=}"
             )
-    
-    async def _handle_subagent_token_wrapper(self, wrapper: SubAgentAnswerTokenWrapper) -> None:
+
+    async def _handle_subagent_token_wrapper(
+        self, wrapper: SubAgentAnswerTokenWrapper
+    ) -> None:
         """处理SubAgentAnswerTokenWrapper"""
         subagent_name = wrapper.subagent_name
         token = wrapper.token
-        
+
         content = token.content
         is_reasoning = token.reasoning_content is not None
-        
+
         subagent_container = self.query_one("#subagent-container")
-        
+
         self._cleanup_subagent_message_widget_if_needed(subagent_name, is_reasoning)
-        
+
         if subagent_name not in self.subagent_current_messages:
             current_message = self._create_subagent_message_widget(
                 subagent_name, content, is_reasoning
@@ -289,25 +291,24 @@ class CLIApp(App):
         else:
             current_message = self.subagent_current_messages[subagent_name]
             current_message.append_content(content)
-    
-    async def _handle_subagent_answer_complete_wrapper(self, wrapper: SubAgentAnswerCompleteWrapper) -> None:
+
+    async def _handle_subagent_answer_complete_wrapper(
+        self, wrapper: SubAgentAnswerCompleteWrapper
+    ) -> None:
         """处理SubAgentAnswerCompleteWrapper"""
         subagent_name = wrapper.subagent_name
         answer = wrapper.answer
-        
+
         if subagent_name in self.subagent_current_messages:
             self.subagent_current_messages[subagent_name].update_display()
             del self.subagent_current_messages[subagent_name]
-        
-    
+
     async def _handle_subagent_runtime_notice(self, notice: CliRuntimeNotice) -> None:
         """处理CliRuntimeNotice"""
         subagent_container = self.query_one("#subagent-container")
-        widget = RuntimeMessageWidget(
-            level=notice.level, content=notice.content
-        )
+        widget = RuntimeMessageWidget(level=notice.level, content=notice.content)
         subagent_container.mount(widget)
-    
+
     async def _handle_subagent_legacy_dict(self, output_dict: dict) -> None:
         """处理旧格式的字典消息（向后兼容）"""
         subagent_name = output_dict["subagent_name"]
@@ -319,7 +320,7 @@ class CLIApp(App):
 
         if message_type == "token":
             self._cleanup_subagent_message_widget_if_needed(subagent_name, is_reasoning)
-            
+
             if subagent_name not in self.subagent_current_messages:
                 current_message = self._create_subagent_message_widget(
                     subagent_name, content, is_reasoning
@@ -336,8 +337,10 @@ class CLIApp(App):
                 del self.subagent_current_messages[subagent_name]
         else:
             assert False, f"Unsupported Type: {message_type}"
-    
-    def _cleanup_subagent_message_widget_if_needed(self, subagent_name: str, is_reasoning: bool) -> None:
+
+    def _cleanup_subagent_message_widget_if_needed(
+        self, subagent_name: str, is_reasoning: bool
+    ) -> None:
         """如果需要，清理旧的SubAgent消息widget"""
         current_widget = self.subagent_current_messages.get(subagent_name)
         if current_widget:
@@ -345,8 +348,10 @@ class CLIApp(App):
                 del self.subagent_current_messages[subagent_name]
             elif isinstance(current_widget, MessageWidget) and is_reasoning:
                 del self.subagent_current_messages[subagent_name]
-    
-    def _create_subagent_message_widget(self, subagent_name: str, content: str, is_reasoning: bool):
+
+    def _create_subagent_message_widget(
+        self, subagent_name: str, content: str, is_reasoning: bool
+    ):
         """创建SubAgent消息widget"""
         if is_reasoning:
             return ReasoningContentWidget(

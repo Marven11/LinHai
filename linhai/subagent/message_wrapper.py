@@ -10,6 +10,7 @@ from linhai.utils import CliRuntimeNotice
 @dataclass
 class SubAgentAnswerTokenWrapper:
     """SubAgent的AnswerToken包装类，包含subagent名称和token。"""
+
     subagent_name: str
     token: AnswerToken
 
@@ -17,6 +18,7 @@ class SubAgentAnswerTokenWrapper:
 @dataclass
 class SubAgentAnswerCompleteWrapper:
     """SubAgent的Answer完成包装类，包含subagent名称和完整的answer。"""
+
     subagent_name: str
     answer: Answer
 
@@ -24,8 +26,11 @@ class SubAgentAnswerCompleteWrapper:
 @dataclass
 class SubAgentNoticeWrapper:
     """SubAgent的CliRuntimeNotice包装类，用于传输运行时通知。"""
+
     subagent_name: str
     notice: CliRuntimeNotice
 
 
-SubAgentMessageWrapper = Union[SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper, SubAgentNoticeWrapper]
+SubAgentMessageWrapper = Union[
+    SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper, SubAgentNoticeWrapper
+]

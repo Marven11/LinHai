@@ -1,7 +1,7 @@
 """SubAgent核心实现。"""
 
 import asyncio
-import logging
+
 from datetime import datetime
 from typing import Sequence
 
@@ -20,8 +20,6 @@ from .message_wrapper import SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteW
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.tools.command import sleep_tool
-
-logger = logging.getLogger(__name__)
 
 
 class SubAgent:
@@ -130,20 +128,16 @@ class SubAgent:
         async for token in answer:
             if isinstance(token, AnswerToken):
                 full_response += token.content
-                
+
                 wrapper = SubAgentAnswerTokenWrapper(
-                    subagent_name=self.name,
-                    token=token
+                    subagent_name=self.name, token=token
                 )
                 await self.group_chat.send_if_exists(
                     "subagent_message",
                     wrapper,
                 )
 
-        wrapper = SubAgentAnswerCompleteWrapper(
-            subagent_name=self.name,
-            answer=answer
-        )
+        wrapper = SubAgentAnswerCompleteWrapper(subagent_name=self.name, answer=answer)
         await self.group_chat.send_if_exists(
             "subagent_message",
             wrapper,
@@ -202,10 +196,8 @@ class SubAgent:
         """运行SubAgent，执行任务直到退出。"""
 
         if hasattr(self.group_chat, "_test_mode"):
-            logger.info("SubAgent %s 在测试模式中跳过运行", self.name)
-            return
 
-        logger.info("SubAgent %s 启动", self.name)
+            return
 
         while self.state == "running":
             should_continue = await self._handle_execution_cycle()
@@ -215,8 +207,6 @@ class SubAgent:
                 self.max_answer_times -= 1
                 if self.max_answer_times <= 0:
                     break
-
-        logger.info("SubAgent %s 结束运行，原因: %s", self.name, self.exit_reason)
 
         from linhai.utils import CliRuntimeNotice
 

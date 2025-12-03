@@ -1,7 +1,7 @@
 """Plugin系统，用于模块化Agent的各种功能。"""
 
 from abc import ABC, abstractmethod
-import logging
+
 from pathlib import Path
 import re
 import time
@@ -21,8 +21,6 @@ from ..utils import CliRuntimeNotice
 JsonValue: TypeAlias = Union[
     str, int, float, bool, List["JsonValue"], Dict[str, "JsonValue"], None
 ]
-
-logger = logging.getLogger(__name__)
 
 
 class Plugin(ABC):
@@ -681,7 +679,7 @@ class UnnecessarySedReadPlugin(Plugin):
                 "后果：难以理解文件内容、生成多条消息导致重复计费\n"
                 "为什么无法省下token: 1. 最终还是需要读取所有文件内容 2. 多次发送回答会导致多次计费token\n"
                 "为什么不能提升认知：文件不完整会带来认知负担、遗漏内容导致行为出错\n"
-                "建议：优先带上行号读取整个文件！如果必须只读取对应行号则先sleep一分钟！"
+                "建议：优先带上行号读取整个文件！如果必须使用sed则先sleep一分钟！"
             )
         return None
 

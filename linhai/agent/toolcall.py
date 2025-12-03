@@ -1,6 +1,5 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
-import logging
 from typing import TYPE_CHECKING
 
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -11,8 +10,6 @@ from .base import RuntimeMessage
 
 if TYPE_CHECKING:
     from .main import Agent
-
-logger = logging.getLogger(__name__)
 
 
 class AgentToolcall:
@@ -212,7 +209,7 @@ class AgentToolcall:
             await self.agent.lifecycle.trigger_tool_conflict(
                 self.agent, tool_call, self.called_tools_in_round
             )
-            logger.warning(conflict_msg)
+
             self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
             self.early_return = True
             return True
@@ -251,7 +248,7 @@ class AgentToolcall:
                     self.agent, tool_call, tool_result
                 )
                 msg = f"工具调用失败: {tool_result.content}"
-                logger.error(msg)
+
                 self.agent.message_processor.append_message(RuntimeMessage(msg))
                 if tool_call.assert_success:
                     return True
@@ -274,7 +271,7 @@ class AgentToolcall:
 
             await self.agent.lifecycle.trigger_tool_failure(self.agent, tool_call, e)
             msg = f"工具调用失败: {str(e)} {repr(e)}"
-            logger.error(msg)
+
             self.agent.message_processor.append_message(RuntimeMessage(msg))
             return False
 

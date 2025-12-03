@@ -6,3 +6,4 @@
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/ tests/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框
 - 注意GroupChat.get_members的用法：get_members用来避免各个对象互相持有引用，不要将get_members的输出保存下来！
+- 对于空行、多余空格等问题: 使用black格式化以清理

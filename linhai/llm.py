@@ -12,7 +12,6 @@ from typing import (
 )
 import asyncio
 import json
-import logging
 
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -78,9 +77,7 @@ class SystemMessage:
 
     def to_json(self) -> str:
 
-        return json.dumps(
-            {"template": self.template}
-        )
+        return json.dumps({"template": self.template})
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
@@ -497,7 +494,9 @@ class OpenAi:
         token_limit: int | None = None,
         compatibility: str | None = None,
         previous_update_callback: Callable[[int], None] | None = None,
-        notification_callback: Callable[[Literal["INFO", "WARNING", "ERROR"], str], Awaitable[None]] | None = None,
+        notification_callback: (
+            Callable[[Literal["INFO", "WARNING", "ERROR"], str], Awaitable[None]] | None
+        ) = None,
     ):
         """初始化OpenAI语言模型。
 

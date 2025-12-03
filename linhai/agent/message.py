@@ -2,7 +2,6 @@
 
 import datetime
 import json
-import logging
 import random
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -13,8 +12,6 @@ from linhai.llm import UserMessage
 from linhai.utils import CliRuntimeNotice, generate_id
 
 from .base import Message, RuntimeMessage
-
-logger = logging.getLogger(__name__)
 
 
 class AgentMessage:
@@ -339,6 +336,6 @@ class AgentMessage:
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)
-            logger.info("对话历史已保存到: %s", filepath)
+
         except (IOError, OSError) as e:
-            logger.error("保存对话历史失败: %s", str(e))
+            raise RuntimeError(f"保存对话历史失败: {e}")

@@ -1,8 +1,6 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
 from pathlib import Path
-import datetime
-import logging
 from typing import Literal
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
@@ -103,7 +101,9 @@ async def create_agent_from_config(
     return agent
 
 
-async def _create_llm_instances(llm_configs: list, group_chat: GroupChat) -> list[LanguageModel]:
+async def _create_llm_instances(
+    llm_configs: list, group_chat: GroupChat
+) -> list[LanguageModel]:
     """创建LLM实例列表
 
     Args:
@@ -113,14 +113,14 @@ async def _create_llm_instances(llm_configs: list, group_chat: GroupChat) -> lis
     Returns:
         LLM实例列表
     """
-    
-    logger = logging.getLogger(__name__)
-    
-    async def notification_callback(level: Literal["INFO", "WARNING", "ERROR"], content: str) -> None:
+
+    async def notification_callback(
+        level: Literal["INFO", "WARNING", "ERROR"], content: str
+    ) -> None:
         """发送通知到ui_log队列"""
         notice = CliRuntimeNotice(level=level, content=content)
         await group_chat.send_if_exists("ui_log", notice)
-    
+
     llms = []
     for llm_config in llm_configs:
         llm_config_dict = llm_config.model_dump()

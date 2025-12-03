@@ -2,7 +2,6 @@
 
 import os
 import re
-import logging
 from typing import Optional, Union
 import tomllib
 from pathlib import Path
@@ -10,9 +9,6 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator
 
 from .exceptions import ConfigValidationError
-
-
-logger = logging.getLogger(__name__)
 
 
 class LLMConfig(BaseModel):

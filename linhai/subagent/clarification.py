@@ -1,15 +1,13 @@
 """澄清系统管理模块，负责Agent和SubAgent之间的问答交互。"""
 
 import asyncio
-import logging
+
 from datetime import datetime, timedelta
 from typing import TypedDict
 
 from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
-
-logger = logging.getLogger(__name__)
 
 
 class Clarification(TypedDict):
@@ -117,8 +115,6 @@ class ClarificationManager:
 
         if clarification_id in self._response_events:
             self._response_events[clarification_id].set()
-
-        logger.info("回复澄清 %s: %s", clarification_id, answer)
 
     def get_unanswered_clarifications(self) -> list[Clarification]:
         """获取所有未解答的澄清列表。"""

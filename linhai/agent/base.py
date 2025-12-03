@@ -63,7 +63,6 @@ class CompressRangeRequest(Message):
 class RuntimeMessage(Message):
     """运行时消息，用于向LLM传递运行时信息。"""
 
-
     def __init__(self, message: str, source: str | None = None):
         self.message = message
         self.source = source
@@ -91,7 +90,6 @@ class RuntimeMessage(Message):
 
 class GlobalMemory:
     """全局记忆类，用于读取和呈现全局记忆文件内容。"""
-
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
@@ -153,7 +151,6 @@ class GlobalMemory:
 
 class PathMemory:
     """路径记忆类，用于检测和呈现特定路径的文件内容。"""
-
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
