@@ -17,6 +17,8 @@ from textual.widgets import Static
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.tool.tools.todolist import TodolistItem
 
+REFRESH_INTERVAL = 0.05
+
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
 ]
@@ -122,7 +124,7 @@ class RainbowAsciiArt(Static):
 
     def on_mount(self) -> None:
         """组件挂载时启动动画"""
-        self.set_interval(0.1, self._update_animation)
+        self.set_interval(REFRESH_INTERVAL, self._update_animation)
 
     def _update_animation(self) -> None:
         """更新动画时间索引并重新渲染"""
@@ -301,11 +303,12 @@ class ToolCallWidget(Static):
 
         self.border_title = "tool call"
 
-    def stop(self) -> None:
+    def finish_streaming(self) -> None:
         """停止组件的timer"""
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
+        self.update_display()
 
     def feed_string(self, new_content: str):
         try:
@@ -321,7 +324,7 @@ class ToolCallWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.timer = self.set_interval(0.1, self.update_display)
+        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
         try:
             self.parser.feed_string(self.json_str)
@@ -493,13 +496,14 @@ class ReasoningContentWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
-        self.timer = self.set_interval(0.1, self.update_display)
+        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
-    def stop(self) -> None:
+    def finish_streaming(self) -> None:
         """停止组件的timer"""
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
+        self.update_display()
 
     def update_display(self) -> None:
         """更新思考消息显示"""
@@ -556,13 +560,12 @@ class NormalContentWidget(Static):
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
-    def stop(self) -> None:
-        """停止组件的timer，如果内容为空则unmount自己"""
+    def finish_streaming(self) -> None:
+        """停止组件的timer"""
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
-        if not self.content_str.strip():
-            self.remove()
+        self.update_display()
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -572,7 +575,7 @@ class NormalContentWidget(Static):
         """组件挂载时开始显示"""
         self._content_static = Static("")
         self.mount(self._content_static)
-        self.timer = self.set_interval(0.1, self.update_display)
+        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
@@ -607,22 +610,12 @@ class MessageWidget(Static):
     def update_display(self):
         self.append_content("")
 
-    def stop(self) -> None:
+    def finish_streaming(self) -> None:
         """停止组件的timer"""
-        stoppable_types = (ToolCallWidget, NormalContentWidget, ReasoningContentWidget)
-
-        if self.current_widget and isinstance(self.current_widget, stoppable_types):
-            timer = self.current_widget.timer
-            if timer:
-                timer.stop()
-                self.current_widget.timer = None
-
-        for widget in self.children:
-            if isinstance(widget, stoppable_types):
-                timer = widget.timer
-                if timer:
-                    timer.stop()
-                    widget.timer = None
+        if self.current_widget and isinstance(
+            self.current_widget, (ToolCallWidget, NormalContentWidget)
+        ):
+            self.current_widget.finish_streaming()
 
     def stop_old_widget(self, old_widget: ToolCallWidget | NormalContentWidget):
         def stop_timer():

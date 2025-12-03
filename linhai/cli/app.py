@@ -165,7 +165,7 @@ class CLIApp(App):
                     isinstance(current_message, ReasoningContentWidget) != is_reasoning
                 ):
                     current_message.update_display()
-                    current_message.stop()
+                    current_message.finish_streaming()
                     current_message = None
 
                 container = self.query_one("#chat-container")
@@ -207,7 +207,7 @@ class CLIApp(App):
 
                 if current_message:
                     current_message.update_display()
-                    current_message.stop()
+                    current_message.finish_streaming()
                 current_message = None
             else:
                 raise RuntimeError(
@@ -519,10 +519,10 @@ class CLIApp(App):
             self.agent_task.cancel()
 
         for message in self.messages:
-            message.stop()
+            message.finish_streaming()
 
         for message in self.subagent_current_messages.values():
-            message.stop()
+            message.finish_streaming()
 
         close_all_terminals()
 
