@@ -73,8 +73,8 @@ class ClarificationManager:
         if from_subagent not in self.subagent_request_count:
             self.subagent_request_count[from_subagent] = 0
 
-        if self.subagent_request_count[from_subagent] >= 2:
-            return "请求澄清超过2次，禁止请求！"
+        if self.subagent_request_count[from_subagent] >= 1:
+            return "请求澄清超过1次，禁止请求！"
 
         self.subagent_request_count[from_subagent] += 1
         await self.add_clarification(clarification_id, question, from_subagent)
@@ -106,8 +106,8 @@ class ClarificationManager:
         time_since_creation = datetime.now() - clarification["created_at"]
         if time_since_creation < timedelta(minutes=2):
             raise ValueError(
-                "新的clarification在两分钟内禁止回答。你需要注意prompt中的要求，先完成相关任务，再回答。"
-                "如果确实要回答，就使用sleep工具等待两分钟后再回答。"
+                "新的clarification在两分钟内禁止回答。你需要注先完成相关任务，再回答。"
+                "如果确实除了回答没有其他事情可做，就使用sleep工具等待两分钟后再回答。"
             )
 
         clarification["answered"] = True
