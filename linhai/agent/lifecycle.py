@@ -22,7 +22,6 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-
 BeforeMessageGenerationCallback: TypeAlias = Callable[
     [
         bool,
@@ -120,14 +119,13 @@ class Lifecycle:
             WaitingUserPlugin,
             WrongEndPlugin,
             PromptFastAgentPlugin,
+            SlowStartPlugin,
             WeirdTokenPlugin,
-            BadMultiToolCall,
             EndThinkPlugin,
             OnlyReasoningPlugin,
             ToolCallInReasoningPlugin,
             PreventToolOutputPlugin,
             SingleToolCallReminderPlugin,
-            ClarificationCheckPlugin,
             JsonCodeBlockPlugin,
             RuntimeImitationPlugin,
             DuplicateFileReadPlugin,
@@ -138,14 +136,13 @@ class Lifecycle:
             WaitingUserPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
             PromptFastAgentPlugin(self.group_chat),
+            SlowStartPlugin(self.group_chat),
             WeirdTokenPlugin(self.group_chat),
-            BadMultiToolCall(self.group_chat),
             EndThinkPlugin(self.group_chat),
             OnlyReasoningPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             PreventToolOutputPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
-            ClarificationCheckPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),
             RuntimeImitationPlugin(self.group_chat),
             DuplicateFileReadPlugin(self.group_chat),

@@ -58,7 +58,6 @@ class Agent:
         self.last_token_usage = None
         self.current_enable_compress = True
         self.soft_compress_triggered = False
-        self.large_messages = {}
 
         self.compress_tool_called_in_last_response = False
         self.current_disable_waiting_user_warning = False
@@ -202,10 +201,14 @@ class Agent:
         if not self.compress_tool_called_in_last_response and threshold_info:
             self.message_processor.add_soft_threshold_notification(
                 threshold_info,
-                self.large_messages,
+                self.message_processor.large_messages,
                 self.compress_tool_called_in_last_response,
             )
-        if self.last_token_usage and threshold_info and not self.compress_tool_called_in_last_response:
+        if (
+            self.last_token_usage
+            and threshold_info
+            and not self.compress_tool_called_in_last_response
+        ):
             _soft, hard, _used, _remaining, _taken = threshold_info
             if self.last_token_usage and self.last_token_usage > hard:
                 await compress_history_range(self)

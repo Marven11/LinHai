@@ -126,7 +126,8 @@ class AgentToolcall:
 
         @dummy_toolset.register_tool(
             name="mark_messages_as_garbage",
-            desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。",
+            desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
+            "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记",
             args={
                 "ids": ToolArgInfo(desc="要标记为垃圾的消息的ID", type="list[str]"),
             },
@@ -137,7 +138,7 @@ class AgentToolcall:
 
         @dummy_toolset.register_tool(
             name="message_garbage_clean",
-            desc="清理垃圾消息。在红灯时：如果有至少10条垃圾消息则引导agent调用此工具，否则引导调用compress_history_range",
+            desc="清理已经标记的垃圾消息",
             args={},
             required_args=[],
         )
@@ -283,7 +284,7 @@ class AgentToolcall:
         tool_result_content = str(tool_result)
         if len(tool_result_content) > 3000:
             message_id = generate_id("largemessage")
-            self.agent.large_messages[message_id] = tool_result
+            self.agent.message_processor.large_messages[message_id] = tool_result
             self.agent.message_processor.append_message(
                 RuntimeMessage(
                     f"为工具 {tool_call.function_name} 的消息分配了ID: {message_id}。"
