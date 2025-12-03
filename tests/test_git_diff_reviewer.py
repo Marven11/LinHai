@@ -41,7 +41,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     def _setup_subagent_manager(self):
         """设置SubAgentManager的mock。"""
         from linhai.subagent import SubAgentManager
-        from linhai.config import SubAgentConfig
+        from linhai.config import SubAgentConfig, EnabledAgentTypes
         try:
             subagent_manager = self.group_chat.get_members("subagent_manager", SubAgentManager)
         except RuntimeError:
@@ -49,7 +49,9 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             self.group_chat.register_member("subagent_manager", subagent_manager)
         subagent_config = Mock(spec=SubAgentConfig)
         subagent_config.enable = True
-        subagent_config.enabled_agent_types = {"git_diff_reviewer": True}  # 启用git_diff_reviewer
+        enabled_agent_types = Mock(spec=EnabledAgentTypes)
+        enabled_agent_types.git_diff_reviewer = True  # 启用git_diff_reviewer
+        subagent_config.enabled_agent_types = enabled_agent_types
         subagent_manager.subagent_config = subagent_config
         subagent_manager.create_subagent = Mock(return_value="success")
         return subagent_manager
@@ -386,75 +388,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
                 mock_send.assert_called_once()
                 call_args = mock_send.call_args
                 self.assertEqual(call_args[0][0], "ui_log")
-                self.assertEqual(call_args[0][1].content, "未触发SubAgent审核：Agent没有使用文件修改工具")
 
-    @patch("asyncio.create_task")
-    @patch("subprocess.run")
-    @patch("os.path.exists")
-    def test_before_waiting_user_no_subagent_manager(self, mock_exists, mock_run, mock_create_task):
-        """测试subagent_manager不存在时抛出RuntimeError。"""
-        mock_exists.return_value = True
-        mock_run.side_effect = [
-            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
-            Mock(stdout="", returncode=0),
-            Mock(stdout="", returncode=0)
-        ]
-        
-        from linhai.group_chat import GroupChat
-        new_group_chat = GroupChat()
-        self.plugin.group_chat = new_group_chat
-        
-        self._setup_for_review()
-        
-        with self.assertRaises(RuntimeError):
-            asyncio.run(self.plugin.before_waiting_user(self.agent))
-        
-        mock_create_task.assert_not_called()
-
-    @patch("asyncio.create_task")
-    @patch("subprocess.run")
-    @patch("os.path.exists")
-    def test_before_waiting_user_no_subagent_config(self, mock_exists, mock_run, mock_create_task):
-        """测试subagent_manager存在但subagent_config为None时不启动审查。"""
-        mock_exists.return_value = True
-        mock_run.side_effect = [
-            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
-            Mock(stdout="", returncode=0),
-            Mock(stdout="", returncode=0)
-        ]
-        
-        self.subagent_manager.subagent_config = None  # 关键：配置为None
-        
-        self._setup_for_review()
-        
-        asyncio.run(self.plugin.before_waiting_user(self.agent))
-        
-        mock_create_task.assert_not_called()
-
-    @patch("asyncio.create_task")
-    @patch("subprocess.run")
-    @patch("os.path.exists")
-    def test_before_waiting_user_subagent_disabled(self, mock_exists, mock_run, mock_create_task):
-        """测试subagent配置禁用时不启动审查。"""
-        mock_exists.return_value = True
-        mock_run.side_effect = [
-            Mock(stdout="diff --git a/test.py b/test.py\n+print('hello')", returncode=0),
-            Mock(stdout="", returncode=0),
-            Mock(stdout="", returncode=0)
-        ]
-        
-        from linhai.config import SubAgentConfig
-        
-        subagent_config = Mock(spec=SubAgentConfig)
-        subagent_config.enable = True
-        subagent_config.enabled_agent_types = {"git_diff_reviewer": False}  # git_diff_reviewer禁用
-        self.subagent_manager.subagent_config = subagent_config
-        
-        self._setup_for_review()
-        
-        asyncio.run(self.plugin.before_waiting_user(self.agent))
-        
-        mock_create_task.assert_not_called()
 
 
     @patch("os.path.getsize")

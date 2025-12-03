@@ -149,6 +149,68 @@ class GlobalMemory:
         return cls(filepath=Path(data["filepath"]))
 
 
+class CodeStyleMessage:
+    """代码风格要求消息类，用于读取和呈现代码风格要求文件内容。"""
+
+    def __init__(self, filepath: Path):
+        self.filepath = filepath
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """
+        将代码风格要求转换为LLM消息格式。
+
+        返回:
+            LanguageModelMessage: 包含代码风格要求内容的系统消息
+        """
+        try:
+            content = self.filepath.read_text()
+            return {
+                "role": "user",
+                "name": "code-style",
+                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<code_style>>",
+            }
+        except FileNotFoundError:
+            return {
+                "role": "user",
+                "name": "code-style",
+                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>代码风格文件不存在或已被移动/删除<<error>>\n<<code_style>>",
+            }
+        except (IOError, OSError) as e:
+            return {
+                "role": "user",
+                "name": "code-style",
+                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<code_style>>",
+            }
+
+    def to_json(self) -> str:
+        """
+        将代码风格要求对象序列化为JSON字符串。
+
+        返回:
+            str: 包含文件路径的JSON字符串
+        """
+        data = {"filepath": str(self.filepath)}
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):
+        """
+        从JSON字符串反序列化代码风格要求对象。
+
+        参数:
+            json_str: JSON格式的字符串
+            group_chat: GroupChat实例（为接口兼容性保留）
+
+        返回:
+            CodeStyleMessage: 反序列化的代码风格要求对象
+        """
+        del group_chat  # 未使用，但为接口兼容性保留
+        data = json.loads(json_str)
+        return cls(filepath=Path(data["filepath"]))
+
+
 class PathMemory:
     """路径记忆类，用于检测和呈现特定路径的文件内容。"""
 

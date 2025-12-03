@@ -72,14 +72,19 @@ class TokenManager:
         token_limit = llm_instance.get_token_limit()
 
         message_count = len(agent.message_processor.messages)
+        garbage_count = len(agent.message_processor.garbage_message_ids)
 
         if use_nerd_font:
             msg_piece = f"\uf27a {message_count}"
+            if garbage_count > 0:
+                msg_piece += f" (\uea81 {garbage_count})"
             cache_symbol = " \uf49b "
             in_symbol = "\uf063 "
             out_symbol = "\uf062 "
         else:
             msg_piece = f"{message_count} msg"
+            if garbage_count > 0:
+                msg_piece += f" ({garbage_count} marked)"
             cache_symbol = " cached"
             in_symbol = " in "
             out_symbol = " out "

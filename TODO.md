@@ -2,11 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构subagent
+- [x] 重构subagent
   - 现在git diff reviewer插件通过group chat获得subagent的配置，只检查自己是否被启用，非常奇怪
   - 只需要保证没有被启用时不注册git diff reviewer就行
   - 记得检查unittest
-- [ ] 添加--code-style选项
+- [x] 添加--code-style选项
   - --code-style选项用来指定对应的code style markdown文件，包含一系列代码风格要求，内容参考当前项目的./CODE_REQUIREMENTS.md文件
   - 对agent消息的影响
     - 在agent启动时将对应的文件内容以message的形式插入
@@ -15,7 +15,7 @@
     - 重构git diff reviewer，在没有指定这个选项时不启动subagent，并弹出CLI消息提示为什么不启动
     - 删除默认的代码规范要求
     - 你需要在linhai/main.py中将args注册到group chat中让git diff reviewer获取
-- [ ] 在CLI底栏消息数量旁边使用括号标明被标记为垃圾的消息数量
+- [x] 在CLI底栏消息数量旁边使用括号标明被标记为垃圾的消息数量
   - 样式`xxx msg (xx marked) | in .....`
   - 开启nerd fonts时使用图标\uea81代替单词marked
 

@@ -25,7 +25,10 @@ def run_tests():
 
 
 async def _create_agent_from_config(
-    group_chat: GroupChat, config, llm_name: str | None = None
+    group_chat: GroupChat,
+    config,
+    llm_name: str | None = None,
+    code_style_path: Path | None = None,
 ):
     """从配置对象创建Agent
 
@@ -33,13 +36,16 @@ async def _create_agent_from_config(
         group_chat: GroupChat实例
         config: 配置对象
         llm_name: 指定的LLM名称（可选）
+        code_style_path: 代码风格要求文件路径（可选）
 
     Returns:
         Agent实例
     """
     from linhai.agent.create import create_agent_from_config
 
-    return await create_agent_from_config(group_chat, config, llm_name)
+    return await create_agent_from_config(
+        group_chat, config, llm_name, code_style_path=code_style_path
+    )
 
 
 async def run(args, init_messages: list[str] | None):
@@ -47,10 +53,13 @@ async def run(args, init_messages: list[str] | None):
     from linhai.config import load_config
 
     group_chat = GroupChat()
+    group_chat.register_member("cli_args", args)
 
     config = load_config(args.config.expanduser())
 
-    _agent = await _create_agent_from_config(group_chat, config, args.llm)
+    _agent = await _create_agent_from_config(
+        group_chat, config, args.llm, code_style_path=args.code_style
+    )
 
     app = CLIApp(
         group_chat=group_chat,
@@ -80,6 +89,11 @@ def main():
     )
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
+    parser.add_argument(
+        "--code-style",
+        type=Path,
+        help="代码风格要求文件路径，包含一系列代码风格要求，如./CODE_REQUIREMENTS.md",
+    )
     args = parser.parse_args()
 
     init_messages = []

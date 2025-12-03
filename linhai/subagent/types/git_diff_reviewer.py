@@ -1,7 +1,7 @@
 """Git diff审查SubAgent类型实现，包含专用插件。"""
 
 import asyncio
-
+import argparse
 import os
 import subprocess
 from typing import TYPE_CHECKING
@@ -18,39 +18,6 @@ from .prompts import GIT_DIFF_REVIEWER_PROMPT
 if TYPE_CHECKING:
     import linhai.agent
 
-DEFAULT_CODE_STYLE = """
-以下问题，严重程度已标明：
-
-- 非常严重：没有实现用户的所有需求
-- 非常严重：画蛇添足地加上了多余的实现
-- 问题较大：只有玩具级、示例级的实现，实现的功能不能 cover 需求
-- 问题较大：代码实现过于简陋
-- 问题较大：基于 if 的防御性编程和不必要的前向兼容
-  - 一般不检查意料外的情况
-  - 遵循 fail fast: 如果出现意料外的情况时代码不会直接崩溃，则需要在前面使用 assert
-- 问题较大：根据unittest修改实现，导致unittest测试的行为和实际的行为不一致
-  - 例如：使用if判断是否处于unittest环境、为unittest添加对应的参数/功能
-  - 例外：根据unittest找到实现的漏洞并修复
-- 存在问题：存在单行注释
-  - 禁止用注释说明“是什么”
-  - 例外：说明“为什么”的注释
-  - 例外：pylint注释等给自动化程序看的注释
-- 存在问题：debug时创建的临时文件没有删除
-- 存在问题：代码风格存在以下风格问题：
-  - try catch后函数继续运行
-    - 例外: 无限重试
-  - try catch后返回不当默认值
-  - **非常常见**: import 位置错误
-  - **非常常见**: 代码嵌套过深、代码块过大
-  - **非常常见**: 滥用 hasattr 和 getattr
-  - 类型标记存在问题：
-    - 必须标记list/dict等容器类型的item类型
-      - 对于复杂的dict必须使用TypedDict或Pydantic等正确标注每个value的类型
-    - 禁止使用Any
-  - 多余副作用：存在满足以下两点的，明显可以重写的函数
-    - 返回None
-    - 通过副作用改变外部状态
-"""
 
 
 class GitDiffReviewerSubAgent(SubAgent):
@@ -237,27 +204,6 @@ class GitDiffReviewPlugin(Plugin):
             "subagent_manager", SubAgentManager
         )
 
-        subagent_config = subagent_manager.subagent_config
-        if subagent_config is None:
-            return
-        if not subagent_config.enable:
-            return
-
-        enabled_agent_types = subagent_config.enabled_agent_types
-        if enabled_agent_types is None:
-            return
-
-        git_diff_reviewer_enabled = False
-        if isinstance(enabled_agent_types, dict):
-            git_diff_reviewer_enabled = enabled_agent_types.get(
-                "git_diff_reviewer", False
-            )
-        else:
-            git_diff_reviewer_enabled = enabled_agent_types.git_diff_reviewer
-
-        if not git_diff_reviewer_enabled:
-            return
-
         git_diff = self._get_git_diff()
         if git_diff is None:
             return
@@ -313,13 +259,25 @@ class GitDiffReviewPlugin(Plugin):
                 f"{item['id']}: {item['content']}" for item in todolist_items
             )
 
+        args = self.group_chat.get_members("cli_args", argparse.Namespace)
+        code_style_content = ""
+        if args.code_style and args.code_style.exists():
+            code_style_content = args.code_style.read_text()
+        else:
+            no_code_style_msg = CliRuntimeNotice(
+                level="WARNING",
+                content="未启动SubAgent审核：未指定有效的代码风格要求文件，请使用--code-style选项指定代码风格要求文件",
+            )
+            await self.group_chat.send_if_exists("ui_log", no_code_style_msg)
+            return
+
         task_message = f"""# Git Diff审查任务
 
 请审查以下git diff内容，检查代码变更是否符合要求：
 
 code style: ---
 
-{DEFAULT_CODE_STYLE}
+{code_style_content}
 
 diff: ---
 

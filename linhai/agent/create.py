@@ -30,6 +30,7 @@ async def create_agent_from_config(
     config: Config,
     llm_name: str | None = None,
     config_basedir: Path | None = None,
+    code_style_path: Path | None = None,
 ):
     """创建Agent实例（从配置对象）
 
@@ -76,6 +77,7 @@ async def create_agent_from_config(
         group_chat=group_chat,
         system_prompt=agent_context["system_prompt"],
         memory_file_path=memory_file_path,
+        code_style_path=code_style_path,
     )
 
     agent = Agent(
@@ -206,6 +208,7 @@ async def _create_init_messages(
     group_chat: GroupChat,
     system_prompt: str,
     memory_file_path: Path | None = None,
+    code_style_path: Path | None = None,
 ) -> list[Message]:
     """创建初始化消息列表
 
@@ -213,6 +216,7 @@ async def _create_init_messages(
         group_chat: GroupChat实例
         system_prompt: 系统提示语
         memory_file_path: 记忆文件路径（可选）
+        code_style_path: 代码风格要求文件路径（可选）
 
     Returns:
         初始化消息列表
@@ -230,6 +234,11 @@ async def _create_init_messages(
         else Path("~/.config/linhai/LINHAI.md").expanduser()
     )
     init_messages.append(GlobalMemory(user_global_memory))
+
+    if code_style_path:
+        from .base import CodeStyleMessage
+
+        init_messages.append(CodeStyleMessage(code_style_path))
 
     project_memory_filepaths = [
         Path("./LINHAI.md").absolute(),
