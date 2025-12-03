@@ -51,12 +51,10 @@ class SystemMessage:
     def __init__(
         self,
         template: str,
-        current_time: str,
         group_chat: "linhai.group_chat.GroupChat",
     ):
         """初始化系统消息。"""
         self.template = template
-        self.current_time = current_time
         self.group_chat = group_chat
 
     def to_llm_message(self) -> LanguageModelMessage:
@@ -71,7 +69,7 @@ class SystemMessage:
                 ).get_tools_info(),
                 ensure_ascii=False,
             ),
-        ).replace("{|CURRENT_TIME|}", self.current_time)
+        )
         return cast(LanguageModelMessage, {"role": "system", "content": system_prompt})
 
     def __repr__(self) -> str:
@@ -81,7 +79,7 @@ class SystemMessage:
     def to_json(self) -> str:
 
         return json.dumps(
-            {"template": self.template, "current_time": self.current_time}
+            {"template": self.template}
         )
 
     @classmethod
@@ -91,7 +89,6 @@ class SystemMessage:
 
         return cls(
             template=data["template"],
-            current_time=data["current_time"],
             group_chat=group_chat,
         )
 

@@ -31,7 +31,6 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         init_messages = [
             SystemMessage(
                 template="System message",
-                current_time="2025-10-26 17:00:00",
                 group_chat=self.group_chat,
             ),
             UserMessage(message="Initial message"),

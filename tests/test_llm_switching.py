@@ -49,7 +49,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         init_messages = [
             SystemMessage(
                 template="Test system prompt",
-                current_time="2025-10-26 17:00:00",
                 group_chat=self.group_chat,
             )
         ]

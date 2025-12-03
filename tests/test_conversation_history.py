@@ -39,7 +39,6 @@ class TestConversationHistory(unittest.TestCase):
         self.init_messages = [
             SystemMessage(
                 template="测试系统消息",
-                current_time="2025-10-26 17:00:00",  # 测试用固定时间
                 group_chat=self.group_chat,
             ),
             UserMessage("测试用户消息"),
@@ -77,9 +76,7 @@ class TestConversationHistory(unittest.TestCase):
         self.assertGreater(len(history_data), 0)
 
         for msg in history_data:
-            if "template" in msg:
-                self.assertIn("current_time", msg)
-            elif "role" in msg:
+            if "role" in msg:
                 self.assertIn("message", msg)
             elif "message" in msg:
                 pass  # RuntimeMessage只有message字段

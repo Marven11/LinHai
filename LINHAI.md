@@ -1,12 +1,8 @@
-- 在开始任务之前务必读取PROJECT.md的内容
 - 你的源码文件就在这个文件夹的`./linhai`文件夹中
-- 回答时避免使用markdown bullet point分小点回答，使用简洁有力的文风，不要大量使用专有名词
 - 不要使用pytest，使用Python的unittest模块来运行测试
-- 在测试代码实现时，可以使用命令：`python -m linhai --config ./config.toml -m '<message>'`，将测试结果输出到xxx.txt中并终止进程，有任何问题直接输出并终止，不要使用LINHAI_WAITING_USER等待。`但记得给足agent思考时间和运行时间，一定手动指定config目录，一定让agent输出并终止自己，否则agent会无限等待
+- 在测试代码实现时，可以在终端中使用命令：`uv run python -m linhai --config ./config.toml -m '<message>'`
 - unittest一定要放在`tests`文件夹
 - 禁止跳过unittest！每个功能都必须获得良好的测试！
-- 当用户要求为某个项目编写代码时，建议跳转到项目根目录(包含pyproject.toml等文件)，以确保后续操作在正确的项目上下文中进行。
-- 运行python命令前使用uv管理环境：使用`uv run python`或检查Python解释器路径
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/ tests/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框
 - 注意GroupChat.get_members的用法：get_members用来避免各个对象互相持有引用，不要将get_members的输出保存下来！

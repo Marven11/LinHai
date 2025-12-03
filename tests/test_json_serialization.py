@@ -21,14 +21,12 @@ class TestJsonSerialization(unittest.TestCase):
         """测试SystemMessage的序列化"""
         original = SystemMessage(
             template="这是一条系统消息",
-            current_time="2025-10-26 17:00:00",
             group_chat=self.mock_group_chat,
         )
         json_str = original.to_json()
         restored = SystemMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.template, restored.template)
-        self.assertEqual(original.current_time, restored.current_time)
 
     def test_user_message_serialization(self):
         """测试UserMessage的序列化"""

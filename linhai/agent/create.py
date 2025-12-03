@@ -118,11 +118,8 @@ async def _create_llm_instances(llm_configs: list, group_chat: GroupChat) -> lis
     
     async def notification_callback(level: Literal["INFO", "WARNING", "ERROR"], content: str) -> None:
         """发送通知到ui_log队列"""
-        try:
-            notice = CliRuntimeNotice(level=level, content=content)
-            await group_chat.send_if_exists("ui_log", notice)
-        except Exception:
-            logger.warning(f"通知发送失败: {content}")
+        notice = CliRuntimeNotice(level=level, content=content)
+        await group_chat.send_if_exists("ui_log", notice)
     
     llms = []
     for llm_config in llm_configs:
@@ -223,7 +220,6 @@ async def _create_init_messages(
     init_messages: list[Message] = [
         SystemMessage(
             template=system_prompt,
-            current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             group_chat=group_chat,
         )
     ]

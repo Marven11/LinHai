@@ -125,15 +125,6 @@ class AgentToolcall:
                 return "暂无token用量信息"
 
         @dummy_toolset.register_tool(
-            name="thanox_history",
-            desc="随机删除一半消息（不包括前5条系统消息）。调用这个工具来触发随机删除流程。",
-            args={},
-            required_args=[],
-        )
-        async def thanox_history() -> str:
-            return await self.agent.message_processor.thanox_history()
-
-        @dummy_toolset.register_tool(
             name="mark_messages_as_garbage",
             desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。",
             args={
@@ -290,7 +281,7 @@ class AgentToolcall:
         """处理工具调用结果。"""
 
         tool_result_content = str(tool_result)
-        if len(tool_result_content) > 8000:
+        if len(tool_result_content) > 3000:
             message_id = generate_id("largemessage")
             self.agent.large_messages[message_id] = tool_result
             self.agent.message_processor.append_message(

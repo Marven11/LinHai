@@ -137,7 +137,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         init_messages: list[Message] = [
             SystemMessage(
                 template="test",
-                current_time="2023-01-01 00:00:00",
                 group_chat=self.group_chat,
             )
         ]
@@ -173,7 +172,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         init_messages: list[Message] = [
             SystemMessage(
                 template="test",
-                current_time="2023-01-01 00:00:00",
                 group_chat=self.group_chat,
             )
         ]

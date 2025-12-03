@@ -205,7 +205,7 @@ class Agent:
                 self.large_messages,
                 self.compress_tool_called_in_last_response,
             )
-        if self.last_token_usage and threshold_info:
+        if self.last_token_usage and threshold_info and not self.compress_tool_called_in_last_response:
             _soft, hard, _used, _remaining, _taken = threshold_info
             if self.last_token_usage and self.last_token_usage > hard:
                 await compress_history_range(self)
