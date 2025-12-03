@@ -652,19 +652,14 @@ class RuntimeImitationPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
 
-        if (
-            isinstance(model, OpenAi)
-            and model.compatibility == "deepseek"
-            and re.match("^<<[a-z_]+>>", current_content) is not None
-        ):
-            await agent.interrupt("不要模仿tag内的输出！")
+        if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
+            return False
+
+        if matches := re.match("^<<([a-z_]+)>>", current_content) :
+            await agent.interrupt(f"不要模仿{matches.group(1)}的输出！")
             return True
 
-        if (
-            isinstance(model, OpenAi)
-            and model.compatibility == "deepseek"
-            and current_content.lstrip().startswith("<tool>{")
-        ):
+        if current_content.lstrip().startswith("<tool>{"):
             await agent.interrupt("工具调用的格式是```json toolcall不是XML!")
             return True
 
@@ -751,7 +746,10 @@ class UnnecessarySedReadPlugin(Plugin):
 
         from linhai.tool.base import ToolResultMessage
 
-        if not isinstance(tool_result, ToolResultMessage) or len(tool_result.content) >= 10000:
+        if (
+            not isinstance(tool_result, ToolResultMessage)
+            or len(tool_result.content) >= 10000
+        ):
             return None
 
         path = Path(filepath)
