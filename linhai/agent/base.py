@@ -63,9 +63,8 @@ class CompressRangeRequest(Message):
 class RuntimeMessage(Message):
     """运行时消息，用于向LLM传递运行时信息。"""
 
-    def __init__(self, message: str, source: str | None = None):
+    def __init__(self, message: str):
         self.message = message
-        self.source = source
 
     def to_llm_message(self) -> LanguageModelMessage:
         return {
@@ -76,7 +75,7 @@ class RuntimeMessage(Message):
 
     def to_json(self) -> str:
 
-        data = {"role": "user", "message": self.message, "source": self.source}
+        data = {"role": "user", "message": self.message}
         return json.dumps(data)
 
     @classmethod
@@ -85,7 +84,7 @@ class RuntimeMessage(Message):
     ):  # pylint: disable=unused-argument
 
         data = json.loads(json_str)
-        return cls(message=data["message"], source=data.get("source"))
+        return cls(message=data["message"])
 
 
 class GlobalMemory:
@@ -348,3 +347,53 @@ class FileContentMessage(Message):
         normalized_content = self._normalize_content(self.content)
         normalized_hash = hash(normalized_content)
         return hash((self._resolved_path, normalized_hash))
+
+
+class PreviousReasoningMessage(Message):
+    """之前的思考内容消息，用于提供agent最近的思考内容参考。"""
+
+    def __init__(self, reasoning_contents: list[str]):
+        self.reasoning_contents = reasoning_contents
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。
+        
+        格式：
+        <<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>
+        """
+        if not self.reasoning_contents:
+            return {
+                "role": "user",
+                "name": "previous-reasoning",
+                "content": ""
+            }
+        
+        content_parts = []
+        for reasoning_content in self.reasoning_contents:
+            content_parts.append(f"<<content>>{reasoning_content}<<content>>")
+        
+        content = (
+            f"<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>>"
+            + "".join(content_parts)
+            + "<<previous_reasoning>>"
+        )
+        return {
+            "role": "user",
+            "name": "previous-reasoning",
+            "content": content
+        }
+
+    def to_json(self) -> str:
+        """转换为JSON字符串。"""
+        data = {
+            "reasoning_contents": self.reasoning_contents
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
+        """从JSON字符串创建实例。"""
+        data = json.loads(json_str)
+        return cls(reasoning_contents=data["reasoning_contents"])

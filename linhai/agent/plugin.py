@@ -12,10 +12,10 @@ import linhai.agent as linhai_agent
 from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
-from linhai.subagent.clarification import ClarificationManager
-from .base import RuntimeMessage, WAITING_USER_MARKER
-from ..llm import Answer, OpenAi, ToolCallMessage
+from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage
+from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage
 from ..utils import CliRuntimeNotice
+from linhai.tool.base import ToolResultMessage
 
 
 JsonValue: TypeAlias = Union[
@@ -120,8 +120,6 @@ class PromptFastAgentPlugin(Plugin):
             "glm",
         ]:
             return
-
-        from linhai.llm import AssistantMessage
 
         has_previous_agent_message = any(
             isinstance(msg, AssistantMessage)
@@ -348,8 +346,10 @@ class SingleToolCallReminderPlugin(Plugin):
 
             if self.single_tool_call_count >= 2:
                 agent.message_processor.update_appending_message(
-                    f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
-                    "除开特殊原因不要每次只调用一个工具！",
+                    RuntimeMessage(
+                        f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
+                        "除开特殊原因不要每次只调用一个工具！"
+                    ),
                     source="single_tool_call_reminder",
                 )
             else:
@@ -386,7 +386,9 @@ class OnlyReasoningPlugin(Plugin):
 
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_appending_message(
-                "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！",
+                RuntimeMessage(
+                    "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
+                ),
                 source="only_reasoning",
             )
             await self.group_chat.send_if_exists(
@@ -398,6 +400,60 @@ class OnlyReasoningPlugin(Plugin):
         else:
             agent.message_processor.update_appending_message(
                 None, source="only_reasoning"
+            )
+
+    def register(self, lifecycle):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class PreviousReasoningPlugin(Plugin):
+    """提供agent最近思考内容的插件。
+    
+    在模型支持思考时将PreviousReasoningMessage插入到appending message，
+    否则移除。
+    """
+
+    async def after_message_generation(
+        self,
+        answer: Answer,
+        _full_response: str,
+        _tool_calls: List[Dict[str, JsonValue]],
+    ):
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        # 检查当前answer是否有思考内容
+        current_reasoning = answer.get_reasoning_message()
+        
+        if current_reasoning is not None:
+            # 获取agent最近的思考内容（最多三条，不包括当前的）
+            reasoning_contents = []
+            
+            # 从最新的消息开始向前找，最多找3条assistant消息的reasoning content
+            for msg in reversed(agent.message_processor.get_messages()):
+                if isinstance(msg, AssistantMessage) and msg.reasoning_message:
+                    # 跳过当前的思考内容
+                    if msg.reasoning_message == current_reasoning:
+                        continue
+                    reasoning_contents.append(msg.reasoning_message)
+                    if len(reasoning_contents) >= 3:
+                        break
+            
+            if reasoning_contents:
+                # 创建PreviousReasoningMessage并添加到appending messages
+                previous_reasoning_msg = PreviousReasoningMessage(reasoning_contents)
+                agent.message_processor.update_appending_message(
+                    previous_reasoning_msg, source="previous_reasoning"
+                )
+            else:
+                # 没有之前的思考内容，移除appending message
+                agent.message_processor.update_appending_message(
+                    None, source="previous_reasoning"
+                )
+        else:
+            # 当前没有思考内容，移除appending message
+            agent.message_processor.update_appending_message(
+                None, source="previous_reasoning"
             )
 
     def register(self, lifecycle):
@@ -478,8 +534,6 @@ class PreventToolOutputPlugin(Plugin):
     ):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         agent = self.group_chat.get_members("agent", Agent)
-
-        from linhai.llm import AssistantMessage
 
         has_previous_agent_message = any(
             isinstance(msg, AssistantMessage)
@@ -655,8 +709,6 @@ class UnnecessarySedReadPlugin(Plugin):
         filepath = tool_call.function_arguments.get("filepath")
         if not filepath:
             return None
-
-        from linhai.tool.base import ToolResultMessage
 
         if (
             not isinstance(tool_result, ToolResultMessage)

@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 在appending message中提供agent最近的思考内容
+- [x] 在appending message中提供agent最近的思考内容
   - 需要解决的问题
     - agent每次生成消息都需要重新思考，生成reasoning content, 而在agent思考结束后
   - 当前的appending message只支持RuntimeMessage，需要修改为支持任意类型的Message
