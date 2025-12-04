@@ -60,6 +60,9 @@ class TestReasoningContentWidget(unittest.TestCase):
         """Test click toggles expanded state."""
         initial_state = self.widget.is_expanded
         
+        # 模拟 update 方法以避免 Textual 上下文错误
+        self.widget.update = Mock()
+        
         self.widget.on_click()
         
         self.assertNotEqual(self.widget.is_expanded, initial_state)
@@ -78,8 +81,9 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.widget.update_display()
         
         self.assertEqual(len(update_calls), 1)
-        panel = update_calls[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
+        content = update_calls[0]
+        # 现在返回的是Text对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Text")
 
     def test_update_display_expanded(self):
         """Test display update in expanded state."""
@@ -91,8 +95,9 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.widget.update_display()
         
         self.assertEqual(len(update_calls), 1)
-        panel = update_calls[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
+        content = update_calls[0]
+        # 现在返回的是Syntax对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Syntax")
 
     def test_truncation_in_collapsed_state(self):
         """Test that collapsed state shows last two lines."""
@@ -108,14 +113,15 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.is_expanded = False
         
-        rendered_content = []
-        widget.update = Mock(side_effect=lambda x: rendered_content.append(x))
+        rendered_contents = []
+        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
         
         widget.update_display()
         
-        self.assertEqual(len(rendered_content), 1)
-        panel = rendered_content[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
+        self.assertEqual(len(rendered_contents), 1)
+        content = rendered_contents[0]
+        # 现在返回的是Text对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Text")
 
     def test_special_characters_in_collapsed_state(self):
         """Test that special characters don't cause crashes in collapsed state."""
@@ -136,7 +142,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.assertEqual(len(rendered_content), 1)
 
     def test_stop_method(self):
-        """Test that stop method stops the timer."""
+        """Test that finish_streaming method stops the timer."""
         widget = ReasoningContentWidget(
             role="assistant",
             content="test content",
@@ -145,13 +151,16 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_timer = Mock()
         widget.timer = mock_timer
         
-        widget.stop()
+        # 模拟 update 方法以避免 Textual 上下文错误
+        widget.update = Mock()
+        
+        widget.finish_streaming()
         
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
     def test_stop_method_actual_timer(self):
-        """Test stop method with actual timer behavior."""
+        """Test finish_streaming method with actual timer behavior."""
         widget = ReasoningContentWidget(
             role="assistant",
             content="test content",
@@ -161,13 +170,16 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_timer = Mock()
         widget.timer = mock_timer
         
-        widget.stop()
+        # 模拟 update 方法以避免 Textual 上下文错误
+        widget.update = Mock()
+        
+        widget.finish_streaming()
         
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
     def test_stop_method_without_timer(self):
-        """Test stop method when there is no timer."""
+        """Test finish_streaming method when there is no timer."""
         widget = ReasoningContentWidget(
             role="assistant",
             content="test content",
@@ -175,28 +187,29 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.timer = None
         
-        widget.stop()
+        # 模拟 update 方法以避免 Textual 上下文错误
+        widget.update = Mock()
+        
+        widget.finish_streaming()
         self.assertIsNone(widget.timer)
 
     def test_panel_styling(self):
-        """Test that Panel styling is correctly applied."""
+        """Test that styling is correctly applied."""
         widget = ReasoningContentWidget(
             role="assistant",
             content="test content",
             sender_name="test"
         )
         
-        rendered_panels = []
-        widget.update = Mock(side_effect=lambda x: rendered_panels.append(x))
+        rendered_contents = []
+        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
         
         widget.update_display()
         
-        self.assertEqual(len(rendered_panels), 1)
-        panel = rendered_panels[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
-        self.assertIsNotNone(panel.border_style)
-        self.assertIsNotNone(panel.title)
-        self.assertIn("test", panel.title)
+        self.assertEqual(len(rendered_contents), 1)
+        content = rendered_contents[0]
+        # 现在返回的是Text对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Text")
 
     def test_no_wrap_styling(self):
         """Test that no_wrap=True is applied in ReasoningContentWidget."""
@@ -207,14 +220,17 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.is_expanded = False
         
-        rendered_panels = []
-        widget.update = Mock(side_effect=lambda x: rendered_panels.append(x))
+        rendered_contents = []
+        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
         
         widget.update_display()
         
-        self.assertEqual(len(rendered_panels), 1)
-        panel = rendered_panels[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
+        self.assertEqual(len(rendered_contents), 1)
+        content = rendered_contents[0]
+        # 现在返回的是Text对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Text")
+        # 检查no_wrap属性
+        self.assertTrue(content.no_wrap)
         
     def test_truncated_content_no_wrap(self):
         """Test that truncated content in collapsed state has no_wrap=True."""
@@ -226,14 +242,17 @@ class TestReasoningContentWidget(unittest.TestCase):
         )
         widget.is_expanded = False
         
-        rendered_panels = []
-        widget.update = Mock(side_effect=lambda x: rendered_panels.append(x))
+        rendered_contents = []
+        widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
         
         widget.update_display()
         
-        self.assertEqual(len(rendered_panels), 1)
-        panel = rendered_panels[0]
-        self.assertEqual(panel.__class__.__name__, "Panel")
+        self.assertEqual(len(rendered_contents), 1)
+        content = rendered_contents[0]
+        # 现在返回的是Text对象，而不是Panel
+        self.assertEqual(content.__class__.__name__, "Text")
+        # 检查no_wrap属性
+        self.assertTrue(content.no_wrap)
 
 
 if __name__ == "__main__":

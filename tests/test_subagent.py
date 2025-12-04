@@ -166,13 +166,14 @@ default_llm = "test"
             self.assertEqual(clarification_manager.subagent_request_count["test-agent"], 1)
             
             result2 = await clarification_manager.request_clarification("clarification_2", "第二个问题", "test-agent")
-            self.assertIsNone(result2)  # 返回None表示成功
-            self.assertEqual(clarification_manager.subagent_request_count["test-agent"], 2)
+            self.assertIsNotNone(result2)  # 返回错误字符串表示被阻止，因为限制已改为1次
+            self.assertIn("超过1次", str(result2))
+            self.assertEqual(clarification_manager.subagent_request_count["test-agent"], 1)  # 计数不应增加
             
             result3 = await clarification_manager.request_clarification("clarification_3", "第三个问题", "test-agent")
             self.assertIsNotNone(result3)  # 返回错误字符串表示被阻止
-            self.assertIn("超过2次", str(result3))
-            self.assertEqual(clarification_manager.subagent_request_count["test-agent"], 2)  # 计数不应增加
+            self.assertIn("超过1次", str(result3))
+            self.assertEqual(clarification_manager.subagent_request_count["test-agent"], 1)  # 计数不应增加
             
             result4 = await clarification_manager.request_clarification("clarification_4", "另一个agent的问题", "other-agent")
             self.assertIsNone(result4)  # 返回None表示成功

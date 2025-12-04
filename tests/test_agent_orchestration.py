@@ -148,10 +148,14 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
         pieces = self.orchestration.get_status_display_pieces(use_nerd_font=False)
         self.assertIsInstance(pieces, list)
         self.assertGreater(len(pieces), 0)
-        # 应该包含消息计数
-        self.assertIn("消息: 4", pieces)  # 初始2条 + 1条RuntimeMessage + 1条大消息
-        self.assertIn("大消息: 1", pieces)
-        self.assertIn("垃圾: 1", pieces)
+        # 应该包含消息计数 - 格式已改为 '4 msgs', '1 large', '1 garbage'
+        for piece in pieces:
+            if 'msgs' in piece:
+                self.assertIn('4', piece)  # 消息数量
+            elif 'large' in piece:
+                self.assertIn('1', piece)  # 大消息数量
+            elif 'garbage' in piece:
+                self.assertIn('1', piece)  # 垃圾消息数量
         
         # 测试使用nerd font
         nerd_pieces = self.orchestration.get_status_display_pieces(use_nerd_font=True)

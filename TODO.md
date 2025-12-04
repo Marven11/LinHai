@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 根据ANALYSIS.md更新unittest，不要删除ANALYSIS.md
+- [x] 根据ANALYSIS.md更新unittest，不要删除ANALYSIS.md
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
