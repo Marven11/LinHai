@@ -7,6 +7,7 @@ import time
 from typing import Union
 
 from rich.markup import escape
+from rich.panel import Panel
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
@@ -507,6 +508,7 @@ class ReasoningContentWidget(Static):
 
     def update_display(self) -> None:
         """更新思考消息显示"""
+
         content_to_display = self.content_str.strip()
 
         if self.is_expanded:

@@ -37,6 +37,19 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.todolist_manager = Mock(spec=TodolistManager)
         self.todolist_manager.list_todolists = Mock(return_value=[])
         self.group_chat.register_member("todolist_manager", self.todolist_manager)
+        
+        # 注册cli_args mock
+        import argparse
+        from pathlib import Path
+        self.cli_args = Mock(spec=argparse.Namespace)
+        # 创建一个临时文件路径作为code_style
+        import tempfile
+        self.temp_code_style_file = tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False)
+        self.temp_code_style_file.write("# 代码风格要求\n")
+        self.temp_code_style_file.close()
+        # 将code_style设置为Path对象
+        self.cli_args.code_style = Path(self.temp_code_style_file.name)
+        self.group_chat.register_member("cli_args", self.cli_args)
 
     def _setup_subagent_manager(self):
         """设置SubAgentManager的mock。"""
@@ -456,3 +469,12 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def tearDown(self):
+        """清理测试环境。"""
+        import os
+        if hasattr(self, 'temp_code_style_file'):
+            try:
+                os.unlink(self.temp_code_style_file.name)
+            except (OSError, FileNotFoundError):
+                pass

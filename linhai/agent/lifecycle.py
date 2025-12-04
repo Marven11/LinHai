@@ -82,6 +82,7 @@ ToolConflictCallback: TypeAlias = Callable[
     ["Agent", ToolCallMessage, list[str]],
     Awaitable[None],
 ]
+AfterWorkingCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 
 class Lifecycle:
@@ -107,6 +108,7 @@ class Lifecycle:
         self._tool_failure_callbacks: list[ToolFailureCallback] = []
         self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
         self._tool_conflict_callbacks: list[ToolConflictCallback] = []
+        self._after_working_callbacks: list[AfterWorkingCallback] = []
 
         self._plugins = self._register_default_plugins()
 
@@ -196,6 +198,10 @@ class Lifecycle:
     def register_tool_conflict(self, callback: ToolConflictCallback):
         """注册工具冲突回调。"""
         self._tool_conflict_callbacks.append(callback)
+
+    def register_after_working(self, callback: AfterWorkingCallback):
+        """注册工作完成后回调。"""
+        self._after_working_callbacks.append(callback)
 
     async def trigger_during_message_generation(
         self, answer: Answer, current_content: str
@@ -288,3 +294,8 @@ class Lifecycle:
         """触发工具冲突事件。"""
         for callback in self._tool_conflict_callbacks:
             await callback(agent, tool_call, conflicting_tools)
+
+    async def trigger_after_working(self, agent: "Agent"):
+        """触发工作完成后事件。"""
+        for callback in self._after_working_callbacks:
+            await callback(agent)

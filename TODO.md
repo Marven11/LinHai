@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构AgentMessage，分离基础的消息管理(AgentMessage)和消息编排(AgentMessageOrchestration)
+- [x] 重构AgentMessage，分离基础的消息管理(AgentMessage)和消息编排(AgentMessageOrchestration)
   - 基础消息管理包括管理基础的messages列表和appending messages集合，处理queue消息等
     - 也负责感知什么时候消息缓存失效
     - 基础消息管理不管理什么是大消息，什么消息应该删除，也不会引导agent执行消息管理相关的行为

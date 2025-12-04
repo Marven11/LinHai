@@ -13,6 +13,7 @@ from .base import (
 )
 from .lifecycle import Lifecycle
 from .message import AgentMessage
+from .orchestration import AgentMessageOrchestration
 from .toolcall import AgentToolcall
 from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
@@ -49,7 +50,9 @@ class Agent:
 
         self.state: AgentState = "waiting_user"
 
+        self.lifecycle = Lifecycle(group_chat)
         self.message_processor = AgentMessage(group_chat, init_messages)
+        self.orchestration = AgentMessageOrchestration(group_chat, self.message_processor)
         self.toolcall_processor = AgentToolcall(self)
 
         self.last_token_usage = None
@@ -62,8 +65,6 @@ class Agent:
         self.last_threshold_state = None
 
         self.current_answer: Answer | None = None
-
-        self.lifecycle = Lifecycle(self.group_chat)
 
         self.messages = self.message_processor.get_messages()
 
@@ -194,21 +195,7 @@ class Agent:
         else:
             await self.generate_response()
 
-        threshold_info = self.get_threshold_info()
-        if not self.compress_tool_called_in_last_response and threshold_info:
-            self.message_processor.add_soft_threshold_notification(
-                threshold_info,
-                self.message_processor.large_messages,
-                self.compress_tool_called_in_last_response,
-            )
-        if (
-            self.last_token_usage
-            and threshold_info
-            and not self.compress_tool_called_in_last_response
-        ):
-            _soft, hard, _used, _remaining, _taken = threshold_info
-            if self.last_token_usage and self.last_token_usage > hard:
-                await compress_history_range(self)
+        await self.orchestration.check_and_handle_threshold(self)
 
     def is_last_message_user(self) -> bool:
         if not self.message_processor.get_messages():

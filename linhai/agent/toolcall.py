@@ -64,10 +64,9 @@ class AgentToolcall:
         return None
 
     def _register_default_toolsets(self):
-        """注册默认工具集（LLM切换、虚拟工具、工作流工具）。"""
+        """注册默认工具集（LLM切换、虚拟工具）。"""
         self._register_llm_toolset()
         self._register_dummy_toolset()
-        self._register_workflow_toolset()
 
     def _register_llm_toolset(self):
         """注册LLM切换工具集。"""
@@ -121,44 +120,12 @@ class AgentToolcall:
             else:
                 return "暂无token用量信息"
 
-        @dummy_toolset.register_tool(
-            name="mark_messages_as_garbage",
-            desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
-            "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记",
-            args={
-                "ids": ToolArgInfo(desc="要标记为垃圾的消息的ID", type="list[str]"),
-            },
-            required_args=["ids"],
-        )
-        async def mark_messages_as_garbage(ids: list[str]) -> str:
-            return self.agent.message_processor.mark_messages_as_garbage(ids)
-
-        @dummy_toolset.register_tool(
-            name="message_garbage_clean",
-            desc="清理已经标记的垃圾消息",
-            args={},
-            required_args=[],
-        )
-        async def message_garbage_clean() -> str:
-            return await self.agent.message_processor.message_garbage_clean()
-
         self.tool_manager.add_toolset(dummy_toolset)
-
-    def _register_workflow_toolset(self):
-        """注册工作流工具集（历史压缩等）。"""
-        workflow_toolset = ToolSet()
-
-        @workflow_toolset.register_tool(
-            name="compress_history_range",
-            desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
-            args={},
-            required_args=[],
-        )
-        async def compress_history_range_tool() -> str:
-            from .workflow import compress_history_range
-
-            return await compress_history_range(self.agent)
-
+        
+        message_management_toolset = self.agent.orchestration.get_message_management_toolset()
+        self.tool_manager.add_toolset(message_management_toolset)
+        
+        workflow_toolset = self.agent.orchestration.get_workflow_toolset()
         self.tool_manager.add_toolset(workflow_toolset)
 
     async def postinit(self):
@@ -277,22 +244,6 @@ class AgentToolcall:
 
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""
-
-        tool_result_content = str(tool_result)
-        if len(tool_result_content) > 3000:
-            message_id = generate_id("largemessage")
-            self.agent.message_processor.large_messages[message_id] = tool_result
-            self.agent.message_processor.append_message(
-                RuntimeMessage(
-                    f"为工具 {tool_call.function_name} 的消息分配了ID: {message_id}。"
-                    "你可以在不需要此消息时使用 mark_messages_as_garbage 工具标记此消息为垃圾以节省token。"
-                    + (
-                        "注意：这个工具输出仍然远低于限制，仍然可以正常使用此工具，不要因为工具会输出较大内容就不使用工具！"
-                        if len(tool_result_content) < 80000
-                        else ""
-                    )
-                )
-            )
 
         self.agent.message_processor.append_message(
             RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")

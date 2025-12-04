@@ -97,15 +97,16 @@ class TestConversationHistory(unittest.TestCase):
         self.assertTrue(self.history_dir.exists())
 
     @patch("pathlib.Path.home")
-    @patch("linhai.agent.message.logger")
-    def test_save_conversation_history_error_handling(self, mock_logger, mock_home):
+    def test_save_conversation_history_error_handling(self, mock_home):
         """测试保存对话历史的错误处理。"""
         mock_home.return_value = Path(self.temp_dir)
 
         with patch("builtins.open", side_effect=IOError("模拟IO错误")):
-            asyncio.run(self.agent.save_conversation_history())
-
-            mock_logger.error.assert_called()
+            # 使用assertRaises捕获RuntimeError
+            with self.assertRaises(RuntimeError) as cm:
+                asyncio.run(self.agent.save_conversation_history())
+            # 断言异常消息
+            self.assertIn("保存对话历史失败", str(cm.exception))
 
 
 if __name__ == "__main__":
