@@ -48,7 +48,7 @@ AfterToolCallCallback: TypeAlias = Callable[
     Awaitable[Optional["RuntimeMessage"]],
 ]
 
-DuringMessageGenerationCallback: TypeAlias = Callable[
+AfterTokenGenerationCallback: TypeAlias = Callable[
     [Answer, str],
     Awaitable[bool],
 ]
@@ -100,8 +100,8 @@ class Lifecycle:
         ] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
-        self._during_message_generation_callbacks: list[
-            DuringMessageGenerationCallback
+        self._after_token_generation_callbacks: list[
+            AfterTokenGenerationCallback
         ] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._tool_success_callbacks: list[ToolSuccessCallback] = []
@@ -173,11 +173,11 @@ class Lifecycle:
         """注册工具调用后的回调。"""
         self._after_tool_call_callbacks.append(callback)
 
-    def register_during_message_generation(
-        self, callback: DuringMessageGenerationCallback
+    def register_after_token_generation(
+        self, callback: AfterTokenGenerationCallback
     ):
-        """注册消息生成中的回调。"""
-        self._during_message_generation_callbacks.append(callback)
+        """注册token生成后的回调。"""
+        self._after_token_generation_callbacks.append(callback)
 
     def register_before_waiting_user(self, callback: BeforeWaitingUserCallback):
         """注册等待用户前的回调。"""
@@ -203,12 +203,12 @@ class Lifecycle:
         """注册工作完成后回调。"""
         self._after_working_callbacks.append(callback)
 
-    async def trigger_during_message_generation(
+    async def trigger_after_token_generation(
         self, answer: Answer, current_content: str
     ) -> bool:
-        """触发消息生成中的事件。"""
+        """触发token生成后的事件。"""
         should_interrupt = False
-        for callback in self._during_message_generation_callbacks:
+        for callback in self._after_token_generation_callbacks:
             result = await callback(answer, current_content)
             if result:
                 should_interrupt = True

@@ -291,7 +291,7 @@ class Agent:
 
             current_content = answer.get_current_content()
 
-            interrupted = await self.lifecycle.trigger_during_message_generation(
+            interrupted = await self.lifecycle.trigger_after_token_generation(
                 answer, current_content
             )
             if interrupted:

@@ -239,6 +239,13 @@ async def _create_init_messages(
         from .base import CodeStyleMessage
 
         init_messages.append(CodeStyleMessage(code_style_path))
+        await group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"已加载代码风格要求文件: {code_style_path}",
+            ),
+        )
 
     project_memory_filepaths = [
         Path("./LINHAI.md").absolute(),

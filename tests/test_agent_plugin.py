@@ -31,11 +31,11 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_during_message_generation.assert_called_once_with(
-            self.plugin.during_message_generation
+        lifecycle.register_after_token_generation.assert_called_once_with(
+            self.plugin.after_token_generation
         )
 
-    async def test_during_message_generation_with_chinese_end_marker(self):
+    async def test_after_token_generation_with_chinese_end_marker(self):
         """测试有中文句子结束标记的情况。"""
         current_content = """这是一些内容
 这是一行中文<｜end▁of▁thought｜><｜end▁of▁sentence｜>
@@ -47,12 +47,12 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
 
-        result = await self.plugin.during_message_generation(
+        result = await self.plugin.after_token_generation(
             self.answer, current_content
         )
 
-        self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
+        self.assertFalse(result)
+        self.agent.interrupt.assert_not_called()
         self.assertTrue(self.agent.message_processor.append_message.called)
         call_args = self.agent.message_processor.append_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
@@ -247,11 +247,11 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_during_message_generation.assert_called_once_with(
-            self.plugin.during_message_generation
+        lifecycle.register_after_token_generation.assert_called_once_with(
+            self.plugin.after_token_generation
         )
 
-    async def test_during_message_generation_with_too_many_tool_calls(self):
+    async def test_after_token_generation_with_too_many_tool_calls(self):
         """测试工具调用超过限制时使用truncate。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "minimax"
@@ -282,7 +282,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
 ```
 """
         
-        result = await self.plugin.during_message_generation(
+        result = await self.plugin.after_token_generation(
             self.answer, current_content
         )
         
@@ -320,18 +320,18 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_during_message_generation.assert_called_once_with(
-            self.plugin.during_message_generation
+        lifecycle.register_after_token_generation.assert_called_once_with(
+            self.plugin.after_token_generation
         )
 
-    async def test_during_message_generation_with_tool_output(self):
+    async def test_after_token_generation_with_tool_output(self):
         """测试检测到工具输出时使用truncate。"""
         self.agent.message_processor.get_messages.return_value = []
         
         current_content = """**tool** 返回了结果
 这是工具调用的内容"""
         
-        result = await self.plugin.during_message_generation(
+        result = await self.plugin.after_token_generation(
             self.answer, current_content
         )
         
@@ -345,14 +345,14 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer.truncate.assert_called_once()
         self.agent.interrupt.assert_not_called()
 
-    async def test_during_message_generation_without_tool_output(self):
+    async def test_after_token_generation_without_tool_output(self):
         """测试没有工具输出时不应该中断。"""
         self.agent.message_processor.get_messages.return_value = []
         
         current_content = """这是正常的回复内容
 没有工具调用的标记"""
         
-        result = await self.plugin.during_message_generation(
+        result = await self.plugin.after_token_generation(
             self.answer, current_content
         )
         
@@ -361,7 +361,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer.truncate.assert_not_called()
         self.agent.interrupt.assert_not_called()
 
-    async def test_during_message_generation_with_previous_message(self):
+    async def test_after_token_generation_with_previous_message(self):
         """测试有之前的assistant消息时不检查工具输出。"""
         self.agent.message_processor.get_messages.return_value = [
             AssistantMessage(message="previous message")
@@ -370,7 +370,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         current_content = """**tool** 返回了结果
 这是工具调用的内容"""
         
-        result = await self.plugin.during_message_generation(
+        result = await self.plugin.after_token_generation(
             self.answer, current_content
         )
         

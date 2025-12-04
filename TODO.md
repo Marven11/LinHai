@@ -2,8 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构，将during message generation callbacks更名为after token generation callbacks
-- [ ] 在使用--code-style属性指定code style时，在init_messages.append(CodeStyleMessage(code_style_path))加入message后弹出CliRuntimeNotice
+- [x] 重构，将during message generation callbacks更名为after token generation callbacks
+- [x] 在使用--code-style属性指定code style时，在init_messages.append(CodeStyleMessage(code_style_path))加入message后弹出CliRuntimeNotice
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

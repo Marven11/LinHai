@@ -95,7 +95,7 @@ class WrongEndPlugin(Plugin):
             )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
+        """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
@@ -147,7 +147,7 @@ class PromptFastAgentPlugin(Plugin):
                 RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
             )
 
-    async def during_message_generation(
+    async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         agent = self.group_chat.get_members("agent", Agent)
@@ -185,9 +185,9 @@ class PromptFastAgentPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
+        """注册before_message_generation和after_token_generation回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        lifecycle.register_after_token_generation(self.after_token_generation)
 
 
 class SlowStartPlugin(Plugin):
@@ -197,7 +197,7 @@ class SlowStartPlugin(Plugin):
         super().__init__(group_chat)
         self.enabled = True
 
-    async def during_message_generation(
+    async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
@@ -222,15 +222,15 @@ class SlowStartPlugin(Plugin):
             self.enabled = False
 
     def register(self, lifecycle):
-        """注册两个回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        """注册after_token_generation和after_message_generation回调。"""
+        lifecycle.register_after_token_generation(self.after_token_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class WeirdTokenPlugin(Plugin):
     """错误标记检查Plugin。"""
 
-    async def during_message_generation(
+    async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
@@ -260,14 +260,14 @@ class WeirdTokenPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        """注册到after_token_generation回调。"""
+        lifecycle.register_after_token_generation(self.after_token_generation)
 
 
 class EndThinkPlugin(Plugin):
     """检查输出中是否有只有'</think>'的行并打断agent。"""
 
-    async def during_message_generation(self, _answer: Answer, current_content: str):
+    async def after_token_generation(self, _answer: Answer, current_content: str):
         """检查是否有一行只有'</think>'。"""
         agent = self.group_chat.get_members("agent", Agent)
 
@@ -281,8 +281,8 @@ class EndThinkPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        """注册到after_token_generation回调。"""
+        lifecycle.register_after_token_generation(self.after_token_generation)
 
 
 class DirectoryChangePlugin(Plugin):
@@ -473,7 +473,7 @@ class PreventToolOutputPlugin(Plugin):
     并提示不要输出工具调用的内容。
     """
 
-    async def during_message_generation(
+    async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
@@ -510,8 +510,8 @@ class PreventToolOutputPlugin(Plugin):
         return False
 
     def register(self, lifecycle):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        """注册到after_token_generation回调。"""
+        lifecycle.register_after_token_generation(self.after_token_generation)
 
 
 class JsonCodeBlockPlugin(Plugin):
@@ -551,7 +551,7 @@ class JsonCodeBlockPlugin(Plugin):
 class RuntimeImitationPlugin(Plugin):
     """阻断deepseek模型模仿runtime输出的插件。"""
 
-    async def during_message_generation(
+    async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查deepseek是否在模仿runtime输出并阻断。"""
@@ -572,8 +572,8 @@ class RuntimeImitationPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到during_message_generation回调。"""
-        lifecycle.register_during_message_generation(self.during_message_generation)
+        """注册到after_token_generation回调。"""
+        lifecycle.register_after_token_generation(self.after_token_generation)
 
 
 class DuplicateFileReadPlugin(Plugin):
