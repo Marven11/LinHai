@@ -34,6 +34,10 @@
       - `<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>`
   - 在模型支持思考时将PreviousReasoningMessage插入到appending message，否则移除
     - 通过在after message generation后检测reasoning content是否为None实现
+- [ ] 重构工具系统，支持current machine
+  - 当前的run command read file等功能默认在本机上运行
+  - 在连接到ssh之后支持通过switch machine修改这些工具的目标机器
+  - 还需要提供一个list machines功能以实现管理已连接机器功能
 - [ ] terminal tab和usage tab
 - [ ] 添加假设颠覆法
 

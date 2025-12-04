@@ -240,10 +240,14 @@ class WeirdTokenPlugin(Plugin):
 
         for line in current_content.split("\n"):
             if re.search(pattern, line):
-                await agent.interrupt(
-                    "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已打断输出"
+                # 使用truncate以保留已经输出的工具调用，避免重复调用
+                agent.message_processor.append_message(
+                    RuntimeMessage(
+                        "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已截断输出"
+                    )
                 )
-                return True
+                answer.truncate()
+                return False
             if (
                 isinstance(model, OpenAi)
                 and model.compatibility == "minimax"
@@ -597,18 +601,24 @@ class DuplicateFileReadPlugin(Plugin):
         if not isinstance(tool_result, FileContentMessage):
             return None
 
-        for message in agent.message_processor.get_messages():
-            if isinstance(message, FileContentMessage) and message == tool_result:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO",
-                        content="模型重复读取相同文件，已阻止",
-                    ),
-                )
-                return RuntimeMessage(
-                    f"错误：重复读取文件{tool_result.filepath}，内容和之前完全相同，不要重复读取文件！"
-                )
+        same_file_messages = [
+            message
+            for message in agent.message_processor.get_messages()
+            if isinstance(message, FileContentMessage) and message.filepath == tool_result.filepath
+        ]
+        # 有时模型再次读取文件仅仅是为了确认文件内容是否变化
+        # 我们只在最后一条消息相同时提醒
+        if len(same_file_messages) >= 1 and same_file_messages[-1] == tool_result:
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content="模型重复读取相同文件，已阻止",
+                ),
+            )
+            return RuntimeMessage(
+                f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏"
+            )
 
         return None
 
@@ -677,9 +687,7 @@ class UnnecessarySedReadPlugin(Plugin):
                 "错误：一分钟内多次小块读取代码文件\n"
                 "违反：优先使用read_file的要求\n"
                 "后果：难以理解文件内容、生成多条消息导致重复计费\n"
-                "为什么无法省下token: 1. 最终还是需要读取所有文件内容 2. 多次发送回答会导致多次计费token\n"
-                "为什么不能提升认知：文件不完整会带来认知负担、遗漏内容导致行为出错\n"
-                "建议：优先带上行号读取整个文件！如果必须使用sed则先sleep一分钟！"
+                "建议：优先带上行号读取整个文件"
             )
         return None
 
