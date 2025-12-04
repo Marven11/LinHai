@@ -2,16 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构AgentMessage，分离基础的消息管理(AgentMessage)和消息编排(AgentMessageOrchestration)
-  - 基础消息管理包括管理基础的messages列表和appending messages集合，处理queue消息等
-    - 也负责感知什么时候消息缓存失效
-    - 基础消息管理不管理什么是大消息，什么消息应该删除，也不会引导agent执行消息管理相关的行为
-  - 消息编排包括管理大消息、引导agent删除一系列消息或执行其他管理消息的行为
-    - 包括各种消息管理工具的实现
-    - AgentMessageOrchestration需要可以自定义CLI底栏显示的“当前有多少消息”的文本，而不是由CLI负责计算
-      - CLI底栏可以分为多个piece，需要让AgentMessageOrchestration自己计算自己的piece
-  - 同时需要将其他地方包含消息编排的实现全部移动到AgentMessageOrchestration中
-  - 记得运行linhai测试
+- [ ] 重构，将during message generation callbacks更名为after token generation callbacks
+- [ ] 在使用--code-style属性指定code style时，在init_messages.append(CodeStyleMessage(code_style_path))加入message后弹出CliRuntimeNotice
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
