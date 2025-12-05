@@ -233,7 +233,7 @@ class WeirdTokenPlugin(Plugin):
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
         agent = self.group_chat.get_members("agent", Agent)
-        pattern = r"^[\u4e00-\u9fffa-zA-Z0-9.,，。！？；：《》（）【】、…]+<｜end▁of▁[a-z]+｜>"
+        pattern = r"<｜end▁of▁[a-z]+｜>"
         model = await agent.get_current_model()
 
         for line in current_content.split("\n"):
