@@ -48,8 +48,8 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         
         call_args = self.mock_agent.message_processor.update_appending_message.call_args
         warning_message = call_args[0][0]
-        self.assertIsInstance(warning_message, str)
-        self.assertIn("不要只思考，不输出", warning_message)
+        self.assertIsInstance(warning_message, RuntimeMessage)
+        self.assertIn("不要只思考，不输出", warning_message.message)
         
         ui_call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")

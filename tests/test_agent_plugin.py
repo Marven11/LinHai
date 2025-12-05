@@ -172,7 +172,8 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.plugin.single_tool_call_count, 5)
         call_args_list = self.agent.message_processor.update_appending_message.call_args_list
         last_call_args = call_args_list[-1]
-        self.assertIn("连续5次仅调用一个工具", last_call_args[0][0])
+        self.assertIsInstance(last_call_args[0][0], RuntimeMessage)
+        self.assertIn("连续5次仅调用一个工具", last_call_args[0][0].message)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
     async def test_after_message_generation_with_multiple_tool_calls(self):

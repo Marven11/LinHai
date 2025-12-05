@@ -6,6 +6,7 @@ from .components import (
     RuntimeMessageWidget,
     MessageWidget,
 )
+from .context_tab import ContextTabWidget
 from .app import CLIApp
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "AnimatedWelcomeWidget",
     "RuntimeMessageWidget",
     "MessageWidget",
+    "ContextTabWidget",
     "CLIApp",
 ]

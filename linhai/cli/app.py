@@ -34,6 +34,7 @@ from .components import (
     ReasoningContentWidget,
     FooterWidget,
 )
+from .context_tab import ContextTabWidget
 from .token_manager import TokenManager
 from .command_handler import CommandHandler
 
@@ -145,6 +146,9 @@ class CLIApp(App):
             with TabPane("SubAgent", id="subagent-tab"):
                 with VerticalScroll(id="subagent-container"):
                     yield Static("SubAgent消息将显示在这里", id="subagent-content")
+
+            with TabPane("Context", id="context-tab"):
+                yield ContextTabWidget(self.group_chat)
 
     async def watch_agent_answer_queue(self) -> None:
         """监听agent_answer队列并处理Agent回答"""
