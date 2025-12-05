@@ -3,12 +3,14 @@
 from typing import Dict, Optional
 from linhai.llm import AnswerTokenUsage
 from linhai.agent import Agent
+from linhai.group_chat import GroupChat
 
 
 class TokenManager:
     """Manager for token usage tracking and display."""
 
-    def __init__(self):
+    def __init__(self, group_chat: GroupChat):
+        group_chat.register_member("token_manager", self)
         self.current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[Dict[str, int]] = None
 

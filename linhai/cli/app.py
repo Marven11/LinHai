@@ -113,7 +113,7 @@ class CLIApp(App):
         self.output_watcher_task: Optional[asyncio.Task] = None
         self.agent_task: Optional[asyncio.Task] = None
 
-        self.token_manager = TokenManager()
+        self.token_manager = TokenManager(group_chat)
 
         self.is_user_scroll_to_end = False
 

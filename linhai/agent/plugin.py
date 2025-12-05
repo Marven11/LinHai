@@ -422,36 +422,16 @@ class PreviousReasoningPlugin(Plugin):
     ):
         agent = self.group_chat.get_members("agent", Agent)
         
-        # 检查当前answer是否有思考内容
-        current_reasoning = answer.get_reasoning_message()
-        
-        if current_reasoning is not None:
-            # 获取agent最近的思考内容（最多三条，不包括当前的）
-            reasoning_contents = []
-            
-            # 从最新的消息开始向前找，最多找3条assistant消息的reasoning content
-            for msg in reversed(agent.message_processor.get_messages()):
-                if isinstance(msg, AssistantMessage) and msg.reasoning_message:
-                    # 跳过当前的思考内容
-                    if msg.reasoning_message == current_reasoning:
-                        continue
-                    reasoning_contents.append(msg.reasoning_message)
-                    if len(reasoning_contents) >= 3:
-                        break
-            
-            if reasoning_contents:
-                # 创建PreviousReasoningMessage并添加到appending messages
-                previous_reasoning_msg = PreviousReasoningMessage(reasoning_contents)
-                agent.message_processor.update_appending_message(
-                    previous_reasoning_msg, source="previous_reasoning"
-                )
-            else:
-                # 没有之前的思考内容，移除appending message
-                agent.message_processor.update_appending_message(
-                    None, source="previous_reasoning"
-                )
+        msgs = [
+            msg.reasoning_message for msg in agent.message_processor.get_messages()
+            if isinstance(msg, AssistantMessage) and msg.reasoning_message
+        ]
+        if msgs:
+            previous_reasoning_msg = PreviousReasoningMessage(msgs[-3:])
+            agent.message_processor.update_appending_message(
+                previous_reasoning_msg, source="previous_reasoning"
+            )
         else:
-            # 当前没有思考内容，移除appending message
             agent.message_processor.update_appending_message(
                 None, source="previous_reasoning"
             )
