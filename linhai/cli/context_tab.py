@@ -25,6 +25,8 @@ else:
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage, AnswerTokenUsage
 from linhai.agent.base import RuntimeMessage
 
+reprobj = reprlib.Repr(maxstring=60)
+
 
 class MessageTypeCounts(TypedDict):
     """Type definition for message type counts."""
@@ -199,7 +201,7 @@ class ContextTabWidget(Static):
 
         # Longest message with expand/collapse support
         if max_length_msg:
-            max_content = reprlib.repr(str(max_length_msg))
+            max_content = reprobj.repr(str(max_length_msg))
             grid.add_row("最长消息:", f"{max_length} 字符")
             grid.add_row("最长内容:", f"{max_content}")
         else:
@@ -275,7 +277,7 @@ class ContextTabWidget(Static):
                     if is_garbage
                     else Text("○ 未标记", style="green")
                 )
-                preview = reprlib.repr(str(msg))[:50]
+                preview = reprobj.repr(str(msg))[:50]
                 grid.add_row(f"  {msg_id}:", f"{status} - {preview}")
                 if is_garbage:
                     marked_count += 1
@@ -297,7 +299,7 @@ class ContextTabWidget(Static):
         for i, msg in enumerate(recent_messages, 1):
             index = len(messages) - len(recent_messages) + i
             msg_type = type(msg).__name__
-            preview = reprlib.repr(str(msg))[:50]
+            preview = reprobj.repr(str(msg))[:50]
             grid.add_row(f"{index}. {msg_type}:", preview)
 
         grid.add_row("")
@@ -314,7 +316,7 @@ class ContextTabWidget(Static):
 
         for source, msg in appending_messages.items():
             msg_type = type(msg).__name__
-            preview = reprlib.repr(str(msg))[:80]  # Show more content
+            preview = reprobj.repr(str(msg))[:80]  # Show more content
             grid.add_row(f"{source} ({msg_type}):", preview)
         grid.add_row("")
 
