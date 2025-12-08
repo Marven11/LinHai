@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import Mock
-from linhai.tool.tools.todolist import TodolistManager
+from linhai.tool.general import TodolistManager, TodolistItem
 from linhai.tool.base import ToolSet, ToolArgInfo
 
 

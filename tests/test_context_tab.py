@@ -43,6 +43,9 @@ class TestContextTab(unittest.TestCase):
         
         group_chat = GroupChat()
         
+        # 避免token_manager重复注册
+        # TokenManager会在CLIApp初始化时自动注册，这里不需要手动注册
+        
         # 注册所有必需的组件
         mock_agent = Mock()
         mock_agent_message = Mock(spec=AgentMessage)
@@ -89,9 +92,13 @@ class TestContextTab(unittest.TestCase):
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
         group_chat.register_member("agent_message_orchestration", mock_orchestration)
-        group_chat.register_member("token_manager", mock_token_manager)
-        
-        app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
+        # 注意：这里不注册token_manager，因为CLIApp会创建并注册
+        # 使用patch来模拟TokenManager的创建，避免重复注册
+        with patch('linhai.cli.app.TokenManager', return_value=mock_token_manager):
+            # 直接注册token_manager到group_chat，这样ContextTabWidget就不会抛出RuntimeError
+            group_chat.register_member('token_manager', mock_token_manager)
+            
+            app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
         
         async def _run_test():
             async with app.run_test() as pilot:

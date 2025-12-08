@@ -10,6 +10,7 @@ class TokenManager:
     """Manager for token usage tracking and display."""
 
     def __init__(self, group_chat: GroupChat):
+        # 直接注册，如果重复则让代码崩溃（fail fast原则）
         group_chat.register_member("token_manager", self)
         self.current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[Dict[str, int]] = None
@@ -75,7 +76,7 @@ class TokenManager:
 
         msg_pieces = agent.orchestration.get_status_display_pieces(use_nerd_font)
         msg_piece = " | ".join(msg_pieces) if msg_pieces else ""
-        
+
         if use_nerd_font:
             cache_symbol = " \uf49b "
             in_symbol = "\uf063 "

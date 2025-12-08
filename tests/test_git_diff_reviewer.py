@@ -33,7 +33,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.subagent_manager.subagent_config = None  # 默认不启用
         self.group_chat.register_member("subagent_manager", self.subagent_manager)
         
-        from linhai.tool.tools.todolist import TodolistManager
+        from linhai.tool.general import TodolistManager
         self.todolist_manager = Mock(spec=TodolistManager)
         self.todolist_manager.list_todolists = Mock(return_value=[])
         self.group_chat.register_member("todolist_manager", self.todolist_manager)

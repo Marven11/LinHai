@@ -7,7 +7,7 @@ import os
 import asyncio
 
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.tool.tools.http import http_request
+from linhai.machine_control.master_host.http import http_request
 
 
 class TestHttpRequestTool(unittest.TestCase):

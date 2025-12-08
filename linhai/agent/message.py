@@ -155,7 +155,7 @@ class AgentMessage:
         """
         if source in self.appending_messages:
             del self.appending_messages[source]
-        
+
         if message is not None:
             self.appending_messages[source] = message
 

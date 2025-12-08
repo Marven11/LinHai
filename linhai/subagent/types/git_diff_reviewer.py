@@ -11,13 +11,12 @@ from linhai.agent.plugin import Plugin
 from linhai.llm import Answer, UserMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.main import SubAgent
-from linhai.tool.tools.todolist import TodolistManager, TodolistItem
+from linhai.tool.general import TodolistManager, TodolistItem
 from linhai.utils import CliRuntimeNotice, generate_id
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
 
 if TYPE_CHECKING:
     import linhai.agent
-
 
 
 class GitDiffReviewerSubAgent(SubAgent):

@@ -12,7 +12,6 @@ import time
 from linhai.llm import Message
 from linhai.agent.base import FileContentMessage
 from linhai.tool.base import (
-    global_tools,
     ToolArgInfo,
     ToolResultMessage,
     ToolErrorMessage,
@@ -84,24 +83,6 @@ def validate_file(file_path: Path) -> str:
     return ""
 
 
-@global_tools.register_tool(
-    name="read_file",
-    desc="读取文件。"
-    "注意 - 优先于grep/sed：在需要读取文件时优先使用此工具带上行号读取整个文件，"
-    "只有在此工具无法读取所有内容时才考虑使用sed!",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),
-    },
-    required_args=["filepath"],
-    conflict_with=[
-        "write_file",
-        "append_file",
-        "replace_file_content",
-        "modify_file_with_sed",
-        "insert_at_line",
-    ],
-)
 def read_file(
     filepath: str, show_line_numbers: bool = False
 ) -> FileContentMessage | ToolErrorMessage:
@@ -135,23 +116,6 @@ def read_file(
     return FileContentMessage(filepath=file_path.as_posix(), content=formatted_content)
 
 
-@global_tools.register_tool(
-    name="write_file",
-    desc="写入文件内容。"
-    "注意：避免输出大量重复内容！修改文件时优先使用replace_file_content或者append_file，复制文件优先使用shell指令",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "content": ToolArgInfo(desc="要写入的内容", type="str"),
-        "override": ToolArgInfo(desc="是否覆盖已有文件", type="bool"),
-    },
-    required_args=["filepath", "content"],
-    conflict_with=[
-        "read_file",
-        "list_files",
-        "get_absolute_path",
-        "run_sed_expression",
-    ],
-)
 def write_file(
     filepath: str, content: str, override: bool = False
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -181,18 +145,6 @@ def write_file(
     return ToolResultMessage(f"成功写入文件: {file_path.as_posix()!r}")
 
 
-@global_tools.register_tool(
-    name="append_file",
-    desc="追加文件内容。" "建议：在增加文件内容时优先考虑使用此工具或insert工具",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
-        "assume_empty_line": ToolArgInfo(
-            desc="是否假设文件以空行结尾，默认为true", type="bool"
-        ),
-    },
-    required_args=["filepath", "content"],
-)
 def append_file(
     filepath: str, content: str, assume_empty_line: bool = True
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -225,7 +177,7 @@ def append_file(
                 "错误：使用assume_empty_line假设原文件末尾有换行，但是原文件并没有换行，且新内容开头也没有换行。"
                 "这会导致原文件的最后一行被修改。"
                 "如果你确实需要修改原文件的最后一行，将assume_empty_line设置为false,"
-                "如果你不需要修改原文件的最后一行，在content的开头加上换行符\\n"
+                "如果你不需要修改原文件的最后一行，在content的开头加上换行符\n"
             )
         with file_path.open("a", encoding="utf-8") as f:
             f.write(content)
@@ -234,23 +186,6 @@ def append_file(
     return ToolResultMessage(f"成功写入文件: {file_path.as_posix()!r}")
 
 
-@global_tools.register_tool(
-    name="replace_file_content",
-    desc="替换文件内容中的指定字符串。"
-    "建议：在修改文件原有内容时优先使用此工具"
-    "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
-    "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "old": ToolArgInfo(desc="要替换的字符串", type="str"),
-        "new": ToolArgInfo(desc="新的字符串", type="str"),
-        "replace_times": ToolArgInfo(
-            desc="替换次数，正数代表替换次数，-1代表替换所有，默认不提供时验证旧内容只出现一次",
-            type="int",
-        ),
-    },
-    required_args=["filepath", "old", "new"],
-)
 def replace_file_content(
     filepath: str, old: str, new: str, replace_times: int | None = None
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -376,14 +311,6 @@ def get_file_info(file_path: Path) -> str:
         )
 
 
-@global_tools.register_tool(
-    name="list_files",
-    desc="列出指定文件夹中的文件(使用./表示当前文件夹)",
-    args={
-        "dirpath": ToolArgInfo(desc="文件夹路径，使用./表示当前目录", type="str"),
-    },
-    required_args=["dirpath"],
-)
 def list_files(dirpath: str) -> ToolResultMessage | ToolErrorMessage:
     """列出指定文件夹中的文件和子目录。
 
@@ -417,14 +344,6 @@ def list_files(dirpath: str) -> ToolResultMessage | ToolErrorMessage:
         return ToolErrorMessage(f"列出文件时发生错误: {exc!r}")
 
 
-@global_tools.register_tool(
-    name="get_absolute_path",
-    desc="获取路径的绝对路径",
-    args={
-        "path": ToolArgInfo(desc="相对或绝对路径", type="str"),
-    },
-    required_args=["path"],
-)
 def get_absolute_path(path: str) -> ToolResultMessage | ToolErrorMessage:
     """获取路径的绝对路径。
 
@@ -441,16 +360,9 @@ def get_absolute_path(path: str) -> ToolResultMessage | ToolErrorMessage:
         return ToolErrorMessage(f"获取绝对路径时发生错误: {exc!r}")
 
 
-@global_tools.register_tool(
-    name="run_sed_expression",
-    desc="执行sed表达式并返回输出，不修改文件",
-    args={
-        "expression": ToolArgInfo(desc="sed表达式，如: 1,1000p", type="str"),
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-    },
-    required_args=["expression", "filepath"],
-)
-def run_sed_expression(expression: str, filepath: str) -> Message:
+def run_sed_expression(
+    expression: str, filepath: str
+) -> ToolResultMessage | ToolErrorMessage:
     """执行sed表达式并返回输出。
 
     Args:
@@ -482,15 +394,6 @@ def run_sed_expression(expression: str, filepath: str) -> Message:
         return ToolErrorMessage(f"运行sed时发生错误: {exc!r}")
 
 
-@global_tools.register_tool(
-    name="modify_file_with_sed",
-    desc="使用sed表达式修改文件，支持mac和linux的区别",
-    args={
-        "expression": ToolArgInfo(desc="sed表达式", type="str"),
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-    },
-    required_args=["expression", "filepath"],
-)
 def modify_file_with_sed(
     expression: str, filepath: str
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -530,21 +433,6 @@ def modify_file_with_sed(
         return ToolErrorMessage(f"运行sed时发生错误: {exc!r}")
 
 
-@global_tools.register_tool(
-    name="insert_at_line",
-    desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。"
-    "建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。"
-    "注意：调用时需提供预期插入位置的当前行内容（不含换行符）以验证行号准确性。",
-    args={
-        "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
-        "content": ToolArgInfo(desc="要插入的内容", type="str"),
-        "expected_line_content": ToolArgInfo(
-            desc="预期插入位置的当前行内容（不含换行符）", type="str"
-        ),
-    },
-    required_args=["filepath", "line_number", "content", "expected_line_content"],
-)
 def insert_at_line(
     filepath: str, line_number: int, content: str, expected_line_content: str
 ) -> ToolResultMessage | ToolErrorMessage:

@@ -16,7 +16,15 @@ from textual.timer import Timer
 from textual.widgets import Static
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
-from linhai.tool.tools.todolist import TodolistItem
+from typing import TypedDict
+
+
+class TodolistItem(TypedDict):
+    """Todolist项的类型定义。"""
+
+    id: str
+    content: str
+
 
 REFRESH_INTERVAL = 0.05
 

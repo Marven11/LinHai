@@ -1,26 +1,12 @@
-"""命令执行工具模块，提供命令执行功能。"""
+"""命令执行工具模块，提供命令执行和目录切换功能。"""
 
-from datetime import datetime
 import asyncio
 import os
 import platform
 import signal
 import subprocess
-from linhai.tool.base import (
-    global_tools,
-    ToolArgInfo,
-    ToolResultMessage,
-    ToolErrorMessage,
-)
 
-
-def get_current_shell() -> str:
-    """获取当前shell路径"""
-    system = platform.system()
-    if system == "Windows":
-        return os.environ.get("COMSPEC", "cmd.exe")
-    else:
-        return os.environ.get("SHELL", "/bin/sh")
+from linhai.tool.base import ToolResultMessage, ToolErrorMessage
 
 
 async def execute_command(
@@ -33,12 +19,12 @@ async def execute_command(
         timeout: 超时时间（秒），默认30秒
 
     Returns:
-        命令执行的输出结果，包含returncode、stdout和stderr
+         命令执行的输出结果，包含returncode、stdout和stderr
     """
     if timeout > 3600:
         return ToolErrorMessage("Timeout value exceeds maximum limit of 3600 seconds")
     try:
-
+        # 防止用户使用EDITOR环境变量打开编辑器
         env = os.environ.copy()
         msg = "using env EDITOR failed, please use other tools."
         env["EDITOR"] = f"sh -c 'echo {msg!r}; exit 1'"
@@ -89,17 +75,6 @@ Stderr:
         return ToolErrorMessage(f"Command failed with error: {str(e)}")
 
 
-@global_tools.register_tool(
-    name="run_command",
-    desc=f"执行系统命令。当前系统：{platform.system()}，当前shell：{get_current_shell()}。可以执行shell命令，但使用时务必谨慎，避免损坏用户电脑。",
-    args={
-        "command": ToolArgInfo(
-            desc="要执行的命令字符串，如 'ls | grep test'", type="str"
-        ),
-        "timeout": ToolArgInfo(desc="超时时间（秒），默认30秒", type="float"),
-    },
-    required_args=["command"],
-)
 async def run_command(
     command: str, timeout: float = 30.0
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -110,17 +85,11 @@ async def run_command(
         timeout: 超时时间（秒），默认30秒
 
     Returns:
-        命令执行的输出结果
+         命令执行的输出结果
     """
     return await execute_command(command, timeout)
 
 
-@global_tools.register_tool(
-    name="change_directory",
-    desc="改变当前工作目录",
-    args={"directory": ToolArgInfo(desc="目标目录的路径", type="str")},
-    required_args=["directory"],
-)
 def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
     """改变当前工作目录
 
@@ -128,24 +97,10 @@ def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
         directory: 目标目录的路径
 
     Returns:
-        成功消息或错误信息
+         成功消息或错误信息
     """
     try:
         os.chdir(directory)
         return ToolResultMessage(f"Changed directory to: {directory}")
     except OSError as e:
         return ToolErrorMessage(f"Error changing directory: {str(e)}")
-
-
-@global_tools.register_tool(
-    name="sleep",
-    desc="睡眠X秒，返回开始和结束时间",
-    args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
-    required_args=["seconds"],
-)
-async def sleep_tool(seconds: float) -> ToolResultMessage:
-    start = datetime.now()
-    await asyncio.sleep(seconds)
-    return ToolResultMessage(
-        f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )

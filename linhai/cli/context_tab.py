@@ -28,6 +28,7 @@ from linhai.agent.base import RuntimeMessage
 
 class MessageTypeCounts(TypedDict):
     """Type definition for message type counts."""
+
     user: int
     assistant: int
     system: int
@@ -69,10 +70,10 @@ class ContextTabWidget(Static):
         self, messages: list[Message]
     ) -> tuple[MessageTypeCounts, int, int, Optional[Message]]:
         """Count message types and calculate statistics.
-        
+
         Args:
             messages: List of messages
-            
+
         Returns:
             Tuple of (type_counts, total_chars, max_length, max_length_msg)
         """
@@ -83,13 +84,13 @@ class ContextTabWidget(Static):
             (SystemMessage, "system"),
             (RuntimeMessage, "runtime"),
         ]
-        
+
         type_counts: MessageTypeCounts = {
             "user": 0,
             "assistant": 0,
             "system": 0,
             "runtime": 0,
-            "other": 0
+            "other": 0,
         }
         total_chars = 0
         max_length_msg: Optional[Message] = None
@@ -102,12 +103,15 @@ class ContextTabWidget(Static):
             if length > max_length:
                 max_length = length
                 max_length_msg = msg
-            
+
             # Simplified type checking using next() with generator
             matching_type = next(
-                (type_key for msg_class, type_key in type_mapping 
-                 if isinstance(msg, msg_class)),
-                None
+                (
+                    type_key
+                    for msg_class, type_key in type_mapping
+                    if isinstance(msg, msg_class)
+                ),
+                None,
             )
             if matching_type:
                 type_counts[matching_type] += 1
@@ -118,10 +122,10 @@ class ContextTabWidget(Static):
 
     def _create_progress_bar(self, percentage: float) -> str:
         """Create a text progress bar using block characters.
-        
+
         Args:
             percentage: Percentage value (0-100)
-            
+
         Returns:
             String representation of progress bar
         """
@@ -130,47 +134,46 @@ class ContextTabWidget(Static):
         bar_width = 30
         filled_width = int(bar_width * percentage / 100)
         empty_width = bar_width - filled_width
-        
+
         # Use block characters for better visual
         filled = "█" * filled_width
         empty = "░" * empty_width
-        
+
         return f"[{filled}{empty}] {percentage:.1f}%"
 
     def _get_token_cache_info(self, used: int) -> tuple[int, float]:
         """Get cached token information from token manager.
-        
+
         Args:
             used: Total tokens used (input + output)
-            
+
         Returns:
             Tuple of (cached_tokens: int, cache_percentage: float)
         """
-        # Fail fast: token manager must exist
-        # If token manager is not registered, it's a programming error
         if not self.group_chat.has_member("token_manager"):
             raise RuntimeError("token_manager should be registered in group_chat")
-        
+
         from linhai.cli.token_manager import TokenManager
+
         token_manager = self.group_chat.get_members("token_manager", TokenManager)
-        
+
         # Fail fast: token_usage must be AnswerTokenUsage or None
         token_usage = token_manager.current_token_usage
         if token_usage is None:
             return 0, 0.0
-        
+
         # Fail fast: if not None, must be AnswerTokenUsage
         if not isinstance(token_usage, AnswerTokenUsage):
             raise RuntimeError(
                 f"token_manager.current_token_usage should be AnswerTokenUsage or None, got {type(token_usage)}"
             )
-        
+
         cached = token_usage.cached_input_tokens or 0
         if cached > 0 and used > 0:
             return cached, (cached / used * 100)
         elif cached > 0:
             return cached, 0.0
-        
+
         return 0, 0.0
 
     def _build_message_statistics_section(
@@ -179,13 +182,13 @@ class ContextTabWidget(Static):
         """Build message statistics section."""
         grid.add_row(Text("消息统计", style="bold yellow"))
         grid.add_row("")
-        
-        type_counts, total_chars, max_length, max_length_msg = self._count_message_types(
-            messages
+
+        type_counts, total_chars, max_length, max_length_msg = (
+            self._count_message_types(messages)
         )
 
         avg_length = total_chars / message_count if message_count > 0 else 0
-        
+
         grid.add_row("总消息数:", f"{message_count}")
         grid.add_row("用户消息:", f"{type_counts['user']}")
         grid.add_row("助手消息:", f"{type_counts['assistant']}")
@@ -193,7 +196,7 @@ class ContextTabWidget(Static):
         grid.add_row("运行时消息:", f"{type_counts['runtime']}")
         grid.add_row("其他消息:", f"{type_counts['other']}")
         grid.add_row("平均长度:", f"{avg_length:.1f} 字符")
-        
+
         # Longest message with expand/collapse support
         if max_length_msg:
             max_content = reprlib.repr(str(max_length_msg))
@@ -201,47 +204,49 @@ class ContextTabWidget(Static):
             grid.add_row("最长内容:", f"{max_content}")
         else:
             grid.add_row("最长消息:", "无")
-        
+
         grid.add_row("")
 
     def _build_token_usage_section(self, grid: Table, agent: Agent) -> None:
         """Build token usage section."""
         grid.add_row(Text("Token用量", style="bold yellow"))
         grid.add_row("")
-        
+
         if not agent:
             grid.add_row("Token信息:", "Agent未初始化")
             grid.add_row("")
             return
-        
+
         threshold_info = agent.get_threshold_info()
         if not threshold_info:
             grid.add_row("Token信息:", "不可用")
             grid.add_row("")
             return
-        
+
         _soft, hard, used, _remaining, taken = threshold_info
         percentage = taken * 100
-        
+
         # Create proper progress bar using Rich
         progress_bar_text = self._create_progress_bar(percentage)
-        
+
         grid.add_row("当前用量:", f"{used}")
         grid.add_row("硬限制:", f"{hard}")
         grid.add_row("使用率:", progress_bar_text)
-        
+
         # Input and output tokens from last answer
-        if agent.last_token_usage and isinstance(agent.last_token_usage, AnswerTokenUsage):
+        if agent.last_token_usage and isinstance(
+            agent.last_token_usage, AnswerTokenUsage
+        ):
             token_usage = agent.last_token_usage
             grid.add_row("输入token:", f"{token_usage.input_tokens}")
             grid.add_row("输出token:", f"{token_usage.output_tokens}")
             grid.add_row("总token:", f"{token_usage.total_tokens}")
-        
+
         # Cache tokens
         cached, cache_percentage = self._get_token_cache_info(used)
         if cached > 0:
             grid.add_row("缓存token:", f"{cached} (~{cache_percentage:.1f}%)")
-        
+
         grid.add_row("")
 
     def _build_orchestration_section(
@@ -250,45 +255,51 @@ class ContextTabWidget(Static):
         """Build orchestration status section."""
         grid.add_row(Text("编排状态", style="bold yellow"))
         grid.add_row("")
-        
+
         large_messages = orchestration.large_messages
         garbage_ids = orchestration.garbage_message_ids
-        
+
         grid.add_row("大消息数量:", f"{len(large_messages)}")
         grid.add_row("垃圾消息数量:", f"{len(garbage_ids)}")
-        
+
         # List large messages with colors - using Rich text for coloring
         if large_messages:
             grid.add_row(Text("大消息列表 (已标记/未标记):", style="bold"))
             marked_count = 0
             unmarked_count = 0
-            
+
             for msg_id, msg in large_messages.items():  # Show all large messages
                 is_garbage = msg_id in garbage_ids
-                status = Text("✓ 已标记", style="red") if is_garbage else Text("○ 未标记", style="green")
+                status = (
+                    Text("✓ 已标记", style="red")
+                    if is_garbage
+                    else Text("○ 未标记", style="green")
+                )
                 preview = reprlib.repr(str(msg))[:50]
                 grid.add_row(f"  {msg_id}:", f"{status} - {preview}")
                 if is_garbage:
                     marked_count += 1
                 else:
                     unmarked_count += 1
-            
+
             grid.add_row("统计:", f"已标记: {marked_count}, 未标记: {unmarked_count}")
-        
+
         grid.add_row("")
 
-    def _build_recent_messages_section(self, grid: Table, messages: list[Message]) -> None:
+    def _build_recent_messages_section(
+        self, grid: Table, messages: list[Message]
+    ) -> None:
         """Build recent messages section."""
         grid.add_row(Text("最近消息 (最多5条)", style="bold yellow"))
         grid.add_row("")
-        
+
         recent_messages = messages[-5:] if messages else []
         for i, msg in enumerate(recent_messages, 1):
             index = len(messages) - len(recent_messages) + i
             msg_type = type(msg).__name__
             preview = reprlib.repr(str(msg))[:50]
             grid.add_row(f"{index}. {msg_type}:", preview)
-        
+
         grid.add_row("")
 
     def _build_appending_messages_section(
@@ -297,10 +308,10 @@ class ContextTabWidget(Static):
         """Build appending messages section."""
         if not appending_messages:
             return
-            
+
         grid.add_row(Text("追加消息", style="bold yellow"))
         grid.add_row("")
-        
+
         for source, msg in appending_messages.items():
             msg_type = type(msg).__name__
             preview = reprlib.repr(str(msg))[:80]  # Show more content
@@ -332,7 +343,7 @@ class ContextTabWidget(Static):
 
         messages = agent_message.messages
         message_count = len(messages)
-        
+
         # Build each section
         self._build_message_statistics_section(grid, messages, message_count)
         self._build_token_usage_section(grid, agent)

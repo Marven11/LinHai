@@ -11,7 +11,7 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
         from linhai.tool.base import ToolSet
 
         self.toolset = ToolSet()
-        from linhai.tool.tools.file import modify_file_with_sed
+        from linhai.machine_control.master_host.file import modify_file_with_sed
 
         self.toolset.register_tool(
             name="modify_file_with_sed",
@@ -23,9 +23,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             required_args=["filepath", "expression"],
         )(modify_file_with_sed)
 
-    @unittest.mock.patch("linhai.tool.tools.file.Path")
-    @unittest.mock.patch("linhai.tool.tools.file.platform.system")
-    @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.platform.system")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.subprocess.run")
     def test_modify_file_with_sed_line_number_warning(
         self, mock_run, mock_system, mock_path
     ):
@@ -55,9 +55,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             check=True,
         )
 
-    @unittest.mock.patch("linhai.tool.tools.file.Path")
-    @unittest.mock.patch("linhai.tool.tools.file.platform.system")
-    @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.platform.system")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.subprocess.run")
     def test_modify_file_with_sed_no_line_number_warning(
         self, mock_run, mock_system, mock_path
     ):
@@ -85,9 +85,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             check=True,
         )
 
-    @unittest.mock.patch("linhai.tool.tools.file.Path")
-    @unittest.mock.patch("linhai.tool.tools.file.platform.system")
-    @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.platform.system")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.subprocess.run")
     def test_modify_file_with_sed_line_range_warning(
         self, mock_run, mock_system, mock_path
     ):
@@ -117,9 +117,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             check=True,
         )
 
-    @unittest.mock.patch("linhai.tool.tools.file.Path")
-    @unittest.mock.patch("linhai.tool.tools.file.platform.system")
-    @unittest.mock.patch("linhai.tool.tools.file.subprocess.run")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.platform.system")
+    @unittest.mock.patch("linhai.machine_control.master_host.file.subprocess.run")
     def test_modify_file_with_sed_linux_system(self, mock_run, mock_system, mock_path):
         """测试在Linux系统上的行为"""
         mock_system.return_value = "Linux"

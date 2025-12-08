@@ -12,12 +12,9 @@ from linhai.subagent.clarification import ClarificationManager
 from linhai.subagent.tools import create_subagent_toolset
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
-from linhai.tool.tools.terminal import terminal_toolset
-from linhai.tool.tools.todolist import (
-    TodolistManager,
-    create_agent_todolist_toolset,
-)
+from linhai.tool.general import TodolistManager, create_agent_todolist_toolset
 from linhai.utils import CliRuntimeNotice
+from linhai.machine_control.main import register_machine_control_tools
 
 from .base import AgentContext, GlobalMemory
 from .clarification_tools import (
@@ -58,7 +55,7 @@ async def create_agent_from_config(
         agent_config=agent_config,
     )
 
-    tool_manager = await _create_tool_manager(
+    tool_manager, machine_control = await _create_tool_manager(
         group_chat,
         tools_config,
         agent_config.mcp if agent_config else [],
@@ -85,6 +82,9 @@ async def create_agent_from_config(
         group_chat=group_chat,
         init_messages=init_messages,
     )
+
+    # 注册MachineControl插件
+    machine_control.register_plugin(agent.lifecycle)
 
     subagent_config = config.subagent
     if subagent_config and subagent_config.enable:
@@ -194,14 +194,21 @@ async def _create_tool_manager(
     group_chat, config: ToolConfig, mcp_config: list[MCPConfig], mcp_basedir: Path
 ):
     """创建ToolManager实例"""
+    from linhai.machine_control import MachineControl
+
     tool_manager = ToolManager(
         group_chat=group_chat,
-        toolsets=[global_tools, terminal_toolset],
+        toolsets=[global_tools],
         config=config,
         mcp_config=mcp_config,
         mcp_basedir=mcp_basedir,
     )
-    return tool_manager
+
+    machine_control = MachineControl(group_chat)
+
+    tool_manager.add_toolset(register_machine_control_tools(machine_control))
+
+    return tool_manager, machine_control
 
 
 async def _create_init_messages(

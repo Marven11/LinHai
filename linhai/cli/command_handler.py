@@ -1,7 +1,7 @@
 """Command handler for CLI commands that should not be sent to agent."""
 
 from linhai.group_chat import GroupChat
-from linhai.tool.tools.todolist import TodolistManager
+from linhai.tool.general import TodolistManager
 from linhai.cli.components import TodolistWidget, RuntimeMessageWidget
 from linhai.utils import CliRuntimeNotice
 

@@ -19,7 +19,7 @@ from linhai.llm import (
 from .message_wrapper import SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.tool.tools.command import sleep_tool
+from linhai.tool.general import sleep_tool
 
 
 class SubAgent:
@@ -97,7 +97,7 @@ class SubAgent:
         )
         self.toolset.add_toolset(clarification_toolset)
 
-        from linhai.tool.tools.todolist import TodolistManager
+        from linhai.tool.general import TodolistManager
 
         todolist_manager = self.group_chat.get_members(
             "todolist_manager", TodolistManager

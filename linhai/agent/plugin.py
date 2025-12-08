@@ -409,7 +409,7 @@ class OnlyReasoningPlugin(Plugin):
 
 class PreviousReasoningPlugin(Plugin):
     """提供agent最近思考内容的插件。
-    
+
     在模型支持思考时将PreviousReasoningMessage插入到appending message，
     否则移除。
     """
@@ -421,9 +421,10 @@ class PreviousReasoningPlugin(Plugin):
         _tool_calls: List[Dict[str, JsonValue]],
     ):
         agent = self.group_chat.get_members("agent", Agent)
-        
+
         msgs = [
-            msg.reasoning_message for msg in agent.message_processor.get_messages()
+            msg.reasoning_message
+            for msg in agent.message_processor.get_messages()
             if isinstance(msg, AssistantMessage) and msg.reasoning_message
         ]
         if msgs:
@@ -638,7 +639,8 @@ class DuplicateFileReadPlugin(Plugin):
         same_file_messages = [
             message
             for message in agent.message_processor.get_messages()
-            if isinstance(message, FileContentMessage) and message.filepath == tool_result.filepath
+            if isinstance(message, FileContentMessage)
+            and message.filepath == tool_result.filepath
         ]
         # 有时模型再次读取文件仅仅是为了确认文件内容是否变化
         # 我们只在最后一条消息相同时提醒

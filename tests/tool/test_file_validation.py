@@ -10,7 +10,7 @@ class TestFileValidation(unittest.TestCase):
         from linhai.tool.base import ToolSet
 
         self.toolset = ToolSet()
-        from linhai.tool.tools.file import (
+        from linhai.machine_control.master_host.file import (
             read_file,
             write_file,
             append_file,

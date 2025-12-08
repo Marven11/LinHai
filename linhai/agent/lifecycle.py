@@ -100,9 +100,7 @@ class Lifecycle:
         ] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
-        self._after_token_generation_callbacks: list[
-            AfterTokenGenerationCallback
-        ] = []
+        self._after_token_generation_callbacks: list[AfterTokenGenerationCallback] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._tool_success_callbacks: list[ToolSuccessCallback] = []
         self._tool_failure_callbacks: list[ToolFailureCallback] = []
@@ -173,9 +171,7 @@ class Lifecycle:
         """注册工具调用后的回调。"""
         self._after_tool_call_callbacks.append(callback)
 
-    def register_after_token_generation(
-        self, callback: AfterTokenGenerationCallback
-    ):
+    def register_after_token_generation(self, callback: AfterTokenGenerationCallback):
         """注册token生成后的回调。"""
         self._after_token_generation_callbacks.append(callback)
 

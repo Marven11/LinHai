@@ -68,7 +68,7 @@ class TestCreateAgent(unittest.TestCase):
             'compress_threshold_soft': 0.5,
             'enable_directory_change_detection': False,
         }
-        mock_tool_manager.return_value = Mock()
+        mock_tool_manager.return_value = (Mock(), Mock())
         mock_init_messages.return_value = [Mock()]
         mock_agent_instance = Mock()
         mock_agent.return_value = mock_agent_instance
@@ -140,7 +140,7 @@ class TestCreateAgent(unittest.TestCase):
                 'compress_threshold_soft': 0.5,
                 'enable_directory_change_detection': False,
             }
-            mock_tool_manager.return_value = Mock()
+            mock_tool_manager.return_value = (Mock(), Mock())
             mock_init_messages.return_value = [Mock()]
             mock_agent.return_value = Mock()
 

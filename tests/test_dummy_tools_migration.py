@@ -21,7 +21,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
         self.group_chat.register_queue("agent_answer")
         from linhai.tool.base import global_tools
-        from linhai.tool.tools.terminal import terminal_toolset
+        from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(

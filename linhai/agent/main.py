@@ -52,7 +52,9 @@ class Agent:
 
         self.lifecycle = Lifecycle(group_chat)
         self.message_processor = AgentMessage(group_chat, init_messages)
-        self.orchestration = AgentMessageOrchestration(group_chat, self.message_processor)
+        self.orchestration = AgentMessageOrchestration(
+            group_chat, self.message_processor
+        )
         self.toolcall_processor = AgentToolcall(self)
 
         self.last_token_usage = None

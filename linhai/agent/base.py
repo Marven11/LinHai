@@ -192,9 +192,7 @@ class CodeStyleMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
-    ):
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         """
         从JSON字符串反序列化代码风格要求对象。
 
@@ -357,37 +355,27 @@ class PreviousReasoningMessage(Message):
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。
-        
+
         格式：
         <<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>
         """
         if not self.reasoning_contents:
-            return {
-                "role": "user",
-                "name": "previous-reasoning",
-                "content": ""
-            }
-        
+            return {"role": "user", "name": "previous-reasoning", "content": ""}
+
         content_parts = []
         for reasoning_content in self.reasoning_contents:
             content_parts.append(f"<<content>>{reasoning_content}<<content>>")
-        
+
         content = (
             f"<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>>"
             + "".join(content_parts)
             + "<<previous_reasoning>>"
         )
-        return {
-            "role": "user",
-            "name": "previous-reasoning",
-            "content": content
-        }
+        return {"role": "user", "name": "previous-reasoning", "content": content}
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
-        data = {
-            "reasoning_contents": self.reasoning_contents
-        }
+        data = {"reasoning_contents": self.reasoning_contents}
         return json.dumps(data)
 
     @classmethod

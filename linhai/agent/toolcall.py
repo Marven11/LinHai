@@ -121,10 +121,12 @@ class AgentToolcall:
                 return "暂无token用量信息"
 
         self.tool_manager.add_toolset(dummy_toolset)
-        
-        message_management_toolset = self.agent.orchestration.get_message_management_toolset()
+
+        message_management_toolset = (
+            self.agent.orchestration.get_message_management_toolset()
+        )
         self.tool_manager.add_toolset(message_management_toolset)
-        
+
         workflow_toolset = self.agent.orchestration.get_workflow_toolset()
         self.tool_manager.add_toolset(workflow_toolset)
 

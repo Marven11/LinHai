@@ -6,7 +6,7 @@ import tempfile
 import os
 
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.tool.tools.http import fetch_article
+from linhai.tool.general import fetch_article
 
 
 class TestFetchArticleTool(unittest.TestCase):
@@ -23,9 +23,9 @@ class TestFetchArticleTool(unittest.TestCase):
             required_args=["url"],
         )(fetch_article)
 
-    @unittest.mock.patch("linhai.tool.tools.http.webdriver.Firefox")
-    @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
-    @unittest.mock.patch("linhai.tool.tools.http.subprocess.run")
+    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_success(self, mock_subprocess, mock_which, mock_driver):
         """测试fetch_article工具成功转换网页为Markdown"""
         mock_which.return_value = "/usr/bin/pandoc"
@@ -79,7 +79,7 @@ class TestFetchArticleTool(unittest.TestCase):
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)
 
-    @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
     def test_fetch_article_pandoc_not_installed(self, mock_which):
         """测试pandoc未安装的情况"""
         mock_which.return_value = None
@@ -88,8 +88,8 @@ class TestFetchArticleTool(unittest.TestCase):
 
         self.assertEqual(result, "错误：pandoc未安装，请先安装pandoc")
 
-    @unittest.mock.patch("linhai.tool.tools.http.webdriver.Firefox")
-    @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
+    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
     def test_fetch_article_webdriver_error(self, mock_which, mock_driver):
         """测试webdriver出错的情况"""
         mock_which.return_value = "/usr/bin/pandoc"
@@ -100,9 +100,9 @@ class TestFetchArticleTool(unittest.TestCase):
 
         self.assertIn("转换失败: WebDriver错误", result)
 
-    @unittest.mock.patch("linhai.tool.tools.http.webdriver.Firefox")
-    @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
-    @unittest.mock.patch("linhai.tool.tools.http.subprocess.run")
+    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_pandoc_error(self, mock_subprocess, mock_which, mock_driver):
         """测试pandoc转换出错的情况"""
         mock_which.return_value = "/usr/bin/pandoc"
@@ -116,9 +116,9 @@ class TestFetchArticleTool(unittest.TestCase):
 
         self.assertIn("转换失败: Pandoc错误", result)
 
-    @unittest.mock.patch("linhai.tool.tools.http.webdriver.Firefox")
-    @unittest.mock.patch("linhai.tool.tools.http.shutil.which")
-    @unittest.mock.patch("linhai.tool.tools.http.subprocess.run")
+    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.shutil.which")
+    @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_table_attributes_removed(
         self, mock_subprocess, mock_which, mock_driver
     ):

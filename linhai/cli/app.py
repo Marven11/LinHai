@@ -22,7 +22,7 @@ from linhai.subagent.message_wrapper import (
     SubAgentAnswerCompleteWrapper,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.tool.tools.terminal import close_all_terminals
+from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 

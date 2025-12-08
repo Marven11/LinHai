@@ -5,7 +5,7 @@ import tempfile
 import os
 from pathlib import Path
 
-from linhai.tool.tools.file import append_file
+from linhai.machine_control.master_host.file import append_file
 
 
 class TestAppendFile(unittest.TestCase):

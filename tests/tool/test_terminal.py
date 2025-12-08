@@ -2,7 +2,7 @@
 
 import unittest
 import asyncio
-from linhai.tool.tools.terminal import terminal_toolset
+from linhai.machine_control.master_host import terminal_toolset
 
 
 class TestTerminalTools(unittest.TestCase):

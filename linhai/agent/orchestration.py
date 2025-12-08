@@ -360,7 +360,6 @@ class AgentMessageOrchestration:
         lifecycle.register_after_working(self._on_after_working)
         lifecycle.register_after_tool_call(self._on_after_tool_call)
 
-
     async def _on_after_tool_call(
         self,
         _agent: "Agent",

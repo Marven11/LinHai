@@ -162,11 +162,29 @@ async def create_terminal(columns: int = 80, lines: int = 24) -> str:
     Returns:
         终端对应的ID
     """
-    term_id = generate_id("terminal")
-    terminal = PyteTerminal(columns=columns, lines=lines)
-    terminals[term_id] = terminal
-    await terminal.start_reading()
-    return term_id
+    try:
+        term_id = generate_id("terminal")
+        terminal = PyteTerminal(columns=columns, lines=lines)
+        terminals[term_id] = terminal
+        await terminal.start_reading()
+        return term_id
+    except Exception as e:
+        return f"创建终端失败: {e}"
+
+
+def close_all_terminals() -> str:
+    """关闭所有终端
+
+    Returns:
+        关闭结果消息
+    """
+
+    count = len(terminals)
+    for terminal_id in list(terminals.keys()):
+        terminal = terminals[terminal_id]
+        terminal.close()
+        del terminals[terminal_id]
+    return f"已关闭所有终端，共{count}个"
 
 
 @terminal_toolset.register_tool(
@@ -278,18 +296,3 @@ async def close_terminal(terminal_id: str) -> str:
     terminal.close()
     del terminals[terminal_id]
     return f"已关闭终端 {terminal_id}"
-
-
-def close_all_terminals() -> str:
-    """关闭所有终端
-
-    Returns:
-        关闭结果消息
-    """
-
-    count = len(terminals)
-    for terminal_id in list(terminals.keys()):
-        terminal = terminals[terminal_id]
-        terminal.close()
-        del terminals[terminal_id]
-    return f"已关闭所有终端，共{count}个"
