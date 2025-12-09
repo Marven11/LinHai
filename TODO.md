@@ -2,8 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 在context tab中显示所有的appending message
-- [ ] 添加插件禁止无用的run_command
+- [x] 在context tab中显示所有的appending message
+- [x] 添加插件禁止无用的run_command
   - 原因：
     - LLM经常在读取文件之后仍然使用额外的工具查看文件内容
     - 这是因为当前任务较难，相较于仔细思考如何编写代码来说，再次确认代码内容要“简单得多”，这是在拖延

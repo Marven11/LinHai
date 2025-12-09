@@ -308,16 +308,16 @@ class ContextTabWidget(Static):
         self, grid: Table, appending_messages: dict[str, Message]
     ) -> None:
         """Build appending messages section."""
-        if not appending_messages:
-            return
-
         grid.add_row(Text("追加消息", style="bold yellow"))
         grid.add_row("")
 
-        for source, msg in appending_messages.items():
-            msg_type = type(msg).__name__
-            preview = reprobj.repr(str(msg))[:80]  # Show more content
-            grid.add_row(f"{source} ({msg_type}):", preview)
+        if not appending_messages:
+            grid.add_row("无追加消息")
+        else:
+            for source, msg in appending_messages.items():
+                msg_type = type(msg).__name__
+                preview = reprobj.repr(str(msg))[:80]  # Show more content
+                grid.add_row(f"{source} ({msg_type}):", preview)
         grid.add_row("")
 
     def update_display(self) -> None:

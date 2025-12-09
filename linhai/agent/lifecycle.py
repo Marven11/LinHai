@@ -127,6 +127,7 @@ class Lifecycle:
             RuntimeImitationPlugin,
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
+            UnnecessaryRunCommandPlugin,
         )
 
         plugins = [
@@ -144,6 +145,7 @@ class Lifecycle:
             RuntimeImitationPlugin(self.group_chat),
             DuplicateFileReadPlugin(self.group_chat),
             UnnecessarySedReadPlugin(self.group_chat),
+            UnnecessaryRunCommandPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

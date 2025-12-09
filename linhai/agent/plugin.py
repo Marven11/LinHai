@@ -5,6 +5,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import re
 import time
+import bashlex
+import bashlex.ast
+import bashlex.errors
 from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 from linhai.agent import Agent
@@ -416,7 +419,7 @@ class PreviousReasoningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        answer: Answer,
+        _answer: Answer,
         _full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
@@ -642,8 +645,7 @@ class DuplicateFileReadPlugin(Plugin):
             if isinstance(message, FileContentMessage)
             and message.filepath == tool_result.filepath
         ]
-        # 有时模型再次读取文件仅仅是为了确认文件内容是否变化
-        # 我们只在最后一条消息相同时提醒
+
         if len(same_file_messages) >= 1 and same_file_messages[-1] == tool_result:
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -678,7 +680,7 @@ class UnnecessarySedReadPlugin(Plugin):
 
     async def _after_tool_call(
         self,
-        agent: "Agent",
+        _agent: "Agent",
         tool_call: ToolCallMessage,
         tool_result: Any,
         success: bool,
@@ -732,3 +734,302 @@ class UnnecessarySedReadPlugin(Plugin):
                 return f.read(32 * 1024).count(b"\n")
         except (FileNotFoundError, PermissionError, OSError):
             return None
+
+
+class UnnecessaryRunCommandPlugin(Plugin):
+    """拦截无用的run_command调用插件。
+
+    禁止以下情况：
+    - 直接使用sed命令查看单个文件（提示：“禁止直接使用sed命令查看文件！”）
+    - 禁止使用grep, head, tail, cat, sed查看已经读取了的文件
+    - 例外：使用`|`或者`>`重定向，有时LLM需要提取文件的其他内容。
+
+    实现：
+    1. 跟踪agent已经通过read_file读取的文件
+    2. 解析run_command命令，检查是否是禁止的命令
+    3. 检查命令是否访问已读取的文件且不在管道/重定向中
+    """
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_after_tool_call(self._after_tool_call)
+
+    async def _after_tool_call(
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        _tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        """工具调用后回调，检查是否是无用的run_command。"""
+        if not success or tool_call.function_name != "run_command":
+            return None
+
+        command = tool_call.function_arguments.get("command")
+        if not command or not isinstance(command, str):
+            return None
+
+        read_files = self._get_read_files(agent)
+        if not read_files:
+            if should_block_command_simple(command):
+                return self._generate_warning_message(command)
+            return None
+
+        if should_block_command_with_files(command, read_files):
+            return self._generate_warning_message(command)
+
+        return None
+
+    def _get_read_files(self, agent: "Agent") -> set[Path]:
+        """获取agent已经读取的文件路径集合（绝对路径）。"""
+        read_files = set()
+        for msg in agent.message_processor.get_messages():
+            if isinstance(msg, FileContentMessage):
+                try:
+                    path = Path(msg.filepath).resolve()
+                    read_files.add(path)
+                except (OSError, ValueError):
+                    continue
+        return read_files
+
+    def _generate_warning_message(self, command: str) -> RuntimeMessage:
+        """生成警告消息。"""
+        forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
+        cmd_name = None
+        try:
+            parts = bashlex.parse(command)
+            for ast_node in parts:
+                cmd_name = self._extract_command_name(ast_node, forbidden_commands)
+                if cmd_name:
+                    break
+        except bashlex.errors.ParsingError:
+            cmd_name = "unknown"
+
+        if cmd_name == "sed":
+            return RuntimeMessage("禁止直接使用sed命令查看文件！")
+        else:
+            return RuntimeMessage(
+                f"禁止使用{cmd_name}命令直接查看文件！"
+                "如果确实需要提取文件内容，请使用管道或重定向。"
+            )
+
+    def _extract_command_name(
+        self, node: bashlex.ast.node, forbidden_commands: set[str]
+    ) -> Optional[str]:
+        """从AST节点中提取命令名，如果命令名在禁止列表中则返回。"""
+        if node.kind == "command":  # type: ignore[attr-defined]
+            for part in get_children(node):
+                if part.kind == "word":  # type: ignore[attr-defined]
+                    word = part.word  # type: ignore[attr-defined]
+                    # 处理带路径的命令（如/bin/cat）和简单的命令名
+                    cmd_name = word.split("/")[-1]  # 获取最后一个部分
+                    if cmd_name in forbidden_commands:
+                        return cmd_name
+        # 递归检查子节点
+        for child in get_children(node):
+            result = self._extract_command_name(child, forbidden_commands)
+            if result:
+                return result
+        return None
+
+
+def get_children(node: bashlex.ast.node) -> list[bashlex.ast.node]:
+    """获取节点的子节点列表，不使用hasattr。"""
+    node_kind = node.kind  # type: ignore[attr-defined]
+    if node_kind == "compound":
+        return node.list  # type: ignore[attr-defined]
+    elif node_kind in ["command", "pipeline", "list"]:
+        return node.parts  # type: ignore[attr-defined]
+    else:
+        return []
+
+
+def traverse_ast(
+    node: bashlex.ast.node, in_pipeline: bool, forbidden_commands: set[str]
+) -> bool:
+    """遍历AST节点，检查是否包含需要拦截的命令。"""
+    node_kind = node.kind  # type: ignore[attr-defined]
+
+    # 处理容器节点
+    if node_kind in ["pipeline", "list", "compound"]:
+        for child in get_children(node):
+            # 对于管道节点，子节点在管道中
+            child_in_pipeline = in_pipeline or (node_kind == "pipeline")
+            if traverse_ast(child, child_in_pipeline, forbidden_commands):
+                return True
+        return False
+
+    if node_kind == "command":
+        cmd_name = None
+        has_redirect = False
+
+        for part in get_children(node):
+            if part.kind == "redirect":  # type: ignore[attr-defined]
+                has_redirect = True
+                continue
+            if cmd_name is None and part.kind == "word":  # type: ignore[attr-defined]
+                cmd_name = part.word  # type: ignore[attr-defined]
+
+        if cmd_name in forbidden_commands and not has_redirect and not in_pipeline:
+            return True
+
+        for child in get_children(node):
+            if traverse_ast(child, in_pipeline, forbidden_commands):
+                return True
+        return False
+
+    for child in get_children(node):
+        if traverse_ast(child, in_pipeline, forbidden_commands):
+            return True
+    return False
+
+
+def should_block_command_simple(command: str) -> bool:
+    """
+    简单判断一个shell命令是否应该被拦截（不检查文件访问）。
+
+    规则：
+    - 命令是单个命令（不在管道中且没有重定向）
+    - 命令名是以下之一：grep, head, tail, cat, sed
+    - 例外：如果命令在管道中或含有重定向，则允许
+
+    返回True表示应该拦截，False表示允许。
+    """
+    if not command.strip():
+        return False
+
+    try:
+        parts = bashlex.parse(command)
+    except bashlex.errors.ParsingError:
+        return False
+
+    # 禁止的命令列表
+    forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
+
+    for ast_node in parts:
+        if traverse_ast(ast_node, False, forbidden_commands):
+            return True
+    return False
+
+
+def should_block_command_with_files(command: str, read_files: set[Path]) -> bool:
+    """
+    判断一个shell命令是否应该被拦截，检查是否访问已读取的文件。
+
+    规则：
+    - 命令是禁止的命令之一（grep, head, tail, cat, sed）
+    - 命令不在管道中且没有重定向
+    - 命令访问了已读取的文件
+
+    返回True表示应该拦截，False表示允许。
+    """
+    if not command.strip():
+        return False
+
+    try:
+        parts = bashlex.parse(command)
+    except bashlex.errors.ParsingError:
+        return False
+
+    # 检查命令是否访问已读取的文件
+    return traverse_ast_with_files(parts, False, read_files)
+
+
+def traverse_ast_with_files(
+    nodes: list[bashlex.ast.node], in_pipeline: bool, read_files: set[Path]
+) -> bool:
+    """遍历AST节点，检查是否包含访问已读取文件的禁止命令。"""
+    for node in nodes:
+        if _traverse_ast_with_files_node(node, in_pipeline, read_files):
+            return True
+    return False
+
+
+def _traverse_ast_with_files_node(
+    node: bashlex.ast.node, in_pipeline: bool, read_files: set[Path]
+) -> bool:
+    """遍历单个AST节点，检查是否包含访问已读取文件的禁止命令。"""
+    node_kind = node.kind  # type: ignore[attr-defined]
+
+    if node_kind in ["pipeline", "list", "compound"]:
+        for child in get_children(node):
+            child_in_pipeline = in_pipeline or (node_kind == "pipeline")
+            if _traverse_ast_with_files_node(child, child_in_pipeline, read_files):
+                return True
+        return False
+
+    if node_kind == "command":
+        return _process_command_node(node, in_pipeline, read_files)
+
+    for child in get_children(node):
+        if _traverse_ast_with_files_node(child, in_pipeline, read_files):
+            return True
+    return False
+
+
+def _process_command_node(
+    node: bashlex.ast.node, in_pipeline: bool, read_files: set[Path]
+) -> bool:
+    """处理命令节点，检查是否访问已读取文件。"""
+    cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(
+        node, read_files
+    )
+
+    if (
+        cmd_name in {"grep", "head", "tail", "cat", "sed"}
+        and not has_redirect
+        and not in_pipeline
+        and accesses_read_file
+    ):
+        return True
+
+    for child in get_children(node):
+        if _traverse_ast_with_files_node(child, in_pipeline, read_files):
+            return True
+    return False
+
+
+def _analyze_command_parts(
+    node: bashlex.ast.node, read_files: set[Path]
+) -> tuple[Optional[str], bool, bool]:
+    """分析命令节点各部分，提取命令名、重定向状态和文件访问状态。"""
+    cmd_name: Optional[str] = None
+    has_redirect = False
+    accesses_read_file = False
+    expecting_option_value = False
+
+    for part in get_children(node):
+        if part.kind == "redirect":  # type: ignore[attr-defined]
+            has_redirect = True
+            continue
+
+        if part.kind != "word":  # type: ignore[attr-defined]
+            continue
+
+        word = part.word  # type: ignore[attr-defined]
+
+        if cmd_name is None:
+            cmd_name = word
+            continue
+
+        if word.startswith("-"):
+            expecting_option_value = "=" not in word
+            continue
+
+        if expecting_option_value:
+            expecting_option_value = False
+            continue
+
+        if _is_read_file(word, read_files):
+            accesses_read_file = True
+
+    return cmd_name, has_redirect, accesses_read_file
+
+
+def _is_read_file(word: str, read_files: set[Path]) -> bool:
+    """检查单词是否为已读取的文件路径。"""
+    try:
+        path = Path(word).resolve()
+        return path in read_files
+    except (OSError, ValueError):
+        return False
