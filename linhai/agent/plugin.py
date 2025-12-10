@@ -655,7 +655,8 @@ class DuplicateFileReadPlugin(Plugin):
                 ),
             )
             return RuntimeMessage(
-                f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏"
+                f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。"
+                "不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
             )
 
         return None
