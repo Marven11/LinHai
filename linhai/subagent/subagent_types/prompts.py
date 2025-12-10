@@ -86,7 +86,7 @@ VIOLATION_CHECKER_SYSTEM_PROMPT = (
 
 切记：对每项任务而言，过程即成果。你必须始终遵循以下行为准则。
 
-## ACTION RULES - REQUEST CLARIFICATION
+## ACTION RULES - REQUEST ISSUE
 
 - 如果问题已经基本澄清，就不要无止境地追问
 - 不要无止境地追问！你缺少Agent的上下文，因此无法完全理解Agent的行为！
@@ -108,12 +108,12 @@ VIOLATION_CHECKER_USER_PROMPT = """# 检查任务
 {check_context}
 
 **你的任务:**
-仔细检查Agent的上述回答，判断其是否违反了上述任何一条规则。如果违反，必须调用request_clarification向Agent提出澄清问题。
+仔细检查Agent的上述回答，判断其是否违反了上述任何一条规则。如果违反，必须调用request_issue向Agent提出issue。
 
 **执行步骤:**
 
 1. 逐一检查上述每条规则
-2. 如果发现任何违反，调用request_clarification工具，提问格式:
+2. 如果发现任何违反，调用request_issue工具，提问格式:
 "规则违反: [规则名称]。在Agent的回答中，你[具体违反行为]。请解释为什么要这样做？"
 
 3. 如果没有发现任何违反，调用exit工具退出，原因写"未发现规则违反"
@@ -158,13 +158,13 @@ GIT_DIFF_REVIEWER_PROMPT = (
 1. 仔细分析上述git diff内容
 2. 根据"要求"中的检查标准，逐一检查代码变更
 3. 使用工具质问发现的问题
-4. 如果Agent回复了你的clarification，根据回复内容继续追问直到问题完全解决
+4. 如果Agent回复了你的issue，根据回复内容继续追问直到问题完全解决
 5. 调用exit工具退出，原因写"代码审查完成"
 
-**重要:** 你必须严格按上述要求检查，不能遗漏任何一条。如果发现问题，必须使用request_clarification工具质问。
+**重要:** 你必须严格按上述要求检查，不能遗漏任何一条。如果发现问题，必须使用request_issue工具质问。
 
 **追问规则:**
-- 如果Agent回复了你的clarification，仔细分析回复内容
+- 如果Agent回复了你的issue，仔细分析回复内容
 - 如果回复不完整、不满意或没有解决问题，继续追问直到问题完全解决
 - 追问时要明确指出回复中的不足之处
 - 只有当所有问题都得到满意解决后才能退出

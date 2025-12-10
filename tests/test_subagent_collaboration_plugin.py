@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from linhai.subagent.types.violation_checker import ViolationCheckerPlugin
+from linhai.subagent.subagent_types.violation_checker import ViolationCheckerPlugin
 from linhai.llm import ToolCallMessage
 
 

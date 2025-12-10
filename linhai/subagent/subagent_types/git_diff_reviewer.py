@@ -54,6 +54,8 @@ class GitDiffReviewerSubAgent(SubAgent):
 
     async def _handle_execution_cycle(self) -> bool:
         result = await super()._handle_execution_cycle()
+        if self.state == "exited":
+            return False
         self.messages.append(
             RuntimeMessage(
                 """
@@ -127,7 +129,7 @@ class GitDiffReviewPlugin(Plugin):
 
         try:
             file_size = os.path.getsize(filename)
-            if file_size > 32 * 1024:  # 32KB
+            if file_size > 32 * 1024:
                 return f"**新增文件: {filename}**\n(文件大小为{file_size}字节，大于32KB，跳过内容)"
         except (OSError, FileNotFoundError):
             pass
@@ -286,7 +288,7 @@ todolist: ---
 
 {todolist_content}
 
-请根据系统提示中的要求进行审查，发现问题时使用request_clarification工具质问。
+请根据系统提示中的要求进行审查，发现问题时使用request_issue工具质问。
 
 **重要：请同时审查todolist的功能是否已经完成。如果代码变更已经完成了某个todolist项的功能，请使用todolist_delete工具删除对应的todolist。**"""
 

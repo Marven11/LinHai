@@ -70,14 +70,14 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_call = MagicMock()
         self.mock_tool_result = MagicMock()
         
-        self.mock_clarification_manager = MagicMock()
-        self.mock_clarification_manager.has_unanswered_clarifications.return_value = False
+        self.mock_issue_manager = MagicMock()
+        self.mock_issue_manager.has_unanswered_issues.return_value = False
         
         def get_members_side_effect(member_type, member_class=None):
             if member_type == "agent":
                 return self.mock_agent
-            elif member_type == "clarification_manager":
-                return self.mock_clarification_manager
+            elif member_type == "issue_manager":
+                return self.mock_issue_manager
             else:
                 return None
         
@@ -227,7 +227,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             def get_members_side_effect(member_type, member_class=None):
                 members = {
                     "agent": self.mock_agent,
-                    "clarification_manager": self.mock_clarification_manager,
+                    "issue_manager": self.mock_issue_manager,
                     "subagent_manager": mock_subagent_manager
                 }
                 return members.get(member_type)

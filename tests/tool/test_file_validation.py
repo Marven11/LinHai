@@ -92,19 +92,19 @@ class TestFileValidation(unittest.TestCase):
     def test_read_file_rejects_binary_file(self):
         """测试read_file拒绝二进制文件"""
         result = self.toolset.call_tool(
-            "read_file", {"filepath": "./linhai/tests/test_binary.zip"}
+            "read_file", {"filepath": "./tests/test_binary.zip"}
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
     def test_write_file_rejects_binary_file_for_existing_file(self):
         """测试write_file在文件存在时拒绝二进制文件"""
-        with open("./linhai/tests/test_temp.txt", "w", encoding="utf-8") as f:
+        with open("./tests/test_temp.txt", "w", encoding="utf-8") as f:
             f.write("test content")
         try:
             result = self.toolset.call_tool(
                 "write_file",
                 {
-                    "filepath": "./linhai/tests/test_binary.zip",
+                    "filepath": "./tests/test_binary.zip",
                     "content": "new content",
                 },
             )
@@ -112,38 +112,38 @@ class TestFileValidation(unittest.TestCase):
         finally:
             import os
 
-            if os.path.exists("./linhai/tests/test_temp.txt"):
-                os.remove("./linhai/tests/test_temp.txt")
+            if os.path.exists("./tests/test_temp.txt"):
+                os.remove("./tests/test_temp.txt")
 
     def test_append_file_rejects_binary_file(self):
         """测试append_file拒绝二进制文件"""
         result = self.toolset.call_tool(
             "append_file",
             {
-                "filepath": "./linhai/tests/test_binary.zip",
+                "filepath": "./tests/test_binary.zip",
                 "content": "appended content",
             },
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
     def test_replace_file_content_rejects_binary_file(self):
         """测试replace_file_content拒绝二进制文件"""
         result = self.toolset.call_tool(
             "replace_file_content",
             {
-                "filepath": "./linhai/tests/test_binary.zip",
+                "filepath": "./tests/test_binary.zip",
                 "old": "test",
                 "new": "replacement",
             },
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
     def test_run_sed_expression_rejects_binary_file(self):
         """测试run_sed_expression拒绝二进制文件"""
         result = self.toolset.call_tool(
             "run_sed_expression",
             {
-                "filepath": "./linhai/tests/test_binary.zip",
+                "filepath": "./tests/test_binary.zip",
                 "expression": "s/test/replacement/",
             },
         )
@@ -154,24 +154,24 @@ class TestFileValidation(unittest.TestCase):
         result = self.toolset.call_tool(
             "modify_file_with_sed",
             {
-                "filepath": "./linhai/tests/test_binary.zip",
+                "filepath": "./tests/test_binary.zip",
                 "expression": "s/test/replacement/",
             },
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
     def test_insert_at_line_rejects_binary_file(self):
         """测试insert_at_line拒绝二进制文件"""
         result = self.toolset.call_tool(
             "insert_at_line",
             {
-                "filepath": "./linhai/tests/test_binary.zip",
+                "filepath": "./tests/test_binary.zip",
                 "line_number": 1,
                 "content": "inserted content",
                 "expected_line_content": "dummy",
             },
         )
-        self.assertIn("不是纯文本文件", result)
+        self.assertIn("不是纯文本文件", str(result))
 
 
 

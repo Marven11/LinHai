@@ -17,15 +17,15 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.append_message = MagicMock()
         
-        self.clarification_manager = MagicMock()
-        self.clarification_manager.has_unanswered_clarifications.return_value = False
+        self.issue_manager = MagicMock()
+        self.issue_manager.has_unanswered_issues.return_value = False
         
         self.group_chat = MagicMock()
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
-            elif member_type == "clarification_manager":
-                return self.clarification_manager
+            elif member_type == "issue_manager":
+                return self.issue_manager
             return None
         self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
         
@@ -59,9 +59,9 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
                 result = self.plugin._is_git_command(command)
                 self.assertEqual(result, expected, f"Failed for command: {command}")
 
-    async def test_block_git_command_with_unanswered_clarifications(self):
-        """测试有未解答澄清时阻止git命令。"""
-        self.clarification_manager.has_unanswered_clarifications.return_value = True
+    async def test_block_git_command_with_unanswered_issues(self):
+        """测试有未解答issue时阻止git命令。"""
+        self.issue_manager.has_unanswered_issues.return_value = True
         
         self.group_chat.send_if_exists = AsyncMock()
         
@@ -74,9 +74,9 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result)
         self.group_chat.send_if_exists.assert_called_once()
 
-    async def test_allow_git_command_without_unanswered_clarifications(self):
-        """测试没有未解答澄清时允许git命令。"""
-        self.clarification_manager.has_unanswered_clarifications.return_value = False
+    async def test_allow_git_command_without_unanswered_issues(self):
+        """测试没有未解答issue时允许git命令。"""
+        self.issue_manager.has_unanswered_issues.return_value = False
         
         tool_call = ToolCallMessage(
             function_name="run_command", 
@@ -89,7 +89,7 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_ignore_non_command_tools(self):
         """测试忽略非命令工具。"""
-        self.clarification_manager.has_unanswered_clarifications.return_value = True
+        self.issue_manager.has_unanswered_issues.return_value = True
         
         tool_call = ToolCallMessage(
             function_name="read_file",

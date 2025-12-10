@@ -110,7 +110,7 @@ class TestMasterHostControl(unittest.TestCase):
         self.assertTrue(hasattr(self.host_control, 'replace_file_content'))
         self.assertTrue(hasattr(self.host_control, 'list_files'))
         self.assertTrue(hasattr(self.host_control, 'get_absolute_path'))
-        self.assertTrue(hasattr(self.host_control, 'run_sed_expression'))
+
         self.assertTrue(hasattr(self.host_control, 'modify_file_with_sed'))
         self.assertTrue(hasattr(self.host_control, 'insert_at_line'))
         

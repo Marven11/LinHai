@@ -60,6 +60,13 @@ class SubAgent:
     def get_system_message_prompt(self):
         raise NotImplementedError()
 
+    def exit(self, reason: str) -> None:
+        """退出SubAgent。"""
+        if self.state == "exited":
+            return  # 已经退出，避免重复退出
+        self.exit_reason = reason
+        self.state = "exited"
+
     def _register_subagent_tools(self):
         """注册SubAgent可用的工具。"""
 
@@ -83,19 +90,22 @@ class SubAgent:
             self.state = "exited"
             return f"SubAgent {self.name} 已退出: {reason}"
 
-        from linhai.subagent.clarification import ClarificationManager
-        from .clarification_tools import create_clarification_toolset
+        from linhai.subagent.issue import IssueManager
+        from .issue_tools import create_issue_toolset
 
-        clarification_manager = self.group_chat.get_members(
-            "clarification_manager", ClarificationManager
+        issue_manager = self.group_chat.get_members(
+            "issue_manager", IssueManager
         )
 
-        if isinstance(clarification_manager, tuple):
-            clarification_manager = clarification_manager[0]
-        clarification_toolset = create_clarification_toolset(
-            clarification_manager, self.name
+        if isinstance(issue_manager, tuple):
+            issue_manager = issue_manager[0]
+        # 注册subagent信息到issue_manager
+        issue_manager.register_subagent(self.name, issue_limit=1)
+        
+        issue_toolset = create_issue_toolset(
+            issue_manager, self  # 传递subagent实例而不是名称
         )
-        self.toolset.add_toolset(clarification_toolset)
+        self.toolset.add_toolset(issue_toolset)
 
         from linhai.tool.general import TodolistManager
 
@@ -179,6 +189,8 @@ class SubAgent:
 
     async def _handle_execution_cycle(self) -> bool:
         """执行一个完整的处理周期，返回是否应继续运行。"""
+        if self.state != "running":
+            return False
         full_response = await self._generate_response()
         tool_calls, errors = self._parse_tool_calls(full_response)
 
@@ -262,7 +274,7 @@ class SubAgentManager:
             agent = self.group_chat.get_members("agent", Agent)
             _, subagent_llm = agent.get_current_llm_info()
 
-        from .types import (
+        from .subagent_types import (
             ViolationCheckerSubAgent,
             GitDiffReviewerSubAgent,
         )
@@ -324,16 +336,16 @@ class SubAgentManager:
 
         from .plugin import (
             GitBlockingPlugin,
-            ClarificationWaitingUserPlugin,
-            ClarificationBlockingPlugin,
+            IssueWaitingUserPlugin,
+            IssueBlockingPlugin,
         )
-        from .types.violation_checker import ViolationCheckerPlugin
-        from .types.git_diff_reviewer import GitDiffReviewPlugin
+        from .subagent_types.violation_checker import ViolationCheckerPlugin
+        from .subagent_types.git_diff_reviewer import GitDiffReviewPlugin
 
         plugins = [
             GitBlockingPlugin(self.group_chat),
-            ClarificationWaitingUserPlugin(self.group_chat),
-            ClarificationBlockingPlugin(self.group_chat),
+            IssueWaitingUserPlugin(self.group_chat),
+            IssueBlockingPlugin(self.group_chat),
         ]
         enabled_agent_types = (
             self.subagent_config.enabled_agent_types if self.subagent_config else None

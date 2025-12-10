@@ -15,23 +15,18 @@ if TYPE_CHECKING:
 
 
 class GitBlockingPlugin(Plugin):
-    """阻止Agent在有未解答澄清时使用git命令的Plugin。"""
+    """阻止Agent在有未解答issue时使用git命令的Plugin。"""
 
     async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        """检查是否有未解答的澄清，如果有则阻止使用git命令。"""
+        """检查是否有未解答的issue，如果有则阻止使用git命令。"""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        from linhai.subagent.clarification import ClarificationManager
+        from linhai.subagent.issue import IssueManager
 
-        clarification_manager = self.group_chat.get_members(
-            "clarification_manager", ClarificationManager
-        )
-        if (
-            clarification_manager
-            and clarification_manager.has_unanswered_clarifications()
-        ):
+        issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
+        if issue_manager and issue_manager.has_unanswered_issues():
 
             tool_name = tool_call.function_name
             arguments = tool_call.function_arguments
@@ -40,18 +35,18 @@ class GitBlockingPlugin(Plugin):
                 command = arguments.get("command", "")
 
                 if self._is_git_command(command):
-                    unanswered = clarification_manager.get_unanswered_clarifications()
-                    clarification_info = "\n".join(
+                    unanswered = issue_manager.get_unanswered_issues()
+                    issue_info = "\n".join(
                         [
-                            f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
-                            for c in unanswered
+                            f"  ID: {i['id']}, 来自: {i['from_subagent']}, 内容: {i['content']}"
+                            for i in unanswered
                         ]
                     )
                     agent.message_processor.append_message(
                         RuntimeMessage(
-                            f"错误：有未解答的澄清问题，禁止使用git命令。"
-                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的澄清问题。\n"
-                            f"未解答的澄清问题:\n{clarification_info}"
+                            f"错误：有未解答的issue，禁止使用git命令。"
+                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的issue。\n"
+                            f"未解答的issue:\n{issue_info}"
                         )
                     )
 
@@ -94,32 +89,27 @@ class GitBlockingPlugin(Plugin):
         lifecycle.register_before_tool_call(self.before_tool_call)
 
 
-class ClarificationWaitingUserPlugin(Plugin):
-    """阻止Agent在有未解答澄清时进入等待用户状态的Plugin。"""
+class IssueWaitingUserPlugin(Plugin):
+    """阻止Agent在有未解答issue时进入等待用户状态的Plugin。"""
 
     async def before_waiting_user(self, agent: "linhai.agent.Agent"):
-        """检查是否有未解答的澄清，如果有则阻止进入等待用户状态。"""
+        """检查是否有未解答的issue，如果有则阻止进入等待用户状态。"""
 
-        from linhai.subagent.clarification import ClarificationManager
+        from linhai.subagent.issue import IssueManager
 
-        clarification_manager = self.group_chat.get_members(
-            "clarification_manager", ClarificationManager
-        )
-        if (
-            clarification_manager
-            and clarification_manager.has_unanswered_clarifications()
-        ):
-            unanswered = clarification_manager.get_unanswered_clarifications()
-            clarification_info = "\n".join(
+        issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
+        if issue_manager and issue_manager.has_unanswered_issues():
+            unanswered = issue_manager.get_unanswered_issues()
+            issue_info = "\n".join(
                 [
-                    f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
-                    for c in unanswered
+                    f"  ID: {i['id']}, 来自: {i['from_subagent']}, 内容: {i['content']}"
+                    for i in unanswered
                 ]
             )
             agent.message_processor.append_message(
                 RuntimeMessage(
-                    f"错误：有未解答的澄清问题，禁止进入等待用户状态。\n"
-                    f"未解答的澄清问题:\n{clarification_info}"
+                    f"错误：有未解答的issue，禁止进入等待用户状态。\n"
+                    f"未解答的issue:\n{issue_info}"
                 )
             )
             agent.state = "working"
@@ -129,39 +119,34 @@ class ClarificationWaitingUserPlugin(Plugin):
         lifecycle.register_before_waiting_user(self.before_waiting_user)
 
 
-class ClarificationBlockingPlugin(Plugin):
-    """阻止Agent在有未解答澄清时停下等待用户的Plugin。"""
+class IssueBlockingPlugin(Plugin):
+    """阻止Agent在有未解答issue时停下等待用户的Plugin。"""
 
     async def after_message_generation(
         self, _answer: Answer, full_response: str, _tool_calls
     ):
-        """检查是否有未解答的澄清，如果有则阻止使用等待用户标记。"""
+        """检查是否有未解答的issue，如果有则阻止使用等待用户标记。"""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        from linhai.subagent.clarification import ClarificationManager
+        from linhai.subagent.issue import IssueManager
 
-        clarification_manager = self.group_chat.get_members(
-            "clarification_manager", ClarificationManager
-        )
-        if (
-            clarification_manager
-            and clarification_manager.has_unanswered_clarifications()
-        ):
+        issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
+        if issue_manager.has_unanswered_issues():
 
             if WAITING_USER_MARKER in full_response:
-                unanswered = clarification_manager.get_unanswered_clarifications()
-                clarification_info = "\n".join(
+                unanswered = issue_manager.get_unanswered_issues()
+                issue_info = "\n".join(
                     [
-                        f"  ID: {c['id']}, 来自: {c['from_subagent']}, 问题: {c['question']}"
-                        for c in unanswered
+                        f"  ID: {i['id']}, 来自: {i['from_subagent']}, 内容: {i['content']}"
+                        for i in unanswered
                     ]
                 )
                 agent.message_processor.append_message(
                     RuntimeMessage(
-                        f"错误：有未解答的澄清问题，禁止使用{WAITING_USER_MARKER!r}等待用户。\n"
-                        f"未解答的澄清问题:\n{clarification_info}"
+                        f"错误：有未解答的issue，禁止使用{WAITING_USER_MARKER!r}等待用户。\n"
+                        f"未解答的issue:\n{issue_info}"
                     )
                 )
                 agent.state = "working"

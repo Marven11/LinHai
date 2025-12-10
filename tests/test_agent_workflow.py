@@ -54,9 +54,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp")
         )
 
-        from linhai.subagent.clarification import ClarificationManager
+        from linhai.subagent.issue import IssueManager
         
-        self.clarification_manager = ClarificationManager(self.group_chat)
+        self.issue_manager = IssueManager(self.group_chat)
 
         self.agent = Agent(
             context=config,

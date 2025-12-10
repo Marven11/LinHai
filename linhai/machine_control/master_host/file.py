@@ -360,6 +360,35 @@ def get_absolute_path(path: str) -> ToolResultMessage | ToolErrorMessage:
         return ToolErrorMessage(f"获取绝对路径时发生错误: {exc!r}")
 
 
+def _check_small_file(file_path: Path) -> str | None:
+    """检查文件是否过小（少于100行且内容少于30000字符）。
+    
+    Args:
+        file_path: 文件路径对象
+        
+    Returns:
+        错误消息或None（如果文件足够大）
+    """
+    try:
+        line_count = 0
+        char_count = 0
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line_count += 1
+                char_count += len(line)
+                if line_count >= 100 and char_count >= 30000:
+                    return None
+        
+        if line_count < 100 and char_count < 30000:
+            return (
+                f"错误: 文件内容过少（{line_count}行，{char_count}字符），禁止使用run_sed_expression工具。\n"
+                f"建议使用read_file工具直接读取文件内容。"
+            )
+        return None
+    except OSError as exc:
+        return f"读取文件内容时发生错误: {exc!r}"
+
+
 def run_sed_expression(
     expression: str, filepath: str
 ) -> ToolResultMessage | ToolErrorMessage:
@@ -376,6 +405,11 @@ def run_sed_expression(
     validation_error = validate_file(file_path)
     if validation_error:
         return ToolErrorMessage(validation_error)
+    
+    small_file_error = _check_small_file(file_path)
+    if small_file_error:
+        return ToolErrorMessage(small_file_error)
+    
     try:
         result = subprocess.run(
             ["sed", "-n", expression, file_path.as_posix()],

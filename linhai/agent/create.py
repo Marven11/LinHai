@@ -8,7 +8,7 @@ from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage
 from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.subagent import SubAgentManager
-from linhai.subagent.clarification import ClarificationManager
+from linhai.subagent.issue import IssueManager
 from linhai.subagent.tools import create_subagent_toolset
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
@@ -17,9 +17,7 @@ from linhai.utils import CliRuntimeNotice
 from linhai.machine_control.main import register_machine_control_tools
 
 from .base import AgentContext, GlobalMemory
-from .clarification_tools import (
-    create_clarification_toolset as create_agent_clarification_toolset,
-)
+from .issue_tools import create_issue_toolset
 
 
 async def create_agent_from_config(
@@ -94,11 +92,9 @@ async def create_agent_from_config(
 
         subagent_manager.register_plugins()
 
-    clarification_manager = ClarificationManager(group_chat)
-    agent_clarification_toolset = create_agent_clarification_toolset(
-        clarification_manager
-    )
-    tool_manager.add_toolset(agent_clarification_toolset)
+    issue_manager = IssueManager(group_chat)
+    agent_issue_toolset = create_issue_toolset(issue_manager)
+    tool_manager.add_toolset(agent_issue_toolset)
 
     return agent
 

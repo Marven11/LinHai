@@ -11,7 +11,7 @@ from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
 from linhai.config import ToolConfig
-from linhai.subagent.clarification import ClarificationManager
+from linhai.subagent.issue import IssueManager
 
 
 class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
@@ -33,7 +33,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
         self.group_chat.register_queue("agent_answer")
 
-        self.clarification_manager = ClarificationManager(self.group_chat)
+        self.issue_manager = IssueManager(self.group_chat)
 
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,

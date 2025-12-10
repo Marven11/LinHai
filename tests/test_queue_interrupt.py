@@ -75,13 +75,13 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         
         self.init_messages = []
         
-        from linhai.subagent.clarification import ClarificationManager
+        from linhai.subagent.issue import IssueManager
         try:
-            self.group_chat.get_members("clarification_manager", ClarificationManager)
+            self.group_chat.get_members("issue_manager", IssueManager)
         except RuntimeError:
             try:
-                clarification_manager = ClarificationManager(self.group_chat)
-                self.group_chat.register_member("clarification_manager", clarification_manager)
+                issue_manager = IssueManager(self.group_chat)
+                self.group_chat.register_member("issue_manager", issue_manager)
             except RuntimeError as e:
                 if "exists" in str(e):
                     pass

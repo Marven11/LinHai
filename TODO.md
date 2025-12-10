@@ -2,9 +2,9 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 修改run_sed_expression的逻辑，完全禁止读取少量内容
+- [x] 修改run_sed_expression的逻辑，完全禁止读取少量内容
   - 标准：少于100行且内容少于30000个字符
-- [ ] 重构clarification -> issue
+- [x] 重构clarification -> issue
   - 深层需求：
     - 将clarification重命名，并结构化创建的过程，统一“最低回复间隔”的逻辑
     - 根据issue的发送限额自动关闭subagent，不生成更多回答

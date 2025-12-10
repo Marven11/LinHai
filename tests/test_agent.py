@@ -79,8 +79,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat.register_queue("agent_answer")
 
-        from linhai.subagent.clarification import ClarificationManager
-        self.clarification_manager = ClarificationManager(self.group_chat)
+        from linhai.subagent.issue import IssueManager
+        self.issue_manager = IssueManager(self.group_chat)
 
         from linhai.config import ToolConfig
         self.tool_manager = ToolManager(
