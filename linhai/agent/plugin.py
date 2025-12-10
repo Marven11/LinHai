@@ -351,7 +351,7 @@ class SingleToolCallReminderPlugin(Plugin):
                 agent.message_processor.update_appending_message(
                     RuntimeMessage(
                         f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
-                        "除开特殊原因不要每次只调用一个工具！"
+                        "除开特殊原因不要每次只调用一个工具！" + "！！！！！" * (self.single_tool_call_count - 2)
                     ),
                     source="single_tool_call_reminder",
                 )

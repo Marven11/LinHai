@@ -296,7 +296,7 @@ class FileContentMessage(Message):
         return {
             "role": "user",
             "name": "file-content",
-            "content": f"<<file_content>>\n<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{self.content}<<content>>\n<<file_content>>",
+            "content": f"<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>><<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{self.content}<<content>>\n<<file_content>>",
         }
 
     def to_json(self) -> str:
