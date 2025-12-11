@@ -21,6 +21,7 @@
 - [ ] 添加一个`/subagent_start`命令手动启动subagent
   - 当前只需要手动启动git diff reviewer
   - 当前插件和手动启动两种方式都可以启动git diff reviewer，可能需要提取启动git diff reviewer的逻辑
+- [ ] 在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -84,7 +85,6 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
-- [ ] 在红灯状态时禁止调用其他工具
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
