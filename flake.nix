@@ -55,6 +55,7 @@
               pydantic
               textual-autocomplete
               chardet
+              bashlex
               pkgs.nodejs # for MCPs like `npx -y chrome-devtools-mcp@latest`
             ];
 
