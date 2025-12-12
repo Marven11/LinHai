@@ -1,6 +1,7 @@
 """消息编排模块，负责管理大消息、垃圾消息、阈值通知等高级消息管理功能。"""
 
 import random
+import time
 from typing import Optional, TYPE_CHECKING, Any
 
 from linhai.agent.workflow import compress_history_range
@@ -34,6 +35,7 @@ class AgentMessageOrchestration:
         self.garbage_message_ids: set[str] = set()
         self.last_threshold_state: Optional[str] = None
         self.compress_tool_called_in_last_response: bool = False
+        self.last_compress_or_clean_time: Optional[float] = None
 
         self._register_lifecycle_callbacks()
 
@@ -134,7 +136,7 @@ class AgentMessageOrchestration:
         await self.agent_message.replace_messages(
             [msg for idx, msg in enumerate(messages) if idx not in indices_to_delete]
         )
-
+        self.last_compress_or_clean_time = time.time()
         return f"thanox_history: 随机删除了{len(indices_to_delete)}条消息"
 
     def set_compress_tool_called(self, called: bool) -> None:
@@ -147,17 +149,17 @@ class AgentMessageOrchestration:
 
     def add_soft_threshold_notification(
         self,
-        threshold_info: tuple[int, int, int, int, float],
+        threshold_info: tuple[int, int, int, float],
     ) -> None:
         """添加软限制消息提示。
 
         Args:
-            threshold_info: 阈值信息元组 (soft, hard, used, remaining, taken)
+            threshold_info: 阈值信息元组 (hard, used, remaining, taken)
         """
         if self.compress_tool_called_in_last_response:
             return
 
-        _soft, hard, used, _remaining, taken = threshold_info
+        hard, used, _remaining, taken = threshold_info
         current_state = self._determine_threshold_state(taken)
 
         if current_state == "绿灯" and self.last_threshold_state == "绿灯":
@@ -170,7 +172,7 @@ class AgentMessageOrchestration:
         self.agent_message.append_message(RuntimeMessage(message_content))
 
     async def check_and_handle_threshold(self, agent: "Agent") -> None:
-        """检查阈值并处理相应的通知和压缩。
+        """检查阈值并处理相应的通知和操作引导。
 
         Args:
             agent: Agent实例，用于获取阈值信息和token使用量
@@ -183,24 +185,107 @@ class AgentMessageOrchestration:
         # 添加软限制通知
         self.add_soft_threshold_notification(threshold_info)
 
-        # 检查是否需要压缩
-        if agent.last_token_usage and not self.compress_tool_called_in_last_response:
-            _soft, hard, _used, _remaining, _taken = threshold_info
-            if agent.last_token_usage > hard:
-                # 引导agent调用压缩工具，而不是直接调用
+        # 根据状态提供操作引导
+        # threshold_info是4元组: (hard, used, remaining, taken)
+        hard, used, _remaining, taken = threshold_info
+        current_state = self._determine_threshold_state(taken)
+
+        # 检查一分钟内是否调用过历史压缩或清理垃圾消息
+        can_compress_or_clean = self._can_compress_or_clean()
+
+        # 如果已经在上一个响应中调用了压缩工具，则跳过
+        if self.compress_tool_called_in_last_response:
+            # 即使压缩工具已被调用，仍应为黄灯和绿灯状态提供引导
+            if (
+                current_state == "黄灯"
+                and can_compress_or_clean
+                and self.garbage_message_ids
+            ):
+                self._handle_yellow_state(can_compress_or_clean)
+            elif current_state in ["绿灯", "绿灯闪烁"] and self.large_messages:
+                self._handle_green_state(current_state)
+            return
+
+        # 根据状态提供相应的操作引导
+        if current_state == "红灯":
+            self._handle_red_state(can_compress_or_clean)
+        elif current_state == "黄灯":
+            self._handle_yellow_state(can_compress_or_clean)
+        elif current_state in ["绿灯", "绿灯闪烁"]:
+            self._handle_green_state(current_state)
+
+    def _can_compress_or_clean(self) -> bool:
+        """检查一分钟内是否调用过历史压缩或清理垃圾消息。
+
+        Returns:
+            bool: 如果可以压缩或清理返回True，否则返回False
+        """
+        if not self.last_compress_or_clean_time:
+            return True
+        time_since_last_compress_or_clean = (
+            time.time() - self.last_compress_or_clean_time
+        )
+        return time_since_last_compress_or_clean >= 60
+
+    def _handle_red_state(self, can_compress_or_clean: bool) -> None:
+        """处理红灯状态。"""
+        if can_compress_or_clean:
+            # 引导agent调用压缩工具
+            guidance_message = (
+                "当前消息过多，建议调用compress_history_range工具进行历史压缩。"
+            )
+            self.agent_message.append_message(RuntimeMessage(guidance_message))
+            # 设置压缩工具调用标志
+            self.compress_tool_called_in_last_response = True
+        else:
+            # 一分钟内已调用过压缩或清理，不设置压缩工具调用标志
+            # 但可以标记大消息为垃圾
+            if self.large_messages:
+                large_message_ids = list(self.large_messages.keys())[:3]
                 guidance_message = (
-                    "当前消息过多，建议调用compress_history_range工具进行历史压缩。"
+                    f"一分钟内已调用过历史压缩或清理，现在不需要担心消息长度问题！正常进行工作！"
+                    f"当前有{len(self.large_messages)}条大消息，"
+                    f"可以先用mark_messages_as_garbage工具标记ID为{', '.join(large_message_ids)}的消息为垃圾。"
                 )
                 self.agent_message.append_message(RuntimeMessage(guidance_message))
-                # 设置压缩工具调用标志
-                self.compress_tool_called_in_last_response = True
+            else:
+                # 没有大消息，引导等待
+                guidance_message = "一分钟内已调用过历史压缩或清理，现在不需要担心消息长度问题！正常进行工作！"
+                self.agent_message.append_message(RuntimeMessage(guidance_message))
+
+    def _handle_yellow_state(self, can_compress_or_clean: bool) -> None:
+        """处理黄灯状态。"""
+        if can_compress_or_clean and self.garbage_message_ids:
+            # 黄灯状态：引导清理垃圾消息
+            guidance_message = "当前有垃圾消息需要清理，建议调用message_garbage_clean工具清理垃圾消息。"
+            self.agent_message.append_message(RuntimeMessage(guidance_message))
+
+    def _handle_green_state(self, current_state: str) -> None:
+        """处理绿灯和绿灯闪烁状态。"""
+        # 绿灯和绿灯闪烁状态：引导标记消息
+        if self.large_messages:
+            # 如果有大消息，引导标记大消息
+            large_message_ids = list(self.large_messages.keys())[:3]
+            guidance_message = (
+                f"当前有{len(self.large_messages)}条大消息，"
+                f"建议使用mark_messages_as_garbage工具标记ID为{', '.join(large_message_ids)}的消息为垃圾。"
+            )
+            self.agent_message.append_message(RuntimeMessage(guidance_message))
+        else:
+            # 如果没有大消息，引导标记不需要的消息
+            guidance_message = (
+                f"当前处于{current_state}状态，建议标记不需要的消息为垃圾以节省token。"
+            )
+            self.agent_message.append_message(RuntimeMessage(guidance_message))
 
     def _determine_threshold_state(self, taken: float) -> str:
-        if taken < 0.4:
+        # taken是小数比例（0-1），转换为百分比（0-100）进行比较
+        percentage = taken * 100
+        if percentage < 50:
             return "绿灯"
-        elif taken < 0.6:
+        elif 50 <= percentage < 70:
             return "绿灯闪烁"
-        elif taken < 0.8:
+        elif 70 <= percentage < 90:
             return "黄灯"
         else:
             return "红灯"
@@ -314,8 +399,10 @@ class AgentMessageOrchestration:
             args={},
             required_args=[],
         )
-        async def message_garbage_clean() -> str:
-            return await self.message_garbage_clean()
+        async def message_garbage_clean_tool() -> str:
+            result = await self.message_garbage_clean()
+            self.last_compress_or_clean_time = time.time()
+            return result
 
         @toolset.register_tool(
             name="thanox_history",
@@ -324,6 +411,7 @@ class AgentMessageOrchestration:
             required_args=[],
         )
         async def thanox_history() -> str:
+            self.last_compress_or_clean_time = time.time()
             return await self.thanox_history()
 
         return toolset
@@ -348,7 +436,9 @@ class AgentMessageOrchestration:
             from linhai.agent import Agent
 
             agent = self.group_chat.get_members("agent", Agent)
-            return await compress_history_range(agent)
+            result = await compress_history_range(agent)
+            self.last_compress_or_clean_time = time.time()
+            return result
 
         return toolset
 

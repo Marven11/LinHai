@@ -22,16 +22,18 @@ class TestCreateAgentMCP(unittest.TestCase):
         """设置测试fixtures"""
         self.temp_dir = tempfile.mkdtemp()
         self.group_chat = GroupChat()
-        
+
         project_root = os.path.dirname(os.path.abspath(__file__))
         source_file = os.path.join(project_root, "real_mcp_server.py")
         dest_file = os.path.join(self.temp_dir, "real_mcp_server.py")
         import shutil
+
         shutil.copy2(source_file, dest_file)
 
     def tearDown(self):
         """清理测试fixtures"""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def create_test_config(self, config_content):
@@ -51,24 +53,22 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 
 [[agent.mcp]]
 name = "calculator"
 server_script_path = "{server_script_path}"
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
         result = asyncio.run(create_agent_from_config(self.group_chat, config))
-        
+
         self.assertIsInstance(result, Agent)
-        
+
         self.assertIsInstance(result, Agent)
-        
+
         self.assertIsInstance(result, Agent)
-        
 
     def test_create_agent_without_mcp_config(self):
         """测试没有MCP配置时create_agent函数正常工作"""
@@ -80,20 +80,17 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
         result = asyncio.run(create_agent_from_config(self.group_chat, config))
-        
+
         self.assertIsInstance(result, Agent)
-        
+
         agent = self.group_chat.get_members("agent", Agent)
         self.assertIsNotNone(agent)
-
-
 
 
 if __name__ == "__main__":

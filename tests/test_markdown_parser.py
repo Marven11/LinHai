@@ -39,10 +39,10 @@ invalid json
 ```
 """
         tool_calls, errors = extract_tool_calls_with_errors(markdown_text)
-        
+
         self.assertEqual(len(tool_calls), 1)
         self.assertEqual(tool_calls[0]["name"], "test_tool")
-        
+
         self.assertEqual(len(errors), 4)
         self.assertIn("JSON格式无效", errors[0])
         self.assertIn("不是对象类型", errors[1])

@@ -22,7 +22,7 @@ from .file import (
     replace_file_content,
     list_files,
     get_absolute_path,
-    run_sed_expression,
+    read_file_with_sed,
     modify_file_with_sed,
     insert_at_line,
 )
@@ -115,9 +115,9 @@ class MasterHostControl:
         """获取路径的绝对路径"""
         return await asyncio.to_thread(get_absolute_path, path)
 
-    async def run_sed_expression(self, expression: str, filepath: str) -> Message:
+    async def read_file_with_sed(self, expression: str, filepath: str) -> Message:
         """执行sed表达式并返回输出"""
-        return await asyncio.to_thread(run_sed_expression, expression, filepath)
+        return await asyncio.to_thread(read_file_with_sed, expression, filepath)
 
     async def modify_file_with_sed(self, expression: str, filepath: str) -> Message:
         """使用sed表达式修改文件"""

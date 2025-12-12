@@ -351,7 +351,8 @@ class SingleToolCallReminderPlugin(Plugin):
                 agent.message_processor.update_appending_message(
                     RuntimeMessage(
                         f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
-                        "除开特殊原因不要每次只调用一个工具！" + "！！！！！" * (self.single_tool_call_count - 2)
+                        "除开特殊原因不要每次只调用一个工具！"
+                        + "！！！！！" * (self.single_tool_call_count - 2)
                     ),
                     source="single_tool_call_reminder",
                 )
@@ -615,10 +616,10 @@ class RuntimeImitationPlugin(Plugin):
 
 
 class DuplicateFileReadPlugin(Plugin):
-    """重复文件读取拦截插件，仅拦截重复读取相同文件内容。
+    """拦截重复文件读取以优化代理行为。
 
-    实现TODO.md中的要求：重复读取同一个文件而且文件内容完全相同则拦截。
-    通过查看agent的message是否有相同的FileContentMessage实现。
+    重复读取相同文件内容浪费token并减慢任务进度。此插件通过检查已有FileContentMessage来检测重复。
+    对于read_file_with_sed，即使sed表达式不同，也视为重复读取，因为代理已拥有完整文件内容，应直接修改而非再次读取。
     """
 
     def register(self, lifecycle):
@@ -633,31 +634,88 @@ class DuplicateFileReadPlugin(Plugin):
         success: bool,
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否重复读取文件。"""
-        if not success or tool_call.function_name != "read_file":
+        # 基本检查
+        if not success:
             return None
 
-        if not isinstance(tool_result, FileContentMessage):
+        tool_name = tool_call.function_name
+        if tool_name not in ["read_file", "read_file_with_sed"]:
             return None
 
-        same_file_messages = [
+        filepath = tool_call.function_arguments.get("filepath")
+        if not filepath:
+            return None
+
+        # 处理read_file_with_sed工具
+        if tool_name == "read_file_with_sed":
+            return await self._handle_read_file_with_sed(agent, filepath, tool_result)
+
+        # 处理read_file工具
+        if tool_name == "read_file" and isinstance(tool_result, FileContentMessage):
+            return await self._handle_read_file(agent, filepath, tool_result)
+
+        return None
+
+    async def _handle_read_file_with_sed(
+        self, agent: "Agent", filepath: str, tool_result: Any
+    ) -> Optional[RuntimeMessage]:
+        """处理read_file_with_sed工具的重复读取检查。"""
+        # 检查最近的FileContentMessage中是否有相同文件
+        recent_file_messages = [
             message
-            for message in agent.message_processor.get_messages()
-            if isinstance(message, FileContentMessage)
-            and message.filepath == tool_result.filepath
+            for message in reversed(list(agent.message_processor.get_messages()))
+            if isinstance(message, FileContentMessage) and message.filepath == filepath
         ]
 
-        if len(same_file_messages) >= 1 and same_file_messages[-1] == tool_result:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content="模型重复读取相同文件，已阻止",
-                ),
-            )
-            return RuntimeMessage(
-                f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。"
-                "不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
-            )
+        if recent_file_messages:
+            latest_message = recent_file_messages[0]
+            try:
+                current_content = Path(filepath).read_text(encoding="utf-8")
+                if latest_message.content == current_content:
+                    # 文件内容相同，阻止读取
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="INFO",
+                            content="模型使用read_file_with_sed读取已读取文件，已阻止",
+                        ),
+                    )
+                    return RuntimeMessage(
+                        "错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！"
+                        "这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！"
+                    )
+                return None
+            except Exception:
+                return None
+
+        return None
+
+    async def _handle_read_file(
+        self, agent: "Agent", filepath: str, tool_result: FileContentMessage
+    ) -> Optional[RuntimeMessage]:
+        """处理read_file工具的重复读取检查。"""
+        # 检查最近的FileContentMessage中是否有相同文件
+        recent_file_messages = [
+            message
+            for message in reversed(list(agent.message_processor.get_messages()))
+            if isinstance(message, FileContentMessage) and message.filepath == filepath
+        ]
+
+        if recent_file_messages:
+            latest_message = recent_file_messages[0]
+            if latest_message == tool_result:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="INFO",
+                        content="模型重复读取相同文件，已阻止",
+                    ),
+                )
+                return RuntimeMessage(
+                    f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。"
+                    "不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                )
+            return None
 
         return None
 
@@ -667,7 +725,7 @@ class UnnecessarySedReadPlugin(Plugin):
 
     判断规则 - 在一分钟内出现两次读取同一个文件的工具调用：
         - 对应文件行数少于1600行
-        - 使用run_sed_expression
+        - 使用read_file_with_sed
         - 工具返回结果小于10000个字符
     """
 
@@ -688,7 +746,7 @@ class UnnecessarySedReadPlugin(Plugin):
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否不必要的小块读取。"""
 
-        if not success or tool_call.function_name != "run_sed_expression":
+        if not success or tool_call.function_name != "read_file_with_sed":
             return None
 
         filepath = tool_call.function_arguments.get("filepath")
@@ -1034,3 +1092,74 @@ def _is_read_file(word: str, read_files: set[Path]) -> bool:
         return path in read_files
     except (OSError, ValueError):
         return False
+
+
+class RedStateToolBlockPlugin(Plugin):
+    """红灯状态工具调用拦截插件。
+
+    在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具。
+    """
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.ALLOWED_TOOLS = {
+            "mark_messages_as_garbage",
+            "message_garbage_clean",
+            "thanox_history",
+            "compress_history_range",
+        }
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_before_tool_call(self._before_tool_call)
+
+    async def _before_tool_call(
+        self,
+        tool_call: ToolCallMessage,
+    ) -> bool:
+        """在工具调用前检查是否需要拦截。"""
+
+        agent = self.group_chat.get_members("agent", Agent)
+        threshold_info = agent.get_threshold_info()
+        if not threshold_info:
+            return False
+
+        _hard, _used, _remaining, taken = threshold_info
+
+        # 获取orchestration，使用其状态计算方法
+        from linhai.agent.orchestration import AgentMessageOrchestration
+
+        orchestration = self.group_chat.get_members(
+            "agent_message_orchestration", AgentMessageOrchestration
+        )
+
+
+        # 使用orchestration的状态计算方法
+        current_state = orchestration._determine_threshold_state(taken)
+        if current_state != "红灯":
+            return False  # 不是红灯状态
+
+        if not orchestration._can_compress_or_clean():
+            return False # 不能调用压缩工具
+
+        # 在红灯状态下，只允许清理类工具，其他工具一律禁止，无论一分钟内是否有清理
+        if tool_call.function_name in self.ALLOWED_TOOLS:
+            return False
+
+        error_msg = (
+            f"错误：当前处于红灯状态（token使用率{taken*100:.1f}%），"
+            f"禁止调用{tool_call.function_name}工具！"
+            "红灯状态下只允许调用mark_messages_as_garbage、message_garbage_clean、"
+            "thanox_history或compress_history_range等消息清理类工具。"
+        )
+
+        # 添加错误消息到agent
+        agent.message_processor.append_message(RuntimeMessage(error_msg))
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content=f"红灯状态下阻止调用{tool_call.function_name}工具，请先调用消息清理类工具",
+            ),
+        )
+        return True

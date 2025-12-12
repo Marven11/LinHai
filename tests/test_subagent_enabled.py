@@ -45,36 +45,36 @@ default_llm = "test_llm"
     async def test_subagent_enabled_true(self):
         """测试SubAgent启用时的情况。"""
         config_path = self.create_test_config(subagent_enabled=True)
-        
+
         try:
             config = load_config(config_path)
-            
+
             self.assertTrue(config.subagent_enabled)
             self.assertIsNotNone(config.subagent)
             assert config.subagent is not None  # 确保pyright知道subagent不为None
             self.assertTrue(config.subagent.enable)
-            
+
             config_str = str(config)
             self.assertIn("subagent_enabled=True", config_str)
-            
+
         finally:
             os.unlink(config_path)
 
     async def test_subagent_enabled_false(self):
         """测试SubAgent禁用时的情况。"""
         config_path = self.create_test_config(subagent_enabled=False)
-        
+
         try:
             config = load_config(config_path)
-            
+
             self.assertFalse(config.subagent_enabled)
             self.assertIsNotNone(config.subagent)
             assert config.subagent is not None  # 确保pyright知道subagent不为None
             self.assertFalse(config.subagent.enable)
-            
+
             config_str = str(config)
             self.assertIn("subagent_enabled=False", config_str)
-            
+
         finally:
             os.unlink(config_path)
 
@@ -90,16 +90,16 @@ model = "test-model"
         fd, path = tempfile.mkstemp(suffix=".toml")
         with os.fdopen(fd, "w") as f:
             f.write(config_content)
-        
+
         try:
             config = load_config(path)
-            
+
             self.assertIsNone(config.subagent)
             self.assertFalse(config.subagent_enabled)
-            
+
             config_str = str(config)
             self.assertIn("subagent_enabled=False", config_str)
-            
+
         finally:
             os.unlink(path)
 
@@ -109,25 +109,26 @@ model = "test-model"
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
         mock_openai.return_value = mock_llm
-        
+
         config_path = self.create_test_config(subagent_enabled=False)
-        
+
         try:
             config = load_config(config_path)
             agent = await create_agent_from_config(self.group_chat, config, None)
-            
+
             subagent_manager_calls = [
-                call for call in self.group_chat.register_member.call_args_list
+                call
+                for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
             ]
             self.assertEqual(len(subagent_manager_calls), 0)
-            
+
             has_subagent_plugin = any(
                 plugin.__class__.__name__ == "SubAgentCollaborationPlugin"
                 for plugin in agent.lifecycle._plugins
             )
             self.assertFalse(has_subagent_plugin)
-            
+
         finally:
             os.unlink(config_path)
 
@@ -137,25 +138,27 @@ model = "test-model"
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
         mock_openai.return_value = mock_llm
-        
+
         config_path = self.create_test_config(subagent_enabled=True)
-        
+
         try:
             config = load_config(config_path)
             agent = await create_agent_from_config(self.group_chat, config, None)
-            
+
             subagent_manager_calls = [
-                call for call in self.group_chat.register_member.call_args_list
+                call
+                for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
             ]
             self.assertEqual(len(subagent_manager_calls), 1)
-            
+
             subagent_manager_calls = [
-                call for call in self.group_chat.register_member.call_args_list
+                call
+                for call in self.group_chat.register_member.call_args_list
                 if call and len(call[0]) > 0 and call[0][0] == "subagent_manager"
             ]
             self.assertEqual(len(subagent_manager_calls), 1)
-            
+
         finally:
             os.unlink(config_path)
 

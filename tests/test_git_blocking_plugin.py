@@ -16,19 +16,21 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.append_message = MagicMock()
-        
+
         self.issue_manager = MagicMock()
         self.issue_manager.has_unanswered_issues.return_value = False
-        
+
         self.group_chat = MagicMock()
+
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
             elif member_type == "issue_manager":
                 return self.issue_manager
             return None
+
         self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
-        
+
         self.plugin = GitBlockingPlugin(self.group_chat)
 
     async def test_register(self):
@@ -53,7 +55,7 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             ("ls -la", False),
             ("python script.py", False),
         ]
-        
+
         for command, expected in test_cases:
             with self.subTest(command=command):
                 result = self.plugin._is_git_command(command)
@@ -62,14 +64,13 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_block_git_command_with_unanswered_issues(self):
         """测试有未解答issue时阻止git命令。"""
         self.issue_manager.has_unanswered_issues.return_value = True
-        
+
         self.group_chat.send_if_exists = AsyncMock()
-        
+
         tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "git status"}
+            function_name="run_command", function_arguments={"command": "git status"}
         )
-        
+
         result = await self.plugin.before_tool_call(tool_call)
         self.assertTrue(result)
         self.group_chat.send_if_exists.assert_called_once()
@@ -77,12 +78,11 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_allow_git_command_without_unanswered_issues(self):
         """测试没有未解答issue时允许git命令。"""
         self.issue_manager.has_unanswered_issues.return_value = False
-        
+
         tool_call = ToolCallMessage(
-            function_name="run_command", 
-            function_arguments={"command": "git status"}
+            function_name="run_command", function_arguments={"command": "git status"}
         )
-        
+
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()
@@ -90,12 +90,11 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_ignore_non_command_tools(self):
         """测试忽略非命令工具。"""
         self.issue_manager.has_unanswered_issues.return_value = True
-        
+
         tool_call = ToolCallMessage(
-            function_name="read_file",
-            function_arguments={"filepath": "test.txt"}
+            function_name="read_file", function_arguments={"filepath": "test.txt"}
         )
-        
+
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.append_message.assert_not_called()

@@ -27,7 +27,6 @@ from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
-from .workflow import compress_history_range
 from linhai.input_parser import parse_user_input
 
 
@@ -72,7 +71,13 @@ class Agent:
 
         self.queued_messages: list = []
 
-    def get_threshold_info(self) -> tuple[int, int, int, int, float] | None:
+    def get_threshold_info(self) -> tuple[int, int, int, float] | None:
+        """获取阈值信息。
+
+        返回:
+            tuple[int, int, int, float] | None:
+                (压缩阈值, 已使用token数, 剩余token数, 使用比例) 或 None
+        """
         if not self.last_token_usage:
             return None
 
@@ -82,32 +87,22 @@ class Agent:
         if token_limit is None:
             token_limit = 65536
 
-        soft_config = self.context.get("compress_threshold_soft", 0.5)
-        hard_config = self.context.get("compress_threshold_hard", 0.8)
-
-        compress_threshold_soft = (
-            int(soft_config * token_limit)
-            if isinstance(soft_config, float)
-            else soft_config
-        )
-        compress_threshold_hard = (
-            int(hard_config * token_limit)
-            if isinstance(hard_config, float)
-            else hard_config
+        threshold_config = self.context.get("compress_threshold", 0.8)
+        compress_threshold = (
+            int(threshold_config * token_limit)
+            if isinstance(threshold_config, float)
+            else threshold_config
         )
 
         taken = (
-            0.0
-            if self.last_token_usage <= compress_threshold_soft
-            else (
-                (self.last_token_usage - compress_threshold_soft)
-                / (compress_threshold_hard - compress_threshold_soft)
-            )
+            min(self.last_token_usage / compress_threshold, 1.0)
+            if compress_threshold > 0
+            else 0.0
         )
-        remaining = compress_threshold_hard - self.last_token_usage
+        remaining = max(compress_threshold - self.last_token_usage, 0)
+
         return (
-            compress_threshold_soft,
-            compress_threshold_hard,
+            compress_threshold,
             self.last_token_usage,
             remaining,
             taken,
@@ -236,6 +231,8 @@ class Agent:
 
         if parsed_input.command == "queue":
             self.queued_messages.append(msg)
+        elif parsed_input.command == "subagent_start":
+            await self.handle_subagent_start_command()
         elif parsed_input.command in ["quit", "exit"]:
             await self.group_chat.send("exit_signal", {"return_code": 0})
         else:
@@ -381,6 +378,39 @@ class Agent:
         llm_name = self.context["llm_names"][current_index]
         llm_instance = self.context["llms"][current_index]
         return llm_name, llm_instance
+
+    async def handle_subagent_start_command(self):
+        """处理/subagent_start命令，手动启动git diff reviewer。"""
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content="手动启动git diff reviewer...",
+            ),
+        )
+
+        from linhai.subagent.main import SubAgentManager
+
+        subagent_manager = self.group_chat.get_members(
+            "subagent_manager", SubAgentManager
+        )
+
+        # 生成唯一的subagent名称
+        from linhai.utils import generate_id
+
+        subagent_name = generate_id("git_diff_reviewer")
+
+        # 创建subagent执行git diff审查
+        result = await subagent_manager.create_subagent(
+            agent_type="git_diff_reviewer",
+            name=subagent_name,
+            task_message="请审查最近的git diff，找出代码中的问题",
+            max_answer_times=None,
+        )
+
+        self.message_processor.append_message(
+            RuntimeMessage(f"已启动git diff reviewer: {result}")
+        )
 
     async def save_conversation_history(self):
         """保存对话历史到文件。"""

@@ -5,6 +5,7 @@ import os
 import re
 import tempfile
 
+
 class TestToolResultMessage(unittest.TestCase):
     """Test cases for ToolResultMessage with large content handling."""
 
@@ -35,7 +36,7 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
-        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        file_paths = re.findall(r"- (\S+_chars_\d+-\d+\.txt)", content)
         self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
         reconstructed_content = ""
@@ -64,7 +65,7 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
-        file_paths = re.findall(r'- (\S+_lines_\d+-\d+\.txt)', content)
+        file_paths = re.findall(r"- (\S+_lines_\d+-\d+\.txt)", content)
         self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
         reconstructed_lines = []
@@ -72,7 +73,7 @@ class TestToolResultMessage(unittest.TestCase):
             self.assertTrue(os.path.exists(file_path), f"临时文件不存在: {file_path}")
             with open(file_path, "r", encoding="utf-8") as f:
                 file_content = f.read()
-                reconstructed_lines.extend(file_content.split('\n'))
+                reconstructed_lines.extend(file_content.split("\n"))
             os.unlink(file_path)
 
         reconstructed_lines = [line for line in reconstructed_lines if line]
@@ -94,7 +95,7 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertIn("已按字符分块保存", content)
         self.assertIn("每10000字符一个文件", content)
 
-        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        file_paths = re.findall(r"- (\S+_chars_\d+-\d+\.txt)", content)
         self.assertEqual(len(file_paths), 1, "应该生成一个文件")
 
         for file_path in file_paths:
@@ -136,7 +137,7 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertIn("已按字符分块保存", content)
         self.assertIn("每10000字符一个文件", content)
 
-        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content)
+        file_paths = re.findall(r"- (\S+_chars_\d+-\d+\.txt)", content)
         self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
         reconstructed_content = ""
@@ -172,7 +173,7 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertIn("已按字符分块保存", content_str)
         self.assertIn("每10000字符一个文件", content_str)
 
-        file_paths = re.findall(r'- (\S+_chars_\d+-\d+\.txt)', content_str)
+        file_paths = re.findall(r"- (\S+_chars_\d+-\d+\.txt)", content_str)
         self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
         reconstructed_content = ""
@@ -184,5 +185,3 @@ class TestToolResultMessage(unittest.TestCase):
             os.unlink(file_path)
 
         self.assertEqual(reconstructed_content, long_content)
-
-

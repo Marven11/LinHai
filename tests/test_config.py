@@ -9,7 +9,7 @@ from linhai.config import ConfigValidationError, load_config, Config
 
 def create_temp_config(config_content: str) -> str:
     """创建临时配置文件并返回路径"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
         f.write(config_content)
         return f.name
 
@@ -19,13 +19,15 @@ class TestConfig(unittest.TestCase):
 
     def test_load_config_valid(self):
         """Test loading a valid config."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
-            f.write('''[[llm]]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(
+                """[[llm]]
 name = "primary"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-''')
+"""
+            )
             temp_file = f.name
 
         try:
@@ -41,12 +43,12 @@ model = "test_model"
 
     def test_load_config_invalid_url(self):
         """Test loading a config with invalid URL."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "primary"
 base_url = "invalid_url"
 api_key = "test_key"
 model = "test_model"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             with self.assertRaises(ConfigValidationError):
@@ -56,12 +58,12 @@ model = "test_model"
 
     def test_load_config_empty_api_key(self):
         """Test loading a config with empty API key."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = ""
 model = "test_model"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             with self.assertRaises(Exception):
@@ -71,12 +73,12 @@ model = "test_model"
 
     def test_load_config_empty_model(self):
         """Test loading a config with empty model."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = ""
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             with self.assertRaises(Exception):
@@ -86,22 +88,21 @@ model = ""
 
     def test_load_config_with_optional_fields(self):
         """Test loading a config with optional fields."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
 [agent]
-compress_threshold_soft = 30000
-compress_threshold_hard = 60000
+compress_threshold = 60000
 
 [memory]
 file_path = "./test_memory.md"
 
 [tools]
 max_output_length = 2000
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -109,8 +110,7 @@ max_output_length = 2000
             self.assertEqual(config.llm[0].base_url, "https://api.example.com")
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold_soft, 30000.0)
-            self.assertEqual(config.agent.compress_threshold_hard, 60000.0)
+            self.assertEqual(config.agent.compress_threshold, 60000)
             self.assertIsNotNone(config.memory)
             assert config.memory is not None
             self.assertEqual(config.memory.file_path, "./test_memory.md")
@@ -122,58 +122,54 @@ max_output_length = 2000
 
     def test_load_config_with_int_values(self):
         """Test loading a config with integer values for compress thresholds."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
 [agent]
-compress_threshold_soft = 30000
-compress_threshold_hard = 60000
-'''
+compress_threshold = 60000
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold_soft, 30000)
-            self.assertEqual(config.agent.compress_threshold_hard, 60000)
+            self.assertEqual(config.agent.compress_threshold, 60000)
         finally:
             os.unlink(temp_file)
 
     def test_load_config_with_float_values(self):
         """Test loading a config with float values for compress thresholds."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
 [agent]
-compress_threshold_soft = 0.5
-compress_threshold_hard = 0.8
-'''
+compress_threshold = 0.8
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold_soft, 0.5)
-            self.assertEqual(config.agent.compress_threshold_hard, 0.8)
+            self.assertEqual(config.agent.compress_threshold, 0.8)
         finally:
             os.unlink(temp_file)
 
     def test_load_config_with_defaults(self):
         """Test loading a config with default values."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -186,7 +182,7 @@ model = "test_model"
 
     def test_load_config_multiple_llms(self):
         """Test loading a config with multiple LLMs."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "primary"
 base_url = "https://api.example.com"
 api_key = "test_key_1"
@@ -197,7 +193,7 @@ name = "secondary"
 base_url = "https://api.example.org"
 api_key = "test_key_2"
 model = "test_model_2"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -218,7 +214,7 @@ model = "test_model_2"
 
     def test_load_config_multiple_llms_with_optional_fields(self):
         """Test loading a config with multiple LLMs and optional fields."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "main"
 base_url = "https://api.example.com"
 api_key = "test_key_1"
@@ -231,15 +227,14 @@ api_key = "test_key_2"
 model = "test_model_2"
 
 [agent]
-compress_threshold_soft = 0.5
-compress_threshold_hard = 0.8
+compress_threshold = 0.8
 
 [memory]
 file_path = "./test_memory.md"
 
 [tools]
 max_output_length = 2000
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -251,8 +246,7 @@ max_output_length = 2000
 
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold_soft, 0.5)
-            self.assertEqual(config.agent.compress_threshold_hard, 0.8)
+            self.assertEqual(config.agent.compress_threshold, 0.8)
             self.assertIsNotNone(config.memory)
             assert config.memory is not None
             self.assertEqual(config.memory.file_path, "./test_memory.md")
@@ -264,12 +258,12 @@ max_output_length = 2000
 
     def test_load_config_multiple_llms_invalid_name(self):
         """Test loading a config with multiple LLMs with empty name."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = ""
 base_url = "https://api.example.com"
 api_key = "test_key_1"
 model = "test_model_1"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             with self.assertRaises(Exception):
@@ -279,7 +273,7 @@ model = "test_model_1"
 
     def test_load_config_with_openai_kwargs(self):
         """Test loading a config with client_options and completion_options."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "qwen"
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = "test_key"
@@ -290,7 +284,7 @@ timeout = 30
 
 [llm.completion_options.stream_options]
 include_usage = true
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -298,7 +292,8 @@ include_usage = true
             self.assertEqual(len(config.llm), 1)
             self.assertEqual(config.llm[0].name, "qwen")
             self.assertEqual(
-                config.llm[0].base_url, "https://dashscope.aliyuncs.com/compatible-mode/v1"
+                config.llm[0].base_url,
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
             )
             self.assertEqual(config.llm[0].api_key, "test_key")
             self.assertEqual(config.llm[0].model, "qwen-plus")
@@ -312,7 +307,7 @@ include_usage = true
 
     def test_load_config_with_type_and_compatibility(self):
         """Test loading a config with type and compatibility fields."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "minimax"
 type = "openai"
 compatibility = "minimax"
@@ -326,19 +321,19 @@ type = "openai"
 base_url = "https://api.openai.com"
 api_key = "test_key_2"
 model = "gpt-4"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 2)
-            
+
             self.assertEqual(config.llm[0].name, "minimax")
             self.assertEqual(config.llm[0].type, "openai")
             self.assertEqual(config.llm[0].compatibility, "minimax")
             self.assertEqual(config.llm[0].base_url, "https://api.minimaxi.com/v1")
             self.assertEqual(config.llm[0].model, "MiniMax-M2")
-            
+
             self.assertEqual(config.llm[1].name, "openai")
             self.assertEqual(config.llm[1].type, "openai")
             self.assertIsNone(config.llm[1].compatibility)
@@ -349,12 +344,12 @@ model = "gpt-4"
 
     def test_load_config_default_type_and_compatibility(self):
         """Test loading a config with default values for type and compatibility."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -365,10 +360,9 @@ model = "test_model"
         finally:
             os.unlink(temp_file)
 
-
     def test_load_config_with_subagent(self):
         """Test loading a config with subagent configuration."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "deepseek"
 base_url = "https://api.deepseek.com/v1"
 api_key = "test_key"
@@ -382,7 +376,7 @@ model = "qwen-plus"
 
 [subagent]
 default_llm = "qwen"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
@@ -395,12 +389,12 @@ default_llm = "qwen"
 
     def test_load_config_with_subagent_default(self):
         """Test loading a config without subagent uses default."""
-        config_content = '''[[llm]]
+        config_content = """[[llm]]
 name = "deepseek"
 base_url = "https://api.deepseek.com/v1"
 api_key = "test_key"
 model = "deepseek-chat"
-'''
+"""
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)

@@ -22,10 +22,10 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         self.config_dir.mkdir()
         self.working_dir = Path(self.temp_dir) / "working"
         self.working_dir.mkdir()
-        
+
         self.original_cwd = os.getcwd()
         os.chdir(self.temp_dir)
-        
+
         self.group_chat = GroupChat()
 
     def tearDown(self):
@@ -37,30 +37,32 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         """测试绝对路径的全局记忆文件"""
         memory_file = Path(self.temp_dir) / "custom_memory.md"
         memory_file.write_text("# 自定义全局记忆\n- 测试内容")
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
+
         try:
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
                     system_prompt="测试系统提示",
-                    memory_file_path=memory_file
+                    memory_file_path=memory_file,
                 )
             )
-            
-            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
+
+            memory_messages = [
+                msg for msg in init_messages if isinstance(msg, GlobalMemory)
+            ]
             self.assertGreater(len(memory_messages), 0)
-            
+
             custom_memory_found = False
             for msg in memory_messages:
                 if isinstance(msg, GlobalMemory) and msg.filepath == memory_file:
                     custom_memory_found = True
                     break
-            
+
             self.assertTrue(custom_memory_found, "未找到自定义全局记忆文件")
-            
+
         finally:
             loop.close()
 
@@ -68,31 +70,36 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         """测试相对路径的全局记忆文件"""
         memory_file = Path("./") / "test_relative_memory.md"
         memory_file.write_text("# 相对路径全局记忆\n- 测试内容")
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
+
         try:
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
                     system_prompt="测试系统提示",
-                    memory_file_path=Path("test_relative_memory.md")
+                    memory_file_path=Path("test_relative_memory.md"),
                 )
             )
-            
-            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
+
+            memory_messages = [
+                msg for msg in init_messages if isinstance(msg, GlobalMemory)
+            ]
             self.assertGreater(len(memory_messages), 0)
-            
+
             relative_memory_found = False
             for msg in memory_messages:
-                if isinstance(msg, GlobalMemory) and msg.filepath.name == "test_relative_memory.md":
+                if (
+                    isinstance(msg, GlobalMemory)
+                    and msg.filepath.name == "test_relative_memory.md"
+                ):
                     relative_memory_found = True
                     self.assertTrue(msg.filepath.exists(), "相对路径文件不存在")
                     break
-            
+
             self.assertTrue(relative_memory_found, "未找到相对路径全局记忆文件")
-            
+
         finally:
             loop.close()
             if memory_file.exists():
@@ -102,28 +109,30 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         """测试未提供memory_file_path时使用默认路径"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
+
         try:
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
                     system_prompt="测试系统提示",
-                    memory_file_path=None
+                    memory_file_path=None,
                 )
             )
-            
-            memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
+
+            memory_messages = [
+                msg for msg in init_messages if isinstance(msg, GlobalMemory)
+            ]
             self.assertGreater(len(memory_messages), 0)
-            
+
             default_memory_found = False
             default_path = Path("~/.config/linhai/LINHAI.md").expanduser()
             for msg in memory_messages:
                 if isinstance(msg, GlobalMemory) and msg.filepath == default_path:
                     default_memory_found = True
                     break
-            
+
             self.assertTrue(default_memory_found, "未找到默认全局记忆文件")
-            
+
         finally:
             loop.close()
 
@@ -131,38 +140,43 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         """测试项目记忆文件自动加载"""
         project_files = ["LINHAI.md", "AGENT.md", "CLAUDE.md"]
         created_files = []
-        
+
         try:
             for filename in project_files:
                 file_path = Path("./") / filename
                 file_path.write_text(f"# {filename}\n- 测试内容")
                 created_files.append(file_path)
-            
+
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
+
             try:
                 init_messages = loop.run_until_complete(
                     _create_init_messages(
                         group_chat=self.group_chat,
                         system_prompt="测试系统提示",
-                        memory_file_path=None
+                        memory_file_path=None,
                     )
                 )
-                
-                memory_messages = [msg for msg in init_messages if isinstance(msg, GlobalMemory)]
-                
+
+                memory_messages = [
+                    msg for msg in init_messages if isinstance(msg, GlobalMemory)
+                ]
+
                 for filename in project_files:
                     file_found = False
                     for msg in memory_messages:
-                        if isinstance(msg, GlobalMemory) and msg.filepath.name == filename:
+                        if (
+                            isinstance(msg, GlobalMemory)
+                            and msg.filepath.name == filename
+                        ):
                             file_found = True
                             break
                     self.assertTrue(file_found, f"未找到项目记忆文件: {filename}")
-                    
+
             finally:
                 loop.close()
-                
+
         finally:
             for file_path in created_files:
                 if file_path.exists():

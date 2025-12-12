@@ -14,11 +14,18 @@ from linhai.utils import CliRuntimeNotice
 class SshMachineControl:
     """SSH机器控制类，负责通过SSH连接远程机器并调用工具。"""
 
-    def __init__(self, host: str, group_chat: GroupChat, port: int = 22, username: Optional[str] = None):
+    def __init__(
+        self,
+        host: str,
+        group_chat: GroupChat,
+        port: int = 22,
+        username: Optional[str] = None,
+    ):
         if username is None:
             import getpass
+
             username = getpass.getuser()
-        
+
         self.host = host
         self.port = port
         self.username = username
@@ -43,9 +50,8 @@ class SshMachineControl:
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="ERROR",
-                    content=f"检查远程Python版本失败: {error_msg}"
-                )
+                    level="ERROR", content=f"检查远程Python版本失败: {error_msg}"
+                ),
             )
             return False
         return True
@@ -69,9 +75,8 @@ class SshMachineControl:
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="ERROR",
-                    content=f"创建远程临时文件失败: {error_msg}"
-                )
+                    level="ERROR", content=f"创建远程临时文件失败: {error_msg}"
+                ),
             )
             raise RuntimeError(f"创建远程临时文件失败: {error_msg}")
 
@@ -90,9 +95,8 @@ class SshMachineControl:
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="ERROR",
-                    content=f"写入远程文件失败: {error_msg}"
-                )
+                    level="ERROR", content=f"写入远程文件失败: {error_msg}"
+                ),
             )
             cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
             try:
@@ -154,9 +158,8 @@ class SshMachineControl:
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="INFO",
-                    content=f"开始连接SSH服务器: {self.host}:{self.port}"
-                )
+                    level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
+                ),
             )
 
             self.trojan_path = Path(tempfile.mktemp(suffix=".py"))
@@ -170,76 +173,74 @@ class SshMachineControl:
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
-                    content=f"检查远程机器Python版本: {self.host}:{self.port}"
-                )
+                    content=f"检查远程机器Python版本: {self.host}:{self.port}",
+                ),
             )
-            
+
             if not await self._check_python_version(ssh_cmd):
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
-                        content=f"远程机器Python版本检查失败: {self.host}:{self.port}"
-                    )
+                        content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
+                    ),
                 )
                 if self.trojan_path and self.trojan_path.exists():
                     self.trojan_path.unlink(missing_ok=True)
                 return False
-            
+
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="INFO",
-                    content=f"Python版本检查通过: {self.host}:{self.port}"
-                )
+                    level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
+                ),
             )
 
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
-                    content=f"复制控制程序到远程机器: {self.host}:{self.port}"
-                )
+                    content=f"复制控制程序到远程机器: {self.host}:{self.port}",
+                ),
             )
-            
+
             remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
             self.remote_trojan_path = remote_trojan_path
-            
-            await self.group_chat.send(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"控制程序已复制到远程机器: {self.host}:{self.port}"
-                )
-            )
 
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
-                    content=f"启动远程控制程序: {self.host}:{self.port}"
-                )
+                    content=f"控制程序已复制到远程机器: {self.host}:{self.port}",
+                ),
             )
-            
+
+            await self.group_chat.send(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
+                ),
+            )
+
             if not await self._start_trojan_process(ssh_cmd, remote_trojan_path):
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
-                        content=f"启动远程控制程序失败: {self.host}:{self.port}"
-                    )
+                        content=f"启动远程控制程序失败: {self.host}:{self.port}",
+                    ),
                 )
                 await self._cleanup_remote_file(ssh_cmd, remote_trojan_path)
                 if self.trojan_path and self.trojan_path.exists():
                     self.trojan_path.unlink(missing_ok=True)
                 return False
-            
+
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
-                    content=f"远程控制程序启动成功: {self.host}:{self.port}"
-                )
+                    content=f"远程控制程序启动成功: {self.host}:{self.port}",
+                ),
             )
 
             return True
@@ -249,8 +250,8 @@ class SshMachineControl:
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
-                    content=f"SSH连接失败: {self.host}:{self.port}, 错误: {str(e)}"
-                )
+                    content=f"SSH连接失败: {self.host}:{self.port}, 错误: {str(e)}",
+                ),
             )
             await self._cleanup_on_connect_failure(ssh_cmd)
             return False
@@ -303,10 +304,10 @@ class SshMachineControl:
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
-                    content=f"在SSH机器 {self.host}:{self.port} 上执行命令: {name}"
-                )
+                    content=f"在SSH机器 {self.host}:{self.port} 上执行命令: {name}",
+                ),
             )
-            
+
             result = await self._send_request(name, args)
             if "error" in result:
                 return ToolErrorMessage(f"工具执行失败: {result['error']}")
@@ -319,11 +320,10 @@ class SshMachineControl:
         await self.group_chat.send(
             "ui_log",
             CliRuntimeNotice(
-                level="INFO",
-                content=f"正在关闭SSH连接: {self.host}:{self.port}"
-            )
+                level="INFO", content=f"正在关闭SSH连接: {self.host}:{self.port}"
+            ),
         )
-        
+
         if self.process:
             try:
                 self.process.terminate()
@@ -333,9 +333,8 @@ class SshMachineControl:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"终止进程时出错: {str(e)}"
-                    )
+                        level="WARNING", content=f"终止进程时出错: {str(e)}"
+                    ),
                 )
             finally:
                 try:
@@ -344,17 +343,15 @@ class SshMachineControl:
                     await self.group_chat.send(
                         "ui_log",
                         CliRuntimeNotice(
-                            level="WARNING",
-                            content=f"等待进程结束时出错: {str(e)}"
-                        )
+                            level="WARNING", content=f"等待进程结束时出错: {str(e)}"
+                        ),
                     )
-        
+
         await self.group_chat.send(
             "ui_log",
             CliRuntimeNotice(
-                level="INFO",
-                content=f"远程进程已终止: {self.host}:{self.port}"
-            )
+                level="INFO", content=f"远程进程已终止: {self.host}:{self.port}"
+            ),
         )
 
         if self.trojan_path and self.trojan_path.exists():
@@ -364,17 +361,15 @@ class SshMachineControl:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"删除本地临时文件时出错: {str(e)}"
-                    )
+                        level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"
+                    ),
                 )
-        
+
         await self.group_chat.send(
             "ui_log",
             CliRuntimeNotice(
-                level="INFO",
-                content=f"本地临时文件已清理: {self.host}:{self.port}"
-            )
+                level="INFO", content=f"本地临时文件已清理: {self.host}:{self.port}"
+            ),
         )
 
         if self.remote_trojan_path:
@@ -405,23 +400,23 @@ class SshMachineControl:
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
-                                content=f"删除远程临时文件失败，返回码: {process.returncode}, 错误: {error_msg}"
-                            )
+                                content=f"删除远程临时文件失败，返回码: {process.returncode}, 错误: {error_msg}",
+                            ),
                         )
                         await self.group_chat.send(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
-                                content=f"删除远程临时文件失败: {self.host}:{self.port}"
-                            )
+                                content=f"删除远程临时文件失败: {self.host}:{self.port}",
+                            ),
                         )
                     else:
                         await self.group_chat.send(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="INFO",
-                                content=f"远程临时文件已清理: {self.host}:{self.port}"
-                            )
+                                content=f"远程临时文件已清理: {self.host}:{self.port}",
+                            ),
                         )
                 except asyncio.TimeoutError:
                     process.kill()
@@ -431,32 +426,31 @@ class SshMachineControl:
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
-                            content=f"删除远程临时文件超时: {self.host}:{self.port}"
-                        )
+                            content=f"删除远程临时文件超时: {self.host}:{self.port}",
+                        ),
                     )
                 except Exception as e:
                     await self.group_chat.send(
                         "ui_log",
                         CliRuntimeNotice(
                             level="ERROR",
-                            content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}"
-                        )
+                            content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}",
+                        ),
                     )
             except Exception as e:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
-                        content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}"
-                    )
+                        content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}",
+                    ),
                 )
-        
+
         await self.group_chat.send(
             "ui_log",
             CliRuntimeNotice(
-                level="INFO",
-                content=f"SSH连接已完全关闭: {self.host}:{self.port}"
-            )
+                level="INFO", content=f"SSH连接已完全关闭: {self.host}:{self.port}"
+            ),
         )
 
     async def http_request(
@@ -568,12 +562,12 @@ class SshMachineControl:
         """获取路径的绝对路径"""
         return await self.call_tool("get_absolute_path", {"path": path})
 
-    async def run_sed_expression(
+    async def read_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultMessage | ToolErrorMessage:
         """执行sed表达式并返回输出"""
         return await self.call_tool(
-            "run_sed_expression", {"expression": expression, "filepath": filepath}
+            "read_file_with_sed", {"expression": expression, "filepath": filepath}
         )
 
     async def modify_file_with_sed(
@@ -626,34 +620,29 @@ class SshMachineControl:
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
-                            content=f"清理远程文件失败，返回码: {process.returncode}, 错误: {error_msg}"
-                        )
+                            content=f"清理远程文件失败，返回码: {process.returncode}, 错误: {error_msg}",
+                        ),
                     )
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
                 await self.group_chat.send(
                     "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content="清理远程文件超时"
-                    )
+                    CliRuntimeNotice(level="WARNING", content="清理远程文件超时"),
                 )
             except Exception as e:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"清理远程文件时出错: {str(e)}"
-                    )
+                        level="ERROR", content=f"清理远程文件时出错: {str(e)}"
+                    ),
                 )
         except Exception as e:
             await self.group_chat.send(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="ERROR",
-                    content=f"清理远程文件时出错: {str(e)}"
-                )
+                    level="ERROR", content=f"清理远程文件时出错: {str(e)}"
+                ),
             )
 
     async def _cleanup_on_connect_failure(self, ssh_cmd: list[str]) -> None:
@@ -671,7 +660,6 @@ class SshMachineControl:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"删除本地临时文件时出错: {str(e)}"
-                    )
+                        level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"
+                    ),
                 )

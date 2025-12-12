@@ -22,10 +22,16 @@ class TestHttpRequestTool(unittest.TestCase):
             args={
                 "method": ToolArgInfo(desc="HTTP方法，如GET、POST", type="str"),
                 "url": ToolArgInfo(desc="请求的URL", type="str"),
-                "params": ToolArgInfo(desc="查询参数（字典形式）", type="Optional[dict]"),
-                "headers": ToolArgInfo(desc="请求头（字典形式）", type="Optional[dict]"),
+                "params": ToolArgInfo(
+                    desc="查询参数（字典形式）", type="Optional[dict]"
+                ),
+                "headers": ToolArgInfo(
+                    desc="请求头（字典形式）", type="Optional[dict]"
+                ),
                 "data": ToolArgInfo(desc="请求体数据", type="Optional[str]"),
-                "follow_redirects": ToolArgInfo(desc="是否跟随重定向，默认True", type="bool"),
+                "follow_redirects": ToolArgInfo(
+                    desc="是否跟随重定向，默认True", type="bool"
+                ),
             },
             required_args=["method", "url"],
         )(http_request)
@@ -36,13 +42,15 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response = unittest.mock.Mock()
         mock_response.headers = {"content-type": "text/html; charset=utf-8"}
         text_content = "<html><body>Test Content</body></html>"
-        mock_response.content = text_content.encode('utf-8')
+        mock_response.content = text_content.encode("utf-8")
         mock_response.text = text_content
         mock_request.return_value = mock_response
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com"}
-        ))
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com"}
+            )
+        )
 
         self.assertIn("Test Content", result)
         self.assertIsInstance(result, str)
@@ -55,17 +63,19 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response.content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
         mock_request.return_value = mock_response
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com/image.png"}
-        ))
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com/image.png"}
+            )
+        )
 
         self.assertTrue(os.path.exists(result))
         self.assertTrue(result.endswith(".bin"))
-        
+
         with open(result, "rb") as f:
             content = f.read()
             self.assertEqual(content, mock_response.content)
-        
+
         os.unlink(result)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -77,16 +87,18 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response.text = "test"
         mock_request.return_value = mock_response
 
-        asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com"}
-        ))
+        asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com"}
+            )
+        )
 
         call_args = mock_request.call_args
         self.assertIn("headers", call_args.kwargs)
         self.assertIn("User-Agent", call_args.kwargs["headers"])
         self.assertEqual(
             call_args.kwargs["headers"]["User-Agent"],
-            "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
+            "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)",
         )
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -95,23 +107,27 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response = unittest.mock.Mock()
         mock_response.headers = {"content-type": "application/json"}
         json_text = '{"key": "value"}'
-        mock_response.content = json_text.encode('utf-8')
+        mock_response.content = json_text.encode("utf-8")
         mock_response.text = json_text
         mock_request.return_value = mock_response
 
         custom_headers = {"Authorization": "Bearer token123"}
-        asyncio.run(self.toolset.call_tool(
-            "http_request", 
-            {
-                "method": "GET", 
-                "url": "http://example.com",
-                "headers": custom_headers
-            }
-        ))
+        asyncio.run(
+            self.toolset.call_tool(
+                "http_request",
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "headers": custom_headers,
+                },
+            )
+        )
 
         call_args = mock_request.call_args
         self.assertIn("headers", call_args.kwargs)
-        self.assertEqual(call_args.kwargs["headers"]["Authorization"], "Bearer token123")
+        self.assertEqual(
+            call_args.kwargs["headers"]["Authorization"], "Bearer token123"
+        )
         self.assertIn("User-Agent", call_args.kwargs["headers"])
 
     @unittest.mock.patch("httpx.AsyncClient.request")
@@ -124,9 +140,11 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response.content = gbk_content
         mock_request.return_value = mock_response
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com"}
-        ))
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com"}
+            )
+        )
 
         self.assertIn("Test Encoding", result)
 
@@ -134,11 +152,16 @@ class TestHttpRequestTool(unittest.TestCase):
     def test_http_request_request_error(self, mock_request):
         """测试请求错误处理"""
         import httpx
-        mock_request.side_effect = httpx.RequestError("Connection timeout", request=unittest.mock.Mock())
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com"}
-        ))
+        mock_request.side_effect = httpx.RequestError(
+            "Connection timeout", request=unittest.mock.Mock()
+        )
+
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com"}
+            )
+        )
 
         self.assertIn("请求失败", result)
         self.assertIn("Connection timeout", result)
@@ -151,9 +174,11 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response.content = b"%PDF-1.4\n1 0 obj\n<<"
         mock_request.return_value = mock_response
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
-        ))
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
+            )
+        )
 
         self.assertTrue(os.path.exists(result))
         self.assertTrue(result.endswith(".bin"))
@@ -167,9 +192,12 @@ class TestHttpRequestTool(unittest.TestCase):
         mock_response.content = b"PK\x03\x04\x14\x00\x00\x00\x08\x00"
         mock_request.return_value = mock_response
 
-        result = asyncio.run(self.toolset.call_tool(
-            "http_request", {"method": "GET", "url": "http://example.com/archive.zip"}
-        ))
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request",
+                {"method": "GET", "url": "http://example.com/archive.zip"},
+            )
+        )
 
         self.assertTrue(os.path.exists(result))
         self.assertTrue(result.endswith(".bin"))

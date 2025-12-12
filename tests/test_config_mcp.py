@@ -18,6 +18,7 @@ class TestMCPConfig(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def create_test_config(self, config_content):
@@ -36,8 +37,7 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 
 [[agent.mcp]]
 name = "calculator"
@@ -48,20 +48,24 @@ name = "another_server"
 server_script_path = "../another_server.py"
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
-        
+
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 2)
-        
+
         calculator_path = agent.mcp[0].server_script_path
         self.assertTrue(os.path.isabs(calculator_path))
-        self.assertEqual(calculator_path, str(config_path.parent / "mcp_server_example.py"))
-        
+        self.assertEqual(
+            calculator_path, str(config_path.parent / "mcp_server_example.py")
+        )
+
         another_path = agent.mcp[1].server_script_path
         self.assertTrue(os.path.isabs(another_path))
-        expected_path = os.path.normpath(str(config_path.parent.parent / "another_server.py"))
+        expected_path = os.path.normpath(
+            str(config_path.parent.parent / "another_server.py")
+        )
         self.assertEqual(os.path.normpath(another_path), expected_path)
 
     def test_mcp_config_absolute_path_unchanged(self):
@@ -75,17 +79,16 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 
 [[agent.mcp]]
 name = "absolute_server"
 server_script_path = "{absolute_path}"
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
-        
+
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 1)
@@ -101,13 +104,12 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
-        
+
         assert config.agent is not None
         agent = config.agent
         self.assertEqual(len(agent.mcp), 0)
@@ -122,15 +124,14 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 
 [[agent.mcp]]
 name = "invalid name!"
 server_script_path = "server.py"
 """
         config_path = self.create_test_config(config_content)
-        
+
         with self.assertRaises(ConfigValidationError):
             load_config(config_path)
 
@@ -144,9 +145,9 @@ api_key = "test-key"
 model = "test-model"
 """
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
-        
+
         self.assertIsNone(config.agent)
 
 

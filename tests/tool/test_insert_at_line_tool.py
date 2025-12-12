@@ -2,6 +2,8 @@ import unittest
 import unittest.mock
 
 from linhai.tool.base import ToolArgInfo
+
+
 class TestInsertAtLineTool(unittest.TestCase):
     """Test cases for the insert_at_line tool."""
 
@@ -190,6 +192,3 @@ class TestInsertAtLineTool(unittest.TestCase):
         self.assertIn("预期行内容不匹配", result)
         self.assertIn("文件末尾应无内容", result)
         mock_file.write_text.assert_not_called()
-
-
-

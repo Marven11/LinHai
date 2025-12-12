@@ -39,8 +39,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         Agent(context=mock_config, group_chat=self.group_chat, init_messages=[])
@@ -60,8 +59,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         Agent(context=mock_config, group_chat=self.group_chat, init_messages=[])
@@ -81,8 +79,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         agent = Agent(context=mock_config, group_chat=self.group_chat, init_messages=[])
@@ -106,8 +103,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         agent = Agent(context=mock_config, group_chat=self.group_chat, init_messages=[])
@@ -130,8 +126,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         init_messages: list[Message] = [
@@ -165,8 +160,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 60000,
-            "compress_threshold_soft": 30000,
+            "compress_threshold": 60000,
         }
 
         init_messages: list[Message] = [

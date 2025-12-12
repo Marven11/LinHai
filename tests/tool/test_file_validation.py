@@ -3,6 +3,8 @@
 import unittest
 
 from linhai.tool.base import ToolArgInfo
+
+
 class TestFileValidation(unittest.TestCase):
     """Test cases for file validation in file operation tools."""
 
@@ -15,7 +17,7 @@ class TestFileValidation(unittest.TestCase):
             write_file,
             append_file,
             replace_file_content,
-            run_sed_expression,
+            read_file_with_sed,
             modify_file_with_sed,
             insert_at_line,
         )
@@ -59,14 +61,14 @@ class TestFileValidation(unittest.TestCase):
         )(replace_file_content)
 
         self.toolset.register_tool(
-            name="run_sed_expression",
+            name="read_file_with_sed",
             desc="执行sed表达式并返回输出",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
             required_args=["filepath", "expression"],
-        )(run_sed_expression)
+        )(read_file_with_sed)
 
         self.toolset.register_tool(
             name="modify_file_with_sed",
@@ -138,10 +140,10 @@ class TestFileValidation(unittest.TestCase):
         )
         self.assertIn("不是纯文本文件", str(result))
 
-    def test_run_sed_expression_rejects_binary_file(self):
-        """测试run_sed_expression拒绝二进制文件"""
+    def test_read_file_with_sed_rejects_binary_file(self):
+        """测试read_file_with_sed拒绝二进制文件"""
         result = self.toolset.call_tool(
-            "run_sed_expression",
+            "read_file_with_sed",
             {
                 "filepath": "./tests/test_binary.zip",
                 "expression": "s/test/replacement/",
@@ -172,6 +174,3 @@ class TestFileValidation(unittest.TestCase):
             },
         )
         self.assertIn("不是纯文本文件", str(result))
-
-
-

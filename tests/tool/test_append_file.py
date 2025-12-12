@@ -13,14 +13,16 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_with_empty_line_default(self):
         """测试默认行为（assume_empty_line=True）当文件以换行符结尾时。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_file.write("Line 1\nLine 2\n")
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")
@@ -29,14 +31,16 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_without_empty_line_default(self):
         """测试默认行为（assume_empty_line=True）当文件不以换行符结尾时。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_file.write("Line 1\nLine 2")  # 没有结尾换行符
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")
@@ -45,14 +49,16 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_without_empty_line_default_warning(self):
         """测试默认行为（assume_empty_line=True）当文件不以换行符结尾且新内容也不以换行符开头时产生警告。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_file.write("Line 1\nLine 2")  # 没有结尾换行符
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "Line 3")
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("警告：原文件末尾没有换行，原最后一行被修改！", content)
@@ -62,14 +68,16 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_with_empty_line_false(self):
         """测试assume_empty_line=False时直接拼接内容。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_file.write("Line 1\nLine 2")  # 没有结尾换行符
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "Line 3", assume_empty_line=False)
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2Line 3")
@@ -78,13 +86,15 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_to_new_file(self):
         """测试追加内容到新文件。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "Line 1")
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1")
@@ -93,14 +103,16 @@ class TestAppendFile(unittest.TestCase):
 
     def test_append_file_with_newline_content(self):
         """测试新内容以换行符开头时的情况。"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
             temp_file.write("Line 1\nLine 2")  # 没有结尾换行符
             temp_path = temp_file.name
-        
+
         try:
             result = append_file(temp_path, "\nLine 3")  # 新内容以换行符开头
             self.assertIn("成功写入文件", result.content)
-            
+
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertEqual(content, "Line 1\nLine 2\nLine 3")

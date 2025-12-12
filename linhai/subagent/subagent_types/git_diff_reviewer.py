@@ -261,24 +261,24 @@ class GitDiffReviewPlugin(Plugin):
             )
 
         args = self.group_chat.get_members("cli_args", argparse.Namespace)
-        code_style_content = ""
-        if args.code_style and args.code_style.exists():
-            code_style_content = args.code_style.read_text()
+        checklist_content = ""
+        if args.checklist and args.checklist.exists():
+            checklist_content = args.checklist.read_text()
         else:
-            no_code_style_msg = CliRuntimeNotice(
+            no_checklist_msg = CliRuntimeNotice(
                 level="WARNING",
-                content="未启动SubAgent审核：未指定有效的代码风格要求文件，请使用--code-style选项指定代码风格要求文件",
+                content="未启动SubAgent审核：未指定有效的检查清单文件，请使用--checklist选项指定检查清单文件",
             )
-            await self.group_chat.send_if_exists("ui_log", no_code_style_msg)
+            await self.group_chat.send_if_exists("ui_log", no_checklist_msg)
             return
 
         task_message = f"""# Git Diff审查任务
 
 请审查以下git diff内容，检查代码变更是否符合要求：
 
-code style: ---
+checklist: ---
 
-{code_style_content}
+{checklist_content}
 
 diff: ---
 

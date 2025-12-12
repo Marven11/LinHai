@@ -225,7 +225,8 @@ class ContextTabWidget(Static):
             grid.add_row("")
             return
 
-        _soft, hard, used, _remaining, taken = threshold_info
+        # threshold_info是4元组: (hard, used, remaining, taken)
+        hard, used, _remaining, taken = threshold_info
         percentage = taken * 100
 
         # Create proper progress bar using Rich

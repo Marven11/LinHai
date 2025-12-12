@@ -231,13 +231,7 @@ class MachineControlToolSet(ToolSet):
                 "show_line_numbers": ToolArgInfo(desc="是否显示行号", type="bool"),
             },
             required_args=["filepath"],
-            conflict_with=[
-                "write_file",
-                "append_file",
-                "replace_file_content",
-                "modify_file_with_sed",
-                "insert_at_line",
-            ],
+            conflict_with=[],
         )
         async def read_file_tool(
             filepath: str, show_line_numbers: bool = False
@@ -258,9 +252,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["filepath", "content"],
             conflict_with=[
                 "read_file",
-                "list_files",
-                "get_absolute_path",
-                "run_sed_expression",
+                "read_file_with_sed",
             ],
         )
         async def write_file_tool(
@@ -282,7 +274,10 @@ class MachineControlToolSet(ToolSet):
                 ),
             },
             required_args=["filepath", "content"],
-            conflict_with=None,
+            conflict_with=[
+                "read_file",
+                "read_file_with_sed",
+            ],
         )
         async def append_file_tool(
             filepath: str, content: str, assume_empty_line: bool = True
@@ -305,7 +300,10 @@ class MachineControlToolSet(ToolSet):
                 ),
             },
             required_args=["filepath", "old", "new"],
-            conflict_with=None,
+            conflict_with=[
+                "read_file",
+                "read_file_with_sed",
+            ],
         )
         async def replace_file_content_tool(
             filepath: str, old: str, new: str, replace_times: Optional[int] = None
@@ -348,20 +346,20 @@ class MachineControlToolSet(ToolSet):
             return await host_control.get_absolute_path(path)
 
         @self.register_tool(
-            name="run_sed_expression",
+            name="read_file_with_sed",
             desc="执行sed表达式并返回输出，不修改文件",
             args={
                 "expression": ToolArgInfo(desc="sed表达式，如: 1,1000p", type="str"),
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
             },
             required_args=["expression", "filepath"],
-            conflict_with=None,
+            conflict_with=[],
         )
-        async def run_sed_expression_tool(expression: str, filepath: str) -> Message:
+        async def read_file_with_sed_tool(expression: str, filepath: str) -> Message:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
-            return await host_control.run_sed_expression(expression, filepath)
+            return await host_control.read_file_with_sed(expression, filepath)
 
         @self.register_tool(
             name="modify_file_with_sed",
@@ -371,7 +369,10 @@ class MachineControlToolSet(ToolSet):
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
             },
             required_args=["expression", "filepath"],
-            conflict_with=None,
+            conflict_with=[
+                "read_file",
+                "read_file_with_sed",
+            ],
         )
         async def modify_file_with_sed_tool(expression: str, filepath: str) -> Message:
             host_control = self.machine_control.machines[
@@ -396,7 +397,10 @@ class MachineControlToolSet(ToolSet):
                 "content",
                 "expected_line_content",
             ],
-            conflict_with=None,
+            conflict_with=[
+                "read_file",
+                "read_file_with_sed",
+            ],
         )
         async def insert_at_line_tool(
             filepath: str, line_number: int, content: str, expected_line_content: str
@@ -465,7 +469,7 @@ class HostControl(Protocol):
 
     async def get_absolute_path(self, path: str) -> Message: ...
 
-    async def run_sed_expression(self, expression: str, filepath: str) -> Message: ...
+    async def read_file_with_sed(self, expression: str, filepath: str) -> Message: ...
 
     async def modify_file_with_sed(self, expression: str, filepath: str) -> Message: ...
 
@@ -528,10 +532,7 @@ class MachineControl:
             return ToolErrorMessage(f"机器ID已存在: {machine_id}")
 
         ssh_control = SshMachineControl(
-            host=host,
-            group_chat=self.group_chat,
-            port=port,
-            username=username
+            host=host, group_chat=self.group_chat, port=port, username=username
         )
 
         # 尝试连接
@@ -550,8 +551,8 @@ class MachineControl:
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
-                level="INFO", 
-                content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {actual_username}"
+                level="INFO",
+                content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {actual_username}",
             ),
         )
 

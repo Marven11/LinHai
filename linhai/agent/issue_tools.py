@@ -10,7 +10,7 @@ def create_issue_toolset(
 ) -> ToolSet:
     """创建并返回Agent的issue管理工具集。"""
     toolset = ToolSet()
-    
+
     @toolset.register_tool(
         name="respond_issue",
         desc="回复SubAgent的issue，这个工具可以安全地和其他工具一起调用",
@@ -23,7 +23,7 @@ def create_issue_toolset(
     def respond_issue(issue_id: str, answer: str) -> str:
         """回复SubAgent的issue。"""
         return issue_manager.respond_issue(issue_id, answer)
-    
+
     @toolset.register_tool(
         name="list_issues",
         desc="列出所有未解答的issue及其可回答时间",
@@ -33,10 +33,10 @@ def create_issue_toolset(
     def list_issues() -> str:
         """列出所有未解答的issue。"""
         unanswered = issue_manager.get_unanswered_issues()
-        
+
         if not unanswered:
             return "当前没有未解答的issue。"
-        
+
         result = "未解答的issue:\n"
         for issue in unanswered:
             result += f"\nID: {issue['id']}\n"
@@ -49,7 +49,7 @@ def create_issue_toolset(
             else:
                 result += "可回答时间: 现在\n"
             result += "-" * 3
-        
+
         return result
-    
+
     return toolset

@@ -28,8 +28,7 @@ class TestConversationHistory(unittest.TestCase):
             "llms": [Mock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_soft": 1000,
-            "compress_threshold_hard": 2000,
+            "compress_threshold": 2000,
         }
 
         self.group_chat = Mock()
@@ -60,7 +59,9 @@ class TestConversationHistory(unittest.TestCase):
         mock_home.return_value = Path(self.temp_dir)
 
         self.agent.message_processor.append_message(UserMessage("你好"))
-        self.agent.message_processor.append_message(AssistantMessage("你好！有什么可以帮助你的？"))
+        self.agent.message_processor.append_message(
+            AssistantMessage("你好！有什么可以帮助你的？")
+        )
         self.agent.message_processor.append_message(RuntimeMessage("测试运行时消息"))
 
         asyncio.run(self.agent.save_conversation_history())
@@ -80,7 +81,6 @@ class TestConversationHistory(unittest.TestCase):
                 self.assertIn("message", msg)
             elif "message" in msg:
                 pass  # RuntimeMessage只有message字段
-
 
     @patch("pathlib.Path.home")
     def test_save_conversation_history_directory_creation(self, mock_home):

@@ -21,10 +21,7 @@ def _check_token_threshold(agent: "linhai.agent.Agent") -> tuple[bool, str]:
     if not threshold_info:
         return True, ""
 
-    soft, _hard, used, _remaining, taken = threshold_info
-    if used < soft:
-        return False, "当前token占用没有超过软限制，禁止删除消息"
-
+    hard, used, _remaining, taken = threshold_info
     if taken < 0.2:
         return False, f"当前token占用小于20%，仅为{taken*100:.2f}%，禁止删除消息"
 

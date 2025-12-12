@@ -5,7 +5,8 @@ from unittest.mock import Mock
 
 from linhai.llm import (
     SystemMessage,
-    UserMessage, AssistantMessage,
+    UserMessage,
+    AssistantMessage,
 )
 from linhai.tool.main import ToolResultMessage, ToolErrorMessage
 
@@ -36,10 +37,6 @@ class TestJsonSerialization(unittest.TestCase):
 
         self.assertEqual(original.message, restored.message)
         self.assertEqual(original.name, restored.name)
-
-
-
-
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""

@@ -26,8 +26,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800
+            "compress_threshold": 800,
         }
 
         self.group_chat = GroupChat()
@@ -40,7 +39,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             toolsets=[global_tools],
             config=ToolConfig(),
             mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            mcp_basedir=Path("/tmp"),
         )
 
         init_messages = [
@@ -58,11 +57,11 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
 
     def test_agent_message_processor_has_tool_access(self):
         """测试Agent的message_processor属性可以访问工具定义"""
-        self.assertTrue(hasattr(self.agent, 'message_processor'))
-        
+        self.assertTrue(hasattr(self.agent, "message_processor"))
+
         messages = self.agent.message_processor.get_messages()
         self.assertIsInstance(messages, list)
-        
+
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
 
@@ -107,11 +106,11 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(tool_call_response)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        self.tool_manager.process_tool_call = AsyncMock(return_value=RuntimeMessage("628"))
-
-        await self.agent.handle_user_message(
-            UserMessage(message="计算114+514")
+        self.tool_manager.process_tool_call = AsyncMock(
+            return_value=RuntimeMessage("628")
         )
+
+        await self.agent.handle_user_message(UserMessage(message="计算114+514"))
         await self.agent.generate_response()
 
         self.tool_manager.process_tool_call.assert_called_once()
@@ -121,43 +120,42 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
 
     def test_agent_can_access_tool_definitions(self):
         """测试Agent可以通过message_processor访问工具定义"""
-        self.assertTrue(hasattr(self.agent, 'message_processor'))
-        
+        self.assertTrue(hasattr(self.agent, "message_processor"))
+
         messages = self.agent.message_processor.get_messages()
         self.assertIsInstance(messages, list)
-        
+
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
-        
-        self.assertTrue(hasattr(self.agent, 'toolcall_processor'))
+
+        self.assertTrue(hasattr(self.agent, "toolcall_processor"))
 
     def test_agent_can_see_tool_names_in_system_prompt(self):
         """测试Agent在系统提示中能看到工具名称"""
         messages = self.agent.message_processor.get_messages()
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
-        
+
         system_prompt = system_messages[0].template
         self.assertIsInstance(system_prompt, str)
         self.assertGreater(len(system_prompt), 0)
-        
 
     def test_tool_manager_has_accessible_tools(self):
         """测试ToolManager有可访问的工具"""
-        self.assertTrue(hasattr(self.tool_manager, 'toolsets'))
+        self.assertTrue(hasattr(self.tool_manager, "toolsets"))
         self.assertIsInstance(self.tool_manager.toolsets, list)
-        
+
         tools_info = self.tool_manager.get_tools_info()
         self.assertIsInstance(tools_info, list)
-        
+
         for tool_info in tools_info:
-            self.assertIn('type', tool_info)
-            self.assertEqual(tool_info['type'], 'function')
-            self.assertIn('function', tool_info)
-            function_info = tool_info['function']
-            self.assertIn('name', function_info)
-            self.assertIn('description', function_info)
-            self.assertIn('parameters', function_info)
+            self.assertIn("type", tool_info)
+            self.assertEqual(tool_info["type"], "function")
+            self.assertIn("function", tool_info)
+            function_info = tool_info["function"]
+            self.assertIn("name", function_info)
+            self.assertIn("description", function_info)
+            self.assertIn("parameters", function_info)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """SubAgent核心实现。"""
 
+import argparse
 import asyncio
 
 from datetime import datetime
@@ -93,15 +94,13 @@ class SubAgent:
         from linhai.subagent.issue import IssueManager
         from .issue_tools import create_issue_toolset
 
-        issue_manager = self.group_chat.get_members(
-            "issue_manager", IssueManager
-        )
+        issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
 
         if isinstance(issue_manager, tuple):
             issue_manager = issue_manager[0]
         # 注册subagent信息到issue_manager
         issue_manager.register_subagent(self.name, issue_limit=1)
-        
+
         issue_toolset = create_issue_toolset(
             issue_manager, self  # 传递subagent实例而不是名称
         )
@@ -353,7 +352,14 @@ class SubAgentManager:
 
         if enabled_agent_types and enabled_agent_types.violation_checker:
             plugins.append(ViolationCheckerPlugin(self.group_chat))
-        if enabled_agent_types and enabled_agent_types.git_diff_reviewer:
+
+        # 检查是否通过命令行选项启用git diff reviewer
+        args = self.group_chat.get_members("cli_args", argparse.Namespace)
+        # 优先使用命令行选项，如果命令行选项指定了git diff reviewer，则启用
+        if args.git_diff_reviewer:
+            plugins.append(GitDiffReviewPlugin(self.group_chat))
+        # 如果命令行选项未指定，但配置中启用了，也启用
+        elif enabled_agent_types and enabled_agent_types.git_diff_reviewer:
             plugins.append(GitDiffReviewPlugin(self.group_chat))
 
         for plugin in plugins:

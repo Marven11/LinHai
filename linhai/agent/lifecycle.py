@@ -128,6 +128,7 @@ class Lifecycle:
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
+            RedStateToolBlockPlugin,
         )
 
         plugins = [
@@ -146,6 +147,7 @@ class Lifecycle:
             DuplicateFileReadPlugin(self.group_chat),
             UnnecessarySedReadPlugin(self.group_chat),
             UnnecessaryRunCommandPlugin(self.group_chat),
+            RedStateToolBlockPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

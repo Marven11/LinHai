@@ -148,42 +148,42 @@ class GlobalMemory:
         return cls(filepath=Path(data["filepath"]))
 
 
-class CodeStyleMessage:
-    """代码风格要求消息类，用于读取和呈现代码风格要求文件内容。"""
+class ChecklistMessage:
+    """检查清单消息类，用于读取和呈现检查清单文件内容。"""
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
 
     def to_llm_message(self) -> LanguageModelMessage:
         """
-        将代码风格要求转换为LLM消息格式。
+        将检查清单转换为LLM消息格式。
 
         返回:
-            LanguageModelMessage: 包含代码风格要求内容的系统消息
+            LanguageModelMessage: 包含检查清单内容的系统消息
         """
         try:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "name": "code-style",
-                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<code_style>>",
+                "name": "checklist",
+                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<checklist>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "name": "code-style",
-                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>代码风格文件不存在或已被移动/删除<<error>>\n<<code_style>>",
+                "name": "checklist",
+                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>检查清单文件不存在或已被移动/删除<<error>>\n<<checklist>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "name": "code-style",
-                "content": f"<<code_style>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<code_style>>",
+                "name": "checklist",
+                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<checklist>>",
             }
 
     def to_json(self) -> str:
         """
-        将代码风格要求对象序列化为JSON字符串。
+        将检查清单对象序列化为JSON字符串。
 
         返回:
             str: 包含文件路径的JSON字符串
@@ -194,14 +194,14 @@ class CodeStyleMessage:
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         """
-        从JSON字符串反序列化代码风格要求对象。
+        从JSON字符串反序列化检查清单对象。
 
         参数:
             json_str: JSON格式的字符串
             group_chat: GroupChat实例（为接口兼容性保留）
 
         返回:
-            CodeStyleMessage: 反序列化的代码风格要求对象
+            ChecklistMessage: 反序列化的检查清单对象
         """
         del group_chat  # 未使用，但为接口兼容性保留
         data = json.loads(json_str)
@@ -276,8 +276,7 @@ class AgentContext(TypedDict):
     llms: list
     llm_names: list[str]
     current_llm_index: int
-    compress_threshold_soft: int | float
-    compress_threshold_hard: int | float
+    compress_threshold: int | float
     memory: NotRequired[dict]
     enable_directory_change_detection: NotRequired[bool]
 

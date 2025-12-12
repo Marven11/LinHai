@@ -29,7 +29,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.return_value = True
             with patch("pathlib.Path.open") as mock_open:
-                mock_open.return_value.__enter__.return_value.read.return_value = "# Test LINHAI.md\nTest content"
+                mock_open.return_value.__enter__.return_value.read.return_value = (
+                    "# Test LINHAI.md\nTest content"
+                )
 
                 global_memory = GlobalMemory(Path("LINHAI.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
@@ -40,7 +42,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.side_effect = lambda path: path.name == "AGENT.md"
             with patch("pathlib.Path.open") as mock_open:
-                mock_open.return_value.__enter__.return_value.read.return_value = "# Test AGENT.md\nTest content"
+                mock_open.return_value.__enter__.return_value.read.return_value = (
+                    "# Test AGENT.md\nTest content"
+                )
 
                 global_memory = GlobalMemory(Path("AGENT.md"))
                 self.assertIsInstance(global_memory, GlobalMemory)
@@ -56,10 +60,11 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 model="test_model",
             )
             mock_agent_config = AgentConfig(
-                compress_threshold_hard=60000,
-                compress_threshold_soft=30000,
+                compress_threshold=60000,
             )
-            _ = Config(llm=[mock_llm_config], agent=mock_agent_config)  # pylint: disable=unused-variable
+            _ = Config(
+                llm=[mock_llm_config], agent=mock_agent_config
+            )  # pylint: disable=unused-variable
 
             global_memory = GlobalMemory(Path("LINHAI.md"))
             self.assertIsInstance(global_memory, GlobalMemory)

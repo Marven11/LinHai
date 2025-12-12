@@ -68,8 +68,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.message_processor.append_message(assistant_msg)
         self.assertFalse(self.message_processor.is_last_message_user())
 
-
-
     def test_add_queued_message(self):
         """测试添加排队消息。"""
         queued_msg = RuntimeMessage("Queued message")
@@ -91,12 +89,6 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         )  # 初始2条 + 1条排队消息 + 1条排队通知
         self.assertIn("排队消息", str(self.message_processor.messages[-2]))
         self.assertEqual(self.message_processor.messages[-1], queued_msg)
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

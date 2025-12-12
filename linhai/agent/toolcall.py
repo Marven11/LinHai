@@ -32,6 +32,13 @@ class AgentToolcall:
     def _check_tool_conflict(self, tool_name: str) -> str | None:
         """检查工具调用冲突，返回冲突工具的名字，没有冲突返回None
 
+        冲突规则：conflict_with是有向的。
+        如果工具A在其conflict_with列表中包含工具B，那么在一个消息内，如果已经调用了工具B，就不能再调用工具A。
+        这代表工具A不能在工具B之后调用，但工具B可以在工具A之后调用（除非工具B也标记了与工具A冲突）。
+        因此，只需要检查一个方向：当前工具的conflict_with是否包含已调用工具。
+        不需要检查已调用工具的conflict_with是否包含当前工具，因为那表示已调用工具不能在当前工具之后调用，
+        但当前工具是在已调用工具之后调用，所以是允许的。
+
         Args:
             tool_name: 要调用的工具名称
 
@@ -39,6 +46,7 @@ class AgentToolcall:
             str | None: 冲突工具的名字，没有冲突返回None
         """
 
+        # 获取当前工具定义
         tool_def = None
         for toolset in self.tool_manager.toolsets:
             if toolset.has_tool(tool_name):
@@ -48,19 +56,14 @@ class AgentToolcall:
         if not tool_def:
             return None
 
+        # 检查当前工具的conflict_with是否包含已调用工具
+        conflict_with = tool_def["conflict_with"]
+        if conflict_with is None:
+            conflict_with = []
         for called_tool in self.called_tools_in_round:
-
-            if called_tool in tool_def["conflict_with"]:
+            if called_tool in conflict_with:
                 return called_tool
 
-            called_tool_def = None
-            for toolset in self.tool_manager.toolsets:
-                if toolset.has_tool(called_tool):
-                    called_tool_def = toolset.get_tools()[called_tool]
-                    break
-
-            if called_tool_def and tool_name in called_tool_def["conflict_with"]:
-                return called_tool
         return None
 
     def _register_default_toolsets(self):

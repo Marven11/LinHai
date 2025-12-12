@@ -16,14 +16,14 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = EndThinkPlugin(self.group_chat)
         self.answer = Mock(spec=Answer)
         self.agent = Mock()
-        
+
         self.group_chat.get_members.return_value = self.agent
-        
+
         self.agent.group_chat = Mock()
         self.agent.group_chat.send = AsyncMock()
-        
+
         self.agent.interrupt = AsyncMock()
-        
+
         self.agent.message_processor = Mock()
         self.agent.message_processor.get_messages.return_value = []
 
@@ -32,9 +32,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         current_content = """这是一些内容
 </think>
 其他内容"""
-        
+
         result = await self.plugin.after_token_generation(self.answer, current_content)
-        
+
         self.assertTrue(result)
 
     async def test_detect_end_think_with_whitespace(self):
@@ -42,18 +42,18 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         current_content = """这是一些内容
    </think>   
 其他内容"""
-        
+
         result = await self.plugin.after_token_generation(self.answer, current_content)
-        
+
         self.assertTrue(result)
 
     async def test_ignore_end_think_in_context(self):
         """测试忽略上下文中的</think>。"""
         current_content = """这是一些内容包含</think>标记
 但不是单独一行"""
-        
+
         result = await self.plugin.after_token_generation(self.answer, current_content)
-        
+
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
@@ -63,9 +63,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         """测试没有</think>的情况。"""
         current_content = """这是一些正常的内容
 没有任何问题"""
-        
+
         result = await self.plugin.after_token_generation(self.answer, current_content)
-        
+
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
@@ -74,9 +74,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         """测试插件注册。"""
         lifecycle = Mock()
-        
+
         self.plugin.register(lifecycle)
-        
+
         lifecycle.register_after_token_generation.assert_called_once_with(
             self.plugin.after_token_generation
         )

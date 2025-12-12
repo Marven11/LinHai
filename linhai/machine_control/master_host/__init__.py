@@ -24,7 +24,7 @@ from .file import (
     replace_file_content,
     list_files,
     get_absolute_path,
-    run_sed_expression,
+    read_file_with_sed,
     modify_file_with_sed,
     insert_at_line,
 )
@@ -46,7 +46,7 @@ __all__ = [
     "replace_file_content",
     "list_files",
     "get_absolute_path",
-    "run_sed_expression",
+    "read_file_with_sed",
     "modify_file_with_sed",
     "insert_at_line",
     "MasterHostControl",

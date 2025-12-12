@@ -6,7 +6,6 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 
-
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
 from linhai.agent.plugin import WaitingUserPlugin
@@ -72,8 +71,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
-            "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800
+            "compress_threshold": 800,
         }
 
         self.group_chat = MagicMock()
@@ -114,7 +112,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             init_messages=init_messages,
         )
-        
+
         plugin = WaitingUserPlugin(self.group_chat)
         plugin.register(self.agent.lifecycle)
 
@@ -133,8 +131,16 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             5,
             format_messages_for_assert(messages),
         )
-        error_msgs = [msg for msg in messages if isinstance(msg, RuntimeMessage) and "不在最后一行" in msg.message]
-        self.assertGreater(len(error_msgs), 0, f"No error message found with '不在最后一行' in messages: {format_messages_for_assert(messages)}")
+        error_msgs = [
+            msg
+            for msg in messages
+            if isinstance(msg, RuntimeMessage) and "不在最后一行" in msg.message
+        ]
+        self.assertGreater(
+            len(error_msgs),
+            0,
+            f"No error message found with '不在最后一行' in messages: {format_messages_for_assert(messages)}",
+        )
         error_msg = error_msgs[0]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
@@ -167,8 +173,16 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             7,
             format_messages_for_assert(messages),
         )
-        error_msgs = [msg for msg in messages if isinstance(msg, RuntimeMessage) and "既调用了工具又使用了" in msg.message]
-        self.assertGreater(len(error_msgs), 0, f"No error message found with '既调用了工具又使用了' in messages: {format_messages_for_assert(messages)}")
+        error_msgs = [
+            msg
+            for msg in messages
+            if isinstance(msg, RuntimeMessage) and "既调用了工具又使用了" in msg.message
+        ]
+        self.assertGreater(
+            len(error_msgs),
+            0,
+            f"No error message found with '既调用了工具又使用了' in messages: {format_messages_for_assert(messages)}",
+        )
         error_msg = error_msgs[0]
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
@@ -191,8 +205,17 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             5,
             format_messages_for_assert(messages),
         )
-        warning_msgs = [msg for msg in messages if isinstance(msg, RuntimeMessage) and "既没有调用工具，也没有使用" in msg.message]
-        self.assertGreater(len(warning_msgs), 0, f"No warning message found with '既没有调用工具，也没有使用' in messages: {format_messages_for_assert(messages)}")
+        warning_msgs = [
+            msg
+            for msg in messages
+            if isinstance(msg, RuntimeMessage)
+            and "既没有调用工具，也没有使用" in msg.message
+        ]
+        self.assertGreater(
+            len(warning_msgs),
+            0,
+            f"No warning message found with '既没有调用工具，也没有使用' in messages: {format_messages_for_assert(messages)}",
+        )
         warning_msg = warning_msgs[0]
         self.assertIsInstance(warning_msg, RuntimeMessage)
         assert isinstance(warning_msg, RuntimeMessage)

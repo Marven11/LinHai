@@ -21,6 +21,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
+
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
@@ -28,6 +29,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager
+
         subagent = Mock()
         subagent.agent_type = "test_type"
         subagent_manager = Mock(spec=SubAgentManager)
@@ -61,6 +63,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.manager.has_unanswered_issues())
 
         import datetime
+
         self.manager.issues["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
 
         self.manager.respond_issue("test-1", "回答1")
@@ -74,6 +77,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
 
         await self.manager.add_issue(issue_id, content, "test-agent")
         import datetime
+
         self.manager.issues[issue_id]["created_at"] -= datetime.timedelta(minutes=3)
 
         self.manager.respond_issue(issue_id, answer)
@@ -88,6 +92,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
         await self.manager.add_issue("test-2", "问题2", "test-agent")
 
         import datetime
+
         self.manager.issues["test-1"]["created_at"] -= datetime.timedelta(minutes=3)
         self.manager.issues["test-2"]["created_at"] -= datetime.timedelta(minutes=3)
 
@@ -116,6 +121,7 @@ class TestIssueAsync(unittest.TestCase):
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
+
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
@@ -123,6 +129,7 @@ class TestIssueAsync(unittest.TestCase):
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager
+
         subagent = Mock()
         subagent.agent_type = "test_type"
         subagent_manager = Mock(spec=SubAgentManager)
@@ -167,10 +174,11 @@ file_path = "memory.md"
         self.config_path.write_text(config_content)
         self.config = load_config(self.config_path)
         self.group_chat = GroupChat()
-        
+
         from linhai.agent import Agent
         from linhai.agent.message import AgentMessage
         from unittest.mock import Mock
+
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
@@ -178,6 +186,7 @@ file_path = "memory.md"
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager
+
         subagent = Mock()
         subagent.agent_type = "test_type"
         subagent_manager = Mock(spec=SubAgentManager)
@@ -198,12 +207,12 @@ file_path = "memory.md"
         await manager.add_issue(issue_id, "工具测试问题", "test-agent")
 
         import datetime
+
         manager.issues[issue_id]["created_at"] -= datetime.timedelta(minutes=3)
 
-        result = toolset.call_tool("respond_issue", {
-            "issue_id": issue_id,
-            "answer": "工具测试回答"
-        })
+        result = toolset.call_tool(
+            "respond_issue", {"issue_id": issue_id, "answer": "工具测试回答"}
+        )
 
         self.assertIn("成功回复issue", result)
         self.assertTrue(manager.issues[issue_id]["answered"])
@@ -214,10 +223,9 @@ file_path = "memory.md"
         manager.register_subagent("test-agent", issue_limit=2)
         toolset = create_issue_toolset(manager)
 
-        result = toolset.call_tool("respond_issue", {
-            "issue_id": "nonexistent",
-            "answer": "回答"
-        })
+        result = toolset.call_tool(
+            "respond_issue", {"issue_id": "nonexistent", "answer": "回答"}
+        )
 
         self.assertIn("错误", result)
         self.assertIn("不存在", result)

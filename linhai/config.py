@@ -74,12 +74,11 @@ class MCPConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
-    compress_threshold_soft: Union[int, float] = Field(default=0.5, ge=0.0)
-    compress_threshold_hard: Union[int, float] = Field(default=0.8, ge=0.0)
+    compress_threshold: Union[int, float] = Field(default=0.8, ge=0.0)
     mcp: list[MCPConfig] = Field(default_factory=list)
     enable_directory_change_detection: bool = Field(default=False)
 
-    @field_validator("compress_threshold_soft", "compress_threshold_hard")
+    @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
         """验证compress_threshold值：如果是float，应在0.0到1.0之间；如果是int，应大于0。"""
         if isinstance(v, float):
@@ -95,7 +94,7 @@ class AgentConfig(BaseModel):
     def __str__(self) -> str:
         """返回Agent配置的字符串表示"""
         mcp_names = [mcp.name for mcp in self.mcp]
-        return f"AgentConfig(soft_threshold={self.compress_threshold_soft}, hard_threshold={self.compress_threshold_hard}, mcp={mcp_names})"
+        return f"AgentConfig(compress_threshold={self.compress_threshold}, mcp={mcp_names})"
 
 
 class MemoryConfig(BaseModel):
@@ -118,6 +117,18 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_output_length={self.max_output_length})"
 
 
+class SubAgentConfig(BaseModel):
+    """SubAgent配置类型定义。"""
+
+    enable: bool = True
+    default_llm: str
+    enabled_agent_types: Optional["EnabledAgentTypes"] = None  # None表示默认不开启
+
+    def __str__(self) -> str:
+        """返回SubAgent配置的字符串表示"""
+        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm}, enabled_types={self.enabled_agent_types})"
+
+
 class CLIConfig(BaseModel):
     """CLI配置类型定义。"""
 
@@ -133,18 +144,6 @@ class EnabledAgentTypes(BaseModel):
 
     violation_checker: bool = False
     git_diff_reviewer: bool = False
-
-
-class SubAgentConfig(BaseModel):
-    """SubAgent配置类型定义。"""
-
-    enable: bool = True
-    default_llm: str
-    enabled_agent_types: Optional[EnabledAgentTypes] = None  # None表示默认不开启
-
-    def __str__(self) -> str:
-        """返回SubAgent配置的字符串表示"""
-        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm}, enabled_types={self.enabled_agent_types})"
 
 
 class Config(BaseModel):

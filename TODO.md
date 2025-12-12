@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构compress_threshold_soft等
+- [x] 重构compress_threshold_soft等
   - 完全删除compress_threshold_soft，当前的百分比完全基于compress_threshold_hard计算
   - 0% - 50% 绿灯 - 标记消息
   - 50% - 70% 绿闪 - 标记消息
@@ -10,20 +10,20 @@
   - 90% - 100% 红灯 - 历史压缩
   - 如果在一分钟内调用过历史压缩或者清理垃圾消息则禁止调用历史压缩
   - 注意主要实现和重要的状态管理需要放在linhai/agent/orchestration.py中
-- [ ] 重命名run_sed_expression为read_file_with_sed并添加插件，禁止使用这个插件读取已经读取的文件
+- [x] 重命名run_sed_expression为read_file_with_sed并添加插件，禁止使用这个插件读取已经读取的文件
   - 当agent使用这个插件读取已经读取的文件时，提醒
     - `错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！`
   - 通过检测所有文件路径相同的FileContentMessage实现判断当前文件是否已经读取
     - 例外: 最近同路径FileContentMessage包含的文件内容和当前文件内容不同
-- [ ] 改名--code-style选项为--checklist，同时修改代码内的表述
-- [ ] 修改工具调用冲突的检测逻辑
+- [x] 改名--code-style选项为--checklist，同时修改代码内的表述
+- [x] 修改工具调用冲突的检测逻辑
   - 确认conflict_with是有向的: A标记自身和B冲突代表在一个消息内A不能在调用B之后调用，不代表B不能在A之后调用
   - 修改文件修改工具和文件读取工具的conflict逻辑：一个消息内修改工具不能在读取工具之后调用，读取工具可以在修改工具后调用
-- [ ] 将git diff reviewer改为使用命令行选项打开而不是通过配置打开
-- [ ] 添加一个`/subagent_start`命令手动启动subagent
+- [x] 将git diff reviewer改为使用命令行选项打开而不是通过配置打开
+- [x] 添加一个`/subagent_start`命令手动启动subagent
   - 当前只需要手动启动git diff reviewer
   - 当前插件和手动启动两种方式都可以启动git diff reviewer，可能需要提取启动git diff reviewer的逻辑
-- [ ] 在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具
+- [x] 在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

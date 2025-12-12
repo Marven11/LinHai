@@ -14,11 +14,11 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """设置测试环境。"""
         self.group_chat = MagicMock()
         self.plugin = ToolCallInReasoningPlugin(self.group_chat)
-        
+
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.append_message = MagicMock()
-        
+
         self.group_chat.get_members.return_value = self.agent
         self.group_chat.send_if_exists = AsyncMock()
 
@@ -27,7 +27,9 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(self.plugin, ToolCallInReasoningPlugin)
         self.assertEqual(self.plugin.group_chat, self.group_chat)
 
-    async def test_after_message_generation_with_tool_call_in_reasoning_and_no_actual_tool_calls(self):
+    async def test_after_message_generation_with_tool_call_in_reasoning_and_no_actual_tool_calls(
+        self,
+    ):
         """测试思考内容中包含工具调用但实际输出中没有工具调用时发出警告。"""
         answer = MagicMock(spec=Answer)
         reasoning_content = """我需要调用工具来完成任务。
@@ -41,27 +43,31 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 """
         answer.get_reasoning_message.return_value = reasoning_content
         answer.reasoning_message = reasoning_content
-        
-        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-        
+
+        result = await self.plugin.after_message_generation(
+            answer, "当前实际输出内容", []
+        )
+
         self.assertFalse(result)  # 不应该中断
         answer.get_reasoning_message.assert_called_once()
-        
+
         self.agent.message_processor.append_message.assert_called_once()
         call_args = self.agent.message_processor.append_message.call_args
         self.assertIsNotNone(call_args)
         self.assertIn("read_file", call_args[0][0].message)
         self.assertIn("list_files", call_args[0][0].message)
         self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
-        
+
         self.group_chat.send_if_exists.assert_called_once()
         ui_call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
         self.assertIn("read_file", ui_call_args[0][1].content)
         self.assertIn("list_files", ui_call_args[0][1].content)
-    
-    async def test_after_message_generation_with_tool_call_in_reasoning_and_actual_tool_calls(self):
+
+    async def test_after_message_generation_with_tool_call_in_reasoning_and_actual_tool_calls(
+        self,
+    ):
         """测试思考内容中包含工具调用且实际输出中也调用了工具时不发出警告。"""
         answer = MagicMock(spec=Answer)
         reasoning_content = """我需要调用工具来完成任务。
@@ -75,14 +81,16 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 """
         answer.get_reasoning_message.return_value = reasoning_content
         answer.reasoning_message = reasoning_content
-        
+
         actual_tool_calls = [
             {"name": "read_file", "arguments": {"filepath": "test.txt"}},
-            {"name": "list_files", "arguments": {"dirpath": "."}}
+            {"name": "list_files", "arguments": {"dirpath": "."}},
         ]
-        
-        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", actual_tool_calls)
-        
+
+        result = await self.plugin.after_message_generation(
+            answer, "当前实际输出内容", actual_tool_calls
+        )
+
         self.assertFalse(result)
         answer.get_reasoning_message.assert_called_once()
         self.agent.message_processor.append_message.assert_not_called()
@@ -92,10 +100,14 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试没有思考内容时不做任何操作。"""
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
-        
-        with patch.object(self.plugin.group_chat, 'get_members', return_value=self.agent):
-            result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-            
+
+        with patch.object(
+            self.plugin.group_chat, "get_members", return_value=self.agent
+        ):
+            result = await self.plugin.after_message_generation(
+                answer, "当前实际输出内容", []
+            )
+
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
             self.group_chat.send_if_exists.assert_not_called()
@@ -106,10 +118,14 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer = MagicMock(spec=Answer)
         reasoning_content = "我只是在思考，没有工具调用。"
         answer.get_reasoning_message.return_value = reasoning_content
-        
-        with patch.object(self.plugin.group_chat, 'get_members', return_value=self.agent):
-            result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-            
+
+        with patch.object(
+            self.plugin.group_chat, "get_members", return_value=self.agent
+        ):
+            result = await self.plugin.after_message_generation(
+                answer, "当前实际输出内容", []
+            )
+
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
             self.group_chat.send_if_exists.assert_not_called()
@@ -126,18 +142,20 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 ```
 """
         answer.get_reasoning_message.return_value = reasoning_content
-        
-        result = await self.plugin.after_message_generation(answer, "当前实际输出内容", [])
-        
+
+        result = await self.plugin.after_message_generation(
+            answer, "当前实际输出内容", []
+        )
+
         self.assertFalse(result)
-        
+
         self.agent.message_processor.append_message.assert_called_once()
         call_args = self.agent.message_processor.append_message.call_args
         self.assertIsNotNone(call_args)
         self.assertIn("read_file", call_args[0][0].message)
         self.assertEqual(call_args[0][0].message.count("read_file"), 1)
         self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
-        
+
         self.group_chat.send_if_exists.assert_called_once()
         ui_call_args = self.group_chat.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
@@ -149,10 +167,12 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         lifecycle.register_after_message_generation = MagicMock()
-        
+
         self.plugin.register(lifecycle)
-        
-        lifecycle.register_after_message_generation.assert_called_once_with(self.plugin.after_message_generation)
+
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
 
 
 if __name__ == "__main__":

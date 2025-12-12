@@ -73,7 +73,9 @@ async def http_request(
                     delete=False, suffix=".bin"
                 ) as tmp_file:
                     tmp_file.write(response.content)
-                    return ToolResultMessage(f"二进制内容已保存到临时文件: {tmp_file.name}")
+                    return ToolResultMessage(
+                        f"二进制内容已保存到临时文件: {tmp_file.name}"
+                    )
             else:
                 if encoding:
                     try:

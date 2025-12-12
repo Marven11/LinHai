@@ -22,6 +22,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
         async def empty_answer_stream(_):
             """返回一个空的答案流。"""
+
             class EmptyAnswer:
                 """空的答案流类。"""
 
@@ -55,8 +56,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["llm1", "llm2"],
             "current_llm_index": 0,
-            "compress_threshold_hard": 1000,
-            "compress_threshold_soft": 500,
+            "compress_threshold": 1000,
         }
 
         self.agent = Agent(
@@ -87,7 +87,8 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(
                 isinstance(msg, RuntimeMessage)
-                and "错误：用户指定的LLM名称'invalid_llm'不存在，请向用户报告这一点" in str(msg)
+                and "错误：用户指定的LLM名称'invalid_llm'不存在，请向用户报告这一点"
+                in str(msg)
                 for msg in messages
             )
         )

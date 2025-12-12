@@ -42,6 +42,14 @@ default_llm = "test"
         self.config = load_config(self.config_path)
         self.group_chat = GroupChat()
 
+        # 注册模拟的cli_args，因为subagent_manager.register_plugins()需要它
+        import argparse
+
+        self.cli_args = argparse.Namespace()
+        self.cli_args.checklist = None
+        self.cli_args.git_diff_reviewer = False
+        self.group_chat.register_member("cli_args", self.cli_args)
+
     def tearDown(self):
         """清理测试环境。"""
         shutil.rmtree(self.test_dir)

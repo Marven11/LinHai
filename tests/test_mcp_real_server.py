@@ -21,6 +21,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def create_test_config(self, config_content):
@@ -33,8 +34,8 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         """Test full integration with real MCP server."""
         project_root = Path(__file__).parent.parent.parent
         server_path = project_root / "linhai" / "tests" / "real_mcp_server.py"
-        
-        config_content = f'''
+
+        config_content = f"""
 [[llm]]
 name = "test"
 base_url = "https://example.com"
@@ -42,21 +43,19 @@ api_key = "test-key"
 model = "test-model"
 
 [agent]
-compress_threshold_soft = 40000
-compress_threshold_hard = 80000
+compress_threshold = 80000
 
 [[agent.mcp]]
 name = "calculator"
 server_script_path = "{server_path}"
-'''
+"""
         config_path = self.create_test_config(config_content)
-        
+
         config = load_config(config_path)
         agent = await create_agent_from_config(self.group_chat, config)
-        
+
         self.assertIsInstance(agent, Agent)
-        
+
         self.assertIsInstance(agent, Agent)
-        
+
         self.assertIsInstance(agent, Agent)
-        

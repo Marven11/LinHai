@@ -25,7 +25,7 @@ async def create_agent_from_config(
     config: Config,
     llm_name: str | None = None,
     config_basedir: Path | None = None,
-    code_style_path: Path | None = None,
+    checklist_path: Path | None = None,
 ):
     """创建Agent实例（从配置对象）
 
@@ -72,7 +72,7 @@ async def create_agent_from_config(
         group_chat=group_chat,
         system_prompt=agent_context["system_prompt"],
         memory_file_path=memory_file_path,
-        code_style_path=code_style_path,
+        checklist_path=checklist_path,
     )
 
     agent = Agent(
@@ -155,12 +155,10 @@ async def _create_agent_context(
         AgentConfig字典
     """
 
-    compress_threshold_hard: int | float = 0.8
-    compress_threshold_soft: int | float = 0.5
+    compress_threshold: int | float = 0.8
 
     if agent_config:
-        compress_threshold_hard = agent_config.compress_threshold_hard
-        compress_threshold_soft = agent_config.compress_threshold_soft
+        compress_threshold = agent_config.compress_threshold
 
     current_llm_index = 0
     if llm_name is not None:
@@ -177,8 +175,7 @@ async def _create_agent_context(
         "llms": llms,
         "llm_names": llm_names,
         "current_llm_index": current_llm_index,
-        "compress_threshold_hard": compress_threshold_hard,
-        "compress_threshold_soft": compress_threshold_soft,
+        "compress_threshold": compress_threshold,
         "enable_directory_change_detection": (
             agent_config.enable_directory_change_detection if agent_config else False
         ),
@@ -211,7 +208,7 @@ async def _create_init_messages(
     group_chat: GroupChat,
     system_prompt: str,
     memory_file_path: Path | None = None,
-    code_style_path: Path | None = None,
+    checklist_path: Path | None = None,
 ) -> list[Message]:
     """创建初始化消息列表
 
@@ -219,7 +216,7 @@ async def _create_init_messages(
         group_chat: GroupChat实例
         system_prompt: 系统提示语
         memory_file_path: 记忆文件路径（可选）
-        code_style_path: 代码风格要求文件路径（可选）
+        checklist_path: 检查清单文件路径（可选）
 
     Returns:
         初始化消息列表
@@ -238,15 +235,15 @@ async def _create_init_messages(
     )
     init_messages.append(GlobalMemory(user_global_memory))
 
-    if code_style_path:
-        from .base import CodeStyleMessage
+    if checklist_path:
+        from .base import ChecklistMessage
 
-        init_messages.append(CodeStyleMessage(code_style_path))
+        init_messages.append(ChecklistMessage(checklist_path))
         await group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
-                content=f"已加载代码风格要求文件: {code_style_path}",
+                content=f"已加载检查清单文件: {checklist_path}",
             ),
         )
 

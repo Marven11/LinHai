@@ -28,7 +28,7 @@ async def _create_agent_from_config(
     group_chat: GroupChat,
     config,
     llm_name: str | None = None,
-    code_style_path: Path | None = None,
+    checklist_path: Path | None = None,
 ):
     """从配置对象创建Agent
 
@@ -36,7 +36,7 @@ async def _create_agent_from_config(
         group_chat: GroupChat实例
         config: 配置对象
         llm_name: 指定的LLM名称（可选）
-        code_style_path: 代码风格要求文件路径（可选）
+        checklist_path: 检查清单文件路径（可选）
 
     Returns:
         Agent实例
@@ -44,7 +44,7 @@ async def _create_agent_from_config(
     from linhai.agent.create import create_agent_from_config
 
     return await create_agent_from_config(
-        group_chat, config, llm_name, code_style_path=code_style_path
+        group_chat, config, llm_name, checklist_path=checklist_path
     )
 
 
@@ -58,7 +58,7 @@ async def run(args, init_messages: list[str] | None):
     config = load_config(args.config.expanduser())
 
     _agent = await _create_agent_from_config(
-        group_chat, config, args.llm, code_style_path=args.code_style
+        group_chat, config, args.llm, checklist_path=args.checklist
     )
 
     app = CLIApp(
@@ -90,9 +90,14 @@ def main():
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
     parser.add_argument(
-        "--code-style",
+        "--checklist",
         type=Path,
-        help="代码风格要求文件路径，包含一系列代码风格要求，如./CODE_REQUIREMENTS.md",
+        help="检查清单文件路径，包含一系列代码要求，如./CODE_REQUIREMENTS.md",
+    )
+    parser.add_argument(
+        "--git-diff-reviewer",
+        action="store_true",
+        help="启用git diff reviewer subagent",
     )
     args = parser.parse_args()
 

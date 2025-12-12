@@ -16,7 +16,6 @@ from linhai.tool.base import global_tools
 from linhai.llm import SystemMessage, OpenAi
 
 
-
 class MockAnswerToken(TypedDict):
     """Mock implementation of AnswerToken for testing."""
 
@@ -71,8 +70,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             "llms": [self.mock_llm],  # 改为列表
             "llm_names": ["test_llm"],  # 添加llm_names字段
             "current_llm_index": 0,  # 添加当前LLM索引
-            "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800
+            "compress_threshold": 800,
         }
 
         self.group_chat = GroupChat()
@@ -80,15 +78,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("agent_answer")
 
         from linhai.subagent.issue import IssueManager
+
         self.issue_manager = IssueManager(self.group_chat)
 
         from linhai.config import ToolConfig
+
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat, 
+            group_chat=self.group_chat,
             toolsets=[global_tools],
             config=ToolConfig(),
             mcp_config=[],
-            mcp_basedir=Path("/tmp")
+            mcp_basedir=Path("/tmp"),
         )
 
         init_messages = [
@@ -145,7 +145,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.agent.state, "waiting_user")
 
-
     async def test_message_processing(self):
         """Test message processing functionality."""
         user_msg = UserMessage(message="Hi", name="user")
@@ -168,9 +167,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             messages[1].to_llm_message().get("content"), "<<user>>Hi<<user>>"
         )
-        self.assertEqual(
-            messages[2].to_llm_message().get("content"), "Processing..."
-        )
+        self.assertEqual(messages[2].to_llm_message().get("content"), "Processing...")
 
         mock_answer2 = MockAnswer(
             [{"reasoning_content": None, "content": "Tool processed"}]
@@ -178,12 +175,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer2
 
         self.agent.message_processor.append_message(tool_msg)
-        
+
         mock_answer2 = MockAnswer(
             [{"reasoning_content": None, "content": "Tool processed"}]
         )
         self.mock_llm.answer_stream.return_value = mock_answer2
-        
+
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
@@ -193,11 +190,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             f"Messages: {[str(msg) for msg in messages]}",
         )  # 系统消息 + 用户消息 + 助手回复 + 工具消息 + 助手回复
         self.assertEqual(
-            messages[3].to_llm_message().get("content"), "<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>"
+            messages[3].to_llm_message().get("content"),
+            "<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>",
         )
-        self.assertEqual(
-            messages[4].to_llm_message().get("content"), "Tool processed"
-        )
+        self.assertEqual(messages[4].to_llm_message().get("content"), "Tool processed")
 
     async def test_error_handling(self):
         """Test error handling functionality."""
@@ -254,11 +250,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        self.tool_manager.process_tool_call = AsyncMock(return_value=ToolResultMessage("工具执行成功"))
-
-        await self.agent.handle_user_message(
-            UserMessage(message="Calculate 2+2")
+        self.tool_manager.process_tool_call = AsyncMock(
+            return_value=ToolResultMessage("工具执行成功")
         )
+
+        await self.agent.handle_user_message(UserMessage(message="Calculate 2+2"))
         await self.agent.generate_response()
 
         self.tool_manager.process_tool_call.assert_called_once()
@@ -275,6 +271,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         async def empty_answer_stream(_):
             """返回一个空的答案流。"""
+
             class EmptyAnswer:
                 """空的答案流类。"""
 
@@ -297,6 +294,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 def get_reasoning_message(self):
                     """返回None。"""
                     return None
+
             return EmptyAnswer()
 
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)
@@ -312,9 +310,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(model, mock_llm2)  # 应该返回第二个LLM
 
         self.agent.context["current_llm_index"] = 0  # 重置索引
-        await self.agent.handle_user_message(
-            UserMessage(message="@invalid command")
-        )
+        await self.agent.handle_user_message(UserMessage(message="@invalid command"))
         self.assertEqual(self.agent.context["current_llm_index"], 0)  # 索引不变
         model = await self.agent.get_current_model()
         self.assertEqual(model, mock_llm1)  # 应该返回第一个LLM
@@ -322,7 +318,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(
                 isinstance(msg, RuntimeMessage)
-                and "错误：用户指定的LLM名称'invalid'不存在，请向用户报告这一点" in str(msg)
+                and "错误：用户指定的LLM名称'invalid'不存在，请向用户报告这一点"
+                in str(msg)
                 for msg in messages
             )
         )
@@ -336,9 +333,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.agent.context["current_llm_index"] = 0  # 重置索引
         await self.agent.handle_user_message(UserMessage(message="@qwen first"))
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引更新为1
-        await self.agent.handle_user_message(
-            UserMessage(message="Normal message")
-        )
+        await self.agent.handle_user_message(UserMessage(message="Normal message"))
         self.assertEqual(self.agent.context["current_llm_index"], 1)  # 索引不变
         await self.agent.handle_user_message(
             UserMessage(message="@deepseek-reasoning second")

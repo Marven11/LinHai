@@ -129,9 +129,11 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.assertGreater(len(append_message_calls), 0)
 
         conflict_messages = [
-            args[0].message for call in append_message_calls
+            args[0].message
+            for call in append_message_calls
             for args in [call[0]]
-            if len(args) > 0 and isinstance(args[0], RuntimeMessage)
+            if len(args) > 0
+            and isinstance(args[0], RuntimeMessage)
             and "工具调用冲突" in args[0].message
         ]
 

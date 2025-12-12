@@ -18,7 +18,7 @@ class TestTodolistManager(unittest.TestCase):
         """测试添加todolist。"""
         content = "测试todolist内容"
         todolist_id = self.manager.add_todolist(content)
-        
+
         self.assertIsNotNone(todolist_id)
         self.assertIn(todolist_id, self.manager.todolists)
         self.assertEqual(self.manager.todolists[todolist_id], content)
@@ -32,12 +32,12 @@ class TestTodolistManager(unittest.TestCase):
         """测试有内容的todolist列表。"""
         content1 = "测试内容1"
         content2 = "测试内容2"
-        
+
         id1 = self.manager.add_todolist(content1)
         id2 = self.manager.add_todolist(content2)
-        
+
         todolists = self.manager.list_todolists()
-        
+
         self.assertEqual(len(todolists), 2)
         expected_dict1 = {"id": id1, "content": content1}
         expected_dict2 = {"id": id2, "content": content2}
@@ -48,7 +48,7 @@ class TestTodolistManager(unittest.TestCase):
         """测试成功删除todolist。"""
         content = "要删除的内容"
         todolist_id = self.manager.add_todolist(content)
-        
+
         self.manager.delete_todolist(todolist_id)
         self.assertNotIn(todolist_id, self.manager.todolists)
 
@@ -56,8 +56,6 @@ class TestTodolistManager(unittest.TestCase):
         """测试删除不存在的todolist。"""
         result = self.manager.delete_todolist("不存在的ID")
         self.assertIn("错误：Todolist ID 不存在的ID 不存在", result)
-
-
 
 
 class TestAgentTodolistToolset(unittest.TestCase):
@@ -68,7 +66,7 @@ class TestAgentTodolistToolset(unittest.TestCase):
         self.mock_group_chat = Mock()
         self.manager = TodolistManager(self.mock_group_chat)
         self.toolset = ToolSet()
-        
+
         @self.toolset.register_tool(
             name="todolist_add",
             desc="添加todolist",
@@ -99,7 +97,7 @@ class TestAgentTodolistToolset(unittest.TestCase):
         """测试agent的todolist_add工具。"""
         content = "测试内容"
         result = self.toolset.get_tool("todolist_add")(content)
-        
+
         self.assertIn("成功添加todolist，ID:", result)
         self.assertEqual(len(self.manager.todolists), 1)
 
@@ -112,9 +110,9 @@ class TestAgentTodolistToolset(unittest.TestCase):
         """测试agent的todolist_list工具（有内容）。"""
         content = "测试内容"
         todolist_id = self.manager.add_todolist(content)
-        
+
         result = self.toolset.get_tool("todolist_list")()
-        
+
         self.assertIn(f"{todolist_id}: {content}", result)
         self.assertNotIn("当前todolist:", result)
 
@@ -132,7 +130,7 @@ class TestSubagentTodolistToolset(unittest.TestCase):
         self.mock_group_chat = Mock()
         self.manager = TodolistManager(self.mock_group_chat)
         self.toolset = ToolSet()
-        
+
         @self.toolset.register_tool(
             name="todolist_add",
             desc="添加todolist",
@@ -172,13 +170,11 @@ class TestSubagentTodolistToolset(unittest.TestCase):
             result = self.manager.delete_todolist(todolist_id)
             return result
 
-
-
     def test_todolist_add_tool(self):
         """测试subagent的todolist_add工具。"""
         content = "测试内容"
         result = self.toolset.get_tool("todolist_add")(content)
-        
+
         self.assertIn("成功添加todolist，ID:", result)
         self.assertEqual(len(self.manager.todolists), 1)
 
@@ -191,9 +187,9 @@ class TestSubagentTodolistToolset(unittest.TestCase):
         """测试subagent的todolist_list工具（有内容）。"""
         content = "测试内容"
         todolist_id = self.manager.add_todolist(content)
-        
+
         result = self.toolset.get_tool("todolist_list")()
-        
+
         self.assertIn(f"{todolist_id}: {content}", result)
         self.assertNotIn("当前todolist:", result)
 
@@ -201,9 +197,9 @@ class TestSubagentTodolistToolset(unittest.TestCase):
         """测试subagent的todolist_delete工具（成功删除）。"""
         content = "要删除的内容"
         todolist_id = self.manager.add_todolist(content)
-        
+
         result = self.toolset.get_tool("todolist_delete")(todolist_id)
-        
+
         self.assertIn("成功删除todolist:", result)
         self.assertEqual(len(self.manager.todolists), 0)
 

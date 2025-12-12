@@ -18,10 +18,11 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
         group_chat = GroupChat()
         # 注册一个mock的lifecycle以避免RuntimeError
         from linhai.agent.lifecycle import Lifecycle
+
         mock_lifecycle = Mock(spec=Lifecycle)
         mock_lifecycle.register_after_working = Mock()
         group_chat.register_member("lifecycle", mock_lifecycle)
-        
+
         self.init_messages = [
             SystemMessage(
                 template="System message",
@@ -30,14 +31,14 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
             UserMessage(message="Initial message"),
         ]
         self.message_processor = AgentMessage(group_chat, self.init_messages)
-        self.orchestration = AgentMessageOrchestration(group_chat, self.message_processor)
+        self.orchestration = AgentMessageOrchestration(
+            group_chat, self.message_processor
+        )
 
     def test_mark_messages_as_garbage(self):
         """测试标记消息为垃圾。"""
         large_msg = RuntimeMessage("Large content" * 1000)
-        message_id = self.orchestration.record_large_message(
-            large_msg, "large content"
-        )
+        message_id = self.orchestration.record_large_message(large_msg, "large content")
         self.message_processor.append_message(large_msg)
 
         result = self.orchestration.mark_messages_as_garbage([message_id])
@@ -55,9 +56,7 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_record_large_message(self):
         """测试记录大消息。"""
         large_msg = RuntimeMessage("Large content")
-        message_id = self.orchestration.record_large_message(
-            large_msg, "large content"
-        )
+        message_id = self.orchestration.record_large_message(large_msg, "large content")
 
         self.assertIn(message_id, self.orchestration.large_messages)
         self.assertEqual(self.orchestration.large_messages[message_id], large_msg)
@@ -65,9 +64,7 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
     async def test_thanox_history(self):
         """测试随机删除历史消息。"""
         for i in range(10):
-            self.message_processor.append_message(
-                UserMessage(message=f"Message {i}")
-            )
+            self.message_processor.append_message(UserMessage(message=f"Message {i}"))
 
         original_count = len(self.message_processor.get_messages())
         result = await self.orchestration.thanox_history()
@@ -82,7 +79,7 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
-        threshold_info = (50000, 100000, 60000, 40000, 0.6)
+        threshold_info = (100000, 60000, 40000, 0.8)
         # 添加一个大消息，以便在红灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.record_large_message(large_msg, "large content")
@@ -92,13 +89,15 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.compress_tool_called_in_last_response = False
         self.orchestration.add_soft_threshold_notification(threshold_info)
 
-        self.assertEqual(len(self.message_processor.messages), 4)  # 初始2条 + 1条大消息 + 1条通知
+        self.assertEqual(
+            len(self.message_processor.messages), 4
+        )  # 初始2条 + 1条大消息 + 1条通知
         self.assertIn("黄灯状态", str(self.message_processor.messages[-1]))
         self.assertIn("Token用量", str(self.message_processor.messages[-1]))
 
     def test_add_soft_threshold_notification_with_compress_tool(self):
         """测试压缩工具调用后不添加通知。"""
-        threshold_info = (50000, 100000, 60000, 40000, 0.6)
+        threshold_info = (100000, 60000, 40000, 0.6)
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.record_large_message(large_msg, "large content")
@@ -108,7 +107,9 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.compress_tool_called_in_last_response = True
         self.orchestration.add_soft_threshold_notification(threshold_info)
 
-        self.assertEqual(len(self.message_processor.messages), 3)  # 初始2条 + 1条大消息，没有通知
+        self.assertEqual(
+            len(self.message_processor.messages), 3
+        )  # 初始2条 + 1条大消息，没有通知
 
     @patch("linhai.agent.message.Path")
     @patch("linhai.agent.message.json")
@@ -135,28 +136,28 @@ class TestAgentMessageOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_get_status_display_piece(self):
         """测试获取状态显示片段。"""
         self.message_processor.append_message(RuntimeMessage("test"))
-        
+
         # 记录一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         message_id = self.orchestration.record_large_message(large_msg, "large content")
         self.message_processor.append_message(large_msg)
-        
+
         # 标记为垃圾
         self.orchestration.mark_messages_as_garbage([message_id])
-        
+
         # 测试不使用nerd font
         pieces = self.orchestration.get_status_display_pieces(use_nerd_font=False)
         self.assertIsInstance(pieces, list)
         self.assertGreater(len(pieces), 0)
         # 应该包含消息计数 - 格式已改为 '4 msgs', '1 large', '1 garbage'
         for piece in pieces:
-            if 'msgs' in piece:
-                self.assertIn('4', piece)  # 消息数量
-            elif 'large' in piece:
-                self.assertIn('1', piece)  # 大消息数量
-            elif 'garbage' in piece:
-                self.assertIn('1', piece)  # 垃圾消息数量
-        
+            if "msgs" in piece:
+                self.assertIn("4", piece)  # 消息数量
+            elif "large" in piece:
+                self.assertIn("1", piece)  # 大消息数量
+            elif "garbage" in piece:
+                self.assertIn("1", piece)  # 垃圾消息数量
+
         # 测试使用nerd font
         nerd_pieces = self.orchestration.get_status_display_pieces(use_nerd_font=True)
         self.assertIsInstance(nerd_pieces, list)

@@ -362,26 +362,26 @@ def get_absolute_path(path: str) -> ToolResultMessage | ToolErrorMessage:
 
 def _check_small_file(file_path: Path) -> str | None:
     """检查文件是否过小（少于100行且内容少于30000字符）。
-    
+
     Args:
         file_path: 文件路径对象
-        
+
     Returns:
         错误消息或None（如果文件足够大）
     """
     try:
         line_count = 0
         char_count = 0
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             for line in f:
                 line_count += 1
                 char_count += len(line)
                 if line_count >= 100 and char_count >= 30000:
                     return None
-        
+
         if line_count < 100 and char_count < 30000:
             return (
-                f"错误: 文件内容过少（{line_count}行，{char_count}字符），禁止使用run_sed_expression工具。\n"
+                f"错误: 文件内容过少（{line_count}行，{char_count}字符），禁止使用read_file_with_sed工具。\n"
                 f"建议使用read_file工具直接读取文件内容。"
             )
         return None
@@ -389,10 +389,10 @@ def _check_small_file(file_path: Path) -> str | None:
         return f"读取文件内容时发生错误: {exc!r}"
 
 
-def run_sed_expression(
+def read_file_with_sed(
     expression: str, filepath: str
 ) -> ToolResultMessage | ToolErrorMessage:
-    """执行sed表达式并返回输出。
+    """执行sed表达式并返回输出，不修改文件。
 
     Args:
         expression: sed表达式
@@ -405,11 +405,11 @@ def run_sed_expression(
     validation_error = validate_file(file_path)
     if validation_error:
         return ToolErrorMessage(validation_error)
-    
+
     small_file_error = _check_small_file(file_path)
     if small_file_error:
         return ToolErrorMessage(small_file_error)
-    
+
     try:
         result = subprocess.run(
             ["sed", "-n", expression, file_path.as_posix()],

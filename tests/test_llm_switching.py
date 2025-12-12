@@ -27,8 +27,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,
-            "compress_threshold_soft": 500,
-            "compress_threshold_hard": 800
+            "compress_threshold": 800,
         }
 
         self.group_chat = GroupChat()

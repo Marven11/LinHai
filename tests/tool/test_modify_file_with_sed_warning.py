@@ -4,6 +4,8 @@ import unittest
 import unittest.mock
 
 from linhai.tool.base import ToolArgInfo
+
+
 class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
     """Test cases for modify_file_with_sed tool with line number warning."""
 
