@@ -87,6 +87,7 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
+- [ ] 为ssh添加terminal工具，实现方式是在trojan.py中维护pty，通过jsonrpc传递pty产生的bytes到主机，主机再通过pyte渲染
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
