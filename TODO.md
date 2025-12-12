@@ -2,28 +2,36 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构compress_threshold_soft等
-  - 完全删除compress_threshold_soft，当前的百分比完全基于compress_threshold_hard计算
-  - 0% - 50% 绿灯 - 标记消息
-  - 50% - 70% 绿闪 - 标记消息
-  - 70% - 90% 黄灯 - 清理垃圾消息
-  - 90% - 100% 红灯 - 历史压缩
-  - 如果在一分钟内调用过历史压缩或者清理垃圾消息则禁止调用历史压缩
-  - 注意主要实现和重要的状态管理需要放在linhai/agent/orchestration.py中
-- [x] 重命名run_sed_expression为read_file_with_sed并添加插件，禁止使用这个插件读取已经读取的文件
-  - 当agent使用这个插件读取已经读取的文件时，提醒
-    - `错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！`
-  - 通过检测所有文件路径相同的FileContentMessage实现判断当前文件是否已经读取
-    - 例外: 最近同路径FileContentMessage包含的文件内容和当前文件内容不同
-- [x] 改名--code-style选项为--checklist，同时修改代码内的表述
-- [x] 修改工具调用冲突的检测逻辑
-  - 确认conflict_with是有向的: A标记自身和B冲突代表在一个消息内A不能在调用B之后调用，不代表B不能在A之后调用
-  - 修改文件修改工具和文件读取工具的conflict逻辑：一个消息内修改工具不能在读取工具之后调用，读取工具可以在修改工具后调用
-- [x] 将git diff reviewer改为使用命令行选项打开而不是通过配置打开
-- [x] 添加一个`/subagent_start`命令手动启动subagent
-  - 当前只需要手动启动git diff reviewer
-  - 当前插件和手动启动两种方式都可以启动git diff reviewer，可能需要提取启动git diff reviewer的逻辑
-- [x] 在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具
+- [ ] 重构compress_threshold、红绿灯状态等上下文管理工具
+  - 逻辑重构
+    - 工具分类
+      - 消息清理工具: compress_history_range, message_garbage_clean和thanox_history
+      - 其他消息管理工具: mark_messages_as_garbage
+      - 其他工具: 其余工具，和上下文管理无关
+    - 判断红绿灯状态: 仅基于当前message状态
+    - 判断上一个回答是否调用了压缩消息的工具: 完全删除
+    - 判断最近是否调用过消息清理工具: 仅判断一分钟内有没有调用过**消息清理工具**
+    - 判断是否需要拦截消息拦截：只基于红绿灯状态和**最近是否调用过消息清理工具**判断
+      - 如果**最近调用过消息清理工具**: 禁止使用消息清理工具，可以使用其他消息管理工具和其他工具
+      - 如果**最近没有调用过消息清理工具**且为红灯: 只能调用消息清理工具和其他消息管理工具，禁止调用其他工具
+      - 其他状态: 可以调用任何工具
+    - 以上判断逻辑均需要编写unittest，测试所有情况！
+  - RedStateToolBlockPlugin应该移动到linhai/agent/orchestration.py中，同时其的实现违反CODE_REQUIREMENTS.md，需要修正
+  - get_threshold_info应该返回一个typeddict标明每个值的含义，而不是返回一个过长的tuple
+  - AgentMessageOrchestration添加appending message的实现应该拆分成一个新的plugin类
+  - 当前token长度超出硬限制且**最近没有调用过消息清理工具**则自动调用thanox_history
+- [ ] 重构prompt.py和SystemMessage，使system prompt的构造结构化
+  - 当前主要包含四个部分：总览、各个部分的介绍、注意事项、示例
+  - 期望的结果:
+    - SystemMessage被注册到group_chat中，全局只有一个SystemMessage
+    - SystemMessage接收各个介绍、注意事项、示例，均为字符串，并拼接为正确的结果
+    - 存在合适的unittest检测拼接结果
+    - SystemMessage提供多个函数支持动态增加注意事项等，虽然现在这些函数没被使用
+- [ ] 当前agent的message数组有多个称呼: messages, context, history, 全部改成context
+  - thanox_history改名成context_thanox, message_garbage_clean改名成context_garbage_clean, compress_history_range改名成compress_context_range
+  - AgentMessageOrchestration改名成AgentContextOrchestration
+  - 搜索messages和history并思考是否需要改名成context, 大部分都需要更名
+- [ ] 用户可以通过`/context_garbage_clean`调用context_garbage_clean或者`/context_thanox`调用context_thanox
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -33,8 +41,6 @@
 
 - [ ] 研究多subagent协作
   - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
-- [ ] 重构prompt.py和SystemMessage，使system prompt的构造结构化
-  - 当前主要包含四个部分：总览、各个部分的介绍、注意事项、示例
 - [ ] secret系统
   - 当前问题: agent必须通过参数调用工具，但是其有时需要输入密码, token等敏感信息
     - 例如agent必须发送这样的工具调用`{"name": "xxx", "arguments": {"content": "password=123456"}}`，其中需要输入敏感密码123456
