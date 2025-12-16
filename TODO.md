@@ -94,6 +94,7 @@
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
 - [ ] 为ssh添加terminal工具，实现方式是在trojan.py中维护pty，通过jsonrpc传递pty产生的bytes到主机，主机再通过pyte渲染
+- [ ] 解决因为消息过多而无法进行历史压缩的问题
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
