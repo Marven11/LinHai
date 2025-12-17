@@ -6,7 +6,6 @@ from typing import Literal
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage
-from linhai.prompt import DEFAULT_SYSTEM_PROMPT
 from linhai.subagent import SubAgentManager
 from linhai.subagent.issue import IssueManager
 from linhai.subagent.tools import create_subagent_toolset
@@ -70,7 +69,6 @@ async def create_agent_from_config(
 
     init_messages = await _create_init_messages(
         group_chat=group_chat,
-        system_prompt=agent_context["system_prompt"],
         memory_file_path=memory_file_path,
         checklist_path=checklist_path,
     )
@@ -171,7 +169,6 @@ async def _create_agent_context(
             )
 
     agent_context: AgentContext = {
-        "system_prompt": DEFAULT_SYSTEM_PROMPT,
         "llms": llms,
         "llm_names": llm_names,
         "current_llm_index": current_llm_index,
@@ -206,7 +203,6 @@ async def _create_tool_manager(
 
 async def _create_init_messages(
     group_chat: GroupChat,
-    system_prompt: str,
     memory_file_path: Path | None = None,
     checklist_path: Path | None = None,
 ) -> list[Message]:
@@ -214,7 +210,6 @@ async def _create_init_messages(
 
     Args:
         group_chat: GroupChat实例
-        system_prompt: 系统提示语
         memory_file_path: 记忆文件路径（可选）
         checklist_path: 检查清单文件路径（可选）
 
@@ -222,14 +217,11 @@ async def _create_init_messages(
         初始化消息列表
     """
     init_messages: list[Message] = [
-        SystemMessage(
-            template=system_prompt,
-            group_chat=group_chat,
-        )
+        SystemMessage(group_chat)
     ]
 
     user_global_memory = (
-        memory_file_path.absolute()
+        Path(memory_file_path).absolute()
         if memory_file_path
         else Path("~/.config/linhai/LINHAI.md").expanduser()
     )

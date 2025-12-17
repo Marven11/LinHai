@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构compress_threshold、红绿灯状态等上下文管理工具
+- [x] 重构compress_threshold、红绿灯状态等上下文管理工具
   - 逻辑重构
     - 工具分类
       - 消息清理工具: compress_history_range, message_garbage_clean和thanox_history
@@ -20,18 +20,18 @@
   - get_threshold_info应该返回一个typeddict标明每个值的含义，而不是返回一个过长的tuple
   - AgentMessageOrchestration添加appending message的实现应该拆分成一个新的plugin类
   - 当前token长度超出硬限制且**最近没有调用过消息清理工具**则自动调用thanox_history
-- [ ] 重构prompt.py和SystemMessage，使system prompt的构造结构化
+- [x] 重构prompt.py和SystemMessage，使system prompt的构造结构化
   - 当前主要包含四个部分：总览、各个部分的介绍、注意事项、示例
   - 期望的结果:
     - SystemMessage被注册到group_chat中，全局只有一个SystemMessage
     - SystemMessage接收各个介绍、注意事项、示例，均为字符串，并拼接为正确的结果
     - 存在合适的unittest检测拼接结果
     - SystemMessage提供多个函数支持动态增加注意事项等，虽然现在这些函数没被使用
-- [ ] 当前agent的message数组有多个称呼: messages, context, history, 全部改成context
+- [x] 当前agent的message数组有多个称呼: messages, context, history, 全部改成context
   - thanox_history改名成context_thanox, message_garbage_clean改名成context_garbage_clean, compress_history_range改名成compress_context_range
   - AgentMessageOrchestration改名成AgentContextOrchestration
   - 搜索messages和history并思考是否需要改名成context, 大部分都需要更名
-- [ ] 用户可以通过`/context_garbage_clean`调用context_garbage_clean或者`/context_thanox`调用context_thanox
+- [x] 用户可以通过`/context_garbage_clean`调用context_garbage_clean或者`/context_thanox`调用context_thanox
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -104,3 +104,4 @@
 ./CODE_REQUIREMENTS.md - 代码风格要求，编写时要注意
 ./MESSAGE_DESIGN.md - 消息设计，直接关系到agent上下文的好坏，从而直接影响agent性能
 ./linhai/group_chat.py - group chat的设计，用来连接各个单例，需要先检查其中的文档注释再使用GroupChat类
+ 

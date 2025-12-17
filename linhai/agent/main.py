@@ -13,7 +13,7 @@ from .base import (
 )
 from .lifecycle import Lifecycle
 from .message import AgentMessage
-from .orchestration import AgentMessageOrchestration
+from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
 from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
 from linhai.llm import (
@@ -24,12 +24,10 @@ from linhai.llm import (
     ToolCallMessage,
 )
 from linhai.group_chat import GroupChat
-from linhai.type_hints import AgentState
+from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 from linhai.input_parser import parse_user_input
-
-
 class Agent:
     """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
 
@@ -51,7 +49,7 @@ class Agent:
 
         self.lifecycle = Lifecycle(group_chat)
         self.message_processor = AgentMessage(group_chat, init_messages)
-        self.orchestration = AgentMessageOrchestration(
+        self.orchestration = AgentContextOrchestration(
             group_chat, self.message_processor
         )
         self.toolcall_processor = AgentToolcall(self)
@@ -71,12 +69,15 @@ class Agent:
 
         self.queued_messages: list = []
 
-    def get_threshold_info(self) -> tuple[int, int, int, float] | None:
+    def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
 
         返回:
-            tuple[int, int, int, float] | None:
-                (压缩阈值, 已使用token数, 剩余token数, 使用比例) 或 None
+            ThresholdInfo | None: 阈值信息字典，包含以下字段：
+                hard_limit: 压缩阈值
+                used_tokens: 已使用token数
+                remaining_tokens: 剩余token数
+                usage_ratio: 使用比例
         """
         if not self.last_token_usage:
             return None
@@ -88,25 +89,25 @@ class Agent:
             token_limit = 65536
 
         threshold_config = self.context.get("compress_threshold", 0.8)
-        compress_threshold = (
+        hard_limit = (
             int(threshold_config * token_limit)
             if isinstance(threshold_config, float)
             else threshold_config
         )
 
-        taken = (
-            min(self.last_token_usage / compress_threshold, 1.0)
-            if compress_threshold > 0
+        usage_ratio = (
+            min(self.last_token_usage / hard_limit, 1.0)
+            if hard_limit > 0
             else 0.0
         )
-        remaining = max(compress_threshold - self.last_token_usage, 0)
+        remaining_tokens = max(hard_limit - self.last_token_usage, 0)
 
-        return (
-            compress_threshold,
-            self.last_token_usage,
-            remaining,
-            taken,
-        )
+        return {
+            "hard_limit": hard_limit,
+            "used_tokens": self.last_token_usage,
+            "remaining_tokens": remaining_tokens,
+            "usage_ratio": usage_ratio,
+        }
 
     async def interrupt(self, custom_message: str | None = None):
         """

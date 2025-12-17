@@ -12,13 +12,13 @@ from textual.widgets import Static
 if TYPE_CHECKING:
     from linhai.group_chat import GroupChat
     from linhai.agent.message import AgentMessage
-    from linhai.agent.orchestration import AgentMessageOrchestration
+    from linhai.agent.orchestration import AgentContextOrchestration
     from linhai.agent import Agent
     from linhai.llm import Message
 else:
     GroupChat = object
     AgentMessage = object
-    AgentMessageOrchestration = object
+    AgentContextOrchestration = object
     Agent = object
     Message = object
 
@@ -225,12 +225,14 @@ class ContextTabWidget(Static):
             grid.add_row("")
             return
 
-        # threshold_info是4元组: (hard, used, remaining, taken)
-        hard, used, _remaining, taken = threshold_info
+        # threshold_info是ThresholdInfo类型的字典
+        hard = threshold_info["hard_limit"]
+        used = threshold_info["used_tokens"]
+        taken = threshold_info["usage_ratio"]
         percentage = taken * 100
 
         # Create proper progress bar using Rich
-        progress_bar_text = self._create_progress_bar(percentage)
+        progress_bar_text = self._create_progress_bar(float(percentage))
 
         grid.add_row("当前用量:", f"{used}")
         grid.add_row("硬限制:", f"{hard}")
@@ -246,14 +248,14 @@ class ContextTabWidget(Static):
             grid.add_row("总token:", f"{token_usage.total_tokens}")
 
         # Cache tokens
-        cached, cache_percentage = self._get_token_cache_info(used)
+        cached, cache_percentage = self._get_token_cache_info(int(used))
         if cached > 0:
             grid.add_row("缓存token:", f"{cached} (~{cache_percentage:.1f}%)")
 
         grid.add_row("")
 
     def _build_orchestration_section(
-        self, grid: Table, orchestration: AgentMessageOrchestration
+        self, grid: Table, orchestration: AgentContextOrchestration
     ) -> None:
         """Build orchestration status section."""
         grid.add_row(Text("编排状态", style="bold yellow"))
@@ -323,23 +325,15 @@ class ContextTabWidget(Static):
 
     def update_display(self) -> None:
         """Update the display with current context information."""
-        # Check if all required components are registered
-        # This is necessary because components may not be initialized yet during testing
-        required_members = ("agent_message", "agent_message_orchestration", "agent")
-        if any(not self.group_chat.has_member(member) for member in required_members):
-            self._show_waiting_message()
-            return
-
-        # Get components - these should exist now
         agent_message: AgentMessage = self.group_chat.get_members(
             "agent_message", AgentMessage
         )
-        orchestration: AgentMessageOrchestration = self.group_chat.get_members(
-            "agent_message_orchestration", AgentMessageOrchestration
+        from linhai.agent.orchestration import AgentContextOrchestration
+        orchestration: AgentContextOrchestration = self.group_chat.get_members(
+            "agent_context_orchestration", AgentContextOrchestration
         )
         agent: Agent = self.group_chat.get_members("agent", Agent)
 
-        # Build rich content
         grid = Table.grid(padding=(0, 1))
         grid.add_column(style="bold cyan")
         grid.add_column()
@@ -347,14 +341,12 @@ class ContextTabWidget(Static):
         messages = agent_message.messages
         message_count = len(messages)
 
-        # Build each section
         self._build_message_statistics_section(grid, messages, message_count)
         self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)
         self._build_appending_messages_section(grid, agent_message.appending_messages)
 
-        # Update the widget
         self._update_content_widget(grid)
 
     def _show_waiting_message(self) -> None:

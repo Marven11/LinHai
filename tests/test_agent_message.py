@@ -15,11 +15,18 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         from linhai.group_chat import GroupChat
+        from linhai.tool.main import ToolManager
+        from unittest.mock import MagicMock
 
         group_chat = GroupChat()
+        
+        # 注册一个Mock的tool_manager，因为SystemMessage初始化需要它
+        mock_tool_manager = MagicMock(spec=ToolManager)
+        mock_tool_manager.get_tools_info.return_value = []
+        group_chat.register_member("tool_manager", mock_tool_manager)
+        
         self.init_messages = [
             SystemMessage(
-                template="System message",
                 group_chat=group_chat,
             ),
             UserMessage(message="Initial message"),

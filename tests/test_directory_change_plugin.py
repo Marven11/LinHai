@@ -27,10 +27,24 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         from linhai.agent.message import AgentMessage
         from linhai.llm import UserMessage, AssistantMessage, SystemMessage
+        from linhai.tool.main import ToolManager
+        
+        # 为SystemMessage初始化提供mock的tool_manager
+        mock_tool_manager = Mock(spec=ToolManager)
+        mock_tool_manager.get_tools_info.return_value = []
+        
+        def get_members_side_effect(member_type, _member_class=None):
+            if member_type == "tool_manager":
+                return mock_tool_manager
+            elif member_type == "agent":
+                return self.mock_agent
+            else:
+                return None
+        
+        self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
         init_messages = [
             SystemMessage(
-                template="System message",
                 group_chat=self.group_chat,
             ),
             UserMessage(message="Initial message"),

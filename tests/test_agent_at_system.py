@@ -52,7 +52,6 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.mock_llm2.answer_stream = empty_answer_stream
 
         self.config: AgentContext = {
-            "system_prompt": "测试系统提示",
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["llm1", "llm2"],
             "current_llm_index": 0,

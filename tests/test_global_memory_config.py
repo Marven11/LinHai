@@ -27,6 +27,13 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         self.group_chat = GroupChat()
+        
+        # 为SystemMessage初始化提供mock的tool_manager
+        from linhai.tool.main import ToolManager
+        from unittest.mock import Mock
+        mock_tool_manager = Mock(spec=ToolManager)
+        mock_tool_manager.get_tools_info.return_value = []
+        self.group_chat.register_member("tool_manager", mock_tool_manager)
 
     def tearDown(self):
         """测试后清理"""
@@ -45,7 +52,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
-                    system_prompt="测试系统提示",
                     memory_file_path=memory_file,
                 )
             )
@@ -78,7 +84,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
-                    system_prompt="测试系统提示",
                     memory_file_path=Path("test_relative_memory.md"),
                 )
             )
@@ -114,7 +119,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             init_messages = loop.run_until_complete(
                 _create_init_messages(
                     group_chat=self.group_chat,
-                    system_prompt="测试系统提示",
                     memory_file_path=None,
                 )
             )
@@ -154,7 +158,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 init_messages = loop.run_until_complete(
                     _create_init_messages(
                         group_chat=self.group_chat,
-                        system_prompt="测试系统提示",
                         memory_file_path=None,
                     )
                 )

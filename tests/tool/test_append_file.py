@@ -43,7 +43,8 @@ class TestAppendFile(unittest.TestCase):
 
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            self.assertEqual(content, "Line 1\nLine 2\nLine 3")
+            # 当文件不以换行符结尾且新内容不以换行符开头时，会添加警告信息
+            self.assertEqual(content, "Line 1\nLine 2Line 3\n警告：原文件末尾没有换行，原最后一行被修改！\n")
         finally:
             os.unlink(temp_path)
 
@@ -92,7 +93,8 @@ class TestAppendFile(unittest.TestCase):
             temp_path = temp_file.name
 
         try:
-            result = append_file(temp_path, "Line 1")
+            # 新文件为空，使用assume_empty_line=False避免换行检查
+            result = append_file(temp_path, "Line 1", assume_empty_line=False)
             self.assertIn("成功写入文件", result.content)
 
             with open(temp_path, "r", encoding="utf-8") as f:

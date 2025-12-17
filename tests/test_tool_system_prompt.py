@@ -22,7 +22,6 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
         config: AgentContext = {
-            "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -44,7 +43,6 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
 
         init_messages = [
             SystemMessage(
-                template="Test system prompt",
                 group_chat=self.group_chat,
             )
         ]
@@ -136,9 +134,13 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
         self.assertGreater(len(system_messages), 0)
 
-        system_prompt = system_messages[0].template
+        # 现在SystemMessage没有template属性，但可以通过to_llm_message()获取内容
+        system_message = system_messages[0].to_llm_message()
+        self.assertIn("content", system_message)
+        system_prompt = system_message.get('content')
         self.assertIsInstance(system_prompt, str)
-        self.assertGreater(len(system_prompt), 0)
+        self.assertIsNotNone(system_prompt)
+        self.assertGreater(len(system_prompt or ""), 0)
 
     def test_tool_manager_has_accessible_tools(self):
         """测试ToolManager有可访问的工具"""

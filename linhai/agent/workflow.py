@@ -21,9 +21,9 @@ def _check_token_threshold(agent: "linhai.agent.Agent") -> tuple[bool, str]:
     if not threshold_info:
         return True, ""
 
-    hard, used, _remaining, taken = threshold_info
-    if taken < 0.2:
-        return False, f"当前token占用小于20%，仅为{taken*100:.2f}%，禁止删除消息"
+    usage_ratio = threshold_info["usage_ratio"]
+    if usage_ratio < 0.2:
+        return False, f"当前token占用小于20%，仅为{usage_ratio*100:.2f}%，禁止删除消息"
 
     return True, ""
 
@@ -166,7 +166,7 @@ async def _execute_message_deletion(
         )
 
 
-async def compress_history_range(agent: "linhai.agent.Agent") -> str:
+async def compress_context_range(agent: "linhai.agent.Agent") -> str:
     """
     压缩指定范围的历史消息以减少上下文长度。
 

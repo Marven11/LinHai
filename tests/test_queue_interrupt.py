@@ -76,7 +76,6 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = Mock()
 
         self.config: AgentContext = {
-            "system_prompt": "测试系统提示",
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,

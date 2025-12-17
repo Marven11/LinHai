@@ -35,7 +35,6 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
         self.config: AgentContext = {
-            "system_prompt": "Test prompt",
             "llms": [],
             "llm_names": [],
             "current_llm_index": 0,
@@ -64,7 +63,7 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
         self.assertIn("已成功标记 1 条消息为垃圾消息", result)
         self.assertIn(f"ID为{test_id}的消息已被标记为垃圾", result)
 
-    async def test_message_garbage_clean(self):
+    async def test_context_garbage_clean(self):
         large_message = RuntimeMessage("x" * 30001)  # 大于30000字符
         test_id = self.agent.orchestration.record_large_message(
             large_message, "x" * 30001
@@ -73,6 +72,6 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
 
         self.agent.orchestration.mark_messages_as_garbage([test_id])
 
-        result = await self.agent.orchestration.message_garbage_clean()
+        result = await self.agent.orchestration.context_garbage_clean()
         self.assertIn("已清理 1 条消息", result)
         self.assertNotIn(test_id, self.agent.orchestration.large_messages)

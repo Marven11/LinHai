@@ -385,7 +385,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """设置测试环境。"""
         self.group_chat = MagicMock()
         self.group_chat.send_if_exists = AsyncMock(return_value=None)
-        from linhai.agent.plugin import RedStateToolBlockPlugin
+        from linhai.agent.orchestration import RedStateToolBlockPlugin
 
         self.plugin = RedStateToolBlockPlugin(self.group_chat)
 
@@ -394,18 +394,23 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.append_message = AsyncMock()
         # 默认阈值信息：绿灯状态
-        self.agent.get_threshold_info.return_value = (80000, 40000, 40000, 0.5)
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 40000,
+            "remaining_tokens": 40000,
+            "usage_ratio": 0.5
+        }
 
         # 模拟orchestration
         self.orchestration = MagicMock()
         self.orchestration.last_compress_or_clean_time = None
-        self.orchestration._determine_threshold_state = MagicMock(return_value="红灯")
+        self.orchestration.should_block_tool_call = MagicMock(return_value=False)
 
         # 设置group_chat.get_members返回值
         def get_members_side_effect(name, cls):
             if name == "agent":
                 return self.agent
-            elif name == "agent_message_orchestration":
+            elif name == "agent_context_orchestration":
                 return self.orchestration
             else:
                 return None
@@ -416,12 +421,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """测试初始化。"""
         self.assertEqual(self.plugin.group_chat, self.group_chat)
         self.assertEqual(
-            self.plugin.ALLOWED_TOOLS,
+            self.plugin.CLEANUP_TOOLS,
+            {
+                "compress_context_range",
+                "context_garbage_clean",
+                "context_thanox",
+            },
+        )
+        self.assertEqual(
+            self.plugin.MANAGEMENT_TOOLS,
             {
                 "mark_messages_as_garbage",
-                "message_garbage_clean",
-                "thanox_history",
-                "compress_history_range",
             },
         )
 
@@ -430,20 +440,20 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
         lifecycle.register_before_tool_call.assert_called_once_with(
-            self.plugin._before_tool_call
+            self.plugin.before_tool_call
         )
 
     def test_green_state_not_block(self):
         """测试绿灯状态不阻止工具调用。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            40000,
-            40000,
-            0.5,
-        )  # 50%使用率，绿灯
-        # 设置状态为绿灯
-        self.orchestration._determine_threshold_state.return_value = "绿灯"
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 40000,
+            "remaining_tokens": 40000,
+            "usage_ratio": 0.5,
+        }  # 50%使用率，绿灯
+        # 设置should_block_tool_call返回False（绿灯状态下不阻止）
+        self.orchestration.should_block_tool_call.return_value = False
 
         # 创建工具调用
         from linhai.llm import ToolCallMessage
@@ -457,7 +467,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证不阻止
         self.assertFalse(result)
@@ -468,12 +478,12 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
     def test_red_state_allow_cleanup_tool(self):
         """测试红灯状态允许清理类工具。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            72000,
-            8000,
-            0.9,
-        )  # 90%使用率，红灯
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 72000,
+            "remaining_tokens": 8000,
+            "usage_ratio": 0.9,
+        }  # 90%使用率，红灯
 
         # 创建清理类工具调用
         from linhai.llm import ToolCallMessage
@@ -487,7 +497,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证允许调用
         self.assertFalse(result)
@@ -498,13 +508,14 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
     def test_red_state_block_other_tool_no_recent_cleanup(self):
         """测试红灯状态且无近期清理，阻止其他工具。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            76000,
-            4000,
-            0.95,
-        )  # 95%使用率，红灯
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
         self.orchestration.last_compress_or_clean_time = None  # 无近期清理
+        self.orchestration.should_block_tool_call.return_value = True
 
         # 创建其他工具调用
         from linhai.llm import ToolCallMessage
@@ -518,7 +529,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证阻止 - 返回True表示阻止
         self.assertTrue(result)
@@ -544,15 +555,16 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
     def test_red_state_block_other_tool_with_recent_cleanup(self):
         """测试红灯状态即使有近期清理，也阻止其他工具。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            76000,
-            4000,
-            0.95,
-        )  # 95%使用率，红灯
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
         self.orchestration.last_compress_or_clean_time = (
             time.time() - 30
         )  # 30秒前清理过
+        self.orchestration.should_block_tool_call.return_value = True
 
         # 创建其他工具调用
         from linhai.llm import ToolCallMessage
@@ -566,7 +578,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证阻止（无论是否有清理，红灯状态只允许清理类工具）
         self.assertTrue(result)
@@ -592,15 +604,16 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
     def test_red_state_block_other_tool_old_cleanup(self):
         """测试红灯状态但清理时间超过一分钟，阻止其他工具。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            76000,
-            4000,
-            0.95,
-        )  # 95%使用率，红灯
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
         self.orchestration.last_compress_or_clean_time = (
             time.time() - 90
         )  # 90秒前清理过，超过一分钟
+        self.orchestration.should_block_tool_call.return_value = True
 
         # 创建其他工具调用
         from linhai.llm import ToolCallMessage
@@ -614,7 +627,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证阻止
         self.assertTrue(result)
@@ -639,7 +652,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin._before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
         # 验证不阻止
         self.assertFalse(result)
@@ -650,20 +663,27 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
     def test_all_allowed_tools(self):
         """测试所有允许的清理类工具。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = (
-            80000,
-            76000,
-            4000,
-            0.95,
-        )  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = None  # 无近期清理
+        self.agent.get_threshold_info.return_value = None  # 无阈值信息，所以不拦截
+        self.orchestration = MagicMock()
+        self.orchestration.should_block_tool_call.return_value = False
+        
+        # 更新get_members模拟以返回正确的orchestration
+        def get_members_side_effect(name, cls):
+            if name == "agent":
+                return self.agent
+            elif name == "agent_context_orchestration":
+                return self.orchestration
+            else:
+                return None
+        
+        self.group_chat.get_members.side_effect = get_members_side_effect
 
         # 测试所有允许的工具
         allowed_tools = [
+            "compress_context_range",
+            "context_garbage_clean",
+            "context_thanox",
             "mark_messages_as_garbage",
-            "message_garbage_clean",
-            "thanox_history",
-            "compress_history_range",
         ]
 
         for tool_name in allowed_tools:
@@ -683,7 +703,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             # 调用插件
             import asyncio
 
-            result = asyncio.run(self.plugin._before_tool_call(tool_call))
+            result = asyncio.run(self.plugin.before_tool_call(tool_call))
 
             # 验证允许调用
             self.assertFalse(result, f"工具 {tool_name} 应该被允许")

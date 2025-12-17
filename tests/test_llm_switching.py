@@ -23,7 +23,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.mock_llm2.answer_stream = AsyncMock(return_value=AsyncMock())
 
         config: AgentContext = {
-            "system_prompt": "Test system prompt",
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["primary", "secondary"],
             "current_llm_index": 0,
@@ -47,7 +46,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         init_messages = [
             SystemMessage(
-                template="Test system prompt",
                 group_chat=self.group_chat,
             )
         ]

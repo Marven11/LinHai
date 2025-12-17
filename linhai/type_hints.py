@@ -75,10 +75,20 @@ class AssistantMessage(TypedDict, total=False):
 
 LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage]
 
+
+class ThresholdInfo(TypedDict):
+    """阈值信息TypedDict，用于get_threshold_info的返回值。"""
+    hard_limit: int
+    used_tokens: int
+    remaining_tokens: int
+    usage_ratio: float
+
+
 __all__ = [
     "SystemMessage",
     "UserMessage",
     "AssistantMessage",
     "LanguageModelMessage",
     "AgentState",
+    "ThresholdInfo",
 ]

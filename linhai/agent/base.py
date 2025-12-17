@@ -272,7 +272,6 @@ class PathMemory:
 class AgentContext(TypedDict):
     """Agent配置参数"""
 
-    system_prompt: str
     llms: list
     llm_names: list[str]
     current_llm_index: int

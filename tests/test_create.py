@@ -67,7 +67,6 @@ class TestCreateAgent(unittest.TestCase):
         mock_llm.compatibility = "openai"
         mock_llm_instances.return_value = [mock_llm]  # type: ignore
         mock_agent_context.return_value = {
-            "system_prompt": "test_prompt",
             "llms": [Mock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -142,7 +141,6 @@ class TestCreateAgent(unittest.TestCase):
             mock_llm.compatibility = "openai"
             mock_llm_instances.return_value = [mock_llm, mock_llm]  # type: ignore
             mock_agent_context.return_value = {
-                "system_prompt": "test_prompt",
                 "llms": [Mock(), Mock()],
                 "llm_names": ["llm1", "llm2"],
                 "current_llm_index": 1,
@@ -287,7 +285,6 @@ class TestCreateInitMessages(unittest.TestCase):
     ):
         """测试创建初始化消息"""
         group_chat = Mock()
-        system_prompt = "test_prompt"
         memory_file_path = Path("memory.md")
 
         mock_path.return_value.exists.return_value = True
@@ -297,7 +294,7 @@ class TestCreateInitMessages(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            _create_init_messages(group_chat, system_prompt, memory_file_path)
+            _create_init_messages(group_chat, memory_file_path)
         )
 
         self.assertGreater(len(result), 0)

@@ -35,7 +35,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def test_get_token_usage_tool_registered(self):
         """Test that get_token_usage tool is properly registered."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -52,10 +51,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
 
-    async def test_thanox_history_tool_registered(self):
-        """Test that thanox_history tool is properly registered."""
+    async def test_context_thanox_tool_registered(self):
+        """Test that context_thanox tool is properly registered."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -67,7 +65,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="thanox_history", function_arguments={})
+            ToolCallMessage(function_name="context_thanox", function_arguments={})
         )
 
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
@@ -75,7 +73,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def test_get_token_usage_tool_call_with_token_usage(self):
         """Test get_token_usage tool call when token usage is available."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -99,7 +96,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
     async def test_get_token_usage_tool_call_without_token_usage(self):
         """Test get_token_usage tool call when no token usage is available."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -119,10 +115,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         content = getattr(result, "content", "")
         self.assertEqual("暂无token用量信息", content)
 
-    async def test_thanox_history_tool_call_with_sufficient_messages(self):
-        """Test thanox_history tool call when there are sufficient messages."""
+    async def test_context_thanox_tool_call_with_sufficient_messages(self):
+        """Test context_thanox tool call when there are sufficient messages."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -131,7 +126,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         init_messages: list[Message] = [
             SystemMessage(
-                template="test",
                 group_chat=self.group_chat,
             )
         ]
@@ -145,18 +139,17 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="thanox_history", function_arguments={})
+            ToolCallMessage(function_name="context_thanox", function_arguments={})
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")
         content = getattr(result, "content", "")
-        self.assertIn("thanox_history: 随机删除了", content)
+        self.assertIn("context_thanox: 随机删除了", content)
         self.assertIn("条消息", content)
 
-    async def test_thanox_history_tool_call_with_insufficient_messages(self):
-        """Test thanox_history tool call when there are insufficient messages."""
+    async def test_context_thanox_tool_call_with_insufficient_messages(self):
+        """Test context_thanox tool call when there are insufficient messages."""
         mock_config: AgentContext = {
-            "system_prompt": "test prompt",
             "llms": [MagicMock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -165,7 +158,6 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         init_messages: list[Message] = [
             SystemMessage(
-                template="test",
                 group_chat=self.group_chat,
             )
         ]
@@ -179,7 +171,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="thanox_history", function_arguments={})
+            ToolCallMessage(function_name="context_thanox", function_arguments={})
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")

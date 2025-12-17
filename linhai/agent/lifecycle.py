@@ -128,8 +128,8 @@ class Lifecycle:
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
-            RedStateToolBlockPlugin,
         )
+        from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
@@ -148,6 +148,7 @@ class Lifecycle:
             UnnecessarySedReadPlugin(self.group_chat),
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
+            AppendingMessagePlugin(self.group_chat),
         ]
 
         for plugin in plugins:

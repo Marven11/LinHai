@@ -67,7 +67,6 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream = AsyncMock()
 
         config: AgentContext = {
-            "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -102,7 +101,6 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         init_messages = [
             SystemMessage(
-                template="Test system prompt",
                 group_chat=self.group_chat,
             )
         ]

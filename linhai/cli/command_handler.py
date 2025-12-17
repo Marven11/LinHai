@@ -4,6 +4,7 @@ from linhai.group_chat import GroupChat
 from linhai.tool.general import TodolistManager
 from linhai.cli.components import TodolistWidget, RuntimeMessageWidget
 from linhai.utils import CliRuntimeNotice
+from linhai.input_parser import parse_user_input
 
 
 class CommandHandler:
@@ -22,6 +23,9 @@ class CommandHandler:
 
         if message_text.startswith("/todolist_delete"):
             return await self._handle_todolist_delete(message_text)
+
+        if message_text.startswith("/context_garbage_clean") or message_text.startswith("/context_thanox"):
+            return await self._handle_context_tool_command(message_text)
 
         return False
 
@@ -99,3 +103,54 @@ class CommandHandler:
 
         if cli_app.should_auto_scroll():
             container.scroll_end(animate=False)
+
+    async def _handle_context_tool_command(self, message_text: str) -> bool:
+        """处理上下文工具命令：/context_garbage_clean 和 /context_thanox。"""
+        # 解析命令和参数
+        parsed_input = parse_user_input(message_text)
+        if not parsed_input.command:
+            await self._show_error_message("错误：无法解析命令")
+            return True
+        
+        # 验证命令是否受支持
+        supported_commands = ["context_garbage_clean", "context_thanox"]
+        if parsed_input.command not in supported_commands:
+            await self._show_error_message(f"错误：不支持的命令 '{parsed_input.command}'，支持的命令有: {', '.join(supported_commands)}")
+            return True
+        
+        # 获取agent实例
+        from linhai.agent import Agent
+        from linhai.llm import ToolCallMessage
+        
+        agent = self.group_chat.get_members("agent", Agent)
+        if agent is None:
+            await self._show_error_message("无法获取agent实例")
+            return True
+        
+        # 显示命令执行开始消息
+        await self._show_success_message(f"正在执行命令: {parsed_input.command}")
+        
+        # 创建工具调用消息（不传递参数，因为工具定义已不带参数）
+        tool_call = ToolCallMessage(
+            function_name=parsed_input.command,
+            function_arguments={},
+            assert_success=False  # 命令工具调用失败不中断后续流程
+        )
+        
+        # 通过agent的toolcall_processor执行工具调用，确保完整的生命周期管理
+        early_return = await agent.toolcall_processor.call_tool(tool_call)
+        
+        if not early_return:
+            # 添加成功执行反馈（失败情况已在call_tool中处理）
+            await self._show_success_message(f"命令{parsed_input.command}执行成功")
+            
+            # 记录成功到日志
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content=f"上下文工具命令执行成功: {parsed_input.command}"
+                )
+            )
+        
+        return True

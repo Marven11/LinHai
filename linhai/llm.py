@@ -49,45 +49,159 @@ class SystemMessage:
 
     def __init__(
         self,
-        template: str,
         group_chat: "linhai.group_chat.GroupChat",
     ):
-        """初始化系统消息。"""
-        self.template = template
+        """初始化系统消息。
+        
+        完全修改设计：group_chat必须提供，系统提示语通过结构化常量动态构建。
+        template参数已移除，不再支持兼容模式。
+        """
         self.group_chat = group_chat
+        
+        # 从prompt模块导入结构化常量并复制到实例属性（支持动态添加）
+        from linhai.prompt import INTRODUCTION_ITEMS, RULES_ITEMS, EXAMPLES_ITEMS, OVERVIEW
+        
+        # 复制常量到实例属性，以便支持动态添加
+        self.overview = OVERVIEW
+        self.introduction_items = INTRODUCTION_ITEMS.copy()
+        self.rules_items = RULES_ITEMS.copy()
+        self.examples_items = EXAMPLES_ITEMS.copy()
+        
+        # 获取工具列表
+        from linhai.tool.main import ToolManager
+        tool_manager = group_chat.get_members("tool_manager", ToolManager)
+        
+        if tool_manager is None:
+            tools_info = []
+        else:
+            tools_info = tool_manager.get_tools_info()
+        self.tools_list = json.dumps(tools_info, ensure_ascii=False)
+        
+        for i, (title, content) in enumerate(self.introduction_items):
+            if title == "TOOLS":
+                self.introduction_items[i] = (title, content + self.tools_list)
+                break
+        
+        self.template = self._build_prompt()
+
+    def _build_prompt(self) -> str:
+        """根据结构化常量构建完整的系统提示语。"""
+        sections = []
+        
+        # OVERVIEW
+        sections.append("# OVERVIEW")
+        sections.append(self.overview)
+        
+        # INTRODUCTION
+        sections.append("# INTRODUCTION")
+        for title, content in self.introduction_items:
+            if title == "TOOLS":
+                # 替换工具列表占位符
+                content = content.replace("{|TOOLS|}", self.tools_list)
+            sections.append(f"## INTRODUCTION - {title}")
+            sections.append(content)
+        
+        # RULES
+        sections.append("# RULES")
+        for title, content in self.rules_items:
+            sections.append(f"## RULES - {title}")
+            sections.append(content)
+        
+        # EXAMPLES
+        sections.append("# EXAMPLES")
+        for title, content in self.examples_items:
+            sections.append(f"## EXAMPLES - {title}")
+            sections.append(content)
+        
+        return "\n\n".join(sections)
+
+    def add_introduction(self, title: str, content: str) -> None:
+        """添加一个新的introduction章节。
+        
+        Args:
+            title: 章节标题（只能包含大写英文字母数字和空格）
+            content: 章节内容
+        """
+        # 验证标题格式（可选，但符合DESIGN.md要求）
+        import re
+        if not re.match(r'^[A-Z0-9\s]+$', title):
+            raise ValueError("标题只能包含大写英文字母数字和空格")
+        self.introduction_items.append((title, content))
+        # 重新构建提示语
+        self.template = self._build_prompt()
+
+    def add_rule(self, title: str, content: str) -> None:
+        """添加一个新的rule章节。
+        
+        Args:
+            title: 章节标题（只能包含大写英文字母数字和空格）
+            content: 章节内容
+        """
+        import re
+        if not re.match(r'^[A-Z0-9\s]+$', title):
+            raise ValueError("标题只能包含大写英文字母数字和空格")
+        self.rules_items.append((title, content))
+        self.template = self._build_prompt()
+
+    def add_example(self, title: str, content: str) -> None:
+        """添加一个新的example章节。
+        
+        Args:
+            title: 章节标题（只能包含大写英文字母数字和空格）
+            content: 章节内容
+        """
+        import re
+        if not re.match(r'^[A-Z0-9\s]+$', title):
+            raise ValueError("标题只能包含大写英文字母数字和空格")
+        self.examples_items.append((title, content))
+        self.template = self._build_prompt()
+
+    @property
+    def message(self) -> str:
+        """获取消息内容（兼容Message协议）。"""
+        return self.template
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        from linhai.tool.main import ToolManager
-
-        system_prompt = self.template.replace(
-            "{|TOOLS|}",
-            json.dumps(
-                self.group_chat.get_members(
-                    "tool_manager", ToolManager
-                ).get_tools_info(),
-                ensure_ascii=False,
-            ),
-        )
-        return cast(LanguageModelMessage, {"role": "system", "content": system_prompt})
+        # template已在构造函数中通过结构化常量构建，直接返回
+        return cast(LanguageModelMessage, {"role": "system", "content": self.template})
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
-        return f"SystemMessage({self.template=})"
+        return f"SystemMessage({self.template[:50] if self.template else 'empty'}...)"
 
     def to_json(self) -> str:
-
-        return json.dumps({"template": self.template})
+        # 序列化时保存template和结构化常量数据
+        data = {
+            "template": self.template,
+            "overview": self.overview,
+            "introduction_items": self.introduction_items,
+            "rules_items": self.rules_items,
+            "examples_items": self.examples_items,
+            "tools_list": self.tools_list
+        }
+        return json.dumps(data)
 
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
-
         data = json.loads(json_str)
-
-        return cls(
-            template=data["template"],
-            group_chat=group_chat,
-        )
+        # 创建SystemMessage实例
+        instance = cls(group_chat=group_chat)
+        # 直接使用JSON中保存的template，而不是重新构建
+        if "template" in data:
+            instance.template = data["template"]
+        # 可选：也可以恢复结构化常量数据
+        if "overview" in data:
+            instance.overview = data["overview"]
+        if "introduction_items" in data:
+            instance.introduction_items = data["introduction_items"]
+        if "rules_items" in data:
+            instance.rules_items = data["rules_items"]
+        if "examples_items" in data:
+            instance.examples_items = data["examples_items"]
+        if "tools_list" in data:
+            instance.tools_list = data["tools_list"]
+        return instance
 
 
 class SubagentSystemMessage:

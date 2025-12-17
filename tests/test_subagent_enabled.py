@@ -109,6 +109,13 @@ model = "test-model"
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
         mock_openai.return_value = mock_llm
+        
+        # 模拟ToolManager返回可序列化的工具信息
+        mock_tool_manager = Mock()
+        mock_tool_manager.get_tools_info.return_value = [
+            {"name": "test_tool", "description": "测试工具"}
+        ]
+        self.group_chat.get_members = Mock(return_value=mock_tool_manager)
 
         config_path = self.create_test_config(subagent_enabled=False)
 
@@ -138,6 +145,13 @@ model = "test-model"
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
         mock_openai.return_value = mock_llm
+        
+        # 模拟ToolManager返回可序列化的工具信息
+        mock_tool_manager = Mock()
+        mock_tool_manager.get_tools_info.return_value = [
+            {"name": "test_tool", "description": "测试工具"}
+        ]
+        self.group_chat.get_members = Mock(return_value=mock_tool_manager)
 
         config_path = self.create_test_config(subagent_enabled=True)
 

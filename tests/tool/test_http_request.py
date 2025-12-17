@@ -51,9 +51,9 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-
-        self.assertIn("Test Content", result)
-        self.assertIsInstance(result, str)
+        # result是ToolResultMessage对象，需要检查其content
+        self.assertIn("Test Content", result.content)
+        self.assertIsInstance(result.content, str)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_binary_content(self, mock_request):
@@ -68,15 +68,22 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/image.png"}
             )
         )
+        
+        # 从ToolResultMessage中提取文件路径
+        self.assertIn("二进制内容已保存到临时文件: ", result.content)
+        # 提取路径：查找"二进制内容已保存到临时文件: "之后的内容
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
+        # 路径可能在<<data>>标记中，我们需要提取到下一个标记前
+        temp_path = result.content[path_start:].split('<<')[0].strip()
+        
+        self.assertTrue(os.path.exists(temp_path))
+        self.assertTrue(temp_path.endswith(".bin"))
 
-        self.assertTrue(os.path.exists(result))
-        self.assertTrue(result.endswith(".bin"))
-
-        with open(result, "rb") as f:
+        with open(temp_path, "rb") as f:
             content = f.read()
             self.assertEqual(content, mock_response.content)
 
-        os.unlink(result)
+        os.unlink(temp_path)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_default_user_agent(self, mock_request):
@@ -145,8 +152,8 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-
-        self.assertIn("Test Encoding", result)
+        # result是ToolResultMessage对象，需要检查其content
+        self.assertIn("Test Encoding", result.content)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_request_error(self, mock_request):
@@ -162,9 +169,9 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-
-        self.assertIn("请求失败", result)
-        self.assertIn("Connection timeout", result)
+        # result是ToolErrorMessage对象，需要检查其content
+        self.assertIn("请求失败", result.content)
+        self.assertIn("Connection timeout", result.content)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_pdf_content(self, mock_request):
@@ -179,10 +186,15 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
             )
         )
-
-        self.assertTrue(os.path.exists(result))
-        self.assertTrue(result.endswith(".bin"))
-        os.unlink(result)
+        
+        # 从ToolResultMessage中提取文件路径
+        self.assertIn("二进制内容已保存到临时文件: ", result.content)
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
+        temp_path = result.content[path_start:].split('<<')[0].strip()
+        
+        self.assertTrue(os.path.exists(temp_path))
+        self.assertTrue(temp_path.endswith(".bin"))
+        os.unlink(temp_path)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_zip_content(self, mock_request):
@@ -198,10 +210,15 @@ class TestHttpRequestTool(unittest.TestCase):
                 {"method": "GET", "url": "http://example.com/archive.zip"},
             )
         )
-
-        self.assertTrue(os.path.exists(result))
-        self.assertTrue(result.endswith(".bin"))
-        os.unlink(result)
+        
+        # 从ToolResultMessage中提取文件路径
+        self.assertIn("二进制内容已保存到临时文件: ", result.content)
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
+        temp_path = result.content[path_start:].split('<<')[0].strip()
+        
+        self.assertTrue(os.path.exists(temp_path))
+        self.assertTrue(temp_path.endswith(".bin"))
+        os.unlink(temp_path)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from linhai.cli.context_tab import ContextTabWidget
 from linhai.group_chat import GroupChat
 from linhai.config import CLIConfig
 from linhai.agent.message import AgentMessage
-from linhai.agent.orchestration import AgentMessageOrchestration
+from linhai.agent.orchestration import AgentContextOrchestration
 
 
 class TestContextTab(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestContextTab(unittest.TestCase):
         # 注册所有必需的组件
         mock_agent = Mock()
         mock_agent_message = Mock(spec=AgentMessage)
-        mock_orchestration = Mock(spec=AgentMessageOrchestration)
+        mock_orchestration = Mock(spec=AgentContextOrchestration)
 
         from linhai.llm import UserMessage, AssistantMessage
         from linhai.agent.base import RuntimeMessage
@@ -65,9 +65,13 @@ class TestContextTab(unittest.TestCase):
         mock_orchestration.large_messages = {}
         mock_orchestration.garbage_message_ids = set()
 
-        # 返回4元组: (hard, used, remaining, taken)
-        # hard=8000, used=6000, remaining=2000, taken=0.75 (6000/8000)
-        mock_agent.get_threshold_info.return_value = (8000, 6000, 2000, 0.75)
+        # 返回ThresholdInfo字典
+        mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 6000,
+            "remaining_tokens": 2000,
+            "usage_ratio": 0.75
+        }
         from linhai.llm import AnswerTokenUsage
 
         mock_token_usage = AnswerTokenUsage(
@@ -97,7 +101,7 @@ class TestContextTab(unittest.TestCase):
 
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_message_orchestration", mock_orchestration)
+        group_chat.register_member("agent_context_orchestration", mock_orchestration)
         # 注意：这里不注册token_manager，因为CLIApp会创建并注册
         # 使用patch来模拟TokenManager的创建，避免重复注册
         with patch("linhai.cli.app.TokenManager", return_value=mock_token_manager):
@@ -135,7 +139,7 @@ class TestContextTab(unittest.TestCase):
 
         # 创建模拟组件
         mock_agent_message = Mock(spec=AgentMessage)
-        mock_orchestration = Mock(spec=AgentMessageOrchestration)
+        mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_agent = Mock()
 
         # 设置模拟数据
@@ -156,9 +160,13 @@ class TestContextTab(unittest.TestCase):
         }
         mock_orchestration.garbage_message_ids = {"largemessage_1"}
 
-        # 返回4元组: (hard, used, remaining, taken)
-        # hard=8000, used=6000, remaining=2000, taken=0.75 (6000/8000)
-        mock_agent.get_threshold_info.return_value = (8000, 6000, 2000, 0.75)
+        # 返回ThresholdInfo字典
+        mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 6000,
+            "remaining_tokens": 2000,
+            "usage_ratio": 0.75
+        }
         from linhai.llm import AnswerTokenUsage
 
         mock_token_usage = AnswerTokenUsage(
@@ -184,7 +192,7 @@ class TestContextTab(unittest.TestCase):
 
         # 注册所有必需的组件
         group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_message_orchestration", mock_orchestration)
+        group_chat.register_member("agent_context_orchestration", mock_orchestration)
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("token_manager", mock_token_manager)
 

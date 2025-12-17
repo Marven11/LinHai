@@ -66,7 +66,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
         config: AgentContext = {
-            "system_prompt": "Test system prompt",
             "llms": [self.mock_llm],  # 改为列表
             "llm_names": ["test_llm"],  # 添加llm_names字段
             "current_llm_index": 0,  # 添加当前LLM索引
@@ -93,7 +92,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         init_messages = [
             SystemMessage(
-                template="Test system prompt",
                 group_chat=self.group_chat,
             )
         ]

@@ -189,10 +189,10 @@ class AgentToolcall:
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
-            "compress_history_range",
+            "compress_context_range",
             "mark_messages_as_garbage",
-            "message_garbage_clean",
-            "thanox_history",
+            "context_garbage_clean",
+            "context_thanox",
         ]
         self.agent.compress_tool_called_in_last_response = (
             tool_call.function_name in compress_tools
