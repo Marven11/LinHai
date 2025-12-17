@@ -20,10 +20,6 @@ class AgentToolcall:
         self.group_chat = agent.group_chat
         self.context = agent.context
 
-        self.tool_manager: ToolManager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
-
         self.called_tools_in_round: list[str] = []
         self.early_return = False
 
@@ -48,7 +44,10 @@ class AgentToolcall:
 
         # 获取当前工具定义
         tool_def = None
-        for toolset in self.tool_manager.toolsets:
+        tool_manager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
+        for toolset in tool_manager.toolsets:
             if toolset.has_tool(tool_name):
                 tool_def = toolset.get_tools()[tool_name]
                 break
@@ -105,7 +104,11 @@ class AgentToolcall:
             current_name = llm_names[self.context["current_llm_index"]]
             return f"当前使用的LLM: {current_name}"
 
-        self.tool_manager.add_toolset(llm_toolset)
+        tool_manager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
+
+        tool_manager.add_toolset(llm_toolset)
 
     def _register_dummy_toolset(self):
         """注册虚拟工具集（token使用情况、历史消息管理等）。"""
@@ -123,18 +126,26 @@ class AgentToolcall:
             else:
                 return "暂无token用量信息"
 
-        self.tool_manager.add_toolset(dummy_toolset)
+        tool_manager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
+
+        tool_manager.add_toolset(dummy_toolset)
 
         message_management_toolset = (
             self.agent.orchestration.get_message_management_toolset()
         )
-        self.tool_manager.add_toolset(message_management_toolset)
+        tool_manager.add_toolset(message_management_toolset)
 
         workflow_toolset = self.agent.orchestration.get_workflow_toolset()
-        self.tool_manager.add_toolset(workflow_toolset)
+        tool_manager.add_toolset(workflow_toolset)
 
     async def postinit(self):
-        await self.tool_manager.ensure_mcp_connector()
+
+        tool_manager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
+        await tool_manager.ensure_mcp_connector()
 
     def start_new_tool_call_round(self):
         """开始新一轮工具调用，清空已调用工具记录"""
@@ -210,8 +221,12 @@ class AgentToolcall:
 
     async def _call_tool(self, tool_call: ToolCallMessage) -> bool:
         """调用工具。"""
+
+        tool_manager = self.group_chat.get_members(
+            "tool_manager", ToolManager
+        )
         try:
-            tool_result = await self.tool_manager.process_tool_call(tool_call)
+            tool_result = await tool_manager.process_tool_call(tool_call)
 
             from linhai.tool.base import ToolErrorMessage
 
