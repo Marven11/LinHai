@@ -2,36 +2,21 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构compress_threshold、红绿灯状态等上下文管理工具
-  - 逻辑重构
-    - 工具分类
-      - 消息清理工具: compress_history_range, message_garbage_clean和thanox_history
-      - 其他消息管理工具: mark_messages_as_garbage
-      - 其他工具: 其余工具，和上下文管理无关
-    - 判断红绿灯状态: 仅基于当前message状态
-    - 判断上一个回答是否调用了压缩消息的工具: 完全删除
-    - 判断最近是否调用过消息清理工具: 仅判断一分钟内有没有调用过**消息清理工具**
-    - 判断是否需要拦截消息拦截：只基于红绿灯状态和**最近是否调用过消息清理工具**判断
-      - 如果**最近调用过消息清理工具**: 禁止使用消息清理工具，可以使用其他消息管理工具和其他工具
-      - 如果**最近没有调用过消息清理工具**且为红灯: 只能调用消息清理工具和其他消息管理工具，禁止调用其他工具
-      - 其他状态: 可以调用任何工具
-    - 以上判断逻辑均需要编写unittest，测试所有情况！
-  - RedStateToolBlockPlugin应该移动到linhai/agent/orchestration.py中，同时其的实现违反CODE_REQUIREMENTS.md，需要修正
-  - get_threshold_info应该返回一个typeddict标明每个值的含义，而不是返回一个过长的tuple
-  - AgentMessageOrchestration添加appending message的实现应该拆分成一个新的plugin类
-  - 当前token长度超出硬限制且**最近没有调用过消息清理工具**则自动调用thanox_history
-- [x] 重构prompt.py和SystemMessage，使system prompt的构造结构化
-  - 当前主要包含四个部分：总览、各个部分的介绍、注意事项、示例
-  - 期望的结果:
-    - SystemMessage被注册到group_chat中，全局只有一个SystemMessage
-    - SystemMessage接收各个介绍、注意事项、示例，均为字符串，并拼接为正确的结果
-    - 存在合适的unittest检测拼接结果
-    - SystemMessage提供多个函数支持动态增加注意事项等，虽然现在这些函数没被使用
-- [x] 当前agent的message数组有多个称呼: messages, context, history, 全部改成context
-  - thanox_history改名成context_thanox, message_garbage_clean改名成context_garbage_clean, compress_history_range改名成compress_context_range
-  - AgentMessageOrchestration改名成AgentContextOrchestration
-  - 搜索messages和history并思考是否需要改名成context, 大部分都需要更名
-- [x] 用户可以通过`/context_garbage_clean`调用context_garbage_clean或者`/context_thanox`调用context_thanox
+- [ ] compress_context_range改名为context_range_compress
+- [ ] 为ssh添加terminal工具
+  - 实现方式是
+    - 在trojan.py中维护pty
+    - 启动终端后trojan.py定时通过jsonrpc传递pty产生的bytes到主机
+    - 主机再通过pyte渲染
+  - 编写完善的unittest
+  - 在/tmp中编写临时脚本使用./.secret.todo.md中提到的机器进行测试
+  - 启动linhai让其使用./.secret.todo.md中提到的ssh机器进行测试
+- [ ] 解决因为消息过多而无法进行历史压缩的问题
+  - 在消息数量少于200条时，显示每条消息
+  - 在消息数量在`[200, 400)`条时，不显示每条消息而是每2条显示一条
+  - 在消息数量在`[400, 600)`条时，不显示每条消息而是每3条显示一条
+  - .. 以此类推，保证显示的消息数量少于200条
+  - 不要画蛇添足：只修改_prepare_messages_for_compression函数
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -93,8 +78,6 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
-- [ ] 为ssh添加terminal工具，实现方式是在trojan.py中维护pty，通过jsonrpc传递pty产生的bytes到主机，主机再通过pyte渲染
-- [ ] 解决因为消息过多而无法进行历史压缩的问题
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
