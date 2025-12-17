@@ -2,6 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
+- [ ] UnnecessarySedReadPlugin的功能没有生效，编写unittest测试，unittest编写完毕之后修复，然后启动linhai测试
+  - 使用`uv run python -m linhai -m '@nothink 测试读取linhai/cli/context_tab.py文件，然后用sed读取其中的十行，看看会发生什么'`
 - [ ] compress_context_range改名为context_range_compress
 - [ ] 为ssh添加terminal工具
   - 实现方式是
