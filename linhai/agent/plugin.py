@@ -682,6 +682,7 @@ class DuplicateFileReadPlugin(Plugin):
             return RuntimeMessage(
                 "错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！"
                 "这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！"
+                "本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
             )
 
         return None
@@ -783,9 +784,8 @@ class UnnecessarySedReadPlugin(Plugin):
             )
             return RuntimeMessage(
                 "错误：一分钟内多次小块读取代码文件\n"
-                "违反：优先使用read_file的要求\n"
-                "后果：难以理解文件内容、生成多条消息导致重复计费\n"
-                "建议：优先带上行号读取整个文件"
+                "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
+                "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件"
             )
         return None
 
@@ -832,12 +832,16 @@ class UnnecessaryRunCommandPlugin(Plugin):
             return None
 
         read_files = self._get_read_files(agent)
-        if not read_files:
-            if should_block_command_simple(command):
-                return self._generate_warning_message(command)
-            return None
 
-        if should_block_command_with_files(command, read_files):
+        if read_files and should_block_command_with_files(command, read_files):
+
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="模型使用命令查看文件，已阻止",
+                ),
+            )
             return self._generate_warning_message(command)
 
         return None
@@ -868,11 +872,10 @@ class UnnecessaryRunCommandPlugin(Plugin):
             cmd_name = "unknown"
 
         if cmd_name == "sed":
-            return RuntimeMessage("禁止直接使用sed命令查看文件！")
+            return RuntimeMessage("禁止直接使用sed命令查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！")
         else:
             return RuntimeMessage(
-                f"禁止使用{cmd_name}命令直接查看文件！"
-                "如果确实需要提取文件内容，请使用管道或重定向。"
+                f"禁止使用{cmd_name}命令直接查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
             )
 
     def _extract_command_name(

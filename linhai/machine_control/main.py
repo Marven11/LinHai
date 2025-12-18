@@ -163,7 +163,7 @@ class MachineControlToolSet(ToolSet):
                 ),
             },
             required_args=["terminal_id", "keys"],
-            conflict_with=None,
+            conflict_with=["create_terminal"],
         )
         async def send_keys_to_terminal_tool(
             terminal_id: str, keys: list[str]
@@ -185,7 +185,7 @@ class MachineControlToolSet(ToolSet):
                 ),
             },
             required_args=["terminal_id", "string", "with_enter"],
-            conflict_with=None,
+            conflict_with=["create_terminal"],
         )
         async def send_string_to_terminal_tool(
             terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
@@ -202,7 +202,7 @@ class MachineControlToolSet(ToolSet):
             desc="读取当前终端的屏幕内容",
             args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
             required_args=["terminal_id"],
-            conflict_with=None,
+            conflict_with=["create_terminal"],
         )
         async def read_terminal_screen_tool(terminal_id: str) -> Message:
             host_control = self.machine_control.machines[
