@@ -7,7 +7,7 @@ import time
 import asyncio
 from typing import Optional, TYPE_CHECKING, Literal
 
-from linhai.agent.workflow import compress_context_range
+from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -32,7 +32,6 @@ class AgentContextOrchestration:
         """
         self.group_chat = group_chat
         self.agent_message = agent_message
-        # 注册到group chat以便其他组件可以访问
         self.group_chat.register_member("agent_context_orchestration", self)
 
         self.large_messages: dict[str, Message] = {}
@@ -56,21 +55,17 @@ class AgentContextOrchestration:
         already_marked_ids = []
 
         for message_id in message_ids:
-            # 检查消息是否存在
             if message_id not in self.large_messages:
                 not_found_ids.append(message_id)
                 continue
 
-            # 检查是否已标记
             if message_id in self.garbage_message_ids:
                 already_marked_ids.append(message_id)
                 continue
 
-            # 标记为垃圾
             self.garbage_message_ids.add(message_id)
             marked_ids.append(message_id)
 
-        # 构建结果消息
         result_parts = []
         if marked_ids:
             result_parts.append(f"已成功标记 {len(marked_ids)} 条消息为垃圾消息")
@@ -92,7 +87,6 @@ class AgentContextOrchestration:
         if not self.garbage_message_ids:
             return "没有垃圾消息需要清理"
 
-        # 获取当前所有垃圾消息ID的快照
         garbage_snapshot = set(self.garbage_message_ids)
         removed_count = 0
         invalid_count = 0
@@ -104,7 +98,6 @@ class AgentContextOrchestration:
                 removed_count += 1
             else:
                 invalid_count += 1
-            # 无论消息是否存在，都从垃圾集合中移除
             self.garbage_message_ids.discard(message_id)
 
         self.last_compress_or_clean_time = time.time()
@@ -172,21 +165,17 @@ class AgentContextOrchestration:
         Args:
             agent: Agent实例，用于获取阈值信息和token使用量
         """
-        # 从agent获取阈值信息
+        # 从agent获取阈值信息（用于判断当前token使用状态）
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
             return
 
-        # 添加软限制通知
         self.add_soft_threshold_notification(threshold_info)
 
-        # 根据状态提供操作引导
         current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
 
-        # 检查一分钟内是否调用过消息清理工具
         recently_called_cleanup = self._recently_called_cleanup_tool()
 
-        # 根据状态提供相应的操作引导
         if current_state == "红灯":
             await self._handle_red_state(recently_called_cleanup, threshold_info)
         elif current_state == "黄灯":
@@ -205,7 +194,9 @@ class AgentContextOrchestration:
         time_since_last_cleanup = time.time() - self.last_compress_or_clean_time
         return time_since_last_cleanup < 60
 
-    def _determine_tool_category(self, tool_name: str) -> Literal["cleanup", "management", "other"]:
+    def _determine_tool_category(
+        self, tool_name: str
+    ) -> Literal["cleanup", "management", "other"]:
         """判断工具所属类别。
 
         Returns:
@@ -214,17 +205,17 @@ class AgentContextOrchestration:
                 "management" - 其他消息管理工具
                 "other" - 其他工具
         """
-        # 消息清理工具
-        if tool_name in ["compress_context_range", "context_garbage_clean", "context_thanox"]:
-            return "cleanup"
-        # 其他消息管理工具
-        elif tool_name == "mark_messages_as_garbage":
-            return "management"
-        # 其他工具
-        else:
-            return "other"
+        tool_category_map = {
+            "context_range_compress": "cleanup",
+            "context_garbage_clean": "cleanup",
+            "context_thanox": "cleanup",
+            "mark_messages_as_garbage": "management",
+        }
+        return tool_category_map.get(tool_name, "other")
 
-    def should_block_tool_call(self, tool_name: str, threshold_info: ThresholdInfo | None) -> bool:
+    def should_block_tool_call(
+        self, tool_name: str, threshold_info: ThresholdInfo | None
+    ) -> bool:
         """判断是否应该拦截工具调用。
 
         Args:
@@ -241,27 +232,33 @@ class AgentContextOrchestration:
         recently_called_cleanup = self._recently_called_cleanup_tool()
         tool_category = self._determine_tool_category(tool_name)
 
-        # 如果最近调用过消息清理工具：禁止使用消息清理工具，可以使用其他消息管理工具和其他工具
+        # 如果最近调用过消息清理工具：禁止使用消息清理工具（避免频繁清理），可以使用其他消息管理工具和其他工具
         if recently_called_cleanup:
             return tool_category == "cleanup"
-        
-        # 如果最近没有调用过消息清理工具且为红灯：只能调用消息清理工具和其他消息管理工具，禁止调用其他工具
+
+        # 如果最近没有调用过消息清理工具且为红灯：只能调用消息清理工具和其他消息管理工具（确保优先处理token限制），禁止调用其他工具
         if current_state == "红灯":
             return tool_category not in ["cleanup", "management"]
-        
-        # 其他状态: 可以调用任何工具
+
+        # 其他状态: 可以调用任何工具（token使用率正常，无需限制）
         return False
 
-    async def _handle_red_state(self, recently_called_cleanup: bool, threshold_info: ThresholdInfo) -> None:
+    async def _handle_red_state(
+        self, recently_called_cleanup: bool, threshold_info: ThresholdInfo
+    ) -> None:
         """处理红灯状态。"""
-        assert threshold_info is not None, "threshold_info should not be None in red state"
-        
+        assert (
+            threshold_info is not None
+        ), "threshold_info should not be None in red state"
+
         if not recently_called_cleanup:
             await self._handle_red_state_no_recent_cleanup(threshold_info)
         else:
             self._handle_red_state_recent_cleanup()
-    
-    async def _handle_red_state_no_recent_cleanup(self, threshold_info: ThresholdInfo) -> None:
+
+    async def _handle_red_state_no_recent_cleanup(
+        self, threshold_info: ThresholdInfo
+    ) -> None:
         """处理红灯状态且最近没有调用清理工具的情况。"""
         hard_limit = threshold_info["hard_limit"]
         used_tokens = threshold_info["used_tokens"]
@@ -273,12 +270,10 @@ class AgentContextOrchestration:
                 )
             )
             return
-        
-        guidance_message = (
-            "当前处于红灯状态，建议调用compress_context_range、context_garbage_clean或context_thanox等消息清理工具。"
-        )
+
+        guidance_message = "当前处于红灯状态，建议调用context_range_compress、context_garbage_clean或context_thanox等消息清理工具。"
         self.agent_message.append_message(RuntimeMessage(guidance_message))
-    
+
     def _handle_red_state_recent_cleanup(self) -> None:
         """处理红灯状态且最近调用过清理工具的情况。"""
         if self.large_messages:
@@ -296,15 +291,15 @@ class AgentContextOrchestration:
     def _handle_yellow_state(self, recently_called_cleanup: bool) -> None:
         """处理黄灯状态。"""
         if not recently_called_cleanup and self.garbage_message_ids:
-            # 黄灯状态：引导清理垃圾消息
+            # 黄灯状态：引导清理垃圾消息（为红灯状态做准备）
             guidance_message = "当前有垃圾消息需要清理，建议调用context_garbage_clean工具清理垃圾消息。"
             self.agent_message.append_message(RuntimeMessage(guidance_message))
 
-    def _handle_green_state(self, current_state: str, recently_called_cleanup: bool) -> None:
+    def _handle_green_state(
+        self, current_state: str, recently_called_cleanup: bool
+    ) -> None:
         """处理绿灯和绿灯闪烁状态。"""
-        # 绿灯和绿灯闪烁状态：引导标记消息
         if self.large_messages:
-            # 如果有大消息，引导标记大消息
             large_message_ids = list(self.large_messages.keys())[:3]
             guidance_message = (
                 f"当前有{len(self.large_messages)}条大消息，"
@@ -312,14 +307,12 @@ class AgentContextOrchestration:
             )
             self.agent_message.append_message(RuntimeMessage(guidance_message))
         else:
-            # 如果没有大消息，引导标记不需要的消息
             guidance_message = (
                 f"当前处于{current_state}状态，建议标记不需要的消息为垃圾以节省token。"
             )
             self.agent_message.append_message(RuntimeMessage(guidance_message))
 
     def _determine_threshold_state(self, usage_ratio: float) -> str:
-        # usage_ratio是小数比例（0-1），转换为百分比（0-100）进行比较
         percentage = usage_ratio * 100
         if percentage < 50:
             return "绿灯"
@@ -336,7 +329,7 @@ class AgentContextOrchestration:
         message_count = len(self.agent_message.messages)
         percentage = usage_ratio * 100
 
-        # 绿灯、绿灯闪烁、黄灯状态的消息模板
+        # 绿灯、绿灯闪烁、黄灯状态的消息模板（提供不同状态的提示信息）
         if current_state == "绿灯":
             return (
                 f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
@@ -361,7 +354,6 @@ class AgentContextOrchestration:
                 "积极考虑删除和当前任务无关的消息，也可以使用历史压缩删除之前任务的消息。"
             )
 
-        # 红灯状态
         large_messages_info = ""
         if self.large_messages:
             large_message_ids = list(self.large_messages.keys())[:3]
@@ -372,13 +364,15 @@ class AgentContextOrchestration:
 
         garbage_count = len(self.garbage_message_ids)
         recently_called_cleanup = self._recently_called_cleanup_tool()
-        
+
         if recently_called_cleanup:
             action_guide = "一分钟内已调用过消息清理工具，可以正常进行工作！"
         elif garbage_count >= 5:
-            action_guide = "当前有至少5条垃圾消息，建议调用context_garbage_clean清理垃圾消息。"
+            action_guide = (
+                "当前有至少5条垃圾消息，建议调用context_garbage_clean清理垃圾消息。"
+            )
         else:
-            action_guide = "建议调用compress_context_range删除大约一半消息！"
+            action_guide = "建议调用context_range_compress删除大约一半消息！"
 
         return (
             f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
@@ -472,15 +466,16 @@ class AgentContextOrchestration:
         toolset = ToolSet()
 
         @toolset.register_tool(
-            name="compress_context_range",
+            name="context_range_compress",
             desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
             args={},
             required_args=[],
         )
-        async def compress_context_range_tool() -> str:
+        async def context_range_compress_tool() -> str:
             from linhai.agent import Agent
+
             agent = self.group_chat.get_members("agent", Agent)
-            result = await compress_context_range(agent)
+            result = await context_range_compress(agent)
             self.last_compress_or_clean_time = time.time()
             return result
 
@@ -526,8 +521,6 @@ class AgentContextOrchestration:
             )
 
 
-
-
 class RedStateToolBlockPlugin:
     """红灯状态工具调用拦截插件。
 
@@ -537,7 +530,7 @@ class RedStateToolBlockPlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
         self.CLEANUP_TOOLS = {
-            "compress_context_range",
+            "context_range_compress",
             "context_garbage_clean",
             "context_thanox",
         }
@@ -555,10 +548,11 @@ class RedStateToolBlockPlugin:
             bool: 如果应该拦截返回True，否则返回False
         """
         from .main import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         if agent is None:
             return False
-        
+
         orchestration = self.group_chat.get_members(
             "agent_context_orchestration", AgentContextOrchestration
         )
@@ -578,7 +572,7 @@ class RedStateToolBlockPlugin:
             error_msg = (
                 f"错误：当前处于红灯状态（token使用率{threshold_info['usage_ratio']*100:.1f}%），"
                 f"禁止调用{tool_call.function_name}工具！"
-                "红灯状态下只允许调用compress_context_range、context_garbage_clean、"
+                "红灯状态下只允许调用context_range_compress、context_garbage_clean、"
                 "context_thanox或mark_messages_as_garbage等消息管理工具。"
             )
 
@@ -617,6 +611,7 @@ class AppendingMessagePlugin:
     ) -> None:
         """在消息生成后添加appending message。"""
         from .main import Agent
+
         agent = self.group_chat.get_members("agent", Agent)
         if agent is None:
             return

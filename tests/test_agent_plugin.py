@@ -423,7 +423,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertEqual(
             self.plugin.CLEANUP_TOOLS,
             {
-                "compress_context_range",
+                "context_range_compress",
                 "context_garbage_clean",
                 "context_thanox",
             },
@@ -680,7 +680,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
         # 测试所有允许的工具
         allowed_tools = [
-            "compress_context_range",
+            "context_range_compress",
             "context_garbage_clean",
             "context_thanox",
             "mark_messages_as_garbage",

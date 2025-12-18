@@ -2,11 +2,11 @@
 
 from .main import Agent, AgentContext
 from .lifecycle import Lifecycle
-from .workflow import compress_context_range
+from .workflow import context_range_compress
 
 __all__ = [
     "Agent",
     "Lifecycle",
     "AgentContext",
-    "compress_context_range",
+    "context_range_compress",
 ]

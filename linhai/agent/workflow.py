@@ -1,8 +1,8 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
-from typing import cast
+from typing import cast, List, Dict
+from linhai.type_hints import LanguageModelMessage
 from reprlib import Repr
-
 import linhai
 from .base import RuntimeMessage, CompressRangeRequest, GlobalMemory
 from linhai.markdown_parser import extract_json_blocks
@@ -10,6 +10,7 @@ from linhai.llm import (
     AssistantMessage,
     SystemMessage,
 )
+
 
 repr_obj = Repr()
 repr_obj.maxstring = 100
@@ -28,13 +29,37 @@ def _check_token_threshold(agent: "linhai.agent.Agent") -> tuple[bool, str]:
     return True, ""
 
 
+def _calculate_display_interval(total_messages: int) -> tuple[int, int]:
+    """计算消息显示的间隔和显示的消息数，确保显示的消息数少于200条"""
+    if total_messages < 200:
+        interval = 1
+    else:
+        interval = ((total_messages - 200) // 200) + 2
+
+    displayed_messages = (total_messages + interval - 1) // interval
+
+    while displayed_messages >= 200:
+        interval += 1
+        displayed_messages = (total_messages + interval - 1) // interval
+
+    return interval, displayed_messages
+
+
 def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
-    """准备消息摘要供LLM选择压缩范围"""
-    messages = [msg.to_llm_message() for msg in agent.message_processor.messages]
-    return "\n".join(
+    messages: List[LanguageModelMessage] = [
+        msg.to_llm_message() for msg in agent.message_processor.messages
+    ]
+    total_messages = len(messages)
+
+    interval, displayed_messages = _calculate_display_interval(total_messages)
+
+    filtered_messages = [
         f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}"
         for i, msg in enumerate(messages)
-    )
+        if i % interval == 0
+    ]
+
+    return "\n".join(filtered_messages)
 
 
 def _parse_compression_range(full_response: str) -> tuple[int, int]:
@@ -166,7 +191,7 @@ async def _execute_message_deletion(
         )
 
 
-async def compress_context_range(agent: "linhai.agent.Agent") -> str:
+async def context_range_compress(agent: "linhai.agent.Agent") -> str:
     """
     压缩指定范围的历史消息以减少上下文长度。
 

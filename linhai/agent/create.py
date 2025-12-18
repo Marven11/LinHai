@@ -216,9 +216,7 @@ async def _create_init_messages(
     Returns:
         初始化消息列表
     """
-    init_messages: list[Message] = [
-        SystemMessage(group_chat)
-    ]
+    init_messages: list[Message] = [SystemMessage(group_chat)]
 
     user_global_memory = (
         Path(memory_file_path).absolute()

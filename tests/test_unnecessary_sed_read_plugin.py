@@ -4,6 +4,7 @@ import unittest
 import time
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from pathlib import Path
 
 from linhai.agent.plugin import UnnecessarySedReadPlugin
 from linhai.llm import ToolCallMessage
@@ -186,6 +187,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_first_call(self, mock_open, mock_path):
         """测试第一次调用。"""
         mock_path.return_value.is_file.return_value = True
+        # 模拟resolve返回绝对路径
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         tool_call = ToolCallMessage(
             function_name="read_file_with_sed",
@@ -200,8 +204,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             )
         )
         self.assertIsNone(result)
-        self.assertIn("./test.py", self.plugin.unnecessary_history)
-        timestamp = self.plugin.unnecessary_history["./test.py"]
+        # 现在插件使用绝对路径作为键
+        self.assertIn(absolute_path, self.plugin.unnecessary_history)
+        timestamp = self.plugin.unnecessary_history[absolute_path]
         self.assertAlmostEqual(timestamp, time.time(), delta=2)
 
     @patch("linhai.agent.plugin.Path")
@@ -209,10 +214,14 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_second_call_within_minute(self, mock_open, mock_path):
         """测试一分钟内的第二次调用。"""
         mock_path.return_value.is_file.return_value = True
+        # 模拟resolve返回绝对路径
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         import time
 
-        self.plugin.unnecessary_history["./test.py"] = (
+        # 现在插件使用绝对路径作为键
+        self.plugin.unnecessary_history[absolute_path] = (
             time.time() - 30
         )  # 30秒前，在1分钟内
 
@@ -243,11 +252,15 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_second_call_after_minute(self, mock_open, mock_path):
         """测试一分钟后的第二次调用。"""
         mock_path.return_value.is_file.return_value = True
+        # 模拟resolve返回绝对路径
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
         import time
 
         current_time = time.time()
 
-        self.plugin.unnecessary_history["./test.py"] = (
+        # 现在插件使用绝对路径作为键
+        self.plugin.unnecessary_history[absolute_path] = (
             current_time - 70
         )  # 70秒前，超过1分钟
 
@@ -265,8 +278,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         self.assertIsNone(result)
-        self.assertIn("./test.py", self.plugin.unnecessary_history)
-        timestamp = self.plugin.unnecessary_history["./test.py"]
+        self.assertIn(absolute_path, self.plugin.unnecessary_history)
+        timestamp = self.plugin.unnecessary_history[absolute_path]
         self.assertAlmostEqual(timestamp, time.time(), delta=2)
 
     @patch("linhai.agent.plugin.Path")
@@ -274,14 +287,20 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_history_cleanup(self, mock_open, mock_path):
         """测试历史记录清理。"""
         mock_path.return_value.is_file.return_value = True
+        # 模拟resolve返回绝对路径
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
         import time
 
         current_time = time.time()
 
-        self.plugin.unnecessary_history["old.py"] = (
+        # 现在插件使用绝对路径作为键，所以历史记录中的键也应该是绝对路径
+        old_absolute_path = "/absolute/path/old.py"
+        new_absolute_path = "/absolute/path/new.py"
+        self.plugin.unnecessary_history[old_absolute_path] = (
             current_time - 300
         )  # 300秒前，应该被清理
-        self.plugin.unnecessary_history["new.py"] = (
+        self.plugin.unnecessary_history[new_absolute_path] = (
             current_time - 50
         )  # 50秒前，应该保留
 
@@ -300,17 +319,124 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertIn(
-            "old.py", self.plugin.unnecessary_history
+            old_absolute_path, self.plugin.unnecessary_history
         )  # 不需要清理旧记录，应该还在
-        self.assertIn("new.py", self.plugin.unnecessary_history)  # 应该保留
-        self.assertIn("./test.py", self.plugin.unnecessary_history)  # 新记录已添加
-        new_timestamp = self.plugin.unnecessary_history["new.py"]
-        old_timestamp = self.plugin.unnecessary_history["old.py"]
+        self.assertIn(new_absolute_path, self.plugin.unnecessary_history)  # 应该保留
+        self.assertIn(absolute_path, self.plugin.unnecessary_history)  # 新记录已添加
+        new_timestamp = self.plugin.unnecessary_history[new_absolute_path]
+        old_timestamp = self.plugin.unnecessary_history[old_absolute_path]
         # 检查时间戳是否保持不变（因为新记录没有更新）
         self.assertAlmostEqual(new_timestamp, current_time - 50, delta=2)
         self.assertAlmostEqual(
             old_timestamp, current_time - 300, delta=2
         )  # old.py的时间戳也应该保持不变
+
+
+    @patch("linhai.agent.plugin.Path")
+    @patch("builtins.open", new_callable=mock_open, read_data=b"line1\\nline2\\nline3\\n")
+    def test_duplicate_file_read_plugin_blocks_sed_after_full_read(self, mock_open, mock_path):
+        """测试DuplicateFileReadPlugin在完整读取文件后阻止read_file_with_sed。"""
+        from linhai.agent.plugin import DuplicateFileReadPlugin
+        plugin = DuplicateFileReadPlugin(self.group_chat)
+        
+        mock_path.return_value.is_file.return_value = True
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
+        
+        # 模拟消息历史中包含FileContentMessage（完整读取的结果）
+        file_content_message = FileContentMessage(absolute_path, "line1\nline2\nline3\n")
+        self.agent.message_processor.get_messages.return_value = [file_content_message]
+        
+        # 模拟read_file_with_sed工具调用
+        tool_call = ToolCallMessage(
+            function_name="read_file_with_sed",
+            function_arguments={"filepath": "./test.py"},
+            assert_success=True,
+        )
+        from linhai.tool.base import ToolResultMessage
+        
+        result = asyncio.run(
+            plugin._after_tool_call(
+                self.agent, tool_call, ToolResultMessage(self.small_result), True
+            )
+        )
+        
+        # 应该被阻止，因为文件已完整读取
+        self.assertIsNotNone(result)
+        from linhai.agent.base import RuntimeMessage
+        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("错误：此文件已经读取", result.message)
+        self.group_chat.send_if_exists.assert_called_once()
+    
+    @patch("linhai.agent.plugin.Path")
+    @patch("builtins.open", new_callable=mock_open, read_data=b"line1\\nline2\\nline3\\n")
+    def test_duplicate_file_read_plugin_allows_sed_when_no_full_read(self, mock_open, mock_path):
+        """测试当没有完整读取文件时，DuplicateFileReadPlugin允许read_file_with_sed。"""
+        from linhai.agent.plugin import DuplicateFileReadPlugin
+        plugin = DuplicateFileReadPlugin(self.group_chat)
+        
+        mock_path.return_value.is_file.return_value = True
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
+        
+        # 模拟消息历史中没有FileContentMessage
+        self.agent.message_processor.get_messages.return_value = []
+        
+        # 模拟read_file_with_sed工具调用
+        tool_call = ToolCallMessage(
+            function_name="read_file_with_sed",
+            function_arguments={"filepath": "./test.py"},
+            assert_success=True,
+        )
+        from linhai.tool.base import ToolResultMessage
+        
+        result = asyncio.run(
+            plugin._after_tool_call(
+                self.agent, tool_call, ToolResultMessage(self.small_result), True
+            )
+        )
+        
+        # 应该允许，因为没有完整读取
+        self.assertIsNone(result)
+        self.group_chat.send_if_exists.assert_not_called()
+    
+    @patch("linhai.agent.plugin.Path")
+    @patch("builtins.open", new_callable=mock_open, read_data=b"line1\\nline2\\nline3\\n")
+    def test_duplicate_file_read_plugin_blocks_read_file_when_identical(self, mock_open, mock_path):
+        """测试DuplicateFileReadPlugin在重复读取相同内容时阻止read_file。"""
+        from linhai.agent.plugin import DuplicateFileReadPlugin
+        plugin = DuplicateFileReadPlugin(self.group_chat)
+        
+        mock_path.return_value.is_file.return_value = True
+        absolute_path = "/absolute/path/test.py"
+        mock_path.return_value.resolve.return_value = Path(absolute_path)
+        
+        # 模拟消息历史中包含FileContentMessage
+        file_content_message = FileContentMessage(absolute_path, "line1\nline2\nline3\n")
+        self.agent.message_processor.get_messages.return_value = [file_content_message]
+        
+        # 模拟read_file工具调用，返回相同内容
+        from linhai.agent.base import FileContentMessage as FCM
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        
+        tool_call = ToolCallMessage(
+            function_name="read_file",
+            function_arguments={"filepath": "./test.py"},
+            assert_success=True,
+        )
+        
+        result = asyncio.run(
+            plugin._after_tool_call(
+                self.agent, tool_call, new_file_content, True
+            )
+        )
+        
+        # 应该被阻止，因为内容相同
+        self.assertIsNotNone(result)
+        from linhai.agent.base import RuntimeMessage
+        self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("错误：你已经读取过文件", result.message)
+        self.group_chat.send_if_exists.assert_called_once()
 
 
 if __name__ == "__main__":

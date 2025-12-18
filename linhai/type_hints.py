@@ -78,6 +78,7 @@ LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMes
 
 class ThresholdInfo(TypedDict):
     """阈值信息TypedDict，用于get_threshold_info的返回值。"""
+
     hard_limit: int
     used_tokens: int
     remaining_tokens: int

@@ -315,6 +315,7 @@ class TestHelperFunctions(unittest.TestCase):
 
         # 直接sed命令应该被拦截
         self.assertTrue(should_block_command_simple("sed -n '1,10p' file.txt"))
+        self.assertTrue(should_block_command_simple("cd /etc && sed -n '1,10p' file.txt"))
 
         # 管道中的sed命令应该允许
         self.assertFalse(should_block_command_simple("cat file.txt | sed 's/old/new/'"))

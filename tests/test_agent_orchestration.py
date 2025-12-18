@@ -187,7 +187,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_determine_tool_category(self):
         """测试工具分类判断。"""
         # 测试消息清理工具
-        self.assertEqual(self.orchestration._determine_tool_category("compress_context_range"), "cleanup")
+        self.assertEqual(self.orchestration._determine_tool_category("context_range_compress"), "cleanup")
         self.assertEqual(self.orchestration._determine_tool_category("context_garbage_clean"), "cleanup")
         self.assertEqual(self.orchestration._determine_tool_category("context_thanox"), "cleanup")
         
@@ -232,7 +232,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = None
         
         # 清理工具应该不被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("compress_context_range", threshold_info))
+        self.assertFalse(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
         self.assertFalse(self.orchestration.should_block_tool_call("context_garbage_clean", threshold_info))
         self.assertFalse(self.orchestration.should_block_tool_call("context_thanox", threshold_info))
         
@@ -248,7 +248,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前
         
         # 清理工具应该被拦截（因为最近调用过）
-        self.assertTrue(self.orchestration.should_block_tool_call("compress_context_range", threshold_info))
+        self.assertTrue(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
         self.assertTrue(self.orchestration.should_block_tool_call("context_garbage_clean", threshold_info))
         self.assertTrue(self.orchestration.should_block_tool_call("context_thanox", threshold_info))
         
@@ -261,7 +261,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = None
         
         # 所有工具都不应该被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("compress_context_range", threshold_info))
+        self.assertFalse(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
         self.assertFalse(self.orchestration.should_block_tool_call("read_file", threshold_info))
 
 

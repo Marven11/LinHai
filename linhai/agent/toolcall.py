@@ -44,9 +44,7 @@ class AgentToolcall:
 
         # 获取当前工具定义
         tool_def = None
-        tool_manager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         for toolset in tool_manager.toolsets:
             if toolset.has_tool(tool_name):
                 tool_def = toolset.get_tools()[tool_name]
@@ -104,9 +102,7 @@ class AgentToolcall:
             current_name = llm_names[self.context["current_llm_index"]]
             return f"当前使用的LLM: {current_name}"
 
-        tool_manager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         tool_manager.add_toolset(llm_toolset)
 
@@ -126,9 +122,7 @@ class AgentToolcall:
             else:
                 return "暂无token用量信息"
 
-        tool_manager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         tool_manager.add_toolset(dummy_toolset)
 
@@ -142,9 +136,7 @@ class AgentToolcall:
 
     async def postinit(self):
 
-        tool_manager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         await tool_manager.ensure_mcp_connector()
 
     def start_new_tool_call_round(self):
@@ -200,7 +192,7 @@ class AgentToolcall:
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
-            "compress_context_range",
+            "context_range_compress",
             "mark_messages_as_garbage",
             "context_garbage_clean",
             "context_thanox",
@@ -222,9 +214,7 @@ class AgentToolcall:
     async def _call_tool(self, tool_call: ToolCallMessage) -> bool:
         """调用工具。"""
 
-        tool_manager = self.group_chat.get_members(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         try:
             tool_result = await tool_manager.process_tool_call(tool_call)
 

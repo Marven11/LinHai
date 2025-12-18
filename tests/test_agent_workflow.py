@@ -7,7 +7,7 @@ from pathlib import Path
 
 from linhai.agent import Agent, AgentContext
 from linhai.agent.base import RuntimeMessage
-from linhai.agent.workflow import compress_context_range
+from linhai.agent.workflow import context_range_compress
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -64,17 +64,17 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_workflow_as_regular_tool(self):
-        """Test that compress_context_range is now a regular tool, not a workflow."""
+        """Test that context_range_compress is now a regular tool, not a workflow."""
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
 
-        self.assertIn("compress_context_range", tool_names)
+        self.assertIn("context_range_compress", tool_names)
 
-    async def test_compress_context_range_as_tool(self):
-        """Test calling compress_context_range as a regular tool."""
+    async def test_context_range_compress_as_tool(self):
+        """Test calling context_range_compress as a regular tool."""
 
-    async def test_compress_context_range_functionality(self):
-        """Test the compress_context_range function with mock data."""
+    async def test_context_range_compress_functionality(self):
+        """Test the context_range_compress function with mock data."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
@@ -119,7 +119,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         self.assertTrue(result)
 
@@ -127,7 +127,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test that compression is triggered when token threshold is exceeded."""
 
     async def test_workflow_with_invalid_range(self):
-        """Test compress_context_range with invalid range parameters."""
+        """Test context_range_compress with invalid range parameters."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
@@ -160,12 +160,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         self.assertTrue(result)
 
     async def test_workflow_with_small_range(self):
-        """Test compress_context_range with range smaller than minimum."""
+        """Test context_range_compress with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
@@ -198,7 +198,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         self.assertTrue(result)
 
@@ -210,22 +210,22 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(hasattr(self.tool_manager, "workflows"))
 
-    async def test_tools_info_includes_compress_context_range(self):
-        """Test that get_tools_info includes compress_context_range as a regular tool."""
+    async def test_tools_info_includes_context_range_compress(self):
+        """Test that get_tools_info includes context_range_compress as a regular tool."""
         tools_info = self.tool_manager.get_tools_info()
 
         workflow_names = [tool["function"]["name"] for tool in tools_info]
-        self.assertIn("compress_context_range", workflow_names)
+        self.assertIn("context_range_compress", workflow_names)
 
         self.assertTrue(any("safe_calculator" in name for name in workflow_names))
 
-    async def test_compress_context_range_tool_structure(self):
-        """Test that compress_context_range tool has correct structure."""
+    async def test_context_range_compress_tool_structure(self):
+        """Test that context_range_compress tool has correct structure."""
         tools_info = self.tool_manager.get_tools_info()
 
         compress_tool = None
         for tool in tools_info:
-            if tool["function"]["name"] == "compress_context_range":
+            if tool["function"]["name"] == "context_range_compress":
                 compress_tool = tool
                 break
 
@@ -234,24 +234,24 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         json_blocks = []
         _ = json_blocks[0] if json_blocks else {}  # pylint: disable=unused-variable
 
-    async def test_compress_context_range_integration(self):
-        """Test that compress_context_range integrates properly with agent."""
+    async def test_context_range_compress_integration(self):
+        """Test that context_range_compress integrates properly with agent."""
 
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
-        self.assertIn("compress_context_range", tool_names)
+        self.assertIn("context_range_compress", tool_names)
 
         compress_tool = next(
             (
                 tool
                 for tool in tools_info
-                if tool["function"]["name"] == "compress_context_range"
+                if tool["function"]["name"] == "context_range_compress"
             ),
             None,
         )
         self.assertIsNotNone(compress_tool)
 
-    async def test_compress_context_range_user_message_protection(self):
+    async def test_context_range_compress_user_message_protection(self):
         """Test that user messages are protected during history compression."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
@@ -330,7 +330,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             side_effect=insert_message_side_effect
         )
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         self.assertTrue(result)
 
@@ -351,8 +351,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Complete TODO.md tasks", summary_message)
         self.assertIn("Important user input", summary_message)
 
-    async def test_compress_context_range_small_delete_ratio(self):
-        """Test compress_context_range with delete ratio less than 30%."""
+    async def test_context_range_compress_small_delete_ratio(self):
+        """Test context_range_compress with delete ratio less than 30%."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
@@ -407,7 +407,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             side_effect=append_message_side_effect
         )
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         self.assertTrue(result)
 
@@ -430,8 +430,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("30%", warning_message)
         self.assertIn("建议删除更多消息", warning_message)
 
-    async def test_compress_context_range_sends_ui_log_message(self):
-        """Test that compress_context_range sends UI log message with current message count."""
+    async def test_context_range_compress_sends_ui_log_message(self):
+        """Test that context_range_compress sends UI log message with current message count."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
@@ -473,7 +473,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.message_processor.insert_message = AsyncMock()
 
-        result = await compress_context_range(mock_agent)
+        result = await context_range_compress(mock_agent)
 
         mock_group_chat.send_if_exists.assert_called_once()
         call_args = mock_group_chat.send_if_exists.call_args

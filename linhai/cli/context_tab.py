@@ -329,6 +329,7 @@ class ContextTabWidget(Static):
             "agent_message", AgentMessage
         )
         from linhai.agent.orchestration import AgentContextOrchestration
+
         orchestration: AgentContextOrchestration = self.group_chat.get_members(
             "agent_context_orchestration", AgentContextOrchestration
         )

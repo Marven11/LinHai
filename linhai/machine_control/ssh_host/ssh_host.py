@@ -482,14 +482,18 @@ class SshMachineControl:
     async def create_terminal(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultMessage | ToolErrorMessage:
-        """SSH不支持create_terminal工具"""
-        return ToolErrorMessage("SSH机器不支持create_terminal工具")
+        """创建远程终端"""
+        return await self.call_tool(
+            "create_terminal", {"columns": columns, "lines": lines}
+        )
 
     async def send_keys_to_terminal(
         self, terminal_id: str, keys: list[str]
     ) -> ToolResultMessage | ToolErrorMessage:
-        """SSH不支持send_keys_to_terminal工具"""
-        return ToolErrorMessage("SSH机器不支持send_keys_to_terminal工具")
+        """发送按键到远程终端"""
+        return await self.call_tool(
+            "send_keys_to_terminal", {"term_id": terminal_id, "keys": keys}
+        )
 
     async def send_string_to_terminal(
         self,
@@ -498,20 +502,35 @@ class SshMachineControl:
         with_enter: bool = True,
         wait_seconds: float = 0.3,
     ) -> ToolResultMessage | ToolErrorMessage:
-        """SSH不支持send_string_to_terminal工具"""
-        return ToolErrorMessage("SSH机器不支持send_string_to_terminal工具")
+        """发送字符串到远程终端"""
+        return await self.call_tool(
+            "send_string_to_terminal",
+            {"term_id": terminal_id, "string": string, "with_enter": with_enter},
+        )
 
     async def read_terminal_screen(
         self, terminal_id: str
     ) -> ToolResultMessage | ToolErrorMessage:
-        """SSH不支持read_terminal_screen工具"""
-        return ToolErrorMessage("SSH机器不支持read_terminal_screen工具")
+        """读取远程终端屏幕内容"""
+        result = await self.call_tool("read_terminal_screen", {"term_id": terminal_id})
+        if isinstance(result, ToolResultMessage):
+            # 解码base64
+            import base64
+
+            try:
+                decoded_bytes = base64.b64decode(result.content)
+                # 将字节流解码为字符串，使用utf-8并用替换字符替换无法解码的字节
+                decoded_str = decoded_bytes.decode("utf-8", errors="replace")
+                return ToolResultMessage(decoded_str)
+            except Exception as e:
+                return ToolErrorMessage(f"解码终端屏幕内容失败: {e}")
+        return result
 
     async def close_terminal(
         self, terminal_id: str
     ) -> ToolResultMessage | ToolErrorMessage:
-        """SSH不支持close_terminal工具"""
-        return ToolErrorMessage("SSH机器不支持close_terminal工具")
+        """关闭远程终端"""
+        return await self.call_tool("close_terminal", {"term_id": terminal_id})
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False

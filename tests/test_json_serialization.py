@@ -48,10 +48,9 @@ class TestJsonSerialization(unittest.TestCase):
         original_data = json.loads(json_str)
         restored_data = json.loads(restored.to_json())
         
-        # SystemMessage的JSON只包含template字段，但template是通过结构化常量动态构建的
-        # 由于template可能依赖于工具信息等动态内容，我们只验证JSON结构正确
-        self.assertIn('template', original_data)
-        self.assertIn('template', restored_data)
+        # SystemMessage的JSON包含结构化数据，验证关键字段存在
+        self.assertIn('overview', original_data)
+        self.assertIn('overview', restored_data)
         
         # 确保group_chat正确传递（虽然不被序列化，但from_json会传入）
         # 我们无法直接比较group_chat，但可以确认它们都使用相同的mock_group_chat

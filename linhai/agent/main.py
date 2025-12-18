@@ -28,6 +28,8 @@ from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 from linhai.input_parser import parse_user_input
+
+
 class Agent:
     """Agent核心类，负责处理消息流、调用工具和管理状态机。"""
 
@@ -96,9 +98,7 @@ class Agent:
         )
 
         usage_ratio = (
-            min(self.last_token_usage / hard_limit, 1.0)
-            if hard_limit > 0
-            else 0.0
+            min(self.last_token_usage / hard_limit, 1.0) if hard_limit > 0 else 0.0
         )
         remaining_tokens = max(hard_limit - self.last_token_usage, 0)
 

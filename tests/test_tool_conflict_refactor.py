@@ -39,13 +39,17 @@ class TestToolConflictRefactor(unittest.TestCase):
         mcp_config: list[MCPConfig] = []
         mcp_basedir = Path(".")
 
-        self.toolcall.tool_manager = ToolManager(
-            group_chat=Mock(),
+        # 创建真实的ToolManager实例，并设置到group_chat中
+        tool_manager = ToolManager(
+            group_chat=self.agent_mock.group_chat,
             toolsets=[],
             config=config,
             mcp_config=mcp_config,
             mcp_basedir=mcp_basedir,
         )
+        # 将tool_manager设置为group_chat.get_members的返回值
+        self.agent_mock.group_chat.get_members.side_effect = lambda member_type, _member_class=None: tool_manager if member_type == "tool_manager" else None
+        self.toolcall.tool_manager = tool_manager
 
     def _reset_called_tools(self) -> None:
         self.toolcall.called_tools_in_round = []

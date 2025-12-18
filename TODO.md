@@ -2,23 +2,28 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 阻止重复读取sed的功能没有生效，编写unittest测试，unittest编写完毕之后修复，然后启动linhai测试
-  - 使用`uv run python -m linhai -m '@nothink 测试读取linhai/cli/context_tab.py文件，然后用sed读取其中的十行，看看会发生什么'`
-- [ ] compress_context_range改名为context_range_compress
-- [ ] 为ssh添加terminal工具
-  - 实现方式是
-    - 在trojan.py中维护pty
-    - 启动终端后trojan.py定时通过jsonrpc传递pty产生的bytes到主机
-    - 主机再通过pyte渲染
-  - 编写完善的unittest
-  - 在/tmp中编写临时脚本使用./.secret.todo.md中提到的机器进行测试
-  - 启动linhai让其使用./.secret.todo.md中提到的ssh机器进行测试
-- [ ] 解决因为消息过多而无法进行历史压缩的问题
-  - 在消息数量少于200条时，显示每条消息
-  - 在消息数量在`[200, 400)`条时，不显示每条消息而是每2条显示一条
-  - 在消息数量在`[400, 600)`条时，不显示每条消息而是每3条显示一条
-  - .. 以此类推，保证显示的消息数量少于200条
-  - 不要画蛇添足：只修改_prepare_messages_for_compression函数
+- [ ] 阻止运行命令读取重复文件的功能没有生效，编写unittest测试，unittest编写完毕之后修复，然后启动linhai测试
+  - 使用`uv run python -m linhai -m '@nothink 测试读取linhai/cli/context_tab.py文件，然后用grep读取其中的几行，输出报告到./duplicate_grep_test.txt然后退出'`
+- [ ] 当前subagent(主要是git diff reviewer)的思考内容没有被显示，修复
+  - 使用`uv run python -m linhai --checklist ./CODE_REQUIREMENTS.md --git-diff-reviewer -m '@nothink 写入一个/tmp/test.txt然后暂停，等待git diff reviewer提出issue，然后sleep 120秒，再然后跟它说这些代码不是你写的，最后再次暂停'`
+  - 需要使用右方向键选择subagent tab（其中显示“SubAgent消息将显示在这里”这句话）以查看subagent输出的内容
+  - 当前subagent的思考内容（第一个灰色方框）中没有内容，需要修复
+- [ ] "红灯状态下阻止调用"没有根据是否在一分钟内发送合适的提示消息，导致如果一分钟内调用了对应工具仍然提示没有调用
+- [ ] 改名终端工具，统一使用terminal_开头
+  - create_terminal -> terminal_create
+  - close_terminal -> terminal_close
+  - send_keys_to_terminal -> terminal_send_keys
+  - send_string_to_terminal -> terminal_send_string
+  - read_terminal_screen -> terminal_read_screen
+- [ ] 添加terminal_click_screen工具，支持通过查找文本点击终端
+  - 这个任务比较复杂，如果因为pyte缺少功能（如不记录打开鼠标事件的mode）的原因实在无法完成就不完成
+  - 你需要检查Screen.mode这个set查看终端程序是否需要鼠标事件
+  - 从当前的get_screen中找到对应字符串的位置然后发送鼠标事件
+  - 可能需要代替pyte发送鼠标事件的控制序列，因为pyte不支持这个功能
+  - 编写完整的测试
+    - 找到的字符串位置是否正确
+    - 根据位置编码得到的鼠标事件控制序列是否正确
+    - 是否在终端程序不支持点击时返回错误信息
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

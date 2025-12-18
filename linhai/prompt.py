@@ -60,7 +60,7 @@ INTRODUCTION_CONTEXT_MANAGEMENT = """
 你可以使用这些工具完成这些目标
 - mark_messages_as_garbage - 标记不需要的消息
 - context_garbage_clean - 一次性清理所有不需要的消息
-- compress_context_range - 历史压缩：删除一连串的消息
+- context_range_compress - 历史压缩：删除一连串的消息
   - 比较复杂，而且会暂停当前任务，优先使用context_garbage_clean
 
 运行时会提醒你当前消息是否紧张
@@ -68,7 +68,7 @@ INTRODUCTION_CONTEXT_MANAGEMENT = """
 - 绿灯闪烁：应该积极标记大消息，可以顺手删除一些**实在和当前任务无关的消息**
 - 黄灯：积极考虑删除**和当前任务无关**的消息，也可以使用历史压缩删除**之前任务**的消息
 - 红灯：优先考虑token限制问题，此时应该放下手中的任何任务，直接使用工具清理消息！
-  - 此时消息非常多，如果已有至少5条垃圾消息，则调用context_garbage_clean清理垃圾消息；否则，使用compress_context_range删除大约一半消息！
+  - 此时消息非常多，如果已有至少5条垃圾消息，则调用context_garbage_clean清理垃圾消息；否则，使用context_range_compress删除大约一半消息！
 """
 
 INTRODUCTION_PENTESTING = """
@@ -468,4 +468,3 @@ COMPRESS_RANGE_PROMPT = """
 - 你最好压缩大约{|SUGGESTED_MESSAGE_COUNT|}条消息
 
 """
-

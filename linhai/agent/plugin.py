@@ -660,33 +660,29 @@ class DuplicateFileReadPlugin(Plugin):
         self, agent: "Agent", filepath: str, tool_result: Any
     ) -> Optional[RuntimeMessage]:
         """处理read_file_with_sed工具的重复读取检查。"""
-        # 检查最近的FileContentMessage中是否有相同文件
+        try:
+            absolute_filepath = str(Path(filepath).resolve())
+        except (OSError, ValueError):
+            return None
+        
         recent_file_messages = [
             message
             for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage) and message.filepath == filepath
+            if isinstance(message, FileContentMessage) and str(Path(message.filepath).resolve()) == absolute_filepath
         ]
 
         if recent_file_messages:
-            latest_message = recent_file_messages[0]
-            try:
-                current_content = Path(filepath).read_text(encoding="utf-8")
-                if latest_message.content == current_content:
-                    # 文件内容相同，阻止读取
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="INFO",
-                            content="模型使用read_file_with_sed读取已读取文件，已阻止",
-                        ),
-                    )
-                    return RuntimeMessage(
-                        "错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！"
-                        "这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！"
-                    )
-                return None
-            except Exception:
-                return None
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content="模型使用read_file_with_sed读取已读取文件，已阻止",
+                ),
+            )
+            return RuntimeMessage(
+                "错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！"
+                "这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！"
+            )
 
         return None
 
@@ -694,16 +690,21 @@ class DuplicateFileReadPlugin(Plugin):
         self, agent: "Agent", filepath: str, tool_result: FileContentMessage
     ) -> Optional[RuntimeMessage]:
         """处理read_file工具的重复读取检查。"""
+        try:
+            absolute_filepath = str(Path(filepath).resolve())
+        except (OSError, ValueError):
+            return None
+        
         # 检查最近的FileContentMessage中是否有相同文件
         recent_file_messages = [
             message
             for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage) and message.filepath == filepath
+            if isinstance(message, FileContentMessage) and str(Path(message.filepath).resolve()) == absolute_filepath
         ]
 
         if recent_file_messages:
             latest_message = recent_file_messages[0]
-            if latest_message == tool_result:
+            if latest_message.content == tool_result.content:
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -763,14 +764,16 @@ class UnnecessarySedReadPlugin(Plugin):
         if not path.is_file():
             return None
 
-        line_count = await self._get_file_line_count(filepath)
+        absolute_filepath = str(path.resolve())
+
+        line_count = await self._get_file_line_count(absolute_filepath)
         if line_count is None or line_count >= 1600:
             return None
 
-        last_history = self.unnecessary_history.get(filepath)
-        self.unnecessary_history[filepath] = time.time()
+        last_history = self.unnecessary_history.get(absolute_filepath)
+        self.unnecessary_history[absolute_filepath] = time.time()
 
-        if last_history and self.unnecessary_history[filepath] - last_history < 60:
+        if last_history and self.unnecessary_history[absolute_filepath] - last_history < 60:
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(

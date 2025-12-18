@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock, patch
 import json
 
 from linhai.prompt import (
-    OVERVIEW, INTRODUCTION_TOOL_USE, INTRODUCTION_TOOLS,
+    OVERVIEW, INTRODUCTION_TOOL_USE,
     RULES_TOOL_USE, RULES_MCP, EXAMPLES_SIMPLE_CONVERSATION
 )
 from linhai.llm import SystemMessage
@@ -44,34 +44,37 @@ class TestSystemMessage(unittest.TestCase):
         self.assertEqual(system_msg.group_chat, self.group_chat)
         
         # 验证模板已构建
-        self.assertIn("OVERVIEW", system_msg.template)
-        self.assertIn("INTRODUCTION", system_msg.template)
-        self.assertIn("RULES", system_msg.template)
-        self.assertIn("EXAMPLES", system_msg.template)
+        content = system_msg.to_llm_message()['content']
+        self.assertIn("OVERVIEW", content)
+        self.assertIn("INTRODUCTION", content)
+        self.assertIn("RULES", content)
+        self.assertIn("EXAMPLES", content)
     
     def test_system_message_contains_tool_definitions(self):
         """测试SystemMessage包含工具定义。"""
         system_msg = SystemMessage(group_chat=self.group_chat)
         
         # 验证工具定义被包含
-        self.assertIn("test_tool", system_msg.template)
-        self.assertIn("测试工具", system_msg.template)
+        content = system_msg.to_llm_message()['content']
+        self.assertIn("test_tool", content)
+        self.assertIn("测试工具", content)
     
     def test_system_message_structure(self):
         """测试SystemMessage的结构化章节。"""
         system_msg = SystemMessage(group_chat=self.group_chat)
+        content = system_msg.to_llm_message()['content']
         
         # 检查章节标题格式
-        self.assertIn("# OVERVIEW", system_msg.template)
-        self.assertIn("# INTRODUCTION", system_msg.template)
-        self.assertIn("# RULES", system_msg.template)
-        self.assertIn("# EXAMPLES", system_msg.template)
+        self.assertIn("# OVERVIEW", content)
+        self.assertIn("# INTRODUCTION", content)
+        self.assertIn("# RULES", content)
+        self.assertIn("# EXAMPLES", content)
         
         # 检查子章节
-        self.assertIn("## INTRODUCTION - TOOL USE", system_msg.template)
-        self.assertIn("## INTRODUCTION - TOOLS", system_msg.template)
-        self.assertIn("## RULES - TOOL USE", system_msg.template)
-        self.assertIn("## EXAMPLES - SIMPLE CONVERSATION", system_msg.template)
+        self.assertIn("## INTRODUCTION - TOOL USE", content)
+        self.assertIn("## INTRODUCTION - TOOLS", content)
+        self.assertIn("## RULES - TOOL USE", content)
+        self.assertIn("## EXAMPLES - SIMPLE CONVERSATION", content)
     
     def test_system_message_without_tool_manager(self):
         """测试没有tool_manager时的SystemMessage初始化。"""
@@ -80,21 +83,23 @@ class TestSystemMessage(unittest.TestCase):
         
         # 应该能正常初始化，但工具列表为空
         system_msg = SystemMessage(group_chat=self.group_chat)
-        self.assertIsNotNone(system_msg.template)
+        content = system_msg.to_llm_message()['content']
+        self.assertIsNotNone(content)
         
         # 检查是否仍然包含结构化章节
-        self.assertIn("# OVERVIEW", system_msg.template)
-        self.assertIn("# INTRODUCTION", system_msg.template)
+        self.assertIn("# OVERVIEW", content)
+        self.assertIn("# INTRODUCTION", content)
     
     def test_system_message_from_structured_constants(self):
         """测试从结构化常量构建prompt。"""
         # 使用原始的常量检查内容是否被正确包含
         system_msg = SystemMessage(group_chat=self.group_chat)
+        content = system_msg.to_llm_message()['content']
         
         # 检查常量内容是否被包含
-        self.assertIn(OVERVIEW, system_msg.template)
-        self.assertIn(INTRODUCTION_TOOL_USE, system_msg.template)
-        self.assertIn(RULES_TOOL_USE, system_msg.template)
+        self.assertIn(OVERVIEW, content)
+        self.assertIn(INTRODUCTION_TOOL_USE, content)
+        self.assertIn(RULES_TOOL_USE, content)
     
     def test_system_message_with_serializable_tools_info(self):
         """测试工具信息可序列化的情况。"""
@@ -105,12 +110,13 @@ class TestSystemMessage(unittest.TestCase):
         ]
         
         system_msg = SystemMessage(group_chat=self.group_chat)
+        content = system_msg.to_llm_message()['content']
         
         # 验证工具信息被包含
-        self.assertIn("test1", system_msg.template)
-        self.assertIn("工具1", system_msg.template)
-        self.assertIn("test2", system_msg.template)
-        self.assertIn("工具2", system_msg.template)
+        self.assertIn("test1", content)
+        self.assertIn("工具1", content)
+        self.assertIn("test2", content)
+        self.assertIn("工具2", content)
     
     def test_system_message_with_non_serializable_tools_info(self):
         """测试工具信息不可序列化的情况（如测试中可能发生）。"""
@@ -123,13 +129,14 @@ class TestSystemMessage(unittest.TestCase):
         
         # 应该能正常初始化
         system_msg = SystemMessage(group_chat=self.group_chat)
-        self.assertIsNotNone(system_msg.template)
+        content = system_msg.to_llm_message()['content']
+        self.assertIsNotNone(content)
         
         # 检查是否包含工具定义
-        self.assertIn("test1", system_msg.template)
-        self.assertIn("工具1", system_msg.template)
-        self.assertIn("test2", system_msg.template)
-        self.assertIn("工具2", system_msg.template)
+        self.assertIn("test1", content)
+        self.assertIn("工具1", content)
+        self.assertIn("test2", content)
+        self.assertIn("工具2", content)
     
     def test_system_message_to_llm_message(self):
         """测试转换为LLM消息格式。"""
@@ -154,9 +161,10 @@ class TestSystemMessage(unittest.TestCase):
         # 注意：重构后的__repr__不再包含'template'字符串，而是显示模板内容的前50个字符
         # 例如：SystemMessage(# OVERVIEW\n\n\n你是林海漫游，一个思维强大、擅长编程、记忆力强...)
         
-        # 验证message属性包含模板内容
-        self.assertIn(OVERVIEW, system_msg.message)
-        self.assertIn(INTRODUCTION_TOOL_USE, system_msg.message)
+        # 检查SystemMessage的字符串表示
+        # repr应该显示模板内容的前50个字符
+        # 验证SystemMessage在repr中
+        self.assertIn("SystemMessage", repr_str)
 
 
 if __name__ == "__main__":
