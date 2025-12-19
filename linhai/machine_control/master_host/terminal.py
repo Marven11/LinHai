@@ -139,7 +139,7 @@ class PyteTerminal:
 
 
 @terminal_toolset.register_tool(
-    name="create_terminal",
+    name="terminal_create",
     desc="新建虚拟终端，返回终端对应的ID，这个工具不能和其他工具一起调用！",
     args={
         "columns": ToolArgInfo(desc="终端列数，默认80", type="int"),
@@ -147,12 +147,12 @@ class PyteTerminal:
     },
     required_args=[],
     conflict_with=[
-        "send_keys_to_terminal",
-        "send_string_to_terminal",
-        "read_terminal_screen",
+        "terminal_send_keys",
+        "terminal_send_string",
+        "terminal_read_screen",
     ],
 )
-async def create_terminal(columns: int = 80, lines: int = 24) -> str:
+async def terminal_create(columns: int = 80, lines: int = 24) -> str:
     """新建虚拟终端
 
     Args:
@@ -188,7 +188,7 @@ def close_all_terminals() -> str:
 
 
 @terminal_toolset.register_tool(
-    name="send_keys_to_terminal",
+    name="terminal_send_keys",
     desc="发送按键列表到终端，特殊按键的定义和pyautogui相同，普通按键则传入对应字符，如'a'。如果需要发送ctrl+c等控制字符，请传入对应的控制键名称，如'ctrl+c'、'ctrl+d'等。",
     args={
         "terminal_id": ToolArgInfo(desc="终端ID", type="str"),
@@ -198,7 +198,7 @@ def close_all_terminals() -> str:
     },
     required_args=["terminal_id", "keys"],
 )
-async def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
+async def terminal_send_keys(terminal_id: str, keys: List[str]) -> str:
     """发送按键列表到终端
 
     Args:
@@ -225,7 +225,7 @@ async def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
 
 
 @terminal_toolset.register_tool(
-    name="send_string_to_terminal",
+    name="terminal_send_string",
     desc="发送命令等字符串到终端",
     args={
         "terminal_id": ToolArgInfo(desc="终端ID", type="str"),
@@ -237,7 +237,7 @@ async def send_keys_to_terminal(terminal_id: str, keys: List[str]) -> str:
     },
     required_args=["terminal_id", "string", "with_enter"],
 )
-async def send_string_to_terminal(
+async def terminal_send_string(
     terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
 ) -> str:
     if terminal_id not in terminals:
@@ -253,12 +253,12 @@ async def send_string_to_terminal(
 
 
 @terminal_toolset.register_tool(
-    name="read_terminal_screen",
+    name="terminal_read_screen",
     desc="读取当前终端的屏幕内容",
     args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
     required_args=["terminal_id"],
 )
-async def read_terminal_screen(terminal_id: str) -> str:
+async def terminal_read_screen(terminal_id: str) -> str:
     """读取终端屏幕内容
 
     Args:
@@ -275,12 +275,12 @@ async def read_terminal_screen(terminal_id: str) -> str:
 
 
 @terminal_toolset.register_tool(
-    name="close_terminal",
+    name="terminal_close",
     desc="关闭终端",
     args={"terminal_id": ToolArgInfo(desc="终端ID", type="str")},
     required_args=["terminal_id"],
 )
-async def close_terminal(terminal_id: str) -> str:
+async def terminal_close(terminal_id: str) -> str:
     """关闭终端
 
     Args:

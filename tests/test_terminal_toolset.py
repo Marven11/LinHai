@@ -25,14 +25,14 @@ class TestTerminalToolset(unittest.TestCase):
     def test_terminal_lifecycle(self):
         """测试终端的完整生命周期"""
         tools = terminal_toolset.get_tools()
-        create_terminal = tools["create_terminal"]["func"]
+        create_terminal = tools["terminal_create"]["func"]
         self.assertIsNotNone(create_terminal, "create_terminal工具未找到")
 
         term_id = self.loop.run_until_complete(create_terminal(columns=80, lines=24))
         self.assertIsNotNone(term_id)
         self.assertIn(term_id, terminals)
 
-        send_string = tools["send_string_to_terminal"]["func"]
+        send_string = tools["terminal_send_string"]["func"]
         self.assertIsNotNone(send_string, "send_string_to_terminal工具未找到")
 
         result = self.loop.run_until_complete(
@@ -40,19 +40,19 @@ class TestTerminalToolset(unittest.TestCase):
         )
         self.assertIn("114514", result)
 
-        read_screen = tools["read_terminal_screen"]["func"]
+        read_screen = tools["terminal_read_screen"]["func"]
         self.assertIsNotNone(read_screen, "read_terminal_screen工具未找到")
 
         screen_content = self.loop.run_until_complete(read_screen(term_id))
         self.assertIn("114514", screen_content)
 
-        send_keys = tools["send_keys_to_terminal"]["func"]
+        send_keys = tools["terminal_send_keys"]["func"]
         self.assertIsNotNone(send_keys, "send_keys_to_terminal工具未找到")
 
         result = self.loop.run_until_complete(send_keys(term_id, ["ctrl+l"]))
         self.assertIn("已发送按键", result)
 
-        close_terminal = tools["close_terminal"]["func"]
+        close_terminal = tools["terminal_close"]["func"]
         self.assertIsNotNone(close_terminal, "close_terminal工具未找到")
 
         result = self.loop.run_until_complete(close_terminal(term_id))
@@ -62,10 +62,10 @@ class TestTerminalToolset(unittest.TestCase):
     def test_multiple_terminals(self):
         """测试多个终端同时运行"""
         tools = terminal_toolset.get_tools()
-        create_terminal = tools["create_terminal"]["func"]
-        send_string = tools["send_string_to_terminal"]["func"]
-        read_screen = tools["read_terminal_screen"]["func"]
-        close_terminal = tools["close_terminal"]["func"]
+        create_terminal = tools["terminal_create"]["func"]
+        send_string = tools["terminal_send_string"]["func"]
+        read_screen = tools["terminal_read_screen"]["func"]
+        close_terminal = tools["terminal_close"]["func"]
 
         term1 = self.loop.run_until_complete(create_terminal())
         term2 = self.loop.run_until_complete(create_terminal())
@@ -91,9 +91,9 @@ class TestTerminalToolset(unittest.TestCase):
     def test_error_handling(self):
         """测试错误处理"""
         tools = terminal_toolset.get_tools()
-        send_string = tools["send_string_to_terminal"]["func"]
-        read_screen = tools["read_terminal_screen"]["func"]
-        close_terminal = tools["close_terminal"]["func"]
+        send_string = tools["terminal_send_string"]["func"]
+        read_screen = tools["terminal_read_screen"]["func"]
+        close_terminal = tools["terminal_close"]["func"]
 
         result = self.loop.run_until_complete(
             send_string("nonexistent", "echo test", with_enter=True)

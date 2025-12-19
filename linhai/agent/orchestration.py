@@ -41,6 +41,21 @@ class AgentContextOrchestration:
 
         self._register_lifecycle_callbacks()
 
+    def _get_unmarked_large_message_ids(self, limit: int = 3) -> list[str]:
+        """获取未标记为垃圾的大消息ID列表。
+
+        Args:
+            limit: 返回的最大ID数量
+
+        Returns:
+            未标记的大消息ID列表
+        """
+        unmarked_ids = [
+            msg_id for msg_id in self.large_messages
+            if msg_id not in self.garbage_message_ids
+        ]
+        return unmarked_ids[:limit]
+
     def mark_messages_as_garbage(self, message_ids: list[str]) -> str:
         """将多个消息标记为垃圾消息。
 
@@ -276,12 +291,12 @@ class AgentContextOrchestration:
 
     def _handle_red_state_recent_cleanup(self) -> None:
         """处理红灯状态且最近调用过清理工具的情况。"""
-        if self.large_messages:
-            large_message_ids = list(self.large_messages.keys())[:3]
+        unmarked_large_message_ids = self._get_unmarked_large_message_ids(3)
+        if unmarked_large_message_ids:
             guidance_message = (
                 f"一分钟内已调用过历史压缩或清理，禁止使用消息清理工具，但可以使用其他工具。"
-                f"当前有{len(self.large_messages)}条大消息，"
-                f"可以先用mark_messages_as_garbage工具标记ID为{', '.join(large_message_ids)}的消息为垃圾。"
+                f"当前有{len(self.large_messages)}条大消息，其中{len(unmarked_large_message_ids)}条未标记，"
+                f"可以先用mark_messages_as_garbage工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
             )
             self.agent_message.append_message(RuntimeMessage(guidance_message))
         else:
@@ -299,11 +314,11 @@ class AgentContextOrchestration:
         self, current_state: str, recently_called_cleanup: bool
     ) -> None:
         """处理绿灯和绿灯闪烁状态。"""
-        if self.large_messages:
-            large_message_ids = list(self.large_messages.keys())[:3]
+        unmarked_large_message_ids = self._get_unmarked_large_message_ids(3)
+        if unmarked_large_message_ids:
             guidance_message = (
-                f"当前有{len(self.large_messages)}条大消息，"
-                f"建议使用mark_messages_as_garbage工具标记ID为{', '.join(large_message_ids)}的消息为垃圾。"
+                f"当前有{len(self.large_messages)}条大消息，其中{len(unmarked_large_message_ids)}条未标记，"
+                f"建议使用mark_messages_as_garbage工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
             )
             self.agent_message.append_message(RuntimeMessage(guidance_message))
         else:
@@ -355,11 +370,11 @@ class AgentContextOrchestration:
             )
 
         large_messages_info = ""
-        if self.large_messages:
-            large_message_ids = list(self.large_messages.keys())[:3]
+        unmarked_large_message_ids = self._get_unmarked_large_message_ids(3)
+        if unmarked_large_message_ids:
             large_messages_info = (
-                f"当前已有{len(self.large_messages)}条大消息。"
-                f"前3个大消息ID: {', '.join(large_message_ids)}。"
+                f"当前已有{len(self.large_messages)}条大消息，其中{len(unmarked_large_message_ids)}条未标记。"
+                f"前3个未标记大消息ID: {', '.join(unmarked_large_message_ids)}。"
             )
 
         garbage_count = len(self.garbage_message_ids)

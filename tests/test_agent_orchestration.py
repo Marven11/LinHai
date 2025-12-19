@@ -265,5 +265,42 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.orchestration.should_block_tool_call("read_file", threshold_info))
 
 
+
+    def test_get_unmarked_large_message_ids(self):
+        """测试获取未标记的大消息ID。"""
+        # 记录几个大消息
+        msg1 = RuntimeMessage("Large content 1" * 1000)
+        msg2 = RuntimeMessage("Large content 2" * 1000)
+        msg3 = RuntimeMessage("Large content 3" * 1000)
+        
+        id1 = self.orchestration.record_large_message(msg1, "large content 1")
+        id2 = self.orchestration.record_large_message(msg2, "large content 2")
+        id3 = self.orchestration.record_large_message(msg3, "large content 3")
+        
+        # 初始状态，所有消息都未标记
+        unmarked_ids = self.orchestration._get_unmarked_large_message_ids()
+        self.assertEqual(len(unmarked_ids), 3)
+        self.assertIn(id1, unmarked_ids)
+        self.assertIn(id2, unmarked_ids)
+        self.assertIn(id3, unmarked_ids)
+        
+        # 标记一个消息为垃圾
+        self.orchestration.mark_messages_as_garbage([id2])
+        
+        # 现在应该只有两个未标记的消息
+        unmarked_ids = self.orchestration._get_unmarked_large_message_ids()
+        self.assertEqual(len(unmarked_ids), 2)
+        self.assertIn(id1, unmarked_ids)
+        self.assertNotIn(id2, unmarked_ids)
+        self.assertIn(id3, unmarked_ids)
+        
+        # 测试limit参数
+        unmarked_ids_limit2 = self.orchestration._get_unmarked_large_message_ids(limit=2)
+        self.assertEqual(len(unmarked_ids_limit2), 2)
+        
+        # 标记所有消息
+        self.orchestration.mark_messages_as_garbage([id1, id3])
+        unmarked_ids_empty = self.orchestration._get_unmarked_large_message_ids()
+        self.assertEqual(len(unmarked_ids_empty), 0)
 if __name__ == "__main__":
     unittest.main()

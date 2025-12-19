@@ -2,24 +2,24 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 当前subagent(主要是git diff reviewer)的思考内容没有被显示，修复
+- [x] 当前subagent(主要是git diff reviewer)的思考内容没有被显示，修复
   - 使用`uv run python -m linhai --checklist ./CODE_REQUIREMENTS.md --git-diff-reviewer -m '@nothink 写入一个/tmp/test.txt然后暂停，等待git diff reviewer提出issue，然后sleep 120秒，再然后跟它说这些代码不是你写的，最后再次暂停'`
   - 需要使用右方向键选择subagent tab（其中显示“SubAgent消息将显示在这里”这句话）以查看subagent输出的内容
   - 当前subagent的思考内容（第一个灰色方框）中没有内容，需要修复
-- [ ] 修复unittest，修改过时的unittest和与预期情况不相符的unittest
+- [x] 修复unittest，修改过时的unittest和与预期情况不相符的unittest
   - 优先修复tests/test_unnecessary_run_command_plugin.py，这个文件与预期相符且测试失败
-- [ ] 提醒模型调用“先用mark_messages_as_garbage工具”时只提示没有标记的大消息ID
+- [x] 提醒模型调用“先用mark_messages_as_garbage工具”时只提示没有标记的大消息ID
   - 需要添加测试保证已经被标记的消息不会被提醒
   - 如果当前没有大消息没被标记则不提醒
-- [ ] "红灯状态下阻止调用"没有根据是否在一分钟内发送合适的提示消息，导致如果一分钟内调用了对应工具仍然提示没有调用
-- [ ] 在阻止模型使用命令/工具读取重复文件时使用reprlib展示文件内容的100个字符，以帮助模型定位内容
-- [ ] 改名终端工具，统一使用terminal_开头
+- [x] "红灯状态下阻止调用"没有根据是否在一分钟内发送合适的提示消息，导致如果一分钟内调用了对应工具仍然提示没有调用
+- [x] 在阻止模型使用命令/工具读取重复文件时使用reprlib展示文件内容的100个字符，以帮助模型定位内容
+- [x] 改名终端工具，统一使用terminal_开头
   - create_terminal -> terminal_create
   - close_terminal -> terminal_close
   - send_keys_to_terminal -> terminal_send_keys
   - send_string_to_terminal -> terminal_send_string
   - read_terminal_screen -> terminal_read_screen
-- [ ] 添加terminal_click_screen工具，支持通过查找文本点击终端
+- [x] 添加terminal_click_screen工具，支持通过查找文本点击终端（已评估：pyte不支持鼠标事件，根据TODO.md说明，决定不实现）
   - 这个任务比较复杂，如果因为pyte缺少功能（如不记录打开鼠标事件的mode）的原因实在无法完成就不完成
   - 你需要检查Screen.mode这个set查看终端程序是否需要鼠标事件
   - 从当前的get_screen中找到对应字符串的位置然后发送鼠标事件

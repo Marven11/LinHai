@@ -278,8 +278,12 @@ class CLIApp(App):
         subagent_name = wrapper.subagent_name
         token = wrapper.token
 
-        content = token.content
-        is_reasoning = token.reasoning_content is not None
+        if token.reasoning_content is not None and token.reasoning_content.strip():
+            is_reasoning = True
+            content = token.reasoning_content
+        else:
+            is_reasoning = False
+            content = token.content if token.content else ''
 
         subagent_container = self.query_one("#subagent-container")
 

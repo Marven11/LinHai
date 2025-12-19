@@ -9,11 +9,11 @@ from linhai.agent.base import FileContentMessage
 from .http import http_request
 from .command import run_command, change_directory
 from .terminal import (
-    create_terminal,
-    send_keys_to_terminal,
-    send_string_to_terminal,
-    read_terminal_screen,
-    close_terminal,
+    terminal_create,
+    terminal_send_keys,
+    terminal_send_string,
+    terminal_read_screen,
+    terminal_close,
 )
 from .file import (
     read_file,
@@ -55,29 +55,29 @@ class MasterHostControl:
         """改变当前工作目录"""
         return change_directory(directory)
 
-    async def create_terminal(self, columns: int = 80, lines: int = 24) -> Message:
+    async def terminal_create(self, columns: int = 80, lines: int = 24) -> Message:
         """新建虚拟终端"""
-        return await create_terminal(columns, lines)
+        return await terminal_create(columns, lines)
 
-    async def send_keys_to_terminal(self, terminal_id: str, keys: list[str]) -> Message:
+    async def terminal_send_keys(self, terminal_id: str, keys: list[str]) -> Message:
         """发送按键列表到终端"""
-        return await send_keys_to_terminal(terminal_id, keys)
+        return await terminal_send_keys(terminal_id, keys)
 
-    async def send_string_to_terminal(
+    async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> Message:
         """发送命令等字符串到终端"""
-        return await send_string_to_terminal(
+        return await terminal_send_string(
             terminal_id, string, with_enter, wait_seconds
         )
 
-    async def read_terminal_screen(self, terminal_id: str) -> Message:
+    async def terminal_read_screen(self, terminal_id: str) -> Message:
         """读取终端屏幕内容"""
-        return await read_terminal_screen(terminal_id)
+        return await terminal_read_screen(terminal_id)
 
-    async def close_terminal(self, terminal_id: str) -> Message:
+    async def terminal_close(self, terminal_id: str) -> Message:
         """关闭终端"""
-        return await close_terminal(terminal_id)
+        return await terminal_close(terminal_id)
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False

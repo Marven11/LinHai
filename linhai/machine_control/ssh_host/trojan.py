@@ -242,7 +242,7 @@ class Trojan:
         except Exception as e:
             return {"error": str(e)}
 
-    def create_terminal(self, columns: int = 80, lines: int = 24) -> TrojanResult:
+    def terminal_create(self, columns: int = 80, lines: int = 24) -> TrojanResult:
         """创建终端，返回终端ID
 
         Args:
@@ -288,7 +288,7 @@ class Trojan:
 
         return {"message": term_id}
 
-    def send_keys_to_terminal(self, term_id: str, keys: list[str]) -> TrojanResult:
+    def terminal_send_keys(self, term_id: str, keys: list[str]) -> TrojanResult:
         """发送按键到终端
 
         Args:
@@ -333,7 +333,7 @@ class Trojan:
 
         return {"message": f"已发送按键: {keys}"}
 
-    def send_string_to_terminal(
+    def terminal_send_string(
         self, term_id: str, string: str, with_enter: bool = False
     ) -> TrojanResult:
         """发送字符串到终端
@@ -359,7 +359,7 @@ class Trojan:
 
         return {"message": f"已发送字符串: {string}"}
 
-    def read_terminal_screen(self, term_id: str) -> TrojanResult:
+    def terminal_read_screen(self, term_id: str) -> TrojanResult:
         """读取终端屏幕内容，返回base64编码的原始字节流供pyte处理
 
         Args:
@@ -391,7 +391,7 @@ class Trojan:
         # 返回base64编码的原始字节流，由pyte处理
         return {"message": base64.b64encode(data).decode("utf-8")}
 
-    def close_terminal(self, term_id: str) -> TrojanResult:
+    def terminal_close(self, term_id: str) -> TrojanResult:
         """关闭终端
 
         Args:

@@ -121,11 +121,11 @@ class TestMasterHostControl(unittest.TestCase):
 
     def test_terminal_operations(self):
         """测试终端操作"""
-        self.assertTrue(hasattr(self.host_control, "create_terminal"))
-        self.assertTrue(hasattr(self.host_control, "send_keys_to_terminal"))
-        self.assertTrue(hasattr(self.host_control, "send_string_to_terminal"))
-        self.assertTrue(hasattr(self.host_control, "read_terminal_screen"))
-        self.assertTrue(hasattr(self.host_control, "close_terminal"))
+        self.assertTrue(hasattr(self.host_control, "terminal_create"))
+        self.assertTrue(hasattr(self.host_control, "terminal_send_keys"))
+        self.assertTrue(hasattr(self.host_control, "terminal_send_string"))
+        self.assertTrue(hasattr(self.host_control, "terminal_read_screen"))
+        self.assertTrue(hasattr(self.host_control, "terminal_close"))
 
 
 if __name__ == "__main__":

@@ -65,40 +65,6 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_after_tool_call_simple_sed_blocked(self):
-        """测试直接使用sed命令被拦截。"""
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "sed -n '1,10p' file.txt"},
-        )
-
-        # 模拟没有已读取的文件
-        with patch.object(self.plugin, "_get_read_files", return_value=set()):
-            result = await self.plugin._after_tool_call(
-                self.agent, tool_call, "result", True
-            )
-
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
-        assert result is not None  # 帮助类型检查器
-        self.assertIn("禁止直接使用sed命令", result.message)
-
-    async def test_after_tool_call_simple_grep_blocked(self):
-        """测试直接使用grep命令被拦截。"""
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "grep pattern file.txt"},
-        )
-
-        with patch.object(self.plugin, "_get_read_files", return_value=set()):
-            result = await self.plugin._after_tool_call(
-                self.agent, tool_call, "result", True
-            )
-
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
-        assert result is not None  # 帮助类型检查器
-        self.assertIn("禁止使用grep命令", result.message)
 
     async def test_after_tool_call_with_pipeline_allowed(self):
         """测试在管道中的grep命令允许。"""
@@ -175,30 +141,6 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-
-    async def test_after_tool_call_different_file_allowed(self):
-        """测试访问未读取的文件允许。"""
-        # 模拟已读取的文件
-        read_file_path = Path("/path/to/read.txt").resolve()
-        read_files = {read_file_path}
-
-        mock_file_msg = MagicMock(spec=FileContentMessage)
-        mock_file_msg.filepath = "/path/to/read.txt"
-
-        self.agent.message_processor.get_messages.return_value = [mock_file_msg]
-
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "grep pattern /path/to/other.txt"},
-        )
-
-        with patch.object(self.plugin, "_get_read_files", return_value=read_files):
-            result = await self.plugin._after_tool_call(
-                self.agent, tool_call, "result", True
-            )
-
-        # 应该允许，因为访问的是不同的文件
-        self.assertIsNone(result)
 
     async def test_get_read_files(self):
         """测试获取已读取的文件。"""

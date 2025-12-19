@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 
 from pathlib import Path
 import re
+import reprlib
 import time
 import bashlex
 import bashlex.ast
 import bashlex.errors
-from typing import Any, Dict, List, Optional, TypeAlias, Union
+from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union
 
 from linhai.agent import Agent
 import linhai.agent as linhai_agent
@@ -679,10 +680,15 @@ class DuplicateFileReadPlugin(Plugin):
                     content="模型使用read_file_with_sed读取已读取文件，已阻止",
                 ),
             )
+            latest_content: str = recent_file_messages[0].content
+            reprobj = reprlib.Repr(maxstring=100)
+
+            preview = reprobj.repr(latest_content)
             return RuntimeMessage(
-                "错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！"
-                "这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！"
-                "本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+                f"错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！\n"
+                f"文件内容预览：{preview}\n"
+                f"这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！\n"
+                f"本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
             )
 
         return None
@@ -713,9 +719,14 @@ class DuplicateFileReadPlugin(Plugin):
                         content="模型重复读取相同文件，已阻止",
                     ),
                 )
+                content = latest_message.content
+                reprobj = reprlib.Repr(maxstring=100)
+
+                preview = reprobj.repr(content)
                 return RuntimeMessage(
-                    f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。"
-                    "不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                    f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
+                    f"文件内容预览：{preview}\n"
+                    f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
                 )
             return None
 
@@ -812,6 +823,8 @@ class UnnecessaryRunCommandPlugin(Plugin):
     3. 检查命令是否访问已读取的文件且不在管道/重定向中
     """
 
+    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {"grep", "head", "tail", "cat", "sed"}
+
     def register(self, lifecycle):
         """注册插件回调。"""
         lifecycle.register_after_tool_call(self._after_tool_call)
@@ -831,15 +844,14 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if not command or not isinstance(command, str):
             return None
 
+
         read_files = self._get_read_files(agent)
-
         if read_files and should_block_command_with_files(command, read_files):
-
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
-                    content="模型使用命令查看文件，已阻止",
+                    content="模型使用命令查看已读取文件，已阻止",
                 ),
             )
             return self._generate_warning_message(command)
@@ -860,7 +872,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
     def _generate_warning_message(self, command: str) -> RuntimeMessage:
         """生成警告消息。"""
-        forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
+        forbidden_commands = self.FORBIDDEN_COMMANDS
         cmd_name = None
         try:
             parts = bashlex.parse(command)
