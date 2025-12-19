@@ -63,7 +63,7 @@ class WaitingUserPlugin(Plugin):
 
         if not agent.current_disable_waiting_user_warning:
             if tool_calls and has_waiting_marker:
-                agent.message_processor.append_message(
+                agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
                         f"工具调用和等待用户是互斥的，请只选择其中一种方式"
@@ -71,7 +71,7 @@ class WaitingUserPlugin(Plugin):
                 )
                 return
             if agent.state == "working" and not tool_calls and not has_waiting_marker:
-                agent.message_processor.append_message(
+                agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
                         f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
@@ -82,7 +82,7 @@ class WaitingUserPlugin(Plugin):
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
-                agent.message_processor.append_message(
+                agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
@@ -107,7 +107,7 @@ class WrongEndPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         regex_result = re.search("<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
-            agent.message_processor.append_message(
+            agent.message_processor.add_new_message(
                 RuntimeMessage(f"警告: 输出了错误的token: {regex_result!r}")
             )
 
@@ -144,7 +144,7 @@ class PromptFastAgentPlugin(Plugin):
         )
 
         if not has_previous_agent_message:
-            agent.message_processor.append_message(
+            agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
                 )
@@ -158,7 +158,7 @@ class PromptFastAgentPlugin(Plugin):
             )
 
         if model.compatibility == "glm":
-            agent.message_processor.append_message(
+            agent.message_processor.add_new_message(
                 RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
             )
 
@@ -180,7 +180,7 @@ class PromptFastAgentPlugin(Plugin):
                     "从刚刚开始就一直在调用大量工具，你疯了？？？？"
                     + "？！？！" * self.speeding_counter
                 )
-            agent.message_processor.append_message(
+            agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
                     + extra_message
@@ -217,7 +217,7 @@ class SlowStartPlugin(Plugin):
     ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         if not self.enabled:
-            return
+            return False
 
         if current_content.count("```json toolcall") > 5:
             self.enabled = False
@@ -256,7 +256,7 @@ class WeirdTokenPlugin(Plugin):
         for line in current_content.split("\n"):
             if re.search(pattern, line):
                 # 使用truncate以保留已经输出的工具调用，避免重复调用
-                agent.message_processor.append_message(
+                agent.message_processor.add_new_message(
                     RuntimeMessage(
                         "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已截断输出"
                     )
@@ -338,7 +338,7 @@ class DirectoryChangePlugin(Plugin):
                     if isinstance(message, (GlobalMemory, PathMemory))
                 )
                 if not has_duplicate:
-                    agent.message_processor.append_message(PathMemory(filepath))
+                    agent.message_processor.add_new_message(PathMemory(filepath))
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到before_message_generation回调。"""
@@ -510,7 +510,7 @@ class ToolCallInReasoningPlugin(Plugin):
                 f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
             )
 
-        agent.message_processor.append_message(RuntimeMessage(agent_warning_message))
+        agent.message_processor.add_new_message(RuntimeMessage(agent_warning_message))
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="WARNING", content=ui_warning_message),
@@ -547,24 +547,24 @@ class PreventToolOutputPlugin(Plugin):
         if self.generated_message_count >= 5:
             return False
 
-        lines = current_content.split("\n")
-        for line in lines:
-            if line.strip().startswith("**tool**"):
-                agent.message_processor.append_message(
-                    RuntimeMessage(
-                        "错误：请不要输出工具调用的内容！"
-                        "工具调用内容（如`**tool**`）是系统内部使用的标签，"
-                        "你不应该直接输出这些内容。"
+            lines = current_content.split("\n")
+            for line in lines:
+                if line.strip().startswith("**tool**"):
+                    agent.message_processor.append_message(
+                        RuntimeMessage(
+                            "错误：请不要输出工具调用的内容！"
+                            "工具调用内容（如`**tool**`）是系统内部使用的标签，"
+                            "你不应该直接输出这些内容。"
+                        )
                     )
-                )
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content="LLM错误输出了**tool**，已截断"
-                    ),
-                )
-                answer.truncate()
-                return False
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING", content="LLM错误输出了**tool**，已截断"
+                        ),
+                    )
+                    answer.truncate()
+                    return False
 
         return False
 
@@ -598,7 +598,7 @@ class JsonCodeBlockPlugin(Plugin):
                 warning_msg = f"警告：你使用了`json`代码块而非`json toolcall`代码块调用了工具{unique_tool_names}，请使用`json toolcall`代码块！"
                 ui_msg = f"检测到json代码块中的工具调用: {', '.join(unique_tool_names)}"
 
-            agent.message_processor.append_message(RuntimeMessage(warning_msg))
+            agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
             )

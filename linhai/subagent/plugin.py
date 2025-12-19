@@ -42,7 +42,7 @@ class GitBlockingPlugin(Plugin):
                             for i in unanswered
                         ]
                     )
-                    agent.message_processor.append_message(
+                    agent.message_processor.add_new_message(
                         RuntimeMessage(
                             f"错误：有未解答的issue，禁止使用git命令。"
                             f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的issue。\n"
@@ -106,7 +106,7 @@ class IssueWaitingUserPlugin(Plugin):
                     for i in unanswered
                 ]
             )
-            agent.message_processor.append_message(
+            agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"错误：有未解答的issue，禁止进入等待用户状态。\n"
                     f"未解答的issue:\n{issue_info}"
@@ -143,7 +143,7 @@ class IssueBlockingPlugin(Plugin):
                         for i in unanswered
                     ]
                 )
-                agent.message_processor.append_message(
+                agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误：有未解答的issue，禁止使用{WAITING_USER_MARKER!r}等待用户。\n"
                         f"未解答的issue:\n{issue_info}"

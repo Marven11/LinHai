@@ -169,13 +169,13 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         content = queue_msg.message.strip()  # type: ignore
         self.assertTrue(content.startswith("/queue"))
 
-        self.agent.message_processor.append_message(
+        self.agent.message_processor.add_new_message(
             AssistantMessage(message="Agent响应")
         )
-        self.agent.message_processor.append_message(
+        self.agent.message_processor.add_new_message(
             RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
         )
-        self.agent.message_processor.append_message(queue_msg)
+        self.agent.message_processor.add_new_message(queue_msg)
 
         agent_messages = self.agent.message_processor.get_messages()
         self.assertEqual(len(agent_messages), 3)

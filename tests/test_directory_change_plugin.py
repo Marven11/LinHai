@@ -137,7 +137,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         existing_memory = PathMemory(test_file)
-        self.mock_agent.message_processor.append_message(existing_memory)
+        self.mock_agent.message_processor.add_new_message(existing_memory)
 
         import asyncio
 
@@ -160,7 +160,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         existing_memory = GlobalMemory(test_file)
-        self.mock_agent.message_processor.append_message(existing_memory)
+        self.mock_agent.message_processor.add_new_message(existing_memory)
 
         import asyncio
 

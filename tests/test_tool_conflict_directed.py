@@ -22,7 +22,7 @@ class TestDirectedToolConflict(unittest.TestCase):
         self.agent.lifecycle.trigger_after_tool_call = AsyncMock(return_value=None)
         self.agent.lifecycle.trigger_tool_conflict = AsyncMock()
         self.agent.message_processor = MagicMock()
-        self.agent.message_processor.append_message = AsyncMock()
+        self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.compress_tool_called_in_last_response = False
         self.agent.state = "working"
 

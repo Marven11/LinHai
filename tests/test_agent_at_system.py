@@ -95,7 +95,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_without_at_system(self):
         """测试没有@系统的默认行为。"""
         user_message = UserMessage(message="你好")
-        self.agent.message_processor.append_message(user_message)
+        self.agent.message_processor.add_new_message(user_message)
 
         selected_model = await self.agent.get_current_model()
 
@@ -104,7 +104,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_in_middle(self):
         """测试消息中间包含@的情况。"""
         user_message = UserMessage(message="请@llm2回答这个问题")
-        self.agent.message_processor.append_message(user_message)
+        self.agent.message_processor.add_new_message(user_message)
 
         selected_model = await self.agent.get_current_model()
 
@@ -113,7 +113,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_empty_at(self):
         """测试只有@的情况。"""
         user_message = UserMessage(message="@")
-        self.agent.message_processor.append_message(user_message)
+        self.agent.message_processor.add_new_message(user_message)
 
         selected_model = await self.agent.get_current_model()
 

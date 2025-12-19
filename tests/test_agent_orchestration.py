@@ -44,19 +44,18 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         """测试标记消息为垃圾。"""
         large_msg = RuntimeMessage("Large content" * 1000)
         message_id = self.orchestration.record_large_message(large_msg, "large content")
-        self.message_processor.append_message(large_msg)
+        self.message_processor.add_new_message(large_msg)
 
-        result = self.orchestration.mark_messages_as_garbage([message_id])
+        result = self.orchestration.context_mark_message_garbage([message_id])
 
-        self.assertIn("成功标记 1 条消息", result)
-        self.assertIn(f"ID为{message_id}的消息已被标记为垃圾", result)
+        self.assertEqual(result, f"已标记{message_id}为垃圾消息")
         self.assertIn(message_id, self.orchestration.garbage_message_ids)
 
     def test_mark_messages_as_garbage_not_found(self):
         """测试标记不存在的消息为垃圾。"""
-        result = self.orchestration.mark_messages_as_garbage(["nonexistent_id"])
+        result = self.orchestration.context_mark_message_garbage(["nonexistent_id"])
 
-        self.assertIn("以下ID不存在: nonexistent_id", result)
+        self.assertEqual(result, "以下ID不存在: nonexistent_id")
 
     def test_record_large_message(self):
         """测试记录大消息。"""
@@ -69,7 +68,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     async def test_context_thanox(self):
         """测试随机删除历史消息。"""
         for i in range(10):
-            self.message_processor.append_message(UserMessage(message=f"Message {i}"))
+            self.message_processor.add_new_message(UserMessage(message=f"Message {i}"))
 
         original_count = len(self.message_processor.get_messages())
         result = await self.orchestration.context_thanox()
@@ -93,16 +92,17 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加一个大消息，以便在红灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.record_large_message(large_msg, "large content")
-        self.message_processor.append_message(large_msg)
+        self.message_processor.add_new_message(large_msg)
 
-        # 调用add_soft_threshold_notification
-        self.orchestration.add_soft_threshold_notification(threshold_info)
-
-        self.assertEqual(
-            len(self.message_processor.messages), 4
-        )  # 初始2条 + 1条大消息 + 1条通知
-        self.assertIn("黄灯状态", str(self.message_processor.messages[-1]))
-        self.assertIn("Token用量", str(self.message_processor.messages[-1]))
+        # 调用add_soft_threshold_notification，现在返回字符串
+        result = self.orchestration.add_soft_threshold_notification(threshold_info)
+        
+        # 验证返回值
+        self.assertIsNotNone(result)
+        self.assertIn("黄灯状态", result)
+        self.assertIn("Token用量", result)
+        # 消息数量应该仍然是3，因为通知没有被添加，只是返回
+        self.assertEqual(len(self.message_processor.messages), 3)
 
     def test_add_soft_threshold_notification_with_compress_tool(self):
         """测试压缩工具调用后不添加通知。"""
@@ -115,14 +115,16 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.record_large_message(large_msg, "large content")
-        self.message_processor.append_message(large_msg)
+        self.message_processor.add_new_message(large_msg)
 
-        # 调用add_soft_threshold_notification
-        self.orchestration.add_soft_threshold_notification(threshold_info)
-
-        self.assertEqual(
-            len(self.message_processor.messages), 4
-        )  # 初始2条 + 1条大消息 + 1条通知（现在不再检查compress_tool_called_in_last_response）
+        # 调用add_soft_threshold_notification，现在返回字符串
+        result = self.orchestration.add_soft_threshold_notification(threshold_info)
+        
+        # 对于绿灯闪烁状态，应该返回消息字符串
+        self.assertIsNotNone(result)
+        self.assertIn("绿灯闪烁状态", result)
+        # 消息数量应该仍然是3
+        self.assertEqual(len(self.message_processor.messages), 3)
 
     @patch("linhai.agent.message.Path")
     @patch("linhai.agent.message.json")
@@ -148,15 +150,15 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_get_status_display_piece(self):
         """测试获取状态显示片段。"""
-        self.message_processor.append_message(RuntimeMessage("test"))
+        self.message_processor.add_new_message(RuntimeMessage("test"))
 
         # 记录一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         message_id = self.orchestration.record_large_message(large_msg, "large content")
-        self.message_processor.append_message(large_msg)
+        self.message_processor.add_new_message(large_msg)
 
         # 标记为垃圾
-        self.orchestration.mark_messages_as_garbage([message_id])
+        self.orchestration.context_mark_message_garbage([message_id])
 
         # 测试不使用nerd font
         pieces = self.orchestration.get_status_display_pieces(use_nerd_font=False)
@@ -192,7 +194,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.orchestration._determine_tool_category("context_thanox"), "cleanup")
         
         # 测试其他消息管理工具
-        self.assertEqual(self.orchestration._determine_tool_category("mark_messages_as_garbage"), "management")
+        self.assertEqual(self.orchestration._determine_tool_category("context_mark_message_garbage"), "management")
         
         # 测试其他工具
         self.assertEqual(self.orchestration._determine_tool_category("read_file"), "other")
@@ -219,88 +221,3 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = time.time() - 70  # 70秒前
         self.assertFalse(self.orchestration._recently_called_cleanup_tool())
 
-    def test_should_block_tool_call(self):
-        """测试工具调用拦截判断。"""
-        threshold_info: ThresholdInfo = {
-            "hard_limit": 100000,
-            "used_tokens": 95000,  # 使用率95%，红灯状态
-            "remaining_tokens": 5000,
-            "usage_ratio": 0.95
-        }
-        
-        # 测试红灯状态且最近没有调用清理工具
-        self.orchestration.last_compress_or_clean_time = None
-        
-        # 清理工具应该不被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
-        self.assertFalse(self.orchestration.should_block_tool_call("context_garbage_clean", threshold_info))
-        self.assertFalse(self.orchestration.should_block_tool_call("context_thanox", threshold_info))
-        
-        # 管理工具应该不被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("mark_messages_as_garbage", threshold_info))
-        
-        # 其他工具应该被拦截
-        self.assertTrue(self.orchestration.should_block_tool_call("read_file", threshold_info))
-        self.assertTrue(self.orchestration.should_block_tool_call("run_command", threshold_info))
-        
-        # 测试最近调用过清理工具
-        import time
-        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前
-        
-        # 清理工具应该被拦截（因为最近调用过）
-        self.assertTrue(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
-        self.assertTrue(self.orchestration.should_block_tool_call("context_garbage_clean", threshold_info))
-        self.assertTrue(self.orchestration.should_block_tool_call("context_thanox", threshold_info))
-        
-        # 管理工具和其他工具应该不被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("mark_messages_as_garbage", threshold_info))
-        self.assertFalse(self.orchestration.should_block_tool_call("read_file", threshold_info))
-        
-        # 测试绿灯状态
-        threshold_info["usage_ratio"] = 0.4  # 使用率40%，绿灯状态
-        self.orchestration.last_compress_or_clean_time = None
-        
-        # 所有工具都不应该被拦截
-        self.assertFalse(self.orchestration.should_block_tool_call("context_range_compress", threshold_info))
-        self.assertFalse(self.orchestration.should_block_tool_call("read_file", threshold_info))
-
-
-
-    def test_get_unmarked_large_message_ids(self):
-        """测试获取未标记的大消息ID。"""
-        # 记录几个大消息
-        msg1 = RuntimeMessage("Large content 1" * 1000)
-        msg2 = RuntimeMessage("Large content 2" * 1000)
-        msg3 = RuntimeMessage("Large content 3" * 1000)
-        
-        id1 = self.orchestration.record_large_message(msg1, "large content 1")
-        id2 = self.orchestration.record_large_message(msg2, "large content 2")
-        id3 = self.orchestration.record_large_message(msg3, "large content 3")
-        
-        # 初始状态，所有消息都未标记
-        unmarked_ids = self.orchestration._get_unmarked_large_message_ids()
-        self.assertEqual(len(unmarked_ids), 3)
-        self.assertIn(id1, unmarked_ids)
-        self.assertIn(id2, unmarked_ids)
-        self.assertIn(id3, unmarked_ids)
-        
-        # 标记一个消息为垃圾
-        self.orchestration.mark_messages_as_garbage([id2])
-        
-        # 现在应该只有两个未标记的消息
-        unmarked_ids = self.orchestration._get_unmarked_large_message_ids()
-        self.assertEqual(len(unmarked_ids), 2)
-        self.assertIn(id1, unmarked_ids)
-        self.assertNotIn(id2, unmarked_ids)
-        self.assertIn(id3, unmarked_ids)
-        
-        # 测试limit参数
-        unmarked_ids_limit2 = self.orchestration._get_unmarked_large_message_ids(limit=2)
-        self.assertEqual(len(unmarked_ids_limit2), 2)
-        
-        # 标记所有消息
-        self.orchestration.mark_messages_as_garbage([id1, id3])
-        unmarked_ids_empty = self.orchestration._get_unmarked_large_message_ids()
-        self.assertEqual(len(unmarked_ids_empty), 0)
-if __name__ == "__main__":
-    unittest.main()

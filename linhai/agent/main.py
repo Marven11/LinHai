@@ -124,13 +124,13 @@ class Agent:
                 interrupt_msg = CliRuntimeNotice(
                     level="WARNING", content=custom_message
                 )
-                self.message_processor.append_message(RuntimeMessage(custom_message))
+                self.message_processor.add_new_message(RuntimeMessage(custom_message))
             else:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
-                self.message_processor.append_message(RuntimeMessage("Agent被打断"))
+                self.message_processor.add_new_message(RuntimeMessage("Agent被打断"))
 
             if "```json toolcall" in self.current_answer.get_current_content():
-                self.message_processor.append_message(
+                self.message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
                 )
 
@@ -219,12 +219,12 @@ class Agent:
                 self.context["current_llm_index"] = self.context["llm_names"].index(
                     llm_name
                 )
-                self.message_processor.append_message(
+                self.message_processor.add_new_message(
                     RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
                 )
             else:
 
-                self.message_processor.append_message(
+                self.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点"
                     )
@@ -237,7 +237,7 @@ class Agent:
         elif parsed_input.command in ["quit", "exit"]:
             await self.group_chat.send("exit_signal", {"return_code": 0})
         else:
-            self.message_processor.append_message(msg)
+            self.message_processor.add_new_message(msg)
 
     async def get_current_model(self) -> LanguageModel:
         """
@@ -269,7 +269,7 @@ class Agent:
                 llm_msg = last_msg.to_llm_message()
                 if llm_msg.get("role") == "assistant":
                     empty_user_msg = RuntimeMessage("继续")
-                    self.message_processor.append_message(empty_user_msg)
+                    self.message_processor.add_new_message(empty_user_msg)
 
         self.current_enable_compress = enable_compress
         self.current_disable_waiting_user_warning = disable_waiting_user_warning
@@ -306,7 +306,7 @@ class Agent:
                 if parsed_input.command is None:
                     await self.group_chat.send("agent_answer", answer)
                     chat_message = answer.get_message()
-                    self.message_processor.append_message(chat_message)
+                    self.message_processor.add_new_message(chat_message)
                     await self.interrupt("Agent被用户打断")
                     await self.handle_user_message(msg)
                     return answer
@@ -317,17 +317,17 @@ class Agent:
 
         chat_message = cast(AssistantMessage, answer.get_message())
         full_response = chat_message.message
-        self.message_processor.append_message(chat_message)
+        self.message_processor.add_new_message(chat_message)
 
         if self.queued_messages:
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
             )
-            self.message_processor.append_message(
+            self.message_processor.add_new_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
             for msg in self.queued_messages:
-                self.message_processor.append_message(msg)
+                self.message_processor.add_new_message(msg)
             self.queued_messages = []
 
         try:
@@ -338,11 +338,11 @@ class Agent:
             )
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-            self.message_processor.append_message(RuntimeMessage("工具调用格式出错"))
+            self.message_processor.add_new_message(RuntimeMessage("工具调用格式出错"))
             return answer
 
         for error in errors:
-            self.message_processor.append_message(RuntimeMessage(error))
+            self.message_processor.add_new_message(RuntimeMessage(error))
 
         self.toolcall_processor.start_new_tool_call_round()
 
@@ -409,7 +409,7 @@ class Agent:
             max_answer_times=None,
         )
 
-        self.message_processor.append_message(
+        self.message_processor.add_new_message(
             RuntimeMessage(f"已启动git diff reviewer: {result}")
         )
 
@@ -433,6 +433,7 @@ class Agent:
         if user_input_found:
             await self.generate_response()
 
+        await self.lifecycle.trigger_before_agent_loop(self)
         while True:
             try:
                 if self.state == "waiting_user":

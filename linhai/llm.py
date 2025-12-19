@@ -12,6 +12,7 @@ from typing import (
 )
 import asyncio
 import json
+import re
 
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -57,6 +58,7 @@ class SystemMessage:
         template参数已移除，不再支持兼容模式。
         """
         self.group_chat = group_chat
+        self.group_chat.register_member("system_message", self)
 
         from linhai.prompt import (
             INTRODUCTION_ITEMS,
@@ -70,15 +72,6 @@ class SystemMessage:
         self.rules_items = RULES_ITEMS.copy()
         self.examples_items = EXAMPLES_ITEMS.copy()
 
-        from linhai.tool.main import ToolManager
-
-        tool_manager = group_chat.get_members("tool_manager", ToolManager)
-
-        if tool_manager is None:
-            tools_info = []
-        else:
-            tools_info = tool_manager.get_tools_info()
-        self.tools_list = json.dumps(tools_info, ensure_ascii=False)
 
     def _build_prompt(self) -> str:
         """根据结构化常量构建完整的系统提示语。"""
@@ -111,11 +104,19 @@ class SystemMessage:
             title: 章节标题（只能包含大写英文字母数字和空格）
             content: 章节内容
         """
-        import re
-
         if not re.match(r"^[A-Z0-9\s]+$", title):
             raise ValueError("标题只能包含大写英文字母数字和空格")
         self.introduction_items.append((title, content))
+
+    def remove_introduction(self, title: str) -> None:
+        """删除指定标题的introduction章节。
+
+        Args:
+            title: 要删除的章节标题
+        """
+        self.introduction_items = [
+            (k, v) for (k, v) in self.introduction_items if k != title
+        ]
 
     def add_rule(self, title: str, content: str) -> None:
         """添加一个新的rule章节。
@@ -124,11 +125,19 @@ class SystemMessage:
             title: 章节标题（只能包含大写英文字母数字和空格）
             content: 章节内容
         """
-        import re
-
         if not re.match(r"^[A-Z0-9\s]+$", title):
             raise ValueError("标题只能包含大写英文字母数字和空格")
         self.rules_items.append((title, content))
+
+    def remove_rule(self, title: str) -> None:
+        """删除指定标题的rule章节。
+
+        Args:
+            title: 要删除的章节标题
+        """
+        self.rules_items = [
+            (k, v) for (k, v) in self.rules_items if k != title
+        ]
 
     def add_example(self, title: str, content: str) -> None:
         """添加一个新的example章节。
@@ -137,29 +146,22 @@ class SystemMessage:
             title: 章节标题（只能包含大写英文字母数字和空格）
             content: 章节内容
         """
-        import re
-
         if not re.match(r"^[A-Z0-9\s]+$", title):
             raise ValueError("标题只能包含大写英文字母数字和空格")
         self.examples_items.append((title, content))
 
+    def remove_example(self, title: str) -> None:
+        """删除指定标题的example章节。
+
+        Args:
+            title: 要删除的章节标题
+        """
+        self.examples_items = [
+            (k, v) for (k, v) in self.examples_items if k != title
+        ]
+
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-
-        from linhai.tool.main import ToolManager
-
-        self.introduction_items = [
-            (k, v) for (k, v) in self.introduction_items if k != "TOOLS"
-        ]
-        self.add_introduction(
-            "TOOLS",
-            json.dumps(
-                self.group_chat.get_members(
-                    "tool_manager", ToolManager
-                ).get_tools_info(),
-                ensure_ascii=False,
-            ),
-        )
         prompt = self._build_prompt()
         return cast(LanguageModelMessage, {"role": "system", "content": prompt})
 
@@ -173,7 +175,6 @@ class SystemMessage:
             "introduction_items": self.introduction_items,
             "rules_items": self.rules_items,
             "examples_items": self.examples_items,
-            "tools_list": self.tools_list,
         }
         return json.dumps(data)
 
@@ -186,7 +187,6 @@ class SystemMessage:
         instance.introduction_items = data["introduction_items"]
         instance.rules_items = data["rules_items"]
         instance.examples_items = data["examples_items"]
-        instance.tools_list = data["tools_list"]
         return instance
 
 

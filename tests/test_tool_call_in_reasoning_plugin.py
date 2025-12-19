@@ -17,7 +17,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
 
         self.group_chat.get_members.return_value = self.agent
         self.group_chat.send_if_exists = AsyncMock()
@@ -51,8 +51,8 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)  # 不应该中断
         answer.get_reasoning_message.assert_called_once()
 
-        self.agent.message_processor.append_message.assert_called_once()
-        call_args = self.agent.message_processor.append_message.call_args
+        self.agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.agent.message_processor.add_new_message.call_args
         self.assertIsNotNone(call_args)
         self.assertIn("read_file", call_args[0][0].message)
         self.assertIn("list_files", call_args[0][0].message)
@@ -93,7 +93,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
         answer.get_reasoning_message.assert_called_once()
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_reasoning_content(self):
@@ -111,7 +111,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
             self.group_chat.send_if_exists.assert_not_called()
-            self.agent.message_processor.append_message.assert_not_called()
+            self.agent.message_processor.add_new_message.assert_not_called()
 
     async def test_after_message_generation_with_reasoning_but_no_tool_calls(self):
         """测试思考内容中没有工具调用时不做任何操作。"""
@@ -129,7 +129,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
             self.group_chat.send_if_exists.assert_not_called()
-            self.agent.message_processor.append_message.assert_not_called()
+            self.agent.message_processor.add_new_message.assert_not_called()
 
     async def test_after_message_generation_with_duplicate_tool_names(self):
         """测试重复工具名称时去重。"""
@@ -149,8 +149,8 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
-        self.agent.message_processor.append_message.assert_called_once()
-        call_args = self.agent.message_processor.append_message.call_args
+        self.agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.agent.message_processor.add_new_message.call_args
         self.assertIsNotNone(call_args)
         self.assertIn("read_file", call_args[0][0].message)
         self.assertEqual(call_args[0][0].message.count("read_file"), 1)

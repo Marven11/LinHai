@@ -15,7 +15,7 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
 
         self.issue_manager = MagicMock()
         self.issue_manager.has_unanswered_issues.return_value = False
@@ -85,7 +85,7 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()
 
     async def test_ignore_non_command_tools(self):
         """测试忽略非命令工具。"""
@@ -97,4 +97,4 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
 
         result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()

@@ -23,11 +23,11 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
         self.agent.interrupt = AsyncMock(
-            side_effect=lambda msg=None: self.agent.message_processor.append_message(
+            side_effect=lambda msg=None: self.agent.message_processor.add_new_message(
                 RuntimeMessage(msg or "Agent被插件打断")
             )
         )  # 添加interrupt mock并模拟添加消息
@@ -54,7 +54,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
 
@@ -62,8 +62,8 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
         self.agent.interrupt.assert_not_called()
-        self.assertTrue(self.agent.message_processor.append_message.called)
-        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("结束标记", call_args[0].message)
 
@@ -76,7 +76,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
@@ -143,7 +143,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         from linhai.agent.plugin import SingleToolCallReminderPlugin
@@ -238,7 +238,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.agent.interrupt = AsyncMock()
         self.agent.get_current_model = AsyncMock()
         self.group_chat = MagicMock()
@@ -292,8 +292,8 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
-        self.assertTrue(self.agent.message_processor.append_message.called)
-        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("禁止超速", call_args[0].message)
         self.assertIn("minimax", call_args[0].message)
@@ -310,7 +310,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.agent.interrupt = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
@@ -339,8 +339,8 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
-        self.assertTrue(self.agent.message_processor.append_message.called)
-        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("请不要输出工具调用的内容", call_args[0].message)
 
@@ -375,8 +375,8 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
-        self.assertTrue(self.agent.message_processor.append_message.called)
-        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("请不要输出工具调用的内容", call_args[0].message)
 
@@ -393,7 +393,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         result = await self.plugin.after_token_generation(self.answer, current_content)
 
         self.assertFalse(result)
-        self.assertTrue(self.agent.message_processor.append_message.called)
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
         self.answer.truncate.assert_called_once()
 
     async def test_after_token_generation_with_1_previous_message(self):
@@ -407,7 +407,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         result = await self.plugin.after_token_generation(self.answer, current_content)
 
         self.assertFalse(result)
-        self.assertTrue(self.agent.message_processor.append_message.called)
+        self.assertTrue(self.agent.message_processor.add_new_message.called)
         self.answer.truncate.assert_called_once()
 
 class TestRedStateToolBlockPlugin(unittest.TestCase):
@@ -424,7 +424,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 模拟agent
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
-        self.agent.message_processor.append_message = AsyncMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         # 默认阈值信息：绿灯状态
         self.agent.get_threshold_info.return_value = {
             "hard_limit": 80000,
@@ -437,6 +437,46 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration = MagicMock()
         self.orchestration.last_compress_or_clean_time = None
         self.orchestration.should_block_tool_call = MagicMock(return_value=False)
+        
+        # Mock get_tool_block_details返回实际的字典
+        def mock_get_tool_block_details(tool_name, threshold_info):
+            if threshold_info is None:
+                return {
+                    "should_block": False,
+                    "tool_category": "other",
+                    "recently_called_cleanup": False,
+                    "current_state": "绿灯"
+                }
+            
+            current_state = "绿灯"
+            usage_ratio = threshold_info["usage_ratio"]
+            if usage_ratio >= 0.9:
+                current_state = "红灯"
+            elif usage_ratio >= 0.7:
+                current_state = "黄灯"
+            elif usage_ratio >= 0.5:
+                current_state = "绿灯闪烁"
+            
+            recently_called_cleanup = self.orchestration.last_compress_or_clean_time is not None and \
+                (time.time() - self.orchestration.last_compress_or_clean_time) < 60
+            
+            tool_category = "cleanup" if tool_name in ["context_range_compress", "context_garbage_clean", "context_thanox"] else \
+                           "management" if tool_name == "context_mark_message_garbage" else "other"
+            
+            should_block = False
+            if recently_called_cleanup:
+                should_block = tool_category == "cleanup"
+            elif current_state == "红灯":
+                should_block = tool_category not in ["cleanup", "management"]
+            
+            return {
+                "should_block": should_block,
+                "tool_category": tool_category,
+                "recently_called_cleanup": recently_called_cleanup,
+                "current_state": current_state
+            }
+        
+        self.orchestration.get_tool_block_details = MagicMock(side_effect=mock_get_tool_block_details)
 
         # 设置group_chat.get_members返回值
         def get_members_side_effect(name, cls):
@@ -463,7 +503,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertEqual(
             self.plugin.MANAGEMENT_TOOLS,
             {
-                "mark_messages_as_garbage",
+                "context_mark_message_garbage",
             },
         )
 
@@ -504,7 +544,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证不阻止
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     def test_red_state_allow_cleanup_tool(self):
@@ -521,7 +561,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="mark_messages_as_garbage",
+            function_name="context_mark_message_garbage",
             function_arguments={"ids": ["test_id"]},
             assert_success=True,
         )
@@ -534,11 +574,11 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证允许调用
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
-    def test_red_state_block_other_tool_no_recent_cleanup(self):
-        """测试红灯状态且无近期清理，阻止其他工具。"""
+    def test_red_state_recent_cleanup_block_cleanup_tool(self):
+        """测试红灯状态、最近调用过清理工具、调用清理工具时被拦截并显示正确错误消息。"""
         # 设置模拟
         self.agent.get_threshold_info.return_value = {
             "hard_limit": 80000,
@@ -546,113 +586,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             "remaining_tokens": 4000,
             "usage_ratio": 0.95,
         }  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = None  # 无近期清理
-        self.orchestration.should_block_tool_call.return_value = True
+        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.should_block_tool_call.return_value = True  # 应该拦截
 
-        # 创建其他工具调用
+        # 创建清理工具调用
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="read_file",
-            function_arguments={"filepath": "./test.py"},
-            assert_success=True,
-        )
-
-        # 调用插件
-        import asyncio
-
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
-
-        # 验证阻止 - 返回True表示阻止
-        self.assertTrue(result)
-        self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once_with(
-            "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="红灯状态下阻止调用read_file工具，请先调用消息清理类工具",
-            ),
-        )
-
-        # 检查消息内容
-        append_call = self.agent.message_processor.append_message.call_args
-        runtime_message = append_call[0][0]
-        self.assertIsInstance(runtime_message, RuntimeMessage)
-        self.assertIn(
-            "错误：当前处于红灯状态（token使用率95.0%）", runtime_message.message
-        )
-        self.assertIn("禁止调用read_file工具！", runtime_message.message)
-
-    def test_red_state_block_other_tool_with_recent_cleanup(self):
-        """测试红灯状态即使有近期清理，也阻止其他工具。"""
-        # 设置模拟
-        self.agent.get_threshold_info.return_value = {
-            "hard_limit": 80000,
-            "used_tokens": 76000,
-            "remaining_tokens": 4000,
-            "usage_ratio": 0.95,
-        }  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = (
-            time.time() - 30
-        )  # 30秒前清理过
-        self.orchestration.should_block_tool_call.return_value = True
-
-        # 创建其他工具调用
-        from linhai.llm import ToolCallMessage
-
-        tool_call = ToolCallMessage(
-            function_name="read_file",
-            function_arguments={"filepath": "./test.py"},
-            assert_success=True,
-        )
-
-        # 调用插件
-        import asyncio
-
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
-
-        # 验证阻止（无论是否有清理，红灯状态只允许清理类工具）
-        self.assertTrue(result)
-        self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once_with(
-            "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="红灯状态下阻止调用read_file工具，请先调用消息清理类工具",
-            ),
-        )
-
-        # 检查消息内容
-        append_call = self.agent.message_processor.append_message.call_args
-        runtime_message = append_call[0][0]
-        self.assertIsInstance(runtime_message, RuntimeMessage)
-        self.assertIn(
-            "错误：当前处于红灯状态（token使用率95.0%）", runtime_message.message
-        )
-        self.assertIn("禁止调用read_file工具！", runtime_message.message)
-
-    def test_red_state_block_other_tool_old_cleanup(self):
-        """测试红灯状态但清理时间超过一分钟，阻止其他工具。"""
-        # 设置模拟
-        self.agent.get_threshold_info.return_value = {
-            "hard_limit": 80000,
-            "used_tokens": 76000,
-            "remaining_tokens": 4000,
-            "usage_ratio": 0.95,
-        }  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = (
-            time.time() - 90
-        )  # 90秒前清理过，超过一分钟
-        self.orchestration.should_block_tool_call.return_value = True
-
-        # 创建其他工具调用
-        from linhai.llm import ToolCallMessage
-
-        tool_call = ToolCallMessage(
-            function_name="read_file",
-            function_arguments={"filepath": "./test.py"},
+            function_name="context_garbage_clean",
+            function_arguments={},
             assert_success=True,
         )
 
@@ -664,15 +606,35 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证阻止
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once()
+        self.agent.message_processor.add_new_message.assert_called_once()
+        self.group_chat.send_if_exists.assert_called_once_with(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="一分钟内已调用过消息清理工具，禁止调用context_garbage_clean工具",
+            ),
+        )
 
-    def test_no_threshold_info(self):
-        """测试无阈值信息时不阻止工具。"""
+        # 检查错误消息是否包含一分钟内禁止
+        append_call = self.agent.message_processor.add_new_message.call_args
+        runtime_message = append_call[0][0]
+        self.assertIsInstance(runtime_message, RuntimeMessage)
+        self.assertIn("一分钟内已调用过消息清理工具", runtime_message.message)
+        self.assertIn("禁止再次调用context_garbage_clean工具", runtime_message.message)
+
+    def test_red_state_recent_cleanup_allow_other_tool(self):
+        """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""
         # 设置模拟
-        self.agent.get_threshold_info.return_value = None  # 无阈值信息
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
+        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.should_block_tool_call.return_value = False  # 不应该拦截
 
-        # 创建工具调用
+        # 创建其他工具调用
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
@@ -689,7 +651,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证不阻止
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.append_message.assert_not_called()
+        self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     def test_all_allowed_tools(self):
@@ -720,7 +682,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
         for tool_name in allowed_tools:
             # 重置模拟调用计数
-            self.agent.message_processor.append_message.reset_mock()
+            self.agent.message_processor.add_new_message.reset_mock()
             self.group_chat.send_if_exists.reset_mock()
 
             # 创建工具调用
@@ -739,5 +701,82 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
             # 验证允许调用
             self.assertFalse(result, f"工具 {tool_name} 应该被允许")
-            self.agent.message_processor.append_message.assert_not_called()
+            self.agent.message_processor.add_new_message.assert_not_called()
             self.group_chat.send_if_exists.assert_not_called()
+
+    def test_red_state_recent_cleanup_block_cleanup_tool(self):
+        """测试红灯状态、最近调用过清理工具、调用清理工具时被拦截并显示正确错误消息。"""
+        # 设置模拟
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
+        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.should_block_tool_call.return_value = True  # 应该拦截
+
+        # 创建清理工具调用
+        from linhai.llm import ToolCallMessage
+
+        tool_call = ToolCallMessage(
+            function_name="context_garbage_clean",
+            function_arguments={},
+            assert_success=True,
+        )
+
+        # 调用插件
+        import asyncio
+
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+
+        # 验证阻止
+        self.assertTrue(result)
+        self.agent.get_threshold_info.assert_called_once()
+        self.agent.message_processor.add_new_message.assert_called_once()
+        self.group_chat.send_if_exists.assert_called_once_with(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="一分钟内已调用过消息清理工具，禁止调用context_garbage_clean工具",
+            ),
+        )
+
+        # 检查错误消息是否包含一分钟内禁止
+        append_call = self.agent.message_processor.add_new_message.call_args
+        runtime_message = append_call[0][0]
+        self.assertIsInstance(runtime_message, RuntimeMessage)
+        self.assertIn("一分钟内已调用过消息清理工具", runtime_message.message)
+        self.assertIn("禁止再次调用context_garbage_clean工具", runtime_message.message)
+
+    def test_red_state_recent_cleanup_allow_other_tool(self):
+        """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""
+        # 设置模拟
+        self.agent.get_threshold_info.return_value = {
+            "hard_limit": 80000,
+            "used_tokens": 76000,
+            "remaining_tokens": 4000,
+            "usage_ratio": 0.95,
+        }  # 95%使用率，红灯
+        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.should_block_tool_call.return_value = False  # 不应该拦截
+
+        # 创建其他工具调用
+        from linhai.llm import ToolCallMessage
+
+        tool_call = ToolCallMessage(
+            function_name="read_file",
+            function_arguments={"filepath": "./test.py"},
+            assert_success=True,
+        )
+
+        # 调用插件
+        import asyncio
+
+        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+
+        # 验证不阻止
+        self.assertFalse(result)
+        self.agent.get_threshold_info.assert_called_once()
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()

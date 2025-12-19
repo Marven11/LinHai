@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import json
 from collections import Counter
 from pathlib import Path
 from typing import Awaitable
@@ -168,3 +169,25 @@ class ToolManager:
             max_output_length = 50000
 
         return ToolResultMessage(content=result, max_output_length=max_output_length)
+
+    def register_lifecycle(self):
+
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle.register_before_message_generation(self.update_tools_definition)
+
+    async def update_tools_definition(
+        self, _enable_compress: bool, _disable_waiting_user_warning: bool
+    ):
+        """更新SystemMessage中的工具定义（before_message_generation回调）。"""
+        from linhai.llm import SystemMessage
+
+        system_message = self.group_chat.get_members("system_message", SystemMessage)
+
+        system_message.remove_introduction("TOOLS")
+
+        tools_info = self.get_tools_info()
+        system_message.add_introduction(
+            "TOOLS", json.dumps(tools_info, ensure_ascii=False)
+        )

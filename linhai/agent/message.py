@@ -45,17 +45,17 @@ class AgentMessage:
         parsed_input = parse_user_input(content)
 
         if parsed_input.switch_model:
-            self.append_message(msg)
+            self.add_new_message(msg)
             return
 
-        self.append_message(msg)
+        self.add_new_message(msg)
 
     async def count_invalidate_cache(self):
         interrupt_msg = CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
         self.cache_invalidate_count += 1
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-    def append_message(self, msg: Message) -> None:
+    def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
 
         新消息插入在普通消息后，appending_messages前。

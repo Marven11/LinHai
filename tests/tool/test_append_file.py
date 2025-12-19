@@ -39,17 +39,16 @@ class TestAppendFile(unittest.TestCase):
 
         try:
             result = append_file(temp_path, "Line 3")
-            self.assertIn("成功写入文件", result.content)
-
+            self.assertIn("错误：使用assume_empty_line假设原文件末尾有换行", result.content)
+            # 文件内容不应被修改，因为返回了错误
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            # 当文件不以换行符结尾且新内容不以换行符开头时，会添加警告信息
-            self.assertEqual(content, "Line 1\nLine 2Line 3\n警告：原文件末尾没有换行，原最后一行被修改！\n")
+            self.assertEqual(content, "Line 1\nLine 2")  # 文件应保持不变
         finally:
             os.unlink(temp_path)
 
     def test_append_file_without_empty_line_default_warning(self):
-        """测试默认行为（assume_empty_line=True）当文件不以换行符结尾且新内容也不以换行符开头时产生警告。"""
+        """测试默认行为（assume_empty_line=True）当文件不以换行符结尾且新内容也不以换行符开头时产生错误。"""
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".txt", delete=False
         ) as temp_file:
@@ -58,12 +57,11 @@ class TestAppendFile(unittest.TestCase):
 
         try:
             result = append_file(temp_path, "Line 3")
-            self.assertIn("成功写入文件", result.content)
-
+            self.assertIn("错误：使用assume_empty_line假设原文件末尾有换行", result.content)
+            # 文件内容不应被修改，因为返回了错误
             with open(temp_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            self.assertIn("警告：原文件末尾没有换行，原最后一行被修改！", content)
-            self.assertIn("Line 3", content)
+            self.assertEqual(content, "Line 1\nLine 2")  # 文件应保持不变
         finally:
             os.unlink(temp_path)
 

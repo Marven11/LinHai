@@ -18,7 +18,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()

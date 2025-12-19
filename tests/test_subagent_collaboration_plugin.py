@@ -15,7 +15,7 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages.return_value = []
-        self.agent.message_processor.append_message = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
 
         self.mock_subagent_manager = MagicMock()
         self.mock_subagent_manager.create_subagent = AsyncMock()

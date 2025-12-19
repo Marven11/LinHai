@@ -172,7 +172,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_llm.answer_stream.return_value = mock_answer2
 
-        self.agent.message_processor.append_message(tool_msg)
+        self.agent.message_processor.add_new_message(tool_msg)
 
         mock_answer2 = MockAnswer(
             [{"reasoning_content": None, "content": "Tool processed"}]

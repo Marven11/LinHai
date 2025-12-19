@@ -393,7 +393,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
                 msg for msg in mock_agent.message_processor.messages if filter_func(msg)
             ]
 
-        def append_message_side_effect(message):
+        def add_new_message_side_effect(message):
             mock_agent.message_processor.messages.append(message)
 
         mock_agent.message_processor.delete_message_range = MagicMock(
@@ -403,8 +403,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.filter_messages = AsyncMock(
             side_effect=filter_messages_side_effect
         )
-        mock_agent.message_processor.append_message = MagicMock(
-            side_effect=append_message_side_effect
+        mock_agent.message_processor.add_new_message = MagicMock(
+            side_effect=add_new_message_side_effect
         )
 
         result = await context_range_compress(mock_agent)

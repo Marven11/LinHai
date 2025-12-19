@@ -105,7 +105,7 @@ class IssueManager:
         from linhai.agent.message import AgentMessage
 
         agent_message = self.group_chat.get_members("agent_message", AgentMessage)
-        agent_message.append_message(
+        agent_message.add_new_message(
             RuntimeMessage(
                 f"收到来自SubAgent(@{from_subagent})的issue，ID为{issue_id}。\n"
                 f"内容: {content}\n"

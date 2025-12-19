@@ -159,7 +159,7 @@ class AgentToolcall:
 
         if self.early_return:
             msg = f"工具调用被跳过: {tool_call.function_name}"
-            self.agent.message_processor.append_message(RuntimeMessage(msg))
+            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -185,7 +185,7 @@ class AgentToolcall:
                 self.agent, tool_call, self.called_tools_in_round
             )
 
-            self.agent.message_processor.append_message(RuntimeMessage(conflict_msg))
+            self.agent.message_processor.add_new_message(RuntimeMessage(conflict_msg))
             self.early_return = True
             return True
 
@@ -226,7 +226,7 @@ class AgentToolcall:
                 )
                 msg = f"工具调用失败: {tool_result.content}"
 
-                self.agent.message_processor.append_message(RuntimeMessage(msg))
+                self.agent.message_processor.add_new_message(RuntimeMessage(msg))
                 if tool_call.assert_success:
                     return True
                 else:
@@ -249,15 +249,15 @@ class AgentToolcall:
             await self.agent.lifecycle.trigger_tool_failure(self.agent, tool_call, e)
             msg = f"工具调用失败: {str(e)} {repr(e)}"
 
-            self.agent.message_processor.append_message(RuntimeMessage(msg))
+            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             return False
 
     async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
         """处理工具调用结果。"""
 
-        self.agent.message_processor.append_message(
+        self.agent.message_processor.add_new_message(
             RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
         )
-        self.agent.message_processor.append_message(tool_result)
+        self.agent.message_processor.add_new_message(tool_result)
         if self.agent.state == "waiting_user":
             self.agent.state = "working"

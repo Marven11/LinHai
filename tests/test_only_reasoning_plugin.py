@@ -16,7 +16,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.mock_agent = MagicMock()
         self.mock_agent.message_processor = MagicMock()
-        self.mock_agent.message_processor.append_message = MagicMock()
+        self.mock_agent.message_processor.add_new_message = MagicMock()
         self.mock_agent.message_processor.update_appending_message = MagicMock()
         self.mock_agent.get_current_model = AsyncMock()
 
@@ -71,7 +71,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_reasoning_deepseek(self):
@@ -88,7 +88,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_with_content_only_deepseek(self):
@@ -105,7 +105,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_with_whitespace_content_deepseek(self):
@@ -139,7 +139,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_non_openai_model(self):
@@ -155,7 +155,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()  # 因为模型检查失败，提前返回
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_deepseek_with_tool_calls(self):
@@ -177,7 +177,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
-        self.mock_agent.message_processor.append_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     def test_register(self):

@@ -79,11 +79,11 @@ class TestConversationHistory(unittest.TestCase):
         """测试保存对话历史。"""
         mock_home.return_value = Path(self.temp_dir)
 
-        self.agent.message_processor.append_message(UserMessage("你好"))
-        self.agent.message_processor.append_message(
+        self.agent.message_processor.add_new_message(UserMessage("你好"))
+        self.agent.message_processor.add_new_message(
             AssistantMessage("你好！有什么可以帮助你的？")
         )
-        self.agent.message_processor.append_message(RuntimeMessage("测试运行时消息"))
+        self.agent.message_processor.add_new_message(RuntimeMessage("测试运行时消息"))
 
         asyncio.run(self.agent.save_conversation_history())
 

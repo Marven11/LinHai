@@ -79,6 +79,8 @@ ToolConflictCallback: TypeAlias = Callable[
 ]
 AfterWorkingCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
+BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -102,6 +104,7 @@ class Lifecycle:
         self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
         self._tool_conflict_callbacks: list[ToolConflictCallback] = []
         self._after_working_callbacks: list[AfterWorkingCallback] = []
+        self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
 
         self._plugins = self._register_default_plugins()
 
@@ -201,6 +204,10 @@ class Lifecycle:
         """注册工作完成后回调。"""
         self._after_working_callbacks.append(callback)
 
+    def register_before_agent_loop(self, callback: BeforeAgentLoopCallback):
+        """注册Agent循环开始前的回调。"""
+        self._before_agent_loop_callbacks.append(callback)
+
     async def trigger_after_token_generation(
         self, answer: Answer, current_content: str
     ) -> bool:
@@ -296,4 +303,9 @@ class Lifecycle:
     async def trigger_after_working(self, agent: "Agent"):
         """触发工作完成后事件。"""
         for callback in self._after_working_callbacks:
+            await callback(agent)
+
+    async def trigger_before_agent_loop(self, agent: "Agent"):
+        """触发Agent循环开始前事件。"""
+        for callback in self._before_agent_loop_callbacks:
             await callback(agent)

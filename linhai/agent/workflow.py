@@ -153,12 +153,12 @@ def _process_compression_range(
     try:
         start_id, end_id = _parse_compression_range(full_response)
     except ValueError as exc:
-        agent.message_processor.append_message(RuntimeMessage(f"错误：{str(exc)}"))
+        agent.message_processor.add_new_message(RuntimeMessage(f"错误：{str(exc)}"))
         return f"历史压缩失败：{str(exc)}"
 
     passed, error_msg = _validate_compression_range(agent, start_id, end_id)
     if not passed:
-        agent.message_processor.append_message(RuntimeMessage(error_msg))
+        agent.message_processor.add_new_message(RuntimeMessage(error_msg))
         return f"历史压缩失败：{error_msg}"
 
     return start_id, end_id
@@ -171,7 +171,7 @@ async def _execute_message_deletion(
 
     warning_msg = _check_delete_ratio_warning(agent, start_id, end_id)
     if warning_msg:
-        agent.message_processor.append_message(RuntimeMessage(warning_msg))
+        agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
 
     deleted_user_messages = _collect_deleted_user_messages(agent, start_id, end_id)
 
@@ -179,7 +179,7 @@ async def _execute_message_deletion(
     deleted_messages = await agent.message_processor.delete_message_range(
         start_id, end_id
     )
-    agent.message_processor.append_message(
+    agent.message_processor.add_new_message(
         RuntimeMessage(f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）")
     )
 
@@ -211,7 +211,7 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
 
     passed, error_msg = _check_token_threshold(agent)
     if not passed:
-        agent.message_processor.append_message(RuntimeMessage(error_msg))
+        agent.message_processor.add_new_message(RuntimeMessage(error_msg))
         return f"历史压缩未执行：{error_msg}"
 
     await agent.message_processor.filter_messages(
@@ -219,7 +219,7 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
     )
 
     messages_summerization = _prepare_messages_for_compression(agent)
-    agent.message_processor.append_message(
+    agent.message_processor.add_new_message(
         CompressRangeRequest(
             messages_summerization, len(agent.message_processor.messages)
         )

@@ -126,15 +126,15 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.toolcall.agent.lifecycle = Mock()
         self.toolcall.agent.lifecycle.trigger_tool_conflict = AsyncMock()
         self.toolcall.agent.message_processor = Mock()
-        self.toolcall.agent.message_processor.append_message = Mock()
+        self.toolcall.agent.message_processor.add_new_message = Mock()
 
     def _verify_error_message_content(self) -> None:
-        append_message_calls = self.toolcall.agent.message_processor.append_message.call_args_list  # type: ignore
-        self.assertGreater(len(append_message_calls), 0)
+        add_new_message_calls = self.toolcall.agent.message_processor.add_new_message.call_args_list  # type: ignore
+        self.assertGreater(len(add_new_message_calls), 0)
 
         conflict_messages = [
             args[0].message
-            for call in append_message_calls
+            for call in add_new_message_calls
             for args in [call[0]]
             if len(args) > 0
             and isinstance(args[0], RuntimeMessage)

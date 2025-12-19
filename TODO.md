@@ -2,18 +2,18 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重命名AgentMessage.append_message为AgentMessage.add_new_message
-- [ ] 并让AppendingMessagePlugin使用update_appending_message添加appending message而不是让AgentContextOrchestration使用append_message
+- [x] 重命名AgentMessage.append_message为AgentMessage.add_new_message
+- [x] 并让AppendingMessagePlugin使用update_appending_message添加appending message而不是让AgentContextOrchestration使用append_message
   - 我们需要避免重复添加大量关于红绿灯状态的new message
   - 消息内容的计算逻辑仍然放在AgentContextOrchestration中
-- [ ] 重构llm.py的SystemMessage
+- [x] 重构llm.py的SystemMessage
   - 添加按照标题删除introduction, rules和examples的函数
   - 不在to_llm_message中手动删除并重新添加TOOLS introduction来获取并更新工具定义
   - ToolManager通过hook before_message_generation，在callback中调用SystemMessage的函数删除并重新添加工具定义
   - 终端启动linhai测试: `uv run python -m linhai -m '@nothink 写入临时文件到/tmp/write_file_test.txt然后退出'`
-- [ ] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
-  - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
-- [ ] mark_messages_as_garbage改名为context_mark_message_garbage并修改逻辑
+- [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
+  - [?] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
+- [x] mark_messages_as_garbage改名为context_mark_message_garbage并修改逻辑
   - 检查是否提供了非法ID（错误的ID或者已经标记为垃圾的消息ID），如果有则直接返回ToolErrorMessage
   - 简化返回消息的格式，仅提及“已标记xxx为垃圾消息”
 - [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理

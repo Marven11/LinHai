@@ -22,6 +22,9 @@ class TestAppendingMessagePlugin(unittest.IsolatedAsyncioTestCase):
         # 创建模拟的Agent和AgentContextOrchestration
         self.agent = Mock(spec=Agent)
         self.agent.get_threshold_info = Mock()
+        # 添加message_processor mock
+        self.agent.message_processor = Mock()
+        self.agent.message_processor.update_appending_message = Mock()
         
         self.orchestration = Mock(spec=AgentContextOrchestration)
         self.orchestration.add_soft_threshold_notification = Mock()

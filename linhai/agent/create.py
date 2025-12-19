@@ -81,6 +81,7 @@ async def create_agent_from_config(
 
     # 注册MachineControl插件
     machine_control.register_plugin(agent.lifecycle)
+    tool_manager.register_lifecycle()
 
     subagent_config = config.subagent
     if subagent_config and subagent_config.enable:
