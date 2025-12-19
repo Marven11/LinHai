@@ -53,11 +53,6 @@ AfterTokenGenerationCallback: TypeAlias = Callable[
     Awaitable[bool],
 ]
 
-BeforeUserMessageCallback: TypeAlias = Callable[
-    ["Agent"],
-    Awaitable[bool],
-]
-
 BeforeWaitingUserCallback: TypeAlias = Callable[
     ["Agent"],
     Awaitable[None],
@@ -239,7 +234,7 @@ class Lifecycle:
             await callback(answer, full_response, tool_calls)
 
     async def trigger_before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        """触发工具调用前的事件。"""
+        """触发工具调用前的事件。callback返回True表示应该打断当前Answer"""
         should_block = False
         for callback in self._before_tool_call_callbacks:
             result = await callback(tool_call)

@@ -329,7 +329,7 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_after_token_generation_with_tool_output(self):
-        """测试检测到工具输出时使用truncate。"""
+        """测试检测到工具输出时使用truncate（少于5条assistant消息）。"""
         self.agent.message_processor.get_messages.return_value = []
 
         current_content = """**tool** 返回了结果
@@ -361,10 +361,11 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer.truncate.assert_not_called()
         self.agent.interrupt.assert_not_called()
 
-    async def test_after_token_generation_with_previous_message(self):
-        """测试有之前的assistant消息时不检查工具输出。"""
+    async def test_after_token_generation_with_4_previous_messages(self):
+        """测试有4条AssistantMessage历史时仍然检查工具输出。"""
+        # 设置消息列表包含4条AssistantMessage
         self.agent.message_processor.get_messages.return_value = [
-            AssistantMessage(message="previous message")
+            AssistantMessage(message=f"message{i}") for i in range(4)
         ]
 
         current_content = """**tool** 返回了结果
@@ -374,9 +375,40 @@ class TestPreventToolOutputPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
-        self.answer.truncate.assert_not_called()
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        call_args = self.agent.message_processor.append_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("请不要输出工具调用的内容", call_args[0].message)
+
+        self.answer.truncate.assert_called_once()
         self.agent.interrupt.assert_not_called()
 
+    async def test_after_token_generation_with_0_previous_messages(self):
+        """测试计数器为0时检测工具输出。"""
+        # 计数器默认为0，无需设置
+
+        current_content = """**tool** 返回了结果
+这是工具调用的内容"""
+
+        result = await self.plugin.after_token_generation(self.answer, current_content)
+
+        self.assertFalse(result)
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        self.answer.truncate.assert_called_once()
+
+    async def test_after_token_generation_with_1_previous_message(self):
+        """测试计数器为1时检测工具输出。"""
+        # 通过after_message_generation递增计数器一次，模拟已经生成了一条消息
+        await self.plugin.after_message_generation(self.answer, "", None)
+
+        current_content = """**tool** 返回了结果
+这是工具调用的内容"""
+
+        result = await self.plugin.after_token_generation(self.answer, current_content)
+
+        self.assertFalse(result)
+        self.assertTrue(self.agent.message_processor.append_message.called)
+        self.answer.truncate.assert_called_once()
 
 class TestRedStateToolBlockPlugin(unittest.TestCase):
     """测试RedStateToolBlockPlugin类。"""
@@ -398,7 +430,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             "hard_limit": 80000,
             "used_tokens": 40000,
             "remaining_tokens": 40000,
-            "usage_ratio": 0.5
+            "usage_ratio": 0.5,
         }
 
         # 模拟orchestration
@@ -666,7 +698,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent.get_threshold_info.return_value = None  # 无阈值信息，所以不拦截
         self.orchestration = MagicMock()
         self.orchestration.should_block_tool_call.return_value = False
-        
+
         # 更新get_members模拟以返回正确的orchestration
         def get_members_side_effect(name, cls):
             if name == "agent":
@@ -675,7 +707,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 return self.orchestration
             else:
                 return None
-        
+
         self.group_chat.get_members.side_effect = get_members_side_effect
 
         # 测试所有允许的工具

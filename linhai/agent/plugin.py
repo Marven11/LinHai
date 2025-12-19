@@ -17,9 +17,22 @@ from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
 from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage
-from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage
+from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
 from ..utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultMessage
+
+
+AnyMessage = Union[
+    AssistantMessage,
+    UserMessage,
+    ToolCallMessage,
+    RuntimeMessage,
+    GlobalMemory,
+    PathMemory,
+    FileContentMessage,
+    PreviousReasoningMessage,
+    ToolResultMessage,
+]
 
 
 JsonValue: TypeAlias = Union[
@@ -200,8 +213,8 @@ class SlowStartPlugin(Plugin):
         self.enabled = True
 
     async def after_token_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
-    ):
+        self, answer: Answer, current_content: str
+    ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         if not self.enabled:
             return
@@ -511,46 +524,53 @@ class ToolCallInReasoningPlugin(Plugin):
 class PreventToolOutputPlugin(Plugin):
     """防止agent错误输出工具调用内容的插件。
 
-    当agent的第一个回复中有一行的开头是`**tool**`时打断agent，
-    并提示不要输出工具调用的内容。
+    检测agent在整个会话中的前5个回复。当回复中包含`**tool**`行时打断agent，
+    并提示不要输出工具调用的内容。只检测会话中的前5条AssistantMessage。
     """
 
+    def __init__(self, group_chat: GroupChat) -> None:
+        super().__init__(group_chat)
+        self.generated_message_count: int = 0
+
+    async def after_message_generation(
+        self, _answer: Answer, _full_response: str, _tool_calls: Any
+    ) -> None:
+        """递增计数器，记录agent生成了一条消息。"""
+        self.generated_message_count += 1
+
     async def after_token_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
-    ):
+        self, answer: Answer, current_content: str
+    ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         agent = self.group_chat.get_members("agent", Agent)
 
-        has_previous_agent_message = any(
-            isinstance(msg, AssistantMessage)
-            for msg in agent.message_processor.get_messages()
-        )
+        if self.generated_message_count >= 5:
+            return False
 
-        if not has_previous_agent_message:
-
-            lines = current_content.split("\n")
-            for line in lines:
-                if line.strip().startswith("**tool**"):
-                    agent.message_processor.append_message(
-                        RuntimeMessage(
-                            "错误：请不要输出工具调用的内容！"
-                            "工具调用内容（如`**tool**`）是系统内部使用的标签，"
-                            "你不应该直接输出这些内容。"
-                        )
+        lines = current_content.split("\n")
+        for line in lines:
+            if line.strip().startswith("**tool**"):
+                agent.message_processor.append_message(
+                    RuntimeMessage(
+                        "错误：请不要输出工具调用的内容！"
+                        "工具调用内容（如`**tool**`）是系统内部使用的标签，"
+                        "你不应该直接输出这些内容。"
                     )
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING", content="LLM错误输出了**tool**，已截断"
-                        ),
-                    )
-                    answer.truncate()
-                    return False
+                )
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING", content="LLM错误输出了**tool**，已截断"
+                    ),
+                )
+                answer.truncate()
+                return False
 
         return False
 
     def register(self, lifecycle):
-        """注册到after_token_generation回调。"""
+        """注册相关回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
         lifecycle.register_after_token_generation(self.after_token_generation)
 
 
@@ -635,7 +655,6 @@ class DuplicateFileReadPlugin(Plugin):
         success: bool,
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否重复读取文件。"""
-        # 基本检查
         if not success:
             return None
 
@@ -647,11 +666,9 @@ class DuplicateFileReadPlugin(Plugin):
         if not filepath:
             return None
 
-        # 处理read_file_with_sed工具
         if tool_name == "read_file_with_sed":
             return await self._handle_read_file_with_sed(agent, filepath, tool_result)
 
-        # 处理read_file工具
         if tool_name == "read_file" and isinstance(tool_result, FileContentMessage):
             return await self._handle_read_file(agent, filepath, tool_result)
 
@@ -665,11 +682,12 @@ class DuplicateFileReadPlugin(Plugin):
             absolute_filepath = str(Path(filepath).resolve())
         except (OSError, ValueError):
             return None
-        
+
         recent_file_messages = [
             message
             for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage) and str(Path(message.filepath).resolve()) == absolute_filepath
+            if isinstance(message, FileContentMessage)
+            and str(Path(message.filepath).resolve()) == absolute_filepath
         ]
 
         if recent_file_messages:
@@ -701,12 +719,12 @@ class DuplicateFileReadPlugin(Plugin):
             absolute_filepath = str(Path(filepath).resolve())
         except (OSError, ValueError):
             return None
-        
-        # 检查最近的FileContentMessage中是否有相同文件
+
         recent_file_messages = [
             message
             for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage) and str(Path(message.filepath).resolve()) == absolute_filepath
+            if isinstance(message, FileContentMessage)
+            and str(Path(message.filepath).resolve()) == absolute_filepath
         ]
 
         if recent_file_messages:
@@ -785,7 +803,10 @@ class UnnecessarySedReadPlugin(Plugin):
         last_history = self.unnecessary_history.get(absolute_filepath)
         self.unnecessary_history[absolute_filepath] = time.time()
 
-        if last_history and self.unnecessary_history[absolute_filepath] - last_history < 60:
+        if (
+            last_history
+            and self.unnecessary_history[absolute_filepath] - last_history < 60
+        ):
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -844,7 +865,6 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if not command or not isinstance(command, str):
             return None
 
-
         read_files = self._get_read_files(agent)
         if read_files and should_block_command_with_files(command, read_files):
             await self.group_chat.send_if_exists(
@@ -884,7 +904,9 @@ class UnnecessaryRunCommandPlugin(Plugin):
             cmd_name = "unknown"
 
         if cmd_name == "sed":
-            return RuntimeMessage("禁止直接使用sed命令查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！")
+            return RuntimeMessage(
+                "禁止直接使用sed命令查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+            )
         else:
             return RuntimeMessage(
                 f"禁止使用{cmd_name}命令直接查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
@@ -898,11 +920,9 @@ class UnnecessaryRunCommandPlugin(Plugin):
             for part in get_children(node):
                 if part.kind == "word":  # type: ignore[attr-defined]
                     word = part.word  # type: ignore[attr-defined]
-                    # 处理带路径的命令（如/bin/cat）和简单的命令名
                     cmd_name = word.split("/")[-1]  # 获取最后一个部分
                     if cmd_name in forbidden_commands:
                         return cmd_name
-        # 递归检查子节点
         for child in get_children(node):
             result = self._extract_command_name(child, forbidden_commands)
             if result:
@@ -927,10 +947,8 @@ def traverse_ast(
     """遍历AST节点，检查是否包含需要拦截的命令。"""
     node_kind = node.kind  # type: ignore[attr-defined]
 
-    # 处理容器节点
     if node_kind in ["pipeline", "list", "compound"]:
         for child in get_children(node):
-            # 对于管道节点，子节点在管道中
             child_in_pipeline = in_pipeline or (node_kind == "pipeline")
             if traverse_ast(child, child_in_pipeline, forbidden_commands):
                 return True
@@ -980,7 +998,6 @@ def should_block_command_simple(command: str) -> bool:
     except bashlex.errors.ParsingError:
         return False
 
-    # 禁止的命令列表
     forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
 
     for ast_node in parts:
@@ -1008,7 +1025,6 @@ def should_block_command_with_files(command: str, read_files: set[Path]) -> bool
     except bashlex.errors.ParsingError:
         return False
 
-    # 检查命令是否访问已读取的文件
     return traverse_ast_with_files(parts, False, read_files)
 
 
@@ -1110,6 +1126,3 @@ def _is_read_file(word: str, read_files: set[Path]) -> bool:
         return path in read_files
     except (OSError, ValueError):
         return False
-
-
-

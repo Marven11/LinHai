@@ -58,7 +58,6 @@ class SystemMessage:
         """
         self.group_chat = group_chat
 
-        # 从prompt模块导入结构化常量并复制到实例属性（支持动态添加）
         from linhai.prompt import (
             INTRODUCTION_ITEMS,
             RULES_ITEMS,
@@ -66,13 +65,11 @@ class SystemMessage:
             OVERVIEW,
         )
 
-        # 复制常量到实例属性，以便支持动态添加
         self.overview = OVERVIEW
         self.introduction_items = INTRODUCTION_ITEMS.copy()
         self.rules_items = RULES_ITEMS.copy()
         self.examples_items = EXAMPLES_ITEMS.copy()
 
-        # 获取工具列表
         from linhai.tool.main import ToolManager
 
         tool_manager = group_chat.get_members("tool_manager", ToolManager)
@@ -87,23 +84,19 @@ class SystemMessage:
         """根据结构化常量构建完整的系统提示语。"""
         sections = []
 
-        # OVERVIEW
         sections.append("# OVERVIEW")
         sections.append(self.overview)
 
-        # INTRODUCTION
         sections.append("# INTRODUCTION")
         for title, content in self.introduction_items:
             sections.append(f"## INTRODUCTION - {title}")
             sections.append(content)
 
-        # RULES
         sections.append("# RULES")
         for title, content in self.rules_items:
             sections.append(f"## RULES - {title}")
             sections.append(content)
 
-        # EXAMPLES
         sections.append("# EXAMPLES")
         for title, content in self.examples_items:
             sections.append(f"## EXAMPLES - {title}")
@@ -118,7 +111,6 @@ class SystemMessage:
             title: 章节标题（只能包含大写英文字母数字和空格）
             content: 章节内容
         """
-        # 验证标题格式（可选，但符合DESIGN.md要求）
         import re
 
         if not re.match(r"^[A-Z0-9\s]+$", title):
@@ -156,7 +148,6 @@ class SystemMessage:
 
         from linhai.tool.main import ToolManager
 
-        # TODO 添加删除introductions等函数
         self.introduction_items = [
             (k, v) for (k, v) in self.introduction_items if k != "TOOLS"
         ]
@@ -177,7 +168,6 @@ class SystemMessage:
         return "SystemMessage()"
 
     def to_json(self) -> str:
-        # 序列化时保存template和结构化常量数据
         data = {
             "overview": self.overview,
             "introduction_items": self.introduction_items,
@@ -190,9 +180,8 @@ class SystemMessage:
     @classmethod
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         data = json.loads(json_str)
-        # 创建SystemMessage实例
         instance = cls(group_chat=group_chat)
-        # 可选你妈了个逼，这些数据不可能不存在！
+
         instance.overview = data["overview"]
         instance.introduction_items = data["introduction_items"]
         instance.rules_items = data["rules_items"]

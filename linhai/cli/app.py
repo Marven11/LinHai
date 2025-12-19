@@ -264,8 +264,7 @@ class CLIApp(App):
             await self._handle_subagent_answer_complete_wrapper(output)
         elif isinstance(output, CliRuntimeNotice):
             await self._handle_subagent_runtime_notice(output)
-        elif isinstance(output, dict) and "subagent_name" in output:
-            await self._handle_subagent_legacy_dict(output)
+
         else:
             raise RuntimeError(
                 f"Unknown Type in subagent_message: {type(output)=} {output=}"
@@ -283,11 +282,11 @@ class CLIApp(App):
             content = token.reasoning_content
         else:
             is_reasoning = False
-            content = token.content if token.content else ''
+            content = token.content if token.content else ""
 
         subagent_container = self.query_one("#subagent-container")
 
-        self._cleanup_subagent_message_widget_if_needed(subagent_name, is_reasoning)
+
 
         if subagent_name not in self.subagent_current_messages:
             current_message = self._create_subagent_message_widget(
@@ -316,46 +315,6 @@ class CLIApp(App):
         subagent_container = self.query_one("#subagent-container")
         widget = RuntimeMessageWidget(level=notice.level, content=notice.content)
         subagent_container.mount(widget)
-
-    async def _handle_subagent_legacy_dict(self, output_dict: dict) -> None:
-        """处理旧格式的字典消息（向后兼容）"""
-        subagent_name = output_dict["subagent_name"]
-        content = output_dict["content"]
-        message_type = output_dict.get("type", "message")
-        is_reasoning = output_dict.get("is_reasoning", False)
-
-        subagent_container = self.query_one("#subagent-container")
-
-        if message_type == "token":
-            self._cleanup_subagent_message_widget_if_needed(subagent_name, is_reasoning)
-
-            if subagent_name not in self.subagent_current_messages:
-                current_message = self._create_subagent_message_widget(
-                    subagent_name, content, is_reasoning
-                )
-                self.subagent_current_messages[subagent_name] = current_message
-                subagent_container.mount(current_message)
-                current_message.update_display()
-            else:
-                current_message = self.subagent_current_messages[subagent_name]
-                current_message.append_content(content)
-        elif message_type == "message_complete":
-            if subagent_name in self.subagent_current_messages:
-                self.subagent_current_messages[subagent_name].update_display()
-                del self.subagent_current_messages[subagent_name]
-        else:
-            assert False, f"Unsupported Type: {message_type}"
-
-    def _cleanup_subagent_message_widget_if_needed(
-        self, subagent_name: str, is_reasoning: bool
-    ) -> None:
-        """如果需要，清理旧的SubAgent消息widget"""
-        current_widget = self.subagent_current_messages.get(subagent_name)
-        if current_widget:
-            if isinstance(current_widget, ReasoningContentWidget) and not is_reasoning:
-                del self.subagent_current_messages[subagent_name]
-            elif isinstance(current_widget, MessageWidget) and is_reasoning:
-                del self.subagent_current_messages[subagent_name]
 
     def _create_subagent_message_widget(
         self, subagent_name: str, content: str, is_reasoning: bool
