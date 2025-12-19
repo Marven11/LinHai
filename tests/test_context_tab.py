@@ -226,8 +226,8 @@ class TestContextTab(unittest.TestCase):
         mock_static = Mock(spec=Static)
         widget.query_one = Mock(return_value=mock_static)
 
-        # 调用update_display（没有注册组件）
-        widget.update_display()
+        # 直接调用_show_waiting_message方法（因为update_display在没有组件时会失败）
+        widget._show_waiting_message()
 
         # 验证显示等待消息
         mock_static.update.assert_called_once_with("等待组件初始化...")

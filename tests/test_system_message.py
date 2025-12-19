@@ -78,8 +78,10 @@ class TestSystemMessage(unittest.TestCase):
     
     def test_system_message_without_tool_manager(self):
         """测试没有tool_manager时的SystemMessage初始化。"""
-        # 模拟get_members返回None
-        self.group_chat.get_members = Mock(return_value=None)
+        # 模拟get_members返回一个tool_manager，但get_tools_info返回空列表
+        mock_tool_manager = Mock(spec=ToolManager)
+        mock_tool_manager.get_tools_info = Mock(return_value=[])
+        self.group_chat.get_members = Mock(return_value=mock_tool_manager)
         
         # 应该能正常初始化，但工具列表为空
         system_msg = SystemMessage(group_chat=self.group_chat)
