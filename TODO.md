@@ -37,6 +37,10 @@
 
 - [ ] 研究多subagent协作
   - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
+- [ ] 修改PreventToolOutputPlugin的实现，使其检测agent的前5个message
+  - 需要在after_message_generation中计数agent生成了多少message
+  - 需要添加测试测试相关行为
+- [ ] 清理linhai/llm.py, linhai/agent/plugin.py等的大部分注释，这些注释在描述“是什么”而不是“为什么”
 - [ ] secret系统
   - 当前问题: agent必须通过参数调用工具，但是其有时需要输入密码, token等敏感信息
     - 例如agent必须发送这样的工具调用`{"name": "xxx", "arguments": {"content": "password=123456"}}`，其中需要输入敏感密码123456
