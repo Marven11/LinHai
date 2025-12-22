@@ -544,27 +544,28 @@ class PreventToolOutputPlugin(Plugin):
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         agent = self.group_chat.get_members("agent", Agent)
 
+        # 只在前5条消息检查
         if self.generated_message_count >= 5:
             return False
 
-            lines = current_content.split("\n")
-            for line in lines:
-                if line.strip().startswith("**tool**"):
-                    agent.message_processor.append_message(
-                        RuntimeMessage(
-                            "错误：请不要输出工具调用的内容！"
-                            "工具调用内容（如`**tool**`）是系统内部使用的标签，"
-                            "你不应该直接输出这些内容。"
-                        )
+        lines = current_content.split("\n")
+        for line in lines:
+            if line.strip().startswith("**tool**"):
+                agent.message_processor.add_new_message(
+                    RuntimeMessage(
+                        "错误：请不要输出工具调用的内容！"
+                        "工具调用内容（如`**tool**`）是系统内部使用的标签，"
+                        "你不应该直接输出这些内容。"
                     )
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING", content="LLM错误输出了**tool**，已截断"
-                        ),
-                    )
-                    answer.truncate()
-                    return False
+                )
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING", content="LLM错误输出了**tool**，已截断"
+                    ),
+                )
+                answer.truncate()
+                return False
 
         return False
 

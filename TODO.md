@@ -19,7 +19,7 @@
 - [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
   - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
   - 需要添加unittest测试这个行为
-- [ ] _handle_subagent_token_wrapper将所有消息都创建为正常消息，没有和agent一样的根据token类型解析的逻辑
+- [x] _handle_subagent_token_wrapper将所有消息都创建为正常消息，没有和agent一样的根据token类型解析的逻辑
   - 这个功能是在commit 4f1e494fd061e1468a7db73ff188f4a34643f9f6被改坏的
   - 需要测试
     - 当前如果第一个token.reasoning_content是空格但是接下来的token.reasoning_content都不是空格，仍然创建

@@ -1,7 +1,7 @@
 """Command-line interface for LinHai agent."""
 
 import asyncio
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -117,7 +117,7 @@ class CLIApp(App):
 
         self.is_user_scroll_to_end = False
 
-        self.subagent_current_messages: dict[
+        self.subagent_current_messages: Dict[
             str, Union[MessageWidget, ReasoningContentWidget]
         ] = {}
 
@@ -277,28 +277,127 @@ class CLIApp(App):
         subagent_name = wrapper.subagent_name
         token = wrapper.token
 
+        # 内联_extract_token_content_and_type逻辑
         if token.reasoning_content is not None and token.reasoning_content.strip():
-            is_reasoning = True
+            token_type = 'reasoning'
             content = token.reasoning_content
         else:
-            is_reasoning = False
+            token_type = 'content'
             content = token.content if token.content else ""
+        
+        if not content:
+            return
 
         subagent_container = self.query_one("#subagent-container")
+        self._ensure_widget_exists(subagent_name, content, token_type, subagent_container)
 
-
-
-        if subagent_name not in self.subagent_current_messages:
-            current_message = self._create_subagent_message_widget(
-                subagent_name, content, is_reasoning
-            )
-            self.subagent_current_messages[subagent_name] = current_message
-            subagent_container.mount(current_message)
-            current_message.update_display()
+    def _extract_token_content_and_type(self, token):
+        """提取token的内容和类型
+        
+        返回: (type, content) 其中type可以是'reasoning', 'content'
+        注意：工具调用不能在这里检测，因为可能被分割成多个token，需要在消息累积缓冲区中检测
+        """
+        if token.reasoning_content is not None and token.reasoning_content.strip():
+            return 'reasoning', token.reasoning_content
         else:
-            current_message = self.subagent_current_messages[subagent_name]
-            current_message.append_content(content)
+            content = token.content if token.content else ""
+            return 'content', content
 
+    def _handle_widget_type_change(self, subagent_name, token_type):
+        """处理widget类型变化
+        
+        当token类型变化时（如从reasoning变为content），
+        完成当前widget的显示并将其从当前消息字典中移除（停止追加），
+        但widget本身保留在容器中显示。
+        """
+        from .components import ReasoningContentWidget, MessageWidget
+        
+        current_message = self.subagent_current_messages.get(subagent_name)
+        if current_message is None:
+            return
+        
+        # 检查widget类型是否匹配
+        is_correct_type = False
+        if token_type == 'reasoning':
+            is_correct_type = isinstance(current_message, ReasoningContentWidget)
+        else:  # 'content'
+            is_correct_type = isinstance(current_message, MessageWidget)
+        
+        if not is_correct_type:
+            # 完成当前widget的显示
+            current_message.update_display()
+            current_message.finish_streaming()
+            # 从字典中移除，停止向其追加内容
+            del self.subagent_current_messages[subagent_name]
+
+    def _ensure_widget_exists(self, subagent_name, content, token_type, subagent_container):
+        """确保widget存在，如果不存在则创建，否则追加内容
+        
+        根据token_type创建或获取对应的widget：
+        - reasoning类型：创建ReasoningContentWidget
+        - content类型：创建MessageWidget
+        当类型变化时，将当前widget从subagent_current_messages中移除（停止追加），
+        但widget本身保留在容器中显示。
+        """
+        from .components import ReasoningContentWidget, MessageWidget
+        
+        current_message = self.subagent_current_messages.get(subagent_name)
+        
+        # 如果当前没有widget，直接创建
+        if current_message is None:
+            # 创建新的widget
+            if token_type == 'reasoning':
+                new_message = ReasoningContentWidget(
+                    role="assistant",
+                    content=content,
+                    sender_name=subagent_name,
+                )
+            else:  # 'content'
+                new_message = MessageWidget(
+                    role="assistant",
+                    content=content,
+                    sender_name=subagent_name,
+                )
+            
+            self.subagent_current_messages[subagent_name] = new_message
+            subagent_container.mount(new_message)
+            new_message.update_display()
+            return
+        
+        # 检查widget类型是否匹配
+        is_correct_type = False
+        if token_type == 'reasoning':
+            is_correct_type = isinstance(current_message, ReasoningContentWidget)
+        else:  # token_type == 'content'
+            is_correct_type = isinstance(current_message, MessageWidget)
+        
+        if not is_correct_type:
+            # 类型不匹配，完成当前widget并创建新widget
+            current_message.update_display()
+            current_message.finish_streaming()
+            # 从字典中移除，但不从容器中删除
+            del self.subagent_current_messages[subagent_name]
+            
+            # 创建新的widget
+            if token_type == 'reasoning':
+                new_message = ReasoningContentWidget(
+                    role="assistant",
+                    content=content,
+                    sender_name=subagent_name,
+                )
+            else:  # 'content'
+                new_message = MessageWidget(
+                    role="assistant",
+                    content=content,
+                    sender_name=subagent_name,
+                )
+            
+            self.subagent_current_messages[subagent_name] = new_message
+            subagent_container.mount(new_message)
+            new_message.update_display()
+        else:
+            # 类型匹配，直接追加内容
+            current_message.append_content(content)
     async def _handle_subagent_answer_complete_wrapper(
         self, wrapper: SubAgentAnswerCompleteWrapper
     ) -> None:
@@ -319,19 +418,15 @@ class CLIApp(App):
     def _create_subagent_message_widget(
         self, subagent_name: str, content: str, is_reasoning: bool
     ):
-        """创建SubAgent消息widget"""
-        if is_reasoning:
-            return ReasoningContentWidget(
-                role="assistant",
-                content=content,
-                sender_name=subagent_name,
-            )
-        else:
-            return MessageWidget(
-                role="assistant",
-                content=content,
-                sender_name=subagent_name,
-            )
+        """创建SubAgent消息widget
+        
+        现在统一返回MessageWidget，由MessageWidget内部处理类型切换
+        """
+        return MessageWidget(
+            role="assistant",
+            content=content,
+            sender_name=subagent_name,
+        )
 
     async def watch_output_queue(self) -> None:
         """启动四个独立的任务分别监听不同的队列"""
