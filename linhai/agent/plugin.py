@@ -818,7 +818,8 @@ class UnnecessarySedReadPlugin(Plugin):
             return RuntimeMessage(
                 "错误：一分钟内多次小块读取代码文件\n"
                 "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
-                "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件"
+                "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件；"
+                "如果需要查看修改过的文件，使用read_file重新读取！"
             )
         return None
 
@@ -906,11 +907,11 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
         if cmd_name == "sed":
             return RuntimeMessage(
-                "禁止直接使用sed命令查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+                "禁止直接使用sed命令查看文件！只能使用read_file*查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
             )
         else:
             return RuntimeMessage(
-                f"禁止使用{cmd_name}命令直接查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+                f"禁止使用{cmd_name}命令直接查看文件！只能使用read_file*查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
             )
 
     def _extract_command_name(

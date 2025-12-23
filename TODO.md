@@ -2,30 +2,32 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重命名AgentMessage.append_message为AgentMessage.add_new_message
-- [x] 并让AppendingMessagePlugin使用update_appending_message添加appending message而不是让AgentContextOrchestration使用append_message
-  - 我们需要避免重复添加大量关于红绿灯状态的new message
-  - 消息内容的计算逻辑仍然放在AgentContextOrchestration中
-- [x] 重构llm.py的SystemMessage
-  - 添加按照标题删除introduction, rules和examples的函数
-  - 不在to_llm_message中手动删除并重新添加TOOLS introduction来获取并更新工具定义
-  - ToolManager通过hook before_message_generation，在callback中调用SystemMessage的函数删除并重新添加工具定义
-  - 终端启动linhai测试: `uv run python -m linhai -m '@nothink 写入临时文件到/tmp/write_file_test.txt然后退出'`
-- [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
-  - [?] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
-- [x] mark_messages_as_garbage改名为context_mark_message_garbage并修改逻辑
-  - 检查是否提供了非法ID（错误的ID或者已经标记为垃圾的消息ID），如果有则直接返回ToolErrorMessage
-  - 简化返回消息的格式，仅提及“已标记xxx为垃圾消息”
-- [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
-  - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
-  - 需要添加unittest测试这个行为
-- [x] _handle_subagent_token_wrapper将所有消息都创建为正常消息，没有和agent一样的根据token类型解析的逻辑
-  - 这个功能是在commit 4f1e494fd061e1468a7db73ff188f4a34643f9f6被改坏的
-  - 需要测试
-    - 当前如果第一个token.reasoning_content是空格但是接下来的token.reasoning_content都不是空格，仍然创建
-    - subagent正常思考后输出回答并调用工具应该生成三个message widget: 思考的widget, 正常回答的widget和工具调用widget
-      - subagent首先生成一列带有reasoning_content的token，然后生成了一列带有content的token，content连起来是正常回答和工具调用
-    - 如果subagent只思考并回答，没有使用```json toolcall调用工具，应该生成两个message widget: 思考的widget, 正常回答的widget
+- [ ] 重构linhai/cli/components.py等的逻辑
+  - 当前
+    - app.py会在token为reasoning时新建并使用ReasoningContentWidget，在token为正常token时使用MessageWidget
+    - MessageWidget会根据token内容自动判断是使用NormalContentWidget还是ToolCallWidget
+    - 但是NormalContentWidget也用来表示用户消息等
+  - 目标
+    - 让app.py不管token是不是reasoning都直接传给MessageWidget
+    - app.py完全不使用ReasoningContentWidget, NormalContentWidget或者ToolCallWidget
+    - MessageWidget根据token的类型和内容判断是使用ReasoningContentWidget, NormalContentWidget还是ToolCallWidget
+    - 写一个UserMessageWidget单独表示用户消息，并在app.py中使用
+  - 测试
+    - 修改当前已有测试以符合新代码架构
+    - 依次传入reasoning token和带有toolcall的正常token应该依次创建ReasoningContentWidget, NormalContentWidget, ToolCallWidget三个widget
+    - [ ] 新测试
+      - 当传入多个reasoning token时，无论内容有没有toolcall都只有一个ReasoningContentWidget
+      - 当传入多个非reasoning token且没有工具调用时，只有一个NormalContentWidget
+      - 当传入多个reasoning token，然后传入多个带toolcall的非reasoning token时，有一个ReasoningContentWidget, 一个ToolCallWidget和至少一个NormalContentWidget
+      - [ ] 按照https://textual.textualize.io/guide/testing/编写完整测试
+        - 流程
+          - 用户选择文本输入框并输入文本，
+          - agent生成多个reasoning token，多个不包含工具调用的token，和一个包含工具调用的普通token
+        - 开头四个方框应该完全符合以下顺序：
+          - 一个user方框
+          - 一个`deepseek (reasoning) [点击展开]`方框
+          - 一个`deepseek`方框
+          - 一个`tool call`方框
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -33,6 +35,17 @@
 
 # 暂时搁置
 
+- [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
+- [ ] 让context_mark_message_garbage返回ToolErrorMessage/ToolResultMessage而不是字符串
+- [ ] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
+  - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
+- [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
+  - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
+  - 需要添加unittest测试这个行为
+- [ ] 重构检查**tool**的插件
+  - 同时修改Answer，删除输出内容中的`**tool**`
+  - 由检查5个Answer改成三个Answer都符合要求时停止
+    - 需要修改unittest
 - [ ] 让Agent在调用工具前提前规划任务
   - 任务规划格式
     - 输出在```json toolcall前的一段嵌套无序列表，使用`[ ]`和`[x]`标记完成的和未完成的任务

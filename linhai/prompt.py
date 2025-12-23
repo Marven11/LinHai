@@ -58,7 +58,7 @@ INTRODUCTION_CONTEXT_MANAGEMENT = """
 - 清理和当前任务无关的消息，降低成本并减低心智负担
 
 你可以使用这些工具完成这些目标
-- mark_messages_as_garbage - 标记不需要的消息
+- context_mark_message_garbage - 标记不需要的消息
 - context_garbage_clean - 一次性清理所有不需要的消息
 - context_range_compress - 历史压缩：删除一连串的消息
   - 比较复杂，而且会暂停当前任务，优先使用context_garbage_clean
@@ -134,8 +134,8 @@ RULES_MCP = """
 """
 
 RULES_CONTEXT_MANAGEMENT = """
-- 优先使用mark_messages_as_garbage: 在Token达到软阈值时，一般使用mark_messages_as_garbage标记一些上一个任务的消息为垃圾
-  - mark_messages_as_garbage可以和其他工具一起调用，不需要暂停当前任务
+- 优先使用context_mark_message_garbage: 在Token达到软阈值时，一般使用context_mark_message_garbage标记一些上一个任务的消息为垃圾
+  - context_mark_message_garbage可以在其他工具之后一起调用，不需要暂停当前任务
   - 但是需要确保标记的消息和当前的任务无关！
   - 历史信息限制在0% ~ 40%时不需要使用
 - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
@@ -150,6 +150,17 @@ RULES_GLOBAL_MEMORY = """
 - 配置文件夹内的全局记忆文件优先于当前文件夹的
 """
 
+RULES_CODING = """
+- 不要二次确认：不要重复读取文件、二次确认文件内容，需要修改文件则必须直接进行修改！
+  - 大胆尝试修改：如果修改错误，runtime会帮你找出错误之处！
+  - 禁止“查找行号”、“确认内容”、“确认代码结构”
+  - 禁止使用grep, sed等工具再次查看文件
+  - 例外：再次使用read_file*工具读取已经修改的文件
+- 制定修改计划：在修改代码前必须输出当前的修改计划，指出需要修改什么文件、什么函数等
+  - 立马开始行动：在制定修改计划后禁止读取其他文件！
+- runtime会一直阻止你二次查看文件，直到你按照规矩行动！
+"""
+
 RULES_ITEMS = [
     ("USER INTERACTION", RULES_USER_INTERACTION),
     ("ISSUE", RULES_ISSUE),
@@ -158,6 +169,7 @@ RULES_ITEMS = [
     ("MCP", RULES_MCP),
     ("CONTEXT MANAGEMENT", RULES_CONTEXT_MANAGEMENT),
     ("GLOBAL MEMORY", RULES_GLOBAL_MEMORY),
+    ("CODING", RULES_CODING)
 ]
 
 # ===============================

@@ -401,7 +401,7 @@ class AgentContextOrchestration:
                 f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
                 f"当前使用{percentage:.1f}%（绿灯状态）。"
                 f"当前已有{message_count}条消息。"
-                "可以顺手标记大消息，无需担心token限制。"
+                "你需要积极完成当前任务，在调用任务相关工具之后顺手标记大消息，无需担心token限制。"
             )
 
         if current_state == "绿灯闪烁":
@@ -409,7 +409,7 @@ class AgentContextOrchestration:
                 f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
                 f"当前使用{percentage:.1f}%（绿灯闪烁状态）。"
                 f"当前已有{message_count}条消息。"
-                "应该积极标记大消息，可以顺手删除一些实在和当前任务无关的消息。"
+                "你需要积极完成当前任务，在调用任务相关工具之后积极标记一些实在和当前任务无关的消息。"
             )
 
         if current_state == "黄灯":
