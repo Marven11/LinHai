@@ -287,12 +287,12 @@ class ToolCallWidget(Static):
         padding-right: 1;
         border-title-align: left;
         border-title-color: $accent;
-        border: solid $accent;
+        border-left: heavy $accent;
     }
 
     ToolCallWidget.error {
         border-title-color: red;
-        border: solid red;
+        border-left: heavy red;
     }
     """
 
@@ -447,7 +447,7 @@ class ReasoningContentWidget(Static):
         overflow: hidden;
         border-title-color: grey;
         border-title-align: left;
-        border: solid grey;
+        border-left: heavy grey;
         padding-left: 1;
         padding-right: 1;
     }
@@ -541,7 +541,7 @@ class UserMessageWidget(Static):
         padding-right: 1;
         border-title-align: left;
         border-title-color: #A3BE8C;
-        border: solid #A3BE8C;
+        border-left: heavy #A3BE8C;
     }
     """
 
@@ -585,6 +585,15 @@ class UserMessageWidget(Static):
                 )
             )
 
+class SpaceWidget(Static):
+    """隔开两个消息的空消息"""
+
+    DEFAULT_CSS = """
+    SpaceWidget {
+        width: 100%;
+        border-left: heavy $background-lighten-2;
+    }
+    """
 
 class NormalContentWidget(Static):
     """普通消息显示组件，按字符换行"""
@@ -597,7 +606,7 @@ class NormalContentWidget(Static):
         padding-right: 1;
         border-title-align: left;
         border-title-color: $primary;
-        border: solid $primary;
+        border-left: heavy $primary;
     }
     """
 
@@ -617,6 +626,8 @@ class NormalContentWidget(Static):
             self.timer.stop()
             self.timer = None
         self.update_display()
+        if not self.content_str.strip():
+            self.remove()
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -646,6 +657,12 @@ class NormalContentWidget(Static):
 
 class MessageWidget(Static):
     """普通消息显示组件，支持流式token处理和JSON工具调用显示"""
+
+    DEFAULT_CSS = """
+    MessageWidget {
+        margin: 1 0;
+    }
+    """
 
     def __init__(self, role: str, sender_name: str):
         super().__init__()
@@ -680,30 +697,33 @@ class MessageWidget(Static):
         self, new_token_type: Literal["normal", "toolcall", "reasoning"]
     ):
         """处理token类型变化"""
+        new_widget = None
         if new_token_type == "toolcall":
-            if self.current_widget:
-                self.current_widget.finish_streaming()
-            self.current_widget = ToolCallWidget()
-            self.mount(self.current_widget)
-            self.current_widget.update_display()
+            new_widget = ToolCallWidget()
         elif new_token_type == "normal":
-            if self.current_widget:
-                self.current_widget.finish_streaming()
-            self.current_widget = NormalContentWidget(
+            new_widget = NormalContentWidget(
                 role=self.role,
                 sender_name=self.sender_name,
             )
-            self.mount(self.current_widget)
-            self.current_widget.update_display()
         elif new_token_type == "reasoning":
-            if self.current_widget:
-                self.current_widget.finish_streaming()
-            self.current_widget = ReasoningContentWidget(
+            new_widget = ReasoningContentWidget(
                 role=self.role,
                 sender_name=self.sender_name,
             )
-            self.mount(self.current_widget)
-            self.current_widget.update_display()
+        else:
+            assert False, f"{new_token_type=}"
+        
+        
+        if self.current_widget:
+            self.current_widget.finish_streaming()
+            # 去除两个widget之间的border, 将两个widget拼接在一起，让UI更加美观
+            self.current_widget.styles.border_bottom = ("none", "white")
+            self.mount(SpaceWidget())
+            new_widget.styles.border_top = ("none", "white")
+        self.mount(new_widget)
+        new_widget.update_display()
+        self.current_widget = new_widget
+
         self._last_token_type = new_token_type
 
     def _handle_parsed_token(self, token: ParsedToken):
@@ -779,11 +799,10 @@ class TodolistWidget(Static):
         width: auto;
         height: auto;
         background: #3B4252;
-        border: solid #88C0D0;
+        border-left: heavy #88C0D0;
         border-title-color: #88C0D0;
         border-title-background: #3B4252;
         padding: 1;
-        margin: 1 0;
     }
 
     .todolist-title {
@@ -791,7 +810,6 @@ class TodolistWidget(Static):
         text-align: center;
         color: #88C0D0;
         text-style: bold;
-        margin-bottom: 1;
     }
 
     .todolist-item {
@@ -805,7 +823,6 @@ class TodolistWidget(Static):
         width: 100%;
         height: 1;
         background: #4C566A;
-        margin: 1 0;
     }
 
     .todolist-empty {

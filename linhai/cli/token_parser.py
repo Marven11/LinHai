@@ -50,7 +50,7 @@ class GatherLine:
 
 
 class TokenParser:
-    """将reasoning/normal的token流解析成reasoning/normal/toolcall的token流，去除toolcall中的换行"""
+    """将reasoning/normal的token流解析成reasoning/normal/toolcall的token流"""
 
     def __init__(self):
         self.state: Literal["normal", "toolcall", "reasoning"] = "normal"
@@ -74,11 +74,7 @@ class TokenParser:
                 if piece == "```json toolcall\n":
                     self.state = "toolcall"
                 else:
-                    parsed.append(
-                        ParsedToken(
-                            token_type="normal", content=piece.replace("\n", "")
-                        )
-                    )
+                    parsed.append(ParsedToken(token_type="normal", content=piece))
             elif self.state == "toolcall":
                 if piece == "```\n":
                     self.state = "normal"
