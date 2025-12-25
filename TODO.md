@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构linhai/cli/components.py等的逻辑
+- [x] 重构linhai/cli/components.py等的逻辑
   - 当前
     - app.py会在token为reasoning时新建并使用ReasoningContentWidget，在token为正常token时使用MessageWidget
     - MessageWidget会根据token内容自动判断是使用NormalContentWidget还是ToolCallWidget
@@ -15,11 +15,11 @@
   - 测试
     - 修改当前已有测试以符合新代码架构
     - 依次传入reasoning token和带有toolcall的正常token应该依次创建ReasoningContentWidget, NormalContentWidget, ToolCallWidget三个widget
-    - [ ] 新测试
+    - [x] 新测试
       - 当传入多个reasoning token时，无论内容有没有toolcall都只有一个ReasoningContentWidget
       - 当传入多个非reasoning token且没有工具调用时，只有一个NormalContentWidget
       - 当传入多个reasoning token，然后传入多个带toolcall的非reasoning token时，有一个ReasoningContentWidget, 一个ToolCallWidget和至少一个NormalContentWidget
-      - [ ] 按照https://textual.textualize.io/guide/testing/编写完整测试
+      - [x] 按照https://textual.textualize.io/guide/testing/编写完整测试
         - 流程
           - 用户选择文本输入框并输入文本，
           - agent生成多个reasoning token，多个不包含工具调用的token，和一个包含工具调用的普通token

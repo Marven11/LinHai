@@ -31,7 +31,7 @@ from .components import (
     AnimatedWelcomeWidget,
     RuntimeMessageWidget,
     MessageWidget,
-    ReasoningContentWidget,
+    UserMessageWidget,
     FooterWidget,
 )
 from .context_tab import ContextTabWidget
@@ -99,7 +99,7 @@ class CLIApp(App):
     ):
         super().__init__()
         self.theme = "nord"
-        self.messages: List[Union[MessageWidget, ReasoningContentWidget]] = []
+        self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("agent_answer")
         self.group_chat.register_queue("ui_log")
@@ -118,7 +118,7 @@ class CLIApp(App):
         self.is_user_scroll_to_end = False
 
         self.subagent_current_messages: Dict[
-            str, Union[MessageWidget, ReasoningContentWidget]
+            str, MessageWidget
         ] = {}
 
         self.completions = []  # 初始化为空，等待agent注册后再生成
@@ -156,46 +156,26 @@ class CLIApp(App):
         while True:
             output = await self.group_chat.receive("agent_answer")
             if isinstance(output, AnswerToken):
-                if output.reasoning_content:
-                    is_reasoning = True
-                    content = output.reasoning_content
-                else:
-                    is_reasoning = False
-                    content = output.content
+                is_reasoning = bool(output.reasoning_content)
+                content = output.reasoning_content if is_reasoning else output.content
                 if not content:
                     continue
-
-                if current_message and (
-                    isinstance(current_message, ReasoningContentWidget) != is_reasoning
-                ):
-                    current_message.update_display()
-                    current_message.finish_streaming()
-                    current_message = None
 
                 container = self.query_one("#chat-container")
 
                 if current_message is None:
-
                     agent = self.group_chat.get_members("agent", Agent)
                     llm_name, _llm = agent.get_current_llm_info()
-                    if is_reasoning:
-                        current_message = ReasoningContentWidget(
-                            role="assistant",
-                            content=content,
-                            sender_name=llm_name,
-                        )
-                    else:
-                        current_message = MessageWidget(
-                            role="assistant",
-                            content=content,
-                            sender_name=llm_name,
-                        )
+                    current_message = MessageWidget(
+                        role="assistant",
+                        sender_name=llm_name,
+                    )
                     await asyncio.sleep(0)
                     container.mount(current_message)
                     self.messages.append(current_message)
                     current_message.update_display()
-                else:
-                    current_message.feed_string(content)
+                
+                current_message.feed_string(content, is_reasoning)
 
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
@@ -303,101 +283,31 @@ class CLIApp(App):
             content = token.content if token.content else ""
             return 'content', content
 
-    def _handle_widget_type_change(self, subagent_name, token_type):
-        """处理widget类型变化
-        
-        当token类型变化时（如从reasoning变为content），
-        完成当前widget的显示并将其从当前消息字典中移除（停止追加），
-        但widget本身保留在容器中显示。
-        """
-        from .components import ReasoningContentWidget, MessageWidget
-        
-        current_message = self.subagent_current_messages.get(subagent_name)
-        if current_message is None:
-            return
-        
-        # 检查widget类型是否匹配
-        is_correct_type = False
-        if token_type == 'reasoning':
-            is_correct_type = isinstance(current_message, ReasoningContentWidget)
-        else:  # 'content'
-            is_correct_type = isinstance(current_message, MessageWidget)
-        
-        if not is_correct_type:
-            # 完成当前widget的显示
-            current_message.update_display()
-            current_message.finish_streaming()
-            # 从字典中移除，停止向其追加内容
-            del self.subagent_current_messages[subagent_name]
+
 
     def _ensure_widget_exists(self, subagent_name, content, token_type, subagent_container):
         """确保widget存在，如果不存在则创建，否则追加内容
         
-        根据token_type创建或获取对应的widget：
-        - reasoning类型：创建ReasoningContentWidget
-        - content类型：创建MessageWidget
-        当类型变化时，将当前widget从subagent_current_messages中移除（停止追加），
-        但widget本身保留在容器中显示。
+        使用MessageWidget统一处理所有token类型，由MessageWidget内部处理类型切换
         """
-        from .components import ReasoningContentWidget, MessageWidget
+        from .components import MessageWidget
         
         current_message = self.subagent_current_messages.get(subagent_name)
+        is_reasoning = token_type == 'reasoning'
         
         # 如果当前没有widget，直接创建
         if current_message is None:
-            # 创建新的widget
-            if token_type == 'reasoning':
-                new_message = ReasoningContentWidget(
-                    role="assistant",
-                    content=content,
-                    sender_name=subagent_name,
-                )
-            else:  # 'content'
-                new_message = MessageWidget(
-                    role="assistant",
-                    content=content,
-                    sender_name=subagent_name,
-                )
+            new_message = MessageWidget(
+                role="assistant",
+                sender_name=subagent_name,
+            )
             
             self.subagent_current_messages[subagent_name] = new_message
             subagent_container.mount(new_message)
             new_message.update_display()
-            return
         
-        # 检查widget类型是否匹配
-        is_correct_type = False
-        if token_type == 'reasoning':
-            is_correct_type = isinstance(current_message, ReasoningContentWidget)
-        else:  # token_type == 'content'
-            is_correct_type = isinstance(current_message, MessageWidget)
-        
-        if not is_correct_type:
-            # 类型不匹配，完成当前widget并创建新widget
-            current_message.update_display()
-            current_message.finish_streaming()
-            # 从字典中移除，但不从容器中删除
-            del self.subagent_current_messages[subagent_name]
-            
-            # 创建新的widget
-            if token_type == 'reasoning':
-                new_message = ReasoningContentWidget(
-                    role="assistant",
-                    content=content,
-                    sender_name=subagent_name,
-                )
-            else:  # 'content'
-                new_message = MessageWidget(
-                    role="assistant",
-                    content=content,
-                    sender_name=subagent_name,
-                )
-            
-            self.subagent_current_messages[subagent_name] = new_message
-            subagent_container.mount(new_message)
-            new_message.update_display()
-        else:
-            # 类型匹配，直接追加内容
-            current_message.append_content(content)
+        # 直接追加内容，由MessageWidget内部处理类型切换
+        current_message.feed_string(content, is_reasoning)
     async def _handle_subagent_answer_complete_wrapper(
         self, wrapper: SubAgentAnswerCompleteWrapper
     ) -> None:
@@ -424,7 +334,6 @@ class CLIApp(App):
         """
         return MessageWidget(
             role="assistant",
-            content=content,
             sender_name=subagent_name,
         )
 
@@ -497,8 +406,7 @@ class CLIApp(App):
 
                 user_msg = UserMessage(message=init_message)
                 self.messages.append(
-                    MessageWidget(
-                        role="user",
+                    UserMessageWidget(
                         content=init_message,
                         sender_name="user",
                     )
@@ -506,7 +414,7 @@ class CLIApp(App):
                 await self.group_chat.send("user_message", user_msg)
 
                 agent = self.group_chat.get_members("agent", Agent)
-                widget = MessageWidget("user", user_msg.message, sender_name="user")
+                widget = UserMessageWidget(user_msg.message, sender_name="user")
                 container = self.query_one("#chat-container")
                 container.mount(widget)
                 widget.update_display()
@@ -638,8 +546,7 @@ class CLIApp(App):
 
         user_msg = UserMessage(message=message_text)
         self.messages.append(
-            MessageWidget(
-                role="user",
+            UserMessageWidget(
                 content=message_text,
                 sender_name="user",
             )
@@ -647,7 +554,7 @@ class CLIApp(App):
         await self.group_chat.send("user_message", user_msg)
         input_element.value = ""  # type: ignore
 
-        widget = MessageWidget("user", user_msg.message, sender_name="user")
+        widget = UserMessageWidget(user_msg.message, sender_name="user")
         container.mount(widget)
         widget.update_display()
         self.is_user_scroll_to_end = True

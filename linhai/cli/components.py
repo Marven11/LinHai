@@ -16,7 +16,8 @@ from textual.timer import Timer
 from textual.widgets import Static
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
-from typing import TypedDict
+from typing import TypedDict, Literal
+from .token_parser import TokenParser, ParsedToken
 
 
 class TodolistItem(TypedDict):
@@ -295,9 +296,9 @@ class ToolCallWidget(Static):
     }
     """
 
-    def __init__(self, json_str: str):
+    def __init__(self):
         super().__init__()
-        self.json_str = json_str
+        self.json_str = ""
         self.parser = StreamJsonParser()
 
         self.timer: Timer | None = None
@@ -334,12 +335,6 @@ class ToolCallWidget(Static):
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
         self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
-
-        try:
-            self.parser.feed_string(self.json_str)
-        except RuntimeError as e:
-            self.has_error = True
-            self.error_message = str(e)
 
     def update_display(self) -> None:
         """更新显示"""
@@ -469,10 +464,10 @@ class ReasoningContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, content: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str):
         super().__init__()
         self.role = f"{role}-reasoning"
-        self.content_str = content
+        self.content_str = ""
         self.is_expanded = False
         self.timer: Timer | None = None
         self.sender_name = sender_name
@@ -535,6 +530,62 @@ class ReasoningContentWidget(Static):
         self.update(renderable)
 
 
+class UserMessageWidget(Static):
+    """用户消息显示组件"""
+
+    DEFAULT_CSS = """
+    UserMessageWidget {
+        width: 100%;
+        overflow: hidden;
+        padding-left: 1;
+        padding-right: 1;
+        border-title-align: left;
+        border-title-color: #A3BE8C;
+        border: solid #A3BE8C;
+    }
+    """
+
+    def __init__(self, content: str, sender_name: str):
+        super().__init__()
+        self.content_str = content
+        self.display_name = sender_name
+        self.timer: Timer | None = None
+        self._content_static: Static | None = None
+        self.border_title = self.display_name
+
+    def finish_streaming(self) -> None:
+        """停止组件的timer"""
+        if self.timer is not None:
+            self.timer.stop()
+            self.timer = None
+        self.update_display()
+
+    def feed_string(self, new_content: str):
+        """追加内容到消息"""
+        self.content_str += new_content
+
+    def on_mount(self) -> None:
+        """组件挂载时开始显示"""
+        self._content_static = Static("")
+        self.mount(self._content_static)
+        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
+
+    def update_display(self) -> None:
+        """更新普通消息显示，按字符换行"""
+        content_to_display = self.content_str.strip()
+
+        if self._content_static is not None:
+            self._content_static.update(
+                Syntax(
+                    content_to_display,
+                    lexer="markdown",
+                    theme="nord-darker",
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
+            )
+
+
 class NormalContentWidget(Static):
     """普通消息显示组件，按字符换行"""
 
@@ -545,24 +596,14 @@ class NormalContentWidget(Static):
         padding-left: 1;
         padding-right: 1;
         border-title-align: left;
-        border-title-color: grey;
-        border: solid grey;
-    }
-
-    NormalContentWidget.user-message {
-        border-title-color: #A3BE8C;
-        border: solid #A3BE8C;
-    }
-
-    NormalContentWidget.assistant-message {
         border-title-color: $primary;
         border: solid $primary;
     }
     """
 
-    def __init__(self, role: str, content: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str):
         super().__init__()
-        self.content_str = content
+        self.content_str = ""
         self.display_name = sender_name
         self.role = role
         self.timer: Timer | None = None
@@ -606,82 +647,75 @@ class NormalContentWidget(Static):
 class MessageWidget(Static):
     """普通消息显示组件，支持流式token处理和JSON工具调用显示"""
 
-    def __init__(self, role: str, content: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str):
         super().__init__()
         self.role = role
-        self.initial_content = content
         self.sender_name = sender_name
-        self.content_str = content
-
-        self.current_widget: ToolCallWidget | NormalContentWidget | None = None
-
-        self.current_line = ""
-
-    def update_display(self):
-        self.append_content("")
+        self.token_parser = TokenParser()
+        self.current_widget: (
+            ToolCallWidget | NormalContentWidget | ReasoningContentWidget | None
+        ) = None
+        self._last_token_type: str | None = None
 
     def finish_streaming(self) -> None:
         """停止组件的timer"""
         if self.current_widget and isinstance(
-            self.current_widget, (ToolCallWidget, NormalContentWidget)
+            self.current_widget,
+            (ToolCallWidget, NormalContentWidget, ReasoningContentWidget),
         ):
             self.current_widget.finish_streaming()
 
-    def stop_old_widget(self, old_widget: ToolCallWidget | NormalContentWidget):
-        def stop_timer():
-            if old_widget.timer:
-                old_widget.timer.stop()
+    def update_display(self):
+        """更新显示"""
+        if self.current_widget:
+            self.current_widget.update_display()
 
-        self.set_timer(5, stop_timer)
-
-    def feed_string(self, new_content: str):
+    def feed_string(self, new_content: str, is_reasoning: bool = False):
         """追加内容到消息"""
-        self.append_content(new_content)
+        parsed_tokens = self.token_parser.receive_token(new_content, is_reasoning)
+        for token in parsed_tokens:
+            self._handle_parsed_token(token)
 
-    def append_content(self, new_content: str):
-        if self.current_widget is None:
+    def _handle_token_type_change(
+        self, new_token_type: Literal["normal", "toolcall", "reasoning"]
+    ):
+        """处理token类型变化"""
+        if new_token_type == "toolcall":
+            if self.current_widget:
+                self.current_widget.finish_streaming()
+            self.current_widget = ToolCallWidget()
+            self.mount(self.current_widget)
+            self.current_widget.update_display()
+        elif new_token_type == "normal":
+            if self.current_widget:
+                self.current_widget.finish_streaming()
             self.current_widget = NormalContentWidget(
-                self.role,
-                "",
-                self.sender_name,
+                role=self.role,
+                sender_name=self.sender_name,
             )
             self.mount(self.current_widget)
-            self.append_content(self.initial_content)
-        for line in new_content.splitlines(keepends=True):
-            new_content, new_widget = self.handle_line(line)
-            self.current_widget.feed_string(new_content)
-            if new_widget is not None:
-                self.stop_old_widget(self.current_widget)
-                self.current_widget = new_widget
-                self.mount(self.current_widget)
+            self.current_widget.update_display()
+        elif new_token_type == "reasoning":
+            if self.current_widget:
+                self.current_widget.finish_streaming()
+            self.current_widget = ReasoningContentWidget(
+                role=self.role,
+                sender_name=self.sender_name,
+            )
+            self.mount(self.current_widget)
+            self.current_widget.update_display()
+        self._last_token_type = new_token_type
 
-    def handle_line(
-        self, line: str
-    ) -> tuple[str, ToolCallWidget | NormalContentWidget | None]:
-        self.current_line += line
-        if self.current_line.startswith("`"):
-            if not self.current_line.endswith("\n"):
-                return "", None
-            if isinstance(self.current_widget, NormalContentWidget):
-                if self.current_line == "```json toolcall\n":
-                    self.current_line = ""
-                    return "", ToolCallWidget("")
-                else:
-                    whole_line = self.current_line
-                    self.current_line = ""
-                    return whole_line, None
-            else:
-                whole_line = self.current_line
-                self.current_line = ""
-                return "", NormalContentWidget(
-                    self.role,
-                    "" if whole_line == "```\n" else whole_line,
-                    self.sender_name,
-                )
-        else:
-            if self.current_line.endswith("\n"):
-                self.current_line = ""
-            return line, None
+    def _handle_parsed_token(self, token: ParsedToken):
+        """处理解析后的token"""
+        token_type = token["token_type"]
+        content = token["content"]
+
+        # 检查token类型是否发生变化
+        if token_type != self._last_token_type:
+            self._handle_token_type_change(token_type)
+        assert self.current_widget is not None
+        self.current_widget.feed_string(content)
 
 
 class FooterWidget(Static):
