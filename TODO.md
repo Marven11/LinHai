@@ -10,7 +10,7 @@
   - 目标
     - 让app.py不管token是不是reasoning都直接传给MessageWidget
     - app.py完全不使用ReasoningContentWidget, NormalContentWidget或者ToolCallWidget
-    - MessageWidget根据token的类型和内容判断是使用ReasoningContentWidget, NormalContentWidget还是ToolCallWidget
+    - MessageWidget使用linhai/cli/token_parser.py处理传入的token, 判断是使用ReasoningContentWidget, NormalContentWidget还是ToolCallWidget
     - 写一个UserMessageWidget单独表示用户消息，并在app.py中使用
   - 测试
     - 修改当前已有测试以符合新代码架构
