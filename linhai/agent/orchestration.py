@@ -495,21 +495,21 @@ class AgentContextOrchestration:
 
         @toolset.register_tool(
             name="context_mark_message_todelete",
-            desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
-            "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记。"
-            "必须描述消息为什么没用",
+            desc="将多个满足特性的消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
+            "垃圾消息特性如下，注意只有完全符合其中条件的消息才可以标记为消息！"
+            "modified_files: 已经修改过的文件内容；"
+            "last_task_messages: 和上一个任务有关，和当前任务完全无关的工具结果。"
+            "特别注意以下类型不是垃圾消息："
+            "非垃圾消息一：已经分析的文件、命令输出等。例外：分析结果也和当前任务无关",
             args={
-                "desc": ToolArgInfo(
-                    desc="描述消息本身，介绍其为什么没用，以及为什么接下来完全不需要其中的内容",
-                    type="str",
-                ),
-                "ids": ToolArgInfo(desc="要标记为垃圾的消息的ID", type="list[str]"),
+                "modified_files": ToolArgInfo(desc="已修改文件的ID", type="list[str]"),
+                "last_task_messages": ToolArgInfo(desc="上一个任务的ID", type="list[str]"),
             },
             required_args=["ids"],
         )
-        def context_mark_message_todelete(desc: str, ids: list[str]) -> str:
-            del desc  # 我们只需要让LLM输出这些消息为什么没用，不检查其中的内容
-            return self.context_mark_message_todelete(ids)
+        def context_mark_message_todelete(modified_files: list[str], last_task_messages: list[str]) -> str:
+            # [TODO] 我们需要修改对应的测试以符合新的modified_files+last_task_messages格式
+            return self.context_mark_message_todelete(modified_files + last_task_messages)
 
         @toolset.register_tool(
             name="context_garbage_clean",
