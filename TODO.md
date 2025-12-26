@@ -5,7 +5,6 @@
 - [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
   - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
   - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
-- [ ] 让context_mark_message_todelete返回ToolErrorMessage/ToolResultMessage而不是字符串
 - [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
   - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
 
@@ -15,13 +14,10 @@
 
 # 暂时搁置
 
+- [ ] 让context_mark_message_todelete返回ToolErrorMessage/ToolResultMessage而不是字符串
 - [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
   - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
   - 需要添加unittest测试这个行为
-- [ ] 重构检查**tool**的插件
-  - 同时修改Answer，删除输出内容中的`**tool**`
-  - 由检查5个Answer改成三个Answer都符合要求时停止
-    - 需要修改unittest
 - [ ] 让Agent在调用工具前提前规划任务
   - 任务规划格式
     - 输出在```json toolcall前的一段嵌套无序列表，使用`[ ]`和`[x]`标记完成的和未完成的任务

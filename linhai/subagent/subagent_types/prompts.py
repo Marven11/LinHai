@@ -46,24 +46,11 @@ TOOLCALL_PROMPT = """
 
 # EXAMPLES
 
-以下是一系列示例，其中`**agent**`和`**tool**`是发送者角色，不要输出！
-
-你应该输出的部分是`**subagent**`后，`**tool**`前的部分！
-
-## 基础任务示例
-
----
-**agent**: 请睡眠5秒然后退出
-
-**subagent**: 主Agent要求我睡眠5秒然后退出
-
-现在调用sleep工具睡眠5秒
+以下是一系列示例
 
 ```json toolcall
 {"name": "sleep", "arguments": {"seconds": 5}}
 ```
-
-睡眠完成后调用exit_app工具退出
 
 ```json toolcall
 {"name": "exit_app", "arguments": {"return_code": 0}}

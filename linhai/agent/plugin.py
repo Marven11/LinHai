@@ -520,61 +520,6 @@ class ToolCallInReasoningPlugin(Plugin):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
-
-class PreventToolOutputPlugin(Plugin):
-    """防止agent错误输出工具调用内容的插件。
-
-    检测agent在整个会话中的前5个回复。当回复中包含`**tool**`行时打断agent，
-    并提示不要输出工具调用的内容。只检测会话中的前5条AssistantMessage。
-    """
-
-    def __init__(self, group_chat: GroupChat) -> None:
-        super().__init__(group_chat)
-        self.generated_message_count: int = 0
-
-    async def after_message_generation(
-        self, _answer: Answer, _full_response: str, _tool_calls: Any
-    ) -> None:
-        """递增计数器，记录agent生成了一条消息。"""
-        self.generated_message_count += 1
-
-    async def after_token_generation(
-        self, answer: Answer, current_content: str
-    ) -> bool:
-        """在消息生成过程中检查是否错误输出了工具调用内容。"""
-        agent = self.group_chat.get_members("agent", Agent)
-
-        # 只在前5条消息检查
-        if self.generated_message_count >= 5:
-            return False
-
-        lines = current_content.split("\n")
-        for line in lines:
-            if line.strip().startswith("**tool**"):
-                agent.message_processor.add_new_message(
-                    RuntimeMessage(
-                        "错误：请不要输出工具调用的内容！"
-                        "工具调用内容（如`**tool**`）是系统内部使用的标签，"
-                        "你不应该直接输出这些内容。"
-                    )
-                )
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content="LLM错误输出了**tool**，已截断"
-                    ),
-                )
-                answer.truncate()
-                return False
-
-        return False
-
-    def register(self, lifecycle):
-        """注册相关回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
-        lifecycle.register_after_token_generation(self.after_token_generation)
-
-
 class JsonCodeBlockPlugin(Plugin):
     """检测agent误用`json`而非`json toolcall`代码块的插件。"""
 
