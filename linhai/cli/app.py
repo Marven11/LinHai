@@ -305,6 +305,7 @@ class CLIApp(App):
             self.subagent_current_messages[subagent_name] = new_message
             subagent_container.mount(new_message)
             new_message.update_display()
+            current_message = new_message
         
         # 直接追加内容，由MessageWidget内部处理类型切换
         current_message.feed_string(content, is_reasoning)
