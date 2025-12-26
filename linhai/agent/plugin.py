@@ -446,7 +446,7 @@ class PreviousReasoningPlugin(Plugin):
             if isinstance(msg, AssistantMessage) and msg.reasoning_message
         ]
         if msgs:
-            previous_reasoning_msg = PreviousReasoningMessage(msgs[-3:])
+            previous_reasoning_msg = PreviousReasoningMessage(msgs[-6:])
             agent.message_processor.update_appending_message(
                 previous_reasoning_msg, source="previous_reasoning"
             )
@@ -567,8 +567,12 @@ class RuntimeImitationPlugin(Plugin):
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return False
 
+
         if matches := re.match("^<<([a-z_]+)>>", current_content):
-            await agent.interrupt(f"不要模仿{matches.group(1)}的输出！")
+            if matches.group(1) == "agent":
+                await agent.interrupt("不要输出<<agent>>这个tag!")
+            else:
+                await agent.interrupt(f"不要模仿{matches.group(1)}的输出！")
             return True
 
         if current_content.lstrip().startswith("<tool>{"):
