@@ -22,6 +22,7 @@ class ToolBlockDetailsDict(TypedDict):
     recently_called_cleanup: bool
     current_state: str
 
+
 if TYPE_CHECKING:
     from .main import Agent
 
@@ -57,7 +58,8 @@ class AgentContextOrchestration:
             未标记的大消息ID列表
         """
         unmarked_ids = [
-            msg_id for msg_id in self.large_messages
+            msg_id
+            for msg_id in self.large_messages
             if msg_id not in self.garbage_message_ids
         ]
         return unmarked_ids[:limit]
@@ -94,7 +96,9 @@ class AgentContextOrchestration:
             if not_found_ids:
                 error_parts.append(f"以下ID不存在: {', '.join(not_found_ids)}")
             if already_marked_ids:
-                error_parts.append(f"以下ID已被重复标记: {', '.join(already_marked_ids)}")
+                error_parts.append(
+                    f"以下ID已被重复标记: {', '.join(already_marked_ids)}"
+                )
             return "; ".join(error_parts)
 
         if marked_ids:
@@ -231,7 +235,11 @@ class AgentContextOrchestration:
                 "management" - 其他消息管理工具
                 "other" - 其他工具
         """
-        if tool_name in {"context_range_compress", "context_garbage_clean", "context_thanox"}:
+        if tool_name in {
+            "context_range_compress",
+            "context_garbage_clean",
+            "context_thanox",
+        }:
             return "cleanup"
         elif tool_name == "context_mark_message_garbage":
             return "management"
@@ -293,7 +301,7 @@ class AgentContextOrchestration:
                 "should_block": False,
                 "tool_category": "other",
                 "recently_called_cleanup": False,
-                "current_state": "绿灯"
+                "current_state": "绿灯",
             }
 
         current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
@@ -306,7 +314,7 @@ class AgentContextOrchestration:
             "should_block": should_block,
             "tool_category": tool_category,
             "recently_called_cleanup": recently_called_cleanup,
-            "current_state": current_state
+            "current_state": current_state,
         }
 
     async def _handle_red_state(
@@ -488,13 +496,19 @@ class AgentContextOrchestration:
         @toolset.register_tool(
             name="context_mark_message_garbage",
             desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
-            "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记",
+            "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记。"
+            "必须描述消息为什么没用",
             args={
+                "desc": ToolArgInfo(
+                    desc="描述消息本身，介绍其为什么没用，以及为什么接下来完全不需要其中的内容",
+                    type="str",
+                ),
                 "ids": ToolArgInfo(desc="要标记为垃圾的消息的ID", type="list[str]"),
             },
             required_args=["ids"],
         )
-        def context_mark_message_garbage(ids: list[str]) -> str:
+        def context_mark_message_garbage(desc: str, ids: list[str]) -> str:
+            del desc  # 我们只需要让LLM输出这些消息为什么没用，不检查其中的内容
             return self.context_mark_message_garbage(ids)
 
         @toolset.register_tool(
@@ -638,11 +652,9 @@ class RedStateToolBlockPlugin:
             tool_category = details["tool_category"]
             recently_called_cleanup = details["recently_called_cleanup"]
             current_state = details["current_state"]
-            
+
             if tool_category == "cleanup" and recently_called_cleanup:
-                error_msg = (
-                    f"错误：一分钟内已调用过消息清理工具，禁止再次调用{tool_call.function_name}工具！"
-                )
+                error_msg = f"错误：一分钟内已调用过消息清理工具，禁止再次调用{tool_call.function_name}工具！"
                 ui_msg = f"一分钟内已调用过消息清理工具，禁止调用{tool_call.function_name}工具"
             else:
                 error_msg = (
