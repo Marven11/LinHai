@@ -2,32 +2,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构linhai/cli/components.py等的逻辑
-  - 当前
-    - app.py会在token为reasoning时新建并使用ReasoningContentWidget，在token为正常token时使用MessageWidget
-    - MessageWidget会根据token内容自动判断是使用NormalContentWidget还是ToolCallWidget
-    - 但是NormalContentWidget也用来表示用户消息等
-  - 目标
-    - 让app.py不管token是不是reasoning都直接传给MessageWidget
-    - app.py完全不使用ReasoningContentWidget, NormalContentWidget或者ToolCallWidget
-    - MessageWidget使用linhai/cli/token_parser.py处理传入的token, 判断是使用ReasoningContentWidget, NormalContentWidget还是ToolCallWidget
-    - 写一个UserMessageWidget单独表示用户消息，并在app.py中使用
-  - 测试
-    - 修改当前已有测试以符合新代码架构
-    - 依次传入reasoning token和带有toolcall的正常token应该依次创建ReasoningContentWidget, NormalContentWidget, ToolCallWidget三个widget
-    - [x] 新测试
-      - 当传入多个reasoning token时，无论内容有没有toolcall都只有一个ReasoningContentWidget
-      - 当传入多个非reasoning token且没有工具调用时，只有一个NormalContentWidget
-      - 当传入多个reasoning token，然后传入多个带toolcall的非reasoning token时，有一个ReasoningContentWidget, 一个ToolCallWidget和至少一个NormalContentWidget
-      - [x] 按照https://textual.textualize.io/guide/testing/编写完整测试
-        - 流程
-          - 用户选择文本输入框并输入文本，
-          - agent生成多个reasoning token，多个不包含工具调用的token，和一个包含工具调用的普通token
-        - 开头四个方框应该完全符合以下顺序：
-          - 一个user方框
-          - 一个`deepseek (reasoning) [点击展开]`方框
-          - 一个`deepseek`方框
-          - 一个`tool call`方框
+- [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
+  - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
+  - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
+- [ ] 让context_mark_message_garbage返回ToolErrorMessage/ToolResultMessage而不是字符串
+- [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
+  - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -35,10 +15,6 @@
 
 # 暂时搁置
 
-- [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
-- [ ] 让context_mark_message_garbage返回ToolErrorMessage/ToolResultMessage而不是字符串
-- [ ] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
-  - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
 - [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
   - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
   - 需要添加unittest测试这个行为
