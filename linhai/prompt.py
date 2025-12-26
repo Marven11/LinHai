@@ -58,17 +58,15 @@ INTRODUCTION_CONTEXT_MANAGEMENT = """
 - 清理和当前任务无关的消息，降低成本并减低心智负担
 
 你可以使用这些工具完成这些目标
-- context_mark_message_todelete - 标记不需要的消息
-- context_garbage_clean - 一次性清理所有不需要的消息
+- context_garbage_clean - 清理大消息：如果当前有至少5条大消息，全部删除并返回每条被删除的消息的repr
 - context_range_compress - 历史压缩：删除一连串的消息
   - 比较复杂，而且会暂停当前任务，优先使用context_garbage_clean
 
 运行时会提醒你当前消息是否紧张
-- 绿灯：不需要担心token限制，为了保持消息cache，减少成本，可以顺手标记大消息
-- 绿灯闪烁：应该积极标记大消息，可以顺手删除一些**实在和当前任务无关的消息**
-- 黄灯：积极考虑删除**和当前任务无关**的消息，也可以使用历史压缩删除**之前任务**的消息
+- 绿灯：积极完成当前任务
+- 黄灯：积极考虑调用context_garbage_clean清理大消息
 - 红灯：优先考虑token限制问题，此时应该放下手中的任何任务，直接使用工具清理消息！
-  - 此时消息非常多，如果已有至少5条垃圾消息，则调用context_garbage_clean清理垃圾消息；否则，使用context_range_compress删除大约一半消息！
+  - 此时消息非常多，如果已有至少5条大消息，则调用context_garbage_clean清理大消息；否则，使用context_range_compress删除大约一半消息！
 """
 
 INTRODUCTION_PENTESTING = """
@@ -146,10 +144,9 @@ RULES_MCP = """
 """
 
 RULES_CONTEXT_MANAGEMENT = """
-- 优先使用context_mark_message_todelete: 在Token达到软阈值时，一般使用context_mark_message_todelete标记一些上一个任务的消息为垃圾
-  - context_mark_message_todelete可以在其他工具之后一起调用，不需要暂停当前任务
-  - 但是需要确保标记的消息和当前的任务无关！
-  - 历史信息限制在0% ~ 40%时不需要使用
+- 在黄灯状态时，积极考虑调用context_garbage_clean清理大消息
+  - context_garbage_clean需要至少有5条大消息才能调用，否则会失败
+  - 历史信息限制在0% ~ 70%时不需要使用
 - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
 - 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。
 - 历史压缩用于删除**上一个任务、上一个步骤**的消息，除非没有任何明显的上一步，否则禁止删除当前步骤的消息

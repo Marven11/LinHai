@@ -41,7 +41,7 @@ class TestCLITabs(unittest.TestCase):
         mock_agent_message.appending_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
-        mock_orchestration.garbage_message_ids = set()
+
         
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
@@ -97,7 +97,7 @@ class TestCLITabs(unittest.TestCase):
         mock_agent_message.appending_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
-        mock_orchestration.garbage_message_ids = set()
+
         
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)

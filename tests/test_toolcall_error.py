@@ -11,7 +11,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         """测试无效JSON时显示原始内容"""
         invalid_json = '{"name": "test", "args": {missing_quote: "value"}'
 
-        widget = ToolCallWidget("")
+        widget = ToolCallWidget()
         widget.feed_string(invalid_json)
 
         widget.update_display()
@@ -23,7 +23,7 @@ class TestToolCallErrorHandling(unittest.TestCase):
         """测试有效JSON时正常解析"""
         valid_json = '{"name": "test_tool", "arguments": {"param": "value"}}'
 
-        widget = ToolCallWidget(valid_json)
+        widget = ToolCallWidget()
 
         widget.feed_string(valid_json)
 

@@ -7,7 +7,6 @@ from linhai.agent.plugin import (
     WeirdTokenPlugin,
     DirectoryChangePlugin,
     PromptFastAgentPlugin,
-    PreventToolOutputPlugin,
 )
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import OpenAi, UserMessage, AssistantMessage
@@ -317,6 +316,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = MagicMock()
+        self.agent.interrupt = AsyncMock()  # 设置为AsyncMock
         # 默认阈值信息：绿灯状态
         self.agent.get_threshold_info.return_value = {
             "hard_limit": 80000,
@@ -334,8 +334,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         def mock_get_tool_block_details(tool_name, threshold_info):
             if threshold_info is None:
                 return {
-                    "should_block": False,
-                    "tool_category": "other",
+                    "blocked_category": None,
+                    "actual_category": "other",
                     "recently_called_cleanup": False,
                     "current_state": "绿灯"
                 }
@@ -347,23 +347,33 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             elif usage_ratio >= 0.7:
                 current_state = "黄灯"
             elif usage_ratio >= 0.5:
-                current_state = "绿灯闪烁"
+                current_state = "绿灯"
             
             recently_called_cleanup = self.orchestration.last_compress_or_clean_time is not None and \
                 (time.time() - self.orchestration.last_compress_or_clean_time) < 60
             
-            tool_category = "cleanup" if tool_name in ["context_range_compress", "context_garbage_clean", "context_thanox"] else \
-                           "management" if tool_name == "context_mark_message_todelete" else "other"
+            actual_category = "cleanup" if tool_name in ["context_range_compress", "context_garbage_clean", "context_thanox"] else "other"
             
+            # 根据 should_block_tool_call 的逻辑映射到具体的 blocked_category
             should_block = False
             if recently_called_cleanup:
-                should_block = tool_category == "cleanup"
+                should_block = actual_category == "cleanup"
             elif current_state == "红灯":
-                should_block = tool_category not in ["cleanup", "management"]
+                should_block = actual_category != "cleanup"
+            
+            blocked_category = None
+            if should_block:
+                if current_state == "红灯":
+                    if recently_called_cleanup and actual_category == "cleanup":
+                        blocked_category = "cleanup"
+                    else:
+                        blocked_category = "other"
+                else:
+                    blocked_category = "cleanup"
             
             return {
-                "should_block": should_block,
-                "tool_category": tool_category,
+                "blocked_category": blocked_category,
+                "actual_category": actual_category,
                 "recently_called_cleanup": recently_called_cleanup,
                 "current_state": current_state
             }
@@ -392,12 +402,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 "context_thanox",
             },
         )
-        self.assertEqual(
-            self.plugin.MANAGEMENT_TOOLS,
-            {
-                "context_mark_message_todelete",
-            },
-        )
+
 
     def test_register(self):
         """测试注册插件。"""
@@ -453,7 +458,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="context_mark_message_todelete",
+            function_name="context_garbage_clean",  # 替换为现有工具
             function_arguments={"ids": ["test_id"]},
             assert_success=True,
         )
@@ -494,7 +499,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             "context_range_compress",
             "context_garbage_clean",
             "context_thanox",
-            "mark_messages_as_garbage",
         ]
 
         for tool_name in allowed_tools:
@@ -550,7 +554,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证阻止
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.message_processor.add_new_message.assert_called_once()
+        self.agent.interrupt.assert_called_once()
         self.group_chat.send_if_exists.assert_called_once_with(
             "ui_log",
             CliRuntimeNotice(
@@ -560,11 +564,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         )
 
         # 检查错误消息是否包含一分钟内禁止
-        append_call = self.agent.message_processor.add_new_message.call_args
-        runtime_message = append_call[0][0]
-        self.assertIsInstance(runtime_message, RuntimeMessage)
-        self.assertIn("一分钟内已调用过消息清理工具", runtime_message.message)
-        self.assertIn("禁止再次调用context_garbage_clean工具", runtime_message.message)
+        interrupt_call = self.agent.interrupt.call_args
+        error_msg = interrupt_call[0][0]
+        self.assertIn("一分钟内已调用过消息清理工具", error_msg)
+        self.assertIn("禁止再次调用context_garbage_clean工具", error_msg)
 
     def test_red_state_recent_cleanup_allow_other_tool(self):
         """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""

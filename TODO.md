@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 完全删除context_mark_message_todelete，重做context_garbage_clean
+- [x] 完全删除context_mark_message_todelete，重做context_garbage_clean - 已完成
   - 当前流程
     - 大消息会被赋予一个ID并展示给agent
     - agent标记消息为不需要
@@ -20,7 +20,6 @@
     - 流程
       - 大消息会被静默记录到`self.large_messages`（一个set）中
       - agent在黄灯状态调用context_garbage_clean删除所有大消息
-    
   - 需要重新编写
     - 代码
     - 测试

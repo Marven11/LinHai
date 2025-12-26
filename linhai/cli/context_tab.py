@@ -262,32 +262,21 @@ class ContextTabWidget(Static):
         grid.add_row("")
 
         large_messages = orchestration.large_messages
-        garbage_ids = orchestration.garbage_message_ids
+        garbage_ids = set()  # garbage_message_ids已删除
 
         grid.add_row("大消息数量:", f"{len(large_messages)}")
         grid.add_row("垃圾消息数量:", f"{len(garbage_ids)}")
 
-        # List large messages with colors - using Rich text for coloring
+        # 显示大消息repr列表
         if large_messages:
-            grid.add_row(Text("大消息列表 (已标记/未标记):", style="bold"))
-            marked_count = 0
-            unmarked_count = 0
-
-            for msg_id, msg in large_messages.items():  # Show all large messages
-                is_garbage = msg_id in garbage_ids
-                status = (
-                    Text("✓ 已标记", style="red")
-                    if is_garbage
-                    else Text("○ 未标记", style="green")
-                )
-                preview = reprobj.repr(str(msg))[:50]
-                grid.add_row(f"  {msg_id}:", f"{status} - {preview}")
-                if is_garbage:
-                    marked_count += 1
-                else:
-                    unmarked_count += 1
-
-            grid.add_row("统计:", f"已标记: {marked_count}, 未标记: {unmarked_count}")
+            grid.add_row(Text(f"当前有{len(large_messages)}条大消息", style="bold"))
+            # 获取大消息的repr列表，最多显示3条
+            repr_list = orchestration.get_large_message_reprs(limit=3)
+            for i, repr_msg in enumerate(repr_list, 1):
+                grid.add_row(f"  {i}.", repr_msg)
+            if len(large_messages) > 3:
+                grid.add_row("提示:", f"... 还有{len(large_messages) - 3}条未显示")
+            grid.add_row("提示:", "调用context_garbage_clean可清理大消息（需≥5条）")
 
         grid.add_row("")
 

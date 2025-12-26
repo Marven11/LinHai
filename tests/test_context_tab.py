@@ -63,7 +63,7 @@ class TestContextTab(unittest.TestCase):
         mock_agent_message.appending_messages = {}
 
         mock_orchestration.large_messages = {}
-        mock_orchestration.garbage_message_ids = set()
+
 
         # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {
@@ -158,7 +158,8 @@ class TestContextTab(unittest.TestCase):
             "largemessage_1": mock_messages[0],
             "largemessage_2": mock_messages[1],
         }
-        mock_orchestration.garbage_message_ids = {"largemessage_1"}
+        mock_orchestration.get_large_message_reprs = Mock(return_value=[])
+
 
         # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {

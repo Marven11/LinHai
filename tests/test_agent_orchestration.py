@@ -40,30 +40,11 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             group_chat, self.message_processor
         )
 
-    def test_mark_messages_as_garbage(self):
-        """测试标记消息为垃圾。"""
-        large_msg = RuntimeMessage("Large content" * 1000)
-        message_id = self.orchestration.record_large_message(large_msg, "large content")
-        self.message_processor.add_new_message(large_msg)
 
-        result = self.orchestration.context_mark_message_todelete([message_id])
 
-        self.assertEqual(result, f"已标记{message_id}为垃圾消息")
-        self.assertIn(message_id, self.orchestration.garbage_message_ids)
 
-    def test_mark_messages_as_garbage_not_found(self):
-        """测试标记不存在的消息为垃圾。"""
-        result = self.orchestration.context_mark_message_todelete(["nonexistent_id"])
 
-        self.assertEqual(result, "以下ID不存在: nonexistent_id")
 
-    def test_record_large_message(self):
-        """测试记录大消息。"""
-        large_msg = RuntimeMessage("Large content")
-        message_id = self.orchestration.record_large_message(large_msg, "large content")
-
-        self.assertIn(message_id, self.orchestration.large_messages)
-        self.assertEqual(self.orchestration.large_messages[message_id], large_msg)
 
     async def test_context_thanox(self):
         """测试随机删除历史消息。"""
@@ -91,7 +72,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
         # 添加一个大消息，以便在红灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
-        self.orchestration.record_large_message(large_msg, "large content")
+        self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
 
         # 调用add_soft_threshold_notification，现在返回字符串
@@ -114,15 +95,15 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
-        self.orchestration.record_large_message(large_msg, "large content")
+        self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
 
         # 调用add_soft_threshold_notification，现在返回字符串
         result = self.orchestration.add_soft_threshold_notification(threshold_info)
         
-        # 对于绿灯闪烁状态，应该返回消息字符串
+        # 对于绿灯状态，应该返回消息字符串
         self.assertIsNotNone(result)
-        self.assertIn("绿灯闪烁状态", result)
+        self.assertIn("绿灯状态", result)
         # 消息数量应该仍然是3
         self.assertEqual(len(self.message_processor.messages), 3)
 
@@ -152,26 +133,23 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         """测试获取状态显示片段。"""
         self.message_processor.add_new_message(RuntimeMessage("test"))
 
-        # 记录一个大消息
+        # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
-        message_id = self.orchestration.record_large_message(large_msg, "large content")
+        self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
 
-        # 标记为垃圾
-        self.orchestration.context_mark_message_todelete([message_id])
+        # 不再需要标记垃圾，因为功能已删除
 
         # 测试不使用nerd font
         pieces = self.orchestration.get_status_display_pieces(use_nerd_font=False)
         self.assertIsInstance(pieces, list)
         self.assertGreater(len(pieces), 0)
-        # 应该包含消息计数 - 格式已改为 '4 msgs', '1 large', '1 garbage'
+        # 应该包含消息计数 - 格式已改为 '4 msgs', '1 large'
         for piece in pieces:
             if "msgs" in piece:
                 self.assertIn("4", piece)  # 消息数量
             elif "large" in piece:
                 self.assertIn("1", piece)  # 大消息数量
-            elif "garbage" in piece:
-                self.assertIn("1", piece)  # 垃圾消息数量
 
         # 测试使用nerd font
         nerd_pieces = self.orchestration.get_status_display_pieces(use_nerd_font=True)
@@ -183,8 +161,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("4", piece)  # 消息数量
             elif "\uf1c0" in piece:  # 大消息图标
                 self.assertIn("1", piece)
-            elif "\uea81" in piece:  # 垃圾图标
-                self.assertIn("1", piece)
 
     def test_determine_tool_category(self):
         """测试工具分类判断。"""
@@ -193,8 +169,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.orchestration._determine_tool_category("context_garbage_clean"), "cleanup")
         self.assertEqual(self.orchestration._determine_tool_category("context_thanox"), "cleanup")
         
-        # 测试其他消息管理工具
-        self.assertEqual(self.orchestration._determine_tool_category("context_mark_message_todelete"), "management")
+        # context_mark_message_todelete 工具已删除，不再测试
         
         # 测试其他工具
         self.assertEqual(self.orchestration._determine_tool_category("read_file"), "other")
@@ -203,7 +178,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_determine_threshold_state(self):
         """测试阈值状态判断。"""
         self.assertEqual(self.orchestration._determine_threshold_state(0.3), "绿灯")
-        self.assertEqual(self.orchestration._determine_threshold_state(0.55), "绿灯闪烁")
+        self.assertEqual(self.orchestration._determine_threshold_state(0.55), "绿灯")
         self.assertEqual(self.orchestration._determine_threshold_state(0.75), "黄灯")
         self.assertEqual(self.orchestration._determine_threshold_state(0.95), "红灯")
 
