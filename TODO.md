@@ -2,30 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 完全删除context_mark_message_todelete，重做context_garbage_clean - 已完成
-  - 当前流程
-    - 大消息会被赋予一个ID并展示给agent
-    - agent标记消息为不需要
-    - agent在黄灯状态调用context_garbage_clean删除所有标记消息
-  - 问题
-    - agent标记消息为不重要后会主动忽略消息内容，即使消息还在那里
-      - 这是幻觉问题：`mark xxx as garbage`本质上是`忽略消息xxx，并继续工作`
-  - 重新设计
-    - 完全删除context_mark_message_todelete并重新设计context_garbage_clean的功能
-      - context_garbage_clean
-        - 如果当前有至少5条大消息，全部删除并返回每条被删除的消息的repr
-          - 使用reprlib并限制每条消息的maxstring=100
-        - 如果当前大消息量少于5条，失败
-    - 删除绿灯闪烁状态，prompt提示绿灯状态完全不需要关心限制问题
-    - 流程
-      - 大消息会被静默记录到`self.large_messages`（一个set）中
-      - agent在黄灯状态调用context_garbage_clean删除所有大消息
-  - 需要重新编写
-    - 代码
-    - 测试
-    - prompt
-  - 其他代码要求
-    - 删除所有和原流程相关的，现在不再需要的代码，包括函数、参数、prompt等！
+- [ ] 重构llm.py，完全弃用callback的设计，让llm类直接持有group_chat
+- [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
+  - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
+  - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
+- [ ] AppendingMessagePlugin应该也在before_message_generation添加appending message
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -33,9 +14,7 @@
 
 # 暂时搁置
 
-- [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
-  - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
-  - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
+- [ ] delete trigger_after_working
 - [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
   - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
 - [ ] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
