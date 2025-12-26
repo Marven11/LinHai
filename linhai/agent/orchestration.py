@@ -64,7 +64,7 @@ class AgentContextOrchestration:
         ]
         return unmarked_ids[:limit]
 
-    def context_mark_message_garbage(self, message_ids: list[str]) -> str:
+    def context_mark_message_todelete(self, message_ids: list[str]) -> str:
         """将多个消息标记为垃圾消息。
 
         Args:
@@ -241,7 +241,7 @@ class AgentContextOrchestration:
             "context_thanox",
         }:
             return "cleanup"
-        elif tool_name == "context_mark_message_garbage":
+        elif tool_name == "context_mark_message_todelete":
             return "management"
         else:
             return "other"
@@ -355,7 +355,7 @@ class AgentContextOrchestration:
             guidance_message = (
                 f"一分钟内已调用过历史压缩或清理，禁止使用消息清理工具，但可以使用其他工具。"
                 f"当前有{len(self.large_messages)}条大消息，其中{len(unmarked_large_message_ids)}条未标记，"
-                f"可以先用context_mark_message_garbage工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
+                f"可以先用context_mark_message_todelete工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
             )
             self.agent_message.add_new_message(RuntimeMessage(guidance_message))
         else:
@@ -377,7 +377,7 @@ class AgentContextOrchestration:
         if unmarked_large_message_ids:
             guidance_message = (
                 f"当前有{len(self.large_messages)}条大消息，其中{len(unmarked_large_message_ids)}条未标记，"
-                f"建议使用context_mark_message_garbage工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
+                f"建议使用context_mark_message_todelete工具标记ID为{', '.join(unmarked_large_message_ids)}的消息为垃圾。"
             )
             self.agent_message.add_new_message(RuntimeMessage(guidance_message))
         else:
@@ -494,7 +494,7 @@ class AgentContextOrchestration:
         toolset = ToolSet()
 
         @toolset.register_tool(
-            name="context_mark_message_garbage",
+            name="context_mark_message_todelete",
             desc="将多个消息标记为不需要的垃圾消息。在绿灯、绿闪、黄灯时优先使用此工具标记消息。"
             "这个工具可以安全地和其他工具一起调用，不会冲突，但是需要注意在其他工具调用完成后再标记。"
             "必须描述消息为什么没用",
@@ -507,9 +507,9 @@ class AgentContextOrchestration:
             },
             required_args=["ids"],
         )
-        def context_mark_message_garbage(desc: str, ids: list[str]) -> str:
+        def context_mark_message_todelete(desc: str, ids: list[str]) -> str:
             del desc  # 我们只需要让LLM输出这些消息为什么没用，不检查其中的内容
-            return self.context_mark_message_garbage(ids)
+            return self.context_mark_message_todelete(ids)
 
         @toolset.register_tool(
             name="context_garbage_clean",
@@ -591,7 +591,7 @@ class AgentContextOrchestration:
             self.agent_message.add_new_message(
                 RuntimeMessage(
                     f"为工具 {tool_call.function_name} 的消息分配了ID: {message_id}。"
-                    "你可以在不需要此消息时使用 context_mark_message_garbage 工具标记此消息为垃圾以节省token。"
+                    "你可以在不需要此消息时使用 context_mark_message_todelete 工具标记此消息为垃圾以节省token。"
                     + (
                         "注意：这个工具输出仍然远低于限制，仍然可以正常使用此工具，不要因为工具会输出较大内容就不使用工具！"
                         if len(tool_result_content) < 80000
@@ -615,7 +615,7 @@ class RedStateToolBlockPlugin:
             "context_thanox",
         }
         self.MANAGEMENT_TOOLS = {
-            "context_mark_message_garbage",
+            "context_mark_message_todelete",
         }
 
     async def before_tool_call(

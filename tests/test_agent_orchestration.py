@@ -46,14 +46,14 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         message_id = self.orchestration.record_large_message(large_msg, "large content")
         self.message_processor.add_new_message(large_msg)
 
-        result = self.orchestration.context_mark_message_garbage([message_id])
+        result = self.orchestration.context_mark_message_todelete([message_id])
 
         self.assertEqual(result, f"已标记{message_id}为垃圾消息")
         self.assertIn(message_id, self.orchestration.garbage_message_ids)
 
     def test_mark_messages_as_garbage_not_found(self):
         """测试标记不存在的消息为垃圾。"""
-        result = self.orchestration.context_mark_message_garbage(["nonexistent_id"])
+        result = self.orchestration.context_mark_message_todelete(["nonexistent_id"])
 
         self.assertEqual(result, "以下ID不存在: nonexistent_id")
 
@@ -158,7 +158,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.message_processor.add_new_message(large_msg)
 
         # 标记为垃圾
-        self.orchestration.context_mark_message_garbage([message_id])
+        self.orchestration.context_mark_message_todelete([message_id])
 
         # 测试不使用nerd font
         pieces = self.orchestration.get_status_display_pieces(use_nerd_font=False)
@@ -194,7 +194,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.orchestration._determine_tool_category("context_thanox"), "cleanup")
         
         # 测试其他消息管理工具
-        self.assertEqual(self.orchestration._determine_tool_category("context_mark_message_garbage"), "management")
+        self.assertEqual(self.orchestration._determine_tool_category("context_mark_message_todelete"), "management")
         
         # 测试其他工具
         self.assertEqual(self.orchestration._determine_tool_category("read_file"), "other")

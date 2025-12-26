@@ -5,7 +5,7 @@
 - [ ] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
   - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
   - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
-- [ ] 让context_mark_message_garbage返回ToolErrorMessage/ToolResultMessage而不是字符串
+- [ ] 让context_mark_message_todelete返回ToolErrorMessage/ToolResultMessage而不是字符串
 - [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
   - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
 

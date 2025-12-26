@@ -461,7 +461,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 (time.time() - self.orchestration.last_compress_or_clean_time) < 60
             
             tool_category = "cleanup" if tool_name in ["context_range_compress", "context_garbage_clean", "context_thanox"] else \
-                           "management" if tool_name == "context_mark_message_garbage" else "other"
+                           "management" if tool_name == "context_mark_message_todelete" else "other"
             
             should_block = False
             if recently_called_cleanup:
@@ -503,7 +503,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertEqual(
             self.plugin.MANAGEMENT_TOOLS,
             {
-                "context_mark_message_garbage",
+                "context_mark_message_todelete",
             },
         )
 
@@ -561,7 +561,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="context_mark_message_garbage",
+            function_name="context_mark_message_todelete",
             function_arguments={"ids": ["test_id"]},
             assert_success=True,
         )

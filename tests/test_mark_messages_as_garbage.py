@@ -49,7 +49,7 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_mark_nonexistent_messages(self):
-        result = self.agent.orchestration.context_mark_message_garbage(["nonexistent-id"])
+        result = self.agent.orchestration.context_mark_message_todelete(["nonexistent-id"])
         self.assertEqual(result, "以下ID不存在: nonexistent-id")
 
     def test_mark_existing_messages(self):
@@ -59,7 +59,7 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
         )
         self.agent.message_processor.add_new_message(large_message)
 
-        result = self.agent.orchestration.context_mark_message_garbage([test_id])
+        result = self.agent.orchestration.context_mark_message_todelete([test_id])
         self.assertEqual(result, f"已标记{test_id}为垃圾消息")
 
     async def test_context_garbage_clean(self):
@@ -69,7 +69,7 @@ class TestMarkMessagesAsGarbage(unittest.IsolatedAsyncioTestCase):
         )
         self.agent.message_processor.add_new_message(large_message)
 
-        self.agent.orchestration.context_mark_message_garbage([test_id])
+        self.agent.orchestration.context_mark_message_todelete([test_id])
 
         result = await self.agent.orchestration.context_garbage_clean()
         self.assertIn("已清理 1 条消息", result)

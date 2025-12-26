@@ -58,7 +58,7 @@ INTRODUCTION_CONTEXT_MANAGEMENT = """
 - 清理和当前任务无关的消息，降低成本并减低心智负担
 
 你可以使用这些工具完成这些目标
-- context_mark_message_garbage - 标记不需要的消息
+- context_mark_message_todelete - 标记不需要的消息
 - context_garbage_clean - 一次性清理所有不需要的消息
 - context_range_compress - 历史压缩：删除一连串的消息
   - 比较复杂，而且会暂停当前任务，优先使用context_garbage_clean
@@ -134,8 +134,8 @@ RULES_MCP = """
 """
 
 RULES_CONTEXT_MANAGEMENT = """
-- 优先使用context_mark_message_garbage: 在Token达到软阈值时，一般使用context_mark_message_garbage标记一些上一个任务的消息为垃圾
-  - context_mark_message_garbage可以在其他工具之后一起调用，不需要暂停当前任务
+- 优先使用context_mark_message_todelete: 在Token达到软阈值时，一般使用context_mark_message_todelete标记一些上一个任务的消息为垃圾
+  - context_mark_message_todelete可以在其他工具之后一起调用，不需要暂停当前任务
   - 但是需要确保标记的消息和当前的任务无关！
   - 历史信息限制在0% ~ 40%时不需要使用
 - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
