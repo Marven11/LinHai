@@ -505,7 +505,7 @@ class AgentContextOrchestration:
                 "modified_files": ToolArgInfo(desc="已修改文件的ID", type="list[str]"),
                 "last_task_messages": ToolArgInfo(desc="上一个任务的ID", type="list[str]"),
             },
-            required_args=["ids"],
+            required_args=["modified_files", "last_task_messages"],
         )
         def context_mark_message_todelete(modified_files: list[str], last_task_messages: list[str]) -> str:
             # [TODO] 我们需要修改对应的测试以符合新的modified_files+last_task_messages格式

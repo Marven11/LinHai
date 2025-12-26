@@ -173,7 +173,7 @@ class PromptFastAgentPlugin(Plugin):
         ]:
             return False
 
-        if current_content.count("```json toolcall") > self.MAX_TOOLCALL_COUNT:
+        if current_content.count("\n```json toolcall") > self.MAX_TOOLCALL_COUNT:
             extra_message = ""
             if self.speeding_counter:
                 extra_message = (
@@ -219,7 +219,7 @@ class SlowStartPlugin(Plugin):
         if not self.enabled:
             return False
 
-        if current_content.count("```json toolcall") > 5:
+        if current_content.count("\n```json toolcall") > 5:
             self.enabled = False
             await self.group_chat.send_if_exists(
                 "ui_log",
