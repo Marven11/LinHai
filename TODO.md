@@ -2,11 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构llm.py，完全弃用callback的设计，让llm类直接持有group_chat
-- [x] 让llm.py直接将AnswerTokenUsage发向对应的CLI queue而不是先通过agent/再转发到CLI
-  - 需求：当前TokenUsage和Token（也就是模型输出本身）混杂在一起，这不是好的实现
-  - 你可能需要在CLIApp中添加一个queue用来专门接收AnswerTokenUsage
-- [x] AppendingMessagePlugin应该也在before_message_generation添加appending message
+- [ ] 有很多unittest在模拟get_members时没有在找不到member时崩溃，而是错误地返回None，修改
+  - 这说明这些unittest没有良好地模拟环境，需要完整添加对应的member
+- [ ] 搜索linhai/中是否使用TYPE_CHECKING，删除这个常量的使用，并按照group_chat.py中的要求解决使用get_members的循环import问题
+- [ ] 在orchestration.py中添加一个插件，在before_message_generation中更新appending_message，告知现在有几条大消息
+- [ ] 修改黄灯的提示，添加要求：黄灯状态下需要避免读取文件，直接开始修改需要修改的文件
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
@@ -20,6 +20,13 @@
 - [x] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
   - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
   - 需要添加unittest测试这个行为
+- [ ] 修改appending_message的设计
+  - appending_message支持排序：在添加时支持指定appending_message的排序方式
+  - 每个appending_message除了有source, message之外增加一个排序权重,起名格式为xxx_value,必须指定，不能默认为0
+    - 好好想想这个权重应该叫什么
+    - 需要定义TypedDict保存每个appending_message的source, message等，作为self.appending_messages的value
+  - 在get_messages中根据这个value排序
+  - update_appending_message需要添加一个参数指定这个权重
 - [ ] 让Agent在调用工具前提前规划任务
   - 任务规划格式
     - 输出在```json toolcall前的一段嵌套无序列表，使用`[ ]`和`[x]`标记完成的和未完成的任务
