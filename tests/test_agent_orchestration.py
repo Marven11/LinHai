@@ -22,7 +22,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.main import ToolManager
 
         mock_lifecycle = Mock(spec=Lifecycle)
-        mock_lifecycle.register_after_working = Mock()
         group_chat.register_member("lifecycle", mock_lifecycle)
         
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它

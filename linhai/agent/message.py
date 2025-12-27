@@ -3,7 +3,7 @@
 import datetime
 import json
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, TypedDict
 
 from linhai.group_chat import GroupChat
 from linhai.input_parser import parse_user_input
@@ -11,6 +11,13 @@ from linhai.llm import UserMessage
 from linhai.utils import CliRuntimeNotice
 
 from .base import Message, RuntimeMessage
+
+
+class AppendingMessageEntry(TypedDict):
+    """附加消息条目，包含源标识符、消息内容和排序值。"""
+    source: str
+    message: Message
+    sort_value: int
 
 
 class AgentMessage:
@@ -28,7 +35,7 @@ class AgentMessage:
         self.group_chat.register_member("agent_message", self)
 
         self.messages: List[Message] = list(init_messages) if init_messages else []
-        self.appending_messages: dict[str, Message] = {}
+        self.appending_messages: dict[str, AppendingMessageEntry] = {}
         self.queued_messages: List[Message] = []
 
         self.cache_invalidate_count = 0
@@ -71,7 +78,10 @@ class AgentMessage:
         Returns:
             消息列表
         """
-        return self.messages + list(self.appending_messages.values())
+        # 按sort_value排序，然后提取message
+        sorted_entries = sorted(self.appending_messages.values(), key=lambda x: x["sort_value"])
+        appending_messages = [entry["message"] for entry in sorted_entries]
+        return self.messages + appending_messages
 
     def get_message_count(self) -> int:
         """获取当前消息数量。
@@ -145,19 +155,24 @@ class AgentMessage:
         if message in self.messages:
             self.messages.remove(message)
 
-    def update_appending_message(self, message: Message | None, source: str) -> None:
+    def update_appending_message(self, message: Message | None, source: str, sort_value: int) -> None:
         """更新或移除appending message。
 
         Args:
             message: 消息内容，如果为None则移除对应source的消息
                   必须是Message实例
             source: 消息来源标识符，用于区分不同的appending messages
+            sort_value: 排序权重，必须指定
         """
         if source in self.appending_messages:
             del self.appending_messages[source]
 
         if message is not None:
-            self.appending_messages[source] = message
+            self.appending_messages[source] = {
+                "source": source,
+                "message": message,
+                "sort_value": sort_value
+            }
 
     def add_queued_message(self, msg: Message) -> None:
         """添加排队消息。

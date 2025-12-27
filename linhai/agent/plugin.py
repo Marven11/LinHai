@@ -125,11 +125,8 @@ class PromptFastAgentPlugin(Plugin):
         super().__init__(group_chat)
         self.speeding_counter = 0
 
-    async def before_message_generation(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ):
-        """在消息生成前检查目录是否更改。"""
-        agent = self.group_chat.get_members("agent", Agent)
+    async def before_agent_loop(self, agent: "Agent"):
+        """在Agent循环开始前添加特定模型提示。"""
         model = await agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility not in [
@@ -138,29 +135,30 @@ class PromptFastAgentPlugin(Plugin):
         ]:
             return
 
-        has_previous_agent_message = any(
-            isinstance(msg, AssistantMessage)
-            for msg in agent.message_processor.get_messages()
+        agent.message_processor.add_new_message(
+            RuntimeMessage(
+                f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+            )
         )
-
-        if not has_previous_agent_message:
-            agent.message_processor.add_new_message(
-                RuntimeMessage(
-                    f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
-                )
-            )
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"针对性优化: {model.compatibility}禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具",
-                ),
-            )
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"针对性优化: {model.compatibility}禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具",
+            ),
+        )
 
         if model.compatibility == "glm":
             agent.message_processor.add_new_message(
                 RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
             )
+
+    async def before_message_generation(
+        self, _enable_compress: bool, _disable_waiting_user_warning: bool
+    ):
+        """在消息生成前检查目录是否更改。"""
+        # 提示逻辑已迁移到before_agent_loop中
+        return
 
     async def after_token_generation(
         self, answer: Answer, current_content: str  # pylint: disable=unused-argument
@@ -200,8 +198,8 @@ class PromptFastAgentPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册before_message_generation和after_token_generation回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        """注册before_agent_loop和after_token_generation回调。"""
+        lifecycle.register_before_agent_loop(self.before_agent_loop)
         lifecycle.register_after_token_generation(self.after_token_generation)
 
 
@@ -369,15 +367,16 @@ class SingleToolCallReminderPlugin(Plugin):
                         + "！！！！！" * (self.single_tool_call_count - 2)
                     ),
                     source="single_tool_call_reminder",
+                    sort_value=0
                 )
             else:
                 agent.message_processor.update_appending_message(
-                    None, source="single_tool_call_reminder"
+                    None, source="single_tool_call_reminder", sort_value=0
                 )
         else:
             self.single_tool_call_count = 0
             agent.message_processor.update_appending_message(
-                None, source="single_tool_call_reminder"
+                None, source="single_tool_call_reminder", sort_value=0
             )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -408,6 +407,7 @@ class OnlyReasoningPlugin(Plugin):
                     "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
                 ),
                 source="only_reasoning",
+                sort_value=0
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -417,7 +417,7 @@ class OnlyReasoningPlugin(Plugin):
             )
         else:
             agent.message_processor.update_appending_message(
-                None, source="only_reasoning"
+                None, source="only_reasoning", sort_value=0
             )
 
     def register(self, lifecycle):
@@ -448,11 +448,11 @@ class PreviousReasoningPlugin(Plugin):
         if msgs:
             previous_reasoning_msg = PreviousReasoningMessage(msgs[-6:])
             agent.message_processor.update_appending_message(
-                previous_reasoning_msg, source="previous_reasoning"
+                previous_reasoning_msg, source="previous_reasoning", sort_value=-100
             )
         else:
             agent.message_processor.update_appending_message(
-                None, source="previous_reasoning"
+                None, source="previous_reasoning", sort_value=-100
             )
 
     def register(self, lifecycle):
@@ -928,6 +928,9 @@ def traverse_ast(
         if traverse_ast(child, in_pipeline, forbidden_commands):
             return True
     return False
+
+
+
 
 
 def should_block_command_simple(command: str) -> bool:

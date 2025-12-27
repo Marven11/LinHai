@@ -594,6 +594,7 @@ class MachineControlPlugin:
         agent.message_processor.update_appending_message(
             RuntimeMessage(f"当前在{self.machine_control.target_machine}上"),
             source="machine_control",
+            sort_value=0
         )
 
     def register(self, lifecycle):

@@ -74,7 +74,6 @@ ToolConflictCallback: TypeAlias = Callable[
     ["Agent", ToolCallMessage, list[str]],
     Awaitable[None],
 ]
-AfterWorkingCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
@@ -100,7 +99,6 @@ class Lifecycle:
         self._tool_failure_callbacks: list[ToolFailureCallback] = []
         self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
         self._tool_conflict_callbacks: list[ToolConflictCallback] = []
-        self._after_working_callbacks: list[AfterWorkingCallback] = []
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
 
         self._plugins = self._register_default_plugins()
@@ -194,10 +192,6 @@ class Lifecycle:
     def register_tool_conflict(self, callback: ToolConflictCallback):
         """注册工具冲突回调。"""
         self._tool_conflict_callbacks.append(callback)
-
-    def register_after_working(self, callback: AfterWorkingCallback):
-        """注册工作完成后回调。"""
-        self._after_working_callbacks.append(callback)
 
     def register_before_agent_loop(self, callback: BeforeAgentLoopCallback):
         """注册Agent循环开始前的回调。"""
@@ -295,10 +289,6 @@ class Lifecycle:
         for callback in self._tool_conflict_callbacks:
             await callback(agent, tool_call, conflicting_tools)
 
-    async def trigger_after_working(self, agent: "Agent"):
-        """触发工作完成后事件。"""
-        for callback in self._after_working_callbacks:
-            await callback(agent)
 
     async def trigger_before_agent_loop(self, agent: "Agent"):
         """触发Agent循环开始前事件。"""

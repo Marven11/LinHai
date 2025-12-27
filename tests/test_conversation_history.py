@@ -42,7 +42,6 @@ class TestConversationHistory(unittest.TestCase):
         mock_tool_manager.get_tools_info.return_value = []
 
         mock_lifecycle = Mock(spec=Lifecycle)
-        mock_lifecycle.register_after_working = Mock()
         mock_lifecycle.register_before_message_generation = Mock()
         mock_lifecycle.register_after_message_generation = Mock()
         mock_lifecycle.register_before_tool_call = Mock()

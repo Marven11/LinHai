@@ -363,18 +363,12 @@ class AgentContextOrchestration:
         from .lifecycle import Lifecycle
 
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
-        lifecycle.register_after_working(self._on_after_working)
         lifecycle.register_after_tool_call(self._on_after_tool_call)
 
         # 注册大消息数量通知插件
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
 
-    async def _on_after_working(self, _agent: "Agent") -> None:
-        """工作完成后的回调，重置状态。"""
-        # 重置状态，例如清除大消息记录或垃圾消息ID
-        self.large_messages.clear()
-        self.last_threshold_state = None
 
     async def _on_after_tool_call(
         self,
@@ -492,7 +486,7 @@ class AppendingMessagePlugin:
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="threshold_notification"
+                RuntimeMessage(message_content), source="threshold_notification", sort_value=0
             )
 
     async def after_message_generation(
@@ -519,7 +513,7 @@ class AppendingMessagePlugin:
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="threshold_notification"
+                RuntimeMessage(message_content), source="threshold_notification", sort_value=0
             )
 
     def register(self, lifecycle):
@@ -557,7 +551,7 @@ class LargeMessageCountPlugin:
         if large_count > 0:
             message_content = f"当前有{large_count}条大消息，建议积极考虑调用context_garbage_clean清理大消息。"
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="large_message_count"
+                RuntimeMessage(message_content), source="large_message_count", sort_value=0
             )
 
     def register(self, lifecycle):

@@ -256,6 +256,8 @@ class TestHelperFunctions(unittest.TestCase):
         result = get_children(mock_other)
         self.assertEqual(result, [])
 
+
+
     def test_should_block_command_simple(self):
         """测试should_block_command_simple函数。"""
         from linhai.agent.plugin import should_block_command_simple

@@ -2,10 +2,10 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] delete trigger_after_working
-- [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
-  - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
-- [ ] 修改appending_message的设计
+- [x] delete trigger_after_working
+- [x] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
+  - [x] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
+- [x] 修改appending_message的设计
   - appending_message支持排序：在添加时支持指定appending_message的排序方式
   - 每个appending_message除了有source, message之外增加一个排序权重,起名格式为xxx_value,必须指定，不能默认为0
     - 好好想想这个权重应该叫什么
