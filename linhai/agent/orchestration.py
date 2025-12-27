@@ -10,8 +10,8 @@ from typing import Optional, TYPE_CHECKING, Literal, TypedDict
 from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultMessage, ToolErrorMessage
-from linhai.utils import generate_id, CliRuntimeNotice
+from linhai.tool.base import ToolSet, ToolResultMessage, ToolErrorMessage
+from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
 from .base import Message, RuntimeMessage
 from .message import AgentMessage
@@ -180,34 +180,7 @@ class AgentContextOrchestration:
         else:
             return "other"
 
-    def should_block_tool_call(
-        self, tool_name: str, threshold_info: ThresholdInfo | None
-    ) -> bool:
-        """判断是否应该拦截工具调用。
 
-        Args:
-            tool_name: 工具名称
-            threshold_info: 阈值信息，如果为None则不拦截
-
-        Returns:
-            bool: 如果应该拦截返回True，否则返回False
-        """
-        if threshold_info is None:
-            return False
-
-        current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
-        recently_called_cleanup = self._recently_called_cleanup_tool()
-        tool_category = self._determine_tool_category(tool_name)
-
-        if current_state == "红灯":
-            if recently_called_cleanup and tool_category == "cleanup":
-                return True
-            return tool_category != "cleanup"
-
-        if recently_called_cleanup:
-            return tool_category == "cleanup"
-
-        return False
 
     def get_tool_block_details(
         self, tool_name: str, threshold_info: ThresholdInfo | None
@@ -237,19 +210,21 @@ class AgentContextOrchestration:
         recently_called_cleanup = self._recently_called_cleanup_tool()
         actual_category = self._determine_tool_category(tool_name)
 
-        # 根据 should_block_tool_call 的逻辑映射到具体的 blocked_category
-        should_block = self.should_block_tool_call(tool_name, threshold_info)
-        if not should_block:
-            blocked_category = None
-        else:
-            # 确定具体的拦截类别，使用与 actual_category 相同的类别体系
-            if current_state == "红灯":
-                if recently_called_cleanup and actual_category == "cleanup":
-                    blocked_category = "cleanup"  # 红灯状态，最近调用过清理，当前是清理工具
-                else:
-                    blocked_category = "other"  # 红灯状态，拦截非清理工具
-            else:  # 绿灯或黄灯状态
-                blocked_category = "cleanup"  # 最近调用过清理，当前是清理工具
+        # 直接根据状态和工具类别判断blocked_category
+        if current_state == "红灯":
+            if recently_called_cleanup:
+                # 红灯状态，最近调用过清理，只阻塞清理工具
+                blocked_category = "cleanup"
+            else:
+                # 红灯状态，没有调用过清理，只阻塞其他工具（允许清理工具）
+                blocked_category = "other"
+        else:  # 绿灯或黄灯状态
+            if recently_called_cleanup:
+                # 非红灯状态，最近调用过清理，只阻塞清理工具
+                blocked_category = "cleanup"
+            else:
+                # 非红灯状态，没有调用过清理，不阻塞任何工具
+                blocked_category = None
 
         return {
             "blocked_category": blocked_category,
@@ -368,7 +343,7 @@ class AgentContextOrchestration:
         Returns:
             包含工作流工具的ToolSet
         """
-        from linhai.tool.base import ToolSet
+
 
         toolset = ToolSet()
 
@@ -405,7 +380,7 @@ class AgentContextOrchestration:
     async def _on_after_tool_call(
         self,
         _agent: "Agent",
-        tool_call: ToolCallMessage,
+        _tool_call: ToolCallMessage,
         tool_result_msg: ToolResultMessage,
         _success: bool,
     ) -> Optional[RuntimeMessage]:
@@ -440,15 +415,10 @@ class RedStateToolBlockPlugin:
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
-        if agent is None:
-            return False
-
         orchestration = self.group_chat.get_members(
             "agent_context_orchestration", AgentContextOrchestration
         )
-        if orchestration is None:
-            return False
-
+        
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
             return False
@@ -463,7 +433,7 @@ class RedStateToolBlockPlugin:
             current_state = details["current_state"]
 
             if details["blocked_category"] == "cleanup" and recently_called_cleanup:
-                error_msg = f"错误：一分钟内已调用过消息清理工具，禁止再次调用{tool_call.function_name}工具！"
+                error_msg = f"一分钟内已经调用过消息清理工具，禁止调用{tool_call.function_name}工具"
                 ui_msg = f"一分钟内已调用过消息清理工具，禁止调用{tool_call.function_name}工具"
             else:
                 error_msg = (
@@ -497,6 +467,29 @@ class AppendingMessagePlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
+    async def before_message_generation(
+        self,
+        _enable_compress: bool,
+        _disable_waiting_user_warning: bool,
+    ) -> None:
+        """在消息生成前添加appending message。"""
+        from .main import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+        orchestration = self.group_chat.get_members(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
+
+        threshold_info = agent.get_threshold_info()
+        if threshold_info is None:
+            return
+
+        message_content = orchestration.add_soft_threshold_notification(threshold_info)
+        if message_content is not None:
+            agent.message_processor.update_appending_message(
+                RuntimeMessage(message_content), source="threshold_notification"
+            )
+
     async def after_message_generation(
         self,
         _answer: dict,
@@ -507,14 +500,9 @@ class AppendingMessagePlugin:
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
-        if agent is None:
-            return
-
         orchestration = self.group_chat.get_members(
             "agent_context_orchestration", AgentContextOrchestration
         )
-        if orchestration is None:
-            return
 
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
@@ -528,4 +516,5 @@ class AppendingMessagePlugin:
 
     def register(self, lifecycle):
         """注册插件回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)

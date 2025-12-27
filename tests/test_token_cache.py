@@ -1,6 +1,7 @@
 """测试token缓存估算功能。"""
 
 import unittest
+from unittest.mock import MagicMock
 from linhai.llm import OpenAi, UserMessage, AssistantMessage, AnswerTokenUsage
 
 
@@ -9,7 +10,10 @@ class TestTokenCache(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
+        # 创建Mock的group_chat参数
+        mock_group_chat = MagicMock()
         self.openai = OpenAi(
+            group_chat=mock_group_chat,
             api_key="test_key",
             base_url="https://api.example.com",
             model="test-model",

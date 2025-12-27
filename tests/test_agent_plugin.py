@@ -566,8 +566,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 检查错误消息是否包含一分钟内禁止
         interrupt_call = self.agent.interrupt.call_args
         error_msg = interrupt_call[0][0]
-        self.assertIn("一分钟内已调用过消息清理工具", error_msg)
-        self.assertIn("禁止再次调用context_garbage_clean工具", error_msg)
+        self.assertIn("一分钟内已经调用过消息清理工具", error_msg)
+        self.assertIn("禁止调用context_garbage_clean工具", error_msg)
 
     def test_red_state_recent_cleanup_allow_other_tool(self):
         """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""

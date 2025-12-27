@@ -122,6 +122,7 @@ async def _create_llm_instances(
     for llm_config in llm_configs:
         llm_config_dict = llm_config.model_dump()
         llm = OpenAi(
+            group_chat=group_chat,
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
             model=llm_config.model,
@@ -129,7 +130,6 @@ async def _create_llm_instances(
             chat_completion_kwargs=llm_config_dict.get("completion_options", {}),
             token_limit=llm_config_dict.get("token_limit"),
             compatibility=llm_config_dict.get("compatibility"),
-            notification_callback=notification_callback,
         )
         llms.append(llm)
     return llms

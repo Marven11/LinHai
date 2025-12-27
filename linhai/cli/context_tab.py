@@ -9,6 +9,10 @@ from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static
 
+# 导入AnswerTokenUsage用于token用量显示
+from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
+from linhai.agent.base import RuntimeMessage
+
 if TYPE_CHECKING:
     from linhai.group_chat import GroupChat
     from linhai.agent.message import AgentMessage
@@ -22,8 +26,6 @@ else:
     Agent = object
     Message = object
 
-from linhai.llm import UserMessage, AssistantMessage, SystemMessage, AnswerTokenUsage
-from linhai.agent.base import RuntimeMessage
 
 reprobj = reprlib.Repr(maxstring=60)
 
@@ -79,6 +81,7 @@ class ContextTabWidget(Static):
         Returns:
             Tuple of (type_counts, total_chars, max_length, max_length_msg)
         """
+        
         # Define message type mapping to avoid hardcoded keys
         type_mapping: list[tuple[type, str]] = [
             (UserMessage, "user"),

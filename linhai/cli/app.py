@@ -105,6 +105,7 @@ class CLIApp(App):
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
         self.group_chat.register_queue("subagent_message")
+        self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
         self.init_messages = init_messages
@@ -179,8 +180,7 @@ class CLIApp(App):
 
                 if self.should_auto_scroll():
                     container.scroll_end(animate=False)
-            elif isinstance(output, AnswerTokenUsage):
-                self.token_manager.current_token_usage = output
+
             elif isinstance(output, Answer):
 
                 token_usage = output.get_token_usage()
@@ -235,6 +235,17 @@ class CLIApp(App):
         while True:
             output = await self.group_chat.receive("subagent_message")
             await self._handle_subagent_message(output)
+
+    async def watch_token_usage_queue(self) -> None:
+        """监听token_usage队列并处理token使用信息"""
+        while True:
+            output = await self.group_chat.receive("token_usage")
+            if isinstance(output, AnswerTokenUsage):
+                self.token_manager.current_token_usage = output
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in token_usage: {type(output)=} {output=}"
+                )
 
     async def _handle_subagent_message(self, output) -> None:
         """处理单个SubAgent消息"""
@@ -345,9 +356,10 @@ class CLIApp(App):
         ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
         exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
         subagent_message_task = asyncio.create_task(self.watch_subagent_message_queue())
+        token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
 
         done, pending = await asyncio.wait(
-            [agent_answer_task, ui_log_task, exit_signal_task, subagent_message_task],
+            [agent_answer_task, ui_log_task, exit_signal_task, subagent_message_task, token_usage_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
 

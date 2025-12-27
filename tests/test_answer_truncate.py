@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.llm import OpenAiAnswer
+from linhai.group_chat import GroupChat
 
 
 class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
@@ -11,7 +12,13 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
     async def test_truncate_sets_truncated_flag_not_interrupted(self):
         """测试truncate会设置truncated标志但不设置interrupted标志。"""
         mock_stream = MagicMock()
-        answer = OpenAiAnswer(mock_stream)
+        mock_group_chat = MagicMock(spec=GroupChat)
+        answer = OpenAiAnswer(
+            stream=mock_stream,
+            group_chat=mock_group_chat,
+            compatibility=None,
+            cached_input_tokens=0
+        )
 
         answer.truncate()
 
@@ -22,7 +29,13 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
     async def test_interrupt_sets_interrupted_flag(self):
         """测试interrupt会设置interrupted标志。"""
         mock_stream = MagicMock()
-        answer = OpenAiAnswer(mock_stream)
+        mock_group_chat = MagicMock(spec=GroupChat)
+        answer = OpenAiAnswer(
+            stream=mock_stream,
+            group_chat=mock_group_chat,
+            compatibility=None,
+            cached_input_tokens=0
+        )
 
         answer.interrupt()
 
@@ -36,7 +49,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 MagicMock(
                     choices=[
                         MagicMock(
-                            delta=MagicMock(content="test", reasoning_content=None)
+                            delta=MagicMock(content="test", reasoning_content="")
                         )
                     ],
                     usage=None,
@@ -44,7 +57,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 MagicMock(
                     choices=[
                         MagicMock(
-                            delta=MagicMock(content=" content", reasoning_content=None)
+                            delta=MagicMock(content=" content", reasoning_content="")
                         )
                     ],
                     usage=None,
@@ -52,8 +65,13 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 StopAsyncIteration(),
             ]
         )
-
-        answer = OpenAiAnswer(mock_stream)
+        mock_group_chat = MagicMock(spec=GroupChat)
+        answer = OpenAiAnswer(
+            stream=mock_stream,
+            group_chat=mock_group_chat,
+            compatibility=None,
+            cached_input_tokens=0
+        )
 
         tokens = []
         async for token in answer:
@@ -78,7 +96,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                     choices=[
                         MagicMock(
                             delta=MagicMock(
-                                content="```json toolcall", reasoning_content=None
+                                content="```json toolcall", reasoning_content=""
                             )
                         )
                     ],
@@ -89,7 +107,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                         MagicMock(
                             delta=MagicMock(
                                 content='\n{"name": "test_tool", "arguments": {}}\n```',
-                                reasoning_content=None,
+                                reasoning_content="",
                             )
                         )
                     ],
@@ -99,7 +117,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                     choices=[
                         MagicMock(
                             delta=MagicMock(
-                                content="不应该出现的后续内容", reasoning_content=None
+                                content="不应该出现的后续内容", reasoning_content=""
                             )
                         )
                     ],
@@ -108,8 +126,13 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 StopAsyncIteration(),
             ]
         )
-
-        answer = OpenAiAnswer(mock_stream)
+        mock_group_chat = MagicMock(spec=GroupChat)
+        answer = OpenAiAnswer(
+            stream=mock_stream,
+            group_chat=mock_group_chat,
+            compatibility=None,
+            cached_input_tokens=0
+        )
 
         tokens = []
         async for token in answer:

@@ -1,14 +1,11 @@
+from __future__ import annotations
 """LLM模块，定义语言模型相关的消息类和协议。"""
-
 from typing import (
     Sequence,
     Protocol,
     AsyncIterator,
     cast,
     runtime_checkable,
-    Callable,
-    Awaitable,
-    Literal,
 )
 import asyncio
 import json
@@ -19,6 +16,7 @@ from openai import AsyncOpenAI
 from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from linhai.type_hints import LanguageModelMessage
+from linhai.utils import CliRuntimeNotice
 import linhai
 
 
@@ -50,7 +48,7 @@ class SystemMessage:
 
     def __init__(
         self,
-        group_chat: "linhai.group_chat.GroupChat",
+        group_chat: linhai.group_chat.GroupChat,
     ):
         """初始化系统消息。
 
@@ -429,9 +427,9 @@ class OpenAiAnswer:
     def __init__(
         self,
         stream,
+        group_chat: linhai.group_chat.GroupChat,
         compatibility: str | None = None,
         cached_input_tokens: int = 0,
-        previous_update_callback: Callable[[int], None] | None = None,
     ):
         """初始化OpenAI回答。"""
         self.tokens = []
@@ -444,9 +442,9 @@ class OpenAiAnswer:
         self.total_tokens = 0
         self.input_tokens = 0
         self.output_tokens = 0
+        self.group_chat = group_chat
         self.cached_input_tokens = cached_input_tokens
         self.toyield: list[AnswerToken | AnswerTokenUsage] = []
-        self.previous_update_callback = previous_update_callback
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -472,6 +470,7 @@ class OpenAiAnswer:
                 self.input_tokens = (
                     usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
                 )
+
                 self.output_tokens = (
                     usage.completion_tokens
                     if hasattr(usage, "completion_tokens")
@@ -480,16 +479,16 @@ class OpenAiAnswer:
                 self.total_tokens = (
                     usage.total_tokens if hasattr(usage, "total_tokens") else 0
                 )
-                self.toyield.append(
+                # Send token usage directly to CLI queue instead of through agent
+                await self.group_chat.send(
+                    "token_usage",
                     AnswerTokenUsage(
                         input_tokens=self.input_tokens,
                         output_tokens=self.output_tokens,
                         total_tokens=self.total_tokens,
-                    )
+                        cached_input_tokens=self.cached_input_tokens,
+                    ),
                 )
-
-                if self.previous_update_callback is not None:
-                    self.previous_update_callback(self.input_tokens)
             if len(chunk.choices) == 0:
                 return
             delta = chunk.choices[0].delta
@@ -585,6 +584,7 @@ class OpenAi:
     def __init__(
         self,
         *,
+        group_chat: linhai.group_chat.GroupChat,
         api_key: str,
         base_url: str,
         model: str,
@@ -593,24 +593,21 @@ class OpenAi:
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
-        previous_update_callback: Callable[[int], None] | None = None,
-        notification_callback: (
-            Callable[[Literal["INFO", "WARNING", "ERROR"], str], Awaitable[None]] | None
-        ) = None,
     ):
         """初始化OpenAI语言模型。
 
         参数:
+            group_chat: GroupChat实例，用于发送通知和协调组件
             api_key: OpenAI API密钥
             base_url: API基础URL
             model: 模型名称
             openai_config: 额外的OpenAI配置
+            chat_completion_kwargs: 聊天补全额外参数
             tools: 可用工具列表
             token_limit: token限制数量
             compatibility: API兼容性模式，支持minimax、kimi等
-            previous_update_callback: 更新previous_input_tokens的回调
-            notification_callback: 发送通知的回调，接受level和content两个参数
         """
+        self.group_chat = group_chat
         self.model = model
         self.openai = AsyncOpenAI(
             api_key=api_key, base_url=base_url, timeout=10, **openai_config
@@ -621,14 +618,8 @@ class OpenAi:
         self.compatibility = compatibility
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
-        self.previous_update_callback = (
-            previous_update_callback or self._default_previous_update_callback
-        )
-        self.notification_callback = notification_callback
 
-    def _default_previous_update_callback(self, input_tokens: int):
-        """默认的previous_input_tokens更新回调。"""
-        self.previous_input_tokens = input_tokens
+
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -725,19 +716,25 @@ class OpenAi:
         while True:
             try:
                 stream = await self.openai.chat.completions.create(**params)
+
+                
                 answer = OpenAiAnswer(
                     stream,
+                    group_chat=self.group_chat,
                     compatibility=self.compatibility,
                     cached_input_tokens=cached_input_tokens,
-                    previous_update_callback=self.previous_update_callback,
+
                 )
                 break
             except (asyncio.TimeoutError, OpenAIError):
-                if self.notification_callback:
-                    await self.notification_callback(
+
+                await self.group_chat.send(
+                    "ui_log",
+                    CliRuntimeNotice(
                         "WARNING",
                         f"API调用失败，将在约{retry_delay:.1f}秒后重试",
-                    )
+                    ),
+                )
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 1.5
                 retry_delay = min(retry_delay, 300)

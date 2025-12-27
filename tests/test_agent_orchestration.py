@@ -1,6 +1,7 @@
 """AgentContextOrchestration类的单元测试。"""
 
 import unittest
+import time
 from unittest.mock import Mock, patch
 
 from linhai.agent.orchestration import AgentContextOrchestration, ThresholdInfo
@@ -188,11 +189,147 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.orchestration._recently_called_cleanup_tool())
         
         # 设置调用时间
-        import time
         self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前
         self.assertTrue(self.orchestration._recently_called_cleanup_tool())
         
         # 超过一分钟
         self.orchestration.last_compress_or_clean_time = time.time() - 70  # 70秒前
         self.assertFalse(self.orchestration._recently_called_cleanup_tool())
+
+    def test_red_state_with_recent_cleanup_allows_normal_tools(self):
+        """测试红灯状态下，如果最近调用过清理工具，正常工具应该被允许。"""
+        
+        # 设置红灯状态（使用率95%）
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95
+        }
+        
+        # 模拟最近调用过清理工具（30秒前）
+        self.orchestration.last_compress_or_clean_time = time.time() - 30
+        
+        # 测试正常工具（如read_file）不应该被阻塞
+        details = self.orchestration.get_tool_block_details("read_file", threshold_info)
+        
+        # 验证：当前状态应该是红灯
+        self.assertEqual(details["current_state"], "红灯")
+        # 验证：最近调用过清理工具
+        self.assertTrue(details["recently_called_cleanup"])
+        # 验证：工具类别是other
+        self.assertEqual(details["actual_category"], "other")
+        # 验证：阻塞的类别应该是cleanup（只阻塞清理工具，不阻塞正常工具）
+        self.assertEqual(details["blocked_category"], "cleanup")
+        # 验证：因为blocked_category是cleanup，而actual_category是other，所以不应该被拦截
+        self.assertNotEqual(details["blocked_category"], details["actual_category"])
+
+    def test_red_state_without_recent_cleanup_blocks_normal_tools(self):
+        """测试红灯状态下，如果没有调用过清理工具，正常工具应该被阻塞。"""
+        
+        # 设置红灯状态（使用率95%）
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95
+        }
+        
+        # 确保没有最近调用清理工具（超过70秒）
+        self.orchestration.last_compress_or_clean_time = time.time() - 70
+        
+        # 测试正常工具（如read_file）应该被阻塞
+        details = self.orchestration.get_tool_block_details("read_file", threshold_info)
+        
+        # 验证：当前状态应该是红灯
+        self.assertEqual(details["current_state"], "红灯")
+        # 验证：最近没有调用过清理工具
+        self.assertFalse(details["recently_called_cleanup"])
+        # 验证：工具类别是other
+        self.assertEqual(details["actual_category"], "other")
+        # 验证：阻塞的类别应该是other（阻塞正常工具）
+        self.assertEqual(details["blocked_category"], "other")
+        # 验证：因为blocked_category和actual_category都是other，所以应该被拦截
+        self.assertEqual(details["blocked_category"], details["actual_category"])
+
+    def test_red_state_with_recent_cleanup_blocks_cleanup_tools(self):
+        """测试红灯状态下，如果最近调用过清理工具，清理工具应该被阻塞。"""
+        # 设置红灯状态（使用率95%）
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95
+        }
+        
+        # 模拟最近调用过清理工具（30秒前）
+        self.orchestration.last_compress_or_clean_time = time.time() - 30
+        
+        # 测试清理工具（如context_garbage_clean）应该被阻塞
+        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
+        
+        # 验证：当前状态应该是红灯
+        self.assertEqual(details["current_state"], "红灯")
+        # 验证：最近调用过清理工具
+        self.assertTrue(details["recently_called_cleanup"])
+        # 验证：工具类别是cleanup
+        self.assertEqual(details["actual_category"], "cleanup")
+        # 验证：阻塞的类别应该是cleanup（阻塞清理工具）
+        self.assertEqual(details["blocked_category"], "cleanup")
+        # 验证：因为blocked_category和actual_category都是cleanup，所以应该被拦截
+        self.assertEqual(details["blocked_category"], details["actual_category"])
+    
+    def test_red_state_with_recent_cleanup_error_message(self):
+        """测试红灯状态下，最近调用过清理工具时返回正确的错误消息。"""
+        # 设置红灯状态（使用率95%）
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95
+        }
+        
+        # 模拟最近调用过清理工具（30秒前）
+        self.orchestration.last_compress_or_clean_time = time.time() - 30
+        
+        # 获取工具拦截详情
+        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
+        
+        # 验证应该被拦截
+        self.assertEqual(details["blocked_category"], details["actual_category"])
+        
+        # 注意：实际错误消息由RedStateToolBlockPlugin生成，这里我们验证拦截逻辑正确
+        # 具体的错误消息测试需要在RedStateToolBlockPlugin的测试中完成
+        # 但我们可以验证拦截条件满足
+        self.assertTrue(details["recently_called_cleanup"])
+        self.assertEqual(details["current_state"], "红灯")
+        self.assertEqual(details["actual_category"], "cleanup")
+
+    def test_yellow_state_with_recent_cleanup_blocks_cleanup_tools(self):
+        """测试黄灯状态下，如果最近调用过清理工具，清理工具应该被阻塞。"""
+        
+        # 设置黄灯状态（使用率75%）
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 75000,
+            "remaining_tokens": 25000,
+            "usage_ratio": 0.75
+        }
+        
+        # 模拟最近调用过清理工具（30秒前）
+        self.orchestration.last_compress_or_clean_time = time.time() - 30
+        
+        # 测试清理工具（如context_garbage_clean）应该被阻塞
+        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
+        
+        # 验证：当前状态应该是黄灯
+        self.assertEqual(details["current_state"], "黄灯")
+        # 验证：最近调用过清理工具
+        self.assertTrue(details["recently_called_cleanup"])
+        # 验证：工具类别是cleanup
+        self.assertEqual(details["actual_category"], "cleanup")
+        # 验证：阻塞的类别应该是cleanup（阻塞清理工具）
+        self.assertEqual(details["blocked_category"], "cleanup")
+        # 验证：因为blocked_category和actual_category都是cleanup，所以应该被拦截
+        self.assertEqual(details["blocked_category"], details["actual_category"])
 
