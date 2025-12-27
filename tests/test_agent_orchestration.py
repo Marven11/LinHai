@@ -70,7 +70,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "remaining_tokens": 40000,
             "usage_ratio": 0.8
         }
-        # 添加一个大消息，以便在红灯状态下可以显示大消息信息
+        # 添加一个大消息，以便在黄灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
@@ -81,7 +81,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 验证返回值
         self.assertIsNotNone(result)
         self.assertIn("黄灯状态", result)
-        self.assertIn("Token用量", result)
+        self.assertIn("上下文占用量", result)
+        self.assertIn("条大消息", result)
         # 消息数量应该仍然是3，因为通知没有被添加，只是返回
         self.assertEqual(len(self.message_processor.messages), 3)
 
@@ -97,13 +98,17 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
+        
+        # 模拟最近调用过清理工具
+        self.orchestration.last_compress_or_clean_time = time.time() - 30
 
         # 调用add_soft_threshold_notification，现在返回字符串
         result = self.orchestration.add_soft_threshold_notification(threshold_info)
         
-        # 对于绿灯状态，应该返回消息字符串
+        # 对于绿灯状态且最近调用过清理工具，应该返回消息字符串
         self.assertIsNotNone(result)
         self.assertIn("绿灯状态", result)
+        self.assertIn("一分钟内有调用过消息清理工具", result)
         # 消息数量应该仍然是3
         self.assertEqual(len(self.message_processor.messages), 3)
 

@@ -126,7 +126,7 @@ class AgentContextOrchestration:
         )
         return message_content
 
-    async def check_and_handle_threshold(self, agent: "Agent") -> None:
+    async def check_and_handle_threshold(self, agent: "linhai.agent.main.Agent") -> None:
         """检查阈值并处理相应的通知和操作引导。
 
         Args:
@@ -241,40 +241,34 @@ class AgentContextOrchestration:
     ) -> str:
         message_count = len(self.agent_message.messages)
         percentage = usage_ratio * 100
-
-        # 绿灯、黄灯状态的消息模板（提供不同状态的提示信息）
-        if current_state == "绿灯":
-            return (
-                f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
-                f"当前使用{percentage:.1f}%（绿灯状态）。"
-                f"当前已有{message_count}条消息。"
-            )
-
-        if current_state == "黄灯":
-            large_count = len(self.large_messages)
-            return (
-                f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
-                f"当前使用{percentage:.1f}%（黄灯状态）。"
-                f"当前已有{message_count}条消息，其中有{large_count}条大消息。"
-                "黄灯状态下需要避免读取文件，直接开始修改需要修改的文件。"
-                "积极考虑调用context_garbage_clean清理大消息。"
-            )
-
         large_count = len(self.large_messages)
         recently_called_cleanup = self._recently_called_cleanup_tool()
 
-        if recently_called_cleanup:
-            action_guide = "一分钟内已调用过消息清理工具，可以正常进行工作！"
-        elif large_count >= 5:
-            action_guide = f"当前有至少{large_count}条大消息，建议调用context_garbage_clean清理大消息。"
-        else:
-            action_guide = "建议调用context_range_compress删除大约一半消息！"
+        recently_called_text = "有" if recently_called_cleanup else "没有"
 
-        return (
-            f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
-            f"当前使用{percentage:.1f}%（红灯状态）。"
-            f"当前已有{message_count}条消息。" + action_guide
-        )
+        # 构建基础信息
+        base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具"
+
+        # 根据状态和条件添加建议
+        if recently_called_cleanup:
+            # 一分钟内调用过消息清理工具
+            if current_state == "红灯":
+                suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
+            else:
+                suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
+        elif current_state == "红灯":
+            # 红灯状态，没有调用过清理工具
+            suggestion = "建议: 立即暂停当前任务，调用消息清理工具"
+        elif current_state == "黄灯":
+            # 黄灯状态，没有调用过清理工具
+            if large_count >= 5:
+                suggestion = "建议: 应该调用context_garbage_clean工具"
+            else:
+                suggestion = "建议: 应该避免读取文件，立即开始修改"
+        else:  # 绿灯状态
+            suggestion = "建议: 不要担心消息限制，立即工作"
+
+        return f"{base_info}, {suggestion}"
 
     def get_status_display_pieces(self, use_nerd_font: bool = False) -> list[str]:
         """获取状态显示片段列表，用于CLI底栏。
@@ -369,10 +363,9 @@ class AgentContextOrchestration:
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
 
-
     async def _on_after_tool_call(
         self,
-        _agent: "Agent",
+        _agent: "linhai.agent.main.Agent",
         _tool_call: ToolCallMessage,
         tool_result_msg: ToolResultMessage,
         _success: bool,
@@ -486,7 +479,9 @@ class AppendingMessagePlugin:
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="threshold_notification", sort_value=0
+                RuntimeMessage(message_content),
+                source="threshold_notification",
+                sort_value=0,
             )
 
     async def after_message_generation(
@@ -513,7 +508,9 @@ class AppendingMessagePlugin:
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="threshold_notification", sort_value=0
+                RuntimeMessage(message_content),
+                source="threshold_notification",
+                sort_value=0,
             )
 
     def register(self, lifecycle):
@@ -525,7 +522,9 @@ class AppendingMessagePlugin:
 class LargeMessageCountPlugin:
     """大消息数量通知插件。
 
-    在before_message_generation中更新appending_message，告知当前有几条大消息。
+    根据大消息数量动态管理appending_message：
+    - 大消息少于5条时：提示不能调用context_garbage_clean
+    - 大消息至少5条时：删除提示（不添加appending_message）
     """
 
     def __init__(self, group_chat: GroupChat):
@@ -536,7 +535,7 @@ class LargeMessageCountPlugin:
         _enable_compress: bool,
         _disable_waiting_user_warning: bool,
     ) -> None:
-        """在消息生成前添加大消息数量通知。"""
+        """在消息生成前根据大消息数量管理appending_message。"""
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -548,10 +547,19 @@ class LargeMessageCountPlugin:
             return
 
         large_count = len(orchestration.large_messages)
-        if large_count > 0:
-            message_content = f"当前有{large_count}条大消息，建议积极考虑调用context_garbage_clean清理大消息。"
+
+        if large_count < 5:
+            # 大消息少于5条时，添加提示不能调用context_garbage_clean
+            message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_garbage_clean"
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content), source="large_message_count", sort_value=0
+                RuntimeMessage(message_content),
+                source="large_message_count",
+                sort_value=0,
+            )
+        else:
+            # 大消息至少5条时，删除提示
+            agent.message_processor.update_appending_message(
+                None, source="large_message_count", sort_value=0
             )
 
     def register(self, lifecycle):
