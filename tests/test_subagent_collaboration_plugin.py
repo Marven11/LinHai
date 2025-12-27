@@ -26,8 +26,9 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
             _ = member_class  # 使用参数以消除警告
             if member_type == "subagent_manager":
                 return self.mock_subagent_manager
-            else:
+            elif member_type == "agent":
                 return self.agent
+            raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
         self.group_chat.send_if_exists = AsyncMock()

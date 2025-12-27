@@ -89,13 +89,20 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.issue_manager = MagicMock()
         self.issue_manager.has_unanswered_issues.return_value = False
 
+        self.lifecycle_mock = MagicMock()
+
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
             elif member_type == "issue_manager":
                 return self.issue_manager
-            else:
+            elif member_type == "tool_manager":
                 return self.tool_manager
+            elif member_type == "lifecycle":
+                return self.lifecycle_mock
+            elif member_type == "agent_context_orchestration":
+                return self.agent.orchestration
+            raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members.side_effect = get_members_side_effect
 

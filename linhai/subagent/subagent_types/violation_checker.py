@@ -1,6 +1,6 @@
 """违规检查SubAgent类型实现，包含专用插件。"""
 
-from typing import Any, TYPE_CHECKING
+from typing import Any
 import asyncio
 
 
@@ -9,10 +9,6 @@ from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.agent.plugin import Plugin
 from linhai.subagent.main import SubAgent
 from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PROMPT
-
-if TYPE_CHECKING:
-    import linhai.agent
-    import linhai.subagent
 
 
 class ViolationCheckerSubAgent(SubAgent):

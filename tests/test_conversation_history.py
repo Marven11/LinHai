@@ -33,28 +33,27 @@ class TestConversationHistory(unittest.TestCase):
         self.group_chat = Mock()
         self.group_chat.register_queue = Mock()
         self.group_chat.register_member = Mock()
-        
+
         # 为SystemMessage初始化提供tool_manager
         from linhai.tool.main import ToolManager
         from linhai.agent.lifecycle import Lifecycle
-        
+
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        
+
         mock_lifecycle = Mock(spec=Lifecycle)
         mock_lifecycle.register_after_working = Mock()
         mock_lifecycle.register_before_message_generation = Mock()
         mock_lifecycle.register_after_message_generation = Mock()
         mock_lifecycle.register_before_tool_call = Mock()
-        
+
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "tool_manager":
                 return mock_tool_manager
             elif member_type == "lifecycle":
                 return mock_lifecycle
-            else:
-                return None
-        
+            raise RuntimeError(f"{member_type!r} not exists")
+
         self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
         self.init_messages = [

@@ -1,7 +1,5 @@
 """SubAgent通用插件实现。"""
 
-from typing import TYPE_CHECKING
-
 import shlex
 import os
 
@@ -9,9 +7,6 @@ from linhai.llm import ToolCallMessage, Answer
 from linhai.utils import CliRuntimeNotice
 from linhai.agent.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
-
-if TYPE_CHECKING:
-    import linhai.agent
 
 
 class GitBlockingPlugin(Plugin):

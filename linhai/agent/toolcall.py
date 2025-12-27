@@ -1,15 +1,10 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
-from typing import TYPE_CHECKING
-
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
 from linhai.utils import generate_id, CliRuntimeNotice
 from .base import RuntimeMessage
-
-if TYPE_CHECKING:
-    from .main import Agent
 
 
 class AgentToolcall:

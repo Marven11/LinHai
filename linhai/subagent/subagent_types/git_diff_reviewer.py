@@ -4,7 +4,7 @@ import asyncio
 import argparse
 import os
 import subprocess
-from typing import TYPE_CHECKING
+
 
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.plugin import Plugin
@@ -14,9 +14,6 @@ from linhai.subagent.main import SubAgent
 from linhai.tool.general import TodolistManager, TodolistItem
 from linhai.utils import CliRuntimeNotice, generate_id
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
-
-if TYPE_CHECKING:
-    import linhai.agent
 
 
 class GitDiffReviewerSubAgent(SubAgent):

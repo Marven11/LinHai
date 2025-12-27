@@ -47,7 +47,9 @@ class TestContextTab(unittest.TestCase):
         # TokenManager会在CLIApp初始化时自动注册，这里不需要手动注册
 
         # 注册所有必需的组件
-        mock_agent = Mock()
+        from linhai.agent.main import Agent
+
+        mock_agent = Mock(spec=Agent)
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
 
@@ -64,13 +66,12 @@ class TestContextTab(unittest.TestCase):
 
         mock_orchestration.large_messages = {}
 
-
         # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
             "remaining_tokens": 2000,
-            "usage_ratio": 0.75
+            "usage_ratio": 0.75,
         }
         from linhai.llm import AnswerTokenUsage
 
@@ -138,9 +139,11 @@ class TestContextTab(unittest.TestCase):
         group_chat = GroupChat()
 
         # 创建模拟组件
+        from linhai.agent.main import Agent
+
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_agent = Mock()
+        mock_agent = Mock(spec=Agent)
 
         # 设置模拟数据
         from linhai.llm import UserMessage, AssistantMessage, AnswerTokenUsage
@@ -160,13 +163,12 @@ class TestContextTab(unittest.TestCase):
         }
         mock_orchestration.get_large_message_reprs = Mock(return_value=[])
 
-
         # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
             "remaining_tokens": 2000,
-            "usage_ratio": 0.75
+            "usage_ratio": 0.75,
         }
         from linhai.llm import AnswerTokenUsage
 

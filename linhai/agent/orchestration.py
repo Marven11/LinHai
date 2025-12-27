@@ -5,7 +5,7 @@
 import random
 import time
 import reprlib
-from typing import Optional, TYPE_CHECKING, Literal, TypedDict
+from typing import Optional, Literal, TypedDict
 
 from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
@@ -25,10 +25,6 @@ class ToolBlockDetailsDict(TypedDict):
     actual_category: str
     recently_called_cleanup: bool
     current_state: str
-
-
-if TYPE_CHECKING:
-    from .main import Agent
 
 
 class AgentContextOrchestration:
@@ -180,8 +176,6 @@ class AgentContextOrchestration:
         else:
             return "other"
 
-
-
     def get_tool_block_details(
         self, tool_name: str, threshold_info: ThresholdInfo | None
     ) -> ToolBlockDetailsDict:
@@ -257,10 +251,12 @@ class AgentContextOrchestration:
             )
 
         if current_state == "黄灯":
+            large_count = len(self.large_messages)
             return (
                 f"当前Token用量为{used_tokens}，硬限制为{hard_limit}，"
                 f"当前使用{percentage:.1f}%（黄灯状态）。"
-                f"当前已有{message_count}条消息。"
+                f"当前已有{message_count}条消息，其中有{large_count}条大消息。"
+                "黄灯状态下需要避免读取文件，直接开始修改需要修改的文件。"
                 "积极考虑调用context_garbage_clean清理大消息。"
             )
 
@@ -344,7 +340,6 @@ class AgentContextOrchestration:
             包含工作流工具的ToolSet
         """
 
-
         toolset = ToolSet()
 
         @toolset.register_tool(
@@ -370,6 +365,10 @@ class AgentContextOrchestration:
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
         lifecycle.register_after_working(self._on_after_working)
         lifecycle.register_after_tool_call(self._on_after_tool_call)
+
+        # 注册大消息数量通知插件
+        large_message_plugin = LargeMessageCountPlugin(self.group_chat)
+        large_message_plugin.register(lifecycle)
 
     async def _on_after_working(self, _agent: "Agent") -> None:
         """工作完成后的回调，重置状态。"""
@@ -418,9 +417,12 @@ class RedStateToolBlockPlugin:
         orchestration = self.group_chat.get_members(
             "agent_context_orchestration", AgentContextOrchestration
         )
-        
+
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
+            return False
+
+        if orchestration is None:
             return False
 
         # 使用orchestration的方法获取工具拦截详情
@@ -484,6 +486,9 @@ class AppendingMessagePlugin:
         if threshold_info is None:
             return
 
+        if orchestration is None:
+            return
+
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
@@ -508,6 +513,9 @@ class AppendingMessagePlugin:
         if threshold_info is None:
             return
 
+        if orchestration is None:
+            return
+
         message_content = orchestration.add_soft_threshold_notification(threshold_info)
         if message_content is not None:
             agent.message_processor.update_appending_message(
@@ -518,3 +526,40 @@ class AppendingMessagePlugin:
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class LargeMessageCountPlugin:
+    """大消息数量通知插件。
+
+    在before_message_generation中更新appending_message，告知当前有几条大消息。
+    """
+
+    def __init__(self, group_chat: GroupChat):
+        self.group_chat = group_chat
+
+    async def before_message_generation(
+        self,
+        _enable_compress: bool,
+        _disable_waiting_user_warning: bool,
+    ) -> None:
+        """在消息生成前添加大消息数量通知。"""
+        from .main import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
+        orchestration = self.group_chat.get_members(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
+
+        if orchestration is None:
+            return
+
+        large_count = len(orchestration.large_messages)
+        if large_count > 0:
+            message_content = f"当前有{large_count}条大消息，建议积极考虑调用context_garbage_clean清理大消息。"
+            agent.message_processor.update_appending_message(
+                RuntimeMessage(message_content), source="large_message_count"
+            )
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)

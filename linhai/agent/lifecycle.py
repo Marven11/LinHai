@@ -15,9 +15,6 @@ from linhai.llm import (
     ToolCallMessage,
 )
 
-if typing.TYPE_CHECKING:
-    from linhai.agent import Agent
-
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[
     [

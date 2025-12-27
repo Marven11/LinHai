@@ -1,7 +1,7 @@
 """Context tab widget for displaying message statistics and token usage."""
 
 import reprlib
-from typing import TYPE_CHECKING, Optional, TypedDict
+from typing import Optional, TypedDict
 
 from rich.table import Table
 from rich.text import Text
@@ -13,18 +13,11 @@ from textual.widgets import Static
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 
-if TYPE_CHECKING:
-    from linhai.group_chat import GroupChat
-    from linhai.agent.message import AgentMessage
-    from linhai.agent.orchestration import AgentContextOrchestration
-    from linhai.agent import Agent
-    from linhai.llm import Message
-else:
-    GroupChat = object
-    AgentMessage = object
-    AgentContextOrchestration = object
-    Agent = object
-    Message = object
+from linhai.group_chat import GroupChat
+from linhai.agent.message import AgentMessage
+from linhai.agent.orchestration import AgentContextOrchestration
+from linhai.agent import Agent
+from linhai.llm import Message
 
 
 reprobj = reprlib.Repr(maxstring=60)
@@ -81,7 +74,7 @@ class ContextTabWidget(Static):
         Returns:
             Tuple of (type_counts, total_chars, max_length, max_length_msg)
         """
-        
+
         # Define message type mapping to avoid hardcoded keys
         type_mapping: list[tuple[type, str]] = [
             (UserMessage, "user"),

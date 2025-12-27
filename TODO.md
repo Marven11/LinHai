@@ -2,11 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 有很多unittest在模拟get_members时没有在找不到member时崩溃，而是错误地返回None，修改
+- [x] 有很多unittest在模拟get_members时没有在找不到member时崩溃，而是错误地返回None，修改
   - 这说明这些unittest没有良好地模拟环境，需要完整添加对应的member
-- [ ] 搜索linhai/中是否使用TYPE_CHECKING，删除这个常量的使用，并按照group_chat.py中的要求解决使用get_members的循环import问题
-- [ ] 在orchestration.py中添加一个插件，在before_message_generation中更新appending_message，告知现在有几条大消息
-- [ ] 修改黄灯的提示，添加要求：黄灯状态下需要避免读取文件，直接开始修改需要修改的文件
+- [x] 搜索linhai/中是否使用TYPE_CHECKING，删除这个常量的使用，并按照group_chat.py中的要求解决使用get_members的循环import问题
+- [x] 在orchestration.py中添加一个插件，在before_message_generation中更新appending_message，告知现在有几条大消息
+- [x] 修改黄灯的提示，添加要求：黄灯状态下需要避免读取文件，直接开始修改需要修改的文件
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

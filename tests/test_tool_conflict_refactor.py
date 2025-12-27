@@ -47,8 +47,14 @@ class TestToolConflictRefactor(unittest.TestCase):
             mcp_config=mcp_config,
             mcp_basedir=mcp_basedir,
         )
+
         # 将tool_manager设置为group_chat.get_members的返回值
-        self.agent_mock.group_chat.get_members.side_effect = lambda member_type, _member_class=None: tool_manager if member_type == "tool_manager" else None
+        def get_members_side_effect(member_type, _member_class=None):
+            if member_type == "tool_manager":
+                return tool_manager
+            raise RuntimeError(f"{member_type!r} not exists")
+
+        self.agent_mock.group_chat.get_members.side_effect = get_members_side_effect
         self.toolcall.tool_manager = tool_manager
 
     def _reset_called_tools(self) -> None:

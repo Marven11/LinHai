@@ -20,7 +20,13 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(return_value=self.agent)
+
+        def get_members_side_effect(member_type, _member_class=None):
+            if member_type == "agent":
+                return self.agent
+            raise RuntimeError(f"{member_type!r} not exists")
+
+        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
         self.group_chat.send_if_exists = AsyncMock()
         self.plugin = UnnecessaryRunCommandPlugin(self.group_chat)
 
@@ -64,7 +70,6 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
             self.agent, tool_call, "result", True
         )
         self.assertIsNone(result)
-
 
     async def test_after_tool_call_with_pipeline_allowed(self):
         """测试在管道中的grep命令允许。"""
@@ -258,7 +263,9 @@ class TestHelperFunctions(unittest.TestCase):
         # 直接sed命令应该被拦截
         self.assertTrue(should_block_command_simple("sed -n '1,10p' file.txt"))
         self.assertTrue(should_block_command_simple("tail -10 file.txt"))
-        self.assertTrue(should_block_command_simple("cd /etc && sed -n '1,10p' file.txt"))
+        self.assertTrue(
+            should_block_command_simple("cd /etc && sed -n '1,10p' file.txt")
+        )
 
         # 管道中的sed命令应该允许
         self.assertFalse(should_block_command_simple("cat file.txt | sed 's/old/new/'"))
