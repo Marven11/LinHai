@@ -2,8 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] agent输出在非第一行的`<<tool>>`没有被RuntimeImitationPlugin打断，使用unittest检测这一点，在运行unittest确认其可以准确找到这个错误后修复这个漏洞。必须先编写并运行unittest，在运行新unittest找到错误之后才能开始修复！这是原则问题！禁止绕过unittest直接修复！！！
-- [ ] 使用`uv run python -m linhai -m '@nothink 尝试读取并复读/tmp/test.txt中的内容（复读时不要将内容包裹在```中）看看会不会被runtime打断，然后退出，如果输出时没有被打断则return code非0，每次只调用一个工具'`验证上一个任务是否成功
+- [x] agent输出在非第一行的`<<tool>>`没有被RuntimeImitationPlugin打断，使用unittest检测这一点，在运行unittest确认其可以准确找到这个错误后修复这个漏洞。必须先编写并运行unittest，在运行新unittest找到错误之后才能开始修复！这是原则问题！禁止绕过unittest直接修复！！！
+- [x] 使用`uv run python -m linhai -m '@nothink 尝试读取并复读/tmp/test.txt中的内容（复读时不要将内容包裹在```中）看看会不会被runtime打断，然后退出，如果输出时没有被打断则return code非0，每次只调用一个工具'`验证上一个任务是否成功
 
 注意：你没法直接使用你修改/新增的功能（因为你没有重启）
 注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest

@@ -568,7 +568,7 @@ class RuntimeImitationPlugin(Plugin):
             return False
 
 
-        if matches := re.match("^<<([a-z_]+)>>", current_content):
+        if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
                 await agent.interrupt("不要输出<<agent>>这个tag!")
             else:
