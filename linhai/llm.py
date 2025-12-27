@@ -430,6 +430,7 @@ class OpenAiAnswer:
         group_chat: linhai.group_chat.GroupChat,
         compatibility: str | None = None,
         cached_input_tokens: int = 0,
+        llm_instance=None,
     ):
         """初始化OpenAI回答。"""
         self.tokens = []
@@ -444,6 +445,7 @@ class OpenAiAnswer:
         self.output_tokens = 0
         self.group_chat = group_chat
         self.cached_input_tokens = cached_input_tokens
+        self.llm_instance = llm_instance
         self.toyield: list[AnswerToken | AnswerTokenUsage] = []
 
     def __aiter__(self):
@@ -479,6 +481,8 @@ class OpenAiAnswer:
                 self.total_tokens = (
                     usage.total_tokens if hasattr(usage, "total_tokens") else 0
                 )
+                if self.llm_instance is not None and self.input_tokens > 0:
+                    self.llm_instance.previous_input_tokens = self.input_tokens
                 # Send token usage directly to CLI queue instead of through agent
                 await self.group_chat.send(
                     "token_usage",
@@ -723,7 +727,7 @@ class OpenAi:
                     group_chat=self.group_chat,
                     compatibility=self.compatibility,
                     cached_input_tokens=cached_input_tokens,
-
+                    llm_instance=self,
                 )
                 break
             except (asyncio.TimeoutError, OpenAIError):
