@@ -2,24 +2,9 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 有很多unittest在模拟get_members时没有在找不到member时崩溃，而是错误地返回None，修改
-  - 这说明这些unittest没有良好地模拟环境，需要完整添加对应的member
-- [x] 搜索linhai/中是否使用TYPE_CHECKING，删除这个常量的使用，并按照group_chat.py中的要求解决使用get_members的循环import问题
-- [x] 在orchestration.py中添加一个插件，在before_message_generation中更新appending_message，告知现在有几条大消息
-- [x] 修改黄灯的提示，添加要求：黄灯状态下需要避免读取文件，直接开始修改需要修改的文件
-
-注意：你没法直接使用你修改/新增的功能（因为你没有重启）
-注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
-注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
-
-# 暂时搁置
-
 - [ ] delete trigger_after_working
 - [?] 在lifecycle中添加before_agent_loop这个lifecycle hook，在Agent.run函数中的`while True:`前调用
   - [ ] 让PromptFastAgentPlugin使用before_agent_loop而不是before_message_generation添加“你现在是xxx”的prompt
-- [x] 当前如果是红灯状态但是一分钟内调用过消息清理工具还是会提示“红灯状态下阻止调用...请先调用消息清理类工具”，这不合理
-  - 应该在一分钟内调用过消息清理工具但是agent仍然调用消息清理工具时提示“一分钟内已经调用过消息清理工具，禁止..”
-  - 需要添加unittest测试这个行为
 - [ ] 修改appending_message的设计
   - appending_message支持排序：在添加时支持指定appending_message的排序方式
   - 每个appending_message除了有source, message之外增加一个排序权重,起名格式为xxx_value,必须指定，不能默认为0
@@ -27,6 +12,13 @@
     - 需要定义TypedDict保存每个appending_message的source, message等，作为self.appending_messages的value
   - 在get_messages中根据这个value排序
   - update_appending_message需要添加一个参数指定这个权重
+
+注意：你没法直接使用你修改/新增的功能（因为你没有重启）
+注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
+注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
+
+# 暂时搁置
+
 - [ ] 让Agent在调用工具前提前规划任务
   - 任务规划格式
     - 输出在```json toolcall前的一段嵌套无序列表，使用`[ ]`和`[x]`标记完成的和未完成的任务
@@ -37,6 +29,19 @@
     - 所有实现放在linhai/agent/planning.py中
   - 插件
     - 任务规划prompt添加插件: hook before_agent_loop，添加介绍任务规划的prompt
+- [ ] 修改_build_threshold_message使其提示以下信息，使用以下格式
+  - `当前为x灯状态, 上下文占用量为xx%, 当前有x条大消息, 一分钟内有/没有调用过..., 建议: ...`
+  - 在黄灯状态: 提示避免读取文件，直接开始修改文件，只在消息多于5条时提示“应该调用context_garbage_clean”
+  - 如果一分钟内调用过消息清理工具，无论是否红灯，都不应该提示应该调用消息清理工具
+  - 在消息清理工具方面
+    - if 一分钟内调用过消息清理工具：不应该调用消息清理工具
+    - elif 红灯: 立即...
+    - elif 黄灯且消息多于5条: 应该调用context_garbage_clean工具
+  - 在其他方面
+    - if 一分钟内调用过消息清理工具: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知
+    - elif 红灯: 立即暂停当前任务
+    - elif 黄灯: 应该避免读取文件，立即开始修改
+    - else: assert 绿灯, 不要担心消息限制，立即工作
 
 ## 任务规划例子
 
