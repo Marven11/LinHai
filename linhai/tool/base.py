@@ -226,6 +226,8 @@ class ToolErrorMessage(Message):
 
     def __init__(self, content: str):
         self.content = content
+        if len(self.content) > 50000:
+            self.content = reprlib.Repr(maxstring=10000).repr(self.content)
 
     def to_llm_message(self) -> LanguageModelMessage:
         return cast(
