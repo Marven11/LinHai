@@ -735,8 +735,8 @@ class OpenAi:
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
-                        "WARNING",
-                        f"API调用失败，将在约{retry_delay:.1f}秒后重试",
+                        level="WARNING",
+                        content=f"API调用失败，将在约{retry_delay:.1f}秒后重试",
                     ),
                 )
                 await asyncio.sleep(retry_delay)
