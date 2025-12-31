@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.agent import Agent, AgentContext
+from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.group_chat import GroupChat
@@ -21,7 +21,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
 
-        config: AgentContext = {
+        config = {
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -48,7 +48,10 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         ]
 
         self.agent = Agent(
-            context=config,
+            llms=config["llms"],
+            llm_names=config["llm_names"],
+            current_llm_index=config["current_llm_index"],
+            compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,
         )

@@ -15,6 +15,16 @@ from linhai.tool.general import TodolistManager, TodolistItem
 from linhai.utils import CliRuntimeNotice, generate_id
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from linhai.agent import Agent, Lifecycle
+    from linhai.agent.plugin import Plugin
+    from linhai.subagent import SubAgentManager
+    from linhai.subagent.main import SubAgent
+    from linhai.tool.general import TodolistManager, TodolistItem
+    from linhai.utils import CliRuntimeNotice, generate_id
+
 
 class GitDiffReviewerSubAgent(SubAgent):
     """Git diff审查SubAgent。"""
@@ -196,7 +206,7 @@ class GitDiffReviewPlugin(Plugin):
             )
         return ""
 
-    async def before_waiting_user(self, agent: "linhai.agent.Agent"):
+    async def before_waiting_user(self, agent: "Agent"):
         """在Agent进入等待用户状态前检查是否需要启动git diff审查。"""
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager
@@ -309,7 +319,7 @@ todolist: ---
         ):
             self._agent_used_file_modification_tools = True
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到before_waiting_user回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
         lifecycle.register_before_waiting_user(self.before_waiting_user)

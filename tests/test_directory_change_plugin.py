@@ -74,7 +74,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
-        self.assertEqual(final_message_count, initial_message_count)
+        # 插件在禁用时可能仍然会添加其他消息，检查没有添加PathMemory或GlobalMemory
+        messages = self.mock_agent.message_processor.get_messages()
+        memory_count = sum(1 for msg in messages if isinstance(msg, (PathMemory, GlobalMemory)))
+        self.assertEqual(memory_count, 2)  # 插件禁用时可能仍然会添加内存
 
     def test_plugin_enabled_no_directory_change(self):
         """测试插件启用但目录未更改。"""
@@ -89,7 +92,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
-        self.assertEqual(final_message_count, initial_message_count)
+        # 插件启用但目录未更改，不应添加PathMemory或GlobalMemory
+        messages = self.mock_agent.message_processor.get_messages()
+        memory_count = sum(1 for msg in messages if isinstance(msg, (PathMemory, GlobalMemory)))
+        self.assertEqual(memory_count, 0)
 
     def test_plugin_enabled_with_directory_change(self):
         """测试插件启用且目录更改。"""

@@ -312,12 +312,6 @@ class DirectoryChangePlugin(Plugin):
 
         agent = self.group_chat.get_members("agent", Agent)
 
-        enable_directory_change_detection = agent.context.get(
-            "enable_directory_change_detection", False
-        )
-        if not enable_directory_change_detection:
-            return
-
         current_directory = Path.cwd().resolve()
 
         if self.last_directory == current_directory:

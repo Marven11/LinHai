@@ -2,10 +2,11 @@
 消息编排模块，负责管理大消息、垃圾消息、阈值通知等高级消息管理功能。
 """
 
+from __future__ import annotations
 import random
 import time
 import reprlib
-from typing import Optional, Literal, TypedDict
+from typing import Optional, Literal, TypedDict, TYPE_CHECKING
 
 from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
@@ -15,6 +16,9 @@ from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
 from .base import Message, RuntimeMessage
 from .message import AgentMessage
+
+if TYPE_CHECKING:
+    from .main import Agent
 
 r = reprlib.Repr()
 r.maxstring = 100
@@ -126,7 +130,7 @@ class AgentContextOrchestration:
         )
         return message_content
 
-    async def check_and_handle_threshold(self, agent: "linhai.agent.main.Agent") -> None:
+    async def check_and_handle_threshold(self, agent: "Agent") -> None:
         """检查阈值并处理相应的通知和操作引导。
 
         Args:
@@ -365,7 +369,7 @@ class AgentContextOrchestration:
 
     async def _on_after_tool_call(
         self,
-        _agent: "linhai.agent.main.Agent",
+        _agent: "Agent",
         _tool_call: ToolCallMessage,
         tool_result_msg: ToolResultMessage,
         _success: bool,

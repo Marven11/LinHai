@@ -106,7 +106,10 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         
         # 创建Agent
         self.agent = Agent(
-            context=self.context,
+            llms=self.context["llms"],
+            llm_names=self.context["llm_names"],
+            current_llm_index=self.context["current_llm_index"],
+            compress_threshold=self.context["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[self.system_message],
         )
@@ -121,7 +124,7 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.planning_plugin.enabled = True
         self.planning_plugin.no_planning_counter = 0
         # 注册回调
-        self.agent.lifecycle.register_before_agent_loop(self.planning_plugin.before_agent_loop)
+        # before_agent_loop方法已移除，不需要注册
         self.agent.lifecycle.register_after_message_generation(self.planning_plugin.after_message_generation)
         self.agent.lifecycle.register_after_token_generation(self.planning_plugin.after_token_generation)
         # 不调用before_agent_loop，因为它会根据agent.context设置enabled，可能覆盖我们的设置
@@ -143,7 +146,7 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 如果没有找到插件，可能是注册问题
         if not planning_plugins:
             # 重新注册self.planning_plugin
-            self.agent.lifecycle.register_before_agent_loop(self.planning_plugin.before_agent_loop)
+            # before_agent_loop方法已移除，不需要注册
             self.agent.lifecycle.register_after_message_generation(self.planning_plugin.after_message_generation)
             self.agent.lifecycle.register_after_token_generation(self.planning_plugin.after_token_generation)
             planning_plugins = [self.planning_plugin]
@@ -182,7 +185,7 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 如果没有找到插件，可能是注册问题
         if not planning_plugins:
             # 重新注册self.planning_plugin
-            self.agent.lifecycle.register_before_agent_loop(self.planning_plugin.before_agent_loop)
+            # before_agent_loop方法已移除，不需要注册
             self.agent.lifecycle.register_after_message_generation(self.planning_plugin.after_message_generation)
             self.agent.lifecycle.register_after_token_generation(self.planning_plugin.after_token_generation)
             planning_plugins = [self.planning_plugin]

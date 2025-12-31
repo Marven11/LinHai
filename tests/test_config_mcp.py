@@ -148,7 +148,7 @@ model = "test-model"
 
         config = load_config(config_path)
 
-        self.assertIsNone(config.agent)
+        self.assertIsNotNone(config.agent)  # 现在有默认值，不再为None
 
 
 if __name__ == "__main__":

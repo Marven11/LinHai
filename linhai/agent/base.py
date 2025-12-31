@@ -192,13 +192,15 @@ class ChecklistMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
         """
         从JSON字符串反序列化检查清单对象。
 
         参数:
             json_str: JSON格式的字符串
-            group_chat: GroupChat实例（为接口兼容性保留）
+            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
 
         返回:
             ChecklistMessage: 反序列化的检查清单对象
@@ -269,16 +271,6 @@ class PathMemory:
         return cls(filepath=Path(data["filepath"]))
 
 
-class AgentContext(TypedDict):
-    """Agent配置参数"""
-
-    llms: list
-    llm_names: list[str]
-    current_llm_index: int
-    compress_threshold: int | float
-    memory: NotRequired[dict]
-    enable_directory_change_detection: bool
-    enable_task_planning: bool
 
 
 class FileContentMessage(Message):

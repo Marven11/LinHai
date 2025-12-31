@@ -14,7 +14,7 @@ from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMe
 from linhai.agent.base import RuntimeMessage
 
 from linhai.group_chat import GroupChat
-from linhai.agent.message import AgentMessage
+from linhai.agent.message import AgentMessage, AppendingMessageEntry
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
@@ -293,7 +293,7 @@ class ContextTabWidget(Static):
         grid.add_row("")
 
     def _build_appending_messages_section(
-        self, grid: Table, appending_messages: dict[str, Message]
+        self, grid: Table, appending_messages: dict[str, AppendingMessageEntry]
     ) -> None:
         """Build appending messages section."""
         grid.add_row(Text("追加消息", style="bold yellow"))
@@ -302,7 +302,8 @@ class ContextTabWidget(Static):
         if not appending_messages:
             grid.add_row("无追加消息")
         else:
-            for source, msg in appending_messages.items():
+            for source, entry in appending_messages.items():
+                msg = entry["message"]
                 msg_type = type(msg).__name__
                 preview = reprobj.repr(str(msg))[:80]  # Show more content
                 grid.add_row(f"{source} ({msg_type}):", preview)

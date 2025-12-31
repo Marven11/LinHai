@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock
 from pathlib import Path
 
-from linhai.agent import Agent, AgentContext
+from linhai.agent import Agent
 from linhai.group_chat import GroupChat
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
@@ -75,7 +75,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         self.mock_llm = Mock()
 
-        self.config: AgentContext = {
+        self.config = {
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -99,7 +99,10 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
                     raise
 
         self.agent = Agent(
-            context=self.config,
+            llms=self.config["llms"],
+            llm_names=self.config["llm_names"],
+            current_llm_index=self.config["current_llm_index"],
+            compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=self.init_messages,
         )

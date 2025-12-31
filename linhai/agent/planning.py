@@ -78,7 +78,6 @@ class TaskPlanningEnforcementPlugin(Plugin):
         super().__init__(group_chat)
         self.no_planning_counter = 0
 
-
     async def after_message_generation(
         self,
         _answer: Answer,

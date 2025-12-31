@@ -8,6 +8,11 @@ from linhai.utils import CliRuntimeNotice
 from linhai.agent.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from linhai.agent import Agent, Lifecycle
+
 
 class GitBlockingPlugin(Plugin):
     """阻止Agent在有未解答issue时使用git命令的Plugin。"""
@@ -79,7 +84,7 @@ class GitBlockingPlugin(Plugin):
         except (ValueError, OSError):
             return False
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到before_tool_call回调。"""
         lifecycle.register_before_tool_call(self.before_tool_call)
 
@@ -87,9 +92,9 @@ class GitBlockingPlugin(Plugin):
 class IssueWaitingUserPlugin(Plugin):
     """阻止Agent在有未解答issue时进入等待用户状态的Plugin。"""
 
-    async def before_waiting_user(self, agent: "linhai.agent.Agent"):
+    async def before_waiting_user(self, agent: "Agent"):
         """检查是否有未解答的issue，如果有则阻止进入等待用户状态。"""
-
+        from linhai.agent import Agent
         from linhai.subagent.issue import IssueManager
 
         issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
@@ -109,7 +114,7 @@ class IssueWaitingUserPlugin(Plugin):
             )
             agent.state = "working"
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到before_waiting_user回调。"""
         lifecycle.register_before_waiting_user(self.before_waiting_user)
 
@@ -146,6 +151,6 @@ class IssueBlockingPlugin(Plugin):
                 )
                 agent.state = "working"
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)

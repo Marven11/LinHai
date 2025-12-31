@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat
-from linhai.agent.base import AgentContext
 
 
 class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
@@ -16,14 +15,29 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = MagicMock(spec=GroupChat)
-        self.context = MagicMock(spec=AgentContext)
+
+        self.context = {
+            "llms": [],
+            "llm_names": [],
+            "current_llm_index": 0,
+            "compress_threshold": 800,
+        }
         self.init_messages = []
 
         self.group_chat.is_empty = MagicMock(return_value=False)
         self.group_chat.receive = AsyncMock()
         self.group_chat.send = AsyncMock()
 
-        self.agent = Agent(self.context, self.group_chat, self.init_messages)
+        # 需要为Agent提供正确的参数
+        # 由于这是单元测试，我们mock了context，但需要确保它有正确的结构
+        self.agent = Agent(
+            llms=self.context["llms"] if hasattr(self.context, "__getitem__") else [],
+            llm_names=self.context["llm_names"] if hasattr(self.context, "__getitem__") else [],
+            current_llm_index=self.context["current_llm_index"] if hasattr(self.context, "__getitem__") else 0,
+            compress_threshold=self.context["compress_threshold"] if hasattr(self.context, "__getitem__") else 800,
+            group_chat=self.group_chat,
+            init_messages=self.init_messages,
+        )
 
     async def test_state_waiting_user_transitions_to_working(self):
         """测试在等待用户状态下接收到消息后直接转为working状态。"""

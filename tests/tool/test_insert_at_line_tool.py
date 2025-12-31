@@ -45,7 +45,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.write_text.assert_called_once_with(
             "line1\ninserted line\nline2\nline3", encoding="utf-8"
         )
-        self.assertIn("成功在文件", result)
+        self.assertIn("成功在文件", str(result))
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     def test_insert_at_line_invalid_line_number(self, mock_path):
@@ -64,7 +64,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "dummy",
             },
         )
-        self.assertIn("行号0无效", result)
+        self.assertIn("行号0无效", str(result))
 
         result = self.toolset.call_tool(
             "insert_at_line",
@@ -75,7 +75,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "dummy",
             },
         )
-        self.assertIn("行号5无效", result)
+        self.assertIn("行号5无效", str(result))
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     def test_insert_at_line_file_not_exists(self, mock_path):
@@ -92,8 +92,8 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "dummy",
             },
         )
-        self.assertIn("文件路径", result)
-        self.assertIn("不存在", result)
+        self.assertIn("文件路径", str(result))
+        self.assertIn("不存在", str(result))
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     def test_insert_at_line_not_file(self, mock_path):
@@ -111,7 +111,7 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "dummy",
             },
         )
-        self.assertIn("不是文件", result)
+        self.assertIn("不是文件", str(result))
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     def test_insert_at_line_line_content_match(self, mock_path):
@@ -133,7 +133,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.write_text.assert_called_once_with(
             "line1\ninserted line\nline2\nline3", encoding="utf-8"
         )
-        self.assertIn("成功在文件", result)
+        self.assertIn("成功在文件", str(result))
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     def test_insert_at_line_line_content_mismatch(self, mock_path):
@@ -152,9 +152,9 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "wrong_line",
             },
         )
-        self.assertIn("预期行内容不匹配", result)
-        self.assertIn("实际内容为'line2'", result)
-        self.assertIn("预期为'wrong_line'", result)
+        self.assertIn("预期行内容不匹配", str(result))
+        self.assertIn("实际内容为'line2'", str(result))
+        self.assertIn("预期为'wrong_line'", str(result))
         mock_file.write_text.assert_not_called()
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
@@ -177,7 +177,7 @@ class TestInsertAtLineTool(unittest.TestCase):
         mock_file.write_text.assert_called_once_with(
             "line1\nline2\nline3\ninserted line\n", encoding="utf-8"
         )
-        self.assertIn("成功在文件", result)
+        self.assertIn("成功在文件", str(result))
 
         mock_file.write_text.reset_mock()
         result = self.toolset.call_tool(
@@ -189,6 +189,6 @@ class TestInsertAtLineTool(unittest.TestCase):
                 "expected_line_content": "not_empty",
             },
         )
-        self.assertIn("预期行内容不匹配", result)
-        self.assertIn("文件末尾应无内容", result)
+        self.assertIn("预期行内容不匹配", str(result))
+        self.assertIn("文件末尾应无内容", str(result))
         mock_file.write_text.assert_not_called()

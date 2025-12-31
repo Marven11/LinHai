@@ -16,7 +16,7 @@ class TestMessageWidgetIntegration(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境，创建完整的CLI环境。"""
-        from linhai.agent import AgentContext
+
         from linhai.llm import Message
         from linhai.tool.main import ToolManager
         from linhai.tool.mcp_connector import MCPConnector
@@ -41,17 +41,24 @@ class TestMessageWidgetIntegration(unittest.TestCase):
         # 创建MCPConnector（会自动注册为mcp_connector成员）
         MCPConnector(self.group_chat)
         
-        # 创建AgentContext
-        context = AgentContext({
+        # 创建配置字典
+        context = {
             "llms": [],
             "llm_names": [],
             "current_llm_index": 0,
             "system_message": "test",
             "compress_threshold": 0.8,
-        })
+        }
         
         # 创建Agent（会自动注册为agent成员）
-        self.agent = Agent(context, self.group_chat, [])
+        self.agent = Agent(
+            llms=context["llms"],
+            llm_names=context["llm_names"],
+            current_llm_index=context["current_llm_index"],
+            compress_threshold=context["compress_threshold"],
+            group_chat=self.group_chat,
+            init_messages=[],
+        )
         
         # 创建CLIApp
         self.app = CLIApp(self.group_chat, self.cli_config)

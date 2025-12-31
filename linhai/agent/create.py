@@ -15,7 +15,7 @@ from linhai.tool.general import TodolistManager, create_agent_todolist_toolset
 from linhai.utils import CliRuntimeNotice
 from linhai.machine_control.main import register_machine_control_tools
 
-from .base import AgentContext, GlobalMemory
+from .base import GlobalMemory
 from .issue_tools import create_issue_toolset
 
 
@@ -39,24 +39,24 @@ async def create_agent_from_config(
     """
     from .main import Agent  # 避免循环导入
 
-    agent_config = config.agent if config.agent else AgentConfig()
-    tools_config = config.tools if config.tools else ToolConfig()
+    agent_config = config.agent
+    tools_config = config.tools
 
     llms = await _create_llm_instances(config.llm, group_chat)
 
     llm_names = [llm_config.name for llm_config in config.llm]
-    agent_context = await _create_agent_context(
-        llms=llms,
-        llm_names=llm_names,
-        llm_name=llm_name,
-        agent_config=agent_config,
-        config=config,
-    )
+
+    # llm_name验证（可选，Agent内部也会验证）
+    if llm_name is not None and llm_name not in llm_names:
+        available_llms = ", ".join(llm_names)
+        raise ValueError(
+            f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
+        )
 
     tool_manager, machine_control = await _create_tool_manager(
         group_chat,
         tools_config,
-        agent_config.mcp if agent_config else [],
+        agent_config.mcp,
         mcp_basedir=config_basedir or Path.cwd(),
     )
 
@@ -75,7 +75,9 @@ async def create_agent_from_config(
     )
 
     agent = Agent(
-        context=agent_context,
+        llms_with_names=list(zip(llms, llm_names)),
+        llm_name=llm_name,
+        compress_threshold=agent_config.compress_threshold,
         group_chat=group_chat,
         init_messages=init_messages,
     )
@@ -85,10 +87,14 @@ async def create_agent_from_config(
     tool_manager.register_lifecycle()
 
 
-    if agent_context.get("enable_task_planning", False):
+    if agent_config.enable_task_planning:
         from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin
         TaskPlanningPromptPlugin(group_chat).register(agent.lifecycle)
         TaskPlanningEnforcementPlugin(group_chat).register(agent.lifecycle)
+
+    if agent_config.enable_directory_change_detection:
+        from .plugin import DirectoryChangePlugin
+        DirectoryChangePlugin(group_chat).register(agent.lifecycle)
 
 
     subagent_config = config.subagent
@@ -143,55 +149,7 @@ async def _create_llm_instances(
     return llms
 
 
-async def _create_agent_context(
-    llms: list[LanguageModel],
-    llm_names: list[str],
-    llm_name: str | None,
-    agent_config: AgentConfig,
-    config: Config,
-) -> AgentContext:
-    """创建AgentConfig字典
 
-    Args:
-        llms: LLM实例列表
-        llm_names: LLM名称列表
-        llm_name: 指定的LLM名称
-        tool_confirmation_config: 工具确认配置
-        agent_config: Agent配置部分（可选）
-        config: 配置对象
-
-    Returns:
-        AgentConfig字典
-    """
-
-    compress_threshold: int | float = 0.8
-
-    if agent_config:
-        compress_threshold = agent_config.compress_threshold
-
-    current_llm_index = 0
-    if llm_name is not None:
-        if llm_name in llm_names:
-            current_llm_index = llm_names.index(llm_name)
-        else:
-            available_llms = ", ".join(llm_names)
-            raise ValueError(
-                f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
-            )
-
-    agent_context: AgentContext = {
-        "llms": llms,
-        "llm_names": llm_names,
-        "current_llm_index": current_llm_index,
-        "compress_threshold": compress_threshold,
-        "enable_directory_change_detection": (
-            agent_config.enable_directory_change_detection if agent_config else False
-        ),
-        "enable_task_planning": (
-            agent_config.enable_task_planning if agent_config else False
-        ),
-    }
-    return agent_context
 
 
 async def _create_tool_manager(

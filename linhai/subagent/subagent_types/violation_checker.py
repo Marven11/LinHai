@@ -10,6 +10,15 @@ from linhai.agent.plugin import Plugin
 from linhai.subagent.main import SubAgent
 from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PROMPT
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from linhai.agent import Agent, Lifecycle
+    from linhai.agent.plugin import Plugin
+    from linhai.subagent import SubAgentManager
+    from linhai.subagent.main import SubAgent
+    from linhai.utils import CliRuntimeNotice, generate_id
+
 
 class ViolationCheckerSubAgent(SubAgent):
     """违规检查SubAgent。"""
@@ -50,7 +59,7 @@ class ViolationCheckerPlugin(Plugin):
 
     async def tool_failure(
         self,
-        agent: "linhai.agent.Agent",
+        agent: "Agent",
         tool_call: ToolCallMessage,
         error: Any,
     ) -> None:
@@ -78,7 +87,7 @@ class ViolationCheckerPlugin(Plugin):
 
     async def tool_conflict(
         self,
-        agent: "linhai.agent.Agent",
+        agent: "Agent",
         tool_call: ToolCallMessage,
         conflicting_tools: list[str],
     ) -> None:
@@ -105,7 +114,7 @@ class ViolationCheckerPlugin(Plugin):
 
     async def _check_violations(
         self,
-        subagent_manager: "linhai.subagent.SubAgentManager",
+        subagent_manager: "SubAgentManager",
         full_response: str,
         tool_call: ToolCallMessage,
         error: Any,
@@ -129,7 +138,7 @@ class ViolationCheckerPlugin(Plugin):
 
     async def _check_conflict_violations(
         self,
-        subagent_manager: "linhai.subagent.SubAgentManager",
+        subagent_manager: "SubAgentManager",
         full_response: str,
         tool_call: ToolCallMessage,
         conflicting_tools: list[str],
@@ -151,7 +160,7 @@ class ViolationCheckerPlugin(Plugin):
             max_answer_times=1,
         )
 
-    def register(self, lifecycle: "linhai.agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到lifecycle回调。"""
         lifecycle.register_tool_failure(self.tool_failure)
         lifecycle.register_tool_conflict(self.tool_conflict)

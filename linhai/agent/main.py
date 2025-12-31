@@ -9,7 +9,6 @@ import asyncio
 
 from .base import (
     RuntimeMessage,
-    AgentContext,
 )
 from .lifecycle import Lifecycle
 from .message import AgentMessage
@@ -35,11 +34,26 @@ class Agent:
 
     def __init__(
         self,
-        context: AgentContext,
+        llms_with_names: list[tuple[LanguageModel, str]],
+        compress_threshold: int | float,
         group_chat: GroupChat,
         init_messages: Sequence[Message],
+        llm_name: str | None = None,
     ):
-        self.context = context
+        self.llms = [item[0] for item in llms_with_names]
+        self.llm_names = [item[1] for item in llms_with_names]
+        
+        # 根据llm_name计算当前LLM索引
+        if llm_name is None:
+            self.current_llm_index = 0
+        elif llm_name in self.llm_names:
+            self.current_llm_index = self.llm_names.index(llm_name)
+        else:
+            raise ValueError(
+                f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+            )
+        
+        self.compress_threshold = compress_threshold
         self.group_chat = group_chat
 
         group_chat.register_queue("user_message")
@@ -84,13 +98,13 @@ class Agent:
         if not self.last_token_usage:
             return None
 
-        current_llm = self.context["llms"][self.context["current_llm_index"]]
+        current_llm = self.llms[self.current_llm_index]
         token_limit = current_llm.get_token_limit()
 
         if token_limit is None:
             token_limit = 65536
 
-        threshold_config = self.context.get("compress_threshold", 0.8)
+        threshold_config = self.compress_threshold
         hard_limit = (
             int(threshold_config * token_limit)
             if isinstance(threshold_config, float)
@@ -215,8 +229,8 @@ class Agent:
 
         if parsed_input.switch_model:
             llm_name = parsed_input.switch_model
-            if llm_name in self.context["llm_names"]:
-                self.context["current_llm_index"] = self.context["llm_names"].index(
+            if llm_name in self.llm_names:
+                self.current_llm_index = self.llm_names.index(
                     llm_name
                 )
                 self.message_processor.add_new_message(
@@ -246,7 +260,7 @@ class Agent:
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        return self.context["llms"][self.context["current_llm_index"]]
+        return self.llms[self.current_llm_index]
 
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
@@ -375,9 +389,9 @@ class Agent:
         返回:
             tuple[str, LanguageModel]: (LLM名称, LLM实例)
         """
-        current_index = self.context["current_llm_index"]
-        llm_name = self.context["llm_names"][current_index]
-        llm_instance = self.context["llms"][current_index]
+        current_index = self.current_llm_index
+        llm_name = self.llm_names[current_index]
+        llm_instance = self.llms[current_index]
         return llm_name, llm_instance
 
     async def handle_subagent_start_command(self):
@@ -426,7 +440,7 @@ class Agent:
         """
 
         user_input_found = False
-        await self.toolcall_processor.postinit()
+        await self.toolcall_processor.ensure_mcp_connector()
         while not self.group_chat.is_empty("user_message"):
             await self.receive_one_user_message()
             user_input_found = True

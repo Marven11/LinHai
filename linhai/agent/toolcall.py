@@ -1,10 +1,14 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
+from typing import TYPE_CHECKING
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage
 from linhai.utils import generate_id, CliRuntimeNotice
 from .base import RuntimeMessage
+
+if TYPE_CHECKING:
+    from .main import Agent
 
 
 class AgentToolcall:
@@ -13,7 +17,6 @@ class AgentToolcall:
     def __init__(self, agent: "Agent"):
         self.agent = agent
         self.group_chat = agent.group_chat
-        self.context = agent.context
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
@@ -66,13 +69,17 @@ class AgentToolcall:
     def _register_llm_toolset(self):
         """注册LLM切换工具集。"""
         llm_toolset = ToolSet()
-        llm_names = self.context.get(
-            "llm_names", [f"llm{i}" for i in range(len(self.context["llms"]))]
-        )
+        llm_names = getattr(self.agent, 'llm_names', [])
+        if not isinstance(llm_names, list):
+            llm_names = []
+
+        desc = "切换到指定的LLM。"
+        if llm_names:
+            desc += "可用的LLM包括: " + ", ".join(llm_names)
 
         @llm_toolset.register_tool(
             name="switch_llm",
-            desc="切换到指定的LLM。可用的LLM包括: " + ", ".join(llm_names),
+            desc=desc,
             args={
                 "llm_name": ToolArgInfo(desc="要切换到的LLM名称", type="str"),
             },
@@ -80,11 +87,11 @@ class AgentToolcall:
         )
         def switch_llm(llm_name: str):
             if llm_name not in llm_names:
-                available_llms = ", ".join(llm_names)
+                available_llms = ", ".join(llm_names) if llm_names else "无可用LLM"
                 return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
 
             index = llm_names.index(llm_name)
-            self.context["current_llm_index"] = index
+            self.agent.current_llm_index = index
             return f"已切换到LLM: {llm_name}"
 
         @llm_toolset.register_tool(
@@ -94,11 +101,10 @@ class AgentToolcall:
             required_args=[],
         )
         def current_llm():
-            current_name = llm_names[self.context["current_llm_index"]]
+            current_name = llm_names[self.agent.current_llm_index] if llm_names else "未知"
             return f"当前使用的LLM: {current_name}"
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
-
         tool_manager.add_toolset(llm_toolset)
 
     def _register_dummy_toolset(self):
@@ -129,7 +135,7 @@ class AgentToolcall:
         workflow_toolset = self.agent.orchestration.get_workflow_toolset()
         tool_manager.add_toolset(workflow_toolset)
 
-    async def postinit(self):
+    async def ensure_mcp_connector(self):
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         await tool_manager.ensure_mcp_connector()

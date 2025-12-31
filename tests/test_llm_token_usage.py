@@ -14,7 +14,7 @@ from linhai.llm import (
     SystemMessage,
 )
 from linhai.group_chat import GroupChat
-from linhai.agent import Agent, AgentContext
+from linhai.agent import Agent
 from linhai.agent.orchestration import AppendingMessagePlugin, AgentContextOrchestration
 from linhai.cli.app import CLIApp
 from linhai.cli.token_manager import TokenManager

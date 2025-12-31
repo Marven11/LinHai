@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 
-from linhai.agent import Agent, AgentContext
+from linhai.agent import Agent
 from linhai.group_chat import GroupChat
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
@@ -51,7 +51,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.mock_llm1.answer_stream = empty_answer_stream
         self.mock_llm2.answer_stream = empty_answer_stream
 
-        self.config: AgentContext = {
+        self.config = {
             "llms": [self.mock_llm1, self.mock_llm2],
             "llm_names": ["llm1", "llm2"],
             "current_llm_index": 0,
@@ -59,7 +59,12 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         }
 
         self.agent = Agent(
-            context=self.config, group_chat=self.group_chat, init_messages=[]
+            llms=self.config["llms"],
+            llm_names=self.config["llm_names"],
+            current_llm_index=self.config["current_llm_index"],
+            compress_threshold=self.config["compress_threshold"],
+            group_chat=self.group_chat,
+            init_messages=[],
         )
 
     async def testget_current_model_with_at_system_valid(self):

@@ -16,13 +16,13 @@ class LLMConfig(BaseModel):
 
     name: str = Field(..., min_length=1)
     type: str = Field(default="openai")
-    compatibility: Optional[str] = Field(default=None)
+    compatibility: str = Field(default="")
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
     client_options: dict = Field(default_factory=dict)
     completion_options: dict = Field(default_factory=dict)
-    token_limit: Optional[int] = Field(default=None)
+    token_limit: int = Field(default=0)
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument
@@ -121,9 +121,9 @@ class ToolConfig(BaseModel):
 class SubAgentConfig(BaseModel):
     """SubAgent配置类型定义。"""
 
-    enable: bool = True
-    default_llm: str
-    enabled_agent_types: Optional["EnabledAgentTypes"] = None  # None表示默认不开启
+    enable: bool = False
+    default_llm: str = ""
+    enabled_agent_types: "EnabledAgentTypes" = Field(default_factory=lambda: EnabledAgentTypes())
 
     def __str__(self) -> str:
         """返回SubAgent配置的字符串表示"""
@@ -151,22 +151,22 @@ class Config(BaseModel):
     """主配置类型定义。"""
 
     llm: list[LLMConfig]
-    agent: Optional[AgentConfig] = None
-    memory: Optional[MemoryConfig] = None
-    tools: Optional[ToolConfig] = None
-    subagent: Optional[SubAgentConfig] = None
+    agent: AgentConfig = Field(default_factory=AgentConfig)
+    memory: MemoryConfig = Field(default_factory=lambda: MemoryConfig(file_path=""))
+    tools: ToolConfig = Field(default_factory=ToolConfig)
+    subagent: SubAgentConfig = Field(default_factory=SubAgentConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
 
     @property
     def subagent_enabled(self) -> bool:
         """检查SubAgent是否启用"""
-        return self.subagent is not None and self.subagent.enable
+        return self.subagent.enable
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
         subagent_enabled = self.subagent_enabled
-        return f"Config(llms={llm_names}, agent={self.agent is not None}, memory={self.memory is not None}, tools={self.tools is not None}, subagent_enabled={subagent_enabled})"
+        return f"Config(llms={llm_names}, agent={self.agent}, memory={self.memory}, tools={self.tools}, subagent_enabled={subagent_enabled})"
 
 
 def load_config(config_path: Union[str, Path]) -> Config:
@@ -183,11 +183,10 @@ def load_config(config_path: Union[str, Path]) -> Config:
     config = Config(**config_data)
 
     config_dir = config_path.parent
-    if config.agent and config.agent.mcp:
-        for mcp_config in config.agent.mcp:
-            if not os.path.isabs(mcp_config.server_script_path):
-                mcp_config.server_script_path = str(
-                    config_dir / mcp_config.server_script_path
-                )
+    for mcp_config in config.agent.mcp:
+        if not os.path.isabs(mcp_config.server_script_path):
+            mcp_config.server_script_path = str(
+                config_dir / mcp_config.server_script_path
+            )
 
     return config

@@ -8,7 +8,7 @@ import asyncio
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from linhai.agent import Agent, AgentContext
+from linhai.agent import Agent
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 
@@ -23,7 +23,7 @@ class TestConversationHistory(unittest.TestCase):
             Path(self.temp_dir) / ".local" / "share" / "linhai" / "conversations"
         )
 
-        self.config: AgentContext = {
+        self.config = {
             "llms": [Mock()],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
@@ -63,7 +63,10 @@ class TestConversationHistory(unittest.TestCase):
         ]
 
         self.agent = Agent(
-            context=self.config,
+            llms=self.config["llms"],
+            llm_names=self.config["llm_names"],
+            current_llm_index=self.config["current_llm_index"],
+            compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=self.init_messages,
         )

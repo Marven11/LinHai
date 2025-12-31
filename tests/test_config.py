@@ -174,9 +174,17 @@ model = "test_model"
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
-            self.assertIsNone(config.agent)
+            # agent现在有默认值，不再是None
+            self.assertIsNotNone(config.agent)
+            self.assertEqual(config.agent.compress_threshold, 0.8)
+            self.assertEqual(config.agent.mcp, [])
+            self.assertFalse(config.agent.enable_directory_change_detection)
+            self.assertFalse(config.agent.enable_task_planning)
+            # memory仍然为None，因为它没有默认值
             self.assertIsNone(config.memory)
-            self.assertIsNone(config.tools)
+            # tools现在有默认值，不再是None
+            self.assertIsNotNone(config.tools)
+            self.assertEqual(config.tools.max_output_length, 50000)
         finally:
             os.unlink(temp_file)
 

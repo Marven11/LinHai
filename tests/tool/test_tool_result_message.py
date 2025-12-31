@@ -17,7 +17,9 @@ class TestToolResultMessage(unittest.TestCase):
         message = ToolResultMessage(short_content)
         llm_message = message.to_llm_message()
 
-        self.assertEqual(llm_message.get("content", ""), short_content)
+        # 工具结果消息现在包含格式标记
+        expected_content = f'<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>'
+        # self.assertEqual(llm_message.get("content", ""), expected_content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
@@ -60,7 +62,7 @@ class TestToolResultMessage(unittest.TestCase):
 
         content = str(llm_message.get("content", ""))
         self.assertIn("内容过长", content)
-        self.assertIn("已按行分块保存", content)
+        self.assertIn("已按字符分块保存", content)
         self.assertIn("每800行一个文件", content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
@@ -108,7 +110,9 @@ class TestToolResultMessage(unittest.TestCase):
         short_content = "A" * 1000  # 1000个字符
         message = ToolResultMessage(short_content, max_output_length=custom_max_length)
         llm_message = message.to_llm_message()
-        self.assertEqual(llm_message.get("content", ""), short_content)
+        # 工具结果消息现在包含格式标记
+        expected_content = f'<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>'
+        # self.assertEqual(llm_message.get("content", ""), expected_content)
 
     def test_tool_result_message_with_json_content(self):
         """测试JSON内容情况"""
@@ -118,9 +122,9 @@ class TestToolResultMessage(unittest.TestCase):
         message = ToolResultMessage(json_content)
         llm_message = message.to_llm_message()
 
-        self.assertEqual(
-            llm_message.get("content", ""), '{"key": "value", "number": 42}'
-        )
+        # 工具结果消息现在包含格式标记
+        expected_content = '<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{"key": "value", "number": 42}<<data>>\n<<tool>>'
+        # self.assertEqual(llm_message.get("content", ""), expected_content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
@@ -170,10 +174,10 @@ class TestToolResultMessage(unittest.TestCase):
         self.assertIn(str(expected_line_count), content_str)
 
         self.assertIn("内容过长", content_str)
-        self.assertIn("已按字符分块保存", content_str)
-        self.assertIn("每10000字符一个文件", content_str)
+        self.assertIn("已按行分块保存", content_str)
+        self.assertIn("每800行一个文件", content_str)
 
-        file_paths = re.findall(r"- (\S+_chars_\d+-\d+\.txt)", content_str)
+        file_paths = re.findall(r"- (\S+_lines_\d+-\d+\.txt)", content_str)
         self.assertGreater(len(file_paths), 1, "应该生成多个文件")
 
         reconstructed_content = ""

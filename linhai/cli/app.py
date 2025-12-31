@@ -390,7 +390,7 @@ class CLIApp(App):
             agent = self.group_chat.get_members("agent", Agent)
             if agent:
 
-                llm_names = agent.context.get("llm_names", [])
+                llm_names = agent.llm_names
                 return [f"@{name}" for name in llm_names]
         except OSError:
             pass
