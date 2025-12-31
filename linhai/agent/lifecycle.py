@@ -6,9 +6,13 @@ from typing import (
     Any,
     TypeAlias,
     Optional,
+    TYPE_CHECKING,
 )
 from linhai.agent.base import RuntimeMessage
 import typing
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent
 
 from linhai.llm import (
     Answer,

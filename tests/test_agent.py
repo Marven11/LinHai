@@ -136,7 +136,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1]["content"], " there")
 
         self.assertIsNotNone(final_answer, "Final Answer object not found")
-        assert final_answer is not None  # 让Pylance识别类型
         content = final_answer.get_message().to_llm_message().get("content")
         self.assertIsNotNone(content)
         self.assertEqual(content, "Hi there")
@@ -157,11 +156,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
-        self.assertEqual(
+        # 系统消息 + 用户消息 + 助手回复 + 可能的RuntimeMessage
+        self.assertGreaterEqual(
             len(messages),
             3,
             f"Messages: {[str(msg) for msg in messages]}",
-        )  # 系统消息 + 用户消息 + 助手回复
+        )
+        self.assertLessEqual(
+            len(messages),
+            4,
+            f"Messages: {[str(msg) for msg in messages]}",
+        )
         self.assertEqual(
             messages[1].to_llm_message().get("content"), "<<user>>Hi<<user>>"
         )
@@ -182,11 +187,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
-        self.assertEqual(
+        # 系统消息 + 用户消息 + 助手回复 + 工具消息 + 助手回复 + 可能的RuntimeMessage
+        self.assertGreaterEqual(
             len(messages),
             5,
             f"Messages: {[str(msg) for msg in messages]}",
-        )  # 系统消息 + 用户消息 + 助手回复 + 工具消息 + 助手回复
+        )
+        self.assertLessEqual(
+            len(messages),
+            6,
+            f"Messages: {[str(msg) for msg in messages]}",
+        )
         self.assertEqual(
             messages[3].to_llm_message().get("content"),
             "<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>",

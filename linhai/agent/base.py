@@ -277,7 +277,8 @@ class AgentContext(TypedDict):
     current_llm_index: int
     compress_threshold: int | float
     memory: NotRequired[dict]
-    enable_directory_change_detection: NotRequired[bool]
+    enable_directory_change_detection: bool
+    enable_task_planning: bool
 
 
 class FileContentMessage(Message):

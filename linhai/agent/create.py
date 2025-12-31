@@ -50,6 +50,7 @@ async def create_agent_from_config(
         llm_names=llm_names,
         llm_name=llm_name,
         agent_config=agent_config,
+        config=config,
     )
 
     tool_manager, machine_control = await _create_tool_manager(
@@ -82,6 +83,13 @@ async def create_agent_from_config(
     # 注册MachineControl插件
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()
+
+
+    if agent_context.get("enable_task_planning", False):
+        from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin
+        TaskPlanningPromptPlugin(group_chat).register(agent.lifecycle)
+        TaskPlanningEnforcementPlugin(group_chat).register(agent.lifecycle)
+
 
     subagent_config = config.subagent
     if subagent_config and subagent_config.enable:
@@ -140,6 +148,7 @@ async def _create_agent_context(
     llm_names: list[str],
     llm_name: str | None,
     agent_config: AgentConfig,
+    config: Config,
 ) -> AgentContext:
     """创建AgentConfig字典
 
@@ -149,6 +158,7 @@ async def _create_agent_context(
         llm_name: 指定的LLM名称
         tool_confirmation_config: 工具确认配置
         agent_config: Agent配置部分（可选）
+        config: 配置对象
 
     Returns:
         AgentConfig字典
@@ -176,6 +186,9 @@ async def _create_agent_context(
         "compress_threshold": compress_threshold,
         "enable_directory_change_detection": (
             agent_config.enable_directory_change_detection if agent_config else False
+        ),
+        "enable_task_planning": (
+            agent_config.enable_task_planning if agent_config else False
         ),
     }
     return agent_context
