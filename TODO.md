@@ -2,16 +2,6 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构linhai/config.py，嵌套配置项不应该为None，并且清理读取配置时检查配置项是否为None的代码
-- [ ] 参考，只有在enable_directory_change_detection启用时才注册相关插件
-  - 且因为不启用时不会注册插件，插件运行时这个bool必然为true，因此不在插件运行时检测这个bool是否为True
-- [ ] 删除不需要的AgentContext这个TypedDict
-  - 初始化时直接传入llms等参数
-  - current_llm_index不应该是初始化传入的参数
-  - memory等键貌似完全没有被使用，检查并删除
-  - 完全删除遗留函数
-
-# 暂时搁置
 
 - [ ] 重构linhai/agent/create.py初始化流程
   - 现状
@@ -35,6 +25,9 @@ def postinit(self):
     tool_manager = group_chat.get_members("tool_manager", ToolManager)
     tool_manager.add_toolset(subagent_toolset)
 ```
+
+# 暂时搁置
+
 
 - [ ] 修改_build_threshold_message使其提示以下信息，使用以下格式
   - `当前为x灯状态, 上下文占用量为xx%, 当前有x条大消息, 一分钟内有/没有调用过..., 建议: ...`
