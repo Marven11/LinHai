@@ -2,47 +2,39 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 让Agent在调用工具前提前规划任务
-  - 任务规划格式
-    - 输出在```json toolcall前的一段嵌套无序列表，使用`[ ]`和`[x]`标记完成的和未完成的任务
-    - 例子在下方
-  - 配置
-    - 可以在配置中通过`[agent]`中的配置项开关，默认关闭
-  - 文件架构
-    - 所有实现放在linhai/agent/planning.py中
-  - 插件
-    - 任务规划prompt添加插件: hook before_agent_loop，添加介绍任务规划的prompt
-    - 打断插件: 
-      - 每次消息结束记录agent是否使用`- [ ]`或者`- [x]`输出任务规划，只需要检测是否有以这两个标志开头的行，不需要复杂检测
-      - 记录连续不输出任务规划的消息数量，如果输出了则计数器归零
-        - agent没有输出任务规划时发送CLI消息提示用户“Agent没有输出任务规划，已提醒”
-      - 如果连续不输出任务规划至少1次，添加对应的appending_message，如果输出了则清零appending_message
-        - 警告agent如果连续3次不输出则会开始打断agent回答
-      - 如果连续不输出任务规划至少3次，在after_message_generation中检测是否有```json toolcall开头的行，如果有且当前内容没有使用- [ ]或者- [x]则打断agent
-  - 完善测试
-    - 没有打开配置时对应的插件不会被注册
-    - 打开插件时agent有以下行为
-      - 正常输出任务规划时不会被打断
-      - 有一次没有输出任务规划会被计数并提醒
-      - 一次没有输出任务规划，且第二次输出中有任务规划，计数器清零，提醒消失
-      - 连续三次没有输出任务规划，然后在生成回答时仍然没有输出任务规划就输出了```json toolcall，被打断
-
-## 任务规划例子
-
-- [ ] 探索代码
-  - [x] 列出当前文件夹
-  - [x] 搜索xxx
-  - [ ] 根据当前文件夹的内容继续探索其中的内容
-- [ ] 开始编写代码
-  - [ ] 完成xxx
-  - [ ] 完成unittest
-
-注意：你没法直接使用你修改/新增的功能（因为你没有重启）
-注意：增加新功能需要添加unittest，修改功能需要修改对应的unittest
-注意：运行 linhai 时，必须创建 terminal 运行 linhai，因为 linhai 是 TUI 软件
+- [ ] 重构linhai/config.py，嵌套配置项不应该为None，并且清理读取配置时检查配置项是否为None的代码
+- [ ] 参考，只有在enable_directory_change_detection启用时才注册相关插件
+  - 且因为不启用时不会注册插件，插件运行时这个bool必然为true，因此不在插件运行时检测这个bool是否为True
+- [ ] 删除不需要的AgentContext这个TypedDict
+  - 初始化时直接传入llms等参数
+  - current_llm_index不应该是初始化传入的参数
+  - memory等键貌似完全没有被使用，检查并删除
+  - 完全删除遗留函数
 
 # 暂时搁置
 
+- [ ] 重构linhai/agent/create.py初始化流程
+  - 现状
+    - 每个组件，如tool_manager, subagent_manager，它们的初始化流程都分为两步
+      1. 初始化自己的属性，如果需要的话将自己注册到GroupChat中
+      2. 调用其他类的函数（如lifecycle.register_*, tool_manager.add_toolset）
+  - 设计
+    - 在GroupChat中添加一个函数add_postinit，接收一个postinit回调函数，和一个函数call_postinit
+      - 考虑给这两个函数改名以体现其功能，同时保证简短易读
+    - 在每个对象“初始化自己的属性”时，如果这个对象需要从group_chat中获得其他对象并调用它们的函数，则注册一个postinit函数
+    - 在每个对象都初始化完毕后调用call_postinit完成“调用其他类的函数”
+  - 效果，以SubagentManager为例:
+
+```python
+def __init__(self, group_chat: GroupChat, ...):
+    # ...
+    group_chat.add_postinit(self.postinit)
+def postinit(self):
+    # ...
+    subagent_toolset = create_subagent_toolset(self)
+    tool_manager = group_chat.get_members("tool_manager", ToolManager)
+    tool_manager.add_toolset(subagent_toolset)
+```
 
 - [ ] 修改_build_threshold_message使其提示以下信息，使用以下格式
   - `当前为x灯状态, 上下文占用量为xx%, 当前有x条大消息, 一分钟内有/没有调用过..., 建议: ...`
@@ -57,10 +49,6 @@
     - elif 红灯: 立即暂停当前任务
     - elif 黄灯: 应该避免读取文件，立即开始修改
     - else: assert 绿灯, 不要担心消息限制，立即工作
-
-
-- [ ] 研究多subagent协作
-  - 需要有两个甚至多个subagent讨论出一个方案再提供给agent修改
 - [ ] secret系统
   - 当前问题: agent必须通过参数调用工具，但是其有时需要输入密码, token等敏感信息
     - 例如agent必须发送这样的工具调用`{"name": "xxx", "arguments": {"content": "password=123456"}}`，其中需要输入敏感密码123456
