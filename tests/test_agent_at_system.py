@@ -58,13 +58,15 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 1000,
         }
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(self.config["llms"], self.config["llm_names"]))
+        
         self.agent = Agent(
-            llms=self.config["llms"],
-            llm_names=self.config["llm_names"],
-            current_llm_index=self.config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
+            llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
 
     async def testget_current_model_with_at_system_valid(self):

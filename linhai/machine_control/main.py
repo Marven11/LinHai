@@ -494,18 +494,11 @@ class MachineControl:
         self.machine_descriptions: Dict[str, str] = {
             "master_host": "本地主机",
         }
+        group_chat.register_member("machine_control", self)
 
     async def switch_machine(
         self, machine_id: str
     ) -> ToolResultMessage | ToolErrorMessage:
-        """切换到指定机器。
-
-        Args:
-            machine_id: 机器ID
-
-        Returns:
-            切换结果消息
-        """
         if machine_id not in self.machines:
             return ToolErrorMessage(f"机器未找到: {machine_id}")
 
@@ -559,14 +552,6 @@ class MachineControl:
         return ToolResultMessage(f"已成功添加SSH机器: {machine_id} ({host}:{port})")
 
     async def list_machines(self) -> ToolResultMessage:
-        """列出所有可用的机器。
-
-        按照要求返回"机器的ID('master_host'等)和机器的描述"格式
-
-        Returns:
-            机器列表信息
-        """
-        # 按照要求格式返回：机器的ID和描述
         lines = ["可用机器:"]
         for machine_id, description in self.machine_descriptions.items():
             current = " (当前)" if machine_id == self.target_machine else ""

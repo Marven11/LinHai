@@ -180,8 +180,9 @@ model = "test_model"
             self.assertEqual(config.agent.mcp, [])
             self.assertFalse(config.agent.enable_directory_change_detection)
             self.assertFalse(config.agent.enable_task_planning)
-            # memory仍然为None，因为它没有默认值
-            self.assertIsNone(config.memory)
+            # memory现在有默认值，检查默认值
+            self.assertIsNotNone(config.memory)
+            self.assertEqual(config.memory.file_path, "")
             # tools现在有默认值，不再是None
             self.assertIsNotNone(config.tools)
             self.assertEqual(config.tools.max_output_length, 50000)
@@ -344,7 +345,8 @@ model = "gpt-4"
 
             self.assertEqual(config.llm[1].name, "openai")
             self.assertEqual(config.llm[1].type, "openai")
-            self.assertIsNone(config.llm[1].compatibility)
+            # compatibility现在默认为空字符串
+            self.assertEqual(config.llm[1].compatibility, "")
             self.assertEqual(config.llm[1].base_url, "https://api.openai.com")
             self.assertEqual(config.llm[1].model, "gpt-4")
         finally:
@@ -364,7 +366,8 @@ model = "test_model"
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 1)
             self.assertEqual(config.llm[0].type, "openai")
-            self.assertIsNone(config.llm[0].compatibility)
+            # compatibility现在默认为空字符串
+            self.assertEqual(config.llm[0].compatibility, "")
         finally:
             os.unlink(temp_file)
 
@@ -407,7 +410,10 @@ model = "deepseek-chat"
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
-            self.assertIsNone(config.subagent)
+            # subagent现在有默认值，检查默认值
+            self.assertIsNotNone(config.subagent)
+            self.assertFalse(config.subagent.enable)
+            self.assertEqual(config.subagent.default_llm, "")
         finally:
             os.unlink(temp_file)
 

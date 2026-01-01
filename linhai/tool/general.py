@@ -245,8 +245,17 @@ class TodolistItem(TypedDict):
 class TodolistManager:
 
     def __init__(self, group_chat: GroupChat):
+        self.group_chat = group_chat
         self.todolists: Dict[str, str] = {}
         group_chat.register_member("todolist_manager", self)
+        group_chat.add_postinit(self.postinit)
+
+    def postinit(self):
+        """后初始化：创建todolist工具集并添加到tool_manager"""
+        from linhai.tool.main import ToolManager
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        todolist_toolset = create_agent_todolist_toolset(self)
+        tool_manager.add_toolset(todolist_toolset)
 
     def add_todolist(self, content: str) -> str:
         if not content or not content.strip():

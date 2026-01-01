@@ -40,7 +40,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试AgentToolcall初始化。"""
         self.assertEqual(self.toolcall_processor.agent, self.mock_agent)
         self.assertEqual(self.toolcall_processor.group_chat, self.mock_agent.group_chat)
-        self.assertEqual(self.toolcall_processor.context, self.mock_agent.context)
+        # context属性已移除，不再检查
 
     def test_register_llm_toolset(self):
         """测试LLM工具集注册。"""

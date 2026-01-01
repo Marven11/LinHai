@@ -8,15 +8,12 @@ from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.issue import IssueManager
-from linhai.subagent.tools import create_subagent_toolset
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
-from linhai.tool.general import TodolistManager, create_agent_todolist_toolset
+from linhai.tool.general import TodolistManager
 from linhai.utils import CliRuntimeNotice
-from linhai.machine_control.main import register_machine_control_tools
 
 from .base import GlobalMemory
-from .issue_tools import create_issue_toolset
 
 
 async def create_agent_from_config(
@@ -46,7 +43,6 @@ async def create_agent_from_config(
 
     llm_names = [llm_config.name for llm_config in config.llm]
 
-    # llm_name验证（可选，Agent内部也会验证）
     if llm_name is not None and llm_name not in llm_names:
         available_llms = ", ".join(llm_names)
         raise ValueError(
@@ -61,8 +57,6 @@ async def create_agent_from_config(
     )
 
     todolist_manager = TodolistManager(group_chat)
-    todolist_toolset = create_agent_todolist_toolset(todolist_manager)
-    tool_manager.add_toolset(todolist_toolset)
 
     memory_file_path = None
     if config.memory and config_basedir:
@@ -100,14 +94,9 @@ async def create_agent_from_config(
     subagent_config = config.subagent
     if subagent_config and subagent_config.enable:
         subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
-        subagent_toolset = create_subagent_toolset(subagent_manager)
-        tool_manager.add_toolset(subagent_toolset)
-
-        subagent_manager.register_plugins()
 
     issue_manager = IssueManager(group_chat)
-    agent_issue_toolset = create_issue_toolset(issue_manager)
-    tool_manager.add_toolset(agent_issue_toolset)
+    group_chat.call_postinit()
 
     return agent
 
@@ -167,9 +156,6 @@ async def _create_tool_manager(
     )
 
     machine_control = MachineControl(group_chat)
-
-    tool_manager.add_toolset(register_machine_control_tools(machine_control))
-
     return tool_manager, machine_control
 
 

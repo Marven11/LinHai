@@ -3,7 +3,7 @@
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
 
-- [ ] 重构linhai/agent/create.py初始化流程
+- [x] 重构linhai/agent/create.py初始化流程
   - 现状
     - 每个组件，如tool_manager, subagent_manager，它们的初始化流程都分为两步
       1. 初始化自己的属性，如果需要的话将自己注册到GroupChat中

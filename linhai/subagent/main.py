@@ -246,6 +246,18 @@ class SubAgentManager:
         self.llm_names = llm_names or []
         self.subagents: dict[str, tuple[SubAgent, asyncio.Task | None]] = {}
         group_chat.register_member("subagent_manager", self)
+        group_chat.add_postinit(self.postinit)
+
+    def postinit(self):
+        """后初始化：创建subagent工具集并添加到tool_manager，然后注册插件"""
+        from linhai.tool.main import ToolManager
+        from .tools import create_subagent_toolset
+        
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        subagent_toolset = create_subagent_toolset(self)
+        tool_manager.add_toolset(subagent_toolset)
+        
+        self.register_plugins()
 
     async def create_subagent(
         self,

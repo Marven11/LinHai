@@ -94,7 +94,10 @@ model = "test-model"
         try:
             config = load_config(path)
 
-            self.assertIsNone(config.subagent)
+            # subagent现在有默认值，检查默认值
+            self.assertIsNotNone(config.subagent)
+            self.assertFalse(config.subagent.enable)
+            self.assertEqual(config.subagent.default_llm, "")
             self.assertFalse(config.subagent_enabled)
 
             config_str = str(config)

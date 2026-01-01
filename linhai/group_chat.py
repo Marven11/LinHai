@@ -23,7 +23,7 @@ GroupChat通信框架，实现多个单例之间的通信，解耦设计
 例如，SubAgent现在使用wrapper类（SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper）来传输消息。
 """
 
-from typing import Any, TypeVar, Type, LiteralString
+from typing import Any, TypeVar, Type, LiteralString, Callable
 import asyncio
 
 T = TypeVar("T")
@@ -33,6 +33,8 @@ class GroupChat:
     def __init__(self):
         self.queues: dict[str, asyncio.Queue] = {}
         self.members: dict[str, Any] = {}
+        self._postinit_callbacks: list[Callable[[], None]] = []
+        self._postinit_called = False
 
     def register_queue(self, name: LiteralString):
         if name in self.queues:
@@ -82,3 +84,20 @@ class GroupChat:
         if name not in self.queues:
             raise RuntimeError(f"{name!r} not exists")
         return await self.queues[name].get()
+
+    def add_postinit(self, callback: Callable[[], None]) -> None:
+        """注册一个后初始化回调函数
+
+        回调函数将在所有对象都初始化完毕后被调用，用来执行需要访问其他对象的初始化操作。
+        """
+        if self._postinit_called:
+            raise RuntimeError("postinit已经调用，无法再添加回调")
+        self._postinit_callbacks.append(callback)
+
+    def call_postinit(self) -> None:
+        """调用所有后初始化回调函数"""
+        if self._postinit_called:
+            raise RuntimeError("postinit已经调用过")
+        for callback in self._postinit_callbacks:
+            callback()
+        self._postinit_called = True

@@ -30,13 +30,21 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
         # 需要为Agent提供正确的参数
         # 由于这是单元测试，我们mock了context，但需要确保它有正确的结构
+        # 将llms和llm_names合并为llms_with_names
+        llms_list = self.context["llms"] if hasattr(self.context, "__getitem__") else []
+        llm_names_list = self.context["llm_names"] if hasattr(self.context, "__getitem__") else []
+        llms_with_names = list(zip(llms_list, llm_names_list))
+        
+        compress_threshold_val = self.context["compress_threshold"] if hasattr(self.context, "__getitem__") else 800
+        current_llm_index = self.context["current_llm_index"] if hasattr(self.context, "__getitem__") else 0
+        llm_name_val = llm_names_list[current_llm_index] if llm_names_list else None
+        
         self.agent = Agent(
-            llms=self.context["llms"] if hasattr(self.context, "__getitem__") else [],
-            llm_names=self.context["llm_names"] if hasattr(self.context, "__getitem__") else [],
-            current_llm_index=self.context["current_llm_index"] if hasattr(self.context, "__getitem__") else 0,
-            compress_threshold=self.context["compress_threshold"] if hasattr(self.context, "__getitem__") else 800,
+            llms_with_names=llms_with_names,
+            compress_threshold=compress_threshold_val,
             group_chat=self.group_chat,
             init_messages=self.init_messages,
+            llm_name=llm_name_val,
         )
 
     async def test_state_waiting_user_transitions_to_working(self):

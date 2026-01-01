@@ -41,13 +41,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 60000,
         }
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[]
+            init_messages=[],
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -67,13 +69,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 60000,
         }
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[]
+            init_messages=[],
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -93,13 +97,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 60000,
         }
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         agent = Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[]
+            init_messages=[],
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
         agent.last_token_usage = 12345
 
@@ -123,13 +129,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 60000,
         }
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         agent = Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[]
+            init_messages=[],
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
         agent.last_token_usage = None
 
@@ -160,13 +168,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         for i in range(15):
             init_messages.append(RuntimeMessage(f"Message {i}"))
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages
+            init_messages=init_messages,
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -197,13 +207,15 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         for i in range(5):
             init_messages.append(RuntimeMessage(f"Message {i}"))
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        
         Agent(
-            llms=mock_config["llms"],
-            llm_names=mock_config["llm_names"],
-            current_llm_index=mock_config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages
+            init_messages=init_messages,
+            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)

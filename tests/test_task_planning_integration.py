@@ -105,13 +105,15 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         }
         
         # 创建Agent
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(self.context["llms"], self.context["llm_names"]))
+        
         self.agent = Agent(
-            llms=self.context["llms"],
-            llm_names=self.context["llm_names"],
-            current_llm_index=self.context["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=self.context["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[self.system_message],
+            llm_name=self.context["llm_names"][self.context["current_llm_index"]],
         )
         
         # 确保只有一个TaskPlanningEnforcementPlugin实例，并启用它

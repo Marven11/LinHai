@@ -57,13 +57,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.issue_manager = IssueManager(self.group_chat)
 
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(config["llms"], config["llm_names"]))
+        
         self.agent = Agent(
-            llms=config["llms"],
-            llm_names=config["llm_names"],
-            current_llm_index=config["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
+            llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
     async def test_workflow_as_regular_tool(self):

@@ -2,6 +2,7 @@
 
 import unittest
 import asyncio
+from unittest.mock import MagicMock
 from textual.app import App
 from linhai.cli.app import CLIApp
 from linhai.group_chat import GroupChat
@@ -43,21 +44,23 @@ class TestMessageWidgetIntegration(unittest.TestCase):
         
         # 创建配置字典
         context = {
-            "llms": [],
-            "llm_names": [],
+            "llms": [MagicMock()],
+            "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "system_message": "test",
             "compress_threshold": 0.8,
         }
         
         # 创建Agent（会自动注册为agent成员）
+        # 将llms和llm_names合并为llms_with_names
+        llms_with_names = list(zip(context["llms"], context["llm_names"]))
+        
         self.agent = Agent(
-            llms=context["llms"],
-            llm_names=context["llm_names"],
-            current_llm_index=context["current_llm_index"],
+            llms_with_names=llms_with_names,
             compress_threshold=context["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
+            llm_name=context["llm_names"][context["current_llm_index"]],
         )
         
         # 创建CLIApp

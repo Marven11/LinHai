@@ -47,6 +47,16 @@ class IssueManager:
         self.issues: dict[str, Issue] = {}
         self._response_events: dict[str, asyncio.Event] = {}
         group_chat.register_member("issue_manager", self)
+        group_chat.add_postinit(self.postinit)
+
+    def postinit(self):
+        """后初始化：创建issue工具集并添加到tool_manager"""
+        from linhai.tool.main import ToolManager
+        from linhai.agent.issue_tools import create_issue_toolset
+        
+        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        issue_toolset = create_issue_toolset(self)
+        tool_manager.add_toolset(issue_toolset)
 
     def register_subagent(self, subagent_name: str, issue_limit: int = 1):
         """注册subagent的issue限额。"""
