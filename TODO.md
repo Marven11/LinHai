@@ -2,28 +2,10 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 当前assert_success选项无用
-  - 问题: 带上assert_success选项调用两个工具读取一个不存在的文件和一个存在的文件，正常来说指定了assert_success的话即使一个工具失败下一个工具也会执行，而不是被跳过
-    - 测试: 在终端中运行linhai: `uv run python -m linhai -m '@nothink 带上assert_success=False选项先后调用两个工具读取一个不存在的文件和一个存在的文件，报告两个工具的执行结果，是成功读取，读取失败还是被跳过，报告到/tmp/report.txt然后退出'`
-    - 你没有重启，修复代码后依然会遇到这个问题
-  - 分析assert_success的应有行为
-    - assert_success类似try-catch机制，当设置为True时工具调用出错会打断后面的工具调用，就像函数调用抛出错误一样，而assert_success为False时工具调用出错不会打断后面的工具调用，就像用try-catch捕获了错误一样
-  - 修复问题
-    - 查看当前调用工具的逻辑，我记得好像是有一个bool记录是否需要跳过工具，需要修改这个bool的设置逻辑
-  - 编写/修改unittest确认问题
-- [x] 修改_build_threshold_message使其提示以下信息，使用以下格式
-  - `当前为x灯状态, 上下文占用量为xx%, 当前有x条大消息, 一分钟内有/没有调用过..., 建议: ...`
-  - 在黄灯状态: 提示避免读取文件，直接开始修改文件，只在消息多于5条时提示“应该调用context_garbage_clean”
-  - 如果一分钟内调用过消息清理工具，无论是否红灯，都不应该提示应该调用消息清理工具
-  - 在消息清理工具方面
-    - if 一分钟内调用过消息清理工具：不应该调用消息清理工具
-    - elif 红灯: 立即...
-    - elif 黄灯且消息多于5条: 应该调用context_garbage_clean工具
-  - 在其他方面
-    - if 一分钟内调用过消息清理工具: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知
-    - elif 红灯: 立即暂停当前任务
-    - elif 黄灯: 应该避免读取文件，立即开始修改
-    - else: assert 绿灯, 不要担心消息限制，立即工作
+- [ ] 完全删除should_block_command_simple，让UnnecessaryRunCommandPlugin只拦截已经读取文件的情况
+  - [ ] 同时测试以下命令是否会被正常拦截: `tail -10 xxx.txt`, `head -10 xxx.txt`，如果没有被拦截则修复并添加对应unittest
+- [ ] UnnecessaryRunCommandPlugin没有拦截awk和rg，修复并添加对应的unittest
+- [ ] UnnecessaryRunCommandPlugin, UnnecessarySedReadPlugin, DuplicateFileReadPlugin应只在当前在master_host上时拦截
 
 # 暂时搁置
 
@@ -79,10 +61,6 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
-- [ ] 完全删除should_block_command_simple，让UnnecessaryRunCommandPlugin只拦截已经读取文件的情况
-  - [ ] 同时测试以下命令是否会被正常拦截: `tail -10 xxx.txt`, `head -10 xxx.txt`，如果没有被拦截则修复并添加对应unittest
-- [ ] UnnecessaryRunCommandPlugin没有拦截awk和rg，修复并添加对应的unittest
-- [ ] UnnecessaryRunCommandPlugin, UnnecessarySedReadPlugin, DuplicateFileReadPlugin应只在当前在master_host上时拦截
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
