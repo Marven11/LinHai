@@ -56,10 +56,19 @@ class GroupChat:
             - 有必要的话，在函数内import对应的类型传给t参数
             - 每次使用数据都动态获取，而不是保存在属性中！
         """
+        # it's so FUCKED up that we write prompt in the error message
         if name not in self.members:
-            raise RuntimeError(f"{name!r} not exists")
+            raise RuntimeError(
+                f"{name!r}未初始化，检查以下问题: "
+                "1. 是否在__init__函数中调用此函数，如果有则说明你在提前获取其他对象！必须阅读本文件的注释，在使用其他对象时才获取！"
+                "2. 是否是unittest错误，如果是则说明你的unittest没有注册此对象，必须在unittest中完整构造这个对象！"
+            )
         if not isinstance(self.members[name], t):
-            raise RuntimeError(f"{name!r} is not {t}")
+            raise RuntimeError(
+                f"{name!r}不是类型{t}，检查以下问题："
+                "1. 是否将Mock类传入了此类"
+                "2. 是否传入了正确的类"
+            )
         return self.members[name]
 
     def has_member(self, name: LiteralString) -> bool:
