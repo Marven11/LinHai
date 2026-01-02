@@ -262,13 +262,13 @@ class AgentContextOrchestration:
                 suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
         elif current_state == "红灯":
             # 红灯状态，没有调用过清理工具
-            suggestion = "建议: 立即暂停当前任务，调用消息清理工具"
+            suggestion = "建议: 立即暂停当前任务"
         elif current_state == "黄灯":
             # 黄灯状态，没有调用过清理工具
             if large_count >= 5:
                 suggestion = "建议: 应该调用context_garbage_clean工具"
             else:
-                suggestion = "建议: 应该避免读取文件，立即开始修改"
+                suggestion = "建议: 应该避免读取文件，直接开始修改文件"
         else:  # 绿灯状态
             suggestion = "建议: 不要担心消息限制，立即工作"
 
