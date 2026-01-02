@@ -2,13 +2,6 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 完全删除should_block_command_simple，让UnnecessaryRunCommandPlugin只拦截已经读取文件的情况
-  - [x] 同时测试以下命令是否会被正常拦截: `tail -10 xxx.txt`, `head -10 xxx.txt`，如果没有被拦截则修复并添加对应unittest
-- [x] UnnecessaryRunCommandPlugin没有拦截awk和rg，修复并添加对应的unittest
-- [x] UnnecessaryRunCommandPlugin, UnnecessarySedReadPlugin, DuplicateFileReadPlugin应只在当前在master_host上时拦截
-
-# 暂时搁置
-
 - [ ] secret系统
   - 当前问题: agent必须通过参数调用工具，但是其有时需要输入密码, token等敏感信息
     - 例如agent必须发送这样的工具调用`{"name": "xxx", "arguments": {"content": "password=123456"}}`，其中需要输入敏感密码123456
@@ -61,6 +54,10 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
+
+# 暂时搁置
+
+
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 
