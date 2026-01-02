@@ -599,6 +599,12 @@ class DuplicateFileReadPlugin(Plugin):
         success: bool,
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否重复读取文件。"""
+        # 只在master_host上拦截
+        from linhai.machine_control import MachineControl
+        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        if machine_control.target_machine != "master_host":
+            return None
+
         if not success:
             return None
 
@@ -714,12 +720,18 @@ class UnnecessarySedReadPlugin(Plugin):
 
     async def _after_tool_call(
         self,
-        _agent: "Agent",
+        agent: "Agent",
         tool_call: ToolCallMessage,
         tool_result: Any,
         success: bool,
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否不必要的小块读取。"""
+
+        # 只在master_host上拦截
+        from linhai.machine_control import MachineControl
+        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        if machine_control.target_machine != "master_host":
+            return None
 
         if not success or tool_call.function_name != "read_file_with_sed":
             return None
@@ -789,7 +801,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
     3. 检查命令是否访问已读取的文件且不在管道/重定向中
     """
 
-    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {"grep", "head", "tail", "cat", "sed"}
+    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
 
     def register(self, lifecycle):
         """注册插件回调。"""
@@ -804,6 +816,12 @@ class UnnecessaryRunCommandPlugin(Plugin):
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否是无用的run_command。"""
         if not success or tool_call.function_name != "run_command":
+            return None
+
+        # 只在master_host上拦截
+        from linhai.machine_control import MachineControl
+        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        if machine_control.target_machine != "master_host":
             return None
 
         command = tool_call.function_arguments.get("command")
@@ -927,31 +945,7 @@ def traverse_ast(
 
 
 
-def should_block_command_simple(command: str) -> bool:
-    """
-    简单判断一个shell命令是否应该被拦截（不检查文件访问）。
 
-    规则：
-    - 命令是单个命令（不在管道中且没有重定向）
-    - 命令名是以下之一：grep, head, tail, cat, sed
-    - 例外：如果命令在管道中或含有重定向，则允许
-
-    返回True表示应该拦截，False表示允许。
-    """
-    if not command.strip():
-        return False
-
-    try:
-        parts = bashlex.parse(command)
-    except bashlex.errors.ParsingError:
-        return False
-
-    forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
-
-    for ast_node in parts:
-        if traverse_ast(ast_node, False, forbidden_commands):
-            return True
-    return False
 
 
 def should_block_command_with_files(command: str, read_files: set[Path]) -> bool:
@@ -1017,7 +1011,7 @@ def _process_command_node(
     )
 
     if (
-        cmd_name in {"grep", "head", "tail", "cat", "sed"}
+        cmd_name in {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
         and not has_redirect
         and not in_pipeline
         and accesses_read_file
@@ -1054,7 +1048,11 @@ def _analyze_command_parts(
             continue
 
         if word.startswith("-"):
-            expecting_option_value = "=" not in word
+            # 检查是否为数字参数，如 -10, -n10 等
+            # 如果参数是纯数字（去掉开头的减号后全是数字），则不是需要值的选项
+            suffix = word.lstrip("-")
+            is_numeric_arg = suffix.isdigit()
+            expecting_option_value = "=" not in word and not is_numeric_arg
             continue
 
         if expecting_option_value:

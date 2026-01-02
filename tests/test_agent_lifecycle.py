@@ -76,11 +76,17 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.mock_issue_manager = MagicMock()
         self.mock_issue_manager.has_unanswered_issues.return_value = False
 
+        # 模拟 machine_control
+        self.mock_machine_control = MagicMock()
+        self.mock_machine_control.target_machine = "master_host"
+
         def get_members_side_effect(member_type, member_class=None):
             if member_type == "agent":
                 return self.mock_agent
             elif member_type == "issue_manager":
                 return self.mock_issue_manager
+            elif member_type == "machine_control":
+                return self.mock_machine_control
             else:
                 return None
 

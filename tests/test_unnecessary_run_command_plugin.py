@@ -21,9 +21,15 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
 
+        # 模拟machine_control
+        self.mock_machine_control = MagicMock()
+        self.mock_machine_control.target_machine = "master_host"
+
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
+            if member_type == "machine_control":
+                return self.mock_machine_control
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
@@ -204,7 +210,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         mock_node.parts = [mock_word]
 
-        forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
+        forbidden_commands = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
 
         result = self.plugin._extract_command_name(mock_node, forbidden_commands)
         self.assertEqual(result, "grep")
@@ -220,10 +226,86 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         mock_node.parts = [mock_word]
 
-        forbidden_commands = {"grep", "head", "tail", "cat", "sed"}
+        forbidden_commands = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
 
         result = self.plugin._extract_command_name(mock_node, forbidden_commands)
         self.assertIsNone(result)
+
+    async def test_after_tool_call_tail_command(self):
+        """测试tail命令拦截。"""
+        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg.filepath = "/path/to/read.txt"
+
+        self.agent.message_processor.get_messages.return_value = [mock_file_msg]
+
+        tool_call = ToolCallMessage(
+            function_name="run_command",
+            function_arguments={"command": "tail -10 /path/to/read.txt"},
+        )
+
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, RuntimeMessage)
+
+    async def test_after_tool_call_head_command(self):
+        """测试head命令拦截。"""
+        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg.filepath = "/path/to/read.txt"
+
+        self.agent.message_processor.get_messages.return_value = [mock_file_msg]
+
+        tool_call = ToolCallMessage(
+            function_name="run_command",
+            function_arguments={"command": "head -10 /path/to/read.txt"},
+        )
+
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, RuntimeMessage)
+
+    async def test_after_tool_call_awk_command(self):
+        """测试awk命令拦截。"""
+        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg.filepath = "/path/to/read.txt"
+
+        self.agent.message_processor.get_messages.return_value = [mock_file_msg]
+
+        tool_call = ToolCallMessage(
+            function_name="run_command",
+            function_arguments={"command": "awk '{print \$1}' /path/to/read.txt"},
+        )
+
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, RuntimeMessage)
+
+    async def test_after_tool_call_rg_command(self):
+        """测试rg命令拦截。"""
+        mock_file_msg = MagicMock(spec=FileContentMessage)
+        mock_file_msg.filepath = "/path/to/read.txt"
+
+        self.agent.message_processor.get_messages.return_value = [mock_file_msg]
+
+        tool_call = ToolCallMessage(
+            function_name="run_command",
+            function_arguments={"command": "rg pattern /path/to/read.txt"},
+        )
+
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
+
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, RuntimeMessage)
 
 
 class TestHelperFunctions(unittest.TestCase):
@@ -258,26 +340,7 @@ class TestHelperFunctions(unittest.TestCase):
 
 
 
-    def test_should_block_command_simple(self):
-        """测试should_block_command_simple函数。"""
-        from linhai.agent.plugin import should_block_command_simple
 
-        # 直接sed命令应该被拦截
-        self.assertTrue(should_block_command_simple("sed -n '1,10p' file.txt"))
-        self.assertTrue(should_block_command_simple("tail -10 file.txt"))
-        self.assertTrue(
-            should_block_command_simple("cd /etc && sed -n '1,10p' file.txt")
-        )
-
-        # 管道中的sed命令应该允许
-        self.assertFalse(should_block_command_simple("cat file.txt | sed 's/old/new/'"))
-
-        # 有重定向的cat命令应该允许
-        self.assertFalse(should_block_command_simple("cat file.txt > output.txt"))
-
-        # 无效命令不应该拦截
-        self.assertFalse(should_block_command_simple(""))
-        self.assertFalse(should_block_command_simple("invalid command"))
 
     @patch("bashlex.parse")
     def test_should_block_command_with_files(self, mock_parse):
@@ -310,6 +373,53 @@ class TestHelperFunctions(unittest.TestCase):
             "grep pattern /path/to/file.txt", read_files
         )
         self.assertTrue(result)
+
+    def test_analyze_command_parts_for_head_tail(self):
+        """测试_analyze_command_parts函数对head和tail命令的解析。"""
+        from linhai.agent.plugin import _analyze_command_parts, get_children
+        import bashlex
+        from pathlib import Path
+        
+        read_files = {Path("/path/to/read.txt").resolve()}
+        
+        # 测试head命令
+        cmd_head = "head -10 /path/to/read.txt"
+        parts_head = bashlex.parse(cmd_head)
+        node_head = parts_head[0]
+        
+        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_head, read_files)
+        print(f"head命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+        
+        # 断言head命令应该检测到文件访问
+        self.assertEqual(cmd_name, "head")
+        self.assertFalse(has_redirect)
+        self.assertTrue(accesses_read_file)
+        
+        # 测试tail命令
+        cmd_tail = "tail -10 /path/to/read.txt"
+        parts_tail = bashlex.parse(cmd_tail)
+        node_tail = parts_tail[0]
+        
+        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_tail, read_files)
+        print(f"tail命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+        
+        # 断言tail命令应该检测到文件访问
+        self.assertEqual(cmd_name, "tail")
+        self.assertFalse(has_redirect)
+        self.assertTrue(accesses_read_file)
+        
+        # 测试grep命令作为对比
+        cmd_grep = "grep pattern /path/to/read.txt"
+        parts_grep = bashlex.parse(cmd_grep)
+        node_grep = parts_grep[0]
+        
+        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_grep, read_files)
+        print(f"grep命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+        
+        # 断言grep命令应该检测到文件访问
+        self.assertEqual(cmd_name, "grep")
+        self.assertFalse(has_redirect)
+        self.assertTrue(accesses_read_file)
 
 
 if __name__ == "__main__":

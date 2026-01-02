@@ -18,11 +18,25 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """设置测试环境。"""
         self.group_chat = MagicMock()
         self.group_chat.send_if_exists = AsyncMock(return_value=None)
-        self.plugin = UnnecessarySedReadPlugin(self.group_chat)
+        
         self.agent = MagicMock()
-
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
+
+        # 模拟machine_control
+        self.mock_machine_control = MagicMock()
+        self.mock_machine_control.target_machine = "master_host"
+
+        def get_members_side_effect(member_type, _member_class=None):
+            if member_type == "agent":
+                return self.agent
+            if member_type == "machine_control":
+                return self.mock_machine_control
+            raise RuntimeError(f"{member_type!r} not exists")
+
+        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
+        
+        self.plugin = UnnecessarySedReadPlugin(self.group_chat)
 
         self.small_result = "line 1\nline 2\nline 3\n"
 
