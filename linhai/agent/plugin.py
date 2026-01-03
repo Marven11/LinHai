@@ -361,7 +361,7 @@ class SingleToolCallReminderPlugin(Plugin):
                         + "！！！！！" * (self.single_tool_call_count - 2)
                     ),
                     source="single_tool_call_reminder",
-                    sort_value=0
+                    sort_value=0,
                 )
             else:
                 agent.message_processor.update_appending_message(
@@ -401,7 +401,7 @@ class OnlyReasoningPlugin(Plugin):
                     "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
                 ),
                 source="only_reasoning",
-                sort_value=0
+                sort_value=0,
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -514,6 +514,7 @@ class ToolCallInReasoningPlugin(Plugin):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
+
 class JsonCodeBlockPlugin(Plugin):
     """检测agent误用`json`而非`json toolcall`代码块的插件。"""
 
@@ -561,7 +562,6 @@ class RuntimeImitationPlugin(Plugin):
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return False
 
-
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
                 await agent.interrupt("不要输出<<agent>>这个tag!")
@@ -601,6 +601,7 @@ class DuplicateFileReadPlugin(Plugin):
         """工具调用后回调，检查是否重复读取文件。"""
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
+
         machine_control = self.group_chat.get_members("machine_control", MachineControl)
         if machine_control.target_machine != "master_host":
             return None
@@ -701,6 +702,119 @@ class DuplicateFileReadPlugin(Plugin):
         return None
 
 
+class WrongTimeoutPlugin(Plugin):
+    """在Agent使用timeout命令而不使用timeout参数时ban掉run_command工具"""
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.ban_until = 0
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_before_tool_call(self.before_tool_call)
+
+    async def before_tool_call(
+        self,
+        tool_call: ToolCallMessage,
+    ) -> bool:
+        """工具调用后回调，检查是否是无用的run_command。"""
+        if tool_call.function_name != "run_command":
+            return False
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        if self.ban_until > time.time():
+            await agent.interrupt(
+                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time()}s解锁，请反思你的行为！"
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="惩罚：Agent未正确使用timeout参数，已惩罚性禁止使用run_command",
+                ),
+            )
+            return True
+
+        command = tool_call.function_arguments.get("command")
+        if not isinstance(command, str) or not command.startswith("timeout "):
+            return False
+
+        if tool_call.function_arguments.get("timeout"):
+            return False
+
+        self.ban_until = time.time() + 180
+
+        await agent.interrupt(
+            "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
+            "你做错的事情是：没有使用timeout参数而是使用timeout命令设置超时，你没发现这一点用都没有吗？"
+            "如果你想让一个程序一直运行，你应该使用终端而不是使用timeout！"
+            "如果你想让一个程序在超时后退出，你应该使用timeout参数而不是命令！"
+        )
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="惩罚：Agent未正确使用timeout参数，已惩罚性禁止使用run_command三分钟",
+            ),
+        )
+        return True
+
+
+class WrongLinhaiPlugin(Plugin):
+    """禁止使用run_command调用linhai"""
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.ban_until = 0
+
+    def register(self, lifecycle):
+        """注册插件回调。"""
+        lifecycle.register_before_tool_call(self.before_tool_call)
+
+    async def before_tool_call(
+        self,
+        tool_call: ToolCallMessage,
+    ) -> bool:
+        """工具调用后回调，检查是否是无用的run_command。"""
+        if tool_call.function_name != "run_command":
+            return False
+
+        agent = self.group_chat.get_members("agent", Agent)
+
+        if self.ban_until > time.time():
+            await agent.interrupt(
+                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time()}s解锁，请反思你的行为！"
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="惩罚：Agent使用run_command运行linhai，已惩罚性禁止使用run_command",
+                ),
+            )
+            return True
+
+        command = tool_call.function_arguments.get("command")
+        if not isinstance(command, str) or " linhai " not in command:
+            return False
+
+        self.ban_until = time.time() + 180
+
+        await agent.interrupt(
+            "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
+            "你做错的事情是：直接在run_command中使用linhai"
+        )
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="惩罚：Agent使用run_command运行linhai，已惩罚性禁止使用run_command三分钟",
+            ),
+        )
+        return True
+
+
 class UnnecessarySedReadPlugin(Plugin):
     """拦截不必要的sed调用插件。
 
@@ -729,6 +843,7 @@ class UnnecessarySedReadPlugin(Plugin):
 
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
+
         machine_control = self.group_chat.get_members("machine_control", MachineControl)
         if machine_control.target_machine != "master_host":
             return None
@@ -801,7 +916,15 @@ class UnnecessaryRunCommandPlugin(Plugin):
     3. 检查命令是否访问已读取的文件且不在管道/重定向中
     """
 
-    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
+    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {
+        "grep",
+        "head",
+        "tail",
+        "cat",
+        "sed",
+        "awk",
+        "rg",
+    }
 
     def register(self, lifecycle):
         """注册插件回调。"""
@@ -820,6 +943,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
+
         machine_control = self.group_chat.get_members("machine_control", MachineControl)
         if machine_control.target_machine != "master_host":
             return None
@@ -940,12 +1064,6 @@ def traverse_ast(
         if traverse_ast(child, in_pipeline, forbidden_commands):
             return True
     return False
-
-
-
-
-
-
 
 
 def should_block_command_with_files(command: str, read_files: set[Path]) -> bool:

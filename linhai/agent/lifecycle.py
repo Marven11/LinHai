@@ -125,6 +125,8 @@ class Lifecycle:
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
+            WrongTimeoutPlugin,
+            WrongLinhaiPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
 
@@ -146,6 +148,8 @@ class Lifecycle:
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
             AppendingMessagePlugin(self.group_chat),
+            WrongTimeoutPlugin(self.group_chat),
+            WrongLinhaiPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
@@ -292,7 +296,6 @@ class Lifecycle:
         """触发工具冲突事件。"""
         for callback in self._tool_conflict_callbacks:
             await callback(agent, tool_call, conflicting_tools)
-
 
     async def trigger_before_agent_loop(self, agent: "Agent"):
         """触发Agent循环开始前事件。"""
