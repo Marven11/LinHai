@@ -540,6 +540,8 @@ class OpenAiAnswer:
     async def __anext__(self) -> AnswerToken | AnswerTokenUsage:
         if not self.toyield:
             await self.update_toyield()
+        if not self.toyield:
+            raise StopAsyncIteration
         return self.toyield.pop(0)
 
     def get_message(self) -> Message:
