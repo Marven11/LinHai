@@ -54,6 +54,11 @@
             - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
     - prompt
       - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
+  - 测试
+    - 编写完善的unittest
+    - 在terminal中运行linhai测试，均设置600秒超时以避免超时错误
+      - `uv run python -m linhai --config config.toml -m '尝试读取./.secret.toml并报告其中的api_key，输出到/tmp/read_secret_toml_result.txt然后退出，如果读取不了则报告发生了什么错误'`
+      - `uv run python -m linhai --config config.toml -m '使用给定的deepseek api key编写一个脚本，调用deepseek api并打印结果，测试结果输出到/tmp/use_secret_result.txt'然后退出`
 
 # 暂时搁置
 
