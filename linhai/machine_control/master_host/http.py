@@ -61,7 +61,7 @@ async def http_request(
                 headers=headers,
                 follow_redirects=follow_redirects,
                 data=data,  # type: ignore[arg-type]
-                timeout=10.0,
+                timeout=60.0,
             )
 
             content_type = response.headers.get("content-type", "").lower()

@@ -99,6 +99,23 @@ INTRODUCTION_EXAMPLES = """
 重要：每次只输出一个<<agent>>包裹的部分，不要一次性输出多个<<agent>>块！
 """
 
+INTRODUCTION_SECRET_SYSTEM = """
+## Secret系统
+
+Secret系统用于安全处理敏感信息（如API密钥、密码等）。
+
+### 可用Secret键
+
+{secrets_list}
+
+### 使用说明
+
+1. 在工具调用中，如果需要使用secret值，必须在工具调用消息中指定`with_secret`字段，值为一个列表，包含你要使用的secret键（格式为KEY，不包含`<$`包裹）。
+2. 在工具调用的参数中，使用<$KEY$>格式引用secret值，这些引用会被自动替换为实际值。
+3. 如果不指定`with_secret`而工具结果包含secret值，结果会被拦截。
+4. 如果指定了`with_secret`，工具结果中的secret值会被替换为<$KEY$>格式以保护安全。
+"""
+
 INTRODUCTION_ITEMS = [
     ("TOOL USE", INTRODUCTION_TOOL_USE),
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
@@ -106,6 +123,7 @@ INTRODUCTION_ITEMS = [
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("PENTESTING", INTRODUCTION_PENTESTING),
     ("EXAMPLES", INTRODUCTION_EXAMPLES),
+    ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
 ]
 
 # ===============================
@@ -383,11 +401,38 @@ EXAMPLES_PRACTICAL_PROGRAMMING = """
 ---
 """
 
+EXAMPLES_SECRET_USAGE = """
+---
+<<user>>使用secret写入API密钥文件<<user>>
+
+<<agent>>用户需要使用secret来写入包含API密钥的文件。我需要调用write_file工具，并使用with_secret字段授权使用DEEPSEEK_API_KEY secret。
+
+首先，我将使用write_file工具，在with_secret字段中指定要使用的secret键，在参数中不使用<$$>，直接通过类似DEEPSEEK_API_KEY的名字引用secret值。
+
+```json toolcall
+{"name": "write_file", "with_secret": ["DEEPSEEK_API_KEY"], "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
+```
+
+等待工具执行结果。
+<<agent>>
+
+<<tool>>{"status": "success", "message": "文件config.py创建成功，secret值已安全替换"}<<tool>>
+
+<<agent>>
+工具执行成功，文件已创建，secret值已安全处理。
+
+文件创建成功，API密钥已安全写入。 #LINHAI_WAITING_USER
+<<agent>>
+
+---
+"""
+
 EXAMPLES_ITEMS = [
     ("SIMPLE CONVERSATION", EXAMPLES_SIMPLE_CONVERSATION),
     ("TOOL CALL", EXAMPLES_TOOL_CALL),
     ("MULTI TOOL CALL", EXAMPLES_MULTI_TOOL_CALL),
     ("PRACTICAL PROGRAMMING", EXAMPLES_PRACTICAL_PROGRAMMING),
+    ("SECRET USAGE", EXAMPLES_SECRET_USAGE),
 ]
 
 # ===============================

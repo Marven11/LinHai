@@ -12,6 +12,7 @@ from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
 from linhai.tool.general import TodolistManager
 from linhai.utils import CliRuntimeNotice
+from linhai.secret import initialize_secret_system
 
 from .base import GlobalMemory
 
@@ -80,6 +81,15 @@ async def create_agent_from_config(
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()
 
+    # 初始化Secret系统（如果配置了secret.config_path）
+    if tools_config.secret.config_path:
+        
+        secret_plugin = initialize_secret_system(
+            group_chat=group_chat,
+            secret_config_path=tools_config.secret.config_path,
+            config_basedir=config_basedir
+        )
+        secret_plugin.register(agent.lifecycle)
 
     if agent_config.enable_task_planning:
         from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin

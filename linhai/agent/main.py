@@ -363,10 +363,12 @@ class Agent:
         for call in tool_calls:
             if "name" in call and "arguments" in call:
                 assert_success = call.get("assert_success", True)
+                with_secret = call.get("with_secret", None)
                 tool_call = ToolCallMessage(
                     function_name=call["name"],
                     function_arguments=call["arguments"],
                     assert_success=assert_success,
+                    with_secret=with_secret
                 )
                 await self.toolcall_processor.call_tool(tool_call)
 

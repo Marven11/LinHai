@@ -2,69 +2,19 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] secret系统
-  - 当前问题: agent必须通过参数调用工具，但是其有时需要输入密码, token等敏感信息
-    - 例如agent必须发送这样的工具调用`{"name": "xxx", "arguments": {"content": "password=123456"}}`，其中需要输入敏感密码123456
-  - 设计secret系统
-    - 配置
-      - 用户可以使用在配置的`[tools.secret]`选项中配置secret配置文件路径的位置
-      - secret配置文件的格式为toml格式，保存各个secret
-      - 在配置中的secret键不用`<$$>`包裹，在agent使用时需要用`<$$>`包裹
-    - secret设计
-      - 一个secret包含键，值和描述
-      - 键包含`[A-Za-z0-9-_]`字符，不以0-9开头且一般使用大写字母
-      - 值是任意字符串，可为空
-      - 描述是一小段话，字符串
-      - secret键的`<$$>`格式
-        - 在agent的上下文中，secret的键需要用`<$$>`包裹，如`<$OPENAI_API_TOKEN$>`
-    - 工具调用
-      - agent可以在调用工具时使用`with_secret`选项，选项的位置和`assert_success`同级 
-      - `with_secret`是一个字符串的列表，包含当前工具调用使用的`<$$>`格式secret键
-        - 如`["<$OPENAI_API_TOKEN$>", "<$SSH_PASSWORD$>"]`
-      - agent如何通过`with_secret`在工具调用中包含secret值
-        - `with_secret`被指定时, toolcall manager会:
-          - 递归检查工具调用arguments中的每个值，将其中的`<$$>`格式secret键替换secret值
-      - agent如何通过`with_secret`查看包含secret值的工具结果
-        - 当secret配置文件被指定时，toolcall manager会注册一个插件拦截所有工具调用结果
-        - 目前不能拦截所有传给agent的消息，例如subagent的issue不会被拦截，加上一条TODO注释说明
-        - 在工具调用本身没有指定`with_secret`时
-          - 如果工具调用的内容包含了任何secret值则拦截
-          - 拦截返回一个新的RuntimeMessage，其中提示
-            - `工具调用的结果包含<<$$>格式secret键>的内容，已拦截`
-            - `如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截`
-        - 在工具调用本身指定了`with_secret`时
-          - 返回一个MaskedToolCallResult，包含原有的工具调用message
-          - 在其的to_llm_message中
-            - 将工具调用结果中将所有的secret值改成对应的secret键
-            - 提示结果中包含什么secret键
-            - 返回`<<masked>><<messaage>>工具内容包含<<$$>格式secret键>, <<$$>格式secret键>secret的内容，已替换<<message>><<content>>（被替换后的工具结果）<<content>><<masked>>`
-    - appending message
-      - 如果没有配置secret则不添加对应message
-      - 添加appending message告知当前可用的<$$>格式secret键和描述
-      - 例如`当前可用secret键: <$OPENAI_API_TOKEN$> - 调用OpenAI的API token; <$SSH_PASSWORD$> - SSH私钥的解锁密码`
-    - 示例: 编写包含api token的python脚本
-      - 用户配置secret配置文件，在其中包含`OPENAI_API_TOKEN=sk-xxx`
-      - agent调用write_file工具:
-        - `{"name": "write_file", "with_secret": ["<$OPENAI_API_TOKEN$>"], "arguments": {"filepath": "test.py", "content": "import openai; OPENAI_API_TOKEN = <$OPENAI_API_TOKEN$>; ..."}}`
-        - 实际写入的文件中不包含`<$OPENAI_API_TOKEN$>`，其中`<$OPENAI_API_TOKEN$>`被替换成对应的secret值
-          - `import openai; OPENAI_API_TOKEN=sk-xxx; ...`
-      - agent读取写好的文件
-        - `{"name": "read_file", "with_secret": ["<$OPENAI_API_TOKEN$>"], "arguments": {"filepath": "test.py"}}`
-            - 返回`<<masked>><<messaage>>工具内容包含<$OPENAI_API_TOKEN$>secret的内容，已替换<<message>><<replaced>><<result>>import openai; OPENAI_API_TOKEN = <$OPENAI_API_TOKEN$>; ...<<result>><<replaced>><<masked>>`
-            - 其中`<<replaced>>`中是替换后的结果，包含双尖括号标记
-    - prompt
-      - 在工具调用中写明`with_secret`的逻辑，需要清晰易懂
-  - 测试
-    - 编写完善的unittest
-    - 在terminal中运行linhai测试，均设置600秒超时以避免超时错误
-      - `uv run python -m linhai --config config.toml -m '尝试读取./.secret.toml并报告其中的api_key，输出到/tmp/read_secret_toml_result.txt然后退出，如果读取不了则报告发生了什么错误'`
-      - `uv run python -m linhai --config config.toml -m '使用给定的deepseek api key编写一个脚本，调用deepseek api并打印结果，测试结果输出到/tmp/use_secret_result.txt'然后退出`
+- [ ] load_secrets_from_config应该根据config.toml的相对位置而不是根据当前位置读取secret.toml
+  - 需要添加对应的unittest
+- [ ] 当前http_request工具不支持设置timeout，需要修改
+  - 加上一个timeout参数，参数是一个整数，代表timeout的秒数，不需要更加细粒度的参数
 
 # 暂时搁置
 
-
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
+
+# 注意
+
+- 在终端刚刚启动linhai时TUI焦点锁定在tab区域，需要按下tab键选择对话区域才能使用pageup/pagedown翻页，查看最新回答，
 
 # 资源
 
