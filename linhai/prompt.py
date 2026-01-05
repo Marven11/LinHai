@@ -97,6 +97,7 @@ INTRODUCTION_EXAMPLES = """
 - <<agent>>：Agent的思考和行动
 
 重要：每次只输出一个<<agent>>包裹的部分，不要一次性输出多个<<agent>>块！
+重要：仅输出<<agent>>内的内容！不要输出<<agent>>标记本身！
 """
 
 INTRODUCTION_SECRET_SYSTEM = """
