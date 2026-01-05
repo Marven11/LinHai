@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 完全删除append_file函数，并在replace_file_content的desc中加上“如果需要在文件末尾追加内容，尝试通过修改文件末尾的几行实现”
+- [x] 完全删除append_file函数，并在replace_file_content的desc中加上“如果需要在文件末尾追加内容，尝试通过修改文件末尾的几行实现”
   - 需要全面清理代码，包括定义、实现、工具注册、unittest等
 
 # 暂时搁置

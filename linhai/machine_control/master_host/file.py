@@ -145,47 +145,6 @@ def write_file(
     return ToolResultMessage(f"成功写入文件: {file_path.as_posix()!r}")
 
 
-def append_file(
-    filepath: str, content: str, assume_empty_line: bool = True
-) -> ToolResultMessage | ToolErrorMessage:
-    """追加内容到文件末尾。
-
-    Args:
-        filepath: 文件路径
-        content: 要追加的内容
-        assume_empty_line: 是否假设文件以空行结尾，默认为true
-
-    Returns:
-        成功或错误消息
-    """
-    file_path = Path(filepath)
-    if file_path.exists():
-        validation_error = validate_file(file_path)
-        if validation_error:
-            return ToolErrorMessage(validation_error)
-
-    if not file_path.exists():
-        return ToolErrorMessage("文件不存在")
-    try:
-        old_content = file_path.read_bytes()
-        if (
-            assume_empty_line
-            and not old_content.endswith(b"\n")
-            and not content.startswith("\n")
-        ):
-            return ToolErrorMessage(
-                "错误：使用assume_empty_line假设原文件末尾有换行，但是原文件并没有换行，且新内容开头也没有换行。"
-                "这会导致原文件的最后一行被修改。"
-                "如果你确实需要修改原文件的最后一行，将assume_empty_line设置为false,"
-                "如果你不需要修改原文件的最后一行，在content的开头加上换行符\n"
-            )
-        with file_path.open("a", encoding="utf-8") as f:
-            f.write(content)
-    except OSError as exc:
-        return ToolErrorMessage(f"写入文件时发生错误: {exc!r}")
-    return ToolResultMessage(f"成功写入文件: {file_path.as_posix()!r}")
-
-
 def replace_file_content(
     filepath: str, old: str, new: str, replace_times: int | None = None
 ) -> ToolResultMessage | ToolErrorMessage:

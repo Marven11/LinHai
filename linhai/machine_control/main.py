@@ -83,9 +83,7 @@ class MachineControlToolSet(ToolSet):
                 "follow_redirects": ToolArgInfo(
                     desc="是否跟随重定向，默认True", type="bool"
                 ),
-                "timeout": ToolArgInfo(
-                    desc="超时时间（秒），默认60秒", type="int"
-                ),
+                "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="int"),
             },
             required_args=["method", "url"],
             conflict_with=None,
@@ -247,7 +245,8 @@ class MachineControlToolSet(ToolSet):
 
         @self.register_tool(
             name="write_file",
-            desc="写入文件内容。注意：避免输出大量重复内容！修改文件时优先使用replace_file_content或者append_file，复制文件优先使用shell指令",
+            desc="写入文件内容。注意：避免输出大量重复内容！修改文件时优先使用replace_file_content，"
+            "如果需要复制文件，必须使用shell指令而不是用此工具重新写入！",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "content": ToolArgInfo(desc="要写入的内容", type="str"),
@@ -268,32 +267,11 @@ class MachineControlToolSet(ToolSet):
             return await host_control.write_file(filepath, content, override)
 
         @self.register_tool(
-            name="append_file",
-            desc="追加文件内容。建议：在增加文件内容时优先考虑使用此工具或insert工具",
-            args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
-                "assume_empty_line": ToolArgInfo(
-                    desc="是否假设文件以空行结尾，默认为true", type="bool"
-                ),
-            },
-            required_args=["filepath", "content"],
-            conflict_with=[
-                "read_file",
-                "read_file_with_sed",
-            ],
-        )
-        async def append_file_tool(
-            filepath: str, content: str, assume_empty_line: bool = True
-        ) -> Message:
-            host_control = self.machine_control.machines[
-                self.machine_control.target_machine
-            ]
-            return await host_control.append_file(filepath, content, assume_empty_line)
-
-        @self.register_tool(
             name="replace_file_content",
-            desc="替换文件内容中的指定字符串。建议：在修改文件原有内容时优先使用此工具重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。",
+            desc="替换文件内容中的指定字符串。建议：在修改文件原有内容时优先使用此工具。"
+            "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
+            "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。"
+            "如果需要在文件末尾追加内容，尝试通过修改文件末尾的几行实现",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "old": ToolArgInfo(desc="要替换的字符串", type="str"),
@@ -462,10 +440,6 @@ class HostControl(Protocol):
         self, filepath: str, content: str, override: bool = False
     ) -> Message: ...
 
-    async def append_file(
-        self, filepath: str, content: str, assume_empty_line: bool = True
-    ) -> Message: ...
-
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> Message: ...
@@ -584,7 +558,7 @@ class MachineControlPlugin:
         agent.message_processor.update_appending_message(
             RuntimeMessage(f"当前在{self.machine_control.target_machine}上"),
             source="machine_control",
-            sort_value=0
+            sort_value=0,
         )
 
     def register(self, lifecycle):

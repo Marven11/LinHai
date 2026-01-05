@@ -82,7 +82,6 @@ class GitDiffReviewPlugin(Plugin):
     FILE_MODIFICATION_TOOLS: set[str] = {
         "write_file",
         "replace_file_content",
-        "append_file",
         "modify_file_with_sed",
         "insert_at_line",
     }

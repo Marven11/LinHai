@@ -111,7 +111,7 @@ class TestMasterHostControl(unittest.TestCase):
         """测试文件操作"""
         self.assertTrue(hasattr(self.host_control, "read_file"))
         self.assertTrue(hasattr(self.host_control, "write_file"))
-        self.assertTrue(hasattr(self.host_control, "append_file"))
+
         self.assertTrue(hasattr(self.host_control, "replace_file_content"))
         self.assertTrue(hasattr(self.host_control, "list_files"))
         self.assertTrue(hasattr(self.host_control, "get_absolute_path"))

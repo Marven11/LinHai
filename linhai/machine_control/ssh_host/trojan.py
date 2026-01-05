@@ -104,18 +104,6 @@ class Trojan:
         except Exception as e:
             return {"error": str(e)}
 
-    def append_file(self, filepath, content, assume_empty_line=True):
-        """追加文件"""
-        try:
-            if not os.path.exists(filepath):
-                return {"error": f"文件不存在: {filepath}"}
-
-            with open(filepath, "a", encoding="utf-8") as f:
-                f.write(content)
-            return {"message": f"内容已追加到: {filepath}"}
-        except Exception as e:
-            return {"error": str(e)}
-
     def replace_file_content(self, filepath, old, new, replace_times=None):
         """替换文件内容"""
         try:

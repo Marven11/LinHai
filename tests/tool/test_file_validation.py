@@ -15,7 +15,6 @@ class TestFileValidation(unittest.TestCase):
         from linhai.machine_control.master_host.file import (
             read_file,
             write_file,
-            append_file,
             replace_file_content,
             read_file_with_sed,
             modify_file_with_sed,
@@ -38,16 +37,6 @@ class TestFileValidation(unittest.TestCase):
             },
             required_args=["filepath", "content"],
         )(write_file)
-
-        self.toolset.register_tool(
-            name="append_file",
-            desc="追加文件内容",
-            args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "content": ToolArgInfo(desc="要在文件后追加的内容", type="str"),
-            },
-            required_args=["filepath", "content"],
-        )(append_file)
 
         self.toolset.register_tool(
             name="replace_file_content",
@@ -116,17 +105,6 @@ class TestFileValidation(unittest.TestCase):
 
             if os.path.exists("./tests/test_temp.txt"):
                 os.remove("./tests/test_temp.txt")
-
-    def test_append_file_rejects_binary_file(self):
-        """测试append_file拒绝二进制文件"""
-        result = self.toolset.call_tool(
-            "append_file",
-            {
-                "filepath": "./tests/test_binary.zip",
-                "content": "appended content",
-            },
-        )
-        self.assertIn("不是纯文本文件", str(result))
 
     def test_replace_file_content_rejects_binary_file(self):
         """测试replace_file_content拒绝二进制文件"""

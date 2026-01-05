@@ -550,19 +550,6 @@ class SshMachineControl:
             {"filepath": filepath, "content": content, "override": override},
         )
 
-    async def append_file(
-        self, filepath: str, content: str, assume_empty_line: bool = True
-    ) -> ToolResultMessage | ToolErrorMessage:
-        """追加文件内容"""
-        return await self.call_tool(
-            "append_file",
-            {
-                "filepath": filepath,
-                "content": content,
-                "assume_empty_line": assume_empty_line,
-            },
-        )
-
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultMessage | ToolErrorMessage:

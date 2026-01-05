@@ -18,7 +18,6 @@ from .terminal import (
 from .file import (
     read_file,
     write_file,
-    append_file,
     replace_file_content,
     list_files,
     get_absolute_path,
@@ -46,7 +45,9 @@ class MasterHostControl:
         timeout: int = 60,
     ) -> Message:
         """发送HTTP请求并返回响应内容或文件路径"""
-        return await http_request(method, url, params, headers, data, follow_redirects, timeout)
+        return await http_request(
+            method, url, params, headers, data, follow_redirects, timeout
+        )
 
     async def run_command(self, command: str, timeout: float = 30.0) -> Message:
         """执行系统命令"""
@@ -68,9 +69,7 @@ class MasterHostControl:
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> Message:
         """发送命令等字符串到终端"""
-        return await terminal_send_string(
-            terminal_id, string, with_enter, wait_seconds
-        )
+        return await terminal_send_string(terminal_id, string, with_enter, wait_seconds)
 
     async def terminal_read_screen(self, terminal_id: str) -> Message:
         """读取终端屏幕内容"""
@@ -91,14 +90,6 @@ class MasterHostControl:
     ) -> Message:
         """写入内容到文件"""
         return await asyncio.to_thread(write_file, filepath, content, override)
-
-    async def append_file(
-        self, filepath: str, content: str, assume_empty_line: bool = True
-    ) -> Message:
-        """追加内容到文件末尾"""
-        return await asyncio.to_thread(
-            append_file, filepath, content, assume_empty_line
-        )
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None

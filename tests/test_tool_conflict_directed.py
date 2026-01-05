@@ -46,13 +46,7 @@ class TestDirectedToolConflict(unittest.TestCase):
                 "read_file_with_sed",
             ],  # write_file不能在read_file之后调用
         }
-        self.append_file_tool = {
-            "name": "append_file",
-            "conflict_with": [
-                "read_file",
-                "read_file_with_sed",
-            ],  # append_file不能在read_file之后调用
-        }
+
         self.replace_file_content_tool = {
             "name": "replace_file_content",
             "conflict_with": [
@@ -99,27 +93,6 @@ class TestDirectedToolConflict(unittest.TestCase):
         # write_file的conflict_with包含read_file，所以应该有冲突
         self.assertEqual(conflict, "read_file", "write_file不能在read_file之后调用")
 
-    def test_append_file_cannot_follow_read_file(self):
-        """测试append_file不能在read_file之后调用（有冲突）。"""
-        # 模拟工具定义
-        mock_toolset = MagicMock()
-        mock_toolset.has_tool = MagicMock(
-            side_effect=lambda name: name == "append_file"
-        )
-        mock_toolset.get_tools = MagicMock(
-            return_value={"append_file": self.append_file_tool}
-        )
-        self.tool_manager.toolsets = [mock_toolset]
-
-        # 先调用read_file
-        self.toolcall.called_tools_in_round = ["read_file"]
-
-        # 检查append_file是否与read_file冲突
-        conflict = self.toolcall._check_tool_conflict("append_file")
-
-        # append_file的conflict_with包含read_file，所以应该有冲突
-        self.assertEqual(conflict, "read_file", "append_file不能在read_file之后调用")
-
     def test_replace_file_content_cannot_follow_read_file(self):
         """测试replace_file_content不能在read_file之后调用（有冲突）。"""
         # 模拟工具定义
@@ -149,13 +122,13 @@ class TestDirectedToolConflict(unittest.TestCase):
         mock_toolset = MagicMock()
 
         def has_tool_side_effect(name):
-            return name in ["write_file", "append_file"]
+            return name in ["write_file", "replace_file_content"]
 
         mock_toolset.has_tool = MagicMock(side_effect=has_tool_side_effect)
         mock_toolset.get_tools = MagicMock(
             return_value={
                 "write_file": self.write_file_tool,
-                "append_file": self.append_file_tool,
+                "replace_file_content": self.replace_file_content_tool,
             }
         )
         self.tool_manager.toolsets = [mock_toolset]
@@ -163,12 +136,12 @@ class TestDirectedToolConflict(unittest.TestCase):
         # 先调用write_file
         self.toolcall.called_tools_in_round = ["write_file"]
 
-        # 检查append_file是否与write_file冲突
-        # append_file的conflict_with只包含read_file和read_file_with_sed，不包含write_file
-        conflict = self.toolcall._check_tool_conflict("append_file")
+        # 检查replace_file_content是否与write_file冲突
+        # replace_file_content的conflict_with只包含read_file和read_file_with_sed，不包含write_file
+        conflict = self.toolcall._check_tool_conflict("replace_file_content")
 
         # 应该没有冲突
-        self.assertIsNone(conflict, "append_file应该可以在write_file之后调用")
+        self.assertIsNone(conflict, "replace_file_content应该可以在write_file之后调用")
 
     def test_read_file_with_sed_same_as_read_file(self):
         """测试read_file_with_sed与read_file具有相同的冲突行为。"""

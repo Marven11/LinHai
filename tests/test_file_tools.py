@@ -9,7 +9,6 @@ from pathlib import Path
 from linhai.machine_control.master_host.file import (
     read_file,
     write_file,
-    append_file,
     replace_file_content,
     list_files,
     get_absolute_path,
@@ -59,16 +58,6 @@ class TestFileTools(unittest.TestCase):
 
         content = self.test_file.read_text(encoding="utf-8")
         self.assertEqual(content, new_content)
-
-    def test_append_file(self):
-        """测试追加文件"""
-        append_content = "\n追加的内容"
-        result = append_file(str(self.test_file), append_content)
-        self.assertIn("成功写入文件", result.content)
-
-        content = self.test_file.read_text(encoding="utf-8")
-        self.assertIn("追加的内容", content)
-        self.assertTrue(content.endswith("追加的内容"))
 
     def test_replace_file_content_default_behavior(self):
         """测试替换文件内容默认行为（不提供replace_times时验证只出现一次）"""

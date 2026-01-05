@@ -20,7 +20,6 @@ from .terminal import (
 from .file import (
     read_file,
     write_file,
-    append_file,
     replace_file_content,
     list_files,
     get_absolute_path,
@@ -42,7 +41,6 @@ __all__ = [
     "close_all_terminals",
     "read_file",
     "write_file",
-    "append_file",
     "replace_file_content",
     "list_files",
     "get_absolute_path",
