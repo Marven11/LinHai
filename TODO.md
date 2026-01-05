@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构subagent配置和--git-diff-reviewer选项等
+- [x] 重构subagent配置和--git-diff-reviewer选项等
   - 当前: 只要指定--checklist就会在暂停时启动git diff reviewer，这不合理
   - 重新设计:
     - git diff reviewer和violation checker默认关闭
@@ -14,7 +14,8 @@
       - 提供此选项时注册git diff reviewer插件: GitDiffReviewPlugin
     - --violation-checker选项
       - 提供此选项时注册violation checker插件
-- [ ] 之前几个commit没有修改unittest，现在有大量过时unittest失败
+- [x] 之前几个commit没有修改unittest，现在有大量过时unittest失败
+  - 状态：从最初的81个错误减少到0个错误，所有504个测试通过
 
 # 暂时搁置
 

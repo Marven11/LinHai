@@ -51,6 +51,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.llm = [mock_llm_config]
         mock_config.agent = Mock()
         mock_config.tools = Mock()
+        mock_config.tools.secret.config_path = ""
         mock_config.memory = Mock()
         mock_config.memory.file_path = "memory.md"
         mock_config.subagent = Mock()
@@ -71,7 +72,7 @@ class TestCreateAgent(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(create_agent_from_config(self.group_chat, mock_config))
+        result = asyncio.run(create_agent_from_config(self.group_chat, mock_config, Path("."), git_diff_reviewer=False, violation_checker=False))
 
         mock_llm_instances.assert_called_once()
         mock_tool_manager.assert_called_once()
@@ -110,6 +111,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.llm = [mock_llm_config1, mock_llm_config2]
         mock_config.agent = Mock()
         mock_config.tools = Mock()
+        mock_config.tools.secret.config_path = ""
         mock_config.memory = Mock()
         mock_config.memory.file_path = "memory.md"
         mock_config.subagent = Mock()
@@ -136,7 +138,7 @@ class TestCreateAgent(unittest.TestCase):
 
             import asyncio
 
-            asyncio.run(create_agent_from_config(self.group_chat, mock_config, "llm2"))
+            asyncio.run(create_agent_from_config(self.group_chat, mock_config, Path("."), "llm2", git_diff_reviewer=False, violation_checker=False))
 
             # 不再检查_create_agent_context调用，因为函数已不存在
 

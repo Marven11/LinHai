@@ -48,7 +48,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_failure(self):
         """测试工具失败时启动subagent。"""
-        tool_call = ToolCallMessage(function_name="test_tool", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="test_tool",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
         error = "测试错误"
 
         mock_subagent_manager = AsyncMock()
@@ -80,7 +85,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_conflict(self):
         """测试工具冲突时启动subagent。"""
-        tool_call = ToolCallMessage(function_name="test_tool", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="test_tool",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
         conflicting_tools = ["conflicting_tool1", "conflicting_tool2"]
 
         mock_subagent_manager = AsyncMock()
@@ -106,7 +116,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         mock_subagent_manager.create_subagent = AsyncMock()
 
         full_response = "测试回答内容"
-        tool_call = ToolCallMessage(function_name="test_tool", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="test_tool",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
         error = "测试错误"
 
         await self.plugin._check_violations(
@@ -126,7 +141,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         mock_subagent_manager.create_subagent = AsyncMock()
 
         full_response = "测试回答内容"
-        tool_call = ToolCallMessage(function_name="test_tool", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="test_tool",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
         error = "测试错误"
 
         await self.plugin._check_violations(
@@ -145,7 +165,12 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         full_response = "测试回答内容"
-        tool_call = ToolCallMessage(function_name="test_tool", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="test_tool",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
         error = "测试错误"
 
         with self.assertRaises(Exception) as context:

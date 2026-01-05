@@ -358,20 +358,11 @@ class SubAgentManager:
             IssueWaitingUserPlugin(self.group_chat),
             IssueBlockingPlugin(self.group_chat),
         ]
-        enabled_agent_types = (
-            self.subagent_config.enabled_agent_types if self.subagent_config else None
-        )
-
-        if enabled_agent_types and enabled_agent_types.violation_checker:
-            plugins.append(ViolationCheckerPlugin(self.group_chat))
-
-        # 检查是否通过命令行选项启用git diff reviewer
         args = self.group_chat.get_members("cli_args", argparse.Namespace)
-        # 优先使用命令行选项，如果命令行选项指定了git diff reviewer，则启用
+        # 根据命令行参数注册插件
+        if args.violation_checker:
+            plugins.append(ViolationCheckerPlugin(self.group_chat))
         if args.git_diff_reviewer:
-            plugins.append(GitDiffReviewPlugin(self.group_chat))
-        # 如果命令行选项未指定，但配置中启用了，也启用
-        elif enabled_agent_types and enabled_agent_types.git_diff_reviewer:
             plugins.append(GitDiffReviewPlugin(self.group_chat))
 
         for plugin in plugins:

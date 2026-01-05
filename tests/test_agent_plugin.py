@@ -431,6 +431,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             function_name="read_file",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
 
         # 调用插件
@@ -461,6 +462,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             function_name="context_garbage_clean",  # 替换为现有工具
             function_arguments={"ids": ["test_id"]},
             assert_success=True,
+            with_secret=None,
         )
 
         # 调用插件
@@ -513,6 +515,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 function_name=tool_name,
                 function_arguments={"test": "arg"},
                 assert_success=True,
+                with_secret=None,
             )
 
             # 调用插件
@@ -544,6 +547,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             function_name="context_garbage_clean",
             function_arguments={},
             assert_success=True,
+            with_secret=None,
         )
 
         # 调用插件
@@ -588,6 +592,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             function_name="read_file",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
 
         # 调用插件

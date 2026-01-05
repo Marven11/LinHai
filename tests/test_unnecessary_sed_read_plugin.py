@@ -60,6 +60,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -77,6 +78,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         result = asyncio.run(
             self.plugin._after_tool_call(self.agent, tool_call, "test result", False)
@@ -90,6 +92,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -107,6 +110,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         result = asyncio.run(
             self.plugin._after_tool_call(
@@ -125,6 +129,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -146,6 +151,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -166,6 +172,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -186,6 +193,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -209,6 +217,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -243,6 +252,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -282,6 +292,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -322,6 +333,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
 
@@ -366,6 +378,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
         
@@ -401,6 +414,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file_with_sed",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         from linhai.tool.base import ToolResultMessage
         
@@ -437,6 +451,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             function_name="read_file",
             function_arguments={"filepath": "./test.py"},
             assert_success=True,
+            with_secret=None,
         )
         
         result = asyncio.run(

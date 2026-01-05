@@ -32,6 +32,9 @@ class TestHttpRequestTool(unittest.TestCase):
                 "follow_redirects": ToolArgInfo(
                     desc="是否跟随重定向，默认True", type="bool"
                 ),
+                "timeout": ToolArgInfo(
+                    desc="超时时间（秒），默认60秒", type="int"
+                ),
             },
             required_args=["method", "url"],
         )(http_request)
@@ -219,6 +222,40 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertTrue(os.path.exists(temp_path))
         self.assertTrue(temp_path.endswith(".bin"))
         os.unlink(temp_path)
+
+
+    @unittest.mock.patch("httpx.AsyncClient.request")
+    def test_http_request_timeout_parameter(self, mock_request):
+        """测试timeout参数传递"""
+        mock_response = unittest.mock.Mock()
+        mock_response.headers = {"content-type": "text/plain"}
+        mock_response.content = b"test"
+        mock_response.text = "test"
+        mock_request.return_value = mock_response
+
+        # 使用默认timeout
+        asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com"}
+            )
+        )
+        call_args = mock_request.call_args
+        self.assertIn("timeout", call_args.kwargs)
+        self.assertEqual(call_args.kwargs["timeout"], 60)
+
+        # 使用自定义timeout
+        asyncio.run(
+            self.toolset.call_tool(
+                "http_request",
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "timeout": 30,
+                },
+            )
+        )
+        call_args = mock_request.call_args
+        self.assertEqual(call_args.kwargs["timeout"], 30)
 
 
 if __name__ == "__main__":

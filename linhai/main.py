@@ -30,11 +30,13 @@ async def _create_agent_from_config(
     config_basedir: Path,
     llm_name: str | None = None,
     checklist_path: Path | None = None,
+    git_diff_reviewer: bool = False,
+    violation_checker: bool = False,
 ):
     from linhai.agent.create import create_agent_from_config
 
     return await create_agent_from_config(
-        group_chat, config, config_basedir, llm_name, checklist_path=checklist_path
+        group_chat, config, config_basedir, llm_name, checklist_path=checklist_path, git_diff_reviewer=git_diff_reviewer, violation_checker=violation_checker
     )
 
 
@@ -54,6 +56,8 @@ async def run(args, init_messages: list[str] | None):
         config_basedir=config_path.parent,
         llm_name=args.llm,
         checklist_path=args.checklist,
+        git_diff_reviewer=args.git_diff_reviewer,
+        violation_checker=args.violation_checker,
     )
 
     app = CLIApp(
@@ -92,7 +96,12 @@ def main():
     parser.add_argument(
         "--git-diff-reviewer",
         action="store_true",
-        help="启用git diff reviewer subagent",
+        help="启用git diff reviewer插件",
+    )
+    parser.add_argument(
+        "--violation-checker",
+        action="store_true",
+        help="启用violation checker插件",
     )
     args = parser.parse_args()
 

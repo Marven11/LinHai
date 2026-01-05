@@ -22,6 +22,12 @@ class TestCreateAgentMCP(unittest.TestCase):
         """设置测试fixtures"""
         self.temp_dir = tempfile.mkdtemp()
         self.group_chat = GroupChat()
+        import argparse
+        self.cli_args = argparse.Namespace()
+        self.cli_args.checklist = None
+        self.cli_args.git_diff_reviewer = False
+        self.cli_args.violation_checker = False
+        self.group_chat.register_member("cli_args", self.cli_args)
 
         project_root = os.path.dirname(os.path.abspath(__file__))
         source_file = os.path.join(project_root, "real_mcp_server.py")
@@ -62,7 +68,8 @@ server_script_path = "{server_script_path}"
         config_path = self.create_test_config(config_content)
 
         config = load_config(config_path)
-        result = asyncio.run(create_agent_from_config(self.group_chat, config))
+        from pathlib import Path
+        result = asyncio.run(create_agent_from_config(self.group_chat, config, Path("."), git_diff_reviewer=self.cli_args.git_diff_reviewer, violation_checker=self.cli_args.violation_checker))
 
         self.assertIsInstance(result, Agent)
 
@@ -85,7 +92,8 @@ compress_threshold = 80000
         config_path = self.create_test_config(config_content)
 
         config = load_config(config_path)
-        result = asyncio.run(create_agent_from_config(self.group_chat, config))
+        from pathlib import Path
+        result = asyncio.run(create_agent_from_config(self.group_chat, config, Path("."), git_diff_reviewer=self.cli_args.git_diff_reviewer, violation_checker=self.cli_args.violation_checker))
 
         self.assertIsInstance(result, Agent)
 

@@ -28,10 +28,16 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
 
         group_chat = GroupChat()
+        import argparse
+        cli_args = argparse.Namespace()
+        cli_args.git_diff_reviewer = False
+        cli_args.violation_checker = False
+        cli_args.checklist = None
+        group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         config = load_config(Path(config_path))
-        result = asyncio.run(create_agent_from_config(group_chat, config))
+        result = asyncio.run(create_agent_from_config(group_chat, config, Path("."), git_diff_reviewer=cli_args.git_diff_reviewer, violation_checker=cli_args.violation_checker))
         self.assertIsInstance(result, Agent)
 
         try:
@@ -54,11 +60,17 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
 
         group_chat = GroupChat()
+        import argparse
+        cli_args = argparse.Namespace()
+        cli_args.git_diff_reviewer = False
+        cli_args.violation_checker = False
+        cli_args.checklist = None
+        group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         config = load_config(Path(config_path))
         result = asyncio.run(
-            create_agent_from_config(group_chat, config, llm_name="test")
+            create_agent_from_config(group_chat, config, Path("."), llm_name="test", git_diff_reviewer=cli_args.git_diff_reviewer, violation_checker=cli_args.violation_checker)
         )
         self.assertIsInstance(result, Agent)
 
@@ -68,6 +80,12 @@ class TestCreateAgent(unittest.TestCase):
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""
         group_chat = GroupChat()
+        import argparse
+        cli_args = argparse.Namespace()
+        cli_args.git_diff_reviewer = False
+        cli_args.violation_checker = False
+        cli_args.checklist = None
+        group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         from linhai.config import load_config
@@ -75,7 +93,7 @@ class TestCreateAgent(unittest.TestCase):
         config = load_config(Path(config_path))
         with self.assertRaises(ValueError) as context:
             asyncio.run(
-                create_agent_from_config(group_chat, config, llm_name="invalid_llm")
+                create_agent_from_config(group_chat, config, Path("."), llm_name="invalid_llm", git_diff_reviewer=cli_args.git_diff_reviewer, violation_checker=cli_args.violation_checker)
             )
 
         self.assertIn("LLM名称 'invalid_llm' 不存在", str(context.exception))

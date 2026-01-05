@@ -15,8 +15,15 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        import argparse
         self.temp_dir = tempfile.mkdtemp()
         self.group_chat = GroupChat()
+        # Register cli_args required by create_agent_from_config
+        cli_args = argparse.Namespace()
+        cli_args.git_diff_reviewer = False
+        cli_args.violation_checker = False
+        cli_args.checklist = False
+        self.group_chat.register_member("cli_args", cli_args)
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -31,6 +38,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         return config_path
 
     async def test_mcp_real_server_integration(self):
+        from pathlib import Path
         """Test full integration with real MCP server."""
         project_root = Path(__file__).parent.parent.parent
         server_path = project_root / "linhai" / "tests" / "real_mcp_server.py"
@@ -52,10 +60,6 @@ server_script_path = "{server_path}"
         config_path = self.create_test_config(config_content)
 
         config = load_config(config_path)
-        agent = await create_agent_from_config(self.group_chat, config)
-
-        self.assertIsInstance(agent, Agent)
-
-        self.assertIsInstance(agent, Agent)
-
+        from pathlib import Path
+        agent = await create_agent_from_config(self.group_chat, config, Path("."))
         self.assertIsInstance(agent, Agent)

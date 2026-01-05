@@ -35,7 +35,7 @@ SSH_PASSWORD = { value = "testpassword", description = "SSH私钥密码" }
     
     def test_load_secrets_from_config(self):
         """测试加载secret配置"""
-        secrets_dict = load_secrets_from_config(str(self.secret_file))
+        secrets_dict = load_secrets_from_config(str(self.secret_file), base_dir=Path(self.temp_dir))
         
         self.assertIn("OPENAI_API_TOKEN", secrets_dict)
         self.assertIn("DEEPSEEK_API_KEY", secrets_dict)
@@ -44,10 +44,37 @@ SSH_PASSWORD = { value = "testpassword", description = "SSH私钥密码" }
         self.assertEqual(secrets_dict["OPENAI_API_TOKEN"]["value"], "sk-test-123456")
         self.assertEqual(secrets_dict["OPENAI_API_TOKEN"]["description"], "OpenAI API token for testing")
     
+    def test_load_secrets_from_config_with_base_dir(self):
+        """测试基于base_dir加载secret配置"""
+        # 创建子目录结构
+        base_dir = Path(self.temp_dir) / "config"
+        base_dir.mkdir()
+        secret_file_in_subdir = base_dir / "secret.toml"
+        
+        # 复制secret内容到子目录文件
+        secret_content = """[secrets]
+TEST_KEY = { value = "test-value", description = "Test key" }
+"""
+        secret_file_in_subdir.write_text(secret_content)
+        
+        # 使用相对路径和base_dir加载
+        secrets_dict = load_secrets_from_config("secret.toml", base_dir=base_dir)
+        
+        self.assertIn("TEST_KEY", secrets_dict)
+        self.assertEqual(secrets_dict["TEST_KEY"]["value"], "test-value")
+        self.assertEqual(secrets_dict["TEST_KEY"]["description"], "Test key")
+        
+        # 测试绝对路径不受base_dir影响
+        secrets_dict2 = load_secrets_from_config(str(secret_file_in_subdir), base_dir=Path("/dummy"))
+        self.assertIn("TEST_KEY", secrets_dict2)
+        
+        # 测试base_dir为None时相对路径基于当前目录（应失败，因为文件不在当前目录）
+        with self.assertRaises(FileNotFoundError):
+            load_secrets_from_config("secret.toml", base_dir=Path("/invalid/dir"))
     def test_load_secrets_file_not_found(self):
         """测试文件不存在时直接崩溃"""
         with self.assertRaises(FileNotFoundError):
-            load_secrets_from_config("/nonexistent/path")
+            load_secrets_from_config("/nonexistent/path", base_dir=Path(self.temp_dir))
     
     def test_load_secrets_invalid_toml(self):
         """测试无效TOML格式时直接崩溃"""
@@ -55,7 +82,7 @@ SSH_PASSWORD = { value = "testpassword", description = "SSH私钥密码" }
         invalid_file.write_text("invalid toml content")
         
         with self.assertRaises(Exception):  # 可能是TOMLDecodeError
-            load_secrets_from_config(str(invalid_file))
+            load_secrets_from_config(str(invalid_file), base_dir=Path(self.temp_dir))
     
     def test_load_secrets_missing_section(self):
         """测试缺少secrets部分时直接崩溃"""
@@ -63,7 +90,7 @@ SSH_PASSWORD = { value = "testpassword", description = "SSH私钥密码" }
         no_secrets_file.write_text("[other_section]\nkey = \"value\"")
         
         with self.assertRaises(Exception):
-            load_secrets_from_config(str(no_secrets_file))
+            load_secrets_from_config(str(no_secrets_file), base_dir=Path(self.temp_dir))
     
     def test_replace_secrets_in_string(self):
         """测试替换字符串中的secret键"""

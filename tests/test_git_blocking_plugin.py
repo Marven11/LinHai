@@ -68,6 +68,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.send_if_exists = AsyncMock()
 
         tool_call = ToolCallMessage(
+            assert_success=True,
+            with_secret=None,
             function_name="run_command", function_arguments={"command": "git status"}
         )
 
@@ -80,6 +82,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = False
 
         tool_call = ToolCallMessage(
+            assert_success=True,
+            with_secret=None,
             function_name="run_command", function_arguments={"command": "git status"}
         )
 
@@ -92,6 +96,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = True
 
         tool_call = ToolCallMessage(
+            assert_success=True,
+            with_secret=None,
             function_name="read_file", function_arguments={"filepath": "test.txt"}
         )
 

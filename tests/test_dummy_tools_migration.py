@@ -55,7 +55,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="get_token_usage", function_arguments={})
+            ToolCallMessage(
+                function_name="get_token_usage",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
@@ -83,7 +88,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="context_thanox", function_arguments={})
+            ToolCallMessage(
+                function_name="context_thanox",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertIn(type(result).__name__, ["ToolResultMessage", "ToolErrorMessage"])
@@ -112,7 +122,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="get_token_usage", function_arguments={})
+            ToolCallMessage(
+                function_name="get_token_usage",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")
@@ -144,7 +159,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="get_token_usage", function_arguments={})
+            ToolCallMessage(
+                function_name="get_token_usage",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")
@@ -182,7 +202,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="context_thanox", function_arguments={})
+            ToolCallMessage(
+                function_name="context_thanox",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")
@@ -221,7 +246,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
 
         result = await tool_manager.process_tool_call(
-            ToolCallMessage(function_name="context_thanox", function_arguments={})
+            ToolCallMessage(
+                function_name="context_thanox",
+                function_arguments={},
+                assert_success=True,
+                with_secret=None,
+            )
         )
 
         self.assertEqual(type(result).__name__, "ToolResultMessage")

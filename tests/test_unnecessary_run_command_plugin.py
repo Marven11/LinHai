@@ -49,6 +49,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": "test.txt"},
+            assert_success=True,
+            with_secret=None,
         )
         result = await self.plugin._after_tool_call(
             self.agent, tool_call, "result", True
@@ -60,6 +62,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "ls"},
+            assert_success=True,
+            with_secret=None,
         )
         result = await self.plugin._after_tool_call(
             self.agent, tool_call, "result", False
@@ -71,6 +75,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
         result = await self.plugin._after_tool_call(
             self.agent, tool_call, "result", True
@@ -82,6 +88,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "cat file.txt | grep pattern"},
+            assert_success=True,
+            with_secret=None,
         )
 
         with patch.object(self.plugin, "_get_read_files", return_value=set()):
@@ -96,6 +104,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "cat file.txt > output.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         with patch.object(self.plugin, "_get_read_files", return_value=set()):
@@ -120,6 +130,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "grep pattern /path/to/read.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(
@@ -144,6 +156,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "cat test.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(
@@ -241,6 +255,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "tail -10 /path/to/read.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(
@@ -260,6 +276,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "head -10 /path/to/read.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(
@@ -279,6 +297,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "awk '{print \$1}' /path/to/read.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(
@@ -298,6 +318,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             function_name="run_command",
             function_arguments={"command": "rg pattern /path/to/read.txt"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.plugin._after_tool_call(

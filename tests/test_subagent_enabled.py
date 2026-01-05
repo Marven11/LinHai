@@ -124,7 +124,7 @@ model = "test-model"
 
         try:
             config = load_config(config_path)
-            agent = await create_agent_from_config(self.group_chat, config, None)
+            agent = await create_agent_from_config(self.group_chat, config, None, git_diff_reviewer=False, violation_checker=False)
 
             subagent_manager_calls = [
                 call
@@ -160,7 +160,7 @@ model = "test-model"
 
         try:
             config = load_config(config_path)
-            agent = await create_agent_from_config(self.group_chat, config, None)
+            agent = await create_agent_from_config(self.group_chat, config, None, git_diff_reviewer=False, violation_checker=False)
 
             subagent_manager_calls = [
                 call

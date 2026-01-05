@@ -58,7 +58,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试无需确认的工具调用成功。"""
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=False,
+            with_secret=None,
         )
 
         mock_result = Mock()
@@ -82,7 +85,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试无需确认的工具调用失败且assert_success=False时不中断。"""
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=False,
+            with_secret=None,
         )
 
         from linhai.tool.base import ToolErrorMessage
@@ -105,7 +111,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试无需确认的工具调用失败。"""
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=True
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
 
         from linhai.tool.base import ToolErrorMessage
@@ -129,7 +138,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.state = "waiting_user"
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
 
         mock_result = Mock()
@@ -143,7 +155,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试before_tool_call返回True时阻止工具调用。"""
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
 
         self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
@@ -162,20 +177,29 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试多个工具调用混合成功和失败的情况。"""
 
         tool_call1 = ToolCallMessage(
-            function_name="test_tool1", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
         mock_result1 = Mock()
         mock_result1.__str__ = Mock(return_value="result1")
 
         tool_call2 = ToolCallMessage(
-            function_name="test_tool2", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=False,
+            with_secret=None,
         )
         from linhai.tool.base import ToolErrorMessage
 
         mock_error2 = ToolErrorMessage("error2")
 
         tool_call3 = ToolCallMessage(
-            function_name="test_tool3", function_arguments={}, assert_success=True
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
         mock_error3 = ToolErrorMessage("error3")
 
@@ -198,7 +222,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         """测试工具调用异常处理。"""
 
         tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}, assert_success=False
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
 
         self.mock_tool_manager.process_tool_call = AsyncMock(
@@ -248,7 +275,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         }
 
         tool_call_a = ToolCallMessage(
-            function_name="tool_a", function_arguments={}, assert_success=False
+            function_name="tool_a",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
         mock_result_a = Mock()
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result_a)
@@ -257,7 +287,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result_a)
 
         tool_call_b = ToolCallMessage(
-            function_name="tool_b", function_arguments={}, assert_success=False
+            function_name="tool_b",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
         )
 
         result_b = await self.toolcall_processor.call_tool(tool_call_b)
@@ -281,6 +314,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             function_name="mark_messages_as_garbage",
             function_arguments={"ids": ["msg1"]},
             assert_success=False,
+            with_secret=None,
         )
 
         mock_result = Mock()

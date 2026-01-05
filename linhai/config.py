@@ -134,11 +134,10 @@ class SubAgentConfig(BaseModel):
 
     enable: bool = False
     default_llm: str = ""
-    enabled_agent_types: "EnabledAgentTypes" = Field(default_factory=lambda: EnabledAgentTypes())
 
     def __str__(self) -> str:
         """返回SubAgent配置的字符串表示"""
-        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm}, enabled_types={self.enabled_agent_types})"
+        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm})"
 
 
 class CLIConfig(BaseModel):
@@ -149,13 +148,6 @@ class CLIConfig(BaseModel):
     def __str__(self) -> str:
         """返回CLI配置的字符串表示"""
         return f"CLIConfig(use_nerd_font={self.use_nerd_font})"
-
-
-class EnabledAgentTypes(BaseModel):
-    """Enabled subagent types configuration."""
-
-    violation_checker: bool = False
-    git_diff_reviewer: bool = False
 
 
 class Config(BaseModel):

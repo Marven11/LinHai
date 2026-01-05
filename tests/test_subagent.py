@@ -48,6 +48,7 @@ default_llm = "test"
         self.cli_args = argparse.Namespace()
         self.cli_args.checklist = None
         self.cli_args.git_diff_reviewer = False
+        self.cli_args.violation_checker = False
         self.group_chat.register_member("cli_args", self.cli_args)
 
     def tearDown(self):
@@ -56,7 +57,8 @@ default_llm = "test"
 
     async def _create_agent(self):
         """异步创建Agent。"""
-        return await create_agent_from_config(self.group_chat, self.config)
+        from pathlib import Path
+        return await create_agent_from_config(self.group_chat, self.config, Path("."), git_diff_reviewer=self.cli_args.git_diff_reviewer, violation_checker=self.cli_args.violation_checker)
 
     def test_subagent_manager_creation(self):
         """测试SubAgentManager创建。"""

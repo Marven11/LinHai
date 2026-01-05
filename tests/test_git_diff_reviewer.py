@@ -60,7 +60,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
     def _setup_subagent_manager(self):
         """设置SubAgentManager的mock。"""
         from linhai.subagent import SubAgentManager
-        from linhai.config import SubAgentConfig, EnabledAgentTypes
+        from linhai.config import SubAgentConfig
 
         try:
             subagent_manager = self.group_chat.get_members(
@@ -71,9 +71,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
             self.group_chat.register_member("subagent_manager", subagent_manager)
         subagent_config = Mock(spec=SubAgentConfig)
         subagent_config.enable = True
-        enabled_agent_types = Mock(spec=EnabledAgentTypes)
-        enabled_agent_types.git_diff_reviewer = True  # 启用git_diff_reviewer
-        subagent_config.enabled_agent_types = enabled_agent_types
+        subagent_config.default_llm = None
         subagent_manager.subagent_config = subagent_config
         subagent_manager.create_subagent = Mock(return_value="success")
         return subagent_manager

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Literal
+import argparse
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
@@ -23,6 +24,8 @@ async def create_agent_from_config(
     config_basedir: Path,
     llm_name: str | None = None,
     checklist_path: Path | None = None,
+    git_diff_reviewer: bool = False,
+    violation_checker: bool = False,
 ):
     """创建Agent实例（从配置对象）
 
@@ -99,6 +102,13 @@ async def create_agent_from_config(
     if agent_config.enable_directory_change_detection:
         from .plugin import DirectoryChangePlugin
         DirectoryChangePlugin(group_chat).register(agent.lifecycle)
+
+    if git_diff_reviewer:
+        from linhai.subagent.subagent_types.git_diff_reviewer import GitDiffReviewPlugin
+        GitDiffReviewPlugin(group_chat).register(agent.lifecycle)
+    if violation_checker:
+        from linhai.subagent.subagent_types.violation_checker import ViolationCheckerPlugin
+        ViolationCheckerPlugin(group_chat).register(agent.lifecycle)
 
 
     subagent_config = config.subagent

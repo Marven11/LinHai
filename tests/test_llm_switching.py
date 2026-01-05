@@ -64,7 +64,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""
-        tool_call = ToolCallMessage(function_name="current_llm", function_arguments={})
+        tool_call = ToolCallMessage(
+        function_name="current_llm",
+        function_arguments={},
+        assert_success=True,
+        with_secret=None,
+    )
 
         result = await self.tool_manager.process_tool_call(tool_call)
 
@@ -77,7 +82,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
         tool_call = ToolCallMessage(
-            function_name="switch_llm", function_arguments={"llm_name": "secondary"}
+            function_name="switch_llm",
+            function_arguments={"llm_name": "secondary"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.tool_manager.process_tool_call(tool_call)
@@ -93,7 +101,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
         tool_call = ToolCallMessage(
-            function_name="switch_llm", function_arguments={"llm_name": "nonexistent"}
+            function_name="switch_llm",
+            function_arguments={"llm_name": "nonexistent"},
+            assert_success=True,
+            with_secret=None,
         )
 
         result = await self.tool_manager.process_tool_call(tool_call)

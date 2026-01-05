@@ -271,13 +271,6 @@ class GitDiffReviewPlugin(Plugin):
         checklist_content = ""
         if args.checklist and args.checklist.exists():
             checklist_content = args.checklist.read_text()
-        else:
-            no_checklist_msg = CliRuntimeNotice(
-                level="WARNING",
-                content="未启动SubAgent审核：未指定有效的检查清单文件，请使用--checklist选项指定检查清单文件",
-            )
-            await self.group_chat.send_if_exists("ui_log", no_checklist_msg)
-            return
 
         task_message = f"""# Git Diff审查任务
 
