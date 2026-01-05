@@ -2,10 +2,19 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] load_secrets_from_config应该根据config.toml的相对位置而不是根据当前位置读取secret.toml
-  - 需要添加对应的unittest
-- [x] 当前http_request工具不支持设置timeout，需要修改
-  - 加上一个timeout参数，参数是一个整数，代表timeout的秒数，不需要更加细粒度的参数
+- [ ] 重构subagent配置和--git-diff-reviewer选项等
+  - 当前: 只要指定--checklist就会在暂停时启动git diff reviewer，这不合理
+  - 重新设计:
+    - git diff reviewer和violation checker默认关闭
+    - subagent配置
+      - 仅包含enable和default_llm选项，不控制对应subagent类型的开启和关闭
+    - --checklist选项
+      - 在上下文中加入checklist文件的内容
+    - --git-diff-reviewer选项
+      - 提供此选项时注册git diff reviewer插件: GitDiffReviewPlugin
+    - --violation-checker选项
+      - 提供此选项时注册violation checker插件
+- [ ] 之前几个commit没有修改unittest，现在有大量过时unittest失败
 
 # 暂时搁置
 
