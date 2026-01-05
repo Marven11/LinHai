@@ -461,6 +461,7 @@ class SshMachineControl:
         headers: Optional[dict[str, str]] = None,
         data: Optional[str] = None,
         follow_redirects: bool = True,
+        timeout: int = 60,
     ) -> ToolResultMessage | ToolErrorMessage:
         """SSH不支持http_request工具"""
         return ToolErrorMessage("SSH机器不支持http_request工具")

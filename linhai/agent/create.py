@@ -20,8 +20,8 @@ from .base import GlobalMemory
 async def create_agent_from_config(
     group_chat: GroupChat,
     config: Config,
+    config_basedir: Path,
     llm_name: str | None = None,
-    config_basedir: Path | None = None,
     checklist_path: Path | None = None,
 ):
     """创建Agent实例（从配置对象）

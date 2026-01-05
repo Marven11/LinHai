@@ -83,6 +83,9 @@ class MachineControlToolSet(ToolSet):
                 "follow_redirects": ToolArgInfo(
                     desc="是否跟随重定向，默认True", type="bool"
                 ),
+                "timeout": ToolArgInfo(
+                    desc="超时时间（秒），默认60秒", type="int"
+                ),
             },
             required_args=["method", "url"],
             conflict_with=None,
@@ -94,12 +97,13 @@ class MachineControlToolSet(ToolSet):
             headers: Optional[Dict[str, str]] = None,
             data: Optional[str] = None,
             follow_redirects: bool = True,
+            timeout: int = 60,
         ) -> Message:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
             return await host_control.http_request(
-                method, url, params, headers, data, follow_redirects
+                method, url, params, headers, data, follow_redirects, timeout
             )
 
         @self.register_tool(
@@ -429,6 +433,7 @@ class HostControl(Protocol):
         headers: Optional[Dict[str, str]] = None,
         data: Optional[str] = None,
         follow_redirects: bool = True,
+        timeout: int = 60,
     ) -> Message: ...
 
     async def run_command(self, command: str, timeout: float = 30.0) -> Message: ...

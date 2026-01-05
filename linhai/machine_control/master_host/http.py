@@ -42,6 +42,7 @@ async def http_request(
     headers: Optional[dict] = None,
     data: Optional[str] = None,
     follow_redirects: bool = True,
+    timeout: int = 60,
 ) -> ToolResultMessage | ToolErrorMessage:
     """
     发送HTTP请求并返回响应内容或文件路径
@@ -61,7 +62,7 @@ async def http_request(
                 headers=headers,
                 follow_redirects=follow_redirects,
                 data=data,  # type: ignore[arg-type]
-                timeout=60.0,
+                timeout=timeout,
             )
 
             content_type = response.headers.get("content-type", "").lower()

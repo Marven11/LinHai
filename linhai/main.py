@@ -27,24 +27,14 @@ def run_tests():
 async def _create_agent_from_config(
     group_chat: GroupChat,
     config,
+    config_basedir: Path,
     llm_name: str | None = None,
     checklist_path: Path | None = None,
 ):
-    """从配置对象创建Agent
-
-    Args:
-        group_chat: GroupChat实例
-        config: 配置对象
-        llm_name: 指定的LLM名称（可选）
-        checklist_path: 检查清单文件路径（可选）
-
-    Returns:
-        Agent实例
-    """
     from linhai.agent.create import create_agent_from_config
 
     return await create_agent_from_config(
-        group_chat, config, llm_name, checklist_path=checklist_path
+        group_chat, config, config_basedir, llm_name, checklist_path=checklist_path
     )
 
 
@@ -55,10 +45,15 @@ async def run(args, init_messages: list[str] | None):
     group_chat = GroupChat()
     group_chat.register_member("cli_args", args)
 
-    config = load_config(args.config.expanduser())
+    config_path = Path(args.config).expanduser()
+    config = load_config(config_path)
 
     _agent = await _create_agent_from_config(
-        group_chat, config, args.llm, checklist_path=args.checklist
+        group_chat,
+        config,
+        config_basedir=config_path.parent,
+        llm_name=args.llm,
+        checklist_path=args.checklist,
     )
 
     app = CLIApp(

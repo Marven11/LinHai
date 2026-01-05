@@ -43,9 +43,10 @@ class MasterHostControl:
         headers: Optional[dict] = None,
         data: Optional[str] = None,
         follow_redirects: bool = True,
+        timeout: int = 60,
     ) -> Message:
         """发送HTTP请求并返回响应内容或文件路径"""
-        return await http_request(method, url, params, headers, data, follow_redirects)
+        return await http_request(method, url, params, headers, data, follow_redirects, timeout)
 
     async def run_command(self, command: str, timeout: float = 30.0) -> Message:
         """执行系统命令"""

@@ -2,9 +2,9 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] load_secrets_from_config应该根据config.toml的相对位置而不是根据当前位置读取secret.toml
+- [x] load_secrets_from_config应该根据config.toml的相对位置而不是根据当前位置读取secret.toml
   - 需要添加对应的unittest
-- [ ] 当前http_request工具不支持设置timeout，需要修改
+- [x] 当前http_request工具不支持设置timeout，需要修改
   - 加上一个timeout参数，参数是一个整数，代表timeout的秒数，不需要更加细粒度的参数
 
 # 暂时搁置

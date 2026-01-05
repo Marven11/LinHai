@@ -16,12 +16,20 @@ class SecretInfo(TypedDict):
     description: str
 
 
-def load_secrets_from_config(config_path: str) -> dict[str, SecretInfo]:
+def load_secrets_from_config(config_path: str, base_dir: str | Path) -> dict[str, SecretInfo]:
     # 如果config_path为空或非字符串，后续操作会自然失败
     config_path = config_path.strip()
-    path = Path(config_path)
+    # 只对config_path进行expanduser处理，base_dir由调用者处理
+    path = Path(config_path).expanduser()
+    
+    # base_dir直接转换为Path对象，不处理expanduser
+    base_dir = Path(base_dir)
+    
+    if not path.is_absolute():
+        path = base_dir / path
+    
     if not path.exists():
-        raise FileNotFoundError(f"Secret config file not found: {config_path}")
+        raise FileNotFoundError(f"Secret config file not found: {path}")
 
     with path.open("rb") as f:
         config_data = tomllib.load(f)
@@ -189,7 +197,7 @@ class SecretInterceptorPlugin:
         lifecycle.register_after_tool_call(self.after_tool_call)
 
 
-def initialize_secret_system(group_chat, secret_config_path: str, config_basedir=None):
+def initialize_secret_system(group_chat, secret_config_path: str, config_basedir: str | Path):
     from linhai.llm import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
 
@@ -204,10 +212,7 @@ def initialize_secret_system(group_chat, secret_config_path: str, config_basedir
     if not config_path:
         raise ValueError("Secret config path is empty after stripping whitespace")
 
-    if config_basedir and not Path(secret_config_path).is_absolute():
-        secret_config_path = str(config_basedir / Path(secret_config_path))
-
-    secrets_dict = load_secrets_from_config(secret_config_path)
+    secrets_dict = load_secrets_from_config(config_path, config_basedir)
 
     secret_plugin = SecretInterceptorPlugin(group_chat, secrets_dict)
 
