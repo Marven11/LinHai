@@ -2,20 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构subagent配置和--git-diff-reviewer选项等
-  - 当前: 只要指定--checklist就会在暂停时启动git diff reviewer，这不合理
-  - 重新设计:
-    - git diff reviewer和violation checker默认关闭
-    - subagent配置
-      - 仅包含enable和default_llm选项，不控制对应subagent类型的开启和关闭
-    - --checklist选项
-      - 在上下文中加入checklist文件的内容
-    - --git-diff-reviewer选项
-      - 提供此选项时注册git diff reviewer插件: GitDiffReviewPlugin
-    - --violation-checker选项
-      - 提供此选项时注册violation checker插件
-- [x] 之前几个commit没有修改unittest，现在有大量过时unittest失败
-  - 状态：从最初的81个错误减少到0个错误，所有504个测试通过
+- [ ] 完全删除append_file函数，并在replace_file_content的desc中加上“如果需要在文件末尾追加内容，尝试通过修改文件末尾的几行实现”
+  - 需要全面清理代码，包括定义、实现、工具注册、unittest等
 
 # 暂时搁置
 
