@@ -48,6 +48,7 @@
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 - [ ] minimax api不支持user消息的name=xxx不同，应该直接删除to_llm_message中生成的所有"name": xxx
+- [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
 
 # 注意
 
