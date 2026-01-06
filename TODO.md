@@ -47,6 +47,7 @@
 
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
+- [ ] minimax api不支持user消息的name=xxx不同，应该直接删除to_llm_message中生成的所有"name": xxx
 
 # 注意
 
