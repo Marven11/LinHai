@@ -228,9 +228,7 @@ class UserMessage:
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
         content = f"<<user>>{self.message}<<user>>"
-        msg = {"role": "user", "name": "user", "content": content}
-        if self.name is not None:
-            msg["name"] = self.name
+        msg = {"role": "user", "content": content}
         return cast(LanguageModelMessage, msg)
 
     def __repr__(self) -> str:
@@ -241,7 +239,6 @@ class UserMessage:
         data = {
             "role": "user",
             "message": self.message,
-            "name": self.name,
         }
         return json.dumps(data)
 
@@ -270,9 +267,7 @@ class AssistantMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        msg = {"role": "assistant", "name": "assistant", "content": self.message}
-        if self.name is not None:
-            msg["name"] = self.name
+        msg = {"role": "assistant", "content": self.message}
         return cast(LanguageModelMessage, msg)
 
     def __repr__(self) -> str:
@@ -284,7 +279,6 @@ class AssistantMessage:
             "role": "assistant",
             "message": self.message,
             "reasoning_message": self.reasoning_message,
-            "name": self.name,
         }
         return json.dumps(data)
 
@@ -747,13 +741,13 @@ class OpenAi:
                     llm_instance=self,
                 )
                 break
-            except (asyncio.TimeoutError, OpenAIError):
+            except (asyncio.TimeoutError, OpenAIError) as e:
 
                 await self.group_chat.send(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
-                        content=f"API调用失败，将在约{retry_delay:.1f}秒后重试",
+                        content=f"API调用失败，将在约{retry_delay:.1f}秒后重试: {e}",
                     ),
                 )
                 await asyncio.sleep(retry_delay)

@@ -36,7 +36,6 @@ class CompressRangeRequest(Message):
         ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5)))
         return {
             "role": "user",
-            "name": "runtime",
             "content": f"<<runtime>>{prompt}<<runtime>>",
         }
 
@@ -69,7 +68,6 @@ class RuntimeMessage(Message):
     def to_llm_message(self) -> LanguageModelMessage:
         return {
             "role": "user",
-            "name": "runtime",
             "content": f"<<runtime>>{self.message}<<runtime>>",
         }
 
@@ -104,19 +102,16 @@ class GlobalMemory:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "name": "global-memory",
                 "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<global_memory>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "name": "global-memory",
                 "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<global_memory>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "name": "global-memory",
                 "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<global_memory>>",
             }
 
@@ -165,19 +160,16 @@ class ChecklistMessage:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "name": "checklist",
                 "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<checklist>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "name": "checklist",
                 "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>检查清单文件不存在或已被移动/删除<<error>>\n<<checklist>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "name": "checklist",
                 "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<checklist>>",
             }
 
@@ -227,19 +219,16 @@ class PathMemory:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "name": "path-memory",
                 "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_memory>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "name": "path-memory",
                 "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_memory>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "name": "path-memory",
                 "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_memory>>",
             }
 
@@ -286,7 +275,6 @@ class FileContentMessage(Message):
         """转换为LLM消息格式。"""
         return {
             "role": "user",
-            "name": "file-content",
             "content": f"<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>><<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{self.content}<<content>>\n<<file_content>>",
         }
 
@@ -351,7 +339,7 @@ class PreviousReasoningMessage(Message):
         <<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>
         """
         if not self.reasoning_contents:
-            return {"role": "user", "name": "previous-reasoning", "content": ""}
+            return {"role": "user", "content": ""}
 
         content_parts = []
         for reasoning_content in self.reasoning_contents:
@@ -362,7 +350,7 @@ class PreviousReasoningMessage(Message):
             + "".join(content_parts)
             + "<<previous_reasoning>>"
         )
-        return {"role": "user", "name": "previous-reasoning", "content": content}
+        return {"role": "user", "content": content}
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""

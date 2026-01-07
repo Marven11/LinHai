@@ -206,7 +206,6 @@ class ToolResultMessage(Message):
             LanguageModelMessage,
             {
                 "role": "user",
-                "name": "tool-result",
                 "content": f"<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{self.content}<<data>>\n<<tool>>",
             },
         )
@@ -234,7 +233,6 @@ class ToolErrorMessage(Message):
             LanguageModelMessage,
             {
                 "role": "user",
-                "name": "tool-error",
                 "content": f"<<tool>>\n<<message>>工具执行失败<<message>>\n<<error>>{self.content}<<error>>\n<<tool>>",
             },
         )

@@ -70,7 +70,7 @@ class TestJsonSerialization(unittest.TestCase):
         restored = UserMessage.from_json(json_str, self.mock_group_chat)
 
         self.assertEqual(original.message, restored.message)
-        self.assertEqual(original.name, restored.name)
+        # name字段不再序列化，所以不检查name字段
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""

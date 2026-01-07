@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] minimax api不支持user消息的name=xxx不同
+- [x] minimax api不支持user消息的name=xxx不同
   - 应该直接删除to_llm_message中生成的所有"name": xxx，因为我们实际上不使用这个字段指导agent
 
 # 暂时搁置
