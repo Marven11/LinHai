@@ -2,6 +2,10 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
+- [ ] cli不支持修改theme，需要在配置中支持
+
+# 暂时搁置
+
 - [ ] 我们需要重构解析agent回答的流程
   - agent的回答是一个token stream，我们需要从其中解析出三类token以传给cli显示
   - agent的输出包含reasoning_content和content两部分，我们需要解析为至少三部分
@@ -10,9 +14,6 @@
     - toolcall message - 可能有多个
   - 同时我们需要在解析时为每一个message生成uuid以方便定位
   - 参考streamjson和linhai/cli/token_parser.py
-
-# 暂时搁置
-
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
