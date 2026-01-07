@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 让RuntimeMessageWidget使用CSS class设置颜色，就像reasoning message一样
+- [x] 让RuntimeMessageWidget使用CSS class设置颜色，就像reasoning message一样
   - 这意味着你需要将当前的单个Static拆成两个
   - 而且在消息类型为info时需要将正文颜色改成$text-muted
 

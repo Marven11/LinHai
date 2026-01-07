@@ -157,7 +157,6 @@ class RainbowAsciiArt(Static):
         lines = self.ascii_art.splitlines()
         for row, line in enumerate(lines):
             for col, char in enumerate(line):
-
                 color_index = (
                     (row + col + self.time_index) // 2 % len(self.rainbow_colors)
                 )
@@ -201,7 +200,6 @@ class AnimatedWelcomeWidget(Static):
         if self.elapsed_time >= 1.0:
             self.animation_stage = 2
         if self.animation_stage == 0:
-
             self.update(self._render_daily_quote())
         elif self.animation_stage == 1:
             self.update(self._render_glitch())
@@ -254,6 +252,39 @@ class RuntimeMessageWidget(Static):
     RuntimeMessageWidget {
         width: auto;
         height: auto;
+        layout: horizontal;
+    }
+    
+    RuntimeMessageWidget .runtime-level {
+        width: 4;
+    }
+    
+    RuntimeMessageWidget .runtime-level-info {
+        color: #4C566A;
+    }
+    
+    RuntimeMessageWidget .runtime-level-warning {
+        color: #EBCB8B;
+    }
+    
+    RuntimeMessageWidget .runtime-level-error {
+        color: #BF616A;
+    }
+    
+    RuntimeMessageWidget .runtime-content {
+        width: 1fr;
+    }
+    
+    RuntimeMessageWidget .runtime-content-info {
+        color: $text-muted;
+    }
+    
+    RuntimeMessageWidget .runtime-content-warning {
+        color: $text;
+    }
+    
+    RuntimeMessageWidget .runtime-content-error {
+        color: $text;
     }
     """
 
@@ -264,16 +295,14 @@ class RuntimeMessageWidget(Static):
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
-
-        level_style = {"INFO": "#4C566A", "WARNING": "#EBCB8B", "ERROR": "#BF616A"}.get(
-            self.level, "#4C566A"
+        yield Static(
+            f"\\[{self.level[0]}] ",
+            classes=f"runtime-level runtime-level-{self.level.lower()}",
         )
-
-        message_text = Text()
-        message_text.append(f"[{self.level[0]}]", style=level_style)
-        message_text.append(f" {self.content}")
-
-        yield Static(message_text)
+        yield Static(
+            self.content,
+            classes=f"runtime-content runtime-content-{self.level.lower()}",
+        )
 
 
 class ToolCallWidget(Static):
@@ -326,7 +355,6 @@ class ToolCallWidget(Static):
             self.json_str += new_content
             self.parser.feed_string(new_content)
         except RuntimeError as e:
-
             self.has_error = True
             self.error_message = str(e)
 
@@ -341,7 +369,6 @@ class ToolCallWidget(Static):
         """更新显示"""
 
         if self.has_error:
-
             self.update(
                 Syntax(
                     self.json_str,
@@ -412,7 +439,6 @@ class ToolCallWidget(Static):
                     )
                 )
         except RuntimeError as e:
-
             self.has_error = True
             self.error_message = str(e)
 
@@ -589,6 +615,7 @@ class UserMessageWidget(Static):
                 )
             )
 
+
 class SpaceWidget(Static):
     """隔开两个消息的空消息"""
 
@@ -598,6 +625,7 @@ class SpaceWidget(Static):
         border-left: heavy $background-lighten-2;
     }
     """
+
 
 class NormalContentWidget(Static):
     """普通消息显示组件，按字符换行"""
@@ -720,8 +748,6 @@ class MessageWidget(Static):
             )
         else:
             assert False, f"{new_token_type=}"
-        
-        
         if self.current_widget:
             self.current_widget.finish_streaming()
             # 去除两个widget之间的border, 将两个widget拼接在一起，让UI更加美观
