@@ -160,7 +160,7 @@ class SecretInterceptorPlugin:
         from .agent.base import RuntimeMessage
 
         with_secret = tool_call.with_secret
-        msg = tool_call
+        msg = tool_result
 
         if with_secret:
             llm_tool_result = tool_result.to_llm_message()
@@ -186,7 +186,7 @@ class SecretInterceptorPlugin:
             )
             return RuntimeMessage(message)
 
-        return None
+        return None if msg is tool_result else msg
 
     def register(self, lifecycle):
         lifecycle.register_before_tool_call(self.before_tool_call)

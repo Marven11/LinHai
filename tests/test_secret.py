@@ -290,6 +290,58 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         result = asyncio.run(plugin.before_tool_call(tool_call))
         
         self.assertTrue(result)  # 应该拦截
+    
+    def test_before_tool_call_with_partial_secrets(self):
+        """测试before_tool_call中with_secret只包含部分secret键时的行为"""
+        from linhai.secret import SecretInterceptorPlugin
+        from linhai.llm import ToolCallMessage
+        
+        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
+        
+        # 创建工具调用，只指定了部分secret键
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={
+                "key1": "<$OPENAI_API_TOKEN$>",
+                "key2": "<$DEEPSEEK_API_KEY$>",
+            },
+            with_secret=["OPENAI_API_TOKEN"],  # 只指定了OPENAI_API_TOKEN，没有DEEPSEEK_API_KEY
+            assert_success=True,
+        )
+        
+        import asyncio
+        result = asyncio.run(plugin.before_tool_call(tool_call))
+        
+        self.assertFalse(result)  # 不应该拦截
+        # 验证只替换了指定的secret键
+        self.assertEqual(tool_call.function_arguments["key1"], "sk-real-key")
+        self.assertEqual(tool_call.function_arguments["key2"], "<$DEEPSEEK_API_KEY$>")  # 未指定的保持原样
+    
+    def test_before_tool_call_with_empty_with_secret(self):
+        """测试before_tool_call中with_secret为空列表时的行为"""
+        from linhai.secret import SecretInterceptorPlugin
+        from linhai.llm import ToolCallMessage
+        
+        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
+        
+        # 创建工具调用，with_secret为空列表
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={
+                "key1": "<$OPENAI_API_TOKEN$>",
+                "key2": "<$DEEPSEEK_API_KEY$>",
+            },
+            with_secret=[],  # 空列表
+            assert_success=True,
+        )
+        
+        import asyncio
+        result = asyncio.run(plugin.before_tool_call(tool_call))
+        
+        self.assertFalse(result)  # 不应该拦截
+        # 验证没有替换任何secret键
+        self.assertEqual(tool_call.function_arguments["key1"], "<$OPENAI_API_TOKEN$>")
+        self.assertEqual(tool_call.function_arguments["key2"], "<$DEEPSEEK_API_KEY$>")
 
 
 class MockGroupChat:
@@ -365,7 +417,7 @@ class TestSecretIntegrationBugFix(unittest.TestCase):
         loop.close()
         
         # 验证结果被拦截
-        self.assertIsNotNone(result, "结果应该被拦截")
+        self.assertIsNotNone(result, f"结果应该被拦截: {result}")
         result_str = str(result)
         self.assertIn("已拦截", result_str, "应该提示已拦截")
         self.assertNotIn(secret_value, result_str, "secret值不应该出现在拦截消息中")

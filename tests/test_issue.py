@@ -6,9 +6,8 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from linhai.subagent.issue import IssueManager
+from linhai.subagent.issue import IssueManager, create_issue_toolset
 from linhai.group_chat import GroupChat
-from linhai.agent.issue_tools import create_issue_toolset
 from linhai.config import load_config
 
 
