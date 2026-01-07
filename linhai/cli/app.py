@@ -98,7 +98,7 @@ class CLIApp(App):
         init_messages: list[str] | None = None,
     ):
         super().__init__()
-        self.theme = "nord"
+        self.theme = "tokyo-night"
         self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("agent_answer")

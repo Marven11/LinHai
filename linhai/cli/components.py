@@ -450,6 +450,7 @@ class ReasoningContentWidget(Static):
         border-left: heavy grey;
         padding-left: 1;
         padding-right: 1;
+        color: $text-muted;
     }
 
     ReasoningContentWidget.reasoning-widget-collapsed {
