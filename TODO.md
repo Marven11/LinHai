@@ -2,9 +2,22 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 让RuntimeMessageWidget使用CSS class设置颜色，就像reasoning message一样
-  - 这意味着你需要将当前的单个Static拆成两个
-  - 而且在消息类型为info时需要将正文颜色改成$text-muted
+- [ ] 重构DuplicateFileReadPlugin, UnnecessarySedReadPlugin和UnnecessaryRunCommandPlugin的逻辑
+  - 这是一个较为大型的重构，先输出markdown规划再修改
+  - DuplicateFileReadPlugin: 仅检查read_file逻辑，完全删除检查read_file_with_sed的逻辑
+  - UnnecessarySedReadPlugin: 在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数
+  - UnnecessaryRunCommandPlugin: 在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数
+    - 不区分是否是sed
+    - 跳过用pipe连接起来的命令
+    - 删除判断参数是否是文件路径的逻辑，仅通过检测“参数是否是存在的文件路径”判断参数是否是文件路径
+  - 抽象检测“过小文件”和“已读取文件”的逻辑
+    - “过小文件”: 字符数量少于15000且行数少于800行
+    - “已读取文件”: 最新且和硬盘文件内容相同
+      - 检查messages列表中的FileContentMessage，提取文件路径相同的FileContentMessage
+      - 仅检查这些message中最新（列表相对位置更后）的message，其需要满足文件内容和硬盘文件内容相同
+      - 检查这个unittest是否通过
+        - 有一系列文件路径相同message，历史message和硬盘文件内容相同，最新message和硬盘文件内容不同 -> 不拦截
+  - prompt: 基本不变
 
 # 暂时搁置
 
