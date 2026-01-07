@@ -254,7 +254,11 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
             RuntimeMessage(wrapped_summary),
         )
 
-        return "历史压缩成功完成，现在请继续工作！"
+        return (
+            "历史压缩成功完成，现在请继续工作！"
+            "注意：每次进行历史压缩都需要重新调用compress_history_range工具！"
+            "注意：历史压缩不能仅输出总结和ID，必须先调用工具！"
+        )
     finally:
 
         await agent.message_processor.filter_messages(
