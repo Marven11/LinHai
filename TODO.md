@@ -2,9 +2,14 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 合并linhai/agent/issue_tools.py到linhai/subagent/issue.py
-- [ ] 修复所有unittest
-  - 测试secret系统时貌似没有测试with_secret不全的情况，需要添加这个测试
+- [ ] 我们需要重构解析agent回答的流程
+  - agent的回答是一个token stream，我们需要从其中解析出三类token以传给cli显示
+  - agent的输出包含reasoning_content和content两部分，我们需要解析为至少三部分
+    - reasoning message - 只有一个
+    - normal message - 可能有多个
+    - toolcall message - 可能有多个
+  - 同时我们需要在解析时为每一个message生成uuid以方便定位
+  - 参考streamjson和linhai/cli/token_parser.py
 
 # 暂时搁置
 
