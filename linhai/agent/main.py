@@ -449,13 +449,14 @@ class Agent:
 
         user_input_found = False
         await self.toolcall_processor.ensure_mcp_connector()
+        await self.lifecycle.trigger_before_agent_loop(self)
+
         while not self.group_chat.is_empty("user_message"):
             await self.receive_one_user_message()
             user_input_found = True
         if user_input_found:
             await self.generate_response()
 
-        await self.lifecycle.trigger_before_agent_loop(self)
         while True:
             try:
                 if self.state == "waiting_user":
