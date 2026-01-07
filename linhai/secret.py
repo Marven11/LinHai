@@ -159,7 +159,8 @@ class SecretInterceptorPlugin:
     async def after_tool_call(self, agent, tool_call, tool_result, success) -> Any:
         from .agent.base import RuntimeMessage
 
-        with_secret = getattr(tool_call, "with_secret", None)
+        with_secret = tool_call.with_secret
+        msg = tool_call
 
         if with_secret:
             llm_tool_result = tool_result.to_llm_message()
@@ -169,23 +170,23 @@ class SecretInterceptorPlugin:
 
             keys_str = ", ".join(with_secret)
             message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_result}<<content>><<masked>>"
+            msg = RuntimeMessage(message)
+
+        result_str = str(msg)
+        contains_secret = None
+        for key, secret_info in self.secrets_dict.items():
+            if secret_info["value"] in result_str:
+                contains_secret = key
+                break
+
+        if contains_secret:
+            message = (
+                f"工具调用的结果包含secret值{contains_secret}，已拦截。"
+                "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
+            )
             return RuntimeMessage(message)
-        else:
-            result_str = str(tool_result)
-            contains_secret = False
-            for key, secret_info in self.secrets_dict.items():
-                if secret_info["value"] in result_str:
-                    contains_secret = True
-                    break
 
-            if contains_secret:
-                message = (
-                    "工具调用的结果包含secret值，已拦截。"
-                    "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
-                )
-                return RuntimeMessage(message)
-
-            return None
+        return None
 
     def register(self, lifecycle):
         lifecycle.register_before_tool_call(self.before_tool_call)
