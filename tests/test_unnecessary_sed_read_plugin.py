@@ -267,7 +267,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         self.assertIsInstance(result, RuntimeMessage)
         assert result is not None
-        self.assertIn("错误：一分钟内多次小块读取代码文件", result.message)
+        self.assertIn("滥用read_file_with_sed多次小块读取代码文件", result.message)
 
         self.group_chat.send_if_exists.assert_called_once()
 

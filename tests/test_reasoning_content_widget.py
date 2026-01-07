@@ -14,7 +14,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.content = "这是一个测试思考内容\n包含多行文本\n和一些特殊字符 [ ] \\ 等"
         self.sender_name = "test-agent"
         self.widget = ReasoningContentWidget(
-            role=self.role, sender_name=self.sender_name
+            role=self.role, sender_name=self.sender_name, theme="nord"
         )
         self.widget.feed_string(self.content)
 
@@ -106,7 +106,7 @@ class TestReasoningContentWidget(unittest.TestCase):
 第四行内容"""
 
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string(multi_line_content)
         widget.is_expanded = False
@@ -126,7 +126,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         content_with_special_chars = "思考内容包含特殊字符 [方括号] \\反斜杠 &符号"
 
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string(content_with_special_chars)
         widget.is_expanded = False
@@ -141,7 +141,7 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_stop_method(self):
         """Test that finish_streaming method stops the timer."""
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string("test content")
         mock_timer = Mock()
@@ -158,7 +158,7 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_stop_method_actual_timer(self):
         """Test finish_streaming method with actual timer behavior."""
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string("test content")
 
@@ -176,7 +176,7 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_stop_method_without_timer(self):
         """Test finish_streaming method when there is no timer."""
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string("test content")
         widget.timer = None
@@ -190,7 +190,7 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_panel_styling(self):
         """Test that styling is correctly applied."""
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string("test content")
 
@@ -207,7 +207,7 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_no_wrap_styling(self):
         """Test that no_wrap=True is applied in ReasoningContentWidget."""
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string("测试内容")
         widget.is_expanded = False
@@ -228,7 +228,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         """Test that truncated content in collapsed state has no_wrap=True."""
         long_content = "这是一行很长的测试内容" * 10
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test"
+            role="assistant", sender_name="test", theme="nord"
         )
         widget.feed_string(long_content)
         widget.is_expanded = False

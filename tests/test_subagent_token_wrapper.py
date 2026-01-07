@@ -21,6 +21,7 @@ class TestSubAgentTokenWrapper(unittest.IsolatedAsyncioTestCase):
         self.group_chat = MagicMock()
         self.cli_config = MagicMock()
         self.cli_config.use_nerd_font = False
+        self.cli_config.theme = "nord"
         self.app = CLIApp(self.group_chat, self.cli_config)
         
         # 模拟必要的组件

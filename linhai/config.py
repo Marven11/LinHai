@@ -144,10 +144,11 @@ class CLIConfig(BaseModel):
     """CLI配置类型定义。"""
 
     use_nerd_font: bool = Field(default=False)
+    theme: str = Field(default="nord")
 
     def __str__(self) -> str:
         """返回CLI配置的字符串表示"""
-        return f"CLIConfig(use_nerd_font={self.use_nerd_font})"
+        return f"CLIConfig(use_nerd_font={self.use_nerd_font}, theme={self.theme})"
 
 
 class Config(BaseModel):

@@ -296,8 +296,9 @@ class ToolCallWidget(Static):
     }
     """
 
-    def __init__(self):
+    def __init__(self, theme: str):
         super().__init__()
+        self.theme = theme
         self.json_str = ""
         self.parser = StreamJsonParser()
 
@@ -345,7 +346,7 @@ class ToolCallWidget(Static):
                 Syntax(
                     self.json_str,
                     lexer="markdown",
-                    theme="nord-darker",
+                    theme=self.theme,
                     background_color="#2E3440",
                     word_wrap=True,
                 )
@@ -405,7 +406,7 @@ class ToolCallWidget(Static):
                     Syntax(
                         self.current_content.strip(),
                         lexer="markdown",
-                        theme="nord-darker",
+                        theme=self.theme,
                         background_color="#2E3440",
                         word_wrap=True,
                     )
@@ -465,8 +466,9 @@ class ReasoningContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str, theme: str):
         super().__init__()
+        self.theme = theme
         self.role = f"{role}-reasoning"
         self.content_str = ""
         self.is_expanded = False
@@ -519,7 +521,7 @@ class ReasoningContentWidget(Static):
             renderable = Syntax(
                 content_to_display,
                 lexer="markdown",
-                theme="nord-darker",
+                theme=self.theme,
                 background_color="#2E3440",
                 word_wrap=True,
             )
@@ -546,8 +548,9 @@ class UserMessageWidget(Static):
     }
     """
 
-    def __init__(self, content: str, sender_name: str):
+    def __init__(self, content: str, sender_name: str, theme: str):
         super().__init__()
+        self.theme = theme
         self.content_str = content
         self.display_name = sender_name
         self.timer: Timer | None = None
@@ -580,7 +583,7 @@ class UserMessageWidget(Static):
                 Syntax(
                     content_to_display,
                     lexer="markdown",
-                    theme="nord-darker",
+                    theme=self.theme,
                     background_color="#2E3440",
                     word_wrap=True,
                 )
@@ -611,8 +614,9 @@ class NormalContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str, theme: str):
         super().__init__()
+        self.theme = theme
         self.content_str = ""
         self.display_name = sender_name
         self.role = role
@@ -649,7 +653,7 @@ class NormalContentWidget(Static):
                 Syntax(
                     content_to_display,
                     lexer="markdown",
-                    theme="nord-darker",
+                    theme=self.theme,
                     background_color="#2E3440",
                     word_wrap=True,
                 )
@@ -665,10 +669,11 @@ class MessageWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str):
+    def __init__(self, role: str, sender_name: str, theme: str):
         super().__init__()
         self.role = role
         self.sender_name = sender_name
+        self.theme = theme
         self.token_parser = TokenParser()
         self.current_widget: (
             ToolCallWidget | NormalContentWidget | ReasoningContentWidget | None
@@ -700,16 +705,18 @@ class MessageWidget(Static):
         """处理token类型变化"""
         new_widget = None
         if new_token_type == "toolcall":
-            new_widget = ToolCallWidget()
+            new_widget = ToolCallWidget(theme=self.theme)
         elif new_token_type == "normal":
             new_widget = NormalContentWidget(
                 role=self.role,
                 sender_name=self.sender_name,
+                theme=self.theme,
             )
         elif new_token_type == "reasoning":
             new_widget = ReasoningContentWidget(
                 role=self.role,
                 sender_name=self.sender_name,
+                theme=self.theme,
             )
         else:
             assert False, f"{new_token_type=}"

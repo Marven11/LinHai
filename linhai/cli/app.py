@@ -98,7 +98,7 @@ class CLIApp(App):
         init_messages: list[str] | None = None,
     ):
         super().__init__()
-        self.theme = "tokyo-night"
+        self.theme = cli_config.theme
         self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
         self.group_chat.register_queue("agent_answer")
@@ -170,6 +170,7 @@ class CLIApp(App):
                     current_message = MessageWidget(
                         role="assistant",
                         sender_name=llm_name,
+                        theme=self.theme,
                     )
                     await asyncio.sleep(0)
                     container.mount(current_message)
@@ -311,6 +312,7 @@ class CLIApp(App):
             new_message = MessageWidget(
                 role="assistant",
                 sender_name=subagent_name,
+                theme=self.theme,
             )
             
             self.subagent_current_messages[subagent_name] = new_message
@@ -347,6 +349,7 @@ class CLIApp(App):
         return MessageWidget(
             role="assistant",
             sender_name=subagent_name,
+            theme=self.theme,
         )
 
     async def watch_output_queue(self) -> None:
@@ -422,12 +425,13 @@ class CLIApp(App):
                     UserMessageWidget(
                         content=init_message,
                         sender_name="user",
+                        theme=self.theme,
                     )
                 )
                 await self.group_chat.send("user_message", user_msg)
 
                 agent = self.group_chat.get_members("agent", Agent)
-                widget = UserMessageWidget(user_msg.message, sender_name="user")
+                widget = UserMessageWidget(user_msg.message, sender_name="user", theme=self.theme)
                 container = self.query_one("#chat-container")
                 container.mount(widget)
                 widget.update_display()
@@ -562,12 +566,13 @@ class CLIApp(App):
             UserMessageWidget(
                 content=message_text,
                 sender_name="user",
+                theme=self.theme,
             )
         )
         await self.group_chat.send("user_message", user_msg)
         input_element.value = ""  # type: ignore
 
-        widget = UserMessageWidget(user_msg.message, sender_name="user")
+        widget = UserMessageWidget(user_msg.message, sender_name="user", theme=self.theme)
         container.mount(widget)
         widget.update_display()
         self.is_user_scroll_to_end = True
