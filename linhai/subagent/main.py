@@ -237,13 +237,12 @@ class SubAgentManager:
         group_chat: GroupChat,
         subagent_config: SubAgentConfig | None,
         llms=None,
-        llm_names=None,
     ):
         assert subagent_config is not None, "subagent_config不能为None"
         self.group_chat = group_chat
         self.subagent_config = subagent_config
         self.llms = llms or []
-        self.llm_names = llm_names or []
+        self.llm_names = [llm.get_name() for llm in (self.llms or [])]
         self.subagents: dict[str, tuple[SubAgent, asyncio.Task | None]] = {}
         group_chat.register_member("subagent_manager", self)
         group_chat.add_postinit(self.postinit)
@@ -252,11 +251,11 @@ class SubAgentManager:
         """后初始化：创建subagent工具集并添加到tool_manager，然后注册插件"""
         from linhai.tool.main import ToolManager
         from .tools import create_subagent_toolset
-        
+
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         subagent_toolset = create_subagent_toolset(self)
         tool_manager.add_toolset(subagent_toolset)
-        
+
         self.register_plugins()
 
     async def create_subagent(

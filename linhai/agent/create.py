@@ -1,7 +1,7 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypedDict, Optional
 import argparse
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
@@ -17,118 +17,141 @@ from linhai.secret import initialize_secret_system
 
 from .base import GlobalMemory
 
+from .main import Agent  # 避免循环导入
 
-async def create_agent_from_config(
+
+class AgentBuildContext(TypedDict):
+    """Agent构建上下文，封装所有初始化Agent所需的数据。
+
+    这是一个TypedDict，用于类型安全的参数传递。
+    """
+
+    group_chat: GroupChat
+    config: Config
+    config_basedir: Path
+    llm_name: str  # 注意：这个字段不能为None，必须是有效的LLM名称
+    checklist_path: Optional[Path]
+    git_diff_reviewer: bool
+    violation_checker: bool
+
+
+def create_agent_build_context(
     group_chat: GroupChat,
     config: Config,
     config_basedir: Path,
-    llm_name: str | None = None,
-    checklist_path: Path | None = None,
-    git_diff_reviewer: bool = False,
-    violation_checker: bool = False,
-):
+    git_diff_reviewer: bool,
+    violation_checker: bool,
+    llm_name: Optional[str] = None,
+    checklist_path: Optional[Path] = None,
+) -> AgentBuildContext:
+    """创建Agent构建上下文，包含验证逻辑。"""
+    # 处理llm_name逻辑
+    llm_configs = config.llm
+    llm_config_names = [llm_config.name for llm_config in llm_configs]
+
+    if llm_name is None:
+        # 配置要求选择第一个llm
+        if not llm_config_names:
+            raise ValueError("配置中没有可用的LLM")
+        resolved_llm_name = llm_config_names[0]
+    elif llm_name not in llm_config_names:
+        available_llms = ", ".join(llm_config_names)
+        raise ValueError(
+            f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
+        )
+    else:
+        resolved_llm_name = llm_name
+
+    return {
+        "group_chat": group_chat,
+        "config": config,
+        "config_basedir": config_basedir,
+        "llm_name": resolved_llm_name,
+        "checklist_path": checklist_path,
+        "git_diff_reviewer": git_diff_reviewer,
+        "violation_checker": violation_checker,
+    }
+
+
+async def create_agent_from_config(
+    context: AgentBuildContext,
+) -> Agent:
     """创建Agent实例（从配置对象）
 
     Args:
-        group_chat: GroupChat实例
-        config: 配置对象
-        llm_name: 指定的LLM名称（可选）
-        config_basedir: 配置文件所在目录（用于解析相对路径）
+        context: Agent构建上下文
 
     Returns:
         Agent实例
     """
     from .main import Agent  # 避免循环导入
 
-    agent_config = config.agent
-    tools_config = config.tools
-
-    llms = await _create_llm_instances(config.llm, group_chat)
-
-    llm_names = [llm_config.name for llm_config in config.llm]
-
-    if llm_name is not None and llm_name not in llm_names:
-        available_llms = ", ".join(llm_names)
-        raise ValueError(
-            f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
-        )
-
-    tool_manager, machine_control = await _create_tool_manager(
-        group_chat,
-        tools_config,
-        agent_config.mcp,
-        mcp_basedir=config_basedir or Path.cwd(),
-    )
-
-    todolist_manager = TodolistManager(group_chat)
-
-    memory_file_path = None
-    if config.memory and config_basedir:
-        memory_file_path = config_basedir / config.memory.file_path
-
-    init_messages = await _create_init_messages(
-        group_chat=group_chat,
-        memory_file_path=memory_file_path,
-        checklist_path=checklist_path,
-    )
-
+    llms = await _create_llm_instances(context)
+    tool_manager, machine_control = await _create_tool_manager(context)
+    todolist_manager = TodolistManager(context["group_chat"])
+    init_messages = await _create_init_messages(context)
     agent = Agent(
-        llms_with_names=list(zip(llms, llm_names)),
-        llm_name=llm_name,
-        compress_threshold=agent_config.compress_threshold,
-        group_chat=group_chat,
+        llms=llms,
+        llm_name=context["llm_name"],
+        compress_threshold=context["config"].agent.compress_threshold,
+        group_chat=context["group_chat"],
         init_messages=init_messages,
     )
-
-    # 注册MachineControl插件
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()
-
-    # 初始化Secret系统（如果配置了secret.config_path）
-    if tools_config.secret.config_path:
-        
-        secret_plugin = initialize_secret_system(
-            group_chat=group_chat,
-            secret_config_path=tools_config.secret.config_path,
-            config_basedir=config_basedir
-        )
-        secret_plugin.register(agent.lifecycle)
-
-    if agent_config.enable_task_planning:
+    if context["config"].agent.enable_task_planning:
         from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin
-        TaskPlanningPromptPlugin(group_chat).register(agent.lifecycle)
-        TaskPlanningEnforcementPlugin(group_chat).register(agent.lifecycle)
 
-    if agent_config.enable_directory_change_detection:
+        TaskPlanningPromptPlugin(context["group_chat"]).register(agent.lifecycle)
+        TaskPlanningEnforcementPlugin(context["group_chat"]).register(agent.lifecycle)
+    if context["config"].agent.enable_directory_change_detection:
         from .plugin import DirectoryChangePlugin
-        DirectoryChangePlugin(group_chat).register(agent.lifecycle)
 
-    if git_diff_reviewer:
+        DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
+    await _create_subagent(context, llms, agent)
+    context["group_chat"].call_postinit()
+    return agent
+
+
+async def _create_subagent(
+    context: AgentBuildContext, llms: list[LanguageModel], agent: Agent
+) -> None:
+    """创建SubAgent相关组件
+
+    Args:
+        context: Agent构建上下文
+        llms: LLM实例列表
+        agent: Agent实例，用于注册插件
+    """
+    from linhai.subagent import SubAgentManager
+    from linhai.subagent.issue import IssueManager
+
+    if context["git_diff_reviewer"]:
         from linhai.subagent.subagent_types.git_diff_reviewer import GitDiffReviewPlugin
-        GitDiffReviewPlugin(group_chat).register(agent.lifecycle)
-    if violation_checker:
-        from linhai.subagent.subagent_types.violation_checker import ViolationCheckerPlugin
-        ViolationCheckerPlugin(group_chat).register(agent.lifecycle)
 
+        GitDiffReviewPlugin(context["group_chat"]).register(agent.lifecycle)
+    if context["violation_checker"]:
+        from linhai.subagent.subagent_types.violation_checker import (
+            ViolationCheckerPlugin,
+        )
 
-    subagent_config = config.subagent
-    if subagent_config and subagent_config.enable:
-        subagent_manager = SubAgentManager(group_chat, subagent_config, llms, llm_names)
+        ViolationCheckerPlugin(context["group_chat"]).register(agent.lifecycle)
 
-    issue_manager = IssueManager(group_chat)
-    group_chat.call_postinit()
+    if context["config"].subagent and context["config"].subagent.enable:
+        subagent_manager = SubAgentManager(
+            context["group_chat"], context["config"].subagent, llms
+        )
+        issue_manager = IssueManager(context["group_chat"])
+    return None
 
     return agent
 
 
-async def _create_llm_instances(
-    llm_configs: list, group_chat: GroupChat
-) -> list[LanguageModel]:
+async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageModel]:
     """创建LLM实例列表
 
     Args:
-        llm_configs: LLM配置列表
-        group_chat: GroupChat实例，用于发送通知
+        context: Agent构建上下文
 
     Returns:
         LLM实例列表
@@ -139,62 +162,68 @@ async def _create_llm_instances(
     ) -> None:
         """发送通知到ui_log队列"""
         notice = CliRuntimeNotice(level=level, content=content)
-        await group_chat.send_if_exists("ui_log", notice)
+        await context["group_chat"].send_if_exists("ui_log", notice)
 
     llms = []
-    for llm_config in llm_configs:
-        llm_config_dict = llm_config.model_dump()
+    for llm_config in context["config"].llm:
         llm = OpenAi(
-            group_chat=group_chat,
+            group_chat=context["group_chat"],
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
             model=llm_config.model,
-            openai_config=llm_config_dict.get("client_options", {}),
-            chat_completion_kwargs=llm_config_dict.get("completion_options", {}),
-            token_limit=llm_config_dict.get("token_limit"),
-            compatibility=llm_config_dict.get("compatibility"),
+            openai_config=llm_config.client_options,
+            chat_completion_kwargs=llm_config.completion_options,
+            token_limit=llm_config.token_limit,
+            compatibility=llm_config.compatibility,
+            name=llm_config.name,
         )
         llms.append(llm)
     return llms
 
 
-
-
-
-async def _create_tool_manager(
-    group_chat, config: ToolConfig, mcp_config: list[MCPConfig], mcp_basedir: Path
-):
+async def _create_tool_manager(context: "AgentBuildContext"):
     """创建ToolManager实例"""
     from linhai.machine_control import MachineControl
 
     tool_manager = ToolManager(
-        group_chat=group_chat,
+        group_chat=context["group_chat"],
         toolsets=[global_tools],
-        config=config,
-        mcp_config=mcp_config,
-        mcp_basedir=mcp_basedir,
+        config=context["config"].tools,
+        mcp_config=context["config"].agent.mcp,
+        mcp_basedir=context["config_basedir"],
     )
 
-    machine_control = MachineControl(group_chat)
+    machine_control = MachineControl(context["group_chat"])
+
+    # 初始化Secret系统（如果配置了secret.config_path）
+    if context["config"].tools.secret.config_path:
+
+        initialize_secret_system(
+            group_chat=context["group_chat"],
+            secret_config_path=context["config"].tools.secret.config_path,
+            config_basedir=context["config_basedir"],
+        )
+
     return tool_manager, machine_control
 
 
-async def _create_init_messages(
-    group_chat: GroupChat,
-    memory_file_path: Path | None = None,
-    checklist_path: Path | None = None,
-) -> list[Message]:
+async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
     """创建初始化消息列表
 
     Args:
-        group_chat: GroupChat实例
-        memory_file_path: 记忆文件路径（可选）
-        checklist_path: 检查清单文件路径（可选）
+        context: Agent构建上下文
 
     Returns:
         初始化消息列表
     """
-    init_messages: list[Message] = [SystemMessage(group_chat)]
+    init_messages: list[Message] = [SystemMessage(context["group_chat"])]
+
+    # 计算memory_file_path
+    memory_file_path = None
+    if context["config"].memory and context["config_basedir"]:
+        memory_file_path = (
+            context["config_basedir"] / context["config"].memory.file_path
+        )
 
     user_global_memory = (
         Path(memory_file_path).absolute()
@@ -203,15 +232,15 @@ async def _create_init_messages(
     )
     init_messages.append(GlobalMemory(user_global_memory))
 
-    if checklist_path:
+    if context["checklist_path"]:
         from .base import ChecklistMessage
 
-        init_messages.append(ChecklistMessage(checklist_path))
-        await group_chat.send_if_exists(
+        init_messages.append(ChecklistMessage(context["checklist_path"]))
+        await context["group_chat"].send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
-                content=f"已加载检查清单文件: {checklist_path}",
+                content=f"已加载检查清单文件: {context["checklist_path"]}",
             ),
         )
 

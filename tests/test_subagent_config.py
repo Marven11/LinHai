@@ -38,9 +38,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         """测试使用配置中的default_llm创建SubAgent。"""
         subagent_config = SubAgentConfig(default_llm="qwen")
 
-        manager = SubAgentManager(
-            self.group_chat, subagent_config, self.llms, self.llm_names
-        )
+        manager = SubAgentManager(self.group_chat, subagent_config, self.llms)
         mock_agent = MagicMock()
         mock_agent.get_current_llm_info = Mock(return_value=(None, self.mock_llm2))
         manager.group_chat.get_members = Mock(return_value=mock_agent)
@@ -60,9 +58,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
     async def test_create_subagent_without_config(self):
         """测试没有配置时使用传入的LLM创建SubAgent。"""
         subagent_config = SubAgentConfig(default_llm="deepseek")
-        manager = SubAgentManager(
-            self.group_chat, subagent_config, self.llms, self.llm_names
-        )
+        manager = SubAgentManager(self.group_chat, subagent_config, self.llms)
 
         result = await manager.create_subagent(
             agent_type="violation_checker",
@@ -80,9 +76,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
         """测试配置的default_llm不存在时使用第一个可用LLM。"""
         subagent_config = SubAgentConfig(default_llm="nonexistent")
 
-        manager = SubAgentManager(
-            self.group_chat, subagent_config, self.llms, self.llm_names
-        )
+        manager = SubAgentManager(self.group_chat, subagent_config, self.llms)
 
         result = await manager.create_subagent(
             agent_type="violation_checker",
@@ -99,9 +93,7 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
     async def test_create_duplicate_subagent(self):
         """测试创建重复的SubAgent。"""
         subagent_config = SubAgentConfig(default_llm="deepseek")
-        manager = SubAgentManager(
-            self.group_chat, subagent_config, self.llms, self.llm_names
-        )
+        manager = SubAgentManager(self.group_chat, subagent_config, self.llms)
 
         mock_subagent = type(
             "MockSubAgent",

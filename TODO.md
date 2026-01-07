@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 创建agent的逻辑linhai/agent/create.py过于复杂，需要改进
+- [x] 创建agent的逻辑linhai/agent/create.py过于复杂，需要改进
   - 现状
     - create_agent_from_config等初始化函数过于复杂，且包含大量默认参数，传参方式也不统一
     - _create_agent_from_config这个wrapper完全不需要存在

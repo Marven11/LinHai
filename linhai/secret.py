@@ -16,18 +16,20 @@ class SecretInfo(TypedDict):
     description: str
 
 
-def load_secrets_from_config(config_path: str, base_dir: str | Path) -> dict[str, SecretInfo]:
+def load_secrets_from_config(
+    config_path: str, base_dir: str | Path
+) -> dict[str, SecretInfo]:
     # 如果config_path为空或非字符串，后续操作会自然失败
     config_path = config_path.strip()
     # 只对config_path进行expanduser处理，base_dir由调用者处理
     path = Path(config_path).expanduser()
-    
+
     # base_dir直接转换为Path对象，不处理expanduser
     base_dir = Path(base_dir)
-    
+
     if not path.is_absolute():
         path = base_dir / path
-    
+
     if not path.exists():
         raise FileNotFoundError(f"Secret config file not found: {path}")
 
@@ -65,8 +67,7 @@ def load_secrets_from_config(config_path: str, base_dir: str | Path) -> dict[str
 
 
 def filter_secrets_by_keys(
-    secrets_dict: dict[str, SecretInfo], 
-    secret_keys: list[str]
+    secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
 ) -> dict[str, str]:
     """根据with_secret列表过滤secret字典，生成替换映射用于后续替换。"""
     replace_map: dict[str, str] = {}
@@ -84,27 +85,19 @@ def recursive_string_replace(obj: object, replace_map: dict[str, str]) -> object
         for pattern, replacement in replace_map.items():
             result = result.replace(pattern, replacement)
         return result
-    
+
     elif isinstance(obj, dict):
-        return {
-            k: recursive_string_replace(v, replace_map)
-            for k, v in obj.items()
-        }
-    
+        return {k: recursive_string_replace(v, replace_map) for k, v in obj.items()}
+
     elif isinstance(obj, list):
-        return [
-            recursive_string_replace(item, replace_map)
-            for item in obj
-        ]
-    
+        return [recursive_string_replace(item, replace_map) for item in obj]
+
     else:
         return obj
 
 
 def replace_secrets_in_object(
-    obj: Any, 
-    secrets_dict: dict[str, SecretInfo], 
-    secret_keys: list[str]
+    obj: Any, secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
 ) -> Any:
     """在工具调用前替换参数中的secret键，确保工具能访问敏感信息。"""
     replace_map = filter_secrets_by_keys(secrets_dict, secret_keys)
@@ -112,9 +105,7 @@ def replace_secrets_in_object(
 
 
 def mask_secrets_in_object(
-    obj: Any, 
-    secrets_dict: dict[str, SecretInfo], 
-    with_secret: list[str]
+    obj: Any, secrets_dict: dict[str, SecretInfo], with_secret: list[str]
 ) -> Any:
     """在工具返回结果后掩码secret值，保护敏感信息不泄露。"""
     replace_map: dict[str, str] = {}
@@ -122,9 +113,11 @@ def mask_secrets_in_object(
         if key in secrets_dict:
             secret_value = secrets_dict[key]["value"]
             replace_map[secret_value] = f"<${key}$>"
-    
-    sorted_replace_map = dict(sorted(replace_map.items(), key=lambda x: len(x[0]), reverse=True))
-    
+
+    sorted_replace_map = dict(
+        sorted(replace_map.items(), key=lambda x: len(x[0]), reverse=True)
+    )
+
     return recursive_string_replace(obj, sorted_replace_map)
 
 
@@ -170,7 +163,9 @@ class SecretInterceptorPlugin:
 
         if with_secret:
             llm_tool_result = tool_result.to_llm_message()
-            masked_result = mask_secrets_in_object(llm_tool_result["content"], self.secrets_dict, with_secret)
+            masked_result = mask_secrets_in_object(
+                llm_tool_result["content"], self.secrets_dict, with_secret
+            )
 
             keys_str = ", ".join(with_secret)
             message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_result}<<content>><<masked>>"
@@ -197,7 +192,9 @@ class SecretInterceptorPlugin:
         lifecycle.register_after_tool_call(self.after_tool_call)
 
 
-def initialize_secret_system(group_chat, secret_config_path: str, config_basedir: str | Path):
+def initialize_secret_system(
+    group_chat, secret_config_path: str, config_basedir: str | Path
+):
     from linhai.llm import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
 
@@ -218,8 +215,23 @@ def initialize_secret_system(group_chat, secret_config_path: str, config_basedir
 
     secrets_message = get_available_secrets_message(secrets_dict)
     if secrets_message:
-        system_message = group_chat.get_members("system_message", SystemMessage)
-        rule_content = INTRODUCTION_SECRET_SYSTEM.format(secrets_list=secrets_message)
-        system_message.add_rule("SECRET SYSTEM", rule_content)
+
+        def add_secret_rule():
+            system_message = group_chat.get_members("system_message", SystemMessage)
+            rule_content = INTRODUCTION_SECRET_SYSTEM.format(
+                secrets_list=secrets_message
+            )
+            system_message.add_rule("SECRET SYSTEM", rule_content)
+
+        group_chat.add_postinit(add_secret_rule)
+
+    # 添加postinit回调来注册插件到lifecycle
+    def register_plugin_to_lifecycle():
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = group_chat.get_members("lifecycle", Lifecycle)
+        secret_plugin.register(lifecycle)
+
+    group_chat.add_postinit(register_plugin_to_lifecycle)
 
     return secret_plugin

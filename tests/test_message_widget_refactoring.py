@@ -9,7 +9,11 @@ from linhai.group_chat import GroupChat
 from linhai.config import CLIConfig
 from linhai.agent import Agent
 from linhai.llm import AnswerToken
-from linhai.cli.components import ReasoningContentWidget, NormalContentWidget, ToolCallWidget
+from linhai.cli.components import (
+    ReasoningContentWidget,
+    NormalContentWidget,
+    ToolCallWidget,
+)
 
 
 class TestMessageWidgetIntegration(unittest.TestCase):
@@ -24,24 +28,24 @@ class TestMessageWidgetIntegration(unittest.TestCase):
         from linhai.config import ToolConfig, MCPConfig
         from linhai.tool.base import ToolSet
         from pathlib import Path
-        
+
         self.group_chat = GroupChat()
         self.cli_config = CLIConfig()
-        
+
         # CLIApp和Agent会自动注册需要的队列，这里不需要手动注册
-        
+
         # 创建ToolManager（会自动注册为tool_manager成员）
         ToolManager(
             group_chat=self.group_chat,
             toolsets=[],
             config=ToolConfig(),
             mcp_config=[],
-            mcp_basedir=Path(".")
+            mcp_basedir=Path("."),
         )
-        
+
         # 创建MCPConnector（会自动注册为mcp_connector成员）
         MCPConnector(self.group_chat)
-        
+
         # 创建配置字典
         context = {
             "llms": [MagicMock()],
@@ -50,19 +54,20 @@ class TestMessageWidgetIntegration(unittest.TestCase):
             "system_message": "test",
             "compress_threshold": 0.8,
         }
-        
+
         # 创建Agent（会自动注册为agent成员）
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(context["llms"], context["llm_names"]))
-        
+        # 配置mock对象的get_name方法
+        mock_llm = context["llms"][0]
+        mock_llm.get_name = MagicMock(return_value="test_llm")
+
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=context["llms"],
             compress_threshold=context["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
             llm_name=context["llm_names"][context["current_llm_index"]],
         )
-        
+
         # 创建CLIApp
         self.app = CLIApp(self.group_chat, self.cli_config)
 
@@ -72,63 +77,66 @@ class TestMessageWidgetIntegration(unittest.TestCase):
             # 模拟用户输入
             input_element = self.app.query_one("#input")
             input_element.value = "计算2+2"
-            
+
             # 触发消息提交
             await self.app._handle_message_submission()
             await pilot.pause()
-            
+
             container = self.app.query_one("#chat-container")
-            
+
             # 验证用户消息已添加（第一个widget是欢迎信息，第二个是用户消息）
             self.assertGreaterEqual(len(container.children), 2)
-            
+
             # 模拟LLM发送多个reasoning token
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="",
-                reasoning_content="用户让我计算2+2，"
-            ))
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(content="", reasoning_content="用户让我计算2+2，"),
+            )
             await pilot.pause()
-            
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="",
-                reasoning_content="这是一个简单的数学问题，"
-            ))
+
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(content="", reasoning_content="这是一个简单的数学问题，"),
+            )
             await pilot.pause()
-            
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="",
-                reasoning_content="我应该使用计算器工具。"
-            ))
+
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(content="", reasoning_content="我应该使用计算器工具。"),
+            )
             await pilot.pause()
-            
+
             # 找到MessageWidget（在欢迎信息和用户消息之后）
             message_widget = None
             for child in container.children:
-                if hasattr(child, 'current_widget'):
+                if hasattr(child, "current_widget"):
                     message_widget = child
                     break
-            
+
             self.assertIsNotNone(message_widget)
             # 验证reasoning widget已创建
             self.assertIsInstance(message_widget.current_widget, ReasoningContentWidget)
-            
+
             # 模拟LLM切换到正常回答
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="让我使用计算器",
-                reasoning_content=""
-            ))
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(content="让我使用计算器", reasoning_content=""),
+            )
             await pilot.pause()
-            
+
             # 验证切换到NormalContentWidget
             self.assertIsInstance(message_widget.current_widget, NormalContentWidget)
-            
+
             # 模拟LLM发送工具调用
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content='```json toolcall\n{"name": "safe_calculator", "arguments": {"expression": "2+2"}}\n```\n',
-                reasoning_content=""
-            ))
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(
+                    content='```json toolcall\n{"name": "safe_calculator", "arguments": {"expression": "2+2"}}\n```\n',
+                    reasoning_content="",
+                ),
+            )
             await pilot.pause()
-            
+
             # 验证切换到ToolCallWidget
             self.assertIsInstance(message_widget.current_widget, ToolCallWidget)
 
@@ -138,27 +146,27 @@ class TestMessageWidgetIntegration(unittest.TestCase):
             # 模拟用户输入
             input_element = self.app.query_one("#input")
             input_element.value = "思考问题"
-            
+
             await self.app._handle_message_submission()
             await pilot.pause()
-            
+
             container = self.app.query_one("#chat-container")
-            
+
             # 模拟LLM发送多个reasoning token
             message_widget = None
             for i in range(3):
-                await self.group_chat.send("agent_answer", AnswerToken(
-                    content="",
-                    reasoning_content=f"思考第{i+1}部分"
-                ))
+                await self.group_chat.send(
+                    "agent_answer",
+                    AnswerToken(content="", reasoning_content=f"思考第{i+1}部分"),
+                )
                 await pilot.pause()
-                
+
                 if message_widget is None:
                     for child in container.children:
-                        if hasattr(child, 'current_widget'):
+                        if hasattr(child, "current_widget"):
                             message_widget = child
                             break
-            
+
             self.assertIsNotNone(message_widget)
             # 验证只创建了一个ReasoningContentWidget
             self.assertIsInstance(message_widget.current_widget, ReasoningContentWidget)
@@ -173,27 +181,27 @@ class TestMessageWidgetIntegration(unittest.TestCase):
             # 模拟用户输入
             input_element = self.app.query_one("#input")
             input_element.value = "回答问题"
-            
+
             await self.app._handle_message_submission()
             await pilot.pause()
-            
+
             container = self.app.query_one("#chat-container")
-            
+
             # 模拟LLM发送多个normal token
             message_widget = None
             for i in range(3):
-                await self.group_chat.send("agent_answer", AnswerToken(
-                    content=f"回答第{i+1}部分",
-                    reasoning_content=""
-                ))
+                await self.group_chat.send(
+                    "agent_answer",
+                    AnswerToken(content=f"回答第{i+1}部分", reasoning_content=""),
+                )
                 await pilot.pause()
-                
+
                 if message_widget is None:
                     for child in container.children:
-                        if hasattr(child, 'current_widget'):
+                        if hasattr(child, "current_widget"):
                             message_widget = child
                             break
-            
+
             self.assertIsNotNone(message_widget)
             # 验证只创建了一个NormalContentWidget
             self.assertIsInstance(message_widget.current_widget, NormalContentWidget)
@@ -208,44 +216,46 @@ class TestMessageWidgetIntegration(unittest.TestCase):
             # 模拟用户输入
             input_element = self.app.query_one("#input")
             input_element.value = "混合测试"
-            
+
             await self.app._handle_message_submission()
             await pilot.pause()
-            
+
             container = self.app.query_one("#chat-container")
-            
+
             # 找到MessageWidget
             message_widget = None
             for child in container.children:
-                if hasattr(child, 'current_widget'):
+                if hasattr(child, "current_widget"):
                     message_widget = child
                     break
-            
+
             self.assertIsNotNone(message_widget)
-            
+
             # 第一阶段：模拟LLM发送reasoning token
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="",
-                reasoning_content="思考内容"
-            ))
+            await self.group_chat.send(
+                "agent_answer", AnswerToken(content="", reasoning_content="思考内容")
+            )
             await pilot.pause()
             reasoning_widget = message_widget.current_widget
             self.assertIsInstance(reasoning_widget, ReasoningContentWidget)
-            
+
             # 第二阶段：模拟LLM切换到normal token
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content="现在开始回答",
-                reasoning_content=""
-            ))
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(content="现在开始回答", reasoning_content=""),
+            )
             await pilot.pause()
             self.assertIsInstance(message_widget.current_widget, NormalContentWidget)
             self.assertNotEqual(message_widget.current_widget, reasoning_widget)
-            
+
             # 第三阶段：模拟LLM切换到toolcall
-            await self.group_chat.send("agent_answer", AnswerToken(
-                content='```json toolcall\n{"name": "test_tool", "arguments": {}}\n```\n',
-                reasoning_content=""
-            ))
+            await self.group_chat.send(
+                "agent_answer",
+                AnswerToken(
+                    content='```json toolcall\n{"name": "test_tool", "arguments": {}}\n```\n',
+                    reasoning_content="",
+                ),
+            )
             await pilot.pause()
             self.assertIsInstance(message_widget.current_widget, ToolCallWidget)
 

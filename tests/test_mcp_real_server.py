@@ -16,6 +16,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         import argparse
+
         self.temp_dir = tempfile.mkdtemp()
         self.group_chat = GroupChat()
         # Register cli_args required by create_agent_from_config
@@ -24,6 +25,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.violation_checker = False
         cli_args.checklist = False
         self.group_chat.register_member("cli_args", cli_args)
+        self.cli_args = cli_args
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -39,6 +41,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
 
     async def test_mcp_real_server_integration(self):
         from pathlib import Path
+
         """Test full integration with real MCP server."""
         project_root = Path(__file__).parent.parent.parent
         server_path = project_root / "linhai" / "tests" / "real_mcp_server.py"
@@ -61,5 +64,15 @@ server_script_path = "{server_path}"
 
         config = load_config(config_path)
         from pathlib import Path
-        agent = await create_agent_from_config(self.group_chat, config, Path("."))
+
+        context = {
+            "group_chat": self.group_chat,
+            "config": config,
+            "config_basedir": Path("."),
+            "llm_name": None,
+            "checklist_path": None,
+            "git_diff_reviewer": self.cli_args.git_diff_reviewer,
+            "violation_checker": self.cli_args.violation_checker,
+        }
+        agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

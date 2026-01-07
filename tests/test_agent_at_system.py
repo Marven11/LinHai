@@ -1,7 +1,7 @@
 """测试Agent的@系统功能。"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 
 from linhai.agent import Agent
 from linhai.group_chat import GroupChat
@@ -18,7 +18,9 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = Mock(return_value=Mock())
 
         self.mock_llm1 = AsyncMock()
+        self.mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
         self.mock_llm2 = AsyncMock()
+        self.mock_llm2.get_name = MagicMock(return_value="qwen")
 
         async def empty_answer_stream(_):
             """返回一个空的答案流。"""
@@ -53,16 +55,13 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
         self.config = {
             "llms": [self.mock_llm1, self.mock_llm2],
-            "llm_names": ["llm1", "llm2"],
+            "llm_names": ["deepseek-reasoning", "qwen"],
             "current_llm_index": 0,
             "compress_threshold": 1000,
         }
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(self.config["llms"], self.config["llm_names"]))
-        
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=self.config["llms"],
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
@@ -71,7 +70,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
     async def testget_current_model_with_at_system_valid(self):
         """测试有效的@系统调用。"""
-        user_message = UserMessage(message="@llm2 你好")
+        user_message = UserMessage(message="@qwen 你好")
 
         await self.agent.handle_user_message(user_message)
 

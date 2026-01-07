@@ -65,10 +65,11 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock()
+        self.mock_llm.get_name = MagicMock(return_value="test-llm")
 
         config = {
             "llms": [self.mock_llm],
-            "llm_names": ["test_llm"],
+            "llm_names": ["test-llm"],
             "current_llm_index": 0,
             "compress_threshold": 800,
         }
@@ -112,11 +113,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             )
         ]
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(config["llms"], config["llm_names"]))
-        
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,

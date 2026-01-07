@@ -50,11 +50,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             )
         ]
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(config["llms"], config["llm_names"]))
-        
+        # 配置mock对象的get_name方法
+        self.mock_llm1.get_name = MagicMock(return_value="primary")
+        self.mock_llm2.get_name = MagicMock(return_value="secondary")
+
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,
@@ -65,11 +66,11 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""
         tool_call = ToolCallMessage(
-        function_name="current_llm",
-        function_arguments={},
-        assert_success=True,
-        with_secret=None,
-    )
+            function_name="current_llm",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+        )
 
         result = await self.tool_manager.process_tool_call(tool_call)
 

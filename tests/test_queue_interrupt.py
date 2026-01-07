@@ -1,7 +1,7 @@
 """测试队列消息不打断agent输出的功能"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 from pathlib import Path
 
 from linhai.agent import Agent
@@ -98,11 +98,11 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
                 else:
                     raise
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(self.config["llms"], self.config["llm_names"]))
-        
+        # 配置mock对象的get_name方法
+        self.mock_llm.get_name = MagicMock(return_value="test_llm")
+
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=self.config["llms"],
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=self.init_messages,

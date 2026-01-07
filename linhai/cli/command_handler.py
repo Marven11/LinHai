@@ -139,6 +139,7 @@ class CommandHandler:
             function_name=parsed_input.command,
             function_arguments={},
             assert_success=False,  # 命令工具调用失败不中断后续流程
+            with_secret=[],
         )
 
         # 通过agent的toolcall_processor执行工具调用，确保完整的生命周期管理

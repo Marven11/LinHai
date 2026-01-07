@@ -58,7 +58,17 @@ default_llm = "test"
     async def _create_agent(self):
         """异步创建Agent。"""
         from pathlib import Path
-        return await create_agent_from_config(self.group_chat, self.config, Path("."), git_diff_reviewer=self.cli_args.git_diff_reviewer, violation_checker=self.cli_args.violation_checker)
+
+        context = {
+            "group_chat": self.group_chat,
+            "config": self.config,
+            "config_basedir": Path("."),
+            "llm_name": None,
+            "checklist_path": None,
+            "git_diff_reviewer": self.cli_args.git_diff_reviewer,
+            "violation_checker": self.cli_args.violation_checker,
+        }
+        return await create_agent_from_config(context)
 
     def test_subagent_manager_creation(self):
         """测试SubAgentManager创建。"""

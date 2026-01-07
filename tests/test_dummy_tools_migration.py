@@ -40,12 +40,13 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
@@ -73,12 +74,13 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
@@ -106,12 +108,13 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
@@ -143,12 +146,13 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=[],
@@ -179,6 +183,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         init_messages: list[Message] = [
             SystemMessage(
@@ -190,9 +195,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,
@@ -223,6 +228,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 60000,
         }
+        mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
         init_messages: list[Message] = [
             SystemMessage(
@@ -234,9 +240,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         # 将llms和llm_names合并为llms_with_names
         llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
-        
+
         Agent(
-            llms_with_names=llms_with_names,
+            llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,

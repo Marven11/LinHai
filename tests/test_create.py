@@ -1,5 +1,6 @@
 """测试Agent创建模块"""
 
+import asyncio
 import unittest
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from linhai.agent.create import (
     _create_tool_manager,
     _create_init_messages,
 )
+from linhai.agent.create import create_agent_build_context
 from linhai.group_chat import GroupChat
 from linhai.config import AgentConfig
 
@@ -72,7 +74,16 @@ class TestCreateAgent(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(create_agent_from_config(self.group_chat, mock_config, Path("."), git_diff_reviewer=False, violation_checker=False))
+        context = create_agent_build_context(
+            group_chat=self.group_chat,
+            config=mock_config,
+            config_basedir=Path("."),
+            llm_name="test_llm",
+            git_diff_reviewer=False,
+            violation_checker=False,
+            checklist_path=None,
+        )
+        result = asyncio.run(create_agent_from_config(context))
 
         mock_llm_instances.assert_called_once()
         mock_tool_manager.assert_called_once()
@@ -138,7 +149,16 @@ class TestCreateAgent(unittest.TestCase):
 
             import asyncio
 
-            asyncio.run(create_agent_from_config(self.group_chat, mock_config, Path("."), "llm2", git_diff_reviewer=False, violation_checker=False))
+            context = create_agent_build_context(
+                group_chat=self.group_chat,
+                config=mock_config,
+                config_basedir=Path("."),
+                llm_name="llm1",
+                git_diff_reviewer=False,
+                violation_checker=False,
+                checklist_path=None,
+            )
+            asyncio.run(create_agent_from_config(context))
 
             # 不再检查_create_agent_context调用，因为函数已不存在
 
@@ -153,30 +173,33 @@ class TestCreateLLMInstances(unittest.TestCase):
                 api_key="test_key",
                 base_url="http://test.com",
                 model="test-model",
-                model_dump=Mock(
-                    return_value={
-                        "client_options": {},
-                        "completion_options": {"temperature": 0.7},
-                        "token_limit": 1000,
-                        "compatibility": "openai",
-                    }
-                ),
+                client_options={},
+                completion_options={"temperature": 0.7},
+                token_limit=1000,
+                compatibility="openai",
+                name="test-llm",
             )
         ]
 
         import asyncio
 
         mock_group_chat = Mock()
-        result = asyncio.run(_create_llm_instances(llm_configs, mock_group_chat))
+        context = {
+            "config": Mock(llm=llm_configs),
+            "group_chat": mock_group_chat,
+            "llm_name": "test-llm",
+            "config_basedir": Path("."),
+            "git_diff_reviewer": False,
+            "violation_checker": False,
+            "checklist_path": None,
+        }
+        result = asyncio.run(_create_llm_instances(context))
 
         self.assertEqual(len(result), 1)
         llm = result[0]
         self.assertEqual(llm.model, "test-model")  # type: ignore
         self.assertEqual(llm.token_limit, 1000)  # type: ignore
         self.assertEqual(llm.compatibility, "openai")  # type: ignore
-
-
-
 
     def test_create_agent_context_default(self):
         """测试创建默认Agent上下文（函数已删除，测试跳过）"""
@@ -219,14 +242,24 @@ class TestCreateToolManager(unittest.TestCase):
         """测试创建ToolManager"""
         group_chat = Mock()
         config = Mock()
-        mcp_config = []
-        mcp_basedir = Path(".")
+        config.secret.config_path = ""
+        config.agent = Mock(mcp=[])
+        config.tools = config
 
-        import asyncio
+        context = {
+            "group_chat": group_chat,
+            "config": config,
+            "config_basedir": Path("."),
+            "llm_name": "test-llm",
+            "git_diff_reviewer": False,
+            "violation_checker": False,
+            "checklist_path": None,
+            "tools_config": config,
+        }
 
-        result = asyncio.run(
-            _create_tool_manager(group_chat, config, mcp_config, mcp_basedir)
-        )
+        _create_tool_manager(context)
+
+        result = asyncio.run(_create_tool_manager(context))
 
         self.assertIsNotNone(result)
 
@@ -250,9 +283,16 @@ class TestCreateInitMessages(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(
-            _create_init_messages(group_chat, memory_file_path)
-        )
+        context = {
+            "group_chat": group_chat,
+            "config": Mock(memory=Mock(file_path=memory_file_path)),
+            "config_basedir": Path("."),
+            "llm_name": "test-llm",
+            "git_diff_reviewer": False,
+            "violation_checker": False,
+            "checklist_path": None,
+        }
+        result = asyncio.run(_create_init_messages(context))
 
         self.assertGreater(len(result), 0)
         mock_system_message.assert_called_once()

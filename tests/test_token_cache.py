@@ -19,6 +19,7 @@ class TestTokenCache(unittest.TestCase):
             model="test-model",
             openai_config={},
             chat_completion_kwargs={},
+            name="test-llm",
         )
 
     def test_calculate_cache_estimation(self):

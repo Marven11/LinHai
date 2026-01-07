@@ -20,6 +20,8 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
+        self.mock_llm.get_name = MagicMock(return_value="test_llm")
+        self.mock_llm.get_token_limit = MagicMock(return_value=None)
 
         config = {
             "llms": [self.mock_llm],
@@ -47,11 +49,8 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             )
         ]
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(config["llms"], config["llm_names"]))
-        
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=init_messages,
@@ -142,7 +141,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         # 现在SystemMessage没有template属性，但可以通过to_llm_message()获取内容
         system_message = system_messages[0].to_llm_message()
         self.assertIn("content", system_message)
-        system_prompt = system_message.get('content')
+        system_prompt = system_message.get("content")
         self.assertIsInstance(system_prompt, str)
         self.assertIsNotNone(system_prompt)
         self.assertGreater(len(system_prompt or ""), 0)

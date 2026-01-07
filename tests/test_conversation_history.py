@@ -23,8 +23,10 @@ class TestConversationHistory(unittest.TestCase):
             Path(self.temp_dir) / ".local" / "share" / "linhai" / "conversations"
         )
 
+        mock_llm = Mock()
+        mock_llm.get_name = lambda: "test_llm"
         self.config = {
-            "llms": [Mock()],
+            "llms": [mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "compress_threshold": 2000,
@@ -62,11 +64,10 @@ class TestConversationHistory(unittest.TestCase):
             UserMessage("测试用户消息"),
         ]
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(self.config["llms"], self.config["llm_names"]))
-        
+        # 将llms和llm_names合并为llms
+
         self.agent = Agent(
-            llms_with_names=llms_with_names,
+            llms=self.config["llms"],
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             init_messages=self.init_messages,

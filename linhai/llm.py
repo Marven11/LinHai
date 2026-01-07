@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """LLM模块，定义语言模型相关的消息类和协议。"""
 from typing import (
     Sequence,
@@ -70,7 +71,6 @@ class SystemMessage:
         self.rules_items = RULES_ITEMS.copy()
         self.examples_items = EXAMPLES_ITEMS.copy()
 
-
     def _build_prompt(self) -> str:
         """根据结构化常量构建完整的系统提示语。"""
         sections = []
@@ -133,9 +133,7 @@ class SystemMessage:
         Args:
             title: 要删除的章节标题
         """
-        self.rules_items = [
-            (k, v) for (k, v) in self.rules_items if k != title
-        ]
+        self.rules_items = [(k, v) for (k, v) in self.rules_items if k != title]
 
     def add_example(self, title: str, content: str) -> None:
         """添加一个新的example章节。
@@ -154,9 +152,7 @@ class SystemMessage:
         Args:
             title: 要删除的章节标题
         """
-        self.examples_items = [
-            (k, v) for (k, v) in self.examples_items if k != title
-        ]
+        self.examples_items = [(k, v) for (k, v) in self.examples_items if k != title]
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
@@ -423,6 +419,14 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
+    def get_name(self) -> str:
+        """获取当前LLM的名称。
+
+        返回:
+            str: LLM的名称
+        """
+        raise NotImplementedError()
+
 
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
@@ -602,6 +606,7 @@ class OpenAi:
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
+        name: str,
     ):
         """初始化OpenAI语言模型。
 
@@ -615,6 +620,7 @@ class OpenAi:
             tools: 可用工具列表
             token_limit: token限制数量
             compatibility: API兼容性模式，支持minimax、kimi等
+            name: LLM的名称
         """
         self.group_chat = group_chat
         self.model = model
@@ -625,10 +631,9 @@ class OpenAi:
         self.chat_completion_kwargs = chat_completion_kwargs
         self.token_limit = token_limit
         self.compatibility = compatibility
+        self.name = name
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
-
-
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -637,6 +642,14 @@ class OpenAi:
             int | None: token限制数量，如果没有配置则返回None
         """
         return self.token_limit
+
+    def get_name(self) -> str:
+        """获取当前LLM的名称。
+
+        返回:
+            str: LLM的名称
+        """
+        return self.name
 
     def _estimate_cached_input_tokens(self, current_history: Sequence[Message]) -> int:
         """估算缓存的输入token数量。
@@ -726,7 +739,6 @@ class OpenAi:
             try:
                 stream = await self.openai.chat.completions.create(**params)
 
-                
                 answer = OpenAiAnswer(
                     stream,
                     group_chat=self.group_chat,

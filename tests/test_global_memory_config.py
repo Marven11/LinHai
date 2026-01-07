@@ -27,10 +27,11 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         self.group_chat = GroupChat()
-        
+
         # 为SystemMessage初始化提供mock的tool_manager
         from linhai.tool.main import ToolManager
         from unittest.mock import Mock
+
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         self.group_chat.register_member("tool_manager", mock_tool_manager)
@@ -49,12 +50,26 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            init_messages = loop.run_until_complete(
-                _create_init_messages(
-                    group_chat=self.group_chat,
-                    memory_file_path=memory_file,
-                )
-            )
+            # 创建模拟的config对象
+            from unittest.mock import Mock
+
+            mock_config = Mock()
+            mock_memory = Mock()
+            mock_memory.file_path = str(
+                memory_file.relative_to(memory_file.parent)
+            )  # 相对路径
+            mock_config.memory = mock_memory
+
+            context = {
+                "group_chat": self.group_chat,
+                "config": mock_config,
+                "config_basedir": memory_file.parent,
+                "llm_name": None,
+                "checklist_path": None,
+                "git_diff_reviewer": False,
+                "violation_checker": False,
+            }
+            init_messages = loop.run_until_complete(_create_init_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -81,12 +96,24 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            init_messages = loop.run_until_complete(
-                _create_init_messages(
-                    group_chat=self.group_chat,
-                    memory_file_path=Path("test_relative_memory.md"),
-                )
-            )
+            # 创建模拟的config对象
+            from unittest.mock import Mock
+
+            mock_config = Mock()
+            mock_memory = Mock()
+            mock_memory.file_path = "test_relative_memory.md"
+            mock_config.memory = mock_memory
+
+            context = {
+                "group_chat": self.group_chat,
+                "config": mock_config,
+                "config_basedir": Path(".").absolute(),
+                "llm_name": None,
+                "checklist_path": None,
+                "git_diff_reviewer": False,
+                "violation_checker": False,
+            }
+            init_messages = loop.run_until_complete(_create_init_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -116,12 +143,22 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            init_messages = loop.run_until_complete(
-                _create_init_messages(
-                    group_chat=self.group_chat,
-                    memory_file_path=None,
-                )
-            )
+            # 创建模拟的config对象，memory为None
+            from unittest.mock import Mock
+
+            mock_config = Mock()
+            mock_config.memory = None
+
+            context = {
+                "group_chat": self.group_chat,
+                "config": mock_config,
+                "config_basedir": None,
+                "llm_name": None,
+                "checklist_path": None,
+                "git_diff_reviewer": False,
+                "violation_checker": False,
+            }
+            init_messages = loop.run_until_complete(_create_init_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -155,12 +192,22 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             asyncio.set_event_loop(loop)
 
             try:
-                init_messages = loop.run_until_complete(
-                    _create_init_messages(
-                        group_chat=self.group_chat,
-                        memory_file_path=None,
-                    )
-                )
+                # 创建模拟的config对象
+                from unittest.mock import Mock
+
+                mock_config = Mock()
+                mock_config.memory = None
+
+                context = {
+                    "group_chat": self.group_chat,
+                    "config": mock_config,
+                    "config_basedir": Path(".").absolute(),
+                    "llm_name": None,
+                    "checklist_path": None,
+                    "git_diff_reviewer": False,
+                    "violation_checker": False,
+                }
+                init_messages = loop.run_until_complete(_create_init_messages(context))
 
                 memory_messages = [
                     msg for msg in init_messages if isinstance(msg, GlobalMemory)

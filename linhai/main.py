@@ -24,25 +24,11 @@ def run_tests():
     return result.wasSuccessful()
 
 
-async def _create_agent_from_config(
-    group_chat: GroupChat,
-    config,
-    config_basedir: Path,
-    llm_name: str | None = None,
-    checklist_path: Path | None = None,
-    git_diff_reviewer: bool = False,
-    violation_checker: bool = False,
-):
-    from linhai.agent.create import create_agent_from_config
-
-    return await create_agent_from_config(
-        group_chat, config, config_basedir, llm_name, checklist_path=checklist_path, git_diff_reviewer=git_diff_reviewer, violation_checker=violation_checker
-    )
-
-
 async def run(args, init_messages: list[str] | None):
     """运行LinHai应用"""
     from linhai.config import load_config
+    from linhai.agent.create import create_agent_from_config
+    from linhai.agent.create import create_agent_build_context
 
     group_chat = GroupChat()
     group_chat.register_member("cli_args", args)
@@ -50,15 +36,16 @@ async def run(args, init_messages: list[str] | None):
     config_path = Path(args.config).expanduser()
     config = load_config(config_path)
 
-    _agent = await _create_agent_from_config(
-        group_chat,
-        config,
+    context = create_agent_build_context(
+        group_chat=group_chat,
+        config=config,
         config_basedir=config_path.parent,
-        llm_name=args.llm,
-        checklist_path=args.checklist,
         git_diff_reviewer=args.git_diff_reviewer,
         violation_checker=args.violation_checker,
+        llm_name=args.llm,
+        checklist_path=args.checklist,
     )
+    _agent = await create_agent_from_config(context)
 
     app = CLIApp(
         group_chat=group_chat,

@@ -34,15 +34,21 @@ class Agent:
 
     def __init__(
         self,
-        llms_with_names: list[tuple[LanguageModel, str]],
+        llms: list[LanguageModel],
         compress_threshold: int | float,
         group_chat: GroupChat,
         init_messages: Sequence[Message],
         llm_name: str | None = None,
     ):
-        self.llms = [item[0] for item in llms_with_names]
-        self.llm_names = [item[1] for item in llms_with_names]
-        
+        self.llms = llms
+        self.llm_names = []
+        for llm in llms:
+            name = llm.get_name()
+            if not isinstance(name, str):
+                # 对于测试中的Mock对象，使用默认名称
+                name = str(name) if name is not None else "unknown-llm"
+            self.llm_names.append(name)
+
         # 根据llm_name计算当前LLM索引
         if llm_name is None:
             self.current_llm_index = 0
@@ -52,7 +58,7 @@ class Agent:
             raise ValueError(
                 f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
             )
-        
+
         self.compress_threshold = compress_threshold
         self.group_chat = group_chat
 
@@ -230,9 +236,7 @@ class Agent:
         if parsed_input.switch_model:
             llm_name = parsed_input.switch_model
             if llm_name in self.llm_names:
-                self.current_llm_index = self.llm_names.index(
-                    llm_name
-                )
+                self.current_llm_index = self.llm_names.index(llm_name)
                 self.message_processor.add_new_message(
                     RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
                 )
@@ -368,7 +372,7 @@ class Agent:
                     function_name=call["name"],
                     function_arguments=call["arguments"],
                     assert_success=assert_success,
-                    with_secret=with_secret
+                    with_secret=with_secret,
                 )
                 await self.toolcall_processor.call_tool(tool_call)
 
