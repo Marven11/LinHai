@@ -29,6 +29,21 @@
     - toolcall message - 可能有多个
   - 同时我们需要在解析时为每一个message生成uuid以方便定位
   - 参考streamjson和linhai/cli/token_parser.py
+- [ ] 改进minimax兼容性
+  - minimax在使用stream=True时不会返回usage信息，这导致minimax不能兼容上下文管理功能
+  - 需要在使用minimax（compatibility=minimax）时使用完全不同的调用API的逻辑
+    - 传入stream=False
+    - 假装我们在流式获取Token
+    - 在拿到完整的回答后发送两个"Token"
+      - 一个token包含所有reasoning content, 且content设置为None
+      - 另一个token包含所有content，且reasoning content设置为None
+      - 这之后提取完整回答的usage并单独发送
+    - 也就是说我们伪造这样的“流式Token”
+      - LLM生成了一个超长的token，包含所有思考内容
+      - 然后又生成了一个超长的token，包含所有正常内容
+    - 如果这个方案不行则继续切分这两个“超大Token”，按照行切分
+    - 必须添加对应的函数并在函数注释中说明这一点
+  - 在使用minimax时提示用户“minimax的api在开启stream时不返回usage，导致兼容问题，已关闭stream”
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
