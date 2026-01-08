@@ -105,15 +105,12 @@ def read_file(
     except OSError as exc:
         return ToolErrorMessage(f"发生错误: {exc!r}")
 
-    if show_line_numbers:
 
-        lines = content.splitlines()
-        numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
-        formatted_content = "\n".join(numbered_lines)
-    else:
-        formatted_content = content
-
-    return FileContentMessage(filepath=file_path.as_posix(), content=formatted_content)
+    return FileContentMessage(
+        filepath=file_path.as_posix(),
+        content=content,
+        show_line_numbers=show_line_numbers,
+    )
 
 
 def write_file(

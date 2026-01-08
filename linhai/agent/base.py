@@ -1,11 +1,9 @@
 """Agent基础模块，包含运行时消息和全局记忆类。"""
 
 import hashlib
-import re
 import json
 from pathlib import Path
 from reprlib import Repr
-from typing import NotRequired, TypedDict
 
 import linhai
 from linhai.llm import (
@@ -260,27 +258,39 @@ class PathMemory:
         return cls(filepath=Path(data["filepath"]))
 
 
-
-
 class FileContentMessage(Message):
     """文件内容消息，专门用于read_file工具返回的文件内容。"""
 
-    def __init__(self, filepath: str, content: str):
+    def __init__(self, filepath: str, content: str, show_line_numbers: bool):
         self.filepath = filepath
         self.content = content
+        self.show_line_numbers = show_line_numbers
         self._content_hash = hashlib.md5(content.encode()).hexdigest()
         self._resolved_path = Path(filepath).resolve()
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
+        if self.show_line_numbers:
+
+            lines = self.content.splitlines()
+            numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
+            formatted_content = "\n".join(numbered_lines)
+        else:
+            formatted_content = self.content
+
         return {
             "role": "user",
-            "content": f"<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>><<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{self.content}<<content>>\n<<file_content>>",
+            "content": "<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>>"
+            f"<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{formatted_content}<<content>>\n<<file_content>>",
         }
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
-        data = {"filepath": self.filepath, "content": self.content}
+        data = {
+            "filepath": self.filepath,
+            "content": self.content,
+            "show_line_numbers": self.show_line_numbers,
+        }
         return json.dumps(data)
 
     @classmethod
@@ -289,7 +299,11 @@ class FileContentMessage(Message):
     ):  # pylint: disable=unused-argument
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
-        return cls(filepath=data["filepath"], content=data["content"])
+        return cls(
+            filepath=data["filepath"],
+            content=data["content"],
+            show_line_numbers=data["show_line_numbers"],
+        )
 
     def __eq__(self, other: object) -> bool:
         """比较两个FileContentMessage是否相同，忽略行号差异。
@@ -304,25 +318,11 @@ class FileContentMessage(Message):
             return False
         if self._resolved_path != other._resolved_path:
             return False
-        if self.content == other.content:
-            return True
-        return self._normalize_content(self.content) == self._normalize_content(
-            other.content
-        )
-
-    @staticmethod
-    def _normalize_content(content: str) -> str:
-        """标准化文件内容，移除行号前缀。
-
-        匹配read_file工具添加的行号格式：行首的数字后跟冒号和空格。
-        例如：'1: content' -> 'content'
-        """
-        return re.sub(r"^\d+: ", "", content, flags=re.MULTILINE)
+        return self.content == other.content
 
     def __hash__(self) -> int:
         """哈希支持，用于set比较。基于标准化内容（忽略行号）计算哈希。"""
-        normalized_content = self._normalize_content(self.content)
-        normalized_hash = hash(normalized_content)
+        normalized_hash = hash(self.content)
         return hash((self._resolved_path, normalized_hash))
 
 

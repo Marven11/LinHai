@@ -850,7 +850,13 @@ class UnnecessarySedReadPlugin(Plugin):
                 "如果需要查看修改过的文件，使用read_file重新读取！"
             )
         else:
-            # 只警告，不拦截
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="模型多次小块读取代码文件，已警告",
+                ),
+            )
             return RuntimeMessage(
                 f"警告：检测到不必要的sed读取（第{self.warning_count}次警告）。建议直接使用read_file读取整个文件。"
             )
