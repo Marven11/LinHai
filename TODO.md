@@ -2,22 +2,15 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 重构DuplicateFileReadPlugin, UnnecessarySedReadPlugin和UnnecessaryRunCommandPlugin的逻辑
-  - 这是一个较为大型的重构，先输出markdown规划再修改
-  - DuplicateFileReadPlugin: 仅检查read_file逻辑，完全删除检查read_file_with_sed的逻辑
-  - UnnecessarySedReadPlugin: 在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数
-  - UnnecessaryRunCommandPlugin: 在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数
-    - 不区分是否是sed
-    - 跳过用pipe连接起来的命令
-    - 删除判断参数是否是文件路径的逻辑，仅通过检测“参数是否是存在的文件路径”判断参数是否是文件路径
-  - 抽象检测“过小文件”和“已读取文件”的逻辑
-    - “过小文件”: 字符数量少于15000且行数少于800行
-    - “已读取文件”: 最新且和硬盘文件内容相同
-      - 检查messages列表中的FileContentMessage，提取文件路径相同的FileContentMessage
-      - 仅检查这些message中最新（列表相对位置更后）的message，其需要满足文件内容和硬盘文件内容相同
-      - 检查这个unittest是否通过
-        - 有一系列文件路径相同message，历史message和硬盘文件内容相同，最新message和硬盘文件内容不同 -> 不拦截
-  - prompt: 基本不变
+- [ ] 我们之前简化了prompt.py，删除了一些条目，但是没有同步修改unittest，需要修复
+  - 先确认unittest全部成功再开始下一个任务
+- [ ] 重构linhai/agent/plugin.py，仅使用bashlex解析命令，并简化其中遍历shell ast树的逻辑
+  - 写一个Traveller类，遍历给定的ast树并记录所有不在pipe中的命令
+    - 提取命令为`list[str]`
+  - 仅通过此方法判断参数是否是文件路径：直接尝试读取参数为文件路径，判断对应文件是否存在
+    - 提取出所有文件路径为list
+  - 判断文件路径是否有“已读取文件”
+  - 重构不应该破坏当前的unittest
 
 # 暂时搁置
 
