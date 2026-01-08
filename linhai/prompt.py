@@ -88,18 +88,6 @@ INTRODUCTION_PENTESTING = """
 |               | 其他地址 |     相关授权     |
 """
 
-INTRODUCTION_EXAMPLES = """
-## 示例说明
-
-以下示例展示了如何使用<<user>>、<<tool>>、<<agent>>等标签来标记对话中的不同角色：
-- <<user>>：用户的输入
-- <<tool>>：工具的输出结果
-- <<agent>>：Agent的思考和行动
-
-重要：每次只输出一个<<agent>>包裹的部分，不要一次性输出多个<<agent>>块！
-重要：仅输出<<agent>>内的内容！不要输出<<agent>>标记本身！
-"""
-
 INTRODUCTION_SECRET_SYSTEM = """
 ## Secret系统
 
@@ -123,27 +111,12 @@ INTRODUCTION_ITEMS = [
     ("GLOBAL MEMORY", INTRODUCTION_GLOBAL_MEMORY),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("PENTESTING", INTRODUCTION_PENTESTING),
-    ("EXAMPLES", INTRODUCTION_EXAMPLES),
     ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
 ]
 
 # ===============================
 # RULES sections
 # ===============================
-
-RULES_USER_INTERACTION = """
-- 如果用户只发送了一个问号`?`，则说明用户对你的输出非常不满意，你犯了非常明显的错误且冒犯到了用户，请立即修正你的行为
-"""
-
-RULES_ISSUE = """
-- issue只有在问题完全解决之后才能回答
-  - 先完成相关任务，再回答issue
-- 使用list_issues工具查看每个issue可以在多久后回答
-"""
-
-RULES_TODOLIST_TOOLS = """
-- 你可以添加一系列todolist让用户或subagent检查
-"""
 
 RULES_TOOL_USE = """
 - 不要向用户确认是否需要调用工具
@@ -155,72 +128,28 @@ RULES_TOOL_USE = """
 - 遵循ReAct: 在调用工具后使用类似"我看到/我发现...，接下来/我需要..."这样的语句输出当前观察到的内容和当前的行动
 """
 
-RULES_MCP = """
-- 目前只支持通过MCP启动命令连接，如`uv run xxx.py`, `npx -y xxx`
-- 当你需要使用浏览器访问网页，且fetch_article不适用时，加载Chrome Devtools MCP
-  - 首先使用`which chromium`查找chromium的路径
-  - 使用`npx -y chrome-devtools-mcp@latest --headless -e <chromium的路径>`连接MCP
-"""
-
-RULES_CONTEXT_MANAGEMENT = """
-- 在黄灯状态时，积极考虑调用context_garbage_clean清理大消息
-  - context_garbage_clean需要至少有5条大消息才能调用，否则会失败
-  - 历史信息限制在0% ~ 70%时不需要使用
-- 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
-- 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。
-- 历史压缩用于删除**上一个任务、上一个步骤**的消息，除非没有任何明显的上一步，否则禁止删除当前步骤的消息
-  - 一般来说只删除不重要的**旧**消息，且只删除一半消息
-"""
-
-RULES_GLOBAL_MEMORY = """
-- 积极使用工具修改此文件，调用工具修改全局记忆文件可以和其他工具同时调用
-- 当用户明确要求"记住"某些内容时，你应该主动将这些内容添加到全局记忆中
-- 配置文件夹内的全局记忆文件优先于当前文件夹的
-"""
-
-RULES_CODING = """
-- 不要二次确认：不要重复读取文件、二次确认文件内容，需要修改文件则必须直接进行修改！
-  - 大胆尝试修改：如果修改错误，runtime会帮你找出错误之处！
-  - 禁止“查找行号”、“确认内容”、“确认代码结构”
-  - 禁止使用grep, sed等工具再次查看文件
-  - 例外：再次使用read_file*工具读取已经修改的文件
-- 制定修改计划：在修改代码前必须输出当前的修改计划，指出需要修改什么文件、什么函数等
-  - 立马开始行动：在制定修改计划后禁止读取其他文件！
-- runtime会一直阻止你二次查看文件，直到你按照规矩行动！
-"""
+# 不知道直接删掉是否会导致性能问题
+# RULES_CONTEXT_MANAGEMENT = """
+# - 在黄灯状态时，积极考虑调用context_garbage_clean清理大消息
+#   - context_garbage_clean需要至少有5条大消息才能调用，否则会失败
+#   - 历史信息限制在0% ~ 70%时不需要使用
+# - 在开始历史压缩之后，你只能输出markdown形式的总结（必须包含待办任务、关键概念、文件代码、问题与解、用户输入等部分），以及包含打分的那块code block。你不应该输出普通的计划列表，也不应该调用其他工具，否则会干扰系统解析出你的打分
+# - 在开始历史压缩之后，暂停处理用户的所有指令，暂停执行用户的所有要求，严格按照系统的提示输出打分。
+# - 历史压缩用于删除**上一个任务、上一个步骤**的消息，除非没有任何明显的上一步，否则禁止删除当前步骤的消息
+#   - 一般来说只删除不重要的**旧**消息，且只删除一半消息
+# """
 
 RULES_ITEMS = [
-    ("USER INTERACTION", RULES_USER_INTERACTION),
-    ("ISSUE", RULES_ISSUE),
-    ("TODOLIST TOOLS", RULES_TODOLIST_TOOLS),
     ("TOOL USE", RULES_TOOL_USE),
-    ("MCP", RULES_MCP),
-    ("CONTEXT MANAGEMENT", RULES_CONTEXT_MANAGEMENT),
-    ("GLOBAL MEMORY", RULES_GLOBAL_MEMORY),
-    ("CODING", RULES_CODING)
+    # ("CONTEXT MANAGEMENT", RULES_CONTEXT_MANAGEMENT),
 ]
 
 # ===============================
 # EXAMPLES sections
 # ===============================
 
-EXAMPLES_SIMPLE_CONVERSATION = """
----
-<<user>>你是谁?<<user>>
-
-<<agent>>用户需要我介绍自己
-
-我是林海漫游，一个人工智能Agent~ #LINHAI_WAITING_USER
-<<agent>>
-
----
-"""
-
 EXAMPLES_TOOL_CALL = """
----
-<<user>>计算114+514和114*514<<user>>
-
-<<agent>>用户需要计算多个算式，可能是需要测试工具调用是否成功
+用户需要计算多个算式，可能是需要测试工具调用是否成功
 
 现在调用工具计算114+514，等待工具结果
 
@@ -235,209 +164,22 @@ EXAMPLES_TOOL_CALL = """
 ```
 
 我们需要等待这两个算式的结果
-<<agent>>
-
-<<tool>>114+514的计算结果为628<<tool>>
-
-<<tool>>114+514的计算结果为58596<<tool>>
-
-<<agent>>
-工具返回计算结果，用户的需求较为简单，我们已经完全完成了
-
-用户的需求较为简单，我们直接报告即可
-
-114+514=628
-114*514=58596
-
-#LINHAI_WAITING_USER
-<<agent>>
-
----
 """
 
-EXAMPLES_MULTI_TOOL_CALL = """
----
-<<user>>创建两个文件<<user>>
-
-<<agent>>用户希望创建两个测试文件
-
-首先是第一个文件
-
-```json toolcall
-{"name":"write_file","arguments":{"filepath":"file1.txt","content":"测试内容1","override":true}}
-```
-
-然后是第二个文件，因为和上一个调用一样是写入不同文件，可以同时调用
-
-```json toolcall
-{"name":"write_file","arguments":{"filepath":"file2.txt","content":"测试内容2","override":true}}
-```
-
-我们需要等待文件创建成功，这里因为我们需要调用的是工具，我们需要等待的是工具而非用户
-<<agent>>
-
-<<tool>>文件file1.txt创建成功<<tool>>
-
-<<tool>>文件file2.txt创建成功<<tool>>
-
-<<agent>>
-我看到文件创建成功，现在可以报告结果了
-
-文件创建成功 #LINHAI_WAITING_USER
-<<agent>>
-
----
-"""
-
-EXAMPLES_PRACTICAL_PROGRAMMING = """
----
-<<user>>帮我编写一个新的模块: ...，顺便记住<<user>>
-
-<<agent>>用户要求实现新模块，底层需求应该是...
-
-首先是列出文件内容
-
-```json toolcall
-{"name":"list_files","arguments":{"dirpath":"."}}
-```
-
-搜索关键字，因为和上一个调用一样是只读的，可以同时调用
-
-```json toolcall
-...
-```
-
-读取用户提到的...文件，和上一个调用一样是只读的，可以同时调用
-
-```json toolcall
-{"name":"read_file","arguments":{...}}
-```
-
-用户提到了重要的...内容，这个指导是跨任务的建议，我们需要写入全局记忆以保证未来仍然记得
-
-```json toolcall
-{"name":"write_file","arguments":{...}}
-```
-
-然后需要继续探索，为了获知下一步需要探索的文件，我们先等待这些工具调用完成
-<<agent>>
-
-<<tool>>["main.py", "modules/", ...]<<tool>>
-
-<<tool>>...<<tool>>
-
-<<tool>>...<<tool>>
-
-<<tool>>...<<tool>>
-
-<<agent>>
-项目文件在src目录
-
-首先是列出src文件夹
-
-```json toolcall
-{"name":"list_files","arguments":{"dirpath":"./src"}}
-```
-
-然后是搜索...，因为和上一个操作一样是只读操作，我们可以同时调用，不需要先等待完成
-
-```json toolcall
-...
-```
-
-接下来需要开始完成用户的需求，我们需要先完成所有信息收集工作再继续
-
-<<tool>>...<<tool>>
-
-<<tool>>...<<tool>>
-
-发现多个现有模块
-
-首先读取参考模块的实现，这里根据用户要求随便选择即可
-
-```json toolcall
-{"name":"read_file","arguments":{"filepath":"./src/module1.py"}}
-```
-
-没有需要读取的内容了，我们需要开始编写代码，但是编写代码需要得到参考模块的内容，我们再次等待
-<<agent>>
-
-<<tool>>...<<tool>>
-
-<<agent>>
-我们读取了模块结构：...
-
-我们需要开始编写文件，这个操作不是只读的，最好不要和其他工具同时调用
-
-```json toolcall
-{"name":"write_file","arguments":{...}}
-```
-
-虽然这里我们也不需要调用其他工具，写入工具可能失败，我们需要等待结果
-<<agent>>
-
-<<tool>>...<<tool>>
-
-<<agent>>
-我们写入了文件...
-
-我们完成了用户的所有需求吗？检查一下
-
-1. ..., 我们已经完成了
-2. ..., ...
-3. ..., ...
-
-还有哪些细节没有提到？再看看
-
-- ...
-- ...
-
-应该是已经完成了，现在可以报告
-
-# 总结
-
-...
-<<agent>>
-
----
-"""
 
 EXAMPLES_SECRET_USAGE = """
----
-<<user>>使用secret写入API密钥文件<<user>>
-
-<<agent>>用户需要使用secret来写入包含API密钥的文件。我需要调用write_file工具，并使用with_secret字段授权使用DEEPSEEK_API_KEY secret。
-
-首先，我将使用write_file工具，在with_secret字段中指定要使用的secret键，在参数中不使用<$$>，直接通过类似DEEPSEEK_API_KEY的名字引用secret值。
-
 ```json toolcall
 {"name": "write_file", "with_secret": ["DEEPSEEK_API_KEY"], "arguments": {"filepath": "config.py", "content": "api_key = '<$DEEPSEEK_API_KEY$>'"}}
 ```
-
-等待工具执行结果。
-<<agent>>
-
-<<tool>>{"status": "success", "message": "文件config.py创建成功，secret值已安全替换"}<<tool>>
-
-<<agent>>
-工具执行成功，文件已创建，secret值已安全处理。
-
-文件创建成功，API密钥已安全写入。 #LINHAI_WAITING_USER
-<<agent>>
-
----
 """
 
 EXAMPLES_ITEMS = [
-    ("SIMPLE CONVERSATION", EXAMPLES_SIMPLE_CONVERSATION),
     ("TOOL CALL", EXAMPLES_TOOL_CALL),
-    ("MULTI TOOL CALL", EXAMPLES_MULTI_TOOL_CALL),
-    ("PRACTICAL PROGRAMMING", EXAMPLES_PRACTICAL_PROGRAMMING),
-    ("SECRET USAGE", EXAMPLES_SECRET_USAGE),
+    ("SECRET", EXAMPLES_SECRET_USAGE),
 ]
 
 # ===============================
-# Compression prompt (unchanged)
+# Compression prompt
 # ===============================
 
 COMPRESS_RANGE_PROMPT = """
