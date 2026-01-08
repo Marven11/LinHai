@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 重构DuplicateFileReadPlugin, UnnecessarySedReadPlugin和UnnecessaryRunCommandPlugin的逻辑
+- [x] 重构DuplicateFileReadPlugin, UnnecessarySedReadPlugin和UnnecessaryRunCommandPlugin的逻辑
   - 这是一个较为大型的重构，先输出markdown规划再修改
   - DuplicateFileReadPlugin: 仅检查read_file逻辑，完全删除检查read_file_with_sed的逻辑
   - UnnecessarySedReadPlugin: 在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数

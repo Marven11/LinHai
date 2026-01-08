@@ -584,7 +584,7 @@ class DuplicateFileReadPlugin(Plugin):
     """拦截重复文件读取以优化代理行为。
 
     重复读取相同文件内容浪费token并减慢任务进度。此插件通过检查已有FileContentMessage来检测重复。
-    对于read_file_with_sed，即使sed表达式不同，也视为重复读取，因为代理已拥有完整文件内容，应直接修改而非再次读取。
+    只检查read_file工具，不检查read_file_with_sed。
     """
 
     def register(self, lifecycle):
@@ -610,55 +610,15 @@ class DuplicateFileReadPlugin(Plugin):
             return None
 
         tool_name = tool_call.function_name
-        if tool_name not in ["read_file", "read_file_with_sed"]:
+        if tool_name != "read_file":
             return None
 
         filepath = tool_call.function_arguments.get("filepath")
         if not filepath:
             return None
 
-        if tool_name == "read_file_with_sed":
-            return await self._handle_read_file_with_sed(agent, filepath, tool_result)
-
-        if tool_name == "read_file" and isinstance(tool_result, FileContentMessage):
+        if isinstance(tool_result, FileContentMessage):
             return await self._handle_read_file(agent, filepath, tool_result)
-
-        return None
-
-    async def _handle_read_file_with_sed(
-        self, agent: "Agent", filepath: str, tool_result: Any
-    ) -> Optional[RuntimeMessage]:
-        """处理read_file_with_sed工具的重复读取检查。"""
-        try:
-            absolute_filepath = str(Path(filepath).resolve())
-        except (OSError, ValueError):
-            return None
-
-        recent_file_messages = [
-            message
-            for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage)
-            and str(Path(message.filepath).resolve()) == absolute_filepath
-        ]
-
-        if recent_file_messages:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content="模型使用read_file_with_sed读取已读取文件，已阻止",
-                ),
-            )
-            latest_content: str = recent_file_messages[0].content
-            reprobj = reprlib.Repr(maxstring=100)
-
-            preview = reprobj.repr(latest_content)
-            return RuntimeMessage(
-                f"错误：此文件已经读取。你已经读取了全部文件内容，禁止重复读取！\n"
-                f"文件内容预览：{preview}\n"
-                f"这是在拖拖沓沓地做无用功！如果需要修改文件必须直接修改！禁止也不需要再次确认！\n"
-                f"本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
-            )
 
         return None
 
@@ -671,12 +631,16 @@ class DuplicateFileReadPlugin(Plugin):
         except (OSError, ValueError):
             return None
 
-        recent_file_messages = [
-            message
-            for message in reversed(list(agent.message_processor.get_messages()))
-            if isinstance(message, FileContentMessage)
-            and str(Path(message.filepath).resolve()) == absolute_filepath
-        ]
+        recent_file_messages = []
+        for message in reversed(list(agent.message_processor.get_messages())):
+            if not isinstance(message, FileContentMessage):
+                continue
+            try:
+                if str(Path(message.filepath).resolve()) == absolute_filepath:
+                    recent_file_messages.append(message)
+            except (OSError, ValueError):
+                # 如果历史消息中的路径无法解析，跳过该消息
+                continue
 
         if recent_file_messages:
             latest_message = recent_file_messages[0]
@@ -818,15 +782,13 @@ class WrongLinhaiPlugin(Plugin):
 class UnnecessarySedReadPlugin(Plugin):
     """拦截不必要的sed调用插件。
 
-    判断规则 - 在一分钟内出现两次读取同一个文件的工具调用：
-        - 对应文件行数少于1600行
-        - 使用read_file_with_sed
-        - 工具返回结果小于10000个字符
+    在检测到读取"过小文件"或"已读取文件"时警告，超过3次才拦截，使用过read_file就重置计数。
     """
 
     def __init__(self, group_chat):
         super().__init__(group_chat)
-        self.unnecessary_history: Dict[str, float] = {}
+        self.warning_count = 0
+        self.last_reset_time = time.time()
 
     def register(self, lifecycle):
         """注册插件回调。"""
@@ -848,36 +810,32 @@ class UnnecessarySedReadPlugin(Plugin):
         if machine_control.target_machine != "master_host":
             return None
 
-        if not success or tool_call.function_name != "read_file_with_sed":
+        if not success:
+            return None
+
+        # 如果使用了read_file，重置警告计数
+        if tool_call.function_name == "read_file":
+            self.warning_count = 0
+            return None
+
+        if tool_call.function_name != "read_file_with_sed":
             return None
 
         filepath = tool_call.function_arguments.get("filepath")
         if not filepath:
             return None
 
-        if (
-            not isinstance(tool_result, ToolResultMessage)
-            or len(tool_result.content) >= 10000
-        ):
+        # 检查文件是否过小或已读取
+        is_small_file = await self._is_small_file(filepath)
+        is_already_read = await self._is_already_read(agent, filepath)
+        
+        if not is_small_file and not is_already_read:
             return None
 
-        path = Path(filepath)
-        if not path.is_file():
-            return None
-
-        absolute_filepath = str(path.resolve())
-
-        line_count = await self._get_file_line_count(absolute_filepath)
-        if line_count is None or line_count >= 1600:
-            return None
-
-        last_history = self.unnecessary_history.get(absolute_filepath)
-        self.unnecessary_history[absolute_filepath] = time.time()
-
-        if (
-            last_history
-            and self.unnecessary_history[absolute_filepath] - last_history < 60
-        ):
+        # 增加警告计数
+        self.warning_count += 1
+        
+        if self.warning_count >= 3:
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -891,40 +849,33 @@ class UnnecessarySedReadPlugin(Plugin):
                 "建议：如果需要查看对应内容的行号，使用show_line参数读取整个文件；"
                 "如果需要查看修改过的文件，使用read_file重新读取！"
             )
-        return None
+        else:
+            # 只警告，不拦截
+            return RuntimeMessage(
+                f"警告：检测到不必要的sed读取（第{self.warning_count}次警告）。建议直接使用read_file读取整个文件。"
+            )
 
-    async def _get_file_line_count(self, filepath: str) -> Optional[int]:
-        """获取原始文件的完整行数。使用高效纯Python实现，确保跨平台兼容性。"""
-        try:
-            with open(filepath, "rb") as f:
-                return f.read(32 * 1024).count(b"\n")
-        except (FileNotFoundError, PermissionError, OSError):
-            return None
+    async def _is_small_file(self, filepath: str) -> bool:
+        """检查文件是否过小（字符数少于15000且行数少于800行）。"""
+        return await is_small_file(filepath)
+
+    async def _is_already_read(self, agent: "Agent", filepath: str) -> bool:
+        """检查文件是否已被读取（最新FileContentMessage内容与硬盘文件内容相同）。"""
+        return await is_already_read(agent, filepath)
 
 
 class UnnecessaryRunCommandPlugin(Plugin):
     """拦截无用的run_command调用插件。
 
-    禁止以下情况：
-    - 直接使用sed命令查看单个文件（提示：“禁止直接使用sed命令查看文件！”）
-    - 禁止使用grep, head, tail, cat, sed查看已经读取了的文件
-    - 例外：使用`|`或者`>`重定向，有时LLM需要提取文件的其他内容。
-
-    实现：
-    1. 跟踪agent已经通过read_file读取的文件
-    2. 解析run_command命令，检查是否是禁止的命令
-    3. 检查命令是否访问已读取的文件且不在管道/重定向中
+    在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数。
+    不区分是否是sed调用，跳过用pipe连接起来的命令，删除判断参数是否是文件路径的逻辑，
+    仅通过检测“参数是否是存在的文件路径”判断参数是否是文件路径。
     """
 
-    FORBIDDEN_COMMANDS: ClassVar[set[str]] = {
-        "grep",
-        "head",
-        "tail",
-        "cat",
-        "sed",
-        "awk",
-        "rg",
-    }
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.warning_count = 0
+        self.last_reset_time = time.time()
 
     def register(self, lifecycle):
         """注册插件回调。"""
@@ -938,7 +889,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         success: bool,
     ) -> Optional[RuntimeMessage]:
         """工具调用后回调，检查是否是无用的run_command。"""
-        if not success or tool_call.function_name != "run_command":
+        if not success:
             return None
 
         # 只在master_host上拦截
@@ -948,73 +899,86 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if machine_control.target_machine != "master_host":
             return None
 
+        # 如果使用了read_file，重置警告计数
+        if tool_call.function_name == "read_file":
+            self.warning_count = 0
+            return None
+
+        if tool_call.function_name != "run_command":
+            return None
+
         command = tool_call.function_arguments.get("command")
         if not command or not isinstance(command, str):
             return None
 
-        read_files = self._get_read_files(agent)
-        if read_files and should_block_command_with_files(command, read_files):
+        # 跳过包含管道的命令
+        if "|" in command:
+            return None
+
+        # 解析命令参数，检查是否有参数是存在的文件路径
+        file_args = self._extract_file_args(command)
+        if not file_args:
+            return None
+
+        # 检查每个文件参数是否过小或已读取
+        has_small_or_read_file = False
+        for file_arg in file_args:
+            if await is_small_file(file_arg) or await is_already_read(agent, file_arg):
+                has_small_or_read_file = True
+                break
+
+        if not has_small_or_read_file:
+            return None
+
+        # 增加警告计数
+        self.warning_count += 1
+        
+        if self.warning_count >= 3:
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
-                    content="模型使用命令查看已读取文件，已阻止",
+                    content="模型多次使用命令查看已读取文件，已阻止",
                 ),
             )
-            return self._generate_warning_message(command)
-
-        return None
-
-    def _get_read_files(self, agent: "Agent") -> set[Path]:
-        """获取agent已经读取的文件路径集合（绝对路径）。"""
-        read_files = set()
-        for msg in agent.message_processor.get_messages():
-            if isinstance(msg, FileContentMessage):
-                try:
-                    path = Path(msg.filepath).resolve()
-                    read_files.add(path)
-                except (OSError, ValueError):
-                    continue
-        return read_files
-
-    def _generate_warning_message(self, command: str) -> RuntimeMessage:
-        """生成警告消息。"""
-        forbidden_commands = self.FORBIDDEN_COMMANDS
-        cmd_name = None
-        try:
-            parts = bashlex.parse(command)
-            for ast_node in parts:
-                cmd_name = self._extract_command_name(ast_node, forbidden_commands)
-                if cmd_name:
-                    break
-        except bashlex.errors.ParsingError:
-            cmd_name = "unknown"
-
-        if cmd_name == "sed":
             return RuntimeMessage(
-                "禁止直接使用sed命令查看文件！只能使用read_file*查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+                "错误：不使用read_file直接读取文件而是滥用命令查看已读取文件\n"
+                "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
+                "建议：如果需要查看文件内容，使用read_file读取整个文件！"
             )
         else:
+            # 只警告，不拦截
             return RuntimeMessage(
-                f"禁止使用{cmd_name}命令直接查看文件！只能使用read_file*查看文件！本插件会一直阻止你重复读取文件，直到你开始改代码为止！"
+                f"警告：检测到使用命令查看已读取文件（第{self.warning_count}次警告）。建议使用read_file读取整个文件。"
             )
 
-    def _extract_command_name(
-        self, node: bashlex.ast.node, forbidden_commands: set[str]
-    ) -> Optional[str]:
-        """从AST节点中提取命令名，如果命令名在禁止列表中则返回。"""
-        if node.kind == "command":  # type: ignore[attr-defined]
-            for part in get_children(node):
-                if part.kind == "word":  # type: ignore[attr-defined]
-                    word = part.word  # type: ignore[attr-defined]
-                    cmd_name = word.split("/")[-1]  # 获取最后一个部分
-                    if cmd_name in forbidden_commands:
-                        return cmd_name
-        for child in get_children(node):
-            result = self._extract_command_name(child, forbidden_commands)
-            if result:
-                return result
-        return None
+    def _extract_file_args(self, command: str) -> list[str]:
+        """从命令中提取可能的文件参数。"""
+        # 简单的参数解析：按空格分割，跳过命令名和以"-"开头的选项
+        parts = command.strip().split()
+        if not parts:
+            return []
+        
+        file_args = []
+        # 跳过命令名
+        for i in range(1, len(parts)):
+            arg = parts[i]
+            # 跳过以"-"开头的选项
+            if arg.startswith("-"):
+                continue
+            # 检查是否为存在的文件路径
+            if self._is_existing_file(arg):
+                file_args.append(arg)
+        
+        return file_args
+    
+    def _is_existing_file(self, path_str: str) -> bool:
+        """检查路径是否为存在的文件。"""
+        try:
+            path = Path(path_str)
+            return path.is_file()
+        except (OSError, ValueError):
+            return False
 
 
 def get_children(node: bashlex.ast.node) -> list[bashlex.ast.node]:
@@ -1190,3 +1154,42 @@ def _is_read_file(word: str, read_files: set[Path]) -> bool:
         return path in read_files
     except (OSError, ValueError):
         return False
+
+
+async def is_small_file(filepath: str) -> bool:
+    """检查文件是否过小（字符数少于15000且行数少于800行）。"""
+    try:
+        with open(filepath, "rb") as f:
+            content = f.read()
+            char_count = len(content)
+            # 估算行数：计算换行符数量
+            line_count = content.count(b"\n")
+            return char_count < 15000 and line_count < 800
+    except (FileNotFoundError, PermissionError, OSError):
+        return False
+
+
+async def is_already_read(agent: "Agent", filepath: str) -> bool:
+    """检查文件是否已被读取（最新FileContentMessage内容与硬盘文件内容相同）。"""
+    try:
+        abs_path = Path(filepath).resolve()
+        # 读取硬盘文件内容
+        with open(abs_path, "rb") as f:
+            disk_content = f.read().decode("utf-8", errors="ignore")
+    except (OSError, ValueError, UnicodeDecodeError):
+        return False
+
+    # 查找相同文件路径的最新FileContentMessage
+    latest_message = None
+    for msg in reversed(list(agent.message_processor.get_messages())):
+        if isinstance(msg, FileContentMessage):
+            try:
+                if Path(msg.filepath).resolve() == abs_path:
+                    latest_message = msg
+                    break
+            except (OSError, ValueError):
+                continue
+
+    if latest_message and latest_message.content == disk_content:
+        return True
+    return False

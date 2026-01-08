@@ -92,10 +92,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        with patch.object(self.plugin, "_get_read_files", return_value=set()):
-            result = await self.plugin._after_tool_call(
-                self.agent, tool_call, "result", True
-            )
+        # 新插件会跳过包含管道的命令
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
 
         self.assertIsNone(result)
 
@@ -108,142 +108,79 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        with patch.object(self.plugin, "_get_read_files", return_value=set()):
-            result = await self.plugin._after_tool_call(
-                self.agent, tool_call, "result", True
-            )
+        # 重定向命令不会被跳过（不包含管道），但如果没有文件参数，也不会警告
+        result = await self.plugin._after_tool_call(
+            self.agent, tool_call, "result", True
+        )
 
         self.assertIsNone(result)
 
     async def test_after_tool_call_read_file_tracking(self):
         """测试已读取文件跟踪。"""
-        # 模拟已读取的文件
-        read_file_path = Path("/path/to/read.txt").resolve()
-        read_files = {read_file_path}
-
         # 创建一个模拟的FileContentMessage
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "grep pattern /path/to/read.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "grep pattern /path/to/read.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_read_file_relative_path(self):
         """测试相对路径的已读取文件跟踪。"""
-        # 模拟当前目录下的已读取文件
-        current_dir = Path.cwd()
-        read_file_path = (current_dir / "test.txt").resolve()
-        read_files = {read_file_path}
-
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "test.txt"
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "cat test.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "cat test.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_get_read_files(self):
-        """测试获取已读取的文件。"""
-        # 创建模拟的FileContentMessage
-        mock_msg1 = MagicMock(spec=FileContentMessage)
-        mock_msg1.filepath = "/path/to/file1.txt"
 
-        mock_msg2 = MagicMock(spec=FileContentMessage)
-        mock_msg2.filepath = "relative/file2.txt"
 
-        mock_msg3 = MagicMock(spec=FileContentMessage)
-        mock_msg3.filepath = "/path/to/file1.txt"  # 重复文件
 
-        self.agent.message_processor.get_messages.return_value = [
-            mock_msg1,
-            mock_msg2,
-            mock_msg3,
-        ]
 
-        read_files = self.plugin._get_read_files(self.agent)
 
-        # 应该只有2个唯一的文件
-        self.assertEqual(len(read_files), 2)
 
-        # 检查路径是否被解析为绝对路径
-        for path in read_files:
-            self.assertTrue(path.is_absolute())
 
-    def test_generate_warning_message_sed(self):
-        """测试生成sed警告消息。"""
-        result = self.plugin._generate_warning_message("sed -n '1,10p' file.txt")
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("禁止直接使用sed命令查看文件", result.message)
 
-    def test_generate_warning_message_grep(self):
-        """测试生成grep警告消息。"""
-        result = self.plugin._generate_warning_message("grep pattern file.txt")
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("禁止使用grep命令直接查看文件", result.message)
 
-    def test_generate_warning_message_parse_error(self):
-        """测试解析错误的命令。"""
-        result = self.plugin._generate_warning_message("invalid | command &")
-        self.assertIsInstance(result, RuntimeMessage)
-        # 应该有一个默认的消息
 
-    def test_extract_command_name(self):
-        """测试从AST节点提取命令名。"""
-        # 创建一个模拟的AST节点
-        mock_node = MagicMock(spec=bashlex.ast.node)
-        mock_node.kind = "command"
 
-        mock_word = MagicMock(spec=bashlex.ast.node)
-        mock_word.kind = "word"
-        mock_word.word = "grep"
-
-        mock_node.parts = [mock_word]
-
-        forbidden_commands = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
-
-        result = self.plugin._extract_command_name(mock_node, forbidden_commands)
-        self.assertEqual(result, "grep")
-
-    def test_extract_command_name_not_found(self):
-        """测试从AST节点提取不在禁止列表中的命令名。"""
-        mock_node = MagicMock(spec=bashlex.ast.node)
-        mock_node.kind = "command"
-
-        mock_word = MagicMock(spec=bashlex.ast.node)
-        mock_word.kind = "word"
-        mock_word.word = "ls"
-
-        mock_node.parts = [mock_word]
-
-        forbidden_commands = {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
-
-        result = self.plugin._extract_command_name(mock_node, forbidden_commands)
-        self.assertIsNone(result)
 
     async def test_after_tool_call_tail_command(self):
         """测试tail命令拦截。"""
@@ -252,19 +189,25 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "tail -10 /path/to/read.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "tail -10 /path/to/read.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_head_command(self):
         """测试head命令拦截。"""
@@ -273,19 +216,25 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "head -10 /path/to/read.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "head -10 /path/to/read.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_awk_command(self):
         """测试awk命令拦截。"""
@@ -294,19 +243,25 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "awk '{print \$1}' /path/to/read.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "awk '{print \$1}' /path/to/read.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_rg_command(self):
         """测试rg命令拦截。"""
@@ -315,19 +270,25 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "rg pattern /path/to/read.txt"},
-            assert_success=True,
-            with_secret=None,
-        )
+        # 模拟文件存在且过小
+        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
+            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+                tool_call = ToolCallMessage(
+                    function_name="run_command",
+                    function_arguments={"command": "rg pattern /path/to/read.txt"},
+                    assert_success=True,
+                    with_secret=None,
+                )
 
-        result = await self.plugin._after_tool_call(
-            self.agent, tool_call, "result", True
-        )
+                result = await self.plugin._after_tool_call(
+                    self.agent, tool_call, "result", True
+                )
 
+        # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
+        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertEqual(self.plugin.warning_count, 1)
 
 
 class TestHelperFunctions(unittest.TestCase):
