@@ -45,8 +45,10 @@
           - Answer的interrupt函数停止发送AnswerToken
           - ParsedAnswer遇到stop iteration自然停止解析
       - 在解析结束时不发送Answer，直接结束函数，让task自然停止
-      - 提供一个函数: wait_parsing，等待task结束并返回None
+      - 提供一个函数: wait_parsing，等待task结束并返回bool
+        - 返回true表示正常结束
         - 结束时await task，因此向上传递task的exception
+        - 如果结束时发现answer被interrupt，返回False
       - CLI可以通过遍历ParsedAnswer的queue得到所有segment
     - segment
       - 一个typeddict，包含segment_type, content, is_finished三个字段
@@ -57,6 +59,7 @@
       - 将ParsedAnswer通过queue发送到"parsed_agent_answer" queue
         - 这意味着需要删除"agent_answer" queue
       - 将检查用户输入的逻辑移动到回调中
+      - 使用wait_parsing等待，并在被interrupt时返回
       - 将无用的返回值直接改为return None
     - linhai/agent/main.py用户打断回调
       - 在每个token生成后检查是否有用户输入，如果有则打断
