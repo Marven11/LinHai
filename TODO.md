@@ -51,6 +51,11 @@
 - [ ] 给工具调用添加on_machine参数，强行指定工具在哪台机器上使用
   - 考虑在连接机器后再添加system prompt
   - 可能还需要添加插件：如果连续3次使用同一个on_machine，且on_machine和当前machine相同则开始警告
+- [ ] conversation系统
+  - 为每次对话创建一个文件夹`~/.local/share/conversation`，注意没有s
+  - 将当前历史消息存放在context.json中
+    - 可能需要重构当前保存读取消息的方法，以标记每个消息的类型，便于恢复
+  - 将规划文件、被删除的消息、大消息等都放进这个文件夹
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
 
 # 注意
