@@ -3,7 +3,7 @@
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
 - [x] 修复上一个commit c92ff243导致的类型标注问题，直接使用`type: ignore`因为这些问题不是我们造成的
-- [ ] 改进minimax兼容性
+- [x] 改进minimax兼容性
   - minimax在使用stream=True时不会返回usage信息，这导致minimax不能兼容上下文管理功能
   - 需要在使用minimax（compatibility=minimax）时使用完全不同的调用API的逻辑
     - 传入stream=False

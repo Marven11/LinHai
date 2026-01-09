@@ -782,33 +782,33 @@ class WrongLinhaiPlugin(Plugin):
 class Traveller:
     """遍历bash AST树，提取不在pipe中的命令参数。"""
     
-    def __init__(self, node: bashlex.ast.node):
+    def __init__(self, node: bashlex.ast.node):  # type: ignore
         self.node = node
         self.command_args: list[list[str]] = []  # 每个命令的参数列表
         self._traverse(node, in_pipe=False)
     
-    def _traverse(self, node: bashlex.ast.node, in_pipe: bool) -> None:
+    def _traverse(self, node: bashlex.ast.node, in_pipe: bool) -> None:  # type: ignore
         """递归遍历AST节点。"""
-        if node.kind == "pipeline":
+        if node.kind == "pipeline":  # type: ignore
             # 管道中的命令，标记为在pipe中
-            for child in node.parts:
+            for child in node.parts:  # type: ignore
                 self._traverse(child, in_pipe=True)
-        elif node.kind == "command" and not in_pipe:
+        elif node.kind == "command" and not in_pipe:  # type: ignore
             # 提取不在pipe中的命令参数
             args = []
-            for part in node.parts:
+            for part in node.parts:  # type: ignore
                 if part.kind == "word":
                     args.append(part.word)
             if args:
                 self.command_args.append(args)
-        elif node.kind == "compound":
-            for child in node.list:
+        elif node.kind == "compound":  # type: ignore
+            for child in node.list:  # type: ignore
                 self._traverse(child, in_pipe)
         elif hasattr(node, 'parts'):
-            for part in node.parts:
+            for part in node.parts:  # type: ignore
                 self._traverse(part, in_pipe)
         elif hasattr(node, 'list'):
-            for child in node.list:
+            for child in node.list:  # type: ignore
                 self._traverse(child, in_pipe)
     
     def get_commands(self) -> list[list[str]]:
@@ -1053,7 +1053,7 @@ def extract_file_args_from_command(command: str) -> list[str]:
         if not parts:
             return []
         
-        traveller = Traveller(parts[0])
+        traveller = Traveller(parts[0])  # type: ignore
         command_args_list: list[list[str]] = traveller.get_commands()
         
         file_args = []

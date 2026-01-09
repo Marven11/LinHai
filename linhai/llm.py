@@ -341,7 +341,7 @@ class Answer(Protocol):
     LLM的一个回答
     """
 
-    def __aiter__(self) -> AsyncIterator[AnswerToken | AnswerTokenUsage]:
+    def __aiter__(self) -> AsyncIterator[AnswerToken]:
         """
         流式返回LLM的回答
         iterator中的每个item是一个token
@@ -447,7 +447,7 @@ class OpenAiAnswer:
         self.group_chat = group_chat
         self.cached_input_tokens = cached_input_tokens
         self.llm_instance = llm_instance
-        self.toyield: list[AnswerToken | AnswerTokenUsage] = []
+        self.toyield: list[AnswerToken] = []
 
     def __aiter__(self):
         """返回异步迭代器。"""
@@ -538,7 +538,7 @@ class OpenAiAnswer:
             self.interrupted = True
             raise StopAsyncIteration from exc
 
-    async def __anext__(self) -> AnswerToken | AnswerTokenUsage:
+    async def __anext__(self) -> AnswerToken:
         if not self.toyield:
             await self.update_toyield()
         if not self.toyield:
@@ -575,6 +575,101 @@ class OpenAiAnswer:
 
     def get_token_usage(self) -> AnswerTokenUsage | None:
         """获取token使用情况，返回包含'input_tokens', 'output_tokens', 'total_tokens'的字典，如果不可用返回None。"""
+        if self.total_tokens == 0:
+            return None
+        return AnswerTokenUsage(
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            total_tokens=self.total_tokens,
+            cached_input_tokens=self.cached_input_tokens,
+        )
+
+
+class MinimaxAnswer:
+    """处理minimax非流式响应的Answer类。"""
+
+    def __init__(
+        self,
+        response,  # ChatCompletion对象
+        group_chat: linhai.group_chat.GroupChat,
+        cached_input_tokens: int = 0,
+        llm_instance=None,
+    ):
+        """初始化Minimax回答。"""
+        # 解析响应
+        message = response.choices[0].message
+        # 对于openai库，我们只能使用getattr
+        self.reasoning_content = getattr(getattr(message, 'reasoning_details', None), "text", None)
+        self.content = getattr(message, 'content', None) or ""
+        usage = getattr(response, 'usage', None)
+
+        self.tokens = []
+        self.interrupted = False
+        self.truncated = False
+        self.total_tokens = usage.total_tokens if usage else 0
+        self.input_tokens = usage.prompt_tokens if usage else 0
+        self.output_tokens = usage.completion_tokens if usage else 0
+        self.group_chat = group_chat
+        self.cached_input_tokens = cached_input_tokens
+        self.llm_instance = llm_instance
+        self.toyield: list[AnswerToken] = []
+        
+        # 如果llm_instance存在，更新previous_input_tokens
+        if self.llm_instance is not None and self.input_tokens > 0:
+            self.llm_instance.previous_input_tokens = self.input_tokens
+        
+        # 注意：token_usage现在在OpenAi类中发送，不在这里发送
+        # 确保toyield只包含AnswerToken
+        if self.reasoning_content:
+            self.toyield.append(AnswerToken(
+                reasoning_content=self.reasoning_content,
+                content="",
+            ))
+        if self.content:
+            self.toyield.append(AnswerToken(
+                reasoning_content=None,
+                content=self.content,
+            ))
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> AnswerToken:
+        if self.interrupted or self.truncated:
+            raise StopAsyncIteration
+        if not self.toyield:
+            raise StopAsyncIteration
+        return self.toyield.pop(0)
+
+    def get_message(self) -> Message:
+        """获取完整的消息对象。"""
+        return AssistantMessage(
+            message=self.content, reasoning_message=self.reasoning_content
+        )
+
+    def get_reasoning_message(self) -> str | None:
+        """获取推理消息（如果存在）。"""
+        return self.reasoning_content
+
+    def interrupt(self):
+        """中断当前回答的生成。"""
+        self.interrupted = True
+        self.toyield.clear()
+
+    def truncate(self):
+        """截断当前回答的生成。"""
+        self.truncated = True
+        self.toyield.clear()
+
+    def get_current_content(self) -> str:
+        """获取当前累积的回答内容。"""
+        return self.content
+
+    def get_token_count(self) -> int:
+        """获取当前回答的token总数。"""
+        return self.total_tokens
+
+    def get_token_usage(self) -> AnswerTokenUsage | None:
+        """获取token使用情况。"""
         if self.total_tokens == 0:
             return None
         return AnswerTokenUsage(
@@ -628,6 +723,7 @@ class OpenAi:
         self.name = name
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
+        self._minimax_warning_sent: bool = False
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -681,6 +777,8 @@ class OpenAi:
 
         return 0
 
+
+
     async def answer_stream(
         self,
         history: Sequence[Message],
@@ -718,7 +816,19 @@ class OpenAi:
         }
 
         if self.compatibility == "minimax":
+            # minimax在使用stream=True时不返回usage信息，导致兼容问题，已关闭stream
             params["extra_body"] = {"reasoning_split": True}
+            params["stream"] = False
+            # 提示用户，但只提示一次
+            if not self._minimax_warning_sent:
+                await self.group_chat.send(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="INFO",
+                        content="minimax的api在开启stream时不返回usage，导致兼容问题，已关闭stream",
+                    ),
+                )
+                self._minimax_warning_sent = True
 
         if self.compatibility == "kimi":
             params["stream_options"] = {"include_usage": True}
@@ -731,15 +841,36 @@ class OpenAi:
         answer = None
         while True:
             try:
-                stream = await self.openai.chat.completions.create(**params)
-
-                answer = OpenAiAnswer(
-                    stream,
-                    group_chat=self.group_chat,
-                    compatibility=self.compatibility,
-                    cached_input_tokens=cached_input_tokens,
-                    llm_instance=self,
-                )
+                if self.compatibility == "minimax":
+                    # 对于minimax，使用非流式请求并返回MinimaxAnswer
+                    response = await self.openai.chat.completions.create(**params)
+                    # 提取usage并直接发送token_usage，不放在toyield里
+                    usage = getattr(response, 'usage', None)
+                    if usage:
+                        await self.group_chat.send(
+                            "token_usage",
+                            AnswerTokenUsage(
+                                input_tokens=usage.prompt_tokens if hasattr(usage, 'prompt_tokens') else 0,
+                                output_tokens=usage.completion_tokens if hasattr(usage, 'completion_tokens') else 0,
+                                total_tokens=usage.total_tokens if hasattr(usage, 'total_tokens') else 0,
+                                cached_input_tokens=cached_input_tokens,
+                            ),
+                        )
+                    answer = MinimaxAnswer(
+                        response,
+                        group_chat=self.group_chat,
+                        cached_input_tokens=cached_input_tokens,
+                        llm_instance=self,
+                    )
+                else:
+                    stream = await self.openai.chat.completions.create(**params)
+                    answer = OpenAiAnswer(
+                        stream,
+                        group_chat=self.group_chat,
+                        compatibility=self.compatibility,
+                        cached_input_tokens=cached_input_tokens,
+                        llm_instance=self,
+                    )
                 break
             except (asyncio.TimeoutError, OpenAIError) as e:
 
