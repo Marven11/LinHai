@@ -37,6 +37,7 @@
     - 如果这个方案不行则继续切分这两个“超大Token”，按照行切分
     - 必须添加对应的函数并在函数注释中说明这一点
   - 在使用minimax时提示用户“minimax的api在开启stream时不返回usage，导致兼容问题，已关闭stream”
+- [ ] 重构工具返回格式，使其直接包含工具名而不是拆分成两个消息
 - [ ] terminal tab
 - [ ] 添加假设颠覆法
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
