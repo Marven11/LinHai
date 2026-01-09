@@ -2,26 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 我们之前简化了prompt.py，修改了文件内容的定义，但是没有同步修改unittest，需要修复
-  - 先确认unittest全部成功再开始下一个任务
-- [x] 重构linhai/agent/plugin.py，仅使用bashlex解析命令，并简化其中遍历shell ast树的逻辑
-  - 写一个Traveller类，遍历给定的ast树并记录所有不在pipe中的命令
-    - 提取命令为`list[str]`
-  - 仅通过此方法判断参数是否是文件路径：直接尝试读取参数为文件路径，判断对应文件是否存在
-    - 提取出所有文件路径为list
-  - 判断文件路径是否有“已读取文件”
-  - 重构不应该破坏当前的unittest
-
-# 暂时搁置
-
-- [ ] 我们需要重构解析agent回答的流程
-  - agent的回答是一个token stream，我们需要从其中解析出三类token以传给cli显示
-  - agent的输出包含reasoning_content和content两部分，我们需要解析为至少三部分
-    - reasoning message - 只有一个
-    - normal message - 可能有多个
-    - toolcall message - 可能有多个
-  - 同时我们需要在解析时为每一个message生成uuid以方便定位
-  - 参考streamjson和linhai/cli/token_parser.py
+- [ ] 修复上一个commit c92ff243导致的类型标注问题，直接使用`type: ignore`因为这些问题不是我们造成的
 - [ ] 改进minimax兼容性
   - minimax在使用stream=True时不会返回usage信息，这导致minimax不能兼容上下文管理功能
   - 需要在使用minimax（compatibility=minimax）时使用完全不同的调用API的逻辑
@@ -37,6 +18,17 @@
     - 如果这个方案不行则继续切分这两个“超大Token”，按照行切分
     - 必须添加对应的函数并在函数注释中说明这一点
   - 在使用minimax时提示用户“minimax的api在开启stream时不返回usage，导致兼容问题，已关闭stream”
+
+# 暂时搁置
+
+- [ ] 我们需要重构解析agent回答的流程
+  - agent的回答是一个token stream，我们需要从其中解析出三类token以传给cli显示
+  - agent的输出包含reasoning_content和content两部分，我们需要解析为至少三部分
+    - reasoning message - 只有一个
+    - normal message - 可能有多个
+    - toolcall message - 可能有多个
+  - 同时我们需要在解析时为每一个message生成uuid以方便定位
+  - 参考streamjson和linhai/cli/token_parser.py
 - [ ] 重构工具返回格式，使其直接包含工具名而不是拆分成两个消息
 - [ ] 让拦截secret内容的插件返回所有包含的secret名，而不是仅返回一个
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
