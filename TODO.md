@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 修复上一个commit c92ff243导致的类型标注问题，直接使用`type: ignore`因为这些问题不是我们造成的
+- [x] 修复上一个commit c92ff243导致的类型标注问题，直接使用`type: ignore`因为这些问题不是我们造成的
 - [ ] 改进minimax兼容性
   - minimax在使用stream=True时不会返回usage信息，这导致minimax不能兼容上下文管理功能
   - 需要在使用minimax（compatibility=minimax）时使用完全不同的调用API的逻辑
@@ -48,6 +48,9 @@
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall则打断
+- [ ] 给工具调用添加on_machine参数，强行指定工具在哪台机器上使用
+  - 考虑在连接机器后再添加system prompt
+  - 可能还需要添加插件：如果连续3次使用同一个on_machine，且on_machine和当前machine相同则开始警告
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
 
 # 注意
