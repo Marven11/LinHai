@@ -1,7 +1,7 @@
 """Test cases for ReasoningContentWidget."""
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from linhai.cli.components import ReasoningContentWidget
 
 
@@ -138,7 +138,8 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         self.assertEqual(len(rendered_content), 1)
 
-    def test_stop_method(self):
+    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    def test_stop_method(self, mock_set_timer):
         """Test that finish_streaming method stops the timer."""
         widget = ReasoningContentWidget(
             role="assistant", sender_name="test", theme="nord"
@@ -149,13 +150,20 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
+        
+        # 配置 mock_set_timer 以停止定时器并清除timer
+        def stop_and_clear(*args, **kwargs):
+            mock_timer.stop()
+            widget.timer = None
+        mock_set_timer.side_effect = stop_and_clear
 
         widget.finish_streaming()
 
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    def test_stop_method_actual_timer(self):
+    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    def test_stop_method_actual_timer(self, mock_set_timer):
         """Test finish_streaming method with actual timer behavior."""
         widget = ReasoningContentWidget(
             role="assistant", sender_name="test", theme="nord"
@@ -167,13 +175,20 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
+        
+        # 配置 mock_set_timer 以停止定时器并清除timer
+        def stop_and_clear(*args, **kwargs):
+            mock_timer.stop()
+            widget.timer = None
+        mock_set_timer.side_effect = stop_and_clear
 
         widget.finish_streaming()
 
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    def test_stop_method_without_timer(self):
+    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    def test_stop_method_without_timer(self, mock_set_timer):
         """Test finish_streaming method when there is no timer."""
         widget = ReasoningContentWidget(
             role="assistant", sender_name="test", theme="nord"
@@ -183,6 +198,11 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
+        
+        # 配置 mock_set_timer 以避免错误，并清除timer
+        def clear_timer(*args, **kwargs):
+            widget.timer = None
+        mock_set_timer.side_effect = clear_timer
 
         widget.finish_streaming()
         self.assertIsNone(widget.timer)

@@ -105,22 +105,6 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNone(result)
 
     @patch("linhai.agent.plugin.Path")
-    def test_not_string_result(self, mock_path):
-        """测试非字符串结果。"""
-        tool_call = ToolCallMessage(
-            function_name="read_file_with_sed",
-            function_arguments={"filepath": "./test.py"},
-            assert_success=True,
-            with_secret=None,
-        )
-        result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent, tool_call, FileContentMessage("./test.py", "content"), True
-            )
-        )
-        self.assertIsNone(result)
-
-    @patch("linhai.agent.plugin.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_large_result(self, mock_open, mock_path):
         """测试结果长度大于等于10000字符的情况。"""
@@ -296,12 +280,12 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.return_value = Path(absolute_path)
         
         # 模拟消息历史中包含FileContentMessage
-        file_content_message = FileContentMessage(absolute_path, "line1\nline2\nline3\n")
+        file_content_message = FileContentMessage(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         self.agent.message_processor.get_messages.return_value = [file_content_message]
         
         # 模拟read_file工具调用，返回相同内容
         from linhai.agent.base import FileContentMessage as FCM
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -339,7 +323,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟read_file工具调用
         from linhai.agent.base import FileContentMessage as FCM
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -370,11 +354,11 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟消息历史中包含FileContentMessage，内容为旧版本
         from linhai.agent.base import FileContentMessage as FCM
-        old_file_content = FCM(absolute_path, "old line1\nold line2\nold line3\n")
+        old_file_content = FCM(absolute_path, "old line1\nold line2\nold line3\n", show_line_numbers=False)
         self.agent.message_processor.get_messages.return_value = [old_file_content]
         
         # 模拟read_file工具调用，返回新内容
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -408,11 +392,11 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟消息历史中包含FileContentMessage
         from linhai.agent.base import FileContentMessage as FCM
-        old_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        old_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         self.agent.message_processor.get_messages.return_value = [old_file_content]
         
         # 模拟read_file工具调用，返回相同内容
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -446,13 +430,13 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟多个历史消息，旧内容不同，最新内容相同
         from linhai.agent.base import FileContentMessage as FCM
-        old_content1 = FCM(absolute_path, "old content")
-        old_content2 = FCM(absolute_path, "different content")
-        latest_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        old_content1 = FCM(absolute_path, "old content", show_line_numbers=False)
+        old_content2 = FCM(absolute_path, "different content", show_line_numbers=False)
+        latest_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         self.agent.message_processor.get_messages.return_value = [old_content1, old_content2, latest_content]
         
         # 模拟read_file工具调用，返回与最新消息相同的内容
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -485,13 +469,13 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟多个历史消息，旧内容相同，最新内容不同
         from linhai.agent.base import FileContentMessage as FCM
-        old_content1 = FCM(absolute_path, "line1\nline2\nline3\n")
-        old_content2 = FCM(absolute_path, "line1\nline2\nline3\n")
-        latest_content = FCM(absolute_path, "different content")
+        old_content1 = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
+        old_content2 = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
+        latest_content = FCM(absolute_path, "different content", show_line_numbers=False)
         self.agent.message_processor.get_messages.return_value = [old_content1, old_content2, latest_content]
         
         # 模拟read_file工具调用，返回与旧消息相同但最新消息不同的内容
-        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n")
+        new_file_content = FCM(absolute_path, "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -521,7 +505,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         
         # 模拟read_file工具调用
         from linhai.agent.base import FileContentMessage as FCM
-        new_file_content = FCM("/some/path/test.py", "line1\nline2\nline3\n")
+        new_file_content = FCM("/some/path/test.py", "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -574,15 +558,19 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         bad_message = MagicMock(spec=FCM)
         bad_message.filepath = "/bad/path"
         bad_message.content = "old content"
+        bad_message._resolved_path = None  # 解析失败，设置为None
+        bad_message.show_line_numbers = False
         
         good_message = MagicMock(spec=FCM)
         good_message.filepath = "/absolute/path/test.py"
         good_message.content = "line1\nline2\nline3\n"
+        good_message._resolved_path = Path(absolute_path)  # 直接设置Path对象，避免调用resolve()
+        good_message.show_line_numbers = False
         
         self.agent.message_processor.get_messages.return_value = [bad_message, good_message]
         
         # 模拟read_file工具调用，返回与好消息相同的内容
-        new_file_content = FCM("/absolute/path/test.py", "line1\nline2\nline3\n")
+        new_file_content = FCM("/absolute/path/test.py", "line1\nline2\nline3\n", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -694,7 +682,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.side_effect = ValueError("Invalid path")
         
         from linhai.agent.base import FileContentMessage as FCM
-        new_file_content = FCM("/some/file.txt", "content")
+        new_file_content = FCM("/some/file.txt", "content", show_line_numbers=False)
         
         tool_call = ToolCallMessage(
             function_name="read_file",

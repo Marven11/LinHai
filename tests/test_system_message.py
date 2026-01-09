@@ -7,7 +7,7 @@ import json
 
 from linhai.prompt import (
     OVERVIEW, INTRODUCTION_TOOL_USE,
-    RULES_TOOL_USE, RULES_MCP, EXAMPLES_SIMPLE_CONVERSATION
+    RULES_TOOL_USE
 )
 from linhai.llm import SystemMessage
 from linhai.group_chat import GroupChat
@@ -80,7 +80,8 @@ class TestSystemMessage(unittest.TestCase):
         self.assertIn("## INTRODUCTION - TOOL USE", content)
         self.assertIn("## INTRODUCTION - TOOL USE", content)
         self.assertIn("## RULES - TOOL USE", content)
-        self.assertIn("## EXAMPLES - SIMPLE CONVERSATION", content)
+        # EXAMPLES_SIMPLE_CONVERSATION no longer exists, check for EXAMPLES section
+        self.assertIn("# EXAMPLES", content)
     
     def test_system_message_without_tool_manager(self):
         """测试没有tool_manager时的SystemMessage初始化。"""

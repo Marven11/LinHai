@@ -291,118 +291,115 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.plugin.warning_count, 1)
 
 
-class TestHelperFunctions(unittest.TestCase):
-    """测试辅助函数。"""
-
-    def test_get_children(self):
-        """测试get_children函数。"""
-        from linhai.agent.plugin import get_children
-
-        # 测试compound节点
-        mock_compound = MagicMock(spec=bashlex.ast.node)
-        mock_compound.kind = "compound"
-        mock_compound.list = ["child1", "child2"]
-
-        result = get_children(mock_compound)
-        self.assertEqual(result, ["child1", "child2"])
-
-        # 测试command节点
-        mock_command = MagicMock(spec=bashlex.ast.node)
-        mock_command.kind = "command"
-        mock_command.parts = ["part1", "part2"]
-
-        result = get_children(mock_command)
-        self.assertEqual(result, ["part1", "part2"])
-
-        # 测试其他节点
-        mock_other = MagicMock(spec=bashlex.ast.node)
-        mock_other.kind = "word"
-
-        result = get_children(mock_other)
-        self.assertEqual(result, [])
-
-
-
-
-
-    @patch("bashlex.parse")
-    def test_should_block_command_with_files(self, mock_parse):
-        """测试should_block_command_with_files函数。"""
-        from linhai.agent.plugin import should_block_command_with_files
-
-        read_files = {Path("/path/to/file.txt").resolve()}
-
-        # 创建模拟的AST节点
-        mock_node = MagicMock(spec=bashlex.ast.node)
-        mock_node.kind = "command"
-
-        mock_word1 = MagicMock(spec=bashlex.ast.node)
-        mock_word1.kind = "word"
-        mock_word1.word = "grep"
-
-        mock_word2 = MagicMock(spec=bashlex.ast.node)
-        mock_word2.kind = "word"
-        mock_word2.word = "pattern"
-
-        mock_word3 = MagicMock(spec=bashlex.ast.node)
-        mock_word3.kind = "word"
-        mock_word3.word = "/path/to/file.txt"
-
-        mock_node.parts = [mock_word1, mock_word2, mock_word3]
-
-        mock_parse.return_value = [mock_node]
-
-        result = should_block_command_with_files(
-            "grep pattern /path/to/file.txt", read_files
-        )
-        self.assertTrue(result)
-
-    def test_analyze_command_parts_for_head_tail(self):
-        """测试_analyze_command_parts函数对head和tail命令的解析。"""
-        from linhai.agent.plugin import _analyze_command_parts, get_children
-        import bashlex
-        from pathlib import Path
-        
-        read_files = {Path("/path/to/read.txt").resolve()}
-        
-        # 测试head命令
-        cmd_head = "head -10 /path/to/read.txt"
-        parts_head = bashlex.parse(cmd_head)
-        node_head = parts_head[0]
-        
-        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_head, read_files)
-        print(f"head命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
-        
-        # 断言head命令应该检测到文件访问
-        self.assertEqual(cmd_name, "head")
-        self.assertFalse(has_redirect)
-        self.assertTrue(accesses_read_file)
-        
-        # 测试tail命令
-        cmd_tail = "tail -10 /path/to/read.txt"
-        parts_tail = bashlex.parse(cmd_tail)
-        node_tail = parts_tail[0]
-        
-        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_tail, read_files)
-        print(f"tail命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
-        
-        # 断言tail命令应该检测到文件访问
-        self.assertEqual(cmd_name, "tail")
-        self.assertFalse(has_redirect)
-        self.assertTrue(accesses_read_file)
-        
-        # 测试grep命令作为对比
-        cmd_grep = "grep pattern /path/to/read.txt"
-        parts_grep = bashlex.parse(cmd_grep)
-        node_grep = parts_grep[0]
-        
-        cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_grep, read_files)
-        print(f"grep命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
-        
-        # 断言grep命令应该检测到文件访问
-        self.assertEqual(cmd_name, "grep")
-        self.assertFalse(has_redirect)
-        self.assertTrue(accesses_read_file)
+# 以下测试针对已删除的函数，暂时注释掉
+# class TestHelperFunctions(unittest.TestCase):
+#     """测试辅助函数。"""
+# 
+#     def test_get_children(self):
+#         """测试get_children函数。"""
+#         from linhai.agent.plugin import get_children
+# 
+#         # 测试compound节点
+#         mock_compound = MagicMock(spec=bashlex.ast.node)
+#         mock_compound.kind = "compound"
+#         mock_compound.list = ["child1", "child2"]
+# 
+#         result = get_children(mock_compound)
+#         self.assertEqual(result, ["child1", "child2"])
+# 
+#         # 测试command节点
+#         mock_command = MagicMock(spec=bashlex.ast.node)
+#         mock_command.kind = "command"
+#         mock_command.parts = ["part1", "part2"]
+# 
+#         result = get_children(mock_command)
+#         self.assertEqual(result, ["part1", "part2"])
+# 
+#         # 测试其他节点
+#         mock_other = MagicMock(spec=bashlex.ast.node)
+#         mock_other.kind = "word"
+# 
+#         result = get_children(mock_other)
+#         self.assertEqual(result, [])
+# 
+#     @patch("bashlex.parse")
+#     def test_should_block_command_with_files(self, mock_parse):
+#         """测试should_block_command_with_files函数。"""
+#         from linhai.agent.plugin import should_block_command_with_files
+# 
+#         read_files = {Path("/path/to/file.txt").resolve()}
+# 
+#         # 创建模拟的AST节点
+#         mock_node = MagicMock(spec=bashlex.ast.node)
+#         mock_node.kind = "command"
+# 
+#         mock_word1 = MagicMock(spec=bashlex.ast.node)
+#         mock_word1.kind = "word"
+#         mock_word1.word = "grep"
+# 
+#         mock_word2 = MagicMock(spec=bashlex.ast.node)
+#         mock_word2.kind = "word"
+#         mock_word2.word = "pattern"
+# 
+#         mock_word3 = MagicMock(spec=bashlex.ast.node)
+#         mock_word3.kind = "word"
+#         mock_word3.word = "/path/to/file.txt"
+# 
+#         mock_node.parts = [mock_word1, mock_word2, mock_word3]
+# 
+#         mock_parse.return_value = [mock_node]
+# 
+#         result = should_block_command_with_files(
+#             "grep pattern /path/to/file.txt", read_files
+#         )
+#         self.assertTrue(result)
+# 
+#     def test_analyze_command_parts_for_head_tail(self):
+#         """测试_analyze_command_parts函数对head和tail命令的解析。"""
+#         from linhai.agent.plugin import _analyze_command_parts, get_children
+#         import bashlex
+#         from pathlib import Path
+#         
+#         read_files = {Path("/path/to/read.txt").resolve()}
+#         
+#         # 测试head命令
+#         cmd_head = "head -10 /path/to/read.txt"
+#         parts_head = bashlex.parse(cmd_head)
+#         node_head = parts_head[0]
+#         
+#         cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_head, read_files)
+#         print(f"head命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+#         
+#         # 断言head命令应该检测到文件访问
+#         self.assertEqual(cmd_name, "head")
+#         self.assertFalse(has_redirect)
+#         self.assertTrue(accesses_read_file)
+#         
+#         # 测试tail命令
+#         cmd_tail = "tail -10 /path/to/read.txt"
+#         parts_tail = bashlex.parse(cmd_tail)
+#         node_tail = parts_tail[0]
+#         
+#         cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_tail, read_files)
+#         print(f"tail命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+#         
+#         # 断言tail命令应该检测到文件访问
+#         self.assertEqual(cmd_name, "tail")
+#         self.assertFalse(has_redirect)
+#         self.assertTrue(accesses_read_file)
+#         
+#         # 测试grep命令作为对比
+#         cmd_grep = "grep pattern /path/to/read.txt"
+#         parts_grep = bashlex.parse(cmd_grep)
+#         node_grep = parts_grep[0]
+#         
+#         cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(node_grep, read_files)
+#         print(f"grep命令解析结果: cmd_name={cmd_name}, has_redirect={has_redirect}, accesses_read_file={accesses_read_file}")
+#         
+#         # 断言grep命令应该检测到文件访问
+#         self.assertEqual(cmd_name, "grep")
+#         self.assertFalse(has_redirect)
+#         self.assertTrue(accesses_read_file)
 
 
 if __name__ == "__main__":

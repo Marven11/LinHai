@@ -779,6 +779,44 @@ class WrongLinhaiPlugin(Plugin):
         return True
 
 
+class Traveller:
+    """遍历bash AST树，提取不在pipe中的命令参数。"""
+    
+    def __init__(self, node: bashlex.ast.node):
+        self.node = node
+        self.command_args: list[list[str]] = []  # 每个命令的参数列表
+        self._traverse(node, in_pipe=False)
+    
+    def _traverse(self, node: bashlex.ast.node, in_pipe: bool) -> None:
+        """递归遍历AST节点。"""
+        if node.kind == "pipeline":
+            # 管道中的命令，标记为在pipe中
+            for child in node.parts:
+                self._traverse(child, in_pipe=True)
+        elif node.kind == "command" and not in_pipe:
+            # 提取不在pipe中的命令参数
+            args = []
+            for part in node.parts:
+                if part.kind == "word":
+                    args.append(part.word)
+            if args:
+                self.command_args.append(args)
+        elif node.kind == "compound":
+            for child in node.list:
+                self._traverse(child, in_pipe)
+        elif hasattr(node, 'parts'):
+            for part in node.parts:
+                self._traverse(part, in_pipe)
+        elif hasattr(node, 'list'):
+            for child in node.list:
+                self._traverse(child, in_pipe)
+    
+    def get_commands(self) -> list[list[str]]:
+        """获取提取的所有命令的参数列表。"""
+        return self.command_args
+
+
+
 class UnnecessarySedReadPlugin(Plugin):
     """拦截不必要的sed调用插件。
 
@@ -922,7 +960,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
             return None
 
         # 解析命令参数，检查是否有参数是存在的文件路径
-        file_args = self._extract_file_args(command)
+        file_args = extract_file_args_from_command(command)
         if not file_args:
             return None
 
@@ -958,208 +996,6 @@ class UnnecessaryRunCommandPlugin(Plugin):
                 f"警告：检测到使用命令查看已读取文件（第{self.warning_count}次警告）。建议使用read_file读取整个文件。"
             )
 
-    def _extract_file_args(self, command: str) -> list[str]:
-        """从命令中提取可能的文件参数。"""
-        # 简单的参数解析：按空格分割，跳过命令名和以"-"开头的选项
-        parts = command.strip().split()
-        if not parts:
-            return []
-        
-        file_args = []
-        # 跳过命令名
-        for i in range(1, len(parts)):
-            arg = parts[i]
-            # 跳过以"-"开头的选项
-            if arg.startswith("-"):
-                continue
-            # 检查是否为存在的文件路径
-            if self._is_existing_file(arg):
-                file_args.append(arg)
-        
-        return file_args
-    
-    def _is_existing_file(self, path_str: str) -> bool:
-        """检查路径是否为存在的文件。"""
-        try:
-            path = Path(path_str)
-            return path.is_file()
-        except (OSError, ValueError):
-            return False
-
-
-def get_children(node: bashlex.ast.node) -> list[bashlex.ast.node]:
-    """获取节点的子节点列表，不使用hasattr。"""
-    node_kind = node.kind  # type: ignore[attr-defined]
-    if node_kind == "compound":
-        return node.list  # type: ignore[attr-defined]
-    elif node_kind in ["command", "pipeline", "list"]:
-        return node.parts  # type: ignore[attr-defined]
-    else:
-        return []
-
-
-def traverse_ast(
-    node: bashlex.ast.node, in_pipeline: bool, forbidden_commands: set[str]
-) -> bool:
-    """遍历AST节点，检查是否包含需要拦截的命令。"""
-    node_kind = node.kind  # type: ignore[attr-defined]
-
-    if node_kind in ["pipeline", "list", "compound"]:
-        for child in get_children(node):
-            child_in_pipeline = in_pipeline or (node_kind == "pipeline")
-            if traverse_ast(child, child_in_pipeline, forbidden_commands):
-                return True
-        return False
-
-    if node_kind == "command":
-        cmd_name = None
-        has_redirect = False
-
-        for part in get_children(node):
-            if part.kind == "redirect":  # type: ignore[attr-defined]
-                has_redirect = True
-                continue
-            if cmd_name is None and part.kind == "word":  # type: ignore[attr-defined]
-                cmd_name = part.word  # type: ignore[attr-defined]
-
-        if cmd_name in forbidden_commands and not has_redirect and not in_pipeline:
-            return True
-
-        for child in get_children(node):
-            if traverse_ast(child, in_pipeline, forbidden_commands):
-                return True
-        return False
-
-    for child in get_children(node):
-        if traverse_ast(child, in_pipeline, forbidden_commands):
-            return True
-    return False
-
-
-def should_block_command_with_files(command: str, read_files: set[Path]) -> bool:
-    """
-    判断一个shell命令是否应该被拦截，检查是否访问已读取的文件。
-
-    规则：
-    - 命令是禁止的命令之一（grep, head, tail, cat, sed）
-    - 命令不在管道中且没有重定向
-    - 命令访问了已读取的文件
-
-    返回True表示应该拦截，False表示允许。
-    """
-    if not command.strip():
-        return False
-
-    try:
-        parts = bashlex.parse(command)
-    except bashlex.errors.ParsingError:
-        return False
-
-    return traverse_ast_with_files(parts, False, read_files)
-
-
-def traverse_ast_with_files(
-    nodes: list[bashlex.ast.node], in_pipeline: bool, read_files: set[Path]
-) -> bool:
-    """遍历AST节点，检查是否包含访问已读取文件的禁止命令。"""
-    for node in nodes:
-        if _traverse_ast_with_files_node(node, in_pipeline, read_files):
-            return True
-    return False
-
-
-def _traverse_ast_with_files_node(
-    node: bashlex.ast.node, in_pipeline: bool, read_files: set[Path]
-) -> bool:
-    """遍历单个AST节点，检查是否包含访问已读取文件的禁止命令。"""
-    node_kind = node.kind  # type: ignore[attr-defined]
-
-    if node_kind in ["pipeline", "list", "compound"]:
-        for child in get_children(node):
-            child_in_pipeline = in_pipeline or (node_kind == "pipeline")
-            if _traverse_ast_with_files_node(child, child_in_pipeline, read_files):
-                return True
-        return False
-
-    if node_kind == "command":
-        return _process_command_node(node, in_pipeline, read_files)
-
-    for child in get_children(node):
-        if _traverse_ast_with_files_node(child, in_pipeline, read_files):
-            return True
-    return False
-
-
-def _process_command_node(
-    node: bashlex.ast.node, in_pipeline: bool, read_files: set[Path]
-) -> bool:
-    """处理命令节点，检查是否访问已读取文件。"""
-    cmd_name, has_redirect, accesses_read_file = _analyze_command_parts(
-        node, read_files
-    )
-
-    if (
-        cmd_name in {"grep", "head", "tail", "cat", "sed", "awk", "rg"}
-        and not has_redirect
-        and not in_pipeline
-        and accesses_read_file
-    ):
-        return True
-
-    for child in get_children(node):
-        if _traverse_ast_with_files_node(child, in_pipeline, read_files):
-            return True
-    return False
-
-
-def _analyze_command_parts(
-    node: bashlex.ast.node, read_files: set[Path]
-) -> tuple[Optional[str], bool, bool]:
-    """分析命令节点各部分，提取命令名、重定向状态和文件访问状态。"""
-    cmd_name: Optional[str] = None
-    has_redirect = False
-    accesses_read_file = False
-    expecting_option_value = False
-
-    for part in get_children(node):
-        if part.kind == "redirect":  # type: ignore[attr-defined]
-            has_redirect = True
-            continue
-
-        if part.kind != "word":  # type: ignore[attr-defined]
-            continue
-
-        word = part.word  # type: ignore[attr-defined]
-
-        if cmd_name is None:
-            cmd_name = word
-            continue
-
-        if word.startswith("-"):
-            # 检查是否为数字参数，如 -10, -n10 等
-            # 如果参数是纯数字（去掉开头的减号后全是数字），则不是需要值的选项
-            suffix = word.lstrip("-")
-            is_numeric_arg = suffix.isdigit()
-            expecting_option_value = "=" not in word and not is_numeric_arg
-            continue
-
-        if expecting_option_value:
-            expecting_option_value = False
-            continue
-
-        if _is_read_file(word, read_files):
-            accesses_read_file = True
-
-    return cmd_name, has_redirect, accesses_read_file
-
-
-def _is_read_file(word: str, read_files: set[Path]) -> bool:
-    """检查单词是否为已读取的文件路径。"""
-    try:
-        path = Path(word).resolve()
-        return path in read_files
-    except (OSError, ValueError):
-        return False
 
 
 async def is_small_file(filepath: str) -> bool:
@@ -1199,3 +1035,34 @@ async def is_already_read(agent: "Agent", filepath: str) -> bool:
     if latest_message and latest_message.content == disk_content:
         return True
     return False
+
+
+def is_existing_file(path_str: str) -> bool:
+    """检查路径是否为存在的文件。"""
+    try:
+        path = Path(path_str)
+        return path.is_file()
+    except (OSError, ValueError):
+        return False
+
+
+def extract_file_args_from_command(command: str) -> list[str]:
+    """从命令中提取可能的文件参数。"""
+    try:
+        parts = bashlex.parse(command)
+        if not parts:
+            return []
+        
+        traveller = Traveller(parts[0])
+        command_args_list: list[list[str]] = traveller.get_commands()
+        
+        file_args = []
+        for args in command_args_list:
+            for i in range(1, len(args)):
+                arg = args[i]
+                if is_existing_file(arg):
+                    file_args.append(arg)
+        
+        return file_args
+    except (bashlex.errors.ParsingError, ValueError):
+        return []
