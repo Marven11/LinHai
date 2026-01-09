@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [ ] 我们之前简化了prompt.py，删除了一些条目，但是没有同步修改unittest，需要修复
+- [ ] 我们之前简化了prompt.py，修改了文件内容的定义，但是没有同步修改unittest，需要修复
   - 先确认unittest全部成功再开始下一个任务
 - [ ] 重构linhai/agent/plugin.py，仅使用bashlex解析命令，并简化其中遍历shell ast树的逻辑
   - 写一个Traveller类，遍历给定的ast树并记录所有不在pipe中的命令
