@@ -80,7 +80,9 @@ runtime会根据上下文消耗量百分比，用红绿灯状态提醒你当前�
 INTRODUCTION_SECRET_SYSTEM = """
 ## Secret系统
 
-Secret系统用于安全处理敏感信息（如API密钥、密码等）。
+Secret系统用于在调用工具时间接地输入密码等敏感信息，将敏感信息包含在工具调用中
+
+Secret系统也用于掩盖工具输出中的密码等信息，让你在不查看的同时处理敏感信息
 
 ### 可用Secret键
 
@@ -88,10 +90,10 @@ Secret系统用于安全处理敏感信息（如API密钥、密码等）。
 
 ### 使用说明
 
-1. 在工具调用中，如果需要使用secret值，必须在工具调用消息中指定`with_secret`字段，值为一个列表，包含你要使用的secret键（格式为KEY，不包含`<$`包裹）。
-2. 在工具调用的参数中，使用<$KEY$>格式引用secret值，这些引用会被自动替换为实际值。
-3. 如果不指定`with_secret`而工具结果包含secret值，结果会被拦截。
-4. 如果指定了`with_secret`，工具结果中的secret值会被替换为<$KEY$>格式以保护安全。
+- 在工具调用中提供和`name`, `assert_success`字段平级的`with_secret`字段，值为一个list[str]，包含所有secret键，不含`<$`包裹
+- 在工具调用中使用secret: 在`arguments`的各项参数中，使用占位符<$KEY$>引用secret值，这些引用会被自动替换为实际值。
+- 在工具返回值中使用secret: 工具结果中如果有`with_secret`中的secret，则secret值会被占位符<$KEY$>代替
+  - 如果你没有指定正确的secret值，则工具结果会被全部拦截
 """
 
 INTRODUCTION_ITEMS = [
