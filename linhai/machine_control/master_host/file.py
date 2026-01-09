@@ -105,7 +105,6 @@ def read_file(
     except OSError as exc:
         return ToolErrorMessage(f"发生错误: {exc!r}")
 
-
     return FileContentMessage(
         filepath=file_path.as_posix(),
         content=content,
@@ -175,8 +174,9 @@ def replace_file_content(
             if count != 1:
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中找到{count}次匹配。"
-                    f"默认只替换一次匹配，但找到多次匹配，请明确指定替换次数。"
-                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
+                    "默认只替换一次匹配，但找到多次匹配。"
+                    "建议1. 需要替换多处：直接指定替换次数/指定全部替换。"
+                    "建议2. 明确只替换一处：在old内容中带上更多内容，以精确匹配一处。"
                 )
             replace_count = 1
         elif replace_times > 0:
@@ -185,17 +185,9 @@ def replace_file_content(
                 return ToolErrorMessage(
                     f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
                     f"但要求替换{replace_times}次。"
-                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
                 )
             replace_count = replace_times
         elif replace_times == -1:
-
-            if count < 2:
-                return ToolErrorMessage(
-                    f"内容{old!r}在文件{file_path.as_posix()!r}中只找到{count}次匹配，"
-                    f"但要求替换所有匹配（至少需要2次匹配）。"
-                    f"内容类似的部分如下: {find_most_similar_in_files(old, content)}"
-                )
             replace_count = -1
         else:
             return ToolErrorMessage(
