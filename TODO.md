@@ -42,6 +42,7 @@
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 直接在调用回调函数时提供工具调用的状态：成功、失败、被跳过
 - [ ] terminal tab
+- [ ] 添加一个列出所有terminal的函数
 - [ ] 添加假设颠覆法
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
 
