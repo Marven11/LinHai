@@ -316,9 +316,11 @@ class FileContentMessage(Message):
         """
         if not isinstance(other, FileContentMessage):
             return False
-        if self._resolved_path != other._resolved_path:
-            return False
-        return self.content == other.content
+        return (
+            self.content == other.content
+            and self._resolved_path == other._resolved_path
+            and self.show_line_numbers == other.show_line_numbers
+        )
 
     def __hash__(self) -> int:
         """哈希支持，用于set比较。基于标准化内容（忽略行号）计算哈希。"""

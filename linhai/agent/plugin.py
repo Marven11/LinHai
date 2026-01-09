@@ -644,7 +644,7 @@ class DuplicateFileReadPlugin(Plugin):
 
         if recent_file_messages:
             latest_message = recent_file_messages[0]
-            if latest_message.content == tool_result.content:
+            if tool_result == latest_message:
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
