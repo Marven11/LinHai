@@ -49,7 +49,13 @@
   - 对于python: 不检测多行字符串
 - [ ] terminal tab
 - [ ] 添加一个列出所有terminal的函数
+- [ ] 分离打断时发送给agent的文本和发送给UI的文本
+  - 当前打断时会将本来应该发送给agent的文本也发送到UI中，如“不要模仿...”，我们不应该这么惊吓用户
 - [ ] 添加假设颠覆法
+  - 添加prompt到system message
+  - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
+    - 检测方法为检查```json toolcall前是否有对应的标题行
+      - 如果没有任何一个对应的标题行但是有```json toolcall则打断
 - [ ] asyncio.iscoroutinefunction将在python 3.16中被移除，需要改成inspect.iscoroutinefunction
 
 # 注意
