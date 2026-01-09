@@ -345,9 +345,13 @@ class ToolCallWidget(Static):
 
     def finish_streaming(self) -> None:
         """停止组件的timer"""
-        if self.timer is not None:
-            self.timer.stop()
-            self.timer = None
+
+        def postponded_stop_timer():
+            if self.timer is not None:
+                self.timer.stop()
+                self.timer = None
+
+        self.set_timer(10, postponded_stop_timer)
         self.update_display()
 
     def feed_string(self, new_content: str):
@@ -533,9 +537,13 @@ class ReasoningContentWidget(Static):
 
     def finish_streaming(self) -> None:
         """停止组件的timer"""
-        if self.timer is not None:
-            self.timer.stop()
-            self.timer = None
+
+        def postponded_stop_timer():
+            if self.timer is not None:
+                self.timer.stop()
+                self.timer = None
+
+        self.set_timer(10, postponded_stop_timer)
         self.update_display()
 
     def update_display(self) -> None:
@@ -585,9 +593,13 @@ class UserMessageWidget(Static):
 
     def finish_streaming(self) -> None:
         """停止组件的timer"""
-        if self.timer is not None:
-            self.timer.stop()
-            self.timer = None
+
+        def postponded_stop_timer():
+            if self.timer is not None:
+                self.timer.stop()
+                self.timer = None
+
+        self.set_timer(10, postponded_stop_timer)
         self.update_display()
 
     def feed_string(self, new_content: str):
@@ -655,9 +667,13 @@ class NormalContentWidget(Static):
 
     def finish_streaming(self) -> None:
         """停止组件的timer"""
-        if self.timer is not None:
-            self.timer.stop()
-            self.timer = None
+
+        def postponded_stop_timer():
+            if self.timer is not None:
+                self.timer.stop()
+                self.timer = None
+
+        self.set_timer(10, postponded_stop_timer)
         self.update_display()
         if not self.content_str.strip():
             self.remove()
