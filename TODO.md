@@ -73,6 +73,19 @@
     - 运行所有unittest
   - 参考
     - 参考streamjson和linhai/cli/token_parser.py
+- [ ] 简化linhai/cli/components.py到600行以内
+  - 删除、移动不必要的import
+  - 移除ToolCallWidget获取for value in self.parser时的try block，这里几乎不会报错
+  - 删除所有finish_streaming函数，在is_finished=True时立即停止timer并进行最后一次update_display
+    - 也就是说停止后update_display不要立即return，要进行最后一次更新
+    - 当前架构保证is_finished=True时不再会有任何更新
+  - 将toolcall widget的self.current_content计算逻辑移动到辅助方法
+  - feed_string和append_content均不需要，当前消息内容完全由传入的segment/content决定，删除这些函数
+  - 删除ReasoningContentWidget等计算标题的逻辑，以及所有widget中设置widget标题的逻辑，当前不显示标题
+  - UserMessageWidget中的消息根本不会定时更新，init传入的content永远不会被更新，因此根本不需要timer,删除timer逻辑
+  - 调整对应unittest
+  - 用wc -l检查
+  - 运行unittest检查
 
 # 暂时搁置
 
