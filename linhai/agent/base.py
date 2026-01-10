@@ -100,17 +100,20 @@ class GlobalMemory:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<global_memory>>",
+                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<content>>{content}<<content>><<global_memory>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<global_memory>>",
+                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>文件不存在或已被移动/删除<<error>><<global_memory>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "content": f"<<global_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<global_memory>>",
+                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>读取时发生错误: {str(e)}<<error>><<global_memory>>",
             }
 
     def to_json(self) -> str:

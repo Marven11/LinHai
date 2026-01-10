@@ -15,7 +15,7 @@ from linhai.tool.general import TodolistManager
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
 
-from .base import GlobalMemory
+from .base import GlobalMemory, PathMemory
 
 from .main import Agent  # 避免循环导入
 
@@ -252,6 +252,6 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
 
     for filepath in project_memory_filepaths:
         if filepath.exists():
-            init_messages.append(GlobalMemory(filepath))
+            init_messages.append(PathMemory(filepath))
 
     return init_messages
