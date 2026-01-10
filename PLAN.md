@@ -45,13 +45,7 @@ ParsedAnswer不可迭代，提供segment_queue供CLI直接访问segment。
 ```python
 class ParsedAnswer:
     def __init__(self, answer: Answer, lifecycle: Lifecycle):
-        self.answer = answer
-        self.lifecycle = lifecycle
-        self.segment_queue = asyncio.Queue()
-        self.current_segment: Segment | None = None
-        self.parsing_task: asyncio.Task | None = None
-        self.is_finished: bool = False
-        self.interrupted: bool = False
+        ...
         
     async def start_parsing(self):
         """启动解析任务"""
@@ -85,40 +79,7 @@ CLI可以通过`parsed_answer.segment_queue`获取segment，而不是通过迭�
 
 ### 3.2 解析状态机
 
-#### 3.2.1 状态定义
-```python
-class ParserState:
-    NORMAL = "normal"
-    TOOLCALL = "toolcall"
-    REASONING = "reasoning"
-```
-
-#### 3.2.2 状态处理逻辑
-每个状态负责处理不同类型的token内容：
-
-1. **NORMAL状态**（默认状态）:
-   - 处理普通文本token
-   - 将token内容追加到当前normal segment
-   - 检测到"```json toolcall\n"时：
-     - 完成当前segment（设置is_finished=True）
-     - 发送当前segment到segment_queue
-     - 切换到TOOLCALL状态，开始新的toolcall segment
-
-2. **TOOLCALL状态**（工具调用状态）:
-   - 处理工具调用JSON内容
-   - 将token内容追加到当前toolcall segment
-   - 检测到单独的"```\n"时：
-     - 完成当前segment（设置is_finished=True）
-     - 发送当前segment到segment_queue
-     - 切换回NORMAL状态，开始新的normal segment
-
-3. **REASONING状态**（推理内容状态）:
-   - 处理推理内容token（is_reasoning=True）
-   - 将token内容追加到当前reasoning segment
-   - 检测到is_reasoning从True变为False时：
-     - 完成当前segment（设置is_finished=True）
-     - 发送当前segment到segment_queue
-     - 切换回NORMAL状态，开始新的normal segment
+禁止手动实现解析流程，必须使用已有的TokenParser解析
 
 ### 3.3 Agent层修改
 
