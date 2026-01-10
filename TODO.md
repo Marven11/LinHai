@@ -76,6 +76,10 @@
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了打断逻辑
   - 查看这个commit删除的linhai/agent/main.py中的代码
   - 在Agent类中添加after_token_generation回调并注册，在接收到用户消息时打断当前消息
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了滚动逻辑
+  - 更好的方法是根本不在正常解析代码时判断是否需要滚动，而是加一个0.1秒的timer专门负责滚动
+  - 写一个timer每0.1秒运行一次，如果should_auto_scroll则调用
+  - 删除其他使用should_auto_scroll的代码
 - [ ] 简化linhai/cli/components.py到600行以内
   - 删除、移动不必要的import
   - 移除ToolCallWidget获取for value in self.parser时的try block，这里几乎不会报错
