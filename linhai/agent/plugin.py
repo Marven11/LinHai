@@ -586,6 +586,9 @@ class DuplicateFileReadPlugin(Plugin):
     重复读取相同文件内容浪费token并减慢任务进度。此插件通过检查已有FileContentMessage来检测重复。
     只检查read_file工具，不检查read_file_with_sed。
     """
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.counter = 0
 
     def register(self, lifecycle):
         """注册插件回调。"""
@@ -656,13 +659,17 @@ class DuplicateFileReadPlugin(Plugin):
                 reprobj = reprlib.Repr(maxstring=100)
 
                 preview = reprobj.repr(content)
+                self.counter += 1
                 return RuntimeMessage(
                     f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
+                    f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
                     f"文件内容预览：{preview}\n"
                     f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
                 )
+            self.counter = 0
             return None
 
+        self.counter = 0
         return None
 
 
