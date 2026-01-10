@@ -57,7 +57,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
 
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
 
         self.assertFalse(result)
         self.agent.interrupt.assert_not_called()
@@ -287,7 +287,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
 ```
 """
 
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
 
         self.assertFalse(result)
 

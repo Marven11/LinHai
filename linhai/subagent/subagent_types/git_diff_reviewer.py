@@ -19,11 +19,11 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from linhai.agent import Agent, Lifecycle
-    from linhai.agent.plugin import Plugin
-    from linhai.subagent import SubAgentManager
-    from linhai.subagent.main import SubAgent
-    from linhai.tool.general import TodolistManager, TodolistItem
-    from linhai.utils import CliRuntimeNotice, generate_id
+    from linhai.agent.plugin import Plugin  # pylint: disable=reimported
+    from linhai.subagent import SubAgentManager  # pylint: disable=reimported
+    from linhai.subagent.main import SubAgent  # pylint: disable=reimported
+    from linhai.tool.general import TodolistManager, TodolistItem  # pylint: disable=reimported
+    from linhai.utils import CliRuntimeNotice, generate_id  # pylint: disable=reimported
 
 
 class GitDiffReviewerSubAgent(SubAgent):

@@ -161,9 +161,8 @@ class PromptFastAgentPlugin(Plugin):
         return
 
     async def after_token_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
-        agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
         if not isinstance(model, OpenAi) or model.compatibility not in [
             "minimax",
@@ -211,7 +210,7 @@ class SlowStartPlugin(Plugin):
         self.enabled = True
 
     async def after_token_generation(
-        self, answer: Answer, current_content: str
+        self, agent: "Agent", answer: Answer, current_content: str
     ) -> bool:
         """在消息生成过程中检查是否错误输出了工具调用内容。"""
         if not self.enabled:
@@ -244,10 +243,9 @@ class WeirdTokenPlugin(Plugin):
     """错误标记检查Plugin。"""
 
     async def after_token_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
-        agent = self.group_chat.get_members("agent", Agent)
         pattern = r"<｜end▁of▁[a-z]+｜>"
         model = await agent.get_current_model()
 
@@ -280,9 +278,8 @@ class WeirdTokenPlugin(Plugin):
 class EndThinkPlugin(Plugin):
     """检查输出中是否有只有'</think>'的行并打断agent。"""
 
-    async def after_token_generation(self, _answer: Answer, current_content: str):
+    async def after_token_generation(self, agent: "Agent", _answer: Answer, current_content: str):
         """检查是否有一行只有'</think>'。"""
-        agent = self.group_chat.get_members("agent", Agent)
 
         lines = current_content.split("\n")
         for line in lines:
@@ -553,10 +550,9 @@ class RuntimeImitationPlugin(Plugin):
     """阻断deepseek模型模仿runtime输出的插件。"""
 
     async def after_token_generation(
-        self, answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
     ):
         """检查deepseek是否在模仿runtime输出并阻断。"""
-        agent = self.group_chat.get_members("agent", Agent)
         model = await agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":

@@ -1,7 +1,5 @@
 """Master host control module for tools that interact with the local machine."""
 
-"""Master host control module for tools that interact with the local machine."""
-
 from .master_host import MasterHostControl
 
 from .http import http_request

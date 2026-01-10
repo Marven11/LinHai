@@ -113,31 +113,12 @@ async def generate_response(...) -> None:
 ### 3.4 CLI层修改
 
 #### 3.4.1 消息处理流程
-```python
-async def watch_parsed_agent_answer_queue(self):
-    while True:
-        parsed_answer = await self.group_chat.receive("parsed_agent_answer")
-        
-        # 持续从segment_queue获取segment，直到解析完成
-        while not parsed_answer.is_finished:
-            try:
-                # 使用asyncio.wait_for避免永久阻塞
-                segment = await asyncio.wait_for(
-                    parsed_answer.segment_queue.get(), 
-                    timeout=0.1
-                )
-                # 创建对应widget
-                widget = self.create_widget_for_segment(segment)
-                self.mount_widget(widget)
-            except asyncio.TimeoutError:
-                # 检查解析是否完成
-                continue
-```
 
-注意：Python的asyncio.Queue没有像Go channel那样的关闭机制，因此需要其他方式判断解析完成。可以：
-1. 在ParsedAnswer中添加`is_finished`属性，解析完成后设为True
-2. 使用特殊的结束segment（如`{'type': 'end_of_stream'}`）
-3. 上述代码示例采用检查`is_finished`属性的方式
+直接将每个parsed answer传给MessageWidget
+
+MessageWidget直接将segment和每个widget一一对应
+
+每个子widget直接读取segment，定时读取最新内容并更新自己，segment更新结束时停止定时器
 
 #### 3.4.2 MessageWidget适配
 - 移除TokenParser依赖
@@ -153,10 +134,6 @@ async def watch_parsed_agent_answer_queue(self):
 2. **插件打断**：通过lifecycle回调触发中断，回调中可以调用`answer.interrupt(cli_message, runtime_message)`并分别指定两个消息
 3. **工具调用失败**：通过lifecycle回调传递Answer对象，让相关处理器处理
 
-#### 3.5.2 用户输入检查
-- 在generate_response的token循环中检查用户输入
-- 有输入时直接调用`answer.interrupt(cli_message, runtime_message)`
-- 不再通过Agent.interrupt方法中转
 
 ### 3.6 生命周期集成
 

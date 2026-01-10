@@ -110,7 +110,7 @@ class MCPConnector:
                 if content.type == "text":
                     result += content.text
             return result
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(f"调用时发生错误：{type(e)} {e!r}")
 
     def init_connector_toolset(self):

@@ -1,7 +1,7 @@
 """SubAgent的issue相关工具。"""
 
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.subagent.issue import IssueManager, IssueError
+from linhai.subagent.issue import IssueManager
 from linhai.subagent.main import SubAgent
 from linhai.utils import generate_id
 

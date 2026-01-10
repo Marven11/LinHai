@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from linhai.agent import Agent, Lifecycle
-    from linhai.agent.plugin import Plugin
-    from linhai.subagent import SubAgentManager
-    from linhai.subagent.main import SubAgent
-    from linhai.utils import CliRuntimeNotice, generate_id
+    from linhai.agent.plugin import Plugin  # pylint: disable=reimported
+    from linhai.subagent import SubAgentManager  # pylint: disable=reimported
+    from linhai.subagent.main import SubAgent  # pylint: disable=reimported
+    from linhai.utils import CliRuntimeNotice, generate_id  # pylint: disable=reimported
 
 
 class ViolationCheckerSubAgent(SubAgent):
@@ -75,7 +75,7 @@ class ViolationCheckerPlugin(Plugin):
         )
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-        from linhai.subagent import SubAgentManager
+        from linhai.subagent import SubAgentManager  # pylint: disable=reimported
 
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager
@@ -97,7 +97,7 @@ class ViolationCheckerPlugin(Plugin):
         )
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-        from linhai.subagent import SubAgentManager
+        from linhai.subagent import SubAgentManager  # pylint: disable=reimported
 
         subagent_manager = self.group_chat.get_members(
             "subagent_manager", SubAgentManager

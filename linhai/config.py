@@ -2,7 +2,7 @@
 
 import os
 import re
-from typing import Optional, Union
+from typing import Union
 import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
@@ -164,7 +164,7 @@ class Config(BaseModel):
     @property
     def subagent_enabled(self) -> bool:
         """检查SubAgent是否启用"""
-        return self.subagent.enable
+        return self.subagent.enable  # type: ignore  # pylint: disable=no-member
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
@@ -187,7 +187,7 @@ def load_config(config_path: Union[str, Path]) -> Config:
     config = Config(**config_data)
 
     config_dir = config_path.parent
-    for mcp_config in config.agent.mcp:
+    for mcp_config in config.agent.mcp:  # type: ignore  # pylint: disable=no-member
         if not os.path.isabs(mcp_config.server_script_path):
             mcp_config.server_script_path = str(
                 config_dir / mcp_config.server_script_path

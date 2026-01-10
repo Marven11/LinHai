@@ -9,10 +9,9 @@ import stat
 import subprocess
 import time
 
-from linhai.llm import Message
+
 from linhai.agent.base import FileContentMessage
 from linhai.tool.base import (
-    ToolArgInfo,
     ToolResultMessage,
     ToolErrorMessage,
 )

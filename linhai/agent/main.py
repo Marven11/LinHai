@@ -10,6 +10,7 @@ import asyncio
 from .base import (
     RuntimeMessage,
 )
+from linhai.parsed_message import ParsedAnswer
 from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
@@ -304,32 +305,22 @@ class Agent:
 
         self.current_answer = answer
 
-        async for token in answer:
-            await self.group_chat.send("agent_answer", token)
-
-            current_content = answer.get_current_content()
-
-            interrupted = await self.lifecycle.trigger_after_token_generation(
-                answer, current_content
-            )
-            if interrupted:
-                return answer
-
-            if not self.group_chat.is_empty("user_message"):
-                msg = await self.receive_one_user_message()
-                from linhai.llm import UserMessage
-
-                assert isinstance(msg, UserMessage)
-                parsed_input = parse_user_input(msg.message.strip())
-                if parsed_input.command is None:
-                    await self.group_chat.send("agent_answer", answer)
-                    chat_message = answer.get_message()
-                    self.message_processor.add_new_message(chat_message)
-                    await self.interrupt("Agent被用户打断")
-                    await self.handle_user_message(msg)
-                    return answer
-
-        await self.group_chat.send("agent_answer", answer)
+        # 创建ParsedAnswer并开始解析
+        parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
+        await parsed_answer.start_parsing()
+        
+        # 发送ParsedAnswer到新队列
+        await self.group_chat.send("parsed_agent_answer", parsed_answer)
+        
+        # 等待解析完成
+        completed_normally = await parsed_answer.wait_parsing()
+        if not completed_normally:
+            # 被中断，直接返回，不执行后续工具调用等
+            return answer
+        
+        # 获取完整的回答消息
+        from linhai.llm import AssistantMessage
+        chat_message = cast(AssistantMessage, answer.get_message())
 
         from linhai.llm import AssistantMessage
 

@@ -168,7 +168,7 @@ async def terminal_create(columns: int = 80, lines: int = 24) -> str:
         terminals[term_id] = terminal
         await terminal.start_reading()
         return term_id
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         return f"创建终端失败: {e}"
 
 

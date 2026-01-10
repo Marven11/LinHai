@@ -229,7 +229,7 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
         answer = await agent.generate_response(
             enable_compress=False, disable_waiting_user_warning=True
         )
-        assistant_message = cast(AssistantMessage, answer.get_message())
+        assistant_message = cast(AssistantMessage, answer.get_message())  # type: ignore
         full_response = assistant_message.message
 
         summary_message_index = len(agent.message_processor.messages) - 1

@@ -36,7 +36,13 @@ class MockAnswer:
     async def __anext__(self):
         if self.index >= len(self.tokens):
             raise StopAsyncIteration
-        token = self.tokens[self.index]
+        token_dict = self.tokens[self.index]
+        # 创建具有reasoning_content和content属性的简单对象
+        class Token:
+            def __init__(self, reasoning_content, content):
+                self.reasoning_content = reasoning_content
+                self.content = content
+        token = Token(token_dict["reasoning_content"], token_dict["content"])
         self.index += 1
         return token
 
@@ -76,6 +82,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat = GroupChat()
 
         self.group_chat.register_queue("agent_answer")
+        self.group_chat.register_queue("parsed_agent_answer")
 
         from linhai.subagent.issue import IssueManager
 
@@ -125,24 +132,24 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_user_message(test_msg)
         await self.agent.generate_response()
 
-        tokens = []
-        final_answer = None
+        # 新设计：接收ParsedAnswer对象而不是token
+        parsed_answer = None
+        while not self.agent.group_chat.is_empty("parsed_agent_answer"):
+            item = await self.agent.group_chat.receive("parsed_agent_answer")
+            if hasattr(item, "segment_queue"):  # ParsedAnswer对象
+                parsed_answer = item
+                break
 
-        while not self.agent.group_chat.is_empty("agent_answer"):
-            item = await self.agent.group_chat.receive("agent_answer")
-            if isinstance(item, dict):  # AnswerToken
-                tokens.append(item)
-            elif hasattr(item, "get_message"):  # 通过鸭子类型检查 Answer 对象
-                final_answer = item
-
-        self.assertEqual(len(tokens), 2)
-        self.assertEqual(tokens[0]["content"], "Hi")
-        self.assertEqual(tokens[1]["content"], " there")
-
-        self.assertIsNotNone(final_answer, "Final Answer object not found")
-        content = final_answer.get_message().to_llm_message().get("content")
-        self.assertIsNotNone(content)
-        self.assertEqual(content, "Hi there")
+        self.assertIsNotNone(parsed_answer, "ParsedAnswer object not found")
+        
+        # 验证解析正常完成
+        completed_normally = await parsed_answer.wait_parsing()
+        self.assertTrue(completed_normally, "Parsing was interrupted")
+        
+        # 验证最终回答内容
+        from linhai.llm import AssistantMessage
+        content = "Hi there"
+        self.assertEqual(self.agent.state, "waiting_user")
 
         self.assertEqual(self.agent.state, "waiting_user")
 

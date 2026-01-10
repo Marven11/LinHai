@@ -9,10 +9,11 @@ from typing import (
     TYPE_CHECKING,
 )
 from linhai.agent.base import RuntimeMessage
-import typing
+
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
+    from linhai.parsed_message import ParsedAnswer, Segment
 
 from linhai.llm import (
     Answer,
@@ -50,8 +51,28 @@ AfterToolCallCallback: TypeAlias = Callable[
 ]
 
 AfterTokenGenerationCallback: TypeAlias = Callable[
-    [Answer, str],
+    ["Agent", Answer, str],
     Awaitable[bool],
+]
+
+BeforeParsingCallback: TypeAlias = Callable[
+    ["ParsedAnswer"],
+    Awaitable[None],
+]
+
+AfterSegmentCallback: TypeAlias = Callable[
+    ["ParsedAnswer", "Segment"],
+    Awaitable[None],
+]
+
+AfterParsingCallback: TypeAlias = Callable[
+    ["ParsedAnswer"],
+    Awaitable[None],
+]
+
+ParsingErrorCallback: TypeAlias = Callable[
+    ["ParsedAnswer", Exception],
+    Awaitable[None],
 ]
 
 BeforeWaitingUserCallback: TypeAlias = Callable[
@@ -98,6 +119,10 @@ class Lifecycle:
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
         self._after_token_generation_callbacks: list[AfterTokenGenerationCallback] = []
+        self._before_parsing_callbacks: list[BeforeParsingCallback] = []
+        self._after_segment_callbacks: list[AfterSegmentCallback] = []
+        self._after_parsing_callbacks: list[AfterParsingCallback] = []
+        self._parsing_error_callbacks: list[ParsingErrorCallback] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._tool_success_callbacks: list[ToolSuccessCallback] = []
         self._tool_failure_callbacks: list[ToolFailureCallback] = []
@@ -185,6 +210,22 @@ class Lifecycle:
         """注册等待用户前的回调。"""
         self._before_waiting_user_callbacks.append(callback)
 
+    def register_before_parsing(self, callback: BeforeParsingCallback):
+        """注册解析开始前的回调。"""
+        self._before_parsing_callbacks.append(callback)
+
+    def register_after_segment(self, callback: AfterSegmentCallback):
+        """注册segment生成后的回调。"""
+        self._after_segment_callbacks.append(callback)
+
+    def register_after_parsing(self, callback: AfterParsingCallback):
+        """注册解析完成后的回调。"""
+        self._after_parsing_callbacks.append(callback)
+
+    def register_parsing_error(self, callback: ParsingErrorCallback):
+        """注册解析错误的回调。"""
+        self._parsing_error_callbacks.append(callback)
+
     def register_tool_success(self, callback: ToolSuccessCallback):
         """注册工具成功回调。"""
         self._tool_success_callbacks.append(callback)
@@ -206,12 +247,12 @@ class Lifecycle:
         self._before_agent_loop_callbacks.append(callback)
 
     async def trigger_after_token_generation(
-        self, answer: Answer, current_content: str
+        self, agent: "Agent", answer: Answer, current_content: str
     ) -> bool:
         """触发token生成后的事件。"""
         should_interrupt = False
         for callback in self._after_token_generation_callbacks:
-            result = await callback(answer, current_content)
+            result = await callback(agent, answer, current_content)
             if result:
                 should_interrupt = True
                 break
@@ -270,6 +311,26 @@ class Lifecycle:
         """触发等待用户前的事件。"""
         for callback in self._before_waiting_user_callbacks:
             await callback(agent)
+
+    async def trigger_before_parsing(self, parsed_answer: "ParsedAnswer"):
+        """触发解析开始前的事件。"""
+        for callback in self._before_parsing_callbacks:
+            await callback(parsed_answer)
+
+    async def trigger_after_segment(self, parsed_answer: "ParsedAnswer", segment: "Segment"):
+        """触发segment生成后的事件。"""
+        for callback in self._after_segment_callbacks:
+            await callback(parsed_answer, segment)
+
+    async def trigger_after_parsing(self, parsed_answer: "ParsedAnswer"):
+        """触发解析完成后的事件。"""
+        for callback in self._after_parsing_callbacks:
+            await callback(parsed_answer)
+
+    async def trigger_parsing_error(self, parsed_answer: "ParsedAnswer", error: Exception):
+        """触发解析错误事件。"""
+        for callback in self._parsing_error_callbacks:
+            await callback(parsed_answer, error)
 
     async def trigger_tool_success(
         self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any

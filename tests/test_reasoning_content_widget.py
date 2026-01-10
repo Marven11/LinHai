@@ -13,8 +13,14 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.role = "assistant"
         self.content = "这是一个测试思考内容\n包含多行文本\n和一些特殊字符 [ ] \\ 等"
         self.sender_name = "test-agent"
+        self.mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         self.widget = ReasoningContentWidget(
-            role=self.role, sender_name=self.sender_name, theme="nord"
+            role=self.role, sender_name=self.sender_name, theme="nord",
+            segment=self.mock_segment
         )
         self.widget.feed_string(self.content)
 
@@ -105,8 +111,14 @@ class TestReasoningContentWidget(unittest.TestCase):
 第三行内容
 第四行内容"""
 
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string(multi_line_content)
         widget.is_expanded = False
@@ -125,8 +137,14 @@ class TestReasoningContentWidget(unittest.TestCase):
         """Test that special characters don't cause crashes in collapsed state."""
         content_with_special_chars = "思考内容包含特殊字符 [方括号] \\反斜杠 &符号"
 
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string(content_with_special_chars)
         widget.is_expanded = False
@@ -141,8 +159,14 @@ class TestReasoningContentWidget(unittest.TestCase):
     @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
     def test_stop_method(self, mock_set_timer):
         """Test that finish_streaming method stops the timer."""
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string("test content")
         mock_timer = Mock()
@@ -165,8 +189,14 @@ class TestReasoningContentWidget(unittest.TestCase):
     @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
     def test_stop_method_actual_timer(self, mock_set_timer):
         """Test finish_streaming method with actual timer behavior."""
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string("test content")
 
@@ -190,8 +220,14 @@ class TestReasoningContentWidget(unittest.TestCase):
     @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
     def test_stop_method_without_timer(self, mock_set_timer):
         """Test finish_streaming method when there is no timer."""
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string("test content")
         widget.timer = None
@@ -209,8 +245,14 @@ class TestReasoningContentWidget(unittest.TestCase):
 
     def test_panel_styling(self):
         """Test that styling is correctly applied."""
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string("test content")
 
@@ -226,8 +268,14 @@ class TestReasoningContentWidget(unittest.TestCase):
 
     def test_no_wrap_styling(self):
         """Test that no_wrap=True is applied in ReasoningContentWidget."""
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string("测试内容")
         widget.is_expanded = False
@@ -247,8 +295,14 @@ class TestReasoningContentWidget(unittest.TestCase):
     def test_truncated_content_no_wrap(self):
         """Test that truncated content in collapsed state has no_wrap=True."""
         long_content = "这是一行很长的测试内容" * 10
+        mock_segment = {
+            "segment_type": "reasoning",
+            "content": "",
+            "is_finished": False
+        }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord"
+            role="assistant", sender_name="test", theme="nord",
+            segment=mock_segment
         )
         widget.feed_string(long_content)
         widget.is_expanded = False

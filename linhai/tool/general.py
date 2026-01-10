@@ -17,7 +17,6 @@ from linhai.tool.base import (
     global_tools,
     ToolArgInfo,
     ToolResultMessage,
-    ToolErrorMessage,
     ToolSet,
 )
 from linhai.group_chat import GroupChat

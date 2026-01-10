@@ -13,10 +13,9 @@ from linhai.agent import Agent
 from linhai.config import CLIConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import (
-    Answer,
-    AnswerToken,
     AnswerTokenUsage,
 )
+from linhai.parsed_message import ParsedAnswer
 from linhai.subagent.message_wrapper import (
     SubAgentAnswerTokenWrapper,
     SubAgentAnswerCompleteWrapper,
@@ -101,7 +100,7 @@ class CLIApp(App):
         self.theme = cli_config.theme
         self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
-        self.group_chat.register_queue("agent_answer")
+        self.group_chat.register_queue("parsed_agent_answer")
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
         self.group_chat.register_queue("subagent_message")
@@ -151,52 +150,40 @@ class CLIApp(App):
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.group_chat)
 
-    async def watch_agent_answer_queue(self) -> None:
-        """监听agent_answer队列并处理Agent回答"""
-        current_message = None
+    async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
+        agent = self.group_chat.get_members("agent", Agent)
+        llm_name, _llm = agent.get_current_llm_info()
+        
+        container = self.query_one("#chat-container")
+        widget = MessageWidget(
+            role="assistant",
+            sender_name=llm_name,
+            theme=self.theme,
+        )
+        widget.set_parsed_answer(parsed_answer)
+        container.mount(widget)
+        self.messages.append(widget)
+        
+        if self.should_auto_scroll():
+            container.scroll_end(animate=False)
+        
+        answer = parsed_answer.answer
+        token_usage = answer.get_token_usage()
+        if token_usage is not None:
+            self.token_manager.update_cumulative_usage(token_usage)
+            self.token_manager.current_token_usage = None
+            self.update_token_display(token_usage.total_tokens)
+    
+    async def watch_parsed_agent_answer_queue(self) -> None:
+        """监听parsed_agent_answer队列并处理解析后的Agent回答"""
         while True:
-            output = await self.group_chat.receive("agent_answer")
-            if isinstance(output, AnswerToken):
-                is_reasoning = bool(output.reasoning_content)
-                content = output.reasoning_content if is_reasoning else output.content
-                if not content:
-                    continue
-
-                container = self.query_one("#chat-container")
-
-                if current_message is None:
-                    agent = self.group_chat.get_members("agent", Agent)
-                    llm_name, _llm = agent.get_current_llm_info()
-                    current_message = MessageWidget(
-                        role="assistant",
-                        sender_name=llm_name,
-                        theme=self.theme,
-                    )
-                    await asyncio.sleep(0)
-                    container.mount(current_message)
-                    self.messages.append(current_message)
-                    current_message.update_display()
-                
-                current_message.feed_string(content, is_reasoning)
-
-                if self.should_auto_scroll():
-                    container.scroll_end(animate=False)
-
-            elif isinstance(output, Answer):
-
-                token_usage = output.get_token_usage()
-                if token_usage is not None:
-                    self.token_manager.update_cumulative_usage(token_usage)
-                    self.token_manager.current_token_usage = None
-                    self.update_token_display(token_usage.total_tokens)
-
-                if current_message:
-                    current_message.update_display()
-                    current_message.finish_streaming()
-                current_message = None
+            output = await self.group_chat.receive("parsed_agent_answer")
+            if isinstance(output, ParsedAnswer):
+                # 为每个ParsedAnswer启动独立的处理任务
+                asyncio.create_task(self._handle_single_parsed_answer(output))
             else:
                 raise RuntimeError(
-                    f"Unknown Type in agent_answer: {type(output)=} {output=}"
+                    f"Unknown Type in parsed_agent_answer: {type(output)=} {output=}"
                 )
 
     async def watch_ui_log_queue(self) -> None:
@@ -353,16 +340,16 @@ class CLIApp(App):
         )
 
     async def watch_output_queue(self) -> None:
-        """启动四个独立的任务分别监听不同的队列"""
+        """启动五个独立的任务分别监听不同的队列"""
 
-        agent_answer_task = asyncio.create_task(self.watch_agent_answer_queue())
+        parsed_answer_task = asyncio.create_task(self.watch_parsed_agent_answer_queue())
         ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
         exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
         subagent_message_task = asyncio.create_task(self.watch_subagent_message_queue())
         token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
 
         done, pending = await asyncio.wait(
-            [agent_answer_task, ui_log_task, exit_signal_task, subagent_message_task, token_usage_task],
+            [parsed_answer_task, ui_log_task, exit_signal_task, subagent_message_task, token_usage_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
 

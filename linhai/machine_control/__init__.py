@@ -6,5 +6,4 @@ from .main import MachineControl
 
 __all__ = ["MachineControl", "MasterHostControl", "SshMachineControl"]
 
-from .main import MachineControl
-from .master_host import MasterHostControl
+

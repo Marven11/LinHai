@@ -7,12 +7,12 @@ import signal
 
 import time
 import base64
-import select
+
 import fcntl
 import platform
-import re
+
 from pathlib import Path
-from typing import TypedDict, NotRequired, Dict, Union
+from typing import TypedDict, Dict, Union
 
 
 class TerminalDict(TypedDict):
@@ -56,6 +56,7 @@ class Trojan:
                 text=True,
                 timeout=timeout,
                 cwd=self.current_dir,
+                check=False,
             )
             output = f"返回码: {result.returncode}\n"
             if result.stdout:
@@ -65,7 +66,7 @@ class Trojan:
             return {"message": output}
         except subprocess.TimeoutExpired:
             return {"error": f"命令超时: {timeout}秒"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def change_directory(self, directory):
@@ -74,7 +75,7 @@ class Trojan:
             os.chdir(directory)
             self.current_dir = os.getcwd()
             return {"message": f"已切换到目录: {self.current_dir}"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def read_file(self, filepath, show_line_numbers=False):
@@ -89,7 +90,7 @@ class Trojan:
                 content = "\n".join(numbered)
 
             return {"message": content}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def write_file(self, filepath, content, override=False):
@@ -101,7 +102,7 @@ class Trojan:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
             return {"message": f"文件已写入: {filepath}"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def replace_file_content(self, filepath, old, new, replace_times=None):
@@ -130,7 +131,7 @@ class Trojan:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(new_content)
             return {"message": f"已替换{count}次"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def list_files(self, dirpath):
@@ -157,7 +158,7 @@ class Trojan:
                 lines.append(f"{dir_mark} {item['name']}{size}")
 
             return {"message": "\n".join(lines)}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def get_absolute_path(self, path):
@@ -165,19 +166,19 @@ class Trojan:
         try:
             abs_path = Path(path).absolute()
             return {"message": str(abs_path)}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def read_file_with_sed(self, expression, filepath):
         """执行sed表达式"""
         try:
             result = subprocess.run(
-                ["sed", "-n", expression, filepath], capture_output=True, text=True
+                ["sed", "-n", expression, filepath], capture_output=True, text=True, check=False
             )
             if result.returncode != 0:
                 return {"error": result.stderr}
             return {"message": result.stdout}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def modify_file_with_sed(self, expression: str, filepath: str) -> dict:
@@ -197,11 +198,11 @@ class Trojan:
             else:
                 cmd = ["sed", "-i", expression, filepath]
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 return {"error": result.stderr}
             return {"message": "文件已修改"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def insert_at_line(self, filepath, line_number, content, expected_line_content):
@@ -227,7 +228,7 @@ class Trojan:
                 f.writelines(lines)
 
             return {"message": f"已插入到第{line_number}行"}
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return {"error": str(e)}
 
     def terminal_create(self, columns: int = 80, lines: int = 24) -> TrojanResult:
@@ -427,7 +428,7 @@ def main():
                 }
 
             print(json.dumps(response), flush=True)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             request_id = None
             if request is not None:
                 request_id = request.get("id")

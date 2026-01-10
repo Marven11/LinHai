@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """LLM模块，定义语言模型相关的消息类和协议。"""
+from __future__ import annotations
 from typing import (
     Sequence,
     Protocol,

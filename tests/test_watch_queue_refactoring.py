@@ -24,7 +24,7 @@ class TestWatchQueueRefactoring(unittest.TestCase):
 
     def test_method_exists(self):
         """测试四个新方法是否存在"""
-        self.assertTrue(hasattr(self.app, "watch_agent_answer_queue"))
+        self.assertTrue(hasattr(self.app, "watch_parsed_agent_answer_queue"))
         self.assertTrue(hasattr(self.app, "watch_ui_log_queue"))
         self.assertTrue(hasattr(self.app, "watch_exit_signal_queue"))
         self.assertTrue(hasattr(self.app, "watch_subagent_message_queue"))
@@ -36,7 +36,7 @@ class TestWatchQueueRefactoring(unittest.TestCase):
 
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_output_queue))
 
-        self.assertTrue(inspect.iscoroutinefunction(self.app.watch_agent_answer_queue))
+        self.assertTrue(inspect.iscoroutinefunction(self.app.watch_parsed_agent_answer_queue))
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_ui_log_queue))
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_exit_signal_queue))
         self.assertTrue(
@@ -45,7 +45,7 @@ class TestWatchQueueRefactoring(unittest.TestCase):
 
     def test_group_chat_registration(self):
         """测试GroupChat队列注册"""
-        self.assertIn("agent_answer", self.group_chat.queues)
+        self.assertIn("parsed_agent_answer", self.group_chat.queues)
         self.assertIn("ui_log", self.group_chat.queues)
         self.assertIn("exit_signal", self.group_chat.queues)
         self.assertIn("subagent_message", self.group_chat.queues)

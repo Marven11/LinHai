@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
+from textual import work
 from textual.app import ComposeResult
 from textual.timer import Timer
 from textual.widgets import Static
@@ -18,6 +19,7 @@ from textual.widgets import Static
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from typing import TypedDict, Literal
 from .token_parser import TokenParser, ParsedToken
+from linhai.parsed_message import Segment
 
 
 class TodolistItem(TypedDict):
@@ -325,9 +327,10 @@ class ToolCallWidget(Static):
     }
     """
 
-    def __init__(self, theme: str):
+    def __init__(self, theme: str, segment: Segment):
         super().__init__()
         self.theme = theme
+        self._segment = segment
         self.json_str = ""
         self.parser = StreamJsonParser()
 
@@ -352,7 +355,6 @@ class ToolCallWidget(Static):
                 self.timer = None
 
         self.set_timer(10, postponded_stop_timer)
-        self.update_display()
 
     def feed_string(self, new_content: str):
         try:
@@ -370,8 +372,6 @@ class ToolCallWidget(Static):
         self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
     def update_display(self) -> None:
-        """更新显示"""
-
         if self.has_error:
             self.update(
                 Syntax(
@@ -385,6 +385,20 @@ class ToolCallWidget(Static):
             self.border_title = "tool call (error)"
             self.add_class("error")
             return
+
+        if self._segment["is_finished"]:
+            self.finish_streaming()
+            return
+
+        segment_content = self._segment["content"]
+        if segment_content != self.json_str:
+            new_content = segment_content.removeprefix(self.json_str)
+            self.json_str = segment_content
+            try:
+                self.parser.feed_string(new_content)
+            except RuntimeError as e:
+                self.has_error = True
+                self.error_message = str(e)
 
         try:
             for value in self.parser:
@@ -446,8 +460,6 @@ class ToolCallWidget(Static):
             self.has_error = True
             self.error_message = str(e)
 
-            self.update_display()
-
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
         matches = re.findall(r"^`+", text, re.MULTILINE)
@@ -496,9 +508,10 @@ class ReasoningContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str):
+    def __init__(self, role: str, sender_name: str, theme: str, segment: Segment):
         super().__init__()
         self.theme = theme
+        self._segment = segment
         self.role = f"{role}-reasoning"
         self.content_str = ""
         self.is_expanded = False
@@ -544,11 +557,19 @@ class ReasoningContentWidget(Static):
                 self.timer = None
 
         self.set_timer(10, postponded_stop_timer)
-        self.update_display()
 
     def update_display(self) -> None:
         """更新思考消息显示"""
-
+        if self._segment["is_finished"]:
+            self.finish_streaming()
+            if self.timer:
+                self.timer.stop()
+            return
+        
+        segment_content = self._segment["content"]
+        if segment_content != self.content_str:
+            self.content_str = segment_content
+            
         content_to_display = self.content_str.strip()
 
         if self.is_expanded:
@@ -600,7 +621,6 @@ class UserMessageWidget(Static):
                 self.timer = None
 
         self.set_timer(10, postponded_stop_timer)
-        self.update_display()
 
     def feed_string(self, new_content: str):
         """追加内容到消息"""
@@ -654,14 +674,15 @@ class NormalContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str):
+    def __init__(self, role: str, sender_name: str, theme: str, segment: Segment):
         super().__init__()
         self.theme = theme
         self.content_str = ""
         self.display_name = sender_name
         self.role = role
-        self.timer: Timer | None = None
-        self._content_static: Static | None = None
+        self.timer = None
+        self._content_static = None
+        self._segment = segment
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
@@ -674,7 +695,6 @@ class NormalContentWidget(Static):
                 self.timer = None
 
         self.set_timer(10, postponded_stop_timer)
-        self.update_display()
         if not self.content_str.strip():
             self.remove()
 
@@ -690,6 +710,14 @@ class NormalContentWidget(Static):
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
+        if self._segment["is_finished"]:
+            self.finish_streaming()
+            return
+        
+        segment_content = self._segment["content"]
+        if segment_content != self.content_str:
+            self.content_str = segment_content
+        
         content_to_display = self.content_str.strip()
 
         if self._content_static is not None:
@@ -705,7 +733,7 @@ class NormalContentWidget(Static):
 
 
 class MessageWidget(Static):
-    """普通消息显示组件，支持流式token处理和JSON工具调用显示"""
+    """消息显示组件，支持ParsedAnswer和segment流式显示"""
 
     DEFAULT_CSS = """
     MessageWidget {
@@ -718,74 +746,66 @@ class MessageWidget(Static):
         self.role = role
         self.sender_name = sender_name
         self.theme = theme
-        self.token_parser = TokenParser()
-        self.current_widget: (
-            ToolCallWidget | NormalContentWidget | ReasoningContentWidget | None
-        ) = None
-        self._last_token_type: str | None = None
+        self.parsed_answer = None
+        self._processing_task = None
 
+    def set_parsed_answer(self, parsed_answer):
+        """设置ParsedAnswer并开始处理segment"""
+        self.parsed_answer = parsed_answer
+        # 开始异步处理segment队列
+        from textual import work
+        self._start_processing_segments()
+
+    @work(exclusive=False)
+    async def _start_processing_segments(self):
+        if not self.parsed_answer:
+            return
+        
+        while True:
+            segment = await self.parsed_answer.segment_queue.get()
+            segment_type = segment["segment_type"]
+            if segment_type == "toolcall":
+                widget = ToolCallWidget(theme=self.theme, segment=segment)
+            elif segment_type == "normal":
+                widget = NormalContentWidget(
+                    role=self.role,
+                    sender_name=self.sender_name,
+                    theme=self.theme,
+                    segment=segment
+                )
+            elif segment_type == "reasoning":
+                widget = ReasoningContentWidget(
+                    role=self.role,
+                    sender_name=self.sender_name,
+                    theme=self.theme,
+                    segment=segment
+                )
+            else:
+                continue
+            
+            self.mount(widget)
+    
+    def _start_widget_updater(self, widget, segment):
+        """启动widget的定时更新器，让widget直接读取segment内容"""
+        # 这里我们需要让widget能够直接访问segment对象
+        # 由于widget已经持有segment引用，我们可以通过传递segment给widget的方式
+        # 但现有widget接口没有设计为直接接收segment，所以我们需要扩展widget
+        # 或者通过其他方式让widget能够获取segment内容
+        # 目前，我们先采用简单方式：通过定时器更新widget内容
+        
+        # 保存segment引用到widget中
+        widget._segment = segment
+        
+        # 如果widget有定时更新显示的方法，启动它
+        if hasattr(widget, 'update_display'):
+            # widget会通过定时器自己更新显示
+            # 我们需要让widget能够读取segment内容
+            # 修改widget的update_display方法，让它从_segment读取内容
+            pass
+        
     def finish_streaming(self) -> None:
-        """停止组件的timer"""
-        if self.current_widget and isinstance(
-            self.current_widget,
-            (ToolCallWidget, NormalContentWidget, ReasoningContentWidget),
-        ):
-            self.current_widget.finish_streaming()
-
-    def update_display(self):
-        """更新显示"""
-        if self.current_widget:
-            self.current_widget.update_display()
-
-    def feed_string(self, new_content: str, is_reasoning: bool = False):
-        """追加内容到消息"""
-        parsed_tokens = self.token_parser.receive_token(new_content, is_reasoning)
-        for token in parsed_tokens:
-            self._handle_parsed_token(token)
-
-    def _handle_token_type_change(
-        self, new_token_type: Literal["normal", "toolcall", "reasoning"]
-    ):
-        """处理token类型变化"""
-        new_widget = None
-        if new_token_type == "toolcall":
-            new_widget = ToolCallWidget(theme=self.theme)
-        elif new_token_type == "normal":
-            new_widget = NormalContentWidget(
-                role=self.role,
-                sender_name=self.sender_name,
-                theme=self.theme,
-            )
-        elif new_token_type == "reasoning":
-            new_widget = ReasoningContentWidget(
-                role=self.role,
-                sender_name=self.sender_name,
-                theme=self.theme,
-            )
-        else:
-            assert False, f"{new_token_type=}"
-        if self.current_widget:
-            self.current_widget.finish_streaming()
-            # 去除两个widget之间的border, 将两个widget拼接在一起，让UI更加美观
-            self.current_widget.styles.border_bottom = ("none", "white")
-            self.mount(SpaceWidget())
-            new_widget.styles.border_top = ("none", "white")
-        self.mount(new_widget)
-        new_widget.update_display()
-        self.current_widget = new_widget
-
-        self._last_token_type = new_token_type
-
-    def _handle_parsed_token(self, token: ParsedToken):
-        """处理解析后的token"""
-        token_type = token["token_type"]
-        content = token["content"]
-
-        # 检查token类型是否发生变化
-        if token_type != self._last_token_type:
-            self._handle_token_type_change(token_type)
-        assert self.current_widget is not None
-        self.current_widget.feed_string(content)
+        """停止所有widget的timer"""
+        # 子widget自己管理定时器，MessageWidget不再负责
 
 
 class FooterWidget(Static):

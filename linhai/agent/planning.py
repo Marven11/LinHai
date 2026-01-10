@@ -143,7 +143,7 @@ class TaskPlanningEnforcementPlugin(Plugin):
                 self.no_planning_counter = 0
 
     async def after_token_generation(
-        self, _answer: Answer, current_content: str
+        self, agent: "Agent", _answer: Answer, current_content: str
     ) -> bool:
         """检查是否应该打断Agent。"""
 

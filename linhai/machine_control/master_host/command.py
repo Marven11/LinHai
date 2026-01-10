@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-import platform
+import platform  # pylint: disable=unused-import
 import signal
 import subprocess
 

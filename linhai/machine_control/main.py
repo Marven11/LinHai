@@ -1,6 +1,6 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
-from typing import Dict, Optional, Protocol, Union, Tuple
+from typing import Dict, Optional, Protocol, Union
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import Message
@@ -512,7 +512,7 @@ class MachineControl:
             connected = await ssh_control.connect()
             if not connected:
                 return ToolErrorMessage(f"连接SSH机器失败: {host}:{port}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             return ToolErrorMessage(f"连接SSH机器时出错: {e}")
 
         self.machines[machine_id] = ssh_control
