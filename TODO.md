@@ -73,6 +73,9 @@
     - 运行所有unittest
   - 参考
     - 参考streamjson和linhai/cli/token_parser.py
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了打断逻辑
+  - 查看这个commit删除的linhai/agent/main.py中的代码
+  - 在Agent类中添加after_token_generation回调并注册，在接收到用户消息时打断当前消息
 - [ ] 简化linhai/cli/components.py到600行以内
   - 删除、移动不必要的import
   - 移除ToolCallWidget获取for value in self.parser时的try block，这里几乎不会报错
