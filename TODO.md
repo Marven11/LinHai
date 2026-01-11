@@ -76,11 +76,14 @@
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了打断逻辑
   - 查看这个commit删除的linhai/agent/main.py中的代码
   - 在Agent类中添加after_token_generation回调并注册，在接收到用户消息时打断当前消息
+  - 必须使用after_token_generation回调！
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了滚动逻辑
   - 更好的方法是根本不在正常解析代码时判断是否需要滚动，而是加一个0.1秒的timer专门负责滚动
   - 写一个timer每0.1秒运行一次，如果should_auto_scroll则调用
   - 删除其他使用should_auto_scroll的代码
-- [ ] 简化linhai/cli/components.py到600行以内
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是忘记了同步修改subagent消息的更新逻辑
+  - 必须完全按照agent接收显示消息的方式！禁止修改任何和subagent无关的代码
+- [ ] 精简重构后不需要的代码，不破坏当前功能，简化linhai/cli/components.py到850行以内
   - 删除、移动不必要的import
   - 移除ToolCallWidget获取for value in self.parser时的try block，这里几乎不会报错
   - 删除所有finish_streaming函数，在is_finished=True时立即停止timer并进行最后一次update_display
@@ -90,6 +93,8 @@
   - feed_string和append_content均不需要，当前消息内容完全由传入的segment/content决定，删除这些函数
   - 删除ReasoningContentWidget等计算标题的逻辑，以及所有widget中设置widget标题的逻辑，当前不显示标题
   - UserMessageWidget中的消息根本不会定时更新，init传入的content永远不会被更新，因此根本不需要timer,删除timer逻辑
+  - 重新检查文件查看以上问题是否完全清除
+  - 重新检查git diff linhai/cli/components.py查看是否误伤其他逻辑
   - 调整对应unittest
   - 用wc -l检查
   - 运行unittest检查
