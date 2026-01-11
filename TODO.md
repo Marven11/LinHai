@@ -18,6 +18,34 @@
   - 同步修改unittest
 - [ ] 运行所有unittest确认所有需要修改的unittest都修改完毕
 
+# 代码要求
+
+本项目的大部分代码要求都在./CODE_REQUIREMENTS.md中，探索代码架构时务必读取此文件！
+
+如果你看不到此文件的内容，务必重新读取！
+
+## 代码要求：unittest
+
+这个项目的绝大部分unittest都是你写的，且无人监督你的unittest实现，你对unittest的所有错误行为负责
+
+开发新功能时：必须添加新的unittest
+
+修改任何代码时：必须规划查找相应代码对应的unittest并修改
+
+删除代码时：必须规划修改使用对应函数/常量/类的unittest
+
+unittest失败时，必须分析
+
+- unittest是否过时
+- unittest是否传入了错误的数据类型
+- unittest是否和用户期望不同
+
+【注意】unittest不得与用户要求相冲突，如果用户要求和unittest不同，必须修改unittest
+【绝对注意】禁止使用if, getattr, hasattr, isinstance等结构检查数据是否来自unittest
+【绝对注意】禁止使用if, getattr, hasattr, isinstance等结构检查是否是Mock类型的数据
+
+不要用pyright检查unittest的类型错误，unittest的类型错误会在运行unittest时自然出现
+
 # 暂时搁置
 
 - [ ] 重构工具返回格式，使其直接包含工具名而不是拆分成两个消息
