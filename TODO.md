@@ -42,6 +42,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"的使用，需要重构
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是没有正确修改 interrupt 的定义，需要重构
   - 完全修改 Agent.interrupt，定义两个参数
     - agent_message: 放进 RuntimeMessage 塞进 agent essages processor 中的消息
