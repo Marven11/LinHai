@@ -109,7 +109,6 @@ async def create_agent_from_config(
 
         DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
     await _create_subagent(context, llms, agent)
-    context["group_chat"].call_postinit()
     return agent
 
 

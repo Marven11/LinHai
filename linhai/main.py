@@ -53,6 +53,8 @@ async def run(args, init_messages: list[str] | None):
         cli_config=config.cli,
     )
 
+    group_chat.call_postinit()
+
     await app.run_async()
     return app.return_code
 

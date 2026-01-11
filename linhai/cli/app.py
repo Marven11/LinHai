@@ -9,7 +9,7 @@ from textual.widgets import Static, TabbedContent, TabPane, Input
 from textual import events
 from textual_autocomplete import AutoComplete, DropdownItem
 
-from linhai.agent import Agent
+from linhai.agent import Agent, Lifecycle
 from linhai.config import CLIConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import (
@@ -19,7 +19,6 @@ from linhai.parsed_message import ParsedAnswer
 from linhai.subagent.message_wrapper import (
     SubAgentAnswerTokenWrapper,
     SubAgentAnswerCompleteWrapper,
-    SubAgentParsedAnswerWrapper,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
@@ -101,15 +100,8 @@ class CLIApp(App):
         self.theme = cli_config.theme
         self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
-        
-        # 注册队列，避免重复注册
-        try:
-            self.group_chat.register_queue("parsed_agent_answer")
-        except RuntimeError as e:
-            if "exists" not in str(e):
-                raise
-            # 队列已存在，忽略错误，继续使用现有队列
-            
+
+        self.group_chat.register_queue("parsed_agent_answer")
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
         self.group_chat.register_queue("subagent_message")
@@ -126,9 +118,7 @@ class CLIApp(App):
 
         self.is_user_scroll_to_end = False
 
-        self.subagent_current_messages: Dict[
-            str, MessageWidget
-        ] = {}
+        self.subagent_current_messages: Dict[str, MessageWidget] = {}
 
         self.completions = []  # 初始化为空，等待agent注册后再生成
         self.command_completions = self._generate_command_completions()
@@ -137,6 +127,13 @@ class CLIApp(App):
         self.cli_config = cli_config
         self.command_handler = CommandHandler(self.group_chat)
         self.auto_scroll_timer_task: Optional[asyncio.Task] = None
+
+        self.group_chat.add_postinit(self.postinit)
+
+    def postinit(self):
+        self.group_chat.get_members(
+            "lifecycle", Lifecycle
+        ).register_after_message_generation(self.after_message_generation)
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -163,7 +160,7 @@ class CLIApp(App):
     async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
         agent = self.group_chat.get_members("agent", Agent)
         llm_name, _llm = agent.get_current_llm_info()
-        
+
         container = self.query_one("#chat-container")
         widget = MessageWidget(
             role="assistant",
@@ -173,14 +170,14 @@ class CLIApp(App):
         widget.set_parsed_answer(parsed_answer)
         container.mount(widget)
         self.messages.append(widget)
-        
-        answer = parsed_answer.answer
+
+    async def after_message_generation(self, answer, full_response, tool_calls):
         token_usage = answer.get_token_usage()
         if token_usage is not None:
             self.token_manager.update_cumulative_usage(token_usage)
             self.token_manager.current_token_usage = None
             self.update_token_display(token_usage.total_tokens)
-    
+
     async def watch_parsed_agent_answer_queue(self) -> None:
         """监听parsed_agent_answer队列并处理解析后的Agent回答"""
         while True:
@@ -246,8 +243,6 @@ class CLIApp(App):
             await self._handle_subagent_token_wrapper(output)
         elif isinstance(output, SubAgentAnswerCompleteWrapper):
             await self._handle_subagent_answer_complete_wrapper(output)
-        elif isinstance(output, SubAgentParsedAnswerWrapper):
-            await self._handle_subagent_parsed_answer_wrapper(output)
         elif isinstance(output, CliRuntimeNotice):
             await self._handle_subagent_runtime_notice(output)
 
@@ -265,42 +260,44 @@ class CLIApp(App):
 
         # 内联_extract_token_content_and_type逻辑
         if token.reasoning_content is not None and token.reasoning_content.strip():
-            token_type = 'reasoning'
+            token_type = "reasoning"
             content = token.reasoning_content
         else:
-            token_type = 'content'
+            token_type = "content"
             content = token.content if token.content else ""
-        
+
         if not content:
             return
 
         subagent_container = self.query_one("#subagent-container")
-        self._ensure_widget_exists(subagent_name, content, token_type, subagent_container)
+        self._ensure_widget_exists(
+            subagent_name, content, token_type, subagent_container
+        )
 
     def _extract_token_content_and_type(self, token):
         """提取token的内容和类型
-        
+
         返回: (type, content) 其中type可以是'reasoning', 'content'
         注意：工具调用不能在这里检测，因为可能被分割成多个token，需要在消息累积缓冲区中检测
         """
         if token.reasoning_content is not None and token.reasoning_content.strip():
-            return 'reasoning', token.reasoning_content
+            return "reasoning", token.reasoning_content
         else:
             content = token.content if token.content else ""
-            return 'content', content
+            return "content", content
 
-
-
-    def _ensure_widget_exists(self, subagent_name, content, token_type, subagent_container):
+    def _ensure_widget_exists(
+        self, subagent_name, content, token_type, subagent_container
+    ):
         """确保widget存在，如果不存在则创建，否则追加内容
-        
+
         使用MessageWidget统一处理所有token类型，由MessageWidget内部处理类型切换
         """
         from .components import MessageWidget
-        
+
         current_message = self.subagent_current_messages.get(subagent_name)
-        is_reasoning = token_type == 'reasoning'
-        
+        is_reasoning = token_type == "reasoning"
+
         # 如果当前没有widget，直接创建
         if current_message is None:
             new_message = MessageWidget(
@@ -308,14 +305,15 @@ class CLIApp(App):
                 sender_name=subagent_name,
                 theme=self.theme,
             )
-            
+
             self.subagent_current_messages[subagent_name] = new_message
             subagent_container.mount(new_message)
             new_message.update_display()
             current_message = new_message
-        
+
         # 直接追加内容，由MessageWidget内部处理类型切换
         current_message.feed_string(content, is_reasoning)
+
     async def _handle_subagent_answer_complete_wrapper(
         self, wrapper: SubAgentAnswerCompleteWrapper
     ) -> None:
@@ -337,7 +335,7 @@ class CLIApp(App):
         self, subagent_name: str, content: str, is_reasoning: bool
     ):
         """创建SubAgent消息widget
-        
+
         现在统一返回MessageWidget，由MessageWidget内部处理类型切换
         """
         return MessageWidget(
@@ -356,7 +354,13 @@ class CLIApp(App):
         token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
 
         done, pending = await asyncio.wait(
-            [parsed_answer_task, ui_log_task, exit_signal_task, subagent_message_task, token_usage_task],
+            [
+                parsed_answer_task,
+                ui_log_task,
+                exit_signal_task,
+                subagent_message_task,
+                token_usage_task,
+            ],
             return_when=asyncio.FIRST_COMPLETED,
         )
 
@@ -433,7 +437,9 @@ class CLIApp(App):
                 await self.group_chat.send("user_message", user_msg)
 
                 agent = self.group_chat.get_members("agent", Agent)
-                widget = UserMessageWidget(user_msg.message, sender_name="user", theme=self.theme)
+                widget = UserMessageWidget(
+                    user_msg.message, sender_name="user", theme=self.theme
+                )
                 container = self.query_one("#chat-container")
                 container.mount(widget)
                 widget.update_display()
@@ -456,7 +462,7 @@ class CLIApp(App):
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
         )
-        
+
         # 启动自动滚动定时器
         self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
 
@@ -571,7 +577,9 @@ class CLIApp(App):
         await self.group_chat.send("user_message", user_msg)
         input_element.value = ""  # type: ignore
 
-        widget = UserMessageWidget(user_msg.message, sender_name="user", theme=self.theme)
+        widget = UserMessageWidget(
+            user_msg.message, sender_name="user", theme=self.theme
+        )
         container.mount(widget)
         widget.update_display()
         self.is_user_scroll_to_end = True
