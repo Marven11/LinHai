@@ -13,6 +13,10 @@
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了其中的TODO，但是忘记了同步修改subagent消息的更新逻辑
   - 必须完全按照agent接收显示消息的方式！禁止修改任何和subagent无关的代码
 - [ ] unittest会在当前目录创建AGENT.md垃圾文件，找到原因并修改
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d引入了set_parsed_answer这个setter，改为在__init__中接收
+  - 禁止编写任何setter
+  - 同步修改unittest
+- [ ] 运行所有unittest确认所有需要修改的unittest都修改完毕
 
 # 暂时搁置
 
