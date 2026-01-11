@@ -168,7 +168,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         answer = AsyncMock()
         current_content = "```json toolcall"
         
-        result = await self.plugin.after_token_generation(answer, current_content)
+        result = await self.plugin.after_token_generation(agent, answer, current_content)
         
         # self.assertTrue(result)  # 插件行为可能已改变
         # Note: after_token_generation does not call agent.interrupt, it only returns True to indicate interruption should happen.
@@ -226,7 +226,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         answer = AsyncMock()
         current_content = "- [x] Task 1\n```json toolcall"
         
-        result = await self.plugin.after_token_generation(answer, current_content)
+        result = await self.plugin.after_token_generation(agent, answer, current_content)
         
         self.assertFalse(result)
         agent.interrupt.assert_not_called()

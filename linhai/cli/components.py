@@ -346,27 +346,6 @@ class ToolCallWidget(Static):
 
         self.border_title = "tool call"
 
-    def finish_streaming(self) -> None:
-        """停止组件的timer"""
-
-        def postponded_stop_timer():
-            if self.timer is not None:
-                self.timer.stop()
-                self.timer = None
-
-        self.set_timer(10, postponded_stop_timer)
-
-    def feed_string(self, new_content: str):
-        try:
-            self.json_str += new_content
-            self.parser.feed_string(new_content)
-        except RuntimeError as e:
-            self.has_error = True
-            self.error_message = str(e)
-
-    def is_current_data_finished(self):
-        return self.parser.is_current_data_finished()
-
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
         self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
@@ -386,9 +365,8 @@ class ToolCallWidget(Static):
             self.add_class("error")
             return
 
-        if self._segment["is_finished"]:
-            self.finish_streaming()
-            return
+        if self._segment["is_finished"] and self.timer:
+            self.timer.stop()
 
         segment_content = self._segment["content"]
         if segment_content != self.json_str:
@@ -399,66 +377,64 @@ class ToolCallWidget(Static):
             except RuntimeError as e:
                 self.has_error = True
                 self.error_message = str(e)
+                return
 
-        try:
-            for value in self.parser:
-                if value.index_key != self.current_key:
-                    self.current_key = value.index_key
-                    self.content_before_current_value = self.current_content
-                    self.current_content += f"{self.current_key}: `"
+        # 移除try block，直接遍历parser
+        for value in self.parser:
+            if value.index_key != self.current_key:
+                self.current_key = value.index_key
+                self.content_before_current_value = self.current_content
+                self.current_content += f"{self.current_key}: `"
 
-                if isinstance(value, Value):
-                    final_value = (
-                        value.value
-                        if isinstance(value.value, str)
-                        else json.dumps(value.value)
-                    )
-
-                    new_guessed_type = self._guess_content_type(final_value)
-                    if not self.guessed_content_type or new_guessed_type:
-                        self.guessed_content_type = new_guessed_type
-
-                    if "\n" in final_value:
-                        backticks = "`" * self.get_backtick_count(final_value)
-                        self.current_content = (
-                            self.content_before_current_value
-                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
-                        )
-                    else:
-                        self.current_content = (
-                            self.content_before_current_value
-                            + f"{self.current_key}: `{final_value}`\n"
-                        )
-
-                    self.current_value = ""
-
-                elif isinstance(value, ValuePiece):
-                    self.current_value += value.char
-                    if "\n" in self.current_value:
-                        backtick_count = self.get_backtick_count(self.current_value)
-                        backticks = "`" * backtick_count
-                        self.current_content = (
-                            self.content_before_current_value
-                            + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
-                        )
-                    else:
-                        self.current_content = (
-                            self.content_before_current_value
-                            + f"{self.current_key}: `{self.current_value}`"
-                        )
-
-                self.update(
-                    Syntax(
-                        self.current_content.strip(),
-                        lexer="markdown",
-                        theme=self.theme,
-                        background_color="#2E3440",
-                        word_wrap=True,
-                    )
+            if isinstance(value, Value):
+                final_value = (
+                    value.value
+                    if isinstance(value.value, str)
+                    else json.dumps(value.value)
                 )
-        except RuntimeError as e:
-            self.has_error = True
-            self.error_message = str(e)
+
+                new_guessed_type = self._guess_content_type(final_value)
+                if not self.guessed_content_type or new_guessed_type:
+                    self.guessed_content_type = new_guessed_type
+
+                if "\n" in final_value:
+                    backticks = "`" * self.get_backtick_count(final_value)
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
+                    )
+                else:
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"{self.current_key}: `{final_value}`\n"
+                    )
+
+                self.current_value = ""
+
+            elif isinstance(value, ValuePiece):
+                self.current_value += value.char
+                if "\n" in self.current_value:
+                    backtick_count = self.get_backtick_count(self.current_value)
+                    backticks = "`" * backtick_count
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
+                    )
+                else:
+                    self.current_content = (
+                        self.content_before_current_value
+                        + f"{self.current_key}: `{self.current_value}`"
+                    )
+
+            self.update(
+                Syntax(
+                    self.current_content.strip(),
+                    lexer="markdown",
+                    theme=self.theme,
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
+            )
 
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
@@ -520,14 +496,6 @@ class ReasoningContentWidget(Static):
         self.border_title = self.calculate_border_title()
         self.add_class("reasoning-widget-collapsed")
 
-    def feed_string(self, new_content: str):
-        """追加内容到消息"""
-        self.content_str += new_content
-
-    def append_content(self, new_content: str):
-        """追加内容到消息（兼容性方法）"""
-        self.feed_string(new_content)
-
     def calculate_border_title(self) -> str:
         return f"{self.sender_name} (reasoning) {'[点击隐藏]' if self.is_expanded else '[点击展开]'}"
 
@@ -548,28 +516,15 @@ class ReasoningContentWidget(Static):
         """组件挂载时开始显示"""
         self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
-    def finish_streaming(self) -> None:
-        """停止组件的timer"""
-
-        def postponded_stop_timer():
-            if self.timer is not None:
-                self.timer.stop()
-                self.timer = None
-
-        self.set_timer(10, postponded_stop_timer)
-
     def update_display(self) -> None:
         """更新思考消息显示"""
-        if self._segment["is_finished"]:
-            self.finish_streaming()
-            if self.timer:
-                self.timer.stop()
-            return
-        
+        if self._segment["is_finished"] and self.timer:
+            self.timer.stop()
+
         segment_content = self._segment["content"]
         if segment_content != self.content_str:
             self.content_str = segment_content
-            
+
         content_to_display = self.content_str.strip()
 
         if self.is_expanded:
@@ -612,25 +567,12 @@ class UserMessageWidget(Static):
         self._content_static: Static | None = None
         self.border_title = self.display_name
 
-    def finish_streaming(self) -> None:
-        """停止组件的timer"""
-
-        def postponded_stop_timer():
-            if self.timer is not None:
-                self.timer.stop()
-                self.timer = None
-
-        self.set_timer(10, postponded_stop_timer)
-
-    def feed_string(self, new_content: str):
-        """追加内容到消息"""
-        self.content_str += new_content
-
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
         self._content_static = Static("")
         self.mount(self._content_static)
-        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
+        # 用户消息不会更新，直接显示内容
+        self.update_display()
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
@@ -686,21 +628,8 @@ class NormalContentWidget(Static):
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
-    def finish_streaming(self) -> None:
-        """停止组件的timer"""
-
-        def postponded_stop_timer():
-            if self.timer is not None:
-                self.timer.stop()
-                self.timer = None
-
-        self.set_timer(10, postponded_stop_timer)
         if not self.content_str.strip():
             self.remove()
-
-    def feed_string(self, new_content: str):
-        """追加内容到消息"""
-        self.content_str += new_content
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
@@ -710,14 +639,13 @@ class NormalContentWidget(Static):
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
-        if self._segment["is_finished"]:
-            self.finish_streaming()
-            return
+        if self._segment["is_finished"] and self.timer:
+            self.timer.stop()
         
         segment_content = self._segment["content"]
         if segment_content != self.content_str:
             self.content_str = segment_content
-        
+
         content_to_display = self.content_str.strip()
 
         if self._content_static is not None:
@@ -752,15 +680,12 @@ class MessageWidget(Static):
     def set_parsed_answer(self, parsed_answer):
         """设置ParsedAnswer并开始处理segment"""
         self.parsed_answer = parsed_answer
-        # 开始异步处理segment队列
-        from textual import work
         self._start_processing_segments()
 
     @work(exclusive=False)
     async def _start_processing_segments(self):
         if not self.parsed_answer:
             return
-        
         while True:
             segment = await self.parsed_answer.segment_queue.get()
             segment_type = segment["segment_type"]
@@ -771,38 +696,20 @@ class MessageWidget(Static):
                     role=self.role,
                     sender_name=self.sender_name,
                     theme=self.theme,
-                    segment=segment
+                    segment=segment,
                 )
             elif segment_type == "reasoning":
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
                     theme=self.theme,
-                    segment=segment
+                    segment=segment,
                 )
             else:
                 continue
-            
+
             self.mount(widget)
-    
-    def _start_widget_updater(self, widget, segment):
-        """启动widget的定时更新器，让widget直接读取segment内容"""
-        # 这里我们需要让widget能够直接访问segment对象
-        # 由于widget已经持有segment引用，我们可以通过传递segment给widget的方式
-        # 但现有widget接口没有设计为直接接收segment，所以我们需要扩展widget
-        # 或者通过其他方式让widget能够获取segment内容
-        # 目前，我们先采用简单方式：通过定时器更新widget内容
-        
-        # 保存segment引用到widget中
-        widget._segment = segment
-        
-        # 如果widget有定时更新显示的方法，启动它
-        if hasattr(widget, 'update_display'):
-            # widget会通过定时器自己更新显示
-            # 我们需要让widget能够读取segment内容
-            # 修改widget的update_display方法，让它从_segment读取内容
-            pass
-        
+
     def finish_streaming(self) -> None:
         """停止所有widget的timer"""
         # 子widget自己管理定时器，MessageWidget不再负责

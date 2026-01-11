@@ -26,12 +26,12 @@ class MockAnswer(Answer):
         return token
 
     def get_message(self):
-        content = "".join(tok.get("content", "") for tok in self.tokens)
+        content = "".join(tok.content for tok in self.tokens)
         from linhai.llm import AssistantMessage
         return AssistantMessage(message=content)
 
     def get_current_content(self):
-        return "".join(tok.get("content", "") for tok in self.tokens[: self.index])
+        return "".join(tok.content for tok in self.tokens[: self.index])
 
     def interrupt(self):
         pass
@@ -51,11 +51,12 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock()
 
         # Simulate tokens: two normal tokens, one toolcall, then another normal
+        from linhai.llm import AnswerToken
         tokens = [
-            {"reasoning_content": None, "content": "Hello "},
-            {"reasoning_content": None, "content": "world! "},
-            {"reasoning_content": None, "content": "```json toolcall\n{}"},
-            {"reasoning_content": None, "content": "After tool"},
+            AnswerToken(reasoning_content=None, content="Hello "),
+            AnswerToken(reasoning_content=None, content="world! "),
+            AnswerToken(reasoning_content=None, content="```json toolcall\n{}"),
+            AnswerToken(reasoning_content=None, content="After tool"),
         ]
         answer = MockAnswer(tokens)
 
@@ -108,9 +109,10 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle.trigger_after_parsing = AsyncMock()
 
         agent = MagicMock()
+        from linhai.llm import AnswerToken
         tokens = [
-            {"reasoning_content": None, "content": "First"},
-            {"reasoning_content": None, "content": "Second"},
+            AnswerToken(reasoning_content=None, content="First"),
+            AnswerToken(reasoning_content=None, content="Second"),
         ]
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent)

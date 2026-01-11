@@ -83,7 +83,8 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         class MockAnswer:
             def __init__(self, content):
                 self.content = content
-                self.tokens = [{"reasoning_content": None, "content": content}]
+                from linhai.llm import AnswerToken
+                self.tokens = [AnswerToken(reasoning_content=None, content=content)]
                 self.index = 0
 
             def __aiter__(self):

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Union
 
 from linhai.llm import AnswerToken, Answer
+from linhai.parsed_message import ParsedAnswer
 from linhai.utils import CliRuntimeNotice
 
 
@@ -31,6 +32,14 @@ class SubAgentNoticeWrapper:
     notice: CliRuntimeNotice
 
 
+@dataclass
+class SubAgentParsedAnswerWrapper:
+    """SubAgent的ParsedAnswer包装类，用于传输解析后的回答。"""
+
+    subagent_name: str
+    parsed_answer: ParsedAnswer
+
+
 SubAgentMessageWrapper = Union[
-    SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper, SubAgentNoticeWrapper
+    SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper, SubAgentNoticeWrapper, SubAgentParsedAnswerWrapper
 ]

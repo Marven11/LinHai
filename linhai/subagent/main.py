@@ -131,26 +131,39 @@ class SubAgent:
 
     async def _generate_response(self) -> str:
         """生成LLM响应并返回完整内容，支持流式输出。"""
+        from linhai.parsed_message import ParsedAnswer
+        from linhai.agent.lifecycle import Lifecycle
+        from linhai.agent.main import Agent
+        
         answer: Answer = await self.llm.answer_stream(self.messages)
 
-        full_response = ""
-        async for token in answer:
-            if isinstance(token, AnswerToken):
-                full_response += token.content
-
-                wrapper = SubAgentAnswerTokenWrapper(
-                    subagent_name=self.name, token=token
-                )
-                await self.group_chat.send_if_exists(
-                    "subagent_message",
-                    wrapper,
-                )
-
-        wrapper = SubAgentAnswerCompleteWrapper(subagent_name=self.name, answer=answer)
+        # 获取主agent的lifecycle和agent实例
+        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        # 创建ParsedAnswer并开始解析
+        parsed_answer = ParsedAnswer(answer, lifecycle, agent)
+        await parsed_answer.start_parsing()
+        
+        # 将ParsedAnswer包装后发送到subagent_message队列
+        from .message_wrapper import SubAgentParsedAnswerWrapper
+        wrapper = SubAgentParsedAnswerWrapper(
+            subagent_name=self.name,
+            parsed_answer=parsed_answer
+        )
         await self.group_chat.send_if_exists(
             "subagent_message",
             wrapper,
         )
+        
+        # 等待解析完成
+        await parsed_answer.wait_parsing()
+        
+        # 获取完整的回答内容
+        full_response = ""
+        async for token in answer:
+            if isinstance(token, AnswerToken):
+                full_response += token.content
 
         return full_response
 

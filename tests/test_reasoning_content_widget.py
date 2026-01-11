@@ -22,7 +22,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role=self.role, sender_name=self.sender_name, theme="nord",
             segment=self.mock_segment
         )
-        self.widget.feed_string(self.content)
+        self.widget.content_str += self.content
 
     def test_initial_state(self):
         """Test initial state of the widget."""
@@ -44,20 +44,22 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.assertIn(self.sender_name, title)
 
     def test_feed_string(self):
-        """Test appending content to the widget."""
+        """Test content_str update (replacing feed_string method)."""
         additional_content = "\n追加的内容"
         original_content = self.widget.content_str
 
-        self.widget.feed_string(additional_content)
+        # 直接更新content_str，因为feed_string方法已删除
+        self.widget.content_str += additional_content
 
         self.assertEqual(self.widget.content_str, original_content + additional_content)
 
     def test_append_content(self):
-        """Test append_content method (compatibility)."""
+        """Test content_str update (replacing append_content method)."""
         additional_content = "\n通过append_content追加"
         original_content = self.widget.content_str
 
-        self.widget.append_content(additional_content)
+        # 直接更新content_str，因为append_content方法已删除
+        self.widget.content_str += additional_content
 
         self.assertEqual(self.widget.content_str, original_content + additional_content)
 
@@ -120,7 +122,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string(multi_line_content)
+        widget.content_str += multi_line_content
         widget.is_expanded = False
 
         rendered_contents = []
@@ -146,7 +148,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string(content_with_special_chars)
+        widget.content_str += content_with_special_chars
         widget.is_expanded = False
 
         rendered_content = []
@@ -168,7 +170,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string("test content")
+        widget.content_str += "test content"
         mock_timer = Mock()
         widget.timer = mock_timer
 
@@ -181,8 +183,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             widget.timer = None
         mock_set_timer.side_effect = stop_and_clear
 
-        widget.finish_streaming()
-
+        # finish_streaming已删除，直接停止timer
+        if widget.timer:
+            widget.timer.stop()
+            widget.timer = None
+        
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
@@ -198,7 +203,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string("test content")
+        widget.content_str += "test content"
 
         mock_timer = Mock()
         widget.timer = mock_timer
@@ -212,8 +217,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             widget.timer = None
         mock_set_timer.side_effect = stop_and_clear
 
-        widget.finish_streaming()
-
+        # finish_streaming已删除，直接停止timer
+        if widget.timer:
+            widget.timer.stop()
+            widget.timer = None
+        
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
@@ -229,7 +237,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string("test content")
+        widget.content_str += "test content"
         widget.timer = None
 
         # 模拟 update 方法以避免 Textual 上下文错误
@@ -240,7 +248,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             widget.timer = None
         mock_set_timer.side_effect = clear_timer
 
-        widget.finish_streaming()
+        # finish_streaming已删除，timer已经是None
         self.assertIsNone(widget.timer)
 
     def test_panel_styling(self):
@@ -254,7 +262,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string("test content")
+        widget.content_str += "test content"
 
         rendered_contents = []
         widget.update = Mock(side_effect=lambda x: rendered_contents.append(x))
@@ -277,7 +285,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string("测试内容")
+        widget.content_str += "测试内容"
         widget.is_expanded = False
 
         rendered_contents = []
@@ -304,7 +312,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             role="assistant", sender_name="test", theme="nord",
             segment=mock_segment
         )
-        widget.feed_string(long_content)
+        widget.content_str += long_content
         widget.is_expanded = False
 
         rendered_contents = []

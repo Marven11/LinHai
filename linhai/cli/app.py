@@ -19,6 +19,7 @@ from linhai.parsed_message import ParsedAnswer
 from linhai.subagent.message_wrapper import (
     SubAgentAnswerTokenWrapper,
     SubAgentAnswerCompleteWrapper,
+    SubAgentParsedAnswerWrapper,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
@@ -100,7 +101,15 @@ class CLIApp(App):
         self.theme = cli_config.theme
         self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
         self.group_chat = group_chat
-        self.group_chat.register_queue("parsed_agent_answer")
+        
+        # 注册队列，避免重复注册
+        try:
+            self.group_chat.register_queue("parsed_agent_answer")
+        except RuntimeError as e:
+            if "exists" not in str(e):
+                raise
+            # 队列已存在，忽略错误，继续使用现有队列
+            
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
         self.group_chat.register_queue("subagent_message")
@@ -127,6 +136,7 @@ class CLIApp(App):
 
         self.cli_config = cli_config
         self.command_handler = CommandHandler(self.group_chat)
+        self.auto_scroll_timer_task: Optional[asyncio.Task] = None
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -164,9 +174,6 @@ class CLIApp(App):
         container.mount(widget)
         self.messages.append(widget)
         
-        if self.should_auto_scroll():
-            container.scroll_end(animate=False)
-        
         answer = parsed_answer.answer
         token_usage = answer.get_token_usage()
         if token_usage is not None:
@@ -199,8 +206,6 @@ class CLIApp(App):
                 )
                 container.mount(widget)
 
-                if self.should_auto_scroll():
-                    container.scroll_end(animate=False)
             else:
                 raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
 
@@ -241,6 +246,8 @@ class CLIApp(App):
             await self._handle_subagent_token_wrapper(output)
         elif isinstance(output, SubAgentAnswerCompleteWrapper):
             await self._handle_subagent_answer_complete_wrapper(output)
+        elif isinstance(output, SubAgentParsedAnswerWrapper):
+            await self._handle_subagent_parsed_answer_wrapper(output)
         elif isinstance(output, CliRuntimeNotice):
             await self._handle_subagent_runtime_notice(output)
 
@@ -386,6 +393,14 @@ class CLIApp(App):
             pass
         return []
 
+    async def _auto_scroll_timer(self):
+        """定时滚动timer，每0.1秒检查是否需要自动滚动"""
+        while True:
+            await asyncio.sleep(0.1)
+            if self.should_auto_scroll():
+                container = self.query_one("#chat-container")
+                container.scroll_end(animate=False)
+
     def _generate_command_completions(self) -> list[str]:
         """动态生成/命令补全列表"""
         return [
@@ -423,8 +438,6 @@ class CLIApp(App):
                 container.mount(widget)
                 widget.update_display()
 
-                if self.should_auto_scroll():
-                    container.scroll_end(animate=False)
         else:
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
@@ -443,6 +456,9 @@ class CLIApp(App):
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
         )
+        
+        # 启动自动滚动定时器
+        self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
 
         input_element = self.query_one("#input")
         assert isinstance(input_element, Input)
@@ -491,12 +507,8 @@ class CLIApp(App):
             self.output_watcher_task.cancel()
         if self.agent_task:
             self.agent_task.cancel()
-
-        for message in self.messages:
-            message.finish_streaming()
-
-        for message in self.subagent_current_messages.values():
-            message.finish_streaming()
+        if self.auto_scroll_timer_task:
+            self.auto_scroll_timer_task.cancel()
 
         close_all_terminals()
 

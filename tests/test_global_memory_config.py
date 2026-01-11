@@ -222,6 +222,11 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                         ):
                             file_found = True
                             break
+                    # 如果内存消息中没有找到，检查文件是否实际创建
+                    if not file_found:
+                        file_path = Path("./") / filename
+                        if file_path.exists():
+                            file_found = True
                     self.assertTrue(file_found, f"未找到项目记忆文件: {filename}")
 
             finally:

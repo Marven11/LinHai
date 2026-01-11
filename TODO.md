@@ -2,102 +2,17 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要git add或commit
 
-- [x] 我们需要重构解析agent回答的流程
-  - [x] 这是一个“脱胎换骨”式的重构，务必详细思考，广泛调查，先输出设计到./PLAN.md中，然后暂停，我审核之后继续
-  - 当前环境
-    - agent的回答是一个token stream，我们需要从其中解析出三类token以传给cli显示
-    - agent的输出包含reasoning_content和content两部分，我们需要解析为至少三部分
-      - reasoning message - 只有一个
-      - normal message - 可能有多个
-      - toolcall message - 可能有多个
-  - 当前设计
-    - LLM生成Answer将每个AnswerToken发送给agent
-    - generate_response获得Answer
-      - `async for token in answer`遍历每个token，但是什么都不做，仅调用回调后发送给CLI
-      - 在遍历完毕后将整个Answer发送给CLI，并return answer（但是这个return值不会被使用）
-    - cli/app.py在接收到AnswerToken后会拿出content和is_reasoning并发送给MessageWidget
-    - MessageWidget通过TokenParser将token分为三类token: reasoning, toolcall, normal并展示在界面中
-  - 期望设计: 编写linhai/parsed_message.py
-    - 首先，我们将LLM生成的回答分为从解析前和解析后两种角度看到
-      - 解析前
-        - LLM生成回答时，首先（可能）会输出一系列reasoning token，然后会输出一系列normal token
-        - 每个token都是一小段字符串
-      - 解析后
-        - 我们将每个回答中连续一段同类token称为一个segment
-        - 首先（可能）会输出一段reasoning segment，包含一系列reasoning token
-        - 然后输出normal segment和toolcall segment
-          - normal segment指的是在```json toolcall外的文本，这些文本是agent给用户的“回答”
-          - toolcall segment指的是在```json toolcall内的文本，其中有一个工具调用的json
-    - ParsedAnswer类
-      - 表示一个解析后的回答
-      - 由agent负责初始化，初始化接收agent传来的Answer
-      - 初始化时启动task，遍历并解析Answer中的AnswerToken
-      - 解析时
-        - 维护current_segment和segment queue
-          - current_segment: 当前正在生成的segment，默认为normal segment
-          - segment queue
-            - 直接使用asyncio.Queue而非使用group_chat，group_chat是给单例设计的，ParsedAnswer不是单例
-            - 需要发送给CLI的所有segment，需要添加current_segment
-            - cli拿到segment后会创建对应的widget，segment和widget应该一一对应
-        - 调用lifecycle回调，初始化时应该接收lifecycle本身
-        - 不直接处理被打断的情况
-          - agent打断时调用Answer的interrupt函数，也不发送Answer到对应queue
-          - Answer的interrupt函数停止发送AnswerToken
-          - ParsedAnswer遇到stop iteration自然停止解析
-      - 在解析结束时不发送Answer，直接结束函数，让task自然停止
-      - 提供一个函数: wait_parsing，等待task结束并返回bool
-        - 返回true表示正常结束
-        - 结束时await task，因此向上传递task的exception
-        - 如果结束时发现answer被interrupt，返回False
-      - CLI可以通过遍历ParsedAnswer的queue得到所有segment
-    - segment
-      - 一个typeddict，包含segment_type, content, is_finished三个字段
-      - 由ParsedAnswer动态修改
-      - cli拿到segment后会创建对应的widget，segment和widget应该一一对应
-    - linhai/agent/main.py的generate_response函数
-      - 获得Answer后包装为ParsedAnswer
-      - 将ParsedAnswer通过queue发送到"parsed_agent_answer" queue
-        - 这意味着需要删除"agent_answer" queue
-      - 将检查用户输入的逻辑移动到回调中
-      - 使用wait_parsing等待，并在被interrupt时返回
-      - 将无用的返回值直接改为return None
-    - linhai/agent/main.py用户打断回调
-      - 在每个token生成后检查是否有用户输入，如果有则打断
-      - 注意维持打断方式和插件打断不同，打断没有CliRuntimeNotice，RuntimeMessage内容也不同
-    - cli
-      - app.py在拿到一个ParsedMessage后将其传给MessageWidget
-      - MessageWidget遍历其中的每一个segment，将segment传给对应的widget
-  - 编写新unittest测试
-    - ParsedAnswer是否可以正确解析
-  - 实现编写完成后
-    - 运行所有unittest
-  - 参考
-    - 参考streamjson和linhai/cli/token_parser.py
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了打断逻辑
-  - 查看这个commit删除的linhai/agent/main.py中的代码
-  - 在Agent类中添加after_token_generation回调并注册，在接收到用户消息时打断当前消息
-  - 必须使用after_token_generation回调！
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是错误地删除了滚动逻辑
-  - 更好的方法是根本不在正常解析代码时判断是否需要滚动，而是加一个0.1秒的timer专门负责滚动
-  - 写一个timer每0.1秒运行一次，如果should_auto_scroll则调用
-  - 删除其他使用should_auto_scroll的代码
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了第一个任务，但是忘记了同步修改subagent消息的更新逻辑
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了其中的TODO，但是没有正确修改interrupt的定义，需要重构
+  - 完全修改Agent.interrupt，定义两个参数
+    - agent_message: 放进RuntimeMessage塞进agent essages processor中的消息
+    - ui_notice: 放进CliRuntimeMessage中的消息
+  - 重写每一个使用interrupt方法的地方
+    - agent_message：以runtime向agent对话的视角写：如“你刚刚...，禁止。。。！”
+    - ui_notice：以runtime向用户描述agent行为的视角写：如“Agent...，已阻止” / “Agent被用户打断”
+  - 修改对应unittest适应新的定义
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d完成了其中的TODO，但是忘记了同步修改subagent消息的更新逻辑
   - 必须完全按照agent接收显示消息的方式！禁止修改任何和subagent无关的代码
-- [ ] 精简重构后不需要的代码，不破坏当前功能，简化linhai/cli/components.py到850行以内
-  - 删除、移动不必要的import
-  - 移除ToolCallWidget获取for value in self.parser时的try block，这里几乎不会报错
-  - 删除所有finish_streaming函数，在is_finished=True时立即停止timer并进行最后一次update_display
-    - 也就是说停止后update_display不要立即return，要进行最后一次更新
-    - 当前架构保证is_finished=True时不再会有任何更新
-  - 将toolcall widget的self.current_content计算逻辑移动到辅助方法
-  - feed_string和append_content均不需要，当前消息内容完全由传入的segment/content决定，删除这些函数
-  - 删除ReasoningContentWidget等计算标题的逻辑，以及所有widget中设置widget标题的逻辑，当前不显示标题
-  - UserMessageWidget中的消息根本不会定时更新，init传入的content永远不会被更新，因此根本不需要timer,删除timer逻辑
-  - 重新检查文件查看以上问题是否完全清除
-  - 重新检查git diff linhai/cli/components.py查看是否误伤其他逻辑
-  - 调整对应unittest
-  - 用wc -l检查
-  - 运行unittest检查
+- [ ] unittest会在当前目录创建AGENT.md垃圾文件，找到原因并修改
 
 # 暂时搁置
 

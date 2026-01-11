@@ -31,7 +31,8 @@ class MockAnswer:
     def __init__(self, content: str):
         """Initialize MockAnswer with content."""
         self.content = content
-        self.tokens = [{"reasoning_content": None, "content": content}]
+        from linhai.llm import AnswerToken
+        self.tokens = [AnswerToken(reasoning_content=None, content=content)]
         self.index = 0
 
     def __aiter__(self):

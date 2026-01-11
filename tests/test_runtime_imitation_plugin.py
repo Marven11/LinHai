@@ -43,7 +43,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         
         current_content = "<<tool>>"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         # 应该被拦截
         self.assertTrue(result)
@@ -61,7 +61,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # <<tool>>出现在第二行，前面有换行符
         current_content = "\n<<tool>>"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         # 这个测试应该失败，因为当前实现只匹配行首
         # 但为了检测漏洞，我们期望它应该被拦截
@@ -79,7 +79,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # <<tool>>前面有空格
         current_content = "    <<tool>>"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         # 这个测试应该失败，因为当前实现只匹配行首
         self.assertTrue(result, "漏洞：前面有空格的<<tool>>标签没有被拦截")
@@ -94,7 +94,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         
         current_content = "<<agent>>"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         self.assertTrue(result)
         self.agent.interrupt.assert_called_once()
@@ -110,7 +110,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         
         current_content = "<<tool>>"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         self.assertFalse(result)
         self.agent.interrupt.assert_not_called()
@@ -124,7 +124,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         
         current_content = "<tool>{"
         
-        result = await self.plugin.after_token_generation(self.answer, current_content)
+        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
         
         self.assertTrue(result)
         self.agent.interrupt.assert_called_once()

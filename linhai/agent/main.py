@@ -91,6 +91,9 @@ class Agent:
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
+        
+        # 注册after_token_generation回调用于用户打断检测
+        self.lifecycle.register_after_token_generation(self.after_token_generation)
 
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
@@ -129,6 +132,13 @@ class Agent:
             "remaining_tokens": remaining_tokens,
             "usage_ratio": usage_ratio,
         }
+
+    async def after_token_generation(self, agent: "Agent", answer, current_content) -> bool:
+        """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
+        if not agent.group_chat.is_empty("user_message") and agent.current_answer:
+            agent.current_answer.interrupt()
+            return True
+        return False
 
     async def interrupt(self, custom_message: str | None = None):
         """
