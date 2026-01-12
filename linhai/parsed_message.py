@@ -15,10 +15,11 @@ class ParsedAnswer:
         self.answer = answer
         self.lifecycle = lifecycle
         self.agent = agent
-        self.segment_queue = asyncio.Queue()
+        self.segment_queue: asyncio.Queue[Segment] = asyncio.Queue()
         self.parsing_task = None
         self.interrupted = False
-        self.token_parser = None
+        from .cli.token_parser import TokenParser
+        self.token_parser = TokenParser()
         self.current_segment = None
 
     async def start_parsing(self):
@@ -48,9 +49,6 @@ class ParsedAnswer:
             self.current_segment["is_finished"] = True
 
     async def _parse_answer(self):
-        if self.token_parser is None:
-            from .cli.token_parser import TokenParser
-            self.token_parser = TokenParser()
         await self.lifecycle.trigger_before_parsing(self)
         async for token in self.answer:
             if self.interrupted:

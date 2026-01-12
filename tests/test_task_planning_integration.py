@@ -81,6 +81,7 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 创建GroupChat
         self.group_chat = GroupChat()
         self.group_chat.register_queue("agent_answer")
+        self.group_chat.register_queue("parsed_agent_answer")
 
         # 注册系统消息
         self.system_message = SystemMessage(group_chat=self.group_chat)

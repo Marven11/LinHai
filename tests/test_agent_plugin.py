@@ -558,13 +558,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证阻止
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.interrupt.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once_with(
-            "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="一分钟内已调用过消息清理工具，禁止调用context_garbage_clean工具",
-            ),
+        self.agent.interrupt.assert_called_once_with(
+            "一分钟内已经调用过消息清理工具，禁止调用context_garbage_clean工具",
+            "一分钟内已调用过消息清理工具，禁止调用context_garbage_clean工具",
         )
 
         # 检查错误消息是否包含一分钟内禁止

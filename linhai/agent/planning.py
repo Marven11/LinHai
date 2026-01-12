@@ -131,7 +131,8 @@ class TaskPlanningEnforcementPlugin(Plugin):
             elif self.no_planning_counter >= 3:
     
                 await self.group_chat.get_members("agent", Agent).interrupt(
-                    "错误：你已经连续3次没有输出任务规划！你必须先在调用工具前输出任务规划！"
+                    "错误：你已经连续3次没有输出任务规划！你必须先在调用工具前输出任务规划！",
+                    "Agent连续3次未输出任务规划，已打断"
                 )
                 await self.group_chat.send_if_exists(
                     "ui_log",

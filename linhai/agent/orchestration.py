@@ -437,11 +437,7 @@ class RedStateToolBlockPlugin:
                 ui_msg = f"{current_state}状态下阻止调用{tool_call.function_name}工具，请先调用消息清理类工具"
 
             # 添加错误消息到agent
-            await agent.interrupt(error_msg)
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(level="WARNING", content=ui_msg),
-            )
+            await agent.interrupt(error_msg, ui_msg)
             return True
 
         return False

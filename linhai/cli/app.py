@@ -17,8 +17,8 @@ from linhai.llm import (
 )
 from linhai.parsed_message import ParsedAnswer
 from linhai.subagent.message_wrapper import (
-    SubAgentAnswerTokenWrapper,
-    SubAgentAnswerCompleteWrapper,
+    SubAgentParsedAnswerWrapper,
+    SubAgentNoticeWrapper,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
@@ -166,8 +166,8 @@ class CLIApp(App):
             role="assistant",
             sender_name=llm_name,
             theme=self.theme,
+            parsed_answer=parsed_answer,
         )
-        widget.set_parsed_answer(parsed_answer)
         container.mount(widget)
         self.messages.append(widget)
 
@@ -239,10 +239,10 @@ class CLIApp(App):
 
     async def _handle_subagent_message(self, output) -> None:
         """处理单个SubAgent消息"""
-        if isinstance(output, SubAgentAnswerTokenWrapper):
-            await self._handle_subagent_token_wrapper(output)
-        elif isinstance(output, SubAgentAnswerCompleteWrapper):
-            await self._handle_subagent_answer_complete_wrapper(output)
+        if isinstance(output, SubAgentParsedAnswerWrapper):
+            await self._handle_subagent_parsed_answer(output)
+        elif isinstance(output, SubAgentNoticeWrapper):
+            await self._handle_subagent_notice_wrapper(output)
         elif isinstance(output, CliRuntimeNotice):
             await self._handle_subagent_runtime_notice(output)
 
@@ -251,79 +251,33 @@ class CLIApp(App):
                 f"Unknown Type in subagent_message: {type(output)=} {output=}"
             )
 
-    async def _handle_subagent_token_wrapper(
-        self, wrapper: SubAgentAnswerTokenWrapper
+    async def _handle_subagent_parsed_answer(
+        self, wrapper: SubAgentParsedAnswerWrapper
     ) -> None:
-        """处理SubAgentAnswerTokenWrapper"""
+        """处理SubAgent的ParsedAnswer"""
+        # SubAgent的ParsedAnswer应该像主Agent的ParsedAnswer一样处理
+        # 使用MessageWidget显示，传递segment给子widget
         subagent_name = wrapper.subagent_name
-        token = wrapper.token
-
-        # 内联_extract_token_content_and_type逻辑
-        if token.reasoning_content is not None and token.reasoning_content.strip():
-            token_type = "reasoning"
-            content = token.reasoning_content
-        else:
-            token_type = "content"
-            content = token.content if token.content else ""
-
-        if not content:
-            return
-
-        subagent_container = self.query_one("#subagent-container")
-        self._ensure_widget_exists(
-            subagent_name, content, token_type, subagent_container
+        parsed_answer = wrapper.parsed_answer
+        
+        container = self.query_one("#subagent-container")
+        widget = MessageWidget(
+            role="assistant",
+            sender_name=subagent_name,
+            theme=self.theme,
+            parsed_answer=parsed_answer,
         )
+        container.mount(widget)
+        
+        # 不需要在subagent_current_messages中跟踪，因为MessageWidget会管理自己的状态
 
-    def _extract_token_content_and_type(self, token):
-        """提取token的内容和类型
-
-        返回: (type, content) 其中type可以是'reasoning', 'content'
-        注意：工具调用不能在这里检测，因为可能被分割成多个token，需要在消息累积缓冲区中检测
-        """
-        if token.reasoning_content is not None and token.reasoning_content.strip():
-            return "reasoning", token.reasoning_content
-        else:
-            content = token.content if token.content else ""
-            return "content", content
-
-    def _ensure_widget_exists(
-        self, subagent_name, content, token_type, subagent_container
-    ):
-        """确保widget存在，如果不存在则创建，否则追加内容
-
-        使用MessageWidget统一处理所有token类型，由MessageWidget内部处理类型切换
-        """
-        from .components import MessageWidget
-
-        current_message = self.subagent_current_messages.get(subagent_name)
-        is_reasoning = token_type == "reasoning"
-
-        # 如果当前没有widget，直接创建
-        if current_message is None:
-            new_message = MessageWidget(
-                role="assistant",
-                sender_name=subagent_name,
-                theme=self.theme,
-            )
-
-            self.subagent_current_messages[subagent_name] = new_message
-            subagent_container.mount(new_message)
-            new_message.update_display()
-            current_message = new_message
-
-        # 直接追加内容，由MessageWidget内部处理类型切换
-        current_message.feed_string(content, is_reasoning)
-
-    async def _handle_subagent_answer_complete_wrapper(
-        self, wrapper: SubAgentAnswerCompleteWrapper
+    async def _handle_subagent_notice_wrapper(
+        self, wrapper: SubAgentNoticeWrapper
     ) -> None:
-        """处理SubAgentAnswerCompleteWrapper"""
-        subagent_name = wrapper.subagent_name
-        answer = wrapper.answer
-
-        if subagent_name in self.subagent_current_messages:
-            self.subagent_current_messages[subagent_name].update_display()
-            del self.subagent_current_messages[subagent_name]
+        """处理SubAgent的Notice"""
+        subagent_container = self.query_one("#subagent-container")
+        widget = RuntimeMessageWidget(level=wrapper.notice.level, content=wrapper.notice.content)
+        subagent_container.mount(widget)
 
     async def _handle_subagent_runtime_notice(self, notice: CliRuntimeNotice) -> None:
         """处理CliRuntimeNotice"""
@@ -331,18 +285,6 @@ class CLIApp(App):
         widget = RuntimeMessageWidget(level=notice.level, content=notice.content)
         subagent_container.mount(widget)
 
-    def _create_subagent_message_widget(
-        self, subagent_name: str, content: str, is_reasoning: bool
-    ):
-        """创建SubAgent消息widget
-
-        现在统一返回MessageWidget，由MessageWidget内部处理类型切换
-        """
-        return MessageWidget(
-            role="assistant",
-            sender_name=subagent_name,
-            theme=self.theme,
-        )
 
     async def watch_output_queue(self) -> None:
         """启动五个独立的任务分别监听不同的队列"""

@@ -140,26 +140,26 @@ class Agent:
             return True
         return False
 
-    async def interrupt(self, custom_message: str | None = None):
+    async def interrupt(self, agent_message: str, ui_notice: str):
         """
         打断当前Answer并添加自定义消息。
 
         参数:
-            custom_message: 自定义消息内容，如果为None则使用默认消息
+            agent_message: 发送给agent的消息内容，放入RuntimeMessage
+            ui_notice: 发送给UI的通知内容，必须提供
         """
         if self.current_answer:
             self.current_answer.interrupt()
-            await self.group_chat.send("agent_answer", self.current_answer)
-
-            if custom_message:
-                interrupt_msg = CliRuntimeNotice(
-                    level="WARNING", content=custom_message
-                )
-                self.message_processor.add_new_message(RuntimeMessage(custom_message))
+            
+            # 总是添加agent_message到message_processor
+            self.message_processor.add_new_message(RuntimeMessage(agent_message))
+            
+            # 使用ui_notice或默认消息
+            if ui_notice is not None:
+                interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
             else:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
-                self.message_processor.add_new_message(RuntimeMessage("Agent被打断"))
-
+                
             if "```json toolcall" in self.current_answer.get_current_content():
                 self.message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")

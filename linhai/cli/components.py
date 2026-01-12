@@ -7,7 +7,6 @@ import time
 from typing import Union
 
 from rich.markup import escape
-from rich.panel import Panel
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
@@ -17,9 +16,8 @@ from textual.timer import Timer
 from textual.widgets import Static
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
-from typing import TypedDict, Literal
-from .token_parser import TokenParser, ParsedToken
-from linhai.parsed_message import Segment
+from typing import TypedDict
+from linhai.parsed_message import Segment, ParsedAnswer
 
 
 class TodolistItem(TypedDict):
@@ -623,18 +621,12 @@ class NormalContentWidget(Static):
         self.display_name = sender_name
         self.role = role
         self.timer = None
-        self._content_static = None
         self._segment = segment
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
-        if not self.content_str.strip():
-            self.remove()
-
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
-        self._content_static = Static("")
-        self.mount(self._content_static)
         self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
 
     def update_display(self) -> None:
@@ -648,16 +640,15 @@ class NormalContentWidget(Static):
 
         content_to_display = self.content_str.strip()
 
-        if self._content_static is not None:
-            self._content_static.update(
-                Syntax(
-                    content_to_display,
-                    lexer="markdown",
-                    theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
-                )
+        self.update(
+            Syntax(
+                content_to_display,
+                lexer="markdown",
+                theme=self.theme,
+                background_color="#2E3440",
+                word_wrap=True,
             )
+        )
 
 
 class MessageWidget(Static):
@@ -669,25 +660,22 @@ class MessageWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str):
+    def __init__(self, role: str, sender_name: str, theme: str, parsed_answer: ParsedAnswer):
         super().__init__()
         self.role = role
         self.sender_name = sender_name
         self.theme = theme
-        self.parsed_answer = None
-        self._processing_task = None
-
-    def set_parsed_answer(self, parsed_answer):
-        """设置ParsedAnswer并开始处理segment"""
         self.parsed_answer = parsed_answer
+        self._processing_task = None
         self._start_processing_segments()
 
     @work(exclusive=False)
     async def _start_processing_segments(self):
-        if not self.parsed_answer:
-            return
+        is_first_segment = True
         while True:
             segment = await self.parsed_answer.segment_queue.get()
+            if not is_first_segment:
+                self.mount(SpaceWidget())
             segment_type = segment["segment_type"]
             if segment_type == "toolcall":
                 widget = ToolCallWidget(theme=self.theme, segment=segment)
@@ -709,6 +697,7 @@ class MessageWidget(Static):
                 continue
 
             self.mount(widget)
+            is_first_segment = False
 
     def finish_streaming(self) -> None:
         """停止所有widget的timer"""

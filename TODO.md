@@ -42,8 +42,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"的使用，需要重构
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是没有正确修改 interrupt 的定义，需要重构
+- [x] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"的使用，需要重构
+- [x] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是没有正确修改 interrupt 的定义，需要重构
   - 完全修改 Agent.interrupt，定义两个参数
     - agent_message: 放进 RuntimeMessage 塞进 agent essages processor 中的消息
     - ui_notice: 放进 CliRuntimeMessage 中的消息
@@ -53,11 +53,13 @@
   - 修改对应 unittest 适应新的定义
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是忘记了同步修改 subagent 消息的更新逻辑
   - 必须完全按照 agent 接收显示消息的方式！禁止修改任何和 subagent 无关的代码
-- [ ] unittest 会在当前目录创建 AGENT.md 垃圾文件，找到原因并修改
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 引入了 set_parsed_answer 这个 setter，改为在**init**中接收
+  - 必须完全清理CLI中直接接受AnswerToken并传给subagent tab的代码
+- [x] unittest 会在当前目录创建 AGENT.md 垃圾文件，找到原因并修改
+- [x] commit 53107284c32b10807dbb653bc7e807242247786d 引入了 set_parsed_answer 这个 setter，改为在**init**中接收
   - 禁止编写任何 setter
   - 同步修改 unittest
 - [ ] 运行所有 unittest 确认所有需要修改的 unittest 都修改完毕
+- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"在unittest中的使用，需要重构
 
 # 代码要求
 

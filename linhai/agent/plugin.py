@@ -265,7 +265,8 @@ class WeirdTokenPlugin(Plugin):
                 and line == "<tool_call>"
             ):
                 await agent.interrupt(
-                    "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！"
+                    "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！",
+                    "检测到错误工具调用格式"
                 )
                 return True
         return False
@@ -285,7 +286,8 @@ class EndThinkPlugin(Plugin):
         for line in lines:
             if line.strip() == "</think>":
                 await agent.interrupt(
-                    "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！"
+                    "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！",
+                    "Agent消息合并错误，已纠正"
                 )
                 return True
         return False
@@ -560,13 +562,13 @@ class RuntimeImitationPlugin(Plugin):
 
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
-                await agent.interrupt("不要输出<<agent>>这个tag!")
+                await agent.interrupt("不要输出<<agent>>这个tag!", "Agent输出了无效标签，已纠正")
             else:
-                await agent.interrupt(f"不要模仿{matches.group(1)}的输出！")
+                await agent.interrupt(f"不要模仿{matches.group(1)}的输出！", "Agent尝试模仿其他输出格式，已纠正")
             return True
 
         if current_content.lstrip().startswith("<tool>{"):
-            await agent.interrupt("工具调用的格式是```json toolcall不是XML!")
+            await agent.interrupt("工具调用的格式是```json toolcall不是XML!", "Agent使用了错误的工具调用格式，已纠正")
             return True
 
         return False
@@ -692,7 +694,8 @@ class WrongTimeoutPlugin(Plugin):
 
         if self.ban_until > time.time():
             await agent.interrupt(
-                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time()}s解锁，请反思你的行为！"
+                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
+                f"Agent错误使用run_command，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）"
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -716,7 +719,8 @@ class WrongTimeoutPlugin(Plugin):
             "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
             "你做错的事情是：没有使用timeout参数而是使用timeout命令设置超时，你没发现这一点用都没有吗？"
             "如果你想让一个程序一直运行，你应该使用终端而不是使用timeout！"
-            "如果你想让一个程序在超时后退出，你应该使用timeout参数而不是命令！"
+            "如果你想让一个程序在超时后退出，你应该使用timeout参数而不是命令！",
+            "Agent错误使用timeout参数，run_command已被禁用三分钟"
         )
         await self.group_chat.send_if_exists(
             "ui_log",
@@ -751,7 +755,8 @@ class WrongLinhaiPlugin(Plugin):
 
         if self.ban_until > time.time():
             await agent.interrupt(
-                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time()}s解锁，请反思你的行为！"
+                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
+                f"Agent错误使用run_command运行linhai，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）"
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -770,7 +775,8 @@ class WrongLinhaiPlugin(Plugin):
 
         await agent.interrupt(
             "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
-            "你做错的事情是：直接在run_command中使用linhai"
+            "你做错的事情是：直接在run_command中使用linhai",
+            "Agent错误使用run_command运行linhai，run_command已被禁用三分钟"
         )
         await self.group_chat.send_if_exists(
             "ui_log",
