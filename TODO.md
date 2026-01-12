@@ -42,12 +42,24 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [?] 当前拦截通过命令查看文件内容的逻辑错误，需要修改
-  - 当前问题：完全没有检查命令名是否是读取文件的命令
-    - 本应包含cat, nl, sed, awk, grep, rg, head, tail, more, less等打印文件内容的工具
-  - 目标设计：插件直接拿到`list[list[str]]`（命令的列表），跳过不在黑名单中的命令，从命令`list[str]`中通过is_existing_file找到文件，然后判断文件是否符合打断标准
-  - 记得修改unittest
-- [?] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"在unittest中的使用，需要重构
+- [ ] 重构工具调用系统
+  - 当前问题：部分工具直接返回消息表示工具结果，这导致工具结果中不能优雅地包含工具名称，工具ID，工具调用信息等内容
+  - 重构计划
+    - 工具方法：只能返回三种值: str | ToolResultSuccess | ToolResultFailed
+    - 删除ToolResultMessage和ToolErrorMessage
+    - 修改工具结果message - 新建ToolCallResultMessage，功能大致和ToolResultMessage一致，但是支持str | ToolResultSuccess | ToolResultFailed三种格式
+      - 需要包含工具调用是当前轮次的第几个调用
+      - 初始化时如果结果过长，则用和ToolResultSuccess相同的方式将文件内容分散保存在临时文件中
+        - 这一部分逻辑需要提取到辅助函数中
+      - 内容: `<<tool>><<name>>（工具名称）<<name>><<index>>（第几个工具调用）<<index>><<toolcall_argument>>（工具调用的参数的repr）<<toolcall_argument>><<message>>工具执行成功<<message>><<data或者error>>{self.content}<<data或者error>><<tool>>`
+        - 其中“工具调用的参数的repr”只有在工具调用失败时才包含在ToolCallResultMessage中，而且需要使用reprlib控制其中字符串的长度
+    - 修改MESSAGES.md 当前工具函数完全不返回Message，工具结果由ToolManager包裹在message中
+    - ToolManager: 调用工具并将结果包裹在ToolCallResultMessage中
+    - AgentToolcall
+      - 维护计数器记录当前工具调用是当前轮次的第几个调用。因此需要在start_new_tool_call_round中清零计数器
+      - 修改：完全不需要提示“你调用了工具...”，重构多余的wrapper函数_handle_tool_result
+    - subagent: 自己将工具调用包装在ToolCallResultMessage中，不使用ToolManager
+- [ ] 重构工具返回格式，使其直接包含工具名而不是拆分成两个消息
 
 # 代码要求
 
@@ -80,7 +92,6 @@ unittest 失败时，必须分析
 # 暂时搁置
 
 - [ ] unittest警告大量测试没有被await，查一下怎么回事，让unittest正确运行而不产生警告
-- [ ] 重构工具返回格式，使其直接包含工具名而不是拆分成两个消息
 - [ ] 让拦截 secret 内容的插件返回所有包含的 secret 名，而不是仅返回一个
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 直接在调用回调函数时提供工具调用的状态：成功、失败、被跳过
