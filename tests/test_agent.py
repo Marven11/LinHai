@@ -81,7 +81,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat = GroupChat()
 
-        self.group_chat.register_queue("agent_answer")
         self.group_chat.register_queue("parsed_agent_answer")
 
         from linhai.subagent.issue import IssueManager

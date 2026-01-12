@@ -18,7 +18,6 @@ from linhai.llm import (
 from linhai.parsed_message import ParsedAnswer
 from linhai.subagent.message_wrapper import (
     SubAgentParsedAnswerWrapper,
-    SubAgentNoticeWrapper,
 )
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
@@ -224,7 +223,18 @@ class CLIApp(App):
         """监听subagent_message队列并处理SubAgent消息"""
         while True:
             output = await self.group_chat.receive("subagent_message")
-            await self._handle_subagent_message(output)
+            if isinstance(output, SubAgentParsedAnswerWrapper):
+                await self._handle_subagent_parsed_answer(output)
+            elif isinstance(output, CliRuntimeNotice):
+                subagent_container = self.query_one("#subagent-container")
+                widget = RuntimeMessageWidget(
+                    level=output.level, content=output.content
+                )
+                subagent_container.mount(widget)
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in subagent_message: {type(output)=} {output=}"
+                )
 
     async def watch_token_usage_queue(self) -> None:
         """监听token_usage队列并处理token使用信息"""
@@ -237,20 +247,6 @@ class CLIApp(App):
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
                 )
 
-    async def _handle_subagent_message(self, output) -> None:
-        """处理单个SubAgent消息"""
-        if isinstance(output, SubAgentParsedAnswerWrapper):
-            await self._handle_subagent_parsed_answer(output)
-        elif isinstance(output, SubAgentNoticeWrapper):
-            await self._handle_subagent_notice_wrapper(output)
-        elif isinstance(output, CliRuntimeNotice):
-            await self._handle_subagent_runtime_notice(output)
-
-        else:
-            raise RuntimeError(
-                f"Unknown Type in subagent_message: {type(output)=} {output=}"
-            )
-
     async def _handle_subagent_parsed_answer(
         self, wrapper: SubAgentParsedAnswerWrapper
     ) -> None:
@@ -259,7 +255,7 @@ class CLIApp(App):
         # 使用MessageWidget显示，传递segment给子widget
         subagent_name = wrapper.subagent_name
         parsed_answer = wrapper.parsed_answer
-        
+
         container = self.query_one("#subagent-container")
         widget = MessageWidget(
             role="assistant",
@@ -268,23 +264,6 @@ class CLIApp(App):
             parsed_answer=parsed_answer,
         )
         container.mount(widget)
-        
-        # 不需要在subagent_current_messages中跟踪，因为MessageWidget会管理自己的状态
-
-    async def _handle_subagent_notice_wrapper(
-        self, wrapper: SubAgentNoticeWrapper
-    ) -> None:
-        """处理SubAgent的Notice"""
-        subagent_container = self.query_one("#subagent-container")
-        widget = RuntimeMessageWidget(level=wrapper.notice.level, content=wrapper.notice.content)
-        subagent_container.mount(widget)
-
-    async def _handle_subagent_runtime_notice(self, notice: CliRuntimeNotice) -> None:
-        """处理CliRuntimeNotice"""
-        subagent_container = self.query_one("#subagent-container")
-        widget = RuntimeMessageWidget(level=notice.level, content=notice.content)
-        subagent_container.mount(widget)
-
 
     async def watch_output_queue(self) -> None:
         """启动五个独立的任务分别监听不同的队列"""

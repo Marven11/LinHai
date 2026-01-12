@@ -106,7 +106,7 @@ class MachineControlToolSet(ToolSet):
 
         @self.register_tool(
             name="run_command",
-            desc="执行系统命令。可以执行shell命令，但使用时务必谨慎，避免损坏用户电脑。",
+            desc="执行系统命令。可以执行shell命令。运行返回值可能为0的程序时应该在本工具参数外设置assert_success为true",
             args={
                 "command": ToolArgInfo(
                     desc="要执行的命令字符串，如 'ls | grep test'", type="str"

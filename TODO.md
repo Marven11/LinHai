@@ -42,10 +42,10 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是忘记了同步修改 subagent 消息的更新逻辑
+- [x] commit 53107284c32b10807dbb653bc7e807242247786d 完成了其中的 TODO，但是忘记了同步修改 subagent 消息的更新逻辑
   - 必须完全按照 agent 接收显示消息的方式！禁止修改任何和 subagent 无关的代码
   - 必须完全清理CLI中直接接受AnswerToken并传给subagent tab的代码
-- [ ] 运行所有 unittest 确认所有需要修改的 unittest 都修改完毕
+- [x] 运行所有 unittest 确认所有需要修改的 unittest 都修改完毕
 - [ ] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"在unittest中的使用，需要重构
 
 # 代码要求

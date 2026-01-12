@@ -31,7 +31,6 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
         }
 
         self.group_chat = GroupChat()
-        self.group_chat.register_queue("agent_answer")
         self.group_chat.register_queue("parsed_agent_answer")
 
         self.issue_manager = IssueManager(self.group_chat)
