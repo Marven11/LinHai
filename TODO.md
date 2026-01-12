@@ -118,6 +118,7 @@ unittest 失败时，必须分析
   - 将当前历史消息存放在 context.json 中
     - 可能需要重构当前保存读取消息的方法，以标记每个消息的类型，便于恢复
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
+- [ ] trojan.py本身以及和trojan交互的代码在读写时没有加锁，这在大量使用时会造成连接错误
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
