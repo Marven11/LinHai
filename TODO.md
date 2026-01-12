@@ -42,12 +42,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前拦截通过命令查看文件内容的逻辑错误，需要修改
+- [?] 当前拦截通过命令查看文件内容的逻辑错误，需要修改
   - 当前问题：完全没有检查命令名是否是读取文件的命令
     - 本应包含cat, nl, sed, awk, grep, rg, head, tail, more, less等打印文件内容的工具
   - 目标设计：插件直接拿到`list[list[str]]`（命令的列表），跳过不在黑名单中的命令，从命令`list[str]`中通过is_existing_file找到文件，然后判断文件是否符合打断标准
   - 记得修改unittest
-- [ ] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"在unittest中的使用，需要重构
+- [?] commit 53107284c32b10807dbb653bc7e807242247786d 没有完全清理"agent_answer"在unittest中的使用，需要重构
 
 # 代码要求
 

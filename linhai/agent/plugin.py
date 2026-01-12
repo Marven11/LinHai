@@ -22,6 +22,20 @@ from ..utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultMessage
 
 
+READ_FILE_COMMANDS = {
+    "cat",
+    "nl",
+    "sed",
+    "awk",
+    "grep",
+    "rg",
+    "head",
+    "tail",
+    "more",
+    "less",
+}
+
+
 AnyMessage = Union[
     AssistantMessage,
     UserMessage,
@@ -161,7 +175,10 @@ class PromptFastAgentPlugin(Plugin):
         return
 
     async def after_token_generation(
-        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self,
+        agent: "Agent",
+        answer: Answer,
+        current_content: str,  # pylint: disable=unused-argument
     ):
         model = await agent.get_current_model()
         if not isinstance(model, OpenAi) or model.compatibility not in [
@@ -243,7 +260,10 @@ class WeirdTokenPlugin(Plugin):
     """错误标记检查Plugin。"""
 
     async def after_token_generation(
-        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self,
+        agent: "Agent",
+        answer: Answer,
+        current_content: str,  # pylint: disable=unused-argument
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
         pattern = r"<｜end▁of▁[a-z]+｜>"
@@ -266,7 +286,7 @@ class WeirdTokenPlugin(Plugin):
             ):
                 await agent.interrupt(
                     "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！",
-                    "检测到错误工具调用格式"
+                    "检测到错误工具调用格式",
                 )
                 return True
         return False
@@ -279,7 +299,9 @@ class WeirdTokenPlugin(Plugin):
 class EndThinkPlugin(Plugin):
     """检查输出中是否有只有'</think>'的行并打断agent。"""
 
-    async def after_token_generation(self, agent: "Agent", _answer: Answer, current_content: str):
+    async def after_token_generation(
+        self, agent: "Agent", _answer: Answer, current_content: str
+    ):
         """检查是否有一行只有'</think>'。"""
 
         lines = current_content.split("\n")
@@ -287,7 +309,7 @@ class EndThinkPlugin(Plugin):
             if line.strip() == "</think>":
                 await agent.interrupt(
                     "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！",
-                    "Agent消息合并错误，已纠正"
+                    "Agent消息合并错误，已纠正",
                 )
                 return True
         return False
@@ -552,7 +574,10 @@ class RuntimeImitationPlugin(Plugin):
     """阻断deepseek模型模仿runtime输出的插件。"""
 
     async def after_token_generation(
-        self, agent: "Agent", answer: Answer, current_content: str  # pylint: disable=unused-argument
+        self,
+        agent: "Agent",
+        answer: Answer,
+        current_content: str,  # pylint: disable=unused-argument
     ):
         """检查deepseek是否在模仿runtime输出并阻断。"""
         model = await agent.get_current_model()
@@ -562,13 +587,21 @@ class RuntimeImitationPlugin(Plugin):
 
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
-                await agent.interrupt("不要输出<<agent>>这个tag!", "Agent输出了无效标签，已纠正")
+                await agent.interrupt(
+                    "不要输出<<agent>>这个tag!", "Agent输出了无效标签，已纠正"
+                )
             else:
-                await agent.interrupt(f"不要模仿{matches.group(1)}的输出！", "Agent尝试模仿其他输出格式，已纠正")
+                await agent.interrupt(
+                    f"不要模仿{matches.group(1)}的输出！",
+                    "Agent尝试模仿其他输出格式，已纠正",
+                )
             return True
 
         if current_content.lstrip().startswith("<tool>{"):
-            await agent.interrupt("工具调用的格式是```json toolcall不是XML!", "Agent使用了错误的工具调用格式，已纠正")
+            await agent.interrupt(
+                "工具调用的格式是```json toolcall不是XML!",
+                "Agent使用了错误的工具调用格式，已纠正",
+            )
             return True
 
         return False
@@ -584,6 +617,7 @@ class DuplicateFileReadPlugin(Plugin):
     重复读取相同文件内容浪费token并减慢任务进度。此插件通过检查已有FileContentMessage来检测重复。
     只检查read_file工具，不检查read_file_with_sed。
     """
+
     def __init__(self, group_chat):
         super().__init__(group_chat)
         self.counter = 0
@@ -695,7 +729,7 @@ class WrongTimeoutPlugin(Plugin):
         if self.ban_until > time.time():
             await agent.interrupt(
                 f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
-                f"Agent错误使用run_command，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）"
+                f"Agent错误使用run_command，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）",
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -720,7 +754,7 @@ class WrongTimeoutPlugin(Plugin):
             "你做错的事情是：没有使用timeout参数而是使用timeout命令设置超时，你没发现这一点用都没有吗？"
             "如果你想让一个程序一直运行，你应该使用终端而不是使用timeout！"
             "如果你想让一个程序在超时后退出，你应该使用timeout参数而不是命令！",
-            "Agent错误使用timeout参数，run_command已被禁用三分钟"
+            "Agent错误使用timeout参数，run_command已被禁用三分钟",
         )
         await self.group_chat.send_if_exists(
             "ui_log",
@@ -756,7 +790,7 @@ class WrongLinhaiPlugin(Plugin):
         if self.ban_until > time.time():
             await agent.interrupt(
                 f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
-                f"Agent错误使用run_command运行linhai，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）"
+                f"Agent错误使用run_command运行linhai，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）",
             )
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -776,7 +810,7 @@ class WrongLinhaiPlugin(Plugin):
         await agent.interrupt(
             "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
             "你做错的事情是：直接在run_command中使用linhai",
-            "Agent错误使用run_command运行linhai，run_command已被禁用三分钟"
+            "Agent错误使用run_command运行linhai，run_command已被禁用三分钟",
         )
         await self.group_chat.send_if_exists(
             "ui_log",
@@ -790,12 +824,12 @@ class WrongLinhaiPlugin(Plugin):
 
 class Traveller:
     """遍历bash AST树，提取不在pipe中的命令参数。"""
-    
+
     def __init__(self, node: bashlex.ast.node):  # type: ignore
         self.node = node
         self.command_args: list[list[str]] = []  # 每个命令的参数列表
         self._traverse(node, in_pipe=False)
-    
+
     def _traverse(self, node: bashlex.ast.node, in_pipe: bool) -> None:  # type: ignore
         """递归遍历AST节点。"""
         if node.kind == "pipeline":  # type: ignore
@@ -813,17 +847,16 @@ class Traveller:
         elif node.kind == "compound":  # type: ignore
             for child in node.list:  # type: ignore
                 self._traverse(child, in_pipe)
-        elif hasattr(node, 'parts'):
+        elif hasattr(node, "parts"):
             for part in node.parts:  # type: ignore
                 self._traverse(part, in_pipe)
-        elif hasattr(node, 'list'):
+        elif hasattr(node, "list"):
             for child in node.list:  # type: ignore
                 self._traverse(child, in_pipe)
-    
+
     def get_commands(self) -> list[list[str]]:
         """获取提取的所有命令的参数列表。"""
         return self.command_args
-
 
 
 class UnnecessarySedReadPlugin(Plugin):
@@ -875,13 +908,13 @@ class UnnecessarySedReadPlugin(Plugin):
         # 检查文件是否过小或已读取
         is_small_file = await self._is_small_file(filepath)
         is_already_read = await self._is_already_read(agent, filepath)
-        
+
         if not is_small_file and not is_already_read:
             return None
 
         # 增加警告计数
         self.warning_count += 1
-        
+
         if self.warning_count >= 3:
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -985,7 +1018,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
         # 增加警告计数
         self.warning_count += 1
-        
+
         if self.warning_count >= 3:
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -1004,7 +1037,6 @@ class UnnecessaryRunCommandPlugin(Plugin):
             return RuntimeMessage(
                 f"警告：检测到使用命令查看已读取文件（第{self.warning_count}次警告）。建议使用read_file读取整个文件。"
             )
-
 
 
 async def is_small_file(filepath: str) -> bool:
@@ -1061,17 +1093,23 @@ def extract_file_args_from_command(command: str) -> list[str]:
         parts = bashlex.parse(command)
         if not parts:
             return []
-        
+
         traveller = Traveller(parts[0])  # type: ignore
         command_args_list: list[list[str]] = traveller.get_commands()
-        
+
         file_args = []
         for args in command_args_list:
+            if not args:
+                continue
+
+            if args[0] not in READ_FILE_COMMANDS:
+                continue
+
             for i in range(1, len(args)):
                 arg = args[i]
                 if is_existing_file(arg):
                     file_args.append(arg)
-        
+
         return file_args
     except (bashlex.errors.ParsingError, ValueError):
         return []
