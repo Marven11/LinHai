@@ -121,6 +121,8 @@ unittest 失败时，必须分析
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
 - [ ] trojan.py本身以及和trojan交互的代码在读写时没有加锁，这在大量使用时会造成连接错误
 - [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
+- [ ] 在配置中支持对机器设置命令白名单
+  - 可能需要考虑如何实现检测通过终端执行的命令
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
