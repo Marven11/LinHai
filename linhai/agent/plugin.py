@@ -1033,7 +1033,13 @@ class UnnecessaryRunCommandPlugin(Plugin):
                 "建议：如果需要查看文件内容，使用read_file读取整个文件！"
             )
         else:
-            # 只警告，不拦截
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content="模型多次使用命令查看已读取文件，已警告",
+                ),
+            )
             return RuntimeMessage(
                 f"警告：检测到使用命令查看已读取文件（第{self.warning_count}次警告）。建议使用read_file读取整个文件。"
             )
