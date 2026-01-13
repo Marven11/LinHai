@@ -123,6 +123,7 @@ unittest 失败时，必须分析
 - [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
+- [ ] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
