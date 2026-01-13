@@ -666,7 +666,8 @@ class MessageWidget(Static):
         self.sender_name = sender_name
         self.theme = theme
         self.parsed_answer = parsed_answer
-        self._processing_task = None
+
+    def on_mount(self):
         self._start_processing_segments()
 
     @work(exclusive=False)
