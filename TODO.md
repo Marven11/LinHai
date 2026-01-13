@@ -46,8 +46,9 @@
   - 当前问题：部分工具直接返回消息表示工具结果，这导致工具结果中不能优雅地包含工具名称，工具ID，工具调用信息等内容
   - 重构计划
     - 工具方法：只能返回三种值: str | ToolResultSuccess | ToolResultFailed
+      - ToolResultSuccess | ToolResultFailed都是pydantic model, 保存str
     - 删除ToolResultMessage和ToolErrorMessage
-    - 修改工具结果message - 新建ToolCallResultMessage，功能大致和ToolResultMessage一致，但是支持str | ToolResultSuccess | ToolResultFailed三种格式
+    - 修改工具结果message - 新建ToolCallResultMessage pydantic model，功能大致和ToolResultMessage一致，但是支持str | ToolResultSuccess | ToolResultFailed三种格式
       - 需要包含工具调用是当前轮次的第几个调用
       - 初始化时如果结果过长，则用和ToolResultSuccess相同的方式将文件内容分散保存在临时文件中
         - 这一部分逻辑需要提取到辅助函数中
