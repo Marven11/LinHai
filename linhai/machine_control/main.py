@@ -254,8 +254,6 @@ class MachineControlToolSet(ToolSet):
             },
             required_args=["filepath", "content"],
             conflict_with=[
-                "read_file",
-                "read_file_with_sed",
             ],
         )
         async def write_file_tool(
@@ -283,8 +281,6 @@ class MachineControlToolSet(ToolSet):
             },
             required_args=["filepath", "old", "new"],
             conflict_with=[
-                "read_file",
-                "read_file_with_sed",
             ],
         )
         async def replace_file_content_tool(
@@ -352,8 +348,6 @@ class MachineControlToolSet(ToolSet):
             },
             required_args=["expression", "filepath"],
             conflict_with=[
-                "read_file",
-                "read_file_with_sed",
             ],
         )
         async def modify_file_with_sed_tool(expression: str, filepath: str) -> Message:
@@ -380,8 +374,6 @@ class MachineControlToolSet(ToolSet):
                 "expected_line_content",
             ],
             conflict_with=[
-                "read_file",
-                "read_file_with_sed",
             ],
         )
         async def insert_at_line_tool(
