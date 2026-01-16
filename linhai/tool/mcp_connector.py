@@ -39,7 +39,7 @@ class MCPConnector:
             self.connector_toolset
         ]
 
-    async def connect_mcp_server(self, name: str, command: str):
+    async def connect_mcp_server(self, name: str, command: str, exit_stack: AsyncExitStack):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
 
@@ -48,7 +48,6 @@ class MCPConnector:
         server_params = StdioServerParameters(
             command=command_lst[0], args=command_lst[1:], env=None
         )
-        exit_stack = AsyncExitStack()
 
         reader, writer = await exit_stack.enter_async_context(
             stdio_client(server_params)
@@ -136,15 +135,17 @@ class MCPConnector:
             ],
         )
         async def connect_mcp_server(name: str, command: str):
+            exit_stack = AsyncExitStack()
             try:
-                _, _, toolset = await self.connect_mcp_server(name, command)
+                _, _, toolset = await self.connect_mcp_server(name, command, exit_stack)
                 return ToolResultSuccess(
                     content=f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
                     + ", ".join(name for name in toolset.tools.keys())
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
-            except (RuntimeError, ConnectionError, OSError) as e:
+            except Exception as e: # WHY: MCP SDK写得很差，抛出的错误类型很多且不确定，我们只能直接捕获Exception
+                await exit_stack.aclose()
                 return ToolResultFailed(content=f"连接{command!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(
