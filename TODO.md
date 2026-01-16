@@ -70,6 +70,7 @@ unittest 失败时，必须分析
 - [ ] 给run_command添加参数expect_statuscode: 要么为整数，要么为"nonzero"
   - 有时候agent要检查文件里没有什么，但是因为grep返回非0值而打断其他工具调用
 - [ ] run_command应该默认使用/usr/bin/env sh, agent不知道如何处理非bash的转义
+- [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
