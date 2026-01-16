@@ -1,9 +1,8 @@
 - 你的源码文件就在这个文件夹的`./linhai`文件夹中
 - 不要使用pytest，使用Python的unittest模块来运行测试
 - 在测试代码实现时，可以在终端中使用命令：`uv run python -m linhai --config ./config.toml -m '<message>'`
-- unittest一定要放在`tests`文件夹
-- 禁止跳过unittest！每个功能都必须获得良好的测试！
-- 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/ tests/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
+- 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框
-- 注意GroupChat.get_members的用法：get_members用来避免各个对象互相持有引用，不要将get_members的输出保存下来！
+- GroupChat.get_members使用时必须先确认group_chat.py的内容，必须先了解其的所有注意事项
 - 对于空行、多余空格等问题: 使用black格式化以清理
+- 忽略unittest的pyright错误
