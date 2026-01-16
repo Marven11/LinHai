@@ -80,6 +80,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         
         # 验证返回值
         self.assertIsNotNone(result)
+        assert result is not None
         self.assertIn("黄灯状态", result)
         self.assertIn("上下文占用量", result)
         self.assertIn("条大消息", result)
@@ -107,6 +108,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         
         # 对于绿灯状态且最近调用过清理工具，应该返回消息字符串
         self.assertIsNotNone(result)
+        assert result is not None
         self.assertIn("绿灯状态", result)
         self.assertIn("一分钟内有调用过消息清理工具", result)
         # 消息数量应该仍然是3

@@ -1,9 +1,15 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
 from typing import TYPE_CHECKING
-from linhai.tool.base import ToolSet, ToolArgInfo
+from linhai.tool.base import (
+    ToolSet,
+    ToolArgInfo,
+    ToolCallResultMessage,
+    ToolResultFailed,
+    ToolResultSuccess,
+)
 from linhai.tool.main import ToolManager
-from linhai.llm import ToolCallMessage
+from linhai.llm import ToolCallMessage, Message
 from linhai.utils import generate_id, CliRuntimeNotice
 from .base import RuntimeMessage
 
@@ -69,7 +75,7 @@ class AgentToolcall:
     def _register_llm_toolset(self):
         """注册LLM切换工具集。"""
         llm_toolset = ToolSet()
-        llm_names = getattr(self.agent, 'llm_names', [])
+        llm_names = getattr(self.agent, "llm_names", [])
         if not isinstance(llm_names, list):
             llm_names = []
 
@@ -101,7 +107,9 @@ class AgentToolcall:
             required_args=[],
         )
         def current_llm():
-            current_name = llm_names[self.agent.current_llm_index] if llm_names else "未知"
+            current_name = (
+                llm_names[self.agent.current_llm_index] if llm_names else "未知"
+            )
             return f"当前使用的LLM: {current_name}"
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
@@ -145,12 +153,13 @@ class AgentToolcall:
         self.called_tools_in_round = []
         self.early_return = False
 
-    async def call_tool(self, tool_call: ToolCallMessage):
+    async def call_tool(self, tool_call: ToolCallMessage, tool_index: int):
         """
         调用工具并处理结果。
 
         参数:
             tool_call: 工具调用消息
+            tool_index: 工具调用的索引（当前消息中的第几个）
 
         返回:
             bool: 是否需要进行早期返回
@@ -207,25 +216,25 @@ class AgentToolcall:
             self.early_return = True
             return True
 
-        result = await self._call_tool(tool_call)
+        result = await self._call_tool(tool_call, tool_index)
         if result:
             self.early_return = True
         return result
 
-    async def _call_tool(self, tool_call: ToolCallMessage) -> bool:
+    async def _call_tool(self, tool_call: ToolCallMessage, tool_index: int) -> bool:
         """调用工具。"""
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         try:
-            tool_result = await tool_manager.process_tool_call(tool_call)
+            tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
 
-            from linhai.tool.base import ToolErrorMessage
-
-            if isinstance(tool_result, ToolErrorMessage):
+            if isinstance(tool_result, ToolCallResultMessage) and isinstance(
+                tool_result.result, ToolResultFailed
+            ):
                 await self.agent.lifecycle.trigger_tool_failure(
                     self.agent, tool_call, tool_result
                 )
-                msg = f"工具调用失败: {tool_result.content}"
+                msg = f"工具调用失败: {tool_result.result.content}"
 
                 self.agent.message_processor.add_new_message(RuntimeMessage(msg))
                 if tool_call.assert_success:
@@ -253,12 +262,11 @@ class AgentToolcall:
             self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             return False
 
-    async def _handle_tool_result(self, tool_call: ToolCallMessage, tool_result):
+    async def _handle_tool_result(
+        self, tool_call: ToolCallMessage, tool_result: Message
+    ):
         """处理工具调用结果。"""
 
-        self.agent.message_processor.add_new_message(
-            RuntimeMessage(f"你调用了工具{tool_call.function_name!r}，结果如下")
-        )
         self.agent.message_processor.add_new_message(tool_result)
         if self.agent.state == "waiting_user":
             self.agent.state = "working"

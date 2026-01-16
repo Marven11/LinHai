@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, AsyncMock
 from linhai.agent import Agent
 from pathlib import Path
 from linhai.llm import SystemMessage, ToolCallMessage
-from linhai.tool.base import ToolErrorMessage, ToolResultMessage
+from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -30,8 +30,6 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         }
 
         self.group_chat = GroupChat()
-
-
 
         from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig
@@ -72,12 +70,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = await self.tool_manager.process_tool_call(tool_call)
+        result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolErrorMessage):
+        if isinstance(result, ToolResultFailed):
             self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolCallResultMessage)
         self.assertIn("primary", str(result.content))  # type: ignore
 
     async def test_switch_llm_tool_success(self):
@@ -89,12 +87,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = await self.tool_manager.process_tool_call(tool_call)
+        result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolErrorMessage):
+        if isinstance(result, ToolResultFailed):
             self.fail(f"switch_llm tool failed: {result.content}")
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolCallResultMessage)
         self.assertIn("已切换到LLM: secondary", str(result.content))  # type: ignore
 
         self.assertEqual(self.agent.current_llm_index, 1)
@@ -108,12 +106,12 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = await self.tool_manager.process_tool_call(tool_call)
+        result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
 
-        if isinstance(result, ToolErrorMessage):
+        if isinstance(result, ToolResultFailed):
             self.fail(f"switch_llm tool failed: {result.content}")
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolCallResultMessage)
         self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))  # type: ignore
         self.assertIn("可用的LLM包括: primary, secondary", str(result.content))  # type: ignore
 

@@ -9,7 +9,7 @@ from linhai.llm import (
     UserMessage,
     AssistantMessage,
 )
-from linhai.tool.main import ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 
 
 class TestJsonSerialization(unittest.TestCase):
@@ -74,16 +74,28 @@ class TestJsonSerialization(unittest.TestCase):
 
     def test_tool_result_message_serialization(self):
         """测试ToolResultMessage的序列化"""
-        original = ToolResultMessage("工具执行结果")
+        original = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=0,
+            result=ToolResultSuccess(content="工具执行结果"),
+            toolcall_argument_repr=None,
+        )
         json_str = original.to_json()
-        restored = ToolResultMessage.from_json(json_str, self.mock_group_chat)
+        restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.content, restored.content)
+        self.assertEqual(original.result.content, restored.result.content)
+        self.assertEqual(original.tool_name, restored.tool_name)
 
     def test_tool_error_message_serialization(self):
         """测试ToolErrorMessage的序列化"""
-        original = ToolErrorMessage("工具执行错误")
+        original = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=0,
+            result=ToolResultFailed(content="工具执行错误"),
+            toolcall_argument_repr="{'arg': 'value'}",
+        )
         json_str = original.to_json()
-        restored = ToolErrorMessage.from_json(json_str, self.mock_group_chat)
+        restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)
 
-        self.assertEqual(original.content, restored.content)
+        self.assertEqual(original.result.content, restored.result.content)
+        self.assertEqual(original.tool_name, restored.tool_name)

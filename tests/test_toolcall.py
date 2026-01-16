@@ -68,10 +68,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result.__str__ = Mock(return_value="test result")
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
-        result = await self.toolcall_processor.call_tool(tool_call)
+        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertFalse(result)
-        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
+        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
             tool_call
         )
@@ -91,15 +91,20 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        from linhai.tool.base import ToolErrorMessage
+        from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
 
-        mock_error = ToolErrorMessage("test error")
+        mock_error = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=0,
+            result=ToolResultFailed(content="test error"),
+            toolcall_argument_repr=None,
+        )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
 
-        result = await self.toolcall_processor.call_tool(tool_call)
+        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertFalse(result)
-        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
+        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
             tool_call
         )
@@ -117,15 +122,20 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        from linhai.tool.base import ToolErrorMessage
+        from linhai.tool.base import ToolCallResultMessage, ToolResultFailed
 
-        mock_error = ToolErrorMessage("test error")
+        mock_error = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=0,
+            result=ToolResultFailed(content="test error"),
+            toolcall_argument_repr=None,
+        )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
 
-        result = await self.toolcall_processor.call_tool(tool_call)
+        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertTrue(result)
-        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call)
+        self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
             tool_call
         )
@@ -147,7 +157,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result = Mock()
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
-        await self.toolcall_processor.call_tool(tool_call)
+        await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertEqual(self.mock_agent.state, "working")
 
@@ -165,7 +175,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             return_value=True
         )
 
-        result = await self.toolcall_processor.call_tool(tool_call)
+        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_not_called()
@@ -176,14 +186,24 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_multiple_tool_calls_with_mixed_results(self):
         """测试多个工具调用混合成功和失败的情况。"""
 
+        from linhai.tool.base import (
+            ToolCallResultMessage,
+            ToolResultSuccess,
+            ToolResultFailed,
+        )
+
         tool_call1 = ToolCallMessage(
             function_name="test_tool",
             function_arguments={},
             assert_success=True,
             with_secret=None,
         )
-        mock_result1 = Mock()
-        mock_result1.__str__ = Mock(return_value="result1")
+        mock_result1 = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=0,
+            result=ToolResultSuccess(content="result1"),
+            toolcall_argument_repr=None,
+        )
 
         tool_call2 = ToolCallMessage(
             function_name="test_tool",
@@ -191,9 +211,12 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             assert_success=False,
             with_secret=None,
         )
-        from linhai.tool.base import ToolErrorMessage
-
-        mock_error2 = ToolErrorMessage("error2")
+        mock_error2 = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=1,
+            result=ToolResultFailed(content="error2"),
+            toolcall_argument_repr=None,
+        )
 
         tool_call3 = ToolCallMessage(
             function_name="test_tool",
@@ -201,19 +224,24 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             assert_success=True,
             with_secret=None,
         )
-        mock_error3 = ToolErrorMessage("error3")
+        mock_error3 = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=2,
+            result=ToolResultFailed(content="error3"),
+            toolcall_argument_repr=None,
+        )
 
         self.mock_tool_manager.process_tool_call = AsyncMock(
             side_effect=[mock_result1, mock_error2, mock_error3]
         )
 
-        result1 = await self.toolcall_processor.call_tool(tool_call1)
+        result1 = await self.toolcall_processor.call_tool(tool_call1, tool_index=1)
         self.assertFalse(result1)
 
-        result2 = await self.toolcall_processor.call_tool(tool_call2)
+        result2 = await self.toolcall_processor.call_tool(tool_call2, tool_index=2)
         self.assertFalse(result2)
 
-        result3 = await self.toolcall_processor.call_tool(tool_call3)
+        result3 = await self.toolcall_processor.call_tool(tool_call3, tool_index=3)
         self.assertTrue(result3)
 
         self.assertEqual(self.mock_tool_manager.process_tool_call.call_count, 3)
@@ -232,7 +260,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             side_effect=RuntimeError("runtime error")
         )
 
-        result = await self.toolcall_processor.call_tool(tool_call)
+        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertFalse(result)
         self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once()
@@ -283,7 +311,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result_a = Mock()
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result_a)
 
-        result_a = await self.toolcall_processor.call_tool(tool_call_a)
+        result_a = await self.toolcall_processor.call_tool(tool_call_a, tool_index=1)
         self.assertFalse(result_a)
 
         tool_call_b = ToolCallMessage(
@@ -293,7 +321,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result_b = await self.toolcall_processor.call_tool(tool_call_b)
+        result_b = await self.toolcall_processor.call_tool(tool_call_b, tool_index=2)
         self.assertTrue(result_b)  # 冲突导致早期返回
         self.assertTrue(self.toolcall_processor.early_return)
 
@@ -306,6 +334,54 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.toolcall_processor.called_tools_in_round, [])
         self.assertFalse(self.toolcall_processor.early_return)
+
+    async def test_tool_index_increment_and_passing(self):
+        """测试tool_index正确递增和传递。"""
+        from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess
+        from unittest.mock import call
+
+        tool_call1 = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+        )
+        tool_call2 = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+        )
+
+        mock_result1 = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=1,
+            result=ToolResultSuccess(content="result1"),
+            toolcall_argument_repr=None,
+        )
+        mock_result2 = ToolCallResultMessage(
+            tool_name="test_tool",
+            tool_index=2,
+            result=ToolResultSuccess(content="result2"),
+            toolcall_argument_repr=None,
+        )
+
+        self.mock_tool_manager.process_tool_call = AsyncMock(
+            side_effect=[mock_result1, mock_result2]
+        )
+
+        # 第一次调用，tool_index应为1
+        result1 = await self.toolcall_processor.call_tool(tool_call1, tool_index=1)
+        self.assertFalse(result1)
+        # 第二次调用，tool_index应为2
+        result2 = await self.toolcall_processor.call_tool(tool_call2, tool_index=2)
+        self.assertFalse(result2)
+
+        # 验证调用参数
+        calls = self.mock_tool_manager.process_tool_call.call_args_list
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0], call(tool_call1, 1))
+        self.assertEqual(calls[1], call(tool_call2, 2))
 
     async def test_compress_tool_flag_setting(self):
         """测试压缩工具标志设置。"""
@@ -320,7 +396,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         mock_result = Mock()
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
-        await self.toolcall_processor.call_tool(tool_call)
+        await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertTrue(self.mock_agent.compress_tool_called_in_last_response)
 

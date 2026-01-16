@@ -5,7 +5,7 @@ import tempfile
 
 import chardet
 import httpx
-from linhai.tool.base import ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
@@ -43,7 +43,7 @@ async def http_request(
     data: Optional[str] = None,
     follow_redirects: bool = True,
     timeout: int = 60,
-) -> ToolResultMessage | ToolErrorMessage:
+) -> ToolResultSuccess | ToolResultFailed:
     """
     发送HTTP请求并返回响应内容或文件路径
     """
@@ -74,20 +74,20 @@ async def http_request(
                     delete=False, suffix=".bin"
                 ) as tmp_file:
                     tmp_file.write(response.content)
-                    return ToolResultMessage(
-                        f"二进制内容已保存到临时文件: {tmp_file.name}"
+                    return ToolResultSuccess(
+                        content=f"二进制内容已保存到临时文件: {tmp_file.name}"
                     )
             else:
                 if encoding:
                     try:
                         content = response.content.decode(encoding)
-                        return ToolResultMessage(content)
+                        return ToolResultSuccess(content=content)
                     except UnicodeDecodeError:
-                        return ToolErrorMessage(f"无法使用编码 {encoding} 解码响应内容")
+                        return ToolResultFailed(content=f"无法使用编码 {encoding} 解码响应内容")
                 else:
                     try:
-                        return ToolResultMessage(response.text)
+                        return ToolResultSuccess(content=response.text)
                     except UnicodeDecodeError:
-                        return ToolErrorMessage("无法解码响应内容，可能是二进制数据")
+                        return ToolResultFailed(content="无法解码响应内容，可能是二进制数据")
     except httpx.RequestError as e:
-        return ToolErrorMessage(f"请求失败: {str(e)}")
+        return ToolResultFailed(content=f"请求失败: {str(e)}")

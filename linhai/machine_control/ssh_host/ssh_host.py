@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
 
 
@@ -289,7 +289,7 @@ class SshMachineControl:
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """调用指定工具。
 
         Args:
@@ -310,10 +310,10 @@ class SshMachineControl:
 
             result = await self._send_request(name, args)
             if "error" in result:
-                return ToolErrorMessage(f"工具执行失败: {result['error']}")
-            return ToolResultMessage(result["message"])
+                return ToolResultFailed(content=f"工具执行失败: {result['error']}")
+            return ToolResultSuccess(content=str(result["message"]))
         except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-            return ToolErrorMessage(f"调用工具失败: {e}")
+            return ToolResultFailed(content=f"调用工具失败: {e}")
 
     async def close(self):
         """关闭连接。"""
@@ -462,13 +462,13 @@ class SshMachineControl:
         data: Optional[str] = None,  # pylint: disable=unused-argument
         follow_redirects: bool = True,  # pylint: disable=unused-argument
         timeout: int = 60,  # pylint: disable=unused-argument
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """SSH不支持http_request工具"""
-        return ToolErrorMessage("SSH机器不支持http_request工具")
+        return ToolResultFailed(content="SSH机器不支持http_request工具")
 
     async def run_command(
         self, command: str, timeout: float = 30.0
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """执行系统命令"""
         return await self.call_tool(
             "run_command", {"command": command, "timeout": timeout}
@@ -476,13 +476,13 @@ class SshMachineControl:
 
     async def change_directory(
         self, directory: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """改变当前工作目录"""
         return await self.call_tool("change_directory", {"directory": directory})
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """创建远程终端"""
         return await self.call_tool(
             "terminal_create", {"columns": columns, "lines": lines}
@@ -490,7 +490,7 @@ class SshMachineControl:
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """发送按键到远程终端"""
         return await self.call_tool(
             "terminal_send_keys", {"term_id": terminal_id, "keys": keys}
@@ -502,7 +502,7 @@ class SshMachineControl:
         string: str,
         with_enter: bool = True,
         wait_seconds: float = 0.3,  # pylint: disable=unused-argument
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """发送字符串到远程终端"""
         return await self.call_tool(
             "terminal_send_string",
@@ -511,10 +511,10 @@ class SshMachineControl:
 
     async def terminal_read_screen(
         self, terminal_id: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """读取远程终端屏幕内容"""
         result = await self.call_tool("terminal_read_screen", {"term_id": terminal_id})
-        if isinstance(result, ToolResultMessage):
+        if isinstance(result, ToolResultSuccess):
             # 解码base64
             import base64
 
@@ -522,20 +522,20 @@ class SshMachineControl:
                 decoded_bytes = base64.b64decode(result.content)
                 # 将字节流解码为字符串，使用utf-8并用替换字符替换无法解码的字节
                 decoded_str = decoded_bytes.decode("utf-8", errors="replace")
-                return ToolResultMessage(decoded_str)
+                return ToolResultSuccess(content=decoded_str)
             except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                return ToolErrorMessage(f"解码终端屏幕内容失败: {e}")
+                return ToolResultFailed(content=f"解码终端屏幕内容失败: {e}")
         return result
 
     async def terminal_close(
         self, terminal_id: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """关闭远程终端"""
         return await self.call_tool("terminal_close", {"term_id": terminal_id})
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """读取文件"""
         return await self.call_tool(
             "read_file", {"filepath": filepath, "show_line_numbers": show_line_numbers}
@@ -543,7 +543,7 @@ class SshMachineControl:
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """写入文件内容"""
         return await self.call_tool(
             "write_file",
@@ -552,26 +552,26 @@ class SshMachineControl:
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """替换文件内容"""
         params: dict[str, str | int] = {"filepath": filepath, "old": old, "new": new}
         if replace_times is not None:
             params["replace_times"] = replace_times
         return await self.call_tool("replace_file_content", params)  # type: ignore
 
-    async def list_files(self, dirpath: str) -> ToolResultMessage | ToolErrorMessage:
+    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         """列出指定文件夹中的文件"""
         return await self.call_tool("list_files", {"dirpath": dirpath})
 
     async def get_absolute_path(
         self, path: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """获取路径的绝对路径"""
         return await self.call_tool("get_absolute_path", {"path": path})
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """执行sed表达式并返回输出"""
         return await self.call_tool(
             "read_file_with_sed", {"expression": expression, "filepath": filepath}
@@ -579,7 +579,7 @@ class SshMachineControl:
 
     async def modify_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """使用sed表达式修改文件"""
         return await self.call_tool(
             "modify_file_with_sed", {"expression": expression, "filepath": filepath}
@@ -591,7 +591,7 @@ class SshMachineControl:
         line_number: int,
         content: str,
         expected_line_content: str,
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """将内容插入到文件的指定行号位置"""
         return await self.call_tool(
             "insert_at_line",

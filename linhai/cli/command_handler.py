@@ -143,7 +143,7 @@ class CommandHandler:
         )
 
         # 通过agent的toolcall_processor执行工具调用，确保完整的生命周期管理
-        early_return = await agent.toolcall_processor.call_tool(tool_call)
+        early_return = await agent.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         if not early_return:
             # 添加成功执行反馈（失败情况已在call_tool中处理）

@@ -6,12 +6,12 @@ import platform  # pylint: disable=unused-import
 import signal
 import subprocess
 
-from linhai.tool.base import ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 async def execute_command(
     command: str, timeout: float = 30.0
-) -> ToolResultMessage | ToolErrorMessage:
+) -> ToolResultSuccess | ToolResultFailed:
     """执行系统命令并返回输出（内部函数）
 
     Args:
@@ -22,7 +22,7 @@ async def execute_command(
          命令执行的输出结果，包含returncode、stdout和stderr
     """
     if timeout > 3600:
-        return ToolErrorMessage("Timeout value exceeds maximum limit of 3600 seconds")
+        return ToolResultFailed(content="Timeout value exceeds maximum limit of 3600 seconds")
     try:
         # 防止用户使用EDITOR环境变量打开编辑器
         env = os.environ.copy()
@@ -50,8 +50,8 @@ async def execute_command(
                 pass
 
             await process.wait()
-            return ToolErrorMessage(
-                f"Command timed out after {timeout} seconds, "
+            return ToolResultFailed(
+                content=f"Command timed out after {timeout} seconds, "
                 "try to interact with it inside terminal"
             )
 
@@ -68,16 +68,16 @@ Stderr:
 {stderr_str}
 """
         if returncode == 0:
-            return ToolResultMessage(output)
+            return ToolResultSuccess(content=output)
         else:
-            return ToolErrorMessage(output)
+            return ToolResultFailed(content=output)
     except (OSError, subprocess.SubprocessError) as e:
-        return ToolErrorMessage(f"Command failed with error: {str(e)}")
+        return ToolResultFailed(content=f"Command failed with error: {str(e)}")
 
 
 async def run_command(
     command: str, timeout: float = 30.0
-) -> ToolResultMessage | ToolErrorMessage:
+) -> ToolResultSuccess | ToolResultFailed:
     """执行系统命令
 
     Args:
@@ -90,7 +90,7 @@ async def run_command(
     return await execute_command(command, timeout)
 
 
-def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
+def change_directory(directory: str) -> ToolResultSuccess | ToolResultFailed:
     """改变当前工作目录
 
     Args:
@@ -101,6 +101,6 @@ def change_directory(directory: str) -> ToolResultMessage | ToolErrorMessage:
     """
     try:
         os.chdir(directory)
-        return ToolResultMessage(f"Changed directory to: {directory}")
+        return ToolResultSuccess(content=f"Changed directory to: {directory}")
     except OSError as e:
-        return ToolErrorMessage(f"Error changing directory: {str(e)}")
+        return ToolResultFailed(content=f"Error changing directory: {str(e)}")

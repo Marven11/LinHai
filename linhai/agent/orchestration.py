@@ -11,7 +11,7 @@ from typing import Optional, Literal, TypedDict, TYPE_CHECKING
 from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolSet, ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
 from .base import Message, RuntimeMessage
@@ -64,7 +64,7 @@ class AgentContextOrchestration:
         reprs = [r.repr(msg) for msg in list(self.large_messages)[:limit]]
         return reprs
 
-    async def context_garbage_clean(self) -> ToolResultMessage | ToolErrorMessage:
+    async def context_garbage_clean(self) -> ToolResultSuccess | ToolResultFailed:
         """清理所有大消息。
 
         Returns:
@@ -72,7 +72,7 @@ class AgentContextOrchestration:
         """
         if len(self.large_messages) < 5:
             error_msg = f"错误：当前只有{len(self.large_messages)}条大消息，需要至少5条大消息才能清理"
-            return ToolErrorMessage(error_msg)
+            return ToolResultFailed(content=error_msg)
 
         await self.agent_message.count_invalidate_cache()
         removed_messages = []
@@ -86,7 +86,7 @@ class AgentContextOrchestration:
 
         result_lines = [f"已清理 {len(removed_messages)} 条大消息:"]
         result_lines.extend(removed_messages)
-        return ToolResultMessage("\n".join(result_lines))
+        return ToolResultSuccess(content="\n".join(result_lines))
 
     async def context_thanox(self) -> str:
         """随机删除一半消息（不包括前5条系统消息）。
@@ -313,7 +313,7 @@ class AgentContextOrchestration:
             args={},
             required_args=[],
         )
-        async def context_garbage_clean_tool() -> ToolErrorMessage | ToolResultMessage:
+        async def context_garbage_clean_tool() -> ToolResultSuccess | ToolResultFailed:
             # 记录工具调用时间用于后续判断
             self.last_compress_or_clean_time = time.time()
             return await self.context_garbage_clean()
@@ -371,7 +371,7 @@ class AgentContextOrchestration:
         self,
         _agent: "Agent",
         _tool_call: ToolCallMessage,
-        tool_result_msg: ToolResultMessage,
+        tool_result_msg: Message,
         _success: bool,
     ) -> Optional[RuntimeMessage]:
         tool_result_content = str(tool_result_msg)

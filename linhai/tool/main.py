@@ -13,10 +13,11 @@ from linhai.config import ToolConfig, MCPConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import Message, ToolCallMessage
 from linhai.tool.base import (
-    ToolErrorMessage,
-    ToolResultMessage,
     ToolSet,
     to_tools_info,
+    ToolCallResultMessage,
+    ToolResultSuccess,
+    ToolResultFailed,
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
@@ -59,7 +60,7 @@ class ToolManager:
         """后初始化：注册MachineControl工具集"""
         from linhai.machine_control.main import register_machine_control_tools
         from linhai.machine_control import MachineControl
-        
+
         machine_control = self.group_chat.get_members("machine_control", MachineControl)
         self.add_toolset(register_machine_control_tools(machine_control))
 
@@ -101,7 +102,9 @@ class ToolManager:
     def get_mcp_connector(self):
         return self.mcp_connector
 
-    async def process_tool_call(self, tool_call: ToolCallMessage) -> Message:
+    async def process_tool_call(
+        self, tool_call: ToolCallMessage, tool_index: int
+    ) -> Message:
         """处理单个工具调用请求并返回结果
 
         Args:
@@ -125,7 +128,17 @@ class ToolManager:
                     level="ERROR", content=f"未找到工具: {tool_call.function_name}"
                 ),
             )
-            return ToolErrorMessage(f"未找到工具: {tool_call.function_name}")
+            import reprlib
+
+            failed_result = ToolResultFailed(
+                content=f"未找到工具: {tool_call.function_name}"
+            )
+            return ToolCallResultMessage(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                result=failed_result,
+                toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+            )
 
         try:
 
@@ -136,7 +149,7 @@ class ToolManager:
             else:
                 result = await asyncio.to_thread(func, **kwargs)
 
-            if isinstance(result, ToolErrorMessage):
+            if isinstance(result, ToolResultFailed):
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -160,7 +173,15 @@ class ToolManager:
                     content=f"工具执行失败: {tool_call.function_name} - {str(e)}",
                 ),
             )
-            return ToolErrorMessage(content=str(e))
+            import reprlib
+
+            failed_result = ToolResultFailed(content=str(e))
+            return ToolCallResultMessage(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                result=failed_result,
+                toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+            )
 
         if isinstance(result, Awaitable):
             result = await result
@@ -168,16 +189,28 @@ class ToolManager:
         if isinstance(result, Message):
             return result
 
+        # 处理工具函数返回的结果：可能是ToolResultSuccess, ToolResultFailed, 或其他类型
+        import reprlib
+
+        if isinstance(result, ToolResultSuccess) or isinstance(
+            result, ToolResultFailed
+        ):
+            tool_result = result
+        else:
+            # 旧版本工具返回字符串或其他类型，视为成功
+            tool_result = ToolResultSuccess(content=str(result))
+
         if self.config and self.config.max_output_length is not None:
             max_output_length = self.config.max_output_length
         else:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(level="INFO", content="使用默认输出长度限制: 50000"),
-            )
             max_output_length = 50000
 
-        return ToolResultMessage(content=result, max_output_length=max_output_length)
+        return ToolCallResultMessage(
+            tool_name=tool_call.function_name,
+            tool_index=tool_index,
+            result=tool_result,
+            max_output_length=max_output_length,
+        )
 
     def register_lifecycle(self):
 

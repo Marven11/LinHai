@@ -1,4 +1,4 @@
-"""Unit tests for ToolResultMessage with large content handling."""
+"""Unit tests for ToolCallResultMessage with large content handling."""
 
 import unittest
 import os
@@ -6,29 +6,29 @@ import re
 import tempfile
 
 
-class TestToolResultMessage(unittest.TestCase):
-    """Test cases for ToolResultMessage with large content handling."""
+class TestToolCallResultMessage(unittest.TestCase):
+    """Test cases for ToolCallResultMessage with large content handling."""
 
     def test_tool_result_message_with_short_content(self):
         """测试短内容情况，应直接返回内容"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         short_content = "This is a short message"
-        message = ToolResultMessage(short_content)
+        message = ToolCallResultMessage(short_content)
         llm_message = message.to_llm_message()
 
         # 工具结果消息现在包含格式标记
-        expected_content = f'<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>'
+        expected_content = f"<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>"
         # self.assertEqual(llm_message.get("content", ""), expected_content)
         self.assertEqual(llm_message["role"], "user")
         self.assertEqual(llm_message.get("name", ""), "tool-result")
 
     def test_tool_result_message_with_long_content_by_chars(self):
         """测试长内容情况，应按字符分块保存到多个文件"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         long_content = "A" * 50001  # 50001个字符，1行
-        message = ToolResultMessage(long_content)
+        message = ToolCallResultMessage(long_content)
         llm_message = message.to_llm_message()
 
         content = str(llm_message.get("content", ""))
@@ -53,11 +53,11 @@ class TestToolResultMessage(unittest.TestCase):
 
     def test_tool_result_message_with_long_content_by_lines(self):
         """测试长内容情况，应按行分块保存到多个文件"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         lines = [f"Line {i}: {'A' * 50}" for i in range(1200)]  # 1200行，每行约55字符
         long_content = "\n".join(lines)
-        message = ToolResultMessage(long_content)
+        message = ToolCallResultMessage(long_content)
         llm_message = message.to_llm_message()
 
         content = str(llm_message.get("content", ""))
@@ -84,12 +84,14 @@ class TestToolResultMessage(unittest.TestCase):
 
     def test_tool_result_message_with_custom_max_length(self):
         """测试自定义最大长度限制"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         custom_max_length = 1000
 
         long_content = "A" * 1001  # 1001个字符
-        message = ToolResultMessage(long_content, max_output_length=custom_max_length)
+        message = ToolCallResultMessage(
+            long_content, max_output_length=custom_max_length
+        )
         llm_message = message.to_llm_message()
 
         content = str(llm_message.get("content", ""))
@@ -108,18 +110,20 @@ class TestToolResultMessage(unittest.TestCase):
             os.unlink(file_path)
 
         short_content = "A" * 1000  # 1000个字符
-        message = ToolResultMessage(short_content, max_output_length=custom_max_length)
+        message = ToolCallResultMessage(
+            short_content, max_output_length=custom_max_length
+        )
         llm_message = message.to_llm_message()
         # 工具结果消息现在包含格式标记
-        expected_content = f'<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>'
+        expected_content = f"<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>{short_content}<<data>>\n<<tool>>"
         # self.assertEqual(llm_message.get("content", ""), expected_content)
 
     def test_tool_result_message_with_json_content(self):
         """测试JSON内容情况"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         json_content = {"key": "value", "number": 42}
-        message = ToolResultMessage(json_content)
+        message = ToolCallResultMessage(json_content)
         llm_message = message.to_llm_message()
 
         # 工具结果消息现在包含格式标记
@@ -130,10 +134,10 @@ class TestToolResultMessage(unittest.TestCase):
 
     def test_tool_result_message_with_long_json_content(self):
         """测试长JSON内容情况，应分块保存到文件"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         long_json_content = {"data": "A" * 50000}  # 超过50000字符
-        message = ToolResultMessage(long_json_content)
+        message = ToolCallResultMessage(long_json_content)
         llm_message = message.to_llm_message()
 
         content = str(llm_message.get("content", ""))
@@ -156,14 +160,14 @@ class TestToolResultMessage(unittest.TestCase):
 
     def test_tool_result_message_includes_line_count_for_long_content(self):
         """测试长内容时包含行数信息"""
-        from linhai.tool.main import ToolResultMessage
+        from linhai.tool.main import ToolCallResultMessage
 
         lines = ["Line " + str(i) for i in range(1000)]  # 1000行
         long_content = "\n".join(lines)  # 999个换行符，共1000行
         while len(long_content) < 50000:
             long_content += "\nAdditional line to make it longer"
 
-        message = ToolResultMessage(long_content)
+        message = ToolCallResultMessage(long_content)
         llm_message = message.to_llm_message()
 
         content_str = str(llm_message.get("content", ""))

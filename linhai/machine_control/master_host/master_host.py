@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Optional
-from linhai.tool.base import ToolErrorMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
 from linhai.agent.base import FileContentMessage
 
@@ -43,17 +43,17 @@ class MasterHostControl:
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
-    ) -> Message:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """发送HTTP请求并返回响应内容或文件路径"""
         return await http_request(
             method, url, params, headers, data, follow_redirects, timeout
         )
 
-    async def run_command(self, command: str, timeout: float = 30.0) -> Message:
+    async def run_command(self, command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed:
         """执行系统命令"""
         return await run_command(command, timeout)
 
-    async def change_directory(self, directory: str) -> Message:
+    async def change_directory(self, directory: str) -> ToolResultSuccess | ToolResultFailed:
         """改变当前工作目录"""
         return change_directory(directory)
 
@@ -81,37 +81,37 @@ class MasterHostControl:
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> FileContentMessage | ToolErrorMessage:
+    ) -> FileContentMessage | ToolResultFailed:
         """读取文件内容"""
         return await asyncio.to_thread(read_file, filepath, show_line_numbers)
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> Message:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """写入内容到文件"""
         return await asyncio.to_thread(write_file, filepath, content, override)
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> Message:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """替换文件内容中的指定字符串"""
         return await asyncio.to_thread(
             replace_file_content, filepath, old, new, replace_times
         )
 
-    async def list_files(self, dirpath: str) -> Message:
+    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         """列出指定文件夹中的文件和子目录"""
         return await asyncio.to_thread(list_files, dirpath)
 
-    async def get_absolute_path(self, path: str) -> Message:
+    async def get_absolute_path(self, path: str) -> ToolResultSuccess | ToolResultFailed:
         """获取路径的绝对路径"""
         return await asyncio.to_thread(get_absolute_path, path)
 
-    async def read_file_with_sed(self, expression: str, filepath: str) -> Message:
+    async def read_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
         """执行sed表达式并返回输出"""
         return await asyncio.to_thread(read_file_with_sed, expression, filepath)
 
-    async def modify_file_with_sed(self, expression: str, filepath: str) -> Message:
+    async def modify_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
         """使用sed表达式修改文件"""
         return await asyncio.to_thread(modify_file_with_sed, expression, filepath)
 
@@ -121,7 +121,7 @@ class MasterHostControl:
         line_number: int,
         content: str,
         expected_line_content: str,
-    ) -> Message:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """将内容插入到文件的指定行号位置"""
         return await asyncio.to_thread(
             insert_at_line, filepath, line_number, content, expected_line_content

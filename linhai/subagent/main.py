@@ -18,7 +18,7 @@ from linhai.llm import (
     UserMessage,
 )
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.tool.base import ToolSet, ToolArgInfo
+from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultSuccess, ToolResultFailed, ToolCallResultMessage
 from linhai.tool.general import sleep_tool
 
 
@@ -46,6 +46,7 @@ class SubAgent:
         self.max_answer_times = max_answer_times
 
         self.toolset = ToolSet()
+        self.tool_call_counter = 0  # 工具调用计数器
         self._register_subagent_tools()
 
         self.messages: list[Message] = [
@@ -178,21 +179,53 @@ class SubAgent:
                 tool_args = call["arguments"]
 
                 if self.toolset.has_tool(tool_name):
-                    try:
-                        result = await self.toolset.call_tool(tool_name, tool_args)
-                        self.messages.append(
-                            UserMessage(message=f"工具 {tool_name} 返回: {result}")
-                        )
-                    except Exception as e:  # pylint: disable=broad-exception-caught
-                        error_msg = f"工具 {tool_name} 执行失败: {e}"
-                        self.messages.append(UserMessage(message=error_msg))
-                        from linhai.utils import CliRuntimeNotice
+                    # 递增工具调用计数器
+                    self.tool_call_counter += 1
+                    tool_index = self.tool_call_counter
 
+                    try:
+                        # 调用工具，工具返回字符串或其他类型
+                        raw_result = await self.toolset.call_tool(tool_name, tool_args)
+                        # 将结果包装为ToolResultSuccess
+                        if isinstance(raw_result, str):
+                            result = ToolResultSuccess(content=raw_result)
+                        else:
+                            try:
+                                import json
+                                content_str = json.dumps(raw_result, ensure_ascii=False)
+                            except (TypeError, ValueError):
+                                content_str = str(raw_result)
+                            result = ToolResultSuccess(content=content_str)
+
+                        # 创建ToolCallResultMessage（成功时不包含toolcall_argument_repr）
+                        tool_result_message = ToolCallResultMessage(
+                            tool_name=tool_name,
+                            tool_index=tool_index,
+                            result=result,
+                        )
+                        self.messages.append(tool_result_message)
+
+                    except Exception as e:  # pylint: disable=broad-exception-caught
+                        # 失败情况
+                        result = ToolResultFailed(content=str(e))
+                        # 创建ToolCallResultMessage，包含toolcall_argument_repr
+                        import reprlib
+                        toolcall_argument_repr = reprlib.repr(tool_args)
+                        tool_result_message = ToolCallResultMessage(
+                            tool_name=tool_name,
+                            tool_index=tool_index,
+                            result=result,
+                            toolcall_argument_repr=toolcall_argument_repr,
+                        )
+                        self.messages.append(tool_result_message)
+
+                        # 发送错误通知
+                        from linhai.utils import CliRuntimeNotice
                         await self.group_chat.send_if_exists(
                             "subagent_message",
                             CliRuntimeNotice(
                                 level="ERROR",
-                                content=f"SubAgent {self.name} 工具 {tool_name} 执行失败: {error_msg}",
+                                content=f"SubAgent {self.name} 工具 {tool_name} 执行失败: {str(e)}",
                             ),
                         )
                 else:

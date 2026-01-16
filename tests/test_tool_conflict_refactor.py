@@ -164,12 +164,12 @@ class TestToolConflictRefactor(unittest.TestCase):
         self._setup_async_mocks()
 
         tool_call = ToolCallMessage(
-        function_name="tool_b",
-        function_arguments={},
-        assert_success=True,
-        with_secret=None,
-    )
-        result = asyncio.run(self.toolcall.call_tool(tool_call))
+            function_name="tool_b",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+        )
+        result = asyncio.run(self.toolcall.call_tool(tool_call, tool_index=1))
 
         self.assertTrue(result)
         self.assertTrue(self.toolcall.early_return)

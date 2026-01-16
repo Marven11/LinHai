@@ -91,7 +91,7 @@ class Agent:
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
-        
+
         # 注册after_token_generation回调用于用户打断检测
         self.lifecycle.register_after_token_generation(self.after_token_generation)
 
@@ -133,7 +133,9 @@ class Agent:
             "usage_ratio": usage_ratio,
         }
 
-    async def after_token_generation(self, agent: "Agent", answer, current_content) -> bool:
+    async def after_token_generation(
+        self, agent: "Agent", answer, current_content
+    ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
         if not agent.group_chat.is_empty("user_message") and agent.current_answer:
             agent.current_answer.interrupt()
@@ -150,16 +152,16 @@ class Agent:
         """
         if self.current_answer:
             self.current_answer.interrupt()
-            
+
             # 总是添加agent_message到message_processor
             self.message_processor.add_new_message(RuntimeMessage(agent_message))
-            
+
             # 使用ui_notice或默认消息
             if ui_notice is not None:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
             else:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
-                
+
             if "```json toolcall" in self.current_answer.get_current_content():
                 self.message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
@@ -318,18 +320,19 @@ class Agent:
         # 创建ParsedAnswer并开始解析
         parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
         await parsed_answer.start_parsing()
-        
+
         # 发送ParsedAnswer到新队列
         await self.group_chat.send("parsed_agent_answer", parsed_answer)
-        
+
         # 等待解析完成
         completed_normally = await parsed_answer.wait_parsing()
         if not completed_normally:
             # 被中断，直接返回，不执行后续工具调用等
             return answer
-        
+
         # 获取完整的回答消息
         from linhai.llm import AssistantMessage
+
         chat_message = cast(AssistantMessage, answer.get_message())
 
         from linhai.llm import AssistantMessage
@@ -365,7 +368,7 @@ class Agent:
 
         self.toolcall_processor.start_new_tool_call_round()
 
-        for call in tool_calls:
+        for i, call in enumerate(tool_calls, start=1):
             if "name" in call and "arguments" in call:
                 assert_success = call.get("assert_success", True)
                 with_secret = call.get("with_secret", None)
@@ -375,7 +378,7 @@ class Agent:
                     assert_success=assert_success,
                     with_secret=with_secret,
                 )
-                await self.toolcall_processor.call_tool(tool_call)
+                await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens

@@ -5,7 +5,7 @@ from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import Message
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolArgInfo, ToolResultMessage, ToolErrorMessage, ToolSet
+from linhai.tool.base import ToolArgInfo, ToolCallResultMessage, ToolResultSuccess, ToolResultFailed, ToolSet
 from linhai.utils import CliRuntimeNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
@@ -28,7 +28,7 @@ class MachineControlToolSet(ToolSet):
             args={},
             required_args=[],
         )
-        async def list_machines_tool() -> ToolResultMessage | ToolErrorMessage:
+        async def list_machines_tool() -> ToolResultSuccess:
             return await self.machine_control.list_machines()
 
         @self.register_tool(
@@ -41,7 +41,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def switch_machine_tool(
             machine_id: str,
-        ) -> ToolResultMessage | ToolErrorMessage:
+        ) -> Union[ToolResultSuccess, ToolResultFailed]:
             return await self.machine_control.switch_machine(machine_id)
 
         @self.register_tool(
@@ -61,7 +61,7 @@ class MachineControlToolSet(ToolSet):
             host: str,
             port: int = 22,
             username: Optional[str] = None,
-        ) -> ToolResultMessage | ToolErrorMessage:
+        ) -> Union[ToolResultSuccess, ToolResultFailed]:
             return await self.machine_control.add_ssh_machine(
                 machine_id, host, port, username
             )
@@ -469,9 +469,9 @@ class MachineControl:
 
     async def switch_machine(
         self, machine_id: str
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> Union[ToolResultSuccess, ToolResultFailed]:
         if machine_id not in self.machines:
-            return ToolErrorMessage(f"机器未找到: {machine_id}")
+            return ToolResultFailed(content=f"机器未找到: {machine_id}")
 
         old_machine_id = self.target_machine
         self.target_machine = machine_id
@@ -483,7 +483,7 @@ class MachineControl:
             ),
         )
 
-        return ToolResultMessage(f"已切换到机器: {machine_id}")
+        return ToolResultSuccess(content=f"已切换到机器: {machine_id}")
 
     async def add_ssh_machine(
         self,
@@ -491,9 +491,9 @@ class MachineControl:
         host: str,
         port: int = 22,
         username: Optional[str] = None,
-    ) -> ToolResultMessage | ToolErrorMessage:
+    ) -> Union[ToolResultSuccess, ToolResultFailed]:
         if machine_id in self.machines:
-            return ToolErrorMessage(f"机器ID已存在: {machine_id}")
+            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
 
         ssh_control = SshMachineControl(
             host=host, group_chat=self.group_chat, port=port, username=username
@@ -503,9 +503,9 @@ class MachineControl:
         try:
             connected = await ssh_control.connect()
             if not connected:
-                return ToolErrorMessage(f"连接SSH机器失败: {host}:{port}")
+                return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
         except Exception as e:  # pylint: disable=broad-exception-caught
-            return ToolErrorMessage(f"连接SSH机器时出错: {e}")
+            return ToolResultFailed(content=f"连接SSH机器时出错: {e}")
 
         self.machines[machine_id] = ssh_control
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
@@ -520,15 +520,15 @@ class MachineControl:
             ),
         )
 
-        return ToolResultMessage(f"已成功添加SSH机器: {machine_id} ({host}:{port})")
+        return ToolResultSuccess(content=f"已成功添加SSH机器: {machine_id} ({host}:{port})")
 
-    async def list_machines(self) -> ToolResultMessage:
+    async def list_machines(self) -> ToolResultSuccess:
         lines = ["可用机器:"]
         for machine_id, description in self.machine_descriptions.items():
             current = " (当前)" if machine_id == self.target_machine else ""
             lines.append(f"  - {machine_id}: {description}{current}")
 
-        return ToolResultMessage("\n".join(lines))
+        return ToolResultSuccess(content="\n".join(lines))
 
     def register_plugin(self, lifecycle):
         """注册插件到lifecycle。"""

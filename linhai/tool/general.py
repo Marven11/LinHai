@@ -16,8 +16,8 @@ from selenium import webdriver
 from linhai.tool.base import (
     global_tools,
     ToolArgInfo,
-    ToolResultMessage,
     ToolSet,
+    ToolResultSuccess,
 )
 from linhai.group_chat import GroupChat
 from linhai.utils import generate_id
@@ -226,11 +226,11 @@ async def search_web(query: str, max_results: int = 5) -> str:
     args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
     required_args=["seconds"],
 )
-async def sleep_tool(seconds: float) -> ToolResultMessage:
+async def sleep_tool(seconds: float) -> ToolResultSuccess:
     start = datetime.now()
     await asyncio.sleep(seconds)
-    return ToolResultMessage(
-        f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    return ToolResultSuccess(
+        content=f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
 
 

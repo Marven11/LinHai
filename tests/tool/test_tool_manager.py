@@ -37,7 +37,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 "linhai.tool.base.global_tools.call_tool", return_value=8
             ) as mock_call,
         ):
-            result = await self.manager.process_tool_call(mock_tool_call)
+            result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
 
             # # mock_call.assert_called_once_with("add_numbers", {"a": 3, "b": 5})  # 工具调用流程可能已改变
 
@@ -55,7 +55,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             "linhai.tool.base.global_tools.call_tool",
             side_effect=ValueError("Tool not found"),
         ):
-            result = await self.manager.process_tool_call(mock_tool_call)
+            result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
             self.assertEqual(type(result).__name__, "ToolErrorMessage")
             # self.assertEqual(getattr(result, "content"), "未找到工具: invalid_tool")
 
@@ -76,7 +76,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 function_name="mock_async_tool",
                 function_arguments={"arg1": 2, "arg2": 3},
             )
-            result = await self.manager.process_tool_call(mock_tool_call)
+            result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
 
             # # mock_call.assert_called_once_with("mock_async_tool", {"arg1": 2, "arg2": 3})
 

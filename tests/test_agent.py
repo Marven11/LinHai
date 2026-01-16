@@ -9,7 +9,7 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage
-from linhai.tool.main import ToolResultMessage
+from linhai.tool.base import ToolResultSuccess
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -155,7 +155,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_message_processing(self):
         """Test message processing functionality."""
         user_msg = UserMessage(message="Hi", name="user")
-        tool_msg = ToolResultMessage(content="result")
+        from linhai.tool.base import ToolCallResultMessage
+        tool_msg = ToolCallResultMessage(
+            tool_name="dummy_tool",
+            tool_index=0,
+            result=ToolResultSuccess(content="result"),
+            toolcall_argument_repr=None,
+        )
 
         mock_answer = MockAnswer(
             [{"reasoning_content": None, "content": "Processing..."}]
@@ -210,7 +216,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             messages[3].to_llm_message().get("content"),
-            "<<tool>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>",
+            "<<tool>>\n<<name>>dummy_tool<<name>>\n<<index>>0<<index>>\n<<message>>工具执行成功<<message>>\n<<data>>result<<data>>\n<<tool>>",
         )
         self.assertEqual(messages[4].to_llm_message().get("content"), "Tool processed")
 
@@ -270,7 +276,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         self.tool_manager.process_tool_call = AsyncMock(
-            return_value=ToolResultMessage("工具执行成功")
+            return_value=ToolResultSuccess(content="工具执行成功")
         )
 
         await self.agent.handle_user_message(UserMessage(message="Calculate 2+2"))

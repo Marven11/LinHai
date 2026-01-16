@@ -19,7 +19,7 @@ from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_e
 from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage
 from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
 from ..utils import CliRuntimeNotice
-from linhai.tool.base import ToolResultMessage
+from linhai.tool.base import ToolCallResultMessage
 
 
 READ_FILE_COMMANDS = {
@@ -45,7 +45,7 @@ AnyMessage = Union[
     PathMemory,
     FileContentMessage,
     PreviousReasoningMessage,
-    ToolResultMessage,
+    ToolCallResultMessage,
 ]
 
 
@@ -942,7 +942,6 @@ class UnnecessarySedReadPlugin(Plugin):
             )
 
     async def _is_small_file(self, filepath: str) -> bool:
-        """检查文件是否过小（字符数少于15000且行数少于800行）。"""
         return await is_small_file(filepath)
 
     async def _is_already_read(self, agent: "Agent", filepath: str) -> bool:
@@ -1046,14 +1045,13 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
 
 async def is_small_file(filepath: str) -> bool:
-    """检查文件是否过小（字符数少于15000且行数少于800行）。"""
     try:
         with open(filepath, "rb") as f:
             content = f.read()
             char_count = len(content)
             # 估算行数：计算换行符数量
             line_count = content.count(b"\n")
-            return char_count < 15000 and line_count < 800
+            return char_count < 40000 and line_count < 2000
     except (FileNotFoundError, PermissionError, OSError):
         return False
 

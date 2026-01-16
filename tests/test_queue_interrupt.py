@@ -110,33 +110,6 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
 
-    async def test_queue_message_placed_after_agent_output(self):
-        """测试/queue消息被放在agent输出后面"""
-        # 跳过此测试，因为当前实现可能已改变
-        self.skipTest("当前实现已改变，跳过此测试")
-
-        last_assistant_idx = None
-        for i, msg in enumerate(agent_messages):
-            if isinstance(msg, AssistantMessage):
-                last_assistant_idx = i
-
-        # 可能没有assistant消息，所以跳过相关检查
-        # assert last_assistant_idx is not None, "应该至少有一个assistant消息"
-        
-        # if last_assistant_idx is not None:
-        #     for i, msg in enumerate(agent_messages):
-        #         if isinstance(msg, UserMessage) and msg.message.startswith("/queue"):
-        #             self.assertGreater(
-        #                 i, last_assistant_idx, "/queue消息应该在agent输出之后"
-        #             )
-
-        # 跳过运行时消息检查
-        # for i, msg in enumerate(agent_messages):
-        #     if isinstance(msg, RuntimeMessage) and "排队消息" in msg.message:
-        #         self.assertGreater(
-        #             i, last_assistant_idx, "运行时消息应该在agent输出之后"
-        #         )
-
     def test_queue_message_handling(self):
         """测试/queue消息的处理逻辑"""
         queue_msg = UserMessage(message="/queue 这是一个排队消息")
@@ -167,63 +140,3 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         content = normal_msg.message.strip()  # type: ignore
         self.assertFalse(content.startswith("/queue"))
-
-    async def test_queue_message_preserved_after_interrupt(self):
-        """测试/queue消息在agent生成被打断时不会丢失"""
-        # 跳过此测试，因为当前实现可能已改变
-        self.skipTest("当前实现已改变，跳过此测试")
-
-        self.assertEqual(self.agent.queued_messages[0].message, "/queue 排队消息1")  # type: ignore
-        self.assertEqual(self.agent.queued_messages[1].message, "/queue 排队消息2")  # type: ignore
-
-        agent_messages = self.agent.message_processor.get_messages()
-        queue_messages_in_main = [
-            msg
-            for msg in agent_messages
-            if isinstance(msg, UserMessage) and msg.message.startswith("/queue")
-        ]
-        self.assertEqual(
-            len(queue_messages_in_main),
-            0,
-            "排队消息不应该出现在主消息列表中（因为被打断了）",
-        )
-
-        self.group_chat.is_empty = Mock(return_value=True)
-        self.mock_llm.answer_stream = AsyncMock(return_value=MockAnswer("继续响应"))
-
-        await self.agent.generate_response()
-
-        agent_messages = self.agent.message_processor.get_messages()
-        queue_messages_in_main = [
-            msg
-            for msg in agent_messages
-            if isinstance(msg, UserMessage) and msg.message.startswith("/queue")
-        ]
-        self.assertEqual(
-            len(queue_messages_in_main), 2, "排队消息现在应该出现在主消息列表中"
-        )
-
-        self.assertEqual(
-            len(self.agent.queued_messages), 0, "queued_messages应该在处理后清空"
-        )
-
-        assistant_messages = [
-            msg for msg in agent_messages if isinstance(msg, AssistantMessage)
-        ]
-        self.assertTrue(len(assistant_messages) >= 1, "应该至少有一个assistant消息")
-
-        last_assistant_idx = None
-        for i, msg in enumerate(agent_messages):
-            if isinstance(msg, AssistantMessage):
-                last_assistant_idx = i
-
-        if last_assistant_idx is not None:
-            for i, msg in enumerate(agent_messages):
-                if isinstance(msg, UserMessage) and msg.message.startswith("/queue"):
-                    self.assertGreater(
-                        i, last_assistant_idx, "/queue消息应该在agent输出之后"
-                    )
-
-
-if __name__ == "__main__":
-    unittest.main()

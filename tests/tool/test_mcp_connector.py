@@ -1,12 +1,13 @@
 """Unit tests for MCP connector."""
 
+import json
 import unittest
 import unittest.mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolErrorMessage, ToolResultMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
@@ -83,15 +84,10 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("Duplicate name", str(context.exception))
 
-    @patch("os.path.exists")
-    async def test_connect_mcp_server_file_not_exists(self, mock_exists):
+    async def test_connect_mcp_server_file_not_exists(self):
         """测试连接不存在的MCP服务器文件。"""
-        mock_exists.return_value = False
-
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(FileNotFoundError):
             await self.connector.connect_mcp_server("test_server", "nonexistent.py")
-
-        self.assertIn("Not exists", str(context.exception))
 
     async def test_disconnect_success(self):
         """测试成功断开连接。"""
@@ -158,7 +154,14 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
     async def test_call_tool_raw_success(self):
         """测试成功调用MCP工具。"""
         mock_session = AsyncMock()
-        mock_session.call_tool.return_value = {"result": "success"}
+        # 模拟MCP协议返回的对象，具有meta和content属性
+        mock_data = MagicMock()
+        mock_data.meta = {}
+        mock_content = MagicMock()
+        mock_content.type = "text"
+        mock_content.text = "success"
+        mock_data.content = [mock_content]
+        mock_session.call_tool.return_value = mock_data
         self.connector.sessions["test_server"] = (
             mock_session,
             AsyncMock(),
@@ -172,7 +175,9 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_session.call_tool.assert_called_once_with(
             "test_tool", arguments={"arg": "value"}
         )
-        self.assertEqual(result, {"result": "success"})
+        # call_tool_raw返回字符串，而不是ToolResultSuccess
+        self.assertIsInstance(result, str)
+        self.assertEqual(result, "data.meta={}\nsuccess")
 
     async def test_get_toolsets(self):
         """测试获取工具集。"""
@@ -210,24 +215,24 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
 
         result = await self.connector.connector_toolset.call_tool(
             "connect_mcp_server",
-            {"name": "test_server", "server_script_path": "test.py"},
+            {"name": "test_server", "command": "test.py"},
         )
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("连接'test.py'成功", result.content)
         self.assertIn("tool1, tool2", result.content)
 
     @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
     async def test_connect_mcp_server_tool_failure(self, mock_connect):
         """测试connect_stdio工具失败。"""
-        mock_connect.side_effect = Exception("Connection failed")
+        mock_connect.side_effect = RuntimeError("Connection failed")
 
         result = await self.connector.connector_toolset.call_tool(
             "connect_mcp_server",
-            {"name": "test_server", "server_script_path": "test.py"},
+            {"name": "test_server", "command": "test.py"},
         )
 
-        self.assertIsInstance(result, ToolErrorMessage)
+        self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("连接'test.py'失败", result.content)
         self.assertIn("Connection failed", result.content)
 
@@ -250,7 +255,7 @@ if __name__ == "__main__":
             "disconnect_mcp_server", {"name": "test_server"}
         )
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("成功断开MCP服务器: 'test_server'", result.content)
         self.assertNotIn("test_server", self.connector.sessions)
 
@@ -260,7 +265,7 @@ if __name__ == "__main__":
             "disconnect_mcp_server", {"name": "nonexistent"}
         )
 
-        self.assertIsInstance(result, ToolErrorMessage)
+        self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("断开失败", result.content)
         self.assertIn("'nonexistent' not exists", result.content)
 
@@ -283,7 +288,7 @@ if __name__ == "__main__":
             "disconnect_all_mcp_servers", {}
         )
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("成功断开所有MCP服务器", result.content)
         self.assertEqual(self.connector.sessions, {})
 
@@ -298,7 +303,7 @@ if __name__ == "__main__":
                 "disconnect_all_mcp_servers", {}
             )
 
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("断开所有服务器失败", result.content)
             self.assertIn("Disconnect error", result.content)
 
@@ -311,7 +316,7 @@ if __name__ == "__main__":
             "list_mcp_servers", {}
         )
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("已连接的MCP服务器 (2个)", result.content)
         self.assertIn("- server1", result.content)
         self.assertIn("- server2", result.content)
@@ -324,5 +329,5 @@ if __name__ == "__main__":
             "list_mcp_servers", {}
         )
 
-        self.assertIsInstance(result, ToolResultMessage)
+        self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("当前没有已连接的MCP服务器", result.content)

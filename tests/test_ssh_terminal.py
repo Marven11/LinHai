@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolResultMessage, ToolErrorMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 class TestSshTerminal(unittest.TestCase):
@@ -37,10 +37,10 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回终端ID
-            self.mock_call_tool.return_value = ToolResultMessage("term_123456789")
+            self.mock_call_tool.return_value = ToolResultSuccess(content="term_123456789")
 
             result = await self.ssh_control.terminal_create(columns=80, lines=24)
-            self.assertIsInstance(result, ToolResultMessage)
+            self.assertIsInstance(result, ToolResultSuccess)
             self.assertEqual(result.content, "term_123456789")
 
             # 验证call_tool被正确调用
@@ -55,7 +55,7 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回成功消息
-            self.mock_call_tool.return_value = ToolResultMessage(
+            self.mock_call_tool.return_value = ToolResultSuccess(content=
                 "已发送字符串: echo hello"
             )
 
@@ -65,7 +65,7 @@ class TestSshTerminal(unittest.TestCase):
                 with_enter=True,
                 wait_seconds=0.3,
             )
-            self.assertIsInstance(result, ToolResultMessage)
+            self.assertIsInstance(result, ToolResultSuccess)
             self.assertIn("已发送字符串", result.content)
 
             # 验证call_tool被正确调用
@@ -81,14 +81,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回成功消息
-            self.mock_call_tool.return_value = ToolResultMessage(
+            self.mock_call_tool.return_value = ToolResultSuccess(content=
                 "已发送按键: ['enter', 'a', 'b']"
             )
 
             result = await self.ssh_control.terminal_send_keys(
                 terminal_id="term_123", keys=["enter", "a", "b"]
             )
-            self.assertIsInstance(result, ToolResultMessage)
+            self.assertIsInstance(result, ToolResultSuccess)
             self.assertIn("已发送按键", result.content)
 
             # 验证call_tool被正确调用
@@ -109,14 +109,14 @@ class TestSshTerminal(unittest.TestCase):
             # 我们这里模拟base64编码的字符串，然后解码后比较
             raw_output = b"hello world\n$"
             mock_output = base64.b64encode(raw_output).decode('utf-8')
-            self.mock_call_tool.return_value = ToolResultMessage(
+            self.mock_call_tool.return_value = ToolResultSuccess(content=
                 mock_output
             )
 
             result = await self.ssh_control.terminal_read_screen(
                 terminal_id="term_123"
             )
-            self.assertIsInstance(result, ToolResultMessage)
+            self.assertIsInstance(result, ToolResultSuccess)
             # ssh_host.py中的terminal_read_screen方法会解码base64
             self.assertEqual(result.content, raw_output.decode('utf-8'))
 
@@ -132,14 +132,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回关闭消息
-            self.mock_call_tool.return_value = ToolResultMessage(
+            self.mock_call_tool.return_value = ToolResultSuccess(content=
                 "已关闭终端 term_123"
             )
 
             result = await self.ssh_control.terminal_close(
                 terminal_id="term_123"
             )
-            self.assertIsInstance(result, ToolResultMessage)
+            self.assertIsInstance(result, ToolResultSuccess)
             self.assertIn("已关闭终端", result.content)
 
             # 验证call_tool被正确调用
@@ -161,10 +161,10 @@ class TestSshTerminal(unittest.TestCase):
             
             # 创建终端
             self.mock_call_tool.side_effect = [
-                ToolResultMessage("term_123"),  # create
-                ToolResultMessage("已发送字符串: echo test"),  # send_string
-                ToolResultMessage(base64_output),  # read_screen (base64编码)
-                ToolResultMessage("已关闭终端 term_123"),  # close
+                ToolResultSuccess(content="term_123"),  # create
+                ToolResultSuccess(content="已发送字符串: echo test"),  # send_string
+                ToolResultSuccess(content=base64_output),  # read_screen (base64编码)
+                ToolResultSuccess(content="已关闭终端 term_123"),  # close
             ]
 
             # 1. 创建终端
@@ -199,14 +199,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "工具执行失败: 终端不存在"
             )
 
             result = await self.ssh_control.terminal_read_screen(
                 terminal_id="nonexistent"
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("工具执行失败", result.content)
 
         self.loop.run_until_complete(test())
@@ -216,13 +216,13 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误信息
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "终端尺寸必须大于0: columns=0, lines=24"
             )
 
             # 注意：实际实现中参数验证在远程端，这里模拟远程返回错误
             result = await self.ssh_control.terminal_create(columns=0, lines=24)
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("终端尺寸必须大于0", result.content)
 
         self.loop.run_until_complete(test())
@@ -232,14 +232,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_send_keys(
                 terminal_id="term_nonexistent", keys=["enter", "a"]
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("终端不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -249,14 +249,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_send_string(
                 terminal_id="term_nonexistent", string="echo test", with_enter=True
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("终端不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -266,14 +266,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_read_screen(
                 terminal_id="term_nonexistent"
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("终端不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -283,14 +283,14 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolErrorMessage(
+            self.mock_call_tool.return_value = ToolResultFailed(content=
                 "终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_close(
                 terminal_id="term_nonexistent"
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("终端不存在", result.content)
 
         self.loop.run_until_complete(test())
@@ -302,7 +302,7 @@ class TestSshTerminal(unittest.TestCase):
             result = await self.ssh_control.http_request(
                 method="GET", url="http://example.com"
             )
-            self.assertIsInstance(result, ToolErrorMessage)
+            self.assertIsInstance(result, ToolResultFailed)
             self.assertIn("SSH机器不支持", result.content)
 
         self.loop.run_until_complete(test())
