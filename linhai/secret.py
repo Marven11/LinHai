@@ -173,15 +173,14 @@ class SecretInterceptorPlugin:
             msg = RuntimeMessage(message)
 
         result_str = str(msg)
-        contains_secret = None
+        contains_secrets = []
         for key, secret_info in self.secrets_dict.items():
             if secret_info["value"] in result_str:
-                contains_secret = key
-                break
+                contains_secrets.append(key)
 
-        if contains_secret:
+        if contains_secrets:
             message = (
-                f"工具调用的结果包含secret值{contains_secret}，已拦截。"
+                f"工具调用的结果包含secret值{contains_secrets}，已拦截。"
                 "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
             )
             return RuntimeMessage(message)

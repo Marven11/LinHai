@@ -57,7 +57,7 @@ class MockAnswer(Answer):
         return None
 
 
-class TestMessageWidgetIntegration(unittest.TestCase):
+class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
     """使用Textual测试框架测试MessageWidget的完整集成。"""
 
     def setUp(self):
