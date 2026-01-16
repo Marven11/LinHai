@@ -5,7 +5,13 @@ from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import Message
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolArgInfo, ToolCallResultMessage, ToolResultSuccess, ToolResultFailed, ToolSet
+from linhai.tool.base import (
+    ToolArgInfo,
+    ToolCallResultMessage,
+    ToolResultSuccess,
+    ToolResultFailed,
+    ToolSet,
+)
 from linhai.utils import CliRuntimeNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
@@ -245,16 +251,18 @@ class MachineControlToolSet(ToolSet):
 
         @self.register_tool(
             name="write_file",
-            desc="写入文件内容。注意：避免输出大量重复内容！修改文件时优先使用replace_file_content，"
-            "如果需要复制文件，必须使用shell指令而不是用此工具重新写入！",
+            desc="写入文件内容。"
+            "注意：不要复述已有的文件内容！"
+            "如果需要复制必须优先使用shell指令cp！"
+            "如果需要修改文件必须优先使用replace_file_content！"
+            "如果需要追加文件内容，用replace_file_content匹配文件末尾几行并追加！",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "content": ToolArgInfo(desc="要写入的内容", type="str"),
                 "override": ToolArgInfo(desc="是否覆盖已有文件", type="bool"),
             },
             required_args=["filepath", "content"],
-            conflict_with=[
-            ],
+            conflict_with=[],
         )
         async def write_file_tool(
             filepath: str, content: str, override: bool = False
@@ -267,9 +275,7 @@ class MachineControlToolSet(ToolSet):
         @self.register_tool(
             name="replace_file_content",
             desc="替换文件内容中的指定字符串。建议：在修改文件原有内容时优先使用此工具。"
-            "重要：为确保修改准确性，必须提供包含完整上下文（至少前后5行）的唯一标识字符串。"
-            "避免对同一文件多次调用此工具修改相同位置，这可能导致意外结果。"
-            "如果需要在文件末尾追加内容，尝试通过修改文件末尾的几行实现",
+            "追加、添加内容时：优先使用此工具。使用方法为匹配末尾的几行并添加新内容。",
             args={
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
                 "old": ToolArgInfo(desc="要替换的字符串", type="str"),
@@ -280,8 +286,7 @@ class MachineControlToolSet(ToolSet):
                 ),
             },
             required_args=["filepath", "old", "new"],
-            conflict_with=[
-            ],
+            conflict_with=[],
         )
         async def replace_file_content_tool(
             filepath: str, old: str, new: str, replace_times: Optional[int] = None
@@ -347,8 +352,7 @@ class MachineControlToolSet(ToolSet):
                 "filepath": ToolArgInfo(desc="文件路径", type="str"),
             },
             required_args=["expression", "filepath"],
-            conflict_with=[
-            ],
+            conflict_with=[],
         )
         async def modify_file_with_sed_tool(expression: str, filepath: str) -> Message:
             host_control = self.machine_control.machines[
@@ -373,8 +377,7 @@ class MachineControlToolSet(ToolSet):
                 "content",
                 "expected_line_content",
             ],
-            conflict_with=[
-            ],
+            conflict_with=[],
         )
         async def insert_at_line_tool(
             filepath: str, line_number: int, content: str, expected_line_content: str
@@ -520,7 +523,9 @@ class MachineControl:
             ),
         )
 
-        return ToolResultSuccess(content=f"已成功添加SSH机器: {machine_id} ({host}:{port})")
+        return ToolResultSuccess(
+            content=f"已成功添加SSH机器: {machine_id} ({host}:{port})"
+        )
 
     async def list_machines(self) -> ToolResultSuccess:
         lines = ["可用机器:"]
