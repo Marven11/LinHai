@@ -2,8 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] commit 85d1c43修改了工具的输出，但是HostControl protocol还没有修改为正确的格式，导致pyright linhai/报错
-- [ ] 修改pyright linhai/的所有错误
+- [x] commit 85d1c43修改了工具的输出，但是HostControl protocol还没有修改为正确的格式，导致pyright linhai/报错
+- [x] 修改pyright linhai/的所有错误
 - [ ] unittest警告大量测试没有被await，查一下怎么回事，让unittest正确运行而不产生警告
 - [ ] 修复所有unittest的错误和警告
 

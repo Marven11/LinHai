@@ -70,8 +70,10 @@ class ToolManager:
         self.mcp_connector = MCPConnector(self.group_chat)
         for mcp_config in self.mcp_config:
             server_script_path = self.mcp_basedir / mcp_config.server_script_path
+            from contextlib import AsyncExitStack
+            exit_stack = AsyncExitStack()
             await self.mcp_connector.connect_mcp_server(
-                mcp_config.name, server_script_path.absolute().as_posix()
+                mcp_config.name, server_script_path.absolute().as_posix(), exit_stack
             )
 
     @property

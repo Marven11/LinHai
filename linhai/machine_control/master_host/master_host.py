@@ -1,7 +1,7 @@
 """Master host control module for tools that interact with the local machine."""
 
 import asyncio
-from typing import Optional
+from typing import Optional, Union
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
 from linhai.agent.base import FileContentMessage
@@ -57,25 +57,25 @@ class MasterHostControl:
         """改变当前工作目录"""
         return change_directory(directory)
 
-    async def terminal_create(self, columns: int = 80, lines: int = 24) -> Message:
+    async def terminal_create(self, columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed:
         """新建虚拟终端"""
         return await terminal_create(columns, lines)
 
-    async def terminal_send_keys(self, terminal_id: str, keys: list[str]) -> Message:
+    async def terminal_send_keys(self, terminal_id: str, keys: list[str]) -> ToolResultSuccess | ToolResultFailed:
         """发送按键列表到终端"""
         return await terminal_send_keys(terminal_id, keys)
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-    ) -> Message:
+    ) -> ToolResultSuccess | ToolResultFailed:
         """发送命令等字符串到终端"""
         return await terminal_send_string(terminal_id, string, with_enter, wait_seconds)
 
-    async def terminal_read_screen(self, terminal_id: str) -> Message:
+    async def terminal_read_screen(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
         """读取终端屏幕内容"""
         return await terminal_read_screen(terminal_id)
 
-    async def terminal_close(self, terminal_id: str) -> Message:
+    async def terminal_close(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
         """关闭终端"""
         return await terminal_close(terminal_id)
 

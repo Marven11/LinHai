@@ -257,8 +257,6 @@ class TestCreateToolManager(unittest.TestCase):
             "tools_config": config,
         }
 
-        _create_tool_manager(context)
-
         result = asyncio.run(_create_tool_manager(context))
 
         self.assertIsNotNone(result)

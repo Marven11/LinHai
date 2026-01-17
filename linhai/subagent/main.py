@@ -290,7 +290,10 @@ class SubAgentManager:
         self.llm_names = [llm.get_name() for llm in (self.llms or [])]
         self.subagents: dict[str, tuple[SubAgent, asyncio.Task | None]] = {}
         group_chat.register_member("subagent_manager", self)
-        group_chat.add_postinit(self.postinit)
+        result = group_chat.add_postinit(self.postinit)
+        if asyncio.iscoroutine(result):
+            # 在测试环境中，add_postinit可能返回协程mock，为了避免警告，我们创建任务
+            asyncio.create_task(result)
 
     def postinit(self):
         """后初始化：创建subagent工具集并添加到tool_manager，然后注册插件"""

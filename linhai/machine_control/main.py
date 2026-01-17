@@ -2,7 +2,7 @@
 
 from typing import Dict, Optional, Protocol, Union
 from linhai.agent import Agent
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import Message
 from linhai.group_chat import GroupChat
 from linhai.tool.base import (
@@ -47,7 +47,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def switch_machine_tool(
             machine_id: str,
-        ) -> Union[ToolResultSuccess, ToolResultFailed]:
+        ) -> ToolResultSuccess | ToolResultFailed:
             return await self.machine_control.switch_machine(machine_id)
 
         @self.register_tool(
@@ -67,7 +67,7 @@ class MachineControlToolSet(ToolSet):
             host: str,
             port: int = 22,
             username: Optional[str] = None,
-        ) -> Union[ToolResultSuccess, ToolResultFailed]:
+        ) -> ToolResultSuccess | ToolResultFailed:
             return await self.machine_control.add_ssh_machine(
                 machine_id, host, port, username
             )
@@ -102,7 +102,7 @@ class MachineControlToolSet(ToolSet):
             data: Optional[str] = None,
             follow_redirects: bool = True,
             timeout: int = 60,
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -122,7 +122,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["command"],
             conflict_with=None,
         )
-        async def run_command_tool(command: str, timeout: float = 30.0) -> Message:
+        async def run_command_tool(command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -135,7 +135,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["directory"],
             conflict_with=None,
         )
-        async def change_directory_tool(directory: str) -> Message:
+        async def change_directory_tool(directory: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -155,7 +155,7 @@ class MachineControlToolSet(ToolSet):
                 "terminal_read_screen",
             ],
         )
-        async def create_terminal_tool(columns: int = 80, lines: int = 24) -> Message:
+        async def create_terminal_tool(columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -175,7 +175,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def send_keys_to_terminal_tool(
             terminal_id: str, keys: list[str]
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -197,7 +197,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def send_string_to_terminal_tool(
             terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -212,7 +212,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["terminal_id"],
             conflict_with=["terminal_create"],
         )
-        async def read_terminal_screen_tool(terminal_id: str) -> Message:
+        async def read_terminal_screen_tool(terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -225,7 +225,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["terminal_id"],
             conflict_with=None,
         )
-        async def close_terminal_tool(terminal_id: str) -> Message:
+        async def close_terminal_tool(terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -243,7 +243,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def read_file_tool(
             filepath: str, show_line_numbers: bool = False
-        ) -> Message:
+        ) -> Union[ToolResultSuccess, ToolResultFailed, FileContentMessage]:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -266,7 +266,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def write_file_tool(
             filepath: str, content: str, override: bool = False
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -290,7 +290,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def replace_file_content_tool(
             filepath: str, old: str, new: str, replace_times: Optional[int] = None
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -309,7 +309,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["dirpath"],
             conflict_with=None,
         )
-        async def list_files_tool(dirpath: str) -> Message:
+        async def list_files_tool(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -322,7 +322,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["path"],
             conflict_with=None,
         )
-        async def get_absolute_path_tool(path: str) -> Message:
+        async def get_absolute_path_tool(path: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -338,7 +338,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["expression", "filepath"],
             conflict_with=[],
         )
-        async def read_file_with_sed_tool(expression: str, filepath: str) -> Message:
+        async def read_file_with_sed_tool(expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -354,7 +354,7 @@ class MachineControlToolSet(ToolSet):
             required_args=["expression", "filepath"],
             conflict_with=[],
         )
-        async def modify_file_with_sed_tool(expression: str, filepath: str) -> Message:
+        async def modify_file_with_sed_tool(expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -381,7 +381,7 @@ class MachineControlToolSet(ToolSet):
         )
         async def insert_at_line_tool(
             filepath: str, line_number: int, content: str, expected_line_content: str
-        ) -> Message:
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -407,45 +407,45 @@ class HostControl(Protocol):
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def run_command(self, command: str, timeout: float = 30.0) -> Message: ...
+    async def run_command(self, command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def change_directory(self, directory: str) -> Message: ...
+    async def change_directory(self, directory: str) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_create(self, columns: int = 80, lines: int = 24) -> Message: ...
+    async def terminal_create(self, columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_read_screen(self, terminal_id: str) -> Message: ...
+    async def terminal_read_screen(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_close(self, terminal_id: str) -> Message: ...
+    async def terminal_close(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
-    ) -> Message: ...
+    ) -> Union[ToolResultSuccess, ToolResultFailed, FileContentMessage]: ...
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def list_files(self, dirpath: str) -> Message: ...
+    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def get_absolute_path(self, path: str) -> Message: ...
+    async def get_absolute_path(self, path: str) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def read_file_with_sed(self, expression: str, filepath: str) -> Message: ...
+    async def read_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def modify_file_with_sed(self, expression: str, filepath: str) -> Message: ...
+    async def modify_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def insert_at_line(
         self,
@@ -453,7 +453,7 @@ class HostControl(Protocol):
         line_number: int,
         content: str,
         expected_line_content: str,
-    ) -> Message: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
 
 class MachineControl:
@@ -472,7 +472,7 @@ class MachineControl:
 
     async def switch_machine(
         self, machine_id: str
-    ) -> Union[ToolResultSuccess, ToolResultFailed]:
+    ) -> ToolResultSuccess | ToolResultFailed:
         if machine_id not in self.machines:
             return ToolResultFailed(content=f"机器未找到: {machine_id}")
 
@@ -494,7 +494,7 @@ class MachineControl:
         host: str,
         port: int = 22,
         username: Optional[str] = None,
-    ) -> Union[ToolResultSuccess, ToolResultFailed]:
+    ) -> ToolResultSuccess | ToolResultFailed:
         if machine_id in self.machines:
             return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
 
