@@ -2,12 +2,13 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 添加一个列出所有 terminal 的工具
 - [ ] 给工具调用添加 on_machine 参数，强行指定工具在哪台机器上使用
   - 要求定义和with_secret一样定义在参数的外边
   - 考虑在连接机器后再添加 system prompt 介绍对应的属性，像secret system一样
   - 添加插件：如果连续 3 次使用同一个 on_machine，且 on_machine 和当前 machine 相同则开始警告
     - 如果有工具没有使用on_machine或者on_machine不同则清除计数器
+- [ ] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
+  - 为下一个任务做准备，必须编写并运行这个脚本成功，验证当前ssh系统没有问题之后才能开始下一个
 - [ ] 重构trojan.py本身以及和trojan交互的代码
   - 在读写stdio时没有加锁，这在大量使用时会造成连接错误
   - trojan.py分离读取请求和处理任务、写入响应的代码，用异步重写
@@ -20,7 +21,6 @@
     - 启动后开一个新task定时读取jsonrpc response塞入results
     - 发送jsonrpc request前将None塞入results, 等待其变为非None然后读出并删除
     - 将self.group_chat.send改为send_if_exists
-- [ ] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
 - [ ] unittest警告大量测试没有被await，查一下怎么回事，让unittest正确运行而不产生警告
 - [ ] 修复所有unittest的错误和警告
 
@@ -54,6 +54,7 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
+- [ ] 添加一个列出所有 terminal 的工具
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 直接在调用回调函数时提供工具调用的状态：成功、失败、被跳过
 - [ ] 添加插件检查代码中的注释，在使用 write_file 等工具写入文件时使用正则提取其中可能的注释
