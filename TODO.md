@@ -2,20 +2,46 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
-  - 为下一个任务做准备，必须编写并运行这个脚本成功，验证当前ssh系统没有问题之后才能开始下一个
-- [x] 重构trojan.py本身以及和trojan交互的代码
-  - 在读写stdio时没有加锁，这在大量使用时会造成连接错误
-  - trojan.py分离读取请求和处理任务、写入响应的代码，用异步重写
-    - 启动两类task:
-      - 请求处理task: 每读取到一个请求时就启动对应的任务处理task
-      - 任务处理task：处理任务，并在获取锁后将结果写入stdout
-    - 将trojan.py代码精简到400行以内，不要留下注释、多余的print，改完检查行数
-  - 重构SshMachineControl和trojan.py通信的逻辑
-    - 维护results: dict[str, result | None]，键为jsonrpc id
-    - 启动后开一个新task定时读取jsonrpc response塞入results
-    - 发送jsonrpc request前将None塞入results, 等待其变为非None然后读出并删除
-    - 将self.group_chat.send改为send_if_exists
+- [ ] 删除run_command工具，完全去除“运行命令”的概念并创建process管理工具替代run_command的功能
+  - 问题：
+    - 我们不知道启动的进程是否会等待读取stdin, agent总是分不清什么时候使用run_command什么时候使用终端
+    - 根源在于agent根本不应该事先判断程序应该用什么工具
+  - 查看prompt是否需要修改
+  - 这是一个较大的重构，仔细规划
+  - process_create工具
+    - 使用传入的命令创建一个进程，等待几秒后检查。
+      - 如果程序已经关闭则提供pid, 返回码，stdout和stderr
+        - 如果返回码非0则视为工具执行失败
+      - 如果程序仍然在运行则返回pid, stdout和stderr并给出message“程序仍然在运行”，将创建的进程对象放入字典中
+    - 有以下参数
+      - 命令：命令是一个list[str]，创建进程时设置shell=False
+      - wait_second: 创建进程后等待几秒检查，默认1秒
+        - 为了避免在程序退出后仍然等待，实际上每0.1秒就检查一次，直到达到wait_second限制或者发现程序退出
+  - process_stdio_write工具
+    - 向stdin写入
+    - 参数pid
+    - 参数content: 需要写入的字符串
+  - process_stdio_read工具
+    - 读取内容
+    - 同时读取stdout和stderr并返回内容
+    - 参数pid
+    - 参数unescape_ansi: 是否反转义ansi序列，默认为true,用于避免在输出中包含大量ansi字符。
+  - process_wait工具
+    - 带超时的等待进程
+    - 参数pid
+    - 参数timeout: 等待几秒，如果传入大于3600的值则报错
+  - process_kill工具
+    - 参数pid
+    - 参数graceful: 是否优雅杀死程序
+    - 必须从字典中找到进程，如果找不到则报错“找不到进程，必须传入当前工具组创建的PID”
+  - 记得使用目标系统的编码
+  - 需要让master_host和ssh都支持新的process工具
+- [ ] 给工具调用添加 on_machine 参数，强行指定工具在哪台机器上使用
+  - 要求定义和with_secret一样定义在参数的外边
+  - 考虑在连接机器后再添加 system prompt 介绍对应的属性，像secret system一样
+  - 添加插件：如果连续 3 次使用同一个 on_machine，且 on_machine 和当前 machine 相同则开始警告
+    - 如果有工具没有使用on_machine或者on_machine不同则清除计数器
+- [ ] 为以上新功能添加unittest
 - [ ] unittest警告大量测试没有被await，查一下怎么回事，让unittest正确运行而不产生警告
 - [ ] 修复所有unittest的错误和警告
 
@@ -49,11 +75,6 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
-- [ ] 给工具调用添加 on_machine 参数，强行指定工具在哪台机器上使用
-  - 要求定义和with_secret一样定义在参数的外边
-  - 考虑在连接机器后再添加 system prompt 介绍对应的属性，像secret system一样
-  - 添加插件：如果连续 3 次使用同一个 on_machine，且 on_machine 和当前 machine 相同则开始警告
-    - 如果有工具没有使用on_machine或者on_machine不同则清除计数器
 - [ ] 添加一个列出所有 terminal 的工具
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 直接在调用回调函数时提供工具调用的状态：成功、失败、被跳过
