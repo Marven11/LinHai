@@ -2,8 +2,25 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] commit 85d1c43修改了工具的输出，但是HostControl protocol还没有修改为正确的格式，导致pyright linhai/报错
-- [x] 修改pyright linhai/的所有错误
+- [ ] 添加一个列出所有 terminal 的工具
+- [ ] 给工具调用添加 on_machine 参数，强行指定工具在哪台机器上使用
+  - 要求定义和with_secret一样定义在参数的外边
+  - 考虑在连接机器后再添加 system prompt 介绍对应的属性，像secret system一样
+  - 添加插件：如果连续 3 次使用同一个 on_machine，且 on_machine 和当前 machine 相同则开始警告
+    - 如果有工具没有使用on_machine或者on_machine不同则清除计数器
+- [ ] 重构trojan.py本身以及和trojan交互的代码
+  - 在读写stdio时没有加锁，这在大量使用时会造成连接错误
+  - trojan.py分离读取请求和处理任务、写入响应的代码，用异步重写
+    - 启动两类task:
+      - 请求处理task: 每读取到一个请求时就启动对应的任务处理task
+      - 任务处理task：处理任务，并在获取锁后将结果写入stdout
+    - 将trojan.py代码精简到400行以内，不要留下注释、多余的print，改完检查行数
+  - 重构SshMachineControl和trojan.py通信的逻辑
+    - 维护results: dict[str, result | None]，键为jsonrpc id
+    - 启动后开一个新task定时读取jsonrpc response塞入results
+    - 发送jsonrpc request前将None塞入results, 等待其变为非None然后读出并删除
+    - 将self.group_chat.send改为send_if_exists
+- [ ] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
 - [ ] unittest警告大量测试没有被await，查一下怎么回事，让unittest正确运行而不产生警告
 - [ ] 修复所有unittest的错误和警告
 
@@ -46,23 +63,16 @@ unittest 失败时，必须分析
   - 使用正则是合理的，因为为每个语言配置一个解析器过于复杂，而且添加的内容也不一定符合代码语法（多行字符串内容等）
   - 对于 python: 不检测多行字符串
 - [ ] terminal tab
-- [ ] 添加一个列出所有 terminal 的函数
-- [ ] 分离打断时发送给 agent 的文本和发送给 UI 的文本
-  - 当前打断时会将本来应该发送给 agent 的文本也发送到 UI 中，如“不要模仿...”，我们不应该这么惊吓用户
 - [ ] 添加假设颠覆法
   - 添加 prompt 到 system message
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
-- [ ] 给工具调用添加 on_machine 参数，强行指定工具在哪台机器上使用
-  - 考虑在连接机器后再添加 system prompt
-  - 可能还需要添加插件：如果连续 3 次使用同一个 on_machine，且 on_machine 和当前 machine 相同则开始警告
 - [ ] conversation 系统
   - 为每次对话创建一个文件夹`~/.local/share/conversation`，注意没有 s
   - 将当前历史消息存放在 context.json 中
     - 可能需要重构当前保存读取消息的方法，以标记每个消息的类型，便于恢复
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
-- [ ] trojan.py本身以及和trojan交互的代码在读写时没有加锁，这在大量使用时会造成连接错误
 - [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
