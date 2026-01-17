@@ -4,6 +4,7 @@ from typing import Dict, Optional, Any
 import asyncio
 import json
 import tempfile
+import uuid
 from pathlib import Path
 
 from linhai.group_chat import GroupChat
@@ -36,7 +37,8 @@ class SshMachineControl:
         self.stdin = None
         self.stdout = None
         self.stderr = None
-        self.request_id = 0
+        self.results: Dict[str, Optional[Dict[str, object]]] = {}
+        self.reader_task: Optional[asyncio.Task] = None
 
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
         """检查远程机器上的Python版本。"""
@@ -44,10 +46,12 @@ class SshMachineControl:
         process = await asyncio.create_subprocess_exec(
             *check_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
+        stdout, stderr = (
+            await process.communicate()
+        )  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"检查远程Python版本失败: {error_msg}"
@@ -61,7 +65,9 @@ class SshMachineControl:
         if self.trojan_path is None or not self.trojan_path.exists():
             raise FileNotFoundError("本地trojan临时文件不存在")
 
-        trojan_content = self.trojan_path.read_text(encoding="utf-8")  # pylint: disable=unspecified-encoding
+        trojan_content = self.trojan_path.read_text(
+            encoding="utf-8"
+        )  # pylint: disable=unspecified-encoding
 
         remote_temp_path_cmd = ssh_cmd + ["mktemp --suffix=.py"]
         process = await asyncio.create_subprocess_exec(
@@ -69,10 +75,12 @@ class SshMachineControl:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await process.communicate()  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
+        stdout, stderr = (
+            await process.communicate()
+        )  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"创建远程临时文件失败: {error_msg}"
@@ -89,10 +97,12 @@ class SshMachineControl:
         process = await asyncio.create_subprocess_exec(
             *echo_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
+        stdout, stderr = (
+            await process.communicate()
+        )  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"写入远程文件失败: {error_msg}"
@@ -106,7 +116,9 @@ class SshMachineControl:
                     stderr=asyncio.subprocess.DEVNULL,
                 )
                 await cleanup_process.wait()
-            except Exception:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+            except (
+                Exception
+            ):  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
                 pass
             raise RuntimeError(f"写入远程文件失败: {error_msg}")
 
@@ -155,7 +167,7 @@ class SshMachineControl:
         ]
 
         try:
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
@@ -166,10 +178,12 @@ class SshMachineControl:
             trojan_file_path = Path(__file__).parent / "trojan.py"
             if not trojan_file_path.exists():
                 raise FileNotFoundError(f"trojan.py文件不存在: {trojan_file_path}")
-            trojan_content = trojan_file_path.read_text(encoding="utf-8")  # pylint: disable=unspecified-encoding
+            trojan_content = trojan_file_path.read_text(
+                encoding="utf-8"
+            )  # pylint: disable=unspecified-encoding
             self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -178,7 +192,7 @@ class SshMachineControl:
             )
 
             if not await self._check_python_version(ssh_cmd):
-                await self.group_chat.send(
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
@@ -189,14 +203,14 @@ class SshMachineControl:
                     self.trojan_path.unlink(missing_ok=True)
                 return False
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
                 ),
             )
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -207,7 +221,7 @@ class SshMachineControl:
             remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
             self.remote_trojan_path = remote_trojan_path
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -215,7 +229,7 @@ class SshMachineControl:
                 ),
             )
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
@@ -223,7 +237,7 @@ class SshMachineControl:
             )
 
             if not await self._start_trojan_process(ssh_cmd, remote_trojan_path):
-                await self.group_chat.send(
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
@@ -235,7 +249,7 @@ class SshMachineControl:
                     self.trojan_path.unlink(missing_ok=True)
                 return False
 
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -243,10 +257,14 @@ class SshMachineControl:
                 ),
             )
 
+            self.reader_task = asyncio.create_task(self._read_responses())
+
             return True
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-            await self.group_chat.send(
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -259,11 +277,10 @@ class SshMachineControl:
     async def _send_request(
         self, method: str, params: Dict[str, object]
     ) -> Dict[str, object]:
-        """发送JSON RPC请求到trojan。"""
-        self.request_id += 1
+        request_id = uuid.uuid4().hex
         request = {
             "jsonrpc": "2.0",
-            "id": self.request_id,
+            "id": request_id,
             "method": method,
             "params": params,
         }
@@ -274,18 +291,17 @@ class SshMachineControl:
         self.stdin.write(request_json.encode())
         await self.stdin.drain()
 
-        if self.stdout is None:
-            raise ConnectionError("连接未建立，stdout为None")
-        response_line = await self.stdout.readline()
-        if not response_line:
-            raise ConnectionError("连接断开")
-
-        response = json.loads(response_line.decode())
-
-        if "error" in response:
-            raise RuntimeError(f"RPC错误: {response['error']}")
-
-        return response["result"]
+        self.results[request_id] = None
+        try:
+            while self.results[request_id] is None:
+                await asyncio.sleep(0.01)
+            result = self.results.pop(request_id)
+            if result is None:
+                raise ConnectionError("未收到响应")
+            return result
+        except Exception as e:
+            self.results.pop(request_id, None)
+            raise e
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
@@ -300,7 +316,7 @@ class SshMachineControl:
             工具执行结果
         """
         try:
-            await self.group_chat.send(
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -312,12 +328,35 @@ class SshMachineControl:
             if "error" in result:
                 return ToolResultFailed(content=f"工具执行失败: {result['error']}")
             return ToolResultSuccess(content=str(result["message"]))
-        except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
             return ToolResultFailed(content=f"调用工具失败: {e}")
 
+    async def _read_responses(self) -> None:
+        while True:
+            if self.stdout is None:
+                await asyncio.sleep(0.1)
+                continue
+            try:
+                line = await self.stdout.readline()
+                if not line:
+                    break
+                response = json.loads(line.decode())
+                response_id = response.get("id")
+                if response_id is not None:
+                    self.results[response_id] = response.get("result")
+            except Exception:
+                break
+
     async def close(self):
-        """关闭连接。"""
-        await self.group_chat.send(
+        if self.reader_task:
+            self.reader_task.cancel()
+            try:
+                await self.reader_task
+            except asyncio.CancelledError:
+                pass
+        await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"正在关闭SSH连接: {self.host}:{self.port}"
@@ -329,8 +368,10 @@ class SshMachineControl:
                 self.process.terminate()
             except ProcessLookupError:
                 pass
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                await self.group_chat.send(
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING", content=f"终止进程时出错: {str(e)}"
@@ -339,15 +380,17 @@ class SshMachineControl:
             finally:
                 try:
                     await self.process.wait()
-                except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                    await self.group_chat.send(
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                    await self.group_chat.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING", content=f"等待进程结束时出错: {str(e)}"
                         ),
                     )
 
-        await self.group_chat.send(
+        await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"远程进程已终止: {self.host}:{self.port}"
@@ -357,15 +400,17 @@ class SshMachineControl:
         if self.trojan_path and self.trojan_path.exists():
             try:
                 self.trojan_path.unlink()
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                await self.group_chat.send(
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"
                     ),
                 )
 
-        await self.group_chat.send(
+        await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"本地临时文件已清理: {self.host}:{self.port}"
@@ -391,19 +436,21 @@ class SshMachineControl:
                     stderr=asyncio.subprocess.PIPE,
                 )
                 try:
-                    stdout, stderr = await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                        process.communicate(), timeout=10
+                    stdout, stderr = (
+                        await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
+                            process.communicate(), timeout=10
+                        )
                     )  # pylint: disable=unused-variable  # pylint: disable=unused-variable
                     if process.returncode != 0:
                         error_msg = stderr.decode()
-                        await self.group_chat.send(
+                        await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
                                 content=f"删除远程临时文件失败，返回码: {process.returncode}, 错误: {error_msg}",
                             ),
                         )
-                        await self.group_chat.send(
+                        await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
@@ -411,7 +458,7 @@ class SshMachineControl:
                             ),
                         )
                     else:
-                        await self.group_chat.send(
+                        await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="INFO",
@@ -422,23 +469,27 @@ class SshMachineControl:
                     process.kill()
                     await process.wait()
 
-                    await self.group_chat.send(
+                    await self.group_chat.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
                             content=f"删除远程临时文件超时: {self.host}:{self.port}",
                         ),
                     )
-                except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                    await self.group_chat.send(
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                    await self.group_chat.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="ERROR",
                             content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}",
                         ),
                     )
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                await self.group_chat.send(
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
@@ -446,7 +497,7 @@ class SshMachineControl:
                     ),
                 )
 
-        await self.group_chat.send(
+        await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"SSH连接已完全关闭: {self.host}:{self.port}"
@@ -523,7 +574,9 @@ class SshMachineControl:
                 # 将字节流解码为字符串，使用utf-8并用替换字符替换无法解码的字节
                 decoded_str = decoded_bytes.decode("utf-8", errors="replace")
                 return ToolResultSuccess(content=decoded_str)
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
                 return ToolResultFailed(content=f"解码终端屏幕内容失败: {e}")
         return result
 
@@ -618,12 +671,14 @@ class SshMachineControl:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                    process.communicate(), timeout=10
+                stdout, stderr = (
+                    await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable
+                        process.communicate(), timeout=10
+                    )
                 )  # pylint: disable=unused-variable  # pylint: disable=unused-variable
                 if process.returncode != 0:
                     error_msg = stderr.decode()
-                    await self.group_chat.send(
+                    await self.group_chat.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
@@ -633,19 +688,23 @@ class SshMachineControl:
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
-                await self.group_chat.send(
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(level="WARNING", content="清理远程文件超时"),
                 )
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                await self.group_chat.send(
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR", content=f"清理远程文件时出错: {str(e)}"
                     ),
                 )
-        except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-            await self.group_chat.send(
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+            await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"清理远程文件时出错: {str(e)}"
@@ -663,8 +722,10 @@ class SshMachineControl:
         if self.trojan_path and self.trojan_path.exists():
             try:
                 self.trojan_path.unlink(missing_ok=True)
-            except Exception as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                await self.group_chat.send(
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
+                await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"

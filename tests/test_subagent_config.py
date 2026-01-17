@@ -22,9 +22,11 @@ class TestSubAgentConfig(unittest.IsolatedAsyncioTestCase):
 
         self.mock_llm1 = AsyncMock()
         self.mock_llm1.name = "deepseek"
+        self.mock_llm1.get_name = Mock(return_value="deepseek")
         self.mock_llm1.answer_stream = AsyncMock()
         self.mock_llm2 = AsyncMock()
         self.mock_llm2.name = "qwen"
+        self.mock_llm2.get_name = Mock(return_value="qwen")
         self.mock_llm2.answer_stream = AsyncMock()
 
         self.llms = [self.mock_llm1, self.mock_llm2]

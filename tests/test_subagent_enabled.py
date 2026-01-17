@@ -23,6 +23,7 @@ class TestSubAgentEnabled(unittest.IsolatedAsyncioTestCase):
         self.group_chat.receive = AsyncMock()
         self.group_chat.is_empty = Mock(return_value=True)
         self.group_chat.get_members = Mock()
+        self.group_chat.add_postinit = Mock(return_value=None)
 
     def create_test_config(self, subagent_enabled: bool):
         """创建测试配置文件。"""
@@ -111,6 +112,7 @@ model = "test-model"
         """测试创建Agent时SubAgent被禁用的情况。"""
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
+        mock_llm.get_name = Mock(return_value="test_llm")
         mock_openai.return_value = mock_llm
 
         # 模拟ToolManager返回可序列化的工具信息
@@ -156,6 +158,7 @@ model = "test-model"
         """测试创建Agent时SubAgent被启用的情况。"""
         mock_llm = AsyncMock()
         mock_llm.answer_stream = AsyncMock()
+        mock_llm.get_name = Mock(return_value="test_llm")
         mock_openai.return_value = mock_llm
 
         # 模拟ToolManager返回可序列化的工具信息

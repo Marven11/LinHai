@@ -2,9 +2,9 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
+- [x] 在/tmp编写临时脚本，完全模拟环境，使用当前的SshMachineControl连接secret中的dell nixos
   - 为下一个任务做准备，必须编写并运行这个脚本成功，验证当前ssh系统没有问题之后才能开始下一个
-- [ ] 重构trojan.py本身以及和trojan交互的代码
+- [x] 重构trojan.py本身以及和trojan交互的代码
   - 在读写stdio时没有加锁，这在大量使用时会造成连接错误
   - trojan.py分离读取请求和处理任务、写入响应的代码，用异步重写
     - 启动两类task:
