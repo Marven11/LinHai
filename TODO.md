@@ -104,6 +104,11 @@ unittest 失败时，必须分析
   - 有时候agent要检查文件里没有什么，但是因为grep返回非0值而打断其他工具调用
 - [ ] run_command应该默认使用/usr/bin/env sh, agent不知道如何处理非bash的转义
 - [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
+- [ ] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
+  - 这样我们可以
+    1. 在一个地方管理如何转为repr
+    2. 保存后可以在json中直接查看object形式的参数
+  - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
