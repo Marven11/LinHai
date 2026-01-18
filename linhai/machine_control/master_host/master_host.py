@@ -1,6 +1,7 @@
 """Master host control module for tools that interact with the local machine."""
 
 import asyncio
+import time
 from typing import Optional, Union
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
@@ -63,24 +64,23 @@ class MasterHostControl:
             pid = str(process.pid)
             self._processes[pid] = process
 
-            elapsed = 0.0
-            while elapsed < wait_second:
+            start = time.perf_counter()
+            while time.perf_counter() - start < wait_second:
                 await asyncio.sleep(0.1)
-                elapsed += 0.1
                 if process.returncode is not None:
                     break
 
-            stdout_data, stderr_data = b"", b""
-            if process.stdout:
-                stdout_data = await process.stdout.read()
-            if process.stderr:
-                stderr_data = await process.stderr.read()
-
-            stdout_str = stdout_data.decode("utf-8", errors="replace")
-            stderr_str = stderr_data.decode("utf-8", errors="replace")
 
             if process.returncode is not None:
                 del self._processes[pid]
+                stdout_data, stderr_data = b"", b""
+                if process.stdout:
+                    stdout_data = await process.stdout.read()
+                if process.stderr:
+                    stderr_data = await process.stderr.read()
+
+                stdout_str = stdout_data.decode("utf-8", errors="replace")
+                stderr_str = stderr_data.decode("utf-8", errors="replace")
                 import json
                 return ToolResultSuccess(
                     content=json.dumps({
@@ -95,8 +95,6 @@ class MasterHostControl:
                 return ToolResultSuccess(
                     content=json.dumps({
                         "pid": pid,
-                        "stdout": stdout_str,
-                        "stderr": stderr_str,
                         "message": "程序仍然在运行",
                     })
                 )
