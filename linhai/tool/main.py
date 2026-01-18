@@ -119,6 +119,35 @@ class ToolManager:
 
         kwargs = tool_call.function_arguments if tool_call.function_arguments else {}
 
+        # 处理on_machine参数
+        original_machine = None
+        machine_control = None
+        if tool_call.on_machine is not None:
+            from linhai.machine_control.main import MachineControl
+            # machine_control应该总是存在，因为ToolManager.postinit会注册它
+            # 如果不存在，说明系统初始化有问题，应该抛出异常
+            machine_control = self.group_chat.get_members("machine_control", MachineControl)
+            if tool_call.on_machine not in machine_control.machines:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="ERROR",
+                        content=f"机器未找到: {tool_call.on_machine}"
+                    ),
+                )
+                import reprlib
+                failed_result = ToolResultFailed(
+                    content=f"机器未找到: {tool_call.on_machine}"
+                )
+                return ToolCallResultMessage(
+                    tool_name=tool_call.function_name,
+                    tool_index=tool_index,
+                    result=failed_result,
+                    toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+                )
+            original_machine = machine_control.target_machine
+            machine_control.target_machine = tool_call.on_machine
+
         target_toolset = None
         for toolset in self.toolsets:
             if toolset.has_tool(tool_call.function_name):
@@ -143,7 +172,6 @@ class ToolManager:
             )
 
         try:
-
             func = target_toolset.get_tool(tool_call.function_name)
 
             if asyncio.iscoroutinefunction(func):
@@ -167,6 +195,35 @@ class ToolManager:
                     ),
                 )
 
+            if isinstance(result, Awaitable):
+                result = await result
+
+            if isinstance(result, Message):
+                return result
+
+            # 处理工具函数返回的结果：可能是ToolResultSuccess, ToolResultFailed, 或其他类型
+            import reprlib
+
+            if isinstance(result, ToolResultSuccess) or isinstance(
+                result, ToolResultFailed
+            ):
+                tool_result = result
+            else:
+                # 旧版本工具返回字符串或其他类型，视为成功
+                tool_result = ToolResultSuccess(content=str(result))
+
+            if self.config and self.config.max_output_length is not None:
+                max_output_length = self.config.max_output_length
+            else:
+                max_output_length = 50000
+
+            return ToolCallResultMessage(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                result=tool_result,
+                max_output_length=max_output_length,
+            )
+
         except Exception as e:  # pylint: disable=broad-exception-caught
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -184,35 +241,10 @@ class ToolManager:
                 result=failed_result,
                 toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
             )
-
-        if isinstance(result, Awaitable):
-            result = await result
-
-        if isinstance(result, Message):
-            return result
-
-        # 处理工具函数返回的结果：可能是ToolResultSuccess, ToolResultFailed, 或其他类型
-        import reprlib
-
-        if isinstance(result, ToolResultSuccess) or isinstance(
-            result, ToolResultFailed
-        ):
-            tool_result = result
-        else:
-            # 旧版本工具返回字符串或其他类型，视为成功
-            tool_result = ToolResultSuccess(content=str(result))
-
-        if self.config and self.config.max_output_length is not None:
-            max_output_length = self.config.max_output_length
-        else:
-            max_output_length = 50000
-
-        return ToolCallResultMessage(
-            tool_name=tool_call.function_name,
-            tool_index=tool_index,
-            result=tool_result,
-            max_output_length=max_output_length,
-        )
+        finally:
+            # 恢复原始机器
+            if machine_control is not None and original_machine is not None:
+                machine_control.target_machine = original_machine
 
     def register_lifecycle(self):
 

@@ -303,12 +303,14 @@ class ToolCallMessage:
         function_arguments: dict,
         assert_success: bool,
         with_secret: list[str] | None,
+        on_machine: str | None = None,
     ):
         """初始化工具调用消息。"""
         self.function_name = function_name
         self.assert_success = assert_success
         self.function_arguments = function_arguments
         self.with_secret = with_secret
+        self.on_machine = on_machine
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
@@ -316,7 +318,8 @@ class ToolCallMessage:
             f"ToolCallMessage(function_name={self.function_name!r}, "
             f"function_arguments={self.function_arguments!r}, "
             f"assert_success={self.assert_success!r}, "
-            f"with_secret={self.with_secret!r})"
+            f"with_secret={self.with_secret!r}, "
+            f"on_machine={self.on_machine!r})"
         )
 
 

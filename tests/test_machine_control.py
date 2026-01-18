@@ -9,9 +9,12 @@ from linhai.machine_control.master_host.master_host import MasterHostControl
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
+from linhai.machine_control.main import MachineControlPlugin
+from linhai.llm import ToolCallMessage
+from linhai.utils import CliRuntimeNotice
 
 
-class TestMachineControl(unittest.TestCase):
+class TestMachineControl(unittest.IsolatedAsyncioTestCase):
     """MachineControl测试类"""
 
     def setUp(self):
@@ -28,37 +31,26 @@ class TestMachineControl(unittest.TestCase):
             self.machine_control.machines["master_host"], MasterHostControl
         )
 
-    def test_list_machines(self):
+    async def test_list_machines(self):
         """测试列出机器"""
+        result = await self.machine_control.list_machines()
+        self.assertIn("可用机器", result.content)
+        self.assertIn("master_host", result.content)
+        self.assertIn("本地主机", result.content)
 
-        async def test():
-            result = await self.machine_control.list_machines()
-            self.assertIn("可用机器", result.content)
-            self.assertIn("master_host", result.content)
-            self.assertIn("本地主机", result.content)
-
-        asyncio.run(test())
-
-    def test_switch_machine_not_found(self):
+    async def test_switch_machine_not_found(self):
         """测试切换到不存在的机器"""
+        result = await self.machine_control.switch_machine("unknown")
+        self.assertIn("机器未找到", result.content)
 
-        async def test():
-            result = await self.machine_control.switch_machine("unknown")
-            self.assertIn("机器未找到", result.content)
-
-        asyncio.run(test())
-
-    def test_switch_machine_success(self):
+    async def test_switch_machine_success(self):
         """测试成功切换机器"""
         mock_send = AsyncMock()
         self.machine_control.group_chat.send = mock_send
 
-        async def test():
-            result = await self.machine_control.switch_machine("master_host")
-            self.assertIn("已切换到机器", result.content)
-            self.assertEqual(self.machine_control.target_machine, "master_host")
-
-        asyncio.run(test())
+        result = await self.machine_control.switch_machine("master_host")
+        self.assertIn("已切换到机器", result.content)
+        self.assertEqual(self.machine_control.target_machine, "master_host")
 
     def test_register_tools(self):
         """测试注册工具"""
@@ -99,9 +91,13 @@ class TestMasterHostControl(unittest.TestCase):
         # 由于http_request需要网络，我们只测试方法存在
         self.assertTrue(hasattr(self.host_control, "http_request"))
 
-    def test_run_command(self):
-        """测试运行命令"""
-        self.assertTrue(hasattr(self.host_control, "run_command"))
+    def test_process_operations(self):
+        """测试进程操作"""
+        self.assertTrue(hasattr(self.host_control, "process_create"))
+        self.assertTrue(hasattr(self.host_control, "process_stdio_write"))
+        self.assertTrue(hasattr(self.host_control, "process_stdio_read"))
+        self.assertTrue(hasattr(self.host_control, "process_wait"))
+        self.assertTrue(hasattr(self.host_control, "process_kill"))
 
     def test_change_directory(self):
         """测试改变目录"""
@@ -126,6 +122,139 @@ class TestMasterHostControl(unittest.TestCase):
         self.assertTrue(hasattr(self.host_control, "terminal_send_string"))
         self.assertTrue(hasattr(self.host_control, "terminal_read_screen"))
         self.assertTrue(hasattr(self.host_control, "terminal_close"))
+
+
+
+
+class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
+    """MachineControlPlugin测试类"""
+
+    def setUp(self):
+        """测试前准备"""
+        self.group_chat = Mock(spec=GroupChat)
+        self.machine_control = Mock(spec=MachineControl)
+        self.machine_control.target_machine = "master_host"
+        self.plugin = MachineControlPlugin(self.group_chat, self.machine_control)
+
+    def test_initialization(self):
+        """测试插件初始化"""
+        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.machine_control, self.machine_control)
+        self.assertEqual(self.plugin.consecutive_same_on_machine_count, 0)
+        self.assertIsNone(self.plugin.last_on_machine)
+
+    async def test_before_tool_call_with_different_machine(self):
+        """测试before_tool_call，当on_machine与当前机器不同时发送提示"""
+        self.machine_control.target_machine = "master_host"
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+            on_machine="other_machine",
+        )
+        mock_send = AsyncMock()
+        self.group_chat.send_if_exists = mock_send
+        
+        result = await self.plugin.before_tool_call(tool_call)
+        
+        self.assertFalse(result)  # 不打断工具调用
+        mock_send.assert_called_once_with(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content="正在切换到机器 other_machine 执行工具 test_tool",
+            ),
+        )
+
+    async def test_before_tool_call_with_same_machine(self):
+        """测试before_tool_call，当on_machine与当前机器相同时不发送提示"""
+        self.machine_control.target_machine = "master_host"
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+            on_machine="master_host",
+        )
+        mock_send = AsyncMock()
+        self.group_chat.send_if_exists = mock_send
+        
+        result = await self.plugin.before_tool_call(tool_call)
+        
+        self.assertFalse(result)
+        mock_send.assert_not_called()
+
+    async def test_after_tool_call_reset_counter(self):
+        """测试after_tool_call，当on_machine为None时重置计数器"""
+        self.plugin.consecutive_same_on_machine_count = 2
+        self.plugin.last_on_machine = "master_host"
+        
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+            on_machine=None,  # 没有指定on_machine
+        )
+        mock_send = AsyncMock()
+        self.group_chat.send_if_exists = mock_send
+        
+        result = await self.plugin.after_tool_call(
+            Mock(), tool_call, Mock(), True
+        )
+        
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.consecutive_same_on_machine_count, 0)
+        self.assertIsNone(self.plugin.last_on_machine)
+        mock_send.assert_not_called()
+
+    async def test_after_tool_call_increment_counter_and_warning(self):
+        """测试after_tool_call，连续相同on_machine时递增计数器并发送警告"""
+        self.machine_control.target_machine = "master_host"
+        self.plugin.consecutive_same_on_machine_count = 2
+        self.plugin.last_on_machine = "master_host"
+        
+        tool_call = ToolCallMessage(
+            function_name="test_tool",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+            on_machine="master_host",  # 与当前机器相同
+        )
+        mock_send = AsyncMock()
+        self.group_chat.send_if_exists = mock_send
+        
+        result = await self.plugin.after_tool_call(
+            Mock(), tool_call, Mock(), True
+        )
+        
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.consecutive_same_on_machine_count, 3)
+        self.assertEqual(self.plugin.last_on_machine, "master_host")
+        # 检查是否发送了警告
+        mock_send.assert_called_once_with(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="连续3次工具调用都指定了相同的on_machine 'master_host'，且未切换机器。请确认是否需要频繁指定。",
+            ),
+        )
+
+    def test_register_method(self):
+        """测试插件的register方法是否正确注册回调"""
+        mock_lifecycle = Mock()
+        self.plugin.register(mock_lifecycle)
+        
+        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+            self.plugin.before_message_generation
+        )
+        mock_lifecycle.register_before_tool_call.assert_called_once_with(
+            self.plugin.before_tool_call
+        )
+        mock_lifecycle.register_after_tool_call.assert_called_once_with(
+            self.plugin.after_tool_call
+        )
 
 
 if __name__ == "__main__":

@@ -517,12 +517,44 @@ class SshMachineControl:
         """SSH不支持http_request工具"""
         return ToolResultFailed(content="SSH机器不支持http_request工具")
 
-    async def run_command(
-        self, command: str, timeout: float = 30.0
+    async def process_create(
+        self, command: list[str], wait_second: float = 1.0
     ) -> ToolResultSuccess | ToolResultFailed:
-        """执行系统命令"""
+        """创建一个进程，等待一段时间后检查状态"""
         return await self.call_tool(
-            "run_command", {"command": command, "timeout": timeout}
+            "process_create", {"command": command, "wait_second": wait_second}
+        )
+
+    async def process_stdio_write(
+        self, pid: str, content: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """向进程的标准输入写入内容"""
+        return await self.call_tool(
+            "process_stdio_write", {"pid": pid, "content": content}
+        )
+
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """读取进程的标准输出和标准错误内容"""
+        return await self.call_tool(
+            "process_stdio_read", {"pid": pid, "unescape_ansi": unescape_ansi}
+        )
+
+    async def process_wait(
+        self, pid: str, timeout: float
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """等待进程结束，带超时设置"""
+        return await self.call_tool(
+            "process_wait", {"pid": pid, "timeout": timeout}
+        )
+
+    async def process_kill(
+        self, pid: str, graceful: bool = True
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """杀死进程，可选择优雅终止"""
+        return await self.call_tool(
+            "process_kill", {"pid": pid, "graceful": graceful}
         )
 
     async def change_directory(

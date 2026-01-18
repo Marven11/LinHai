@@ -16,7 +16,7 @@ from typing import TypedDict, Dict, Union
 class TerminalDict(TypedDict):
     master: int
     slave: int
-    process: subprocess.Popen[bytes]
+    process: asyncio.subprocess.Process
     columns: int
     lines: int
     last_read_pos: int
@@ -37,32 +37,56 @@ class Trojan:
     def __init__(self):
         self.current_dir = os.getcwd()
         self.terminals: Dict[str, TerminalDict] = {}
+        self._processes: Dict[str, asyncio.subprocess.Process] = {}
         self.stdout_lock = asyncio.Lock()
         self.request_queue = asyncio.Queue()
 
-    async def run_command(self, command, timeout=30):
+    async def process_create(self, command, wait_second=1.0):
         try:
-            process = await asyncio.create_subprocess_shell(
-                command,
+            process = await asyncio.create_subprocess_exec(
+                *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self.current_dir,
             )
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=timeout,
-                )
-            except asyncio.TimeoutError:
-                process.kill()
-                await process.wait()
-                return {"error": f"命令超时: {timeout}秒"}
-            output = f"返回码: {process.returncode}\n"
-            if stdout:
-                output += f"stdout:\n{stdout.decode()}\n"
-            if stderr:
-                output += f"stderr:\n{stderr.decode()}"
-            return {"message": output}
+            pid = str(process.pid)
+            self._processes[pid] = process
+
+            elapsed = 0.0
+            while elapsed < wait_second:
+                await asyncio.sleep(0.1)
+                elapsed += 0.1
+                if process.returncode is not None:
+                    break
+
+            stdout_data, stderr_data = b"", b""
+            if process.stdout:
+                stdout_data = await process.stdout.read()
+            if process.stderr:
+                stderr_data = await process.stderr.read()
+
+            stdout_str = stdout_data.decode("utf-8", errors="replace")
+            stderr_str = stderr_data.decode("utf-8", errors="replace")
+
+            if process.returncode is not None:
+                del self._processes[pid]
+                return {
+                    "message": json.dumps({
+                        "pid": pid,
+                        "returncode": process.returncode,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                    })
+                }
+            else:
+                return {
+                    "message": json.dumps({
+                        "pid": pid,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                        "message": "程序仍然在运行",
+                    })
+                }
         except Exception as e:
             return {"error": str(e)}
 

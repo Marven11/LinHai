@@ -1,9 +1,9 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
-from typing import Dict, Optional, Protocol, Union
+from typing import Dict, Optional, Protocol, Union, Any
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage, FileContentMessage
-from linhai.llm import Message
+from linhai.llm import Message, ToolCallMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.base import (
     ToolArgInfo,
@@ -110,23 +110,7 @@ class MachineControlToolSet(ToolSet):
                 method, url, params, headers, data, follow_redirects, timeout
             )
 
-        @self.register_tool(
-            name="run_command",
-            desc="执行系统命令。可以执行shell命令。运行返回值可能为0的程序时应该在本工具参数外设置assert_success为true",
-            args={
-                "command": ToolArgInfo(
-                    desc="要执行的命令字符串，如 'ls | grep test'", type="str"
-                ),
-                "timeout": ToolArgInfo(desc="超时时间（秒），默认30秒", type="float"),
-            },
-            required_args=["command"],
-            conflict_with=None,
-        )
-        async def run_command_tool(command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed:
-            host_control = self.machine_control.machines[
-                self.machine_control.target_machine
-            ]
-            return await host_control.run_command(command, timeout)
+
 
         @self.register_tool(
             name="change_directory",
@@ -140,6 +124,104 @@ class MachineControlToolSet(ToolSet):
                 self.machine_control.target_machine
             ]
             return await host_control.change_directory(directory)
+
+        @self.register_tool(
+            name="process_create",
+            desc="创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。",
+            args={
+                "command": ToolArgInfo(
+                    desc="命令列表，如[\"ls\", \"-la\"]", type="list[str]"
+                ),
+                "wait_second": ToolArgInfo(
+                    desc="创建进程后等待的秒数，默认1.0秒", type="float"
+                ),
+            },
+            required_args=["command"],
+            conflict_with=None,
+        )
+        async def process_create_tool(
+            command: list[str], wait_second: float = 1.0
+        ) -> ToolResultSuccess | ToolResultFailed:
+            host_control = self.machine_control.machines[
+                self.machine_control.target_machine
+            ]
+            return await host_control.process_create(command, wait_second)
+
+        @self.register_tool(
+            name="process_stdio_write",
+            desc="向进程的标准输入写入内容。",
+            args={
+                "pid": ToolArgInfo(desc="进程ID", type="str"),
+                "content": ToolArgInfo(desc="要写入的内容", type="str"),
+            },
+            required_args=["pid", "content"],
+            conflict_with=None,
+        )
+        async def process_stdio_write_tool(
+            pid: str, content: str
+        ) -> ToolResultSuccess | ToolResultFailed:
+            host_control = self.machine_control.machines[
+                self.machine_control.target_machine
+            ]
+            return await host_control.process_stdio_write(pid, content)
+
+        @self.register_tool(
+            name="process_stdio_read",
+            desc="读取进程的标准输出和标准错误内容。",
+            args={
+                "pid": ToolArgInfo(desc="进程ID", type="str"),
+                "unescape_ansi": ToolArgInfo(
+                    desc="是否反转义ANSI序列，默认为True", type="bool"
+                ),
+            },
+            required_args=["pid"],
+            conflict_with=None,
+        )
+        async def process_stdio_read_tool(
+            pid: str, unescape_ansi: bool = True
+        ) -> ToolResultSuccess | ToolResultFailed:
+            host_control = self.machine_control.machines[
+                self.machine_control.target_machine
+            ]
+            return await host_control.process_stdio_read(pid, unescape_ansi)
+
+        @self.register_tool(
+            name="process_wait",
+            desc="等待进程结束，带超时设置。",
+            args={
+                "pid": ToolArgInfo(desc="进程ID", type="str"),
+                "timeout": ToolArgInfo(desc="超时时间（秒）", type="float"),
+            },
+            required_args=["pid", "timeout"],
+            conflict_with=None,
+        )
+        async def process_wait_tool(
+            pid: str, timeout: float
+        ) -> ToolResultSuccess | ToolResultFailed:
+            host_control = self.machine_control.machines[
+                self.machine_control.target_machine
+            ]
+            return await host_control.process_wait(pid, timeout)
+
+        @self.register_tool(
+            name="process_kill",
+            desc="杀死进程，可选择优雅终止。",
+            args={
+                "pid": ToolArgInfo(desc="进程ID", type="str"),
+                "graceful": ToolArgInfo(
+                    desc="是否优雅终止进程，默认为True", type="bool"
+                ),
+            },
+            required_args=["pid"],
+            conflict_with=None,
+        )
+        async def process_kill_tool(
+            pid: str, graceful: bool = True
+        ) -> ToolResultSuccess | ToolResultFailed:
+            host_control = self.machine_control.machines[
+                self.machine_control.target_machine
+            ]
+            return await host_control.process_kill(pid, graceful)
 
         @self.register_tool(
             name="terminal_create",
@@ -409,9 +491,17 @@ class HostControl(Protocol):
         timeout: int = 60,
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def run_command(self, command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed: ...
-
     async def change_directory(self, directory: str) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_create(self, command: list[str], wait_second: float = 1.0) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_stdio_write(self, pid: str, content: str) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_stdio_read(self, pid: str, unescape_ansi: bool = True) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_wait(self, pid: str, timeout: float) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_kill(self, pid: str, graceful: bool) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def terminal_create(self, columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed: ...
 
@@ -543,11 +633,13 @@ class MachineControl:
 
 
 class MachineControlPlugin:
-    """MachineControl的插件，用于添加当前机器提示。"""
+    """MachineControl的插件，用于添加当前机器提示和on_machine使用警告。"""
 
     def __init__(self, group_chat: GroupChat, machine_control: MachineControl):
         self.group_chat = group_chat
         self.machine_control = machine_control
+        self.consecutive_same_on_machine_count = 0
+        self.last_on_machine: Optional[str] = None
 
     async def before_message_generation(self, *_args, **_kwargs):
         """在消息生成前更新appending_message。"""
@@ -558,6 +650,56 @@ class MachineControlPlugin:
             sort_value=0,
         )
 
+    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
+        """在工具调用前检查on_machine参数并提示切换。"""
+        on_machine = tool_call.on_machine
+        if on_machine is not None:
+            current_machine = self.machine_control.target_machine
+            if on_machine != current_machine:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="INFO",
+                        content=f"正在切换到机器 {on_machine} 执行工具 {tool_call.function_name}",
+                    ),
+                )
+        return False  # 不打断工具调用
+
+    async def after_tool_call(
+        self,
+        agent: Agent,
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        """在工具调用后更新连续使用on_machine的计数器并检查警告。"""
+        on_machine = tool_call.on_machine
+        current_machine = self.machine_control.target_machine  # 工具调用后已恢复为原始机器
+
+        if on_machine is None or on_machine != current_machine:
+            # 没有使用on_machine或指定了不同的机器，重置计数器
+            self.consecutive_same_on_machine_count = 0
+            self.last_on_machine = None
+        else:
+            # 使用on_machine且与当前机器相同
+            if self.last_on_machine == on_machine:
+                self.consecutive_same_on_machine_count += 1
+            else:
+                self.consecutive_same_on_machine_count = 1
+                self.last_on_machine = on_machine
+
+            if self.consecutive_same_on_machine_count >= 3:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING",
+                        content=f"连续{self.consecutive_same_on_machine_count}次工具调用都指定了相同的on_machine '{on_machine}'，且未切换机器。请确认是否需要频繁指定。",
+                    ),
+                )
+        return None  # 不替换工具结果
+
     def register(self, lifecycle):
-        """注册到before_message_generation回调。"""
+        """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.register_before_tool_call(self.before_tool_call)
+        lifecycle.register_after_tool_call(self.after_tool_call)

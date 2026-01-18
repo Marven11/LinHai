@@ -34,6 +34,9 @@ class MasterHostControl:
     工具定义由MachineControl统一管理。
     """
 
+    def __init__(self):
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
+
     async def http_request(
         self,
         method: str,
@@ -49,9 +52,146 @@ class MasterHostControl:
             method, url, params, headers, data, follow_redirects, timeout
         )
 
-    async def run_command(self, command: str, timeout: float = 30.0) -> ToolResultSuccess | ToolResultFailed:
-        """执行系统命令"""
-        return await run_command(command, timeout)
+    async def process_create(self, command: list[str], wait_second: float = 1.0) -> ToolResultSuccess | ToolResultFailed:
+        """创建一个进程，等待一段时间后检查状态"""
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            pid = str(process.pid)
+            self._processes[pid] = process
+
+            elapsed = 0.0
+            while elapsed < wait_second:
+                await asyncio.sleep(0.1)
+                elapsed += 0.1
+                if process.returncode is not None:
+                    break
+
+            stdout_data, stderr_data = b"", b""
+            if process.stdout:
+                stdout_data = await process.stdout.read()
+            if process.stderr:
+                stderr_data = await process.stderr.read()
+
+            stdout_str = stdout_data.decode("utf-8", errors="replace")
+            stderr_str = stderr_data.decode("utf-8", errors="replace")
+
+            if process.returncode is not None:
+                del self._processes[pid]
+                import json
+                return ToolResultSuccess(
+                    content=json.dumps({
+                        "pid": pid,
+                        "returncode": process.returncode,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                    })
+                )
+            else:
+                import json
+                return ToolResultSuccess(
+                    content=json.dumps({
+                        "pid": pid,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                        "message": "程序仍然在运行",
+                    })
+                )
+        except Exception as e:
+            return ToolResultFailed(content=str(e))
+
+    async def process_stdio_write(self, pid: str, content: str) -> ToolResultSuccess | ToolResultFailed:
+        """向进程的标准输入写入内容"""
+        try:
+            process = self._processes.get(pid)
+            if process is None:
+                return ToolResultFailed(content=f"找不到进程 {pid}")
+            if process.stdin is None:
+                return ToolResultFailed(content=f"进程 {pid} 没有标准输入")
+            process.stdin.write(content.encode("utf-8"))
+            await process.stdin.drain()
+            import json
+            return ToolResultSuccess(content=json.dumps({"pid": pid, "message": "写入成功"}))
+        except Exception as e:
+            return ToolResultFailed(content=str(e))
+
+    async def process_stdio_read(self, pid: str, unescape_ansi: bool = True) -> ToolResultSuccess | ToolResultFailed:
+        """读取进程的标准输出和标准错误内容"""
+        try:
+            process = self._processes.get(pid)
+            if process is None:
+                return ToolResultFailed(content=f"找不到进程 {pid}")
+            stdout_data, stderr_data = b"", b""
+            if process.stdout:
+                stdout_data = await process.stdout.read()
+            if process.stderr:
+                stderr_data = await process.stderr.read()
+            stdout_str = stdout_data.decode("utf-8", errors="replace")
+            stderr_str = stderr_data.decode("utf-8", errors="replace")
+            if unescape_ansi:
+                import re
+                ansi_escape = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
+                stdout_str = ansi_escape.sub('', stdout_str)
+                stderr_str = ansi_escape.sub('', stderr_str)
+            import json
+            return ToolResultSuccess(content=json.dumps({"pid": pid, "stdout": stdout_str, "stderr": stderr_str}))
+        except Exception as e:
+            return ToolResultFailed(content=str(e))
+
+    async def process_wait(self, pid: str, timeout: float) -> ToolResultSuccess | ToolResultFailed:
+        """等待进程结束，带超时设置"""
+        try:
+            if timeout > 3600:
+                return ToolResultFailed(content="超时时间不能超过3600秒")
+            process = self._processes.get(pid)
+            if process is None:
+                return ToolResultFailed(content=f"找不到进程 {pid}")
+            try:
+                await asyncio.wait_for(process.wait(), timeout=timeout)
+                stdout_data, stderr_data = b"", b""
+                if process.stdout:
+                    stdout_data = await process.stdout.read()
+                if process.stderr:
+                    stderr_data = await process.stderr.read()
+                stdout_str = stdout_data.decode("utf-8", errors="replace")
+                stderr_str = stderr_data.decode("utf-8", errors="replace")
+                del self._processes[pid]
+                import json
+                return ToolResultSuccess(content=json.dumps({
+                    "pid": pid,
+                    "returncode": process.returncode,
+                    "stdout": stdout_str,
+                    "stderr": stderr_str,
+                }))
+            except asyncio.TimeoutError:
+                return ToolResultFailed(content=f"等待进程 {pid} 超时")
+        except Exception as e:
+            return ToolResultFailed(content=str(e))
+
+    async def process_kill(self, pid: str, graceful: bool = True) -> ToolResultSuccess | ToolResultFailed:
+        """杀死进程，可选择优雅终止"""
+        try:
+            process = self._processes.get(pid)
+            if process is None:
+                return ToolResultFailed(content="找不到进程，必须传入当前工具组创建的PID")
+            if graceful:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+            else:
+                process.kill()
+                await process.wait()
+            del self._processes[pid]
+            import json
+            return ToolResultSuccess(content=json.dumps({"pid": pid, "message": "进程已终止"}))
+        except Exception as e:
+            return ToolResultFailed(content=str(e))
 
     async def change_directory(self, directory: str) -> ToolResultSuccess | ToolResultFailed:
         """改变当前工作目录"""
