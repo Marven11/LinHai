@@ -2,6 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
+- [ ] linhai/machine_control/master_host/master_host.py等文件中的process_create等工具没有使用`<<>>`组织内容，而是使用了json
+  - 检查所有构造ToolResultSuccess和ToolResultFailed的地方，保证传入的不是json而是使用`<<>>`组织的内容
 - [ ] 添加一个列出所有 terminal 的工具
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 需要规划，统计当前插件等会如何使用这些回调，重构后应该将这个回调设计成什么样
