@@ -344,6 +344,28 @@ class Trojan:
         del self.terminals[term_id]
         return {"message": f"已关闭终端 {term_id}"}
 
+    async def terminal_list(self) -> TrojanResult:
+        """返回所有终端列表"""
+        if not self.terminals:
+            return {"message": "<<terminals>>没有活动的终端<<terminals>>"}
+        
+        lines = []
+        for term_id, terminal in self.terminals.items():
+            try:
+                # 获取终端基本信息
+                term_info = {
+                    "terminal_id": term_id,
+                    "machine": "remote",
+                    "screen": "终端屏幕内容（需通过read_screen获取）",
+                    "columns": terminal["columns"],
+                    "lines": terminal["lines"],
+                }
+                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<columns>>{term_info['columns']}<<columns>><<lines>>{term_info['lines']}<<lines>>")
+            except Exception:
+                # 如果获取信息失败，至少返回终端ID
+                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<screen>>无法获取终端信息<<screen>>")
+        return {"message": "\n".join(lines)}
+
     async def process_requests(self):
         while True:
             request = await self.request_queue.get()

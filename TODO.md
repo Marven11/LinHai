@@ -2,11 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 添加一个列出所有 terminal 的工具
+- [x] 添加一个列出所有 terminal 的工具
   - 工具列出所有机器上的所有terminal，提示每个terminal所在机器以及其他状态
   - 同样使用`<<>>`组织内容
-- [ ] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
-- [ ] 添加插件：在没有使用with_secret且参数中包含`<$KEY$>`wrapper时则警告
+- [x] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
+- [x] 添加插件：在没有使用with_secret且参数中包含`<$KEY$>`wrapper时则警告
   - 问题: agent会误会secret的使用方法，有时会忘记使用with_secret，但是有时agent就是想向文件中写入包含`<$$>`的内容
 
 # 代码要求

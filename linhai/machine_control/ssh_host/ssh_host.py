@@ -618,6 +618,16 @@ class SshMachineControl:
         """关闭远程终端"""
         return await self.call_tool("terminal_close", {"term_id": terminal_id})
 
+    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+        """获取远程终端列表"""
+        result = await self.call_tool("terminal_list", {})
+        if isinstance(result, ToolResultSuccess):
+            return ToolResultSuccess(content=result.content)
+        else:
+            return ToolResultFailed(
+                content=f"获取终端列表失败: {result.content}",
+            )
+
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:

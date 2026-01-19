@@ -929,3 +929,73 @@ def is_existing_file(path_str: str) -> bool:
         return path.is_file()
     except (OSError, ValueError):
         return False
+
+
+class WithSecretParameterPositionPlugin(Plugin):
+    """检查工具调用中with_secret参数位置错误的插件"""
+    
+    async def after_tool_call(
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        if success:
+            return None
+        
+        arguments = tool_call.function_arguments
+        if 'with_secret' not in arguments:
+            return None
+        
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content="检测到with_secret参数位置错误"
+            )
+        )
+        return RuntimeMessage(
+            "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
+            "正确格式：{\"name\": \"tool_name\", \"with_secret\": [\"KEY\"], \"arguments\": {...}}"
+        )
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到after_tool_call回调。"""
+        lifecycle.register_after_tool_call(self.after_tool_call)
+
+
+class MissingWithSecretWarningPlugin(Plugin):
+    """检查未使用with_secret但包含<$KEY$>的插件"""
+    
+    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
+        has_with_secret = tool_call.with_secret is not None
+
+        arguments_str = str(tool_call.function_arguments)
+        has_secret_pattern = re.search(r'<\$[A-Z_]+\$>', arguments_str)
+        
+        if has_secret_pattern and not has_with_secret:
+            agent = self.group_chat.get_members("agent", Agent)
+            if agent and hasattr(agent, 'message_processor'):
+                agent.message_processor.add_new_message(
+                    RuntimeMessage(
+                        "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
+                        "请确认：\n"
+                        "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
+                        "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
+                    )
+                )
+            
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content="检测到可能忘记使用with_secret的工具调用"
+                )
+            )
+            return False
+        return False
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册到before_tool_call回调。"""
+        lifecycle.register_before_tool_call(self.before_tool_call)

@@ -281,3 +281,18 @@ class MasterHostControl:
         return await asyncio.to_thread(
             insert_at_line, filepath, line_number, content, expected_line_content
         )
+
+    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+        """获取所有终端列表"""
+        from .terminal import terminals
+        if not terminals:
+            return ToolResultSuccess(content="<<terminals>>没有活动的终端<<terminals>>")
+        lines = []
+        for term_id, terminal in terminals.items():
+            # 获取终端状态信息
+            try:
+                screen = terminal.get_screen()
+                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>{screen}<<screen>>")
+            except Exception:
+                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>无法获取屏幕内容<<screen>>")
+        return ToolResultSuccess(content="\n".join(lines))

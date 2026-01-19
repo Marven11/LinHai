@@ -38,6 +38,41 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertIn("master_host", result.content)
         self.assertIn("本地主机", result.content)
 
+    async def test_list_all_terminals(self):
+        """测试列出所有终端"""
+        # 模拟get_terminals方法返回空终端列表
+        mock_host_control = Mock()
+        mock_host_control.get_terminals = AsyncMock(
+            return_value=Mock(content="")
+        )
+        self.machine_control.machines = {"master_host": mock_host_control}
+        
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("当前所有机器上都没有终端", result.content)
+        
+        # 测试有终端的情况
+        mock_host_control.get_terminals = AsyncMock(
+            return_value=Mock(content="终端1: 运行中\n终端2: 空闲")
+        )
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("机器 master_host", result.content)
+        self.assertIn("终端1", result.content)
+        self.assertIn("终端2", result.content)
+        
+        # 测试多个机器
+        mock_host_control2 = Mock()
+        mock_host_control2.get_terminals = AsyncMock(
+            return_value=Mock(content="远程终端: 运行中")
+        )
+        self.machine_control.machines = {
+            "master_host": mock_host_control,
+            "ssh_host": mock_host_control2
+        }
+        result = await self.machine_control.list_all_terminals()
+        self.assertIn("机器 master_host", result.content)
+        self.assertIn("机器 ssh_host", result.content)
+        self.assertIn("远程终端", result.content)
+
     async def test_switch_machine_not_found(self):
         """测试切换到不存在的机器"""
         result = await self.machine_control.switch_machine("unknown")

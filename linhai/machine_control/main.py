@@ -29,6 +29,15 @@ class MachineControlToolSet(ToolSet):
         """注册所有工具"""
 
         @self.register_tool(
+            name="list_terminals",
+            desc="列出所有机器上的所有终端",
+            args={},
+            required_args=[],
+        )
+        async def list_terminals_tool() -> ToolResultSuccess | ToolResultFailed:
+            return await self.machine_control.list_all_terminals()
+
+        @self.register_tool(
             name="list_machines",
             desc="列出所有可用的机器",
             args={},
@@ -545,6 +554,8 @@ class HostControl(Protocol):
         expected_line_content: str,
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
+    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed: ...
+
 
 class MachineControl:
     """机器控制管理器，负责注册工具和切换机器。"""
@@ -616,6 +627,26 @@ class MachineControl:
         return ToolResultSuccess(
             content=f"已成功添加SSH机器: {machine_id} ({host}:{port})"
         )
+
+    async def list_all_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+        """列出所有机器上的所有终端"""
+        all_terminals = []
+        for machine_id, host_control in self.machines.items():
+            result = await host_control.get_terminals()
+            if isinstance(result, ToolResultFailed):
+                return ToolResultFailed(
+                    content=f"获取机器 {machine_id} 的终端列表失败: {result.content}"
+                )
+            # result.content 应该是格式化的终端信息
+            if result.content:
+                all_terminals.append(f"机器 {machine_id}:\n{result.content}")
+        
+        if not all_terminals:
+            content = "当前所有机器上都没有终端"
+        else:
+            content = "\n\n".join(all_terminals)
+        
+        return ToolResultSuccess(content=content)
 
     async def list_machines(self) -> ToolResultSuccess:
         lines = ["可用机器:"]
