@@ -39,7 +39,9 @@ class MCPConnector:
             self.connector_toolset
         ]
 
-    async def connect_mcp_server(self, name: str, command: str, exit_stack: AsyncExitStack):
+    async def connect_mcp_server(
+        self, name: str, command: str, exit_stack: AsyncExitStack
+    ):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
 
@@ -131,7 +133,6 @@ class MCPConnector:
                 "disconnect_mcp_server",
                 "disconnect_all_mcp_servers",
                 "list_mcp_servers",
-                "run_command",
             ],
         )
         async def connect_mcp_server(name: str, command: str):
@@ -144,7 +145,9 @@ class MCPConnector:
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
-            except Exception as e: # WHY: MCP SDK写得很差，抛出的错误类型很多且不确定，我们只能直接捕获Exception
+            except (
+                Exception
+            ) as e:  # WHY: MCP SDK写得很差，抛出的错误类型很多且不确定，我们只能直接捕获Exception
                 await exit_stack.aclose()
                 return ToolResultFailed(content=f"连接{command!r}失败，错误: {e!r}")
 

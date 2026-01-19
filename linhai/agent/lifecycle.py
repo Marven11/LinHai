@@ -150,8 +150,6 @@ class Lifecycle:
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
-            WrongTimeoutPlugin,
-            WrongLinhaiPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
 
@@ -173,8 +171,6 @@ class Lifecycle:
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
             AppendingMessagePlugin(self.group_chat),
-            WrongTimeoutPlugin(self.group_chat),
-            WrongLinhaiPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
@@ -317,7 +313,9 @@ class Lifecycle:
         for callback in self._before_parsing_callbacks:
             await callback(parsed_answer)
 
-    async def trigger_after_segment(self, parsed_answer: "ParsedAnswer", segment: "Segment"):
+    async def trigger_after_segment(
+        self, parsed_answer: "ParsedAnswer", segment: "Segment"
+    ):
         """触发segment生成后的事件。"""
         for callback in self._after_segment_callbacks:
             await callback(parsed_answer, segment)
@@ -327,7 +325,9 @@ class Lifecycle:
         for callback in self._after_parsing_callbacks:
             await callback(parsed_answer)
 
-    async def trigger_parsing_error(self, parsed_answer: "ParsedAnswer", error: Exception):
+    async def trigger_parsing_error(
+        self, parsed_answer: "ParsedAnswer", error: Exception
+    ):
         """触发解析错误事件。"""
         for callback in self._parsing_error_callbacks:
             await callback(parsed_answer, error)

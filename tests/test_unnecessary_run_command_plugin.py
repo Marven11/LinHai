@@ -6,8 +6,6 @@ from pathlib import Path
 from linhai.agent.plugin import UnnecessaryRunCommandPlugin
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import ToolCallMessage
-import bashlex
-import bashlex.ast
 
 
 class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
@@ -44,8 +42,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin._after_tool_call
         )
 
-    async def test_after_tool_call_not_run_command(self):
-        """测试非run_command工具调用。"""
+    async def test_after_tool_call_not_process_create(self):
+        """测试非process_create工具调用。"""
         tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": "test.txt"},
@@ -57,11 +55,11 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_after_tool_call_run_command_failed(self):
-        """测试run_command调用失败。"""
+    async def test_after_tool_call_process_create_failed(self):
+        """测试process_create调用失败。"""
         tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "ls"},
+            function_name="process_create",
+            function_arguments={"command": ["ls"]},
             assert_success=True,
             with_secret=None,
         )
@@ -71,9 +69,9 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_after_tool_call_no_command(self):
-        """测试run_command没有命令参数。"""
+        """测试process_create没有命令参数。"""
         tool_call = ToolCallMessage(
-            function_name="run_command",
+            function_name="process_create",
             function_arguments={},
             assert_success=True,
             with_secret=None,
@@ -84,15 +82,14 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_after_tool_call_with_pipeline_allowed(self):
-        """测试在管道中的grep命令允许。"""
+        """测试包含管道符号的命令允许。"""
         tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "cat file.txt | grep pattern"},
+            function_name="process_create",
+            function_arguments={"command": ["cat", "file.txt", "|", "grep", "pattern"]},
             assert_success=True,
             with_secret=None,
         )
 
-        # 新插件会跳过包含管道的命令
         result = await self.plugin._after_tool_call(
             self.agent, tool_call, "result", True
         )
@@ -102,8 +99,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_tool_call_with_redirect_allowed(self):
         """测试有重定向的cat命令允许。"""
         tool_call = ToolCallMessage(
-            function_name="run_command",
-            function_arguments={"command": "cat file.txt > output.txt"},
+            function_name="process_create",
+            function_arguments={"command": ["cat", "file.txt", ">", "output.txt"]},
             assert_success=True,
             with_secret=None,
         )
@@ -125,10 +122,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "grep pattern /path/to/read.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["grep", "pattern", "/path/to/read.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -140,7 +137,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_read_file_relative_path(self):
@@ -152,10 +149,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "cat test.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["cat", "test.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -167,7 +164,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
 
@@ -191,10 +188,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "tail -10 /path/to/read.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["tail", "-10", "/path/to/read.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -206,7 +203,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_head_command(self):
@@ -218,10 +215,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "head -10 /path/to/read.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["head", "-10", "/path/to/read.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -233,7 +230,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_awk_command(self):
@@ -245,10 +242,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "awk '{print \$1}' /path/to/read.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["awk", "{print $1}", "/path/to/read.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -260,7 +257,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
     async def test_after_tool_call_rg_command(self):
@@ -272,10 +269,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 模拟文件存在且过小
         with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_small_file", return_value=True):
+            with patch("linhai.agent.plugin.is_already_read", return_value=True):
                 tool_call = ToolCallMessage(
-                    function_name="run_command",
-                    function_arguments={"command": "rg pattern /path/to/read.txt"},
+                    function_name="process_create",
+                    function_arguments={"command": ["rg", "pattern", "/path/to/read.txt"]},
                     assert_success=True,
                     with_secret=None,
                 )
@@ -287,7 +284,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         # 第一次警告
         self.assertIsNotNone(result)
         self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("警告：检测到使用命令查看已读取文件", result.message)
+        self.assertIn("警告：检测到不必要的process_create用于读取已读文件", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
 

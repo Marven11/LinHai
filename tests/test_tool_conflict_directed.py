@@ -184,32 +184,3 @@ class TestDirectedToolConflict(unittest.TestCase):
         conflict = self.toolcall._check_tool_conflict("list_files")
 
         self.assertIsNone(conflict, "list_files应该可以在任何工具之后调用")
-
-    def test_empty_conflict_list(self):
-        """测试空conflict_with列表的工具。"""
-        # 模拟工具定义
-        mock_toolset = MagicMock()
-        mock_toolset.has_tool = MagicMock(
-            side_effect=lambda name: name == "run_command"
-        )
-        # run_command有空的conflict_with列表
-        run_command_tool = {
-            "name": "run_command",
-            "conflict_with": [],  # 空列表表示没有冲突
-        }
-        mock_toolset.get_tools = MagicMock(
-            return_value={"run_command": run_command_tool}
-        )
-        self.tool_manager.toolsets = [mock_toolset]
-
-        # 先调用read_file
-        self.toolcall.called_tools_in_round = ["read_file"]
-
-        # 检查run_command是否与read_file冲突
-        conflict = self.toolcall._check_tool_conflict("run_command")
-
-        self.assertIsNone(conflict, "run_command应该可以在任何工具之后调用")
-
-
-if __name__ == "__main__":
-    unittest.main()

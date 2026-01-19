@@ -6,9 +6,7 @@ from pathlib import Path
 import re
 import reprlib
 import time
-import bashlex
-import bashlex.ast
-import bashlex.errors
+
 from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union
 
 from linhai.agent import Agent
@@ -705,160 +703,6 @@ class DuplicateFileReadPlugin(Plugin):
         return None
 
 
-class WrongTimeoutPlugin(Plugin):
-    """在Agent使用timeout命令而不使用timeout参数时ban掉run_command工具"""
-
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.ban_until = 0
-
-    def register(self, lifecycle):
-        """注册插件回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
-
-    async def before_tool_call(
-        self,
-        tool_call: ToolCallMessage,
-    ) -> bool:
-        """工具调用后回调，检查是否是无用的run_command。"""
-        if tool_call.function_name != "run_command":
-            return False
-
-        agent = self.group_chat.get_members("agent", Agent)
-
-        if self.ban_until > time.time():
-            await agent.interrupt(
-                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
-                f"Agent错误使用run_command，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）",
-            )
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING",
-                    content="惩罚：Agent未正确使用timeout参数，已惩罚性禁止使用run_command",
-                ),
-            )
-            return True
-
-        command = tool_call.function_arguments.get("command")
-        if not isinstance(command, str) or not command.startswith("timeout "):
-            return False
-
-        if tool_call.function_arguments.get("timeout"):
-            return False
-
-        self.ban_until = time.time() + 180
-
-        await agent.interrupt(
-            "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
-            "你做错的事情是：没有使用timeout参数而是使用timeout命令设置超时，你没发现这一点用都没有吗？"
-            "如果你想让一个程序一直运行，你应该使用终端而不是使用timeout！"
-            "如果你想让一个程序在超时后退出，你应该使用timeout参数而不是命令！",
-            "Agent错误使用timeout参数，run_command已被禁用三分钟",
-        )
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="惩罚：Agent未正确使用timeout参数，已惩罚性禁止使用run_command三分钟",
-            ),
-        )
-        return True
-
-
-class WrongLinhaiPlugin(Plugin):
-    """禁止使用run_command调用linhai"""
-
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
-        self.ban_until = 0
-
-    def register(self, lifecycle):
-        """注册插件回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
-
-    async def before_tool_call(
-        self,
-        tool_call: ToolCallMessage,
-    ) -> bool:
-        """工具调用后回调，检查是否是无用的run_command。"""
-        if tool_call.function_name != "run_command":
-            return False
-
-        agent = self.group_chat.get_members("agent", Agent)
-
-        if self.ban_until > time.time():
-            await agent.interrupt(
-                f"错误：因为你的错误行为，当前run_command已被禁用，剩余{self.ban_until-time.time():.1f}s解锁，请反思你的行为！",
-                f"Agent错误使用run_command运行linhai，已被暂时禁用（剩余{self.ban_until-time.time():.1f}s）",
-            )
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING",
-                    content="惩罚：Agent使用run_command运行linhai，已惩罚性禁止使用run_command",
-                ),
-            )
-            return True
-
-        command = tool_call.function_arguments.get("command")
-        if not isinstance(command, str) or " linhai " not in command:
-            return False
-
-        self.ban_until = time.time() + 180
-
-        await agent.interrupt(
-            "错误：因为你的错误行为，当前run_command已被禁用三分钟，请立即反思你的行为！"
-            "你做错的事情是：直接在run_command中使用linhai",
-            "Agent错误使用run_command运行linhai，run_command已被禁用三分钟",
-        )
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="惩罚：Agent使用run_command运行linhai，已惩罚性禁止使用run_command三分钟",
-            ),
-        )
-        return True
-
-
-class Traveller:
-    """遍历bash AST树，提取不在pipe中的命令参数。"""
-
-    def __init__(self, node: bashlex.ast.node):  # type: ignore
-        self.node = node
-        self.command_args: list[list[str]] = []  # 每个命令的参数列表
-        self._traverse(node, in_pipe=False)
-
-    def _traverse(self, node: bashlex.ast.node, in_pipe: bool) -> None:  # type: ignore
-        """递归遍历AST节点。"""
-        if node.kind == "pipeline":  # type: ignore
-            # 管道中的命令，标记为在pipe中
-            for child in node.parts:  # type: ignore
-                self._traverse(child, in_pipe=True)
-        elif node.kind == "command" and not in_pipe:  # type: ignore
-            # 提取不在pipe中的命令参数
-            args = []
-            for part in node.parts:  # type: ignore
-                if part.kind == "word":
-                    args.append(part.word)
-            if args:
-                self.command_args.append(args)
-        elif node.kind == "compound":  # type: ignore
-            for child in node.list:  # type: ignore
-                self._traverse(child, in_pipe)
-        elif hasattr(node, "parts"):
-            for part in node.parts:  # type: ignore
-                self._traverse(part, in_pipe)
-        elif hasattr(node, "list"):
-            for child in node.list:  # type: ignore
-                self._traverse(child, in_pipe)
-
-    def get_commands(self) -> list[list[str]]:
-        """获取提取的所有命令的参数列表。"""
-        return self.command_args
-
-
 class UnnecessarySedReadPlugin(Plugin):
     """拦截不必要的sed调用插件。
 
@@ -950,11 +794,9 @@ class UnnecessarySedReadPlugin(Plugin):
 
 
 class UnnecessaryRunCommandPlugin(Plugin):
-    """拦截无用的run_command调用插件。
+    """拦截不必要的process_create调用插件。
 
-    在检测到读取“过小文件”或“已读取文件”时警告，超过3次才拦截，使用过read_file就重置计数。
-    不区分是否是sed调用，跳过用pipe连接起来的命令，删除判断参数是否是文件路径的逻辑，
-    仅通过检测“参数是否是存在的文件路径”判断参数是否是文件路径。
+    检查process_create工具是否用于读取已读取的文件，超过3次警告。
     """
 
     def __init__(self, group_chat):
@@ -970,13 +812,10 @@ class UnnecessaryRunCommandPlugin(Plugin):
         self,
         agent: "Agent",
         tool_call: ToolCallMessage,
-        _tool_result: Any,
+        tool_result: Any,
         success: bool,
     ) -> Optional[RuntimeMessage]:
-        """工具调用后回调，检查是否是无用的run_command。"""
-        if not success:
-            return None
-
+        """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
 
@@ -984,64 +823,65 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if machine_control.target_machine != "master_host":
             return None
 
-        # 如果使用了read_file，重置警告计数
-        if tool_call.function_name == "read_file":
-            self.warning_count = 0
+        if not success:
             return None
 
-        if tool_call.function_name != "run_command":
+        tool_name = tool_call.function_name
+        if tool_name != "process_create":
             return None
 
-        command = tool_call.function_arguments.get("command")
-        if not command or not isinstance(command, str):
+        arguments = tool_call.function_arguments
+        command_list = arguments.get("command", [])
+
+        if not command_list:
             return None
 
-        # 跳过包含管道的命令
-        if "|" in command:
+        # 检查是否为读取文件命令
+        cmd = command_list[0]
+        if cmd not in READ_FILE_COMMANDS:
             return None
 
-        # 解析命令参数，检查是否有参数是存在的文件路径
-        file_args = extract_file_args_from_command(command)
+        # 提取可能的文件参数
+        file_args = []
+        for arg in command_list[1:]:  # 跳过命令本身
+            if is_existing_file(arg):
+                file_args.append(arg)
+
         if not file_args:
             return None
 
-        # 检查每个文件参数是否过小或已读取
-        has_small_or_read_file = False
-        for file_arg in file_args:
-            if await is_small_file(file_arg) or await is_already_read(agent, file_arg):
-                has_small_or_read_file = True
-                break
-
-        if not has_small_or_read_file:
-            return None
-
-        # 增加警告计数
-        self.warning_count += 1
-
-        if self.warning_count >= 3:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING",
-                    content="模型多次使用命令查看已读取文件，已阻止",
-                ),
-            )
-            return RuntimeMessage(
-                "错误：不使用read_file直接读取文件而是滥用命令查看已读取文件\n"
-                "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
-                "建议：如果需要查看文件内容，使用read_file读取整个文件！"
-            )
-        else:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content="模型多次使用命令查看已读取文件，已警告",
-                ),
-            )
-            return RuntimeMessage(
-                f"警告：检测到使用命令查看已读取文件（第{self.warning_count}次警告）。建议使用read_file读取整个文件。"
-            )
+        # 检查文件是否已被读取
+        for filepath in file_args:
+            if await is_already_read(agent, filepath):
+                self.warning_count += 1
+                if self.warning_count >= 3:
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING",
+                            content="模型多次使用process_create读取已读文件，已阻止",
+                        ),
+                    )
+                    return RuntimeMessage(
+                        "错误：不使用read_file直接读取文件而是滥用process_create多次读取已读文件\n"
+                        "警告：本插件会一直阻止你重复读取文件，直到你开始改代码为止！\n"
+                        "建议：如果需要查看文件内容，使用read_file工具；"
+                        "如果需要执行命令，确保命令必要且文件未重复读取。"
+                    )
+                else:
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING",
+                            content=f"模型使用process_create读取已读文件，已警告（第{self.warning_count}次）",
+                        ),
+                    )
+                    return RuntimeMessage(
+                        f"警告：检测到不必要的process_create用于读取已读文件（第{self.warning_count}次警告）。"
+                        f"建议直接使用read_file读取文件。"
+                    )
+        self.warning_count = 0
+        return None
 
 
 async def is_small_file(filepath: str) -> bool:
@@ -1089,31 +929,3 @@ def is_existing_file(path_str: str) -> bool:
         return path.is_file()
     except (OSError, ValueError):
         return False
-
-
-def extract_file_args_from_command(command: str) -> list[str]:
-    """从命令中提取可能的文件参数。"""
-    try:
-        parts = bashlex.parse(command)
-        if not parts:
-            return []
-
-        traveller = Traveller(parts[0])  # type: ignore
-        command_args_list: list[list[str]] = traveller.get_commands()
-
-        file_args = []
-        for args in command_args_list:
-            if not args:
-                continue
-
-            if args[0] not in READ_FILE_COMMANDS:
-                continue
-
-            for i in range(1, len(args)):
-                arg = args[i]
-                if is_existing_file(arg):
-                    file_args.append(arg)
-
-        return file_args
-    except (bashlex.errors.ParsingError, ValueError):
-        return []

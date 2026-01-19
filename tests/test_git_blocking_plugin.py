@@ -41,25 +41,7 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.before_tool_call
         )
 
-    async def test_git_command_detection(self):
-        """测试git命令检测。"""
-        test_cases = [
-            ("git status", True),
-            ("git commit -m 'test'", True),
-            ("git push", True),
-            ("git-log", True),
-            ("/usr/bin/git status", True),
-            ("/usr/local/bin/git", True),
-            ("mygit command", False),
-            ("echo 'git is great'", False),
-            ("ls -la", False),
-            ("python script.py", False),
-        ]
 
-        for command, expected in test_cases:
-            with self.subTest(command=command):
-                result = self.plugin._is_git_command(command)
-                self.assertEqual(result, expected, f"Failed for command: {command}")
 
     async def test_block_git_command_with_unanswered_issues(self):
         """测试有未解答issue时阻止git命令。"""
@@ -70,7 +52,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             assert_success=True,
             with_secret=None,
-            function_name="run_command", function_arguments={"command": "git status"}
+            function_name="process_create",
+            function_arguments={"command": ["git", "status"]},
         )
 
         result = await self.plugin.before_tool_call(tool_call)
@@ -84,7 +67,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             assert_success=True,
             with_secret=None,
-            function_name="run_command", function_arguments={"command": "git status"}
+            function_name="process_create",
+            function_arguments={"command": ["git", "status"]},
         )
 
         result = await self.plugin.before_tool_call(tool_call)
@@ -98,7 +82,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         tool_call = ToolCallMessage(
             assert_success=True,
             with_secret=None,
-            function_name="read_file", function_arguments={"filepath": "test.txt"}
+            function_name="read_file",
+            function_arguments={"filepath": "test.txt"},
         )
 
         result = await self.plugin.before_tool_call(tool_call)

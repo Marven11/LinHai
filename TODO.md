@@ -2,15 +2,15 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] linhai/machine_control/master_host/master_host.py等文件中的process_create等工具没有使用`<<>>`组织内容，而是使用了json
+- [x] linhai/machine_control/master_host/master_host.py等文件中的process_create等工具没有使用`<<>>`组织内容，而是使用了json
   - 检查所有构造ToolResultSuccess和ToolResultFailed的地方，保证传入的不是json而是使用`<<>>`组织的内容
   - 目标: 保证传给agent的ToolResultSuccess和ToolResultFailed完全不使用json或者其他可能转义字符串的格式
-- [ ] run_command被删除，需要同时删除以下无用插件: WrongLinhaiPlugin, WrongTimeoutPlugin
-- [ ] commit 9448e24删除了run_command工具，但是没有同步修改插件
+- [x] run_command被删除，需要同时删除以下无用插件: WrongLinhaiPlugin, WrongTimeoutPlugin
+- [x] commit 9448e24删除了run_command工具，但是没有同步修改插件
   - 这是一个较大的重构，需要rg搜索所有使用run_command的地方并修改
   - 因为run_command被移除，当前命令的表示方式不是str而是`list[str]`，因此我们根本不需要任何bash语法解析逻辑，删除相关函数和bashlex依赖
-- [ ] 为上面的功能添加unittest
-- [ ] 查看修复所有unittest的错误和警告
+- [x] 为上面的功能添加unittest
+- [x] 查看修复所有unittest的错误和警告
 
 # 代码要求
 

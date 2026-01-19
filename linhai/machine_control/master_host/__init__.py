@@ -3,7 +3,7 @@
 from .master_host import MasterHostControl
 
 from .http import http_request
-from .command import run_command, change_directory
+from .command import change_directory
 from .terminal import (
     terminal_create,
     terminal_send_keys,
@@ -29,7 +29,6 @@ from .file import (
 
 __all__ = [
     "http_request",
-    "run_command",
     "change_directory",
     "terminal_create",
     "terminal_send_keys",

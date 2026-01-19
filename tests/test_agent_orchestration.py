@@ -23,7 +23,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         mock_lifecycle = Mock(spec=Lifecycle)
         group_chat.register_member("lifecycle", mock_lifecycle)
-        
+
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
@@ -39,12 +39,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration = AgentContextOrchestration(
             group_chat, self.message_processor
         )
-
-
-
-
-
-
 
     async def test_context_thanox(self):
         """测试随机删除历史消息。"""
@@ -68,7 +62,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "hard_limit": 100000,
             "used_tokens": 60000,
             "remaining_tokens": 40000,
-            "usage_ratio": 0.8
+            "usage_ratio": 0.8,
         }
         # 添加一个大消息，以便在黄灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
@@ -77,7 +71,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 调用add_soft_threshold_notification，现在返回字符串
         result = self.orchestration.add_soft_threshold_notification(threshold_info)
-        
+
         # 验证返回值
         self.assertIsNotNone(result)
         assert result is not None
@@ -93,19 +87,19 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "hard_limit": 100000,
             "used_tokens": 60000,
             "remaining_tokens": 40000,
-            "usage_ratio": 0.6
+            "usage_ratio": 0.6,
         }
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
         self.message_processor.add_new_message(large_msg)
-        
+
         # 模拟最近调用过清理工具
         self.orchestration.last_compress_or_clean_time = time.time() - 30
 
         # 调用add_soft_threshold_notification，现在返回字符串
         result = self.orchestration.add_soft_threshold_notification(threshold_info)
-        
+
         # 对于绿灯状态且最近调用过清理工具，应该返回消息字符串
         self.assertIsNotNone(result)
         assert result is not None
@@ -172,15 +166,24 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_determine_tool_category(self):
         """测试工具分类判断。"""
         # 测试消息清理工具
-        self.assertEqual(self.orchestration._determine_tool_category("context_range_compress"), "cleanup")
-        self.assertEqual(self.orchestration._determine_tool_category("context_garbage_clean"), "cleanup")
-        self.assertEqual(self.orchestration._determine_tool_category("context_thanox"), "cleanup")
-        
+        self.assertEqual(
+            self.orchestration._determine_tool_category("context_range_compress"),
+            "cleanup",
+        )
+        self.assertEqual(
+            self.orchestration._determine_tool_category("context_garbage_clean"),
+            "cleanup",
+        )
+        self.assertEqual(
+            self.orchestration._determine_tool_category("context_thanox"), "cleanup"
+        )
+
         # context_mark_message_todelete 工具已删除，不再测试
-        
+
         # 测试其他工具
-        self.assertEqual(self.orchestration._determine_tool_category("read_file"), "other")
-        self.assertEqual(self.orchestration._determine_tool_category("run_command"), "other")
+        self.assertEqual(
+            self.orchestration._determine_tool_category("read_file"), "other"
+        )
 
     def test_determine_threshold_state(self):
         """测试阈值状态判断。"""
@@ -193,32 +196,32 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         """测试最近调用清理工具判断。"""
         # 初始状态应该为False
         self.assertFalse(self.orchestration._recently_called_cleanup_tool())
-        
+
         # 设置调用时间
         self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前
         self.assertTrue(self.orchestration._recently_called_cleanup_tool())
-        
+
         # 超过一分钟
         self.orchestration.last_compress_or_clean_time = time.time() - 70  # 70秒前
         self.assertFalse(self.orchestration._recently_called_cleanup_tool())
 
     def test_red_state_with_recent_cleanup_allows_normal_tools(self):
         """测试红灯状态下，如果最近调用过清理工具，正常工具应该被允许。"""
-        
+
         # 设置红灯状态（使用率95%）
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
             "used_tokens": 95000,
             "remaining_tokens": 5000,
-            "usage_ratio": 0.95
+            "usage_ratio": 0.95,
         }
-        
+
         # 模拟最近调用过清理工具（30秒前）
         self.orchestration.last_compress_or_clean_time = time.time() - 30
-        
+
         # 测试正常工具（如read_file）不应该被阻塞
         details = self.orchestration.get_tool_block_details("read_file", threshold_info)
-        
+
         # 验证：当前状态应该是红灯
         self.assertEqual(details["current_state"], "红灯")
         # 验证：最近调用过清理工具
@@ -232,21 +235,21 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_red_state_without_recent_cleanup_blocks_normal_tools(self):
         """测试红灯状态下，如果没有调用过清理工具，正常工具应该被阻塞。"""
-        
+
         # 设置红灯状态（使用率95%）
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
             "used_tokens": 95000,
             "remaining_tokens": 5000,
-            "usage_ratio": 0.95
+            "usage_ratio": 0.95,
         }
-        
+
         # 确保没有最近调用清理工具（超过70秒）
         self.orchestration.last_compress_or_clean_time = time.time() - 70
-        
+
         # 测试正常工具（如read_file）应该被阻塞
         details = self.orchestration.get_tool_block_details("read_file", threshold_info)
-        
+
         # 验证：当前状态应该是红灯
         self.assertEqual(details["current_state"], "红灯")
         # 验证：最近没有调用过清理工具
@@ -265,15 +268,17 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "hard_limit": 100000,
             "used_tokens": 95000,
             "remaining_tokens": 5000,
-            "usage_ratio": 0.95
+            "usage_ratio": 0.95,
         }
-        
+
         # 模拟最近调用过清理工具（30秒前）
         self.orchestration.last_compress_or_clean_time = time.time() - 30
-        
+
         # 测试清理工具（如context_garbage_clean）应该被阻塞
-        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
-        
+        details = self.orchestration.get_tool_block_details(
+            "context_garbage_clean", threshold_info
+        )
+
         # 验证：当前状态应该是红灯
         self.assertEqual(details["current_state"], "红灯")
         # 验证：最近调用过清理工具
@@ -284,7 +289,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(details["blocked_category"], "cleanup")
         # 验证：因为blocked_category和actual_category都是cleanup，所以应该被拦截
         self.assertEqual(details["blocked_category"], details["actual_category"])
-    
+
     def test_red_state_with_recent_cleanup_error_message(self):
         """测试红灯状态下，最近调用过清理工具时返回正确的错误消息。"""
         # 设置红灯状态（使用率95%）
@@ -292,18 +297,20 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "hard_limit": 100000,
             "used_tokens": 95000,
             "remaining_tokens": 5000,
-            "usage_ratio": 0.95
+            "usage_ratio": 0.95,
         }
-        
+
         # 模拟最近调用过清理工具（30秒前）
         self.orchestration.last_compress_or_clean_time = time.time() - 30
-        
+
         # 获取工具拦截详情
-        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
-        
+        details = self.orchestration.get_tool_block_details(
+            "context_garbage_clean", threshold_info
+        )
+
         # 验证应该被拦截
         self.assertEqual(details["blocked_category"], details["actual_category"])
-        
+
         # 注意：实际错误消息由RedStateToolBlockPlugin生成，这里我们验证拦截逻辑正确
         # 具体的错误消息测试需要在RedStateToolBlockPlugin的测试中完成
         # 但我们可以验证拦截条件满足
@@ -313,21 +320,23 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_yellow_state_with_recent_cleanup_blocks_cleanup_tools(self):
         """测试黄灯状态下，如果最近调用过清理工具，清理工具应该被阻塞。"""
-        
+
         # 设置黄灯状态（使用率75%）
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
             "used_tokens": 75000,
             "remaining_tokens": 25000,
-            "usage_ratio": 0.75
+            "usage_ratio": 0.75,
         }
-        
+
         # 模拟最近调用过清理工具（30秒前）
         self.orchestration.last_compress_or_clean_time = time.time() - 30
-        
+
         # 测试清理工具（如context_garbage_clean）应该被阻塞
-        details = self.orchestration.get_tool_block_details("context_garbage_clean", threshold_info)
-        
+        details = self.orchestration.get_tool_block_details(
+            "context_garbage_clean", threshold_info
+        )
+
         # 验证：当前状态应该是黄灯
         self.assertEqual(details["current_state"], "黄灯")
         # 验证：最近调用过清理工具
@@ -338,4 +347,3 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(details["blocked_category"], "cleanup")
         # 验证：因为blocked_category和actual_category都是cleanup，所以应该被拦截
         self.assertEqual(details["blocked_category"], details["actual_category"])
-

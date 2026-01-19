@@ -20,69 +20,54 @@ class GitBlockingPlugin(Plugin):
     async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
         """检查是否有未解答的issue，如果有则阻止使用git命令。"""
         from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-
         from linhai.subagent.issue import IssueManager
 
         issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
-        if issue_manager and issue_manager.has_unanswered_issues():
-
-            tool_name = tool_call.function_name
-            arguments = tool_call.function_arguments
-
-            if tool_name in ["run_command"]:
-                command = arguments.get("command", "")
-
-                if self._is_git_command(command):
-                    unanswered = issue_manager.get_unanswered_issues()
-                    issue_info = "\n".join(
-                        [
-                            f"  ID: {i['id']}, 来自: {i['from_subagent']}, 内容: {i['content']}"
-                            for i in unanswered
-                        ]
-                    )
-                    agent.message_processor.add_new_message(
-                        RuntimeMessage(
-                            f"错误：有未解答的issue，禁止使用git命令。"
-                            f"命令 '{command}' 被识别为git命令，请先回复所有SubAgent的issue。\n"
-                            f"未解答的issue:\n{issue_info}"
-                        )
-                    )
-
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="ERROR", content=f"Git命令被阻止: {command}"
-                        ),
-                    )
-
-                    return True
-        return False
-
-    def _is_git_command(self, command: str) -> bool:
-        """精确检测是否为git命令"""
-
-        try:
-            parts = shlex.split(command.strip())
-            if not parts:
-                return False
-
-            cmd = parts[0]
-
-            if cmd == "git":
-                return True
-
-            if cmd.startswith("git-"):
-                return True
-
-            basename = os.path.basename(cmd)
-            if basename == "git" or basename == "git.exe":
-                return True
-
+        if not issue_manager or not issue_manager.has_unanswered_issues():
             return False
-        except (ValueError, OSError):
+
+        tool_name = tool_call.function_name
+        if tool_name != "process_create":
             return False
+
+        arguments = tool_call.function_arguments
+        command_list = arguments["command"]
+
+        if not command_list:
+            return False
+        cmd = command_list[0]
+        if not (
+            cmd == "git"
+            or cmd.startswith("git-")
+            or os.path.basename(cmd) in ("git", "git.exe")
+        ):
+            return False
+
+        agent = self.group_chat.get_members("agent", Agent)
+        unanswered = issue_manager.get_unanswered_issues()
+        issue_info = "\n".join(
+            [
+                f"  ID: {i['id']}, 来自: {i['from_subagent']}, 内容: {i['content']}"
+                for i in unanswered
+            ]
+        )
+        agent.message_processor.add_new_message(
+            RuntimeMessage(
+                f"错误：有未解答的issue，禁止使用git命令。"
+                f"命令 '{' '.join(command_list)}' 被识别为git命令，请先回复所有SubAgent的issue。\n"
+                f"未解答的issue:\n{issue_info}"
+            )
+        )
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="ERROR",
+                content=f"Git命令被阻止: {' '.join(command_list)}",
+            ),
+        )
+
+        return True
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到before_tool_call回调。"""

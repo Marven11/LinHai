@@ -428,7 +428,7 @@ class TestGitDiffReviewPlugin(unittest.TestCase):
         self.plugin._agent_used_file_modification_tools = False
 
         mock_answer = Mock()
-        tool_calls = [{"name": "run_command", "arguments": {"command": "ls -la"}}]
+        tool_calls = [{"name": "sleep", "arguments": {"seconds": 1}}]
         asyncio.run(self.plugin.after_message_generation(mock_answer, "", tool_calls))
 
         self.assertFalse(self.plugin._agent_used_file_modification_tools)

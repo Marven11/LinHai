@@ -124,8 +124,6 @@ class TestMasterHostControl(unittest.TestCase):
         self.assertTrue(hasattr(self.host_control, "terminal_close"))
 
 
-
-
 class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
     """MachineControlPlugin测试类"""
 
@@ -155,9 +153,9 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         )
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
-        
+
         result = await self.plugin.before_tool_call(tool_call)
-        
+
         self.assertFalse(result)  # 不打断工具调用
         mock_send.assert_called_once_with(
             "ui_log",
@@ -179,9 +177,9 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         )
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
-        
+
         result = await self.plugin.before_tool_call(tool_call)
-        
+
         self.assertFalse(result)
         mock_send.assert_not_called()
 
@@ -189,7 +187,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         """测试after_tool_call，当on_machine为None时重置计数器"""
         self.plugin.consecutive_same_on_machine_count = 2
         self.plugin.last_on_machine = "master_host"
-        
+
         tool_call = ToolCallMessage(
             function_name="test_tool",
             function_arguments={},
@@ -199,11 +197,9 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         )
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
-        
-        result = await self.plugin.after_tool_call(
-            Mock(), tool_call, Mock(), True
-        )
-        
+
+        result = await self.plugin.after_tool_call(Mock(), tool_call, Mock(), True)
+
         self.assertIsNone(result)
         self.assertEqual(self.plugin.consecutive_same_on_machine_count, 0)
         self.assertIsNone(self.plugin.last_on_machine)
@@ -214,7 +210,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         self.machine_control.target_machine = "master_host"
         self.plugin.consecutive_same_on_machine_count = 2
         self.plugin.last_on_machine = "master_host"
-        
+
         tool_call = ToolCallMessage(
             function_name="test_tool",
             function_arguments={},
@@ -224,11 +220,9 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         )
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
-        
-        result = await self.plugin.after_tool_call(
-            Mock(), tool_call, Mock(), True
-        )
-        
+
+        result = await self.plugin.after_tool_call(Mock(), tool_call, Mock(), True)
+
         self.assertIsNone(result)
         self.assertEqual(self.plugin.consecutive_same_on_machine_count, 3)
         self.assertEqual(self.plugin.last_on_machine, "master_host")
@@ -245,7 +239,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件的register方法是否正确注册回调"""
         mock_lifecycle = Mock()
         self.plugin.register(mock_lifecycle)
-        
+
         mock_lifecycle.register_before_message_generation.assert_called_once_with(
             self.plugin.before_message_generation
         )
@@ -255,6 +249,36 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_lifecycle.register_after_tool_call.assert_called_once_with(
             self.plugin.after_tool_call
         )
+
+
+class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
+    """测试工具调用结果格式（<<>>格式）"""
+
+    async def test_tool_result_success_format(self):
+        """测试ToolResultSuccess的content格式为<<>>"""
+        from linhai.tool.base import ToolResultSuccess
+
+        # 测试简单的键值对
+        content = "<<pid>>123<<pid>><<message>>test<<message>>"
+        result = ToolResultSuccess(content=content)
+        self.assertEqual(result.content, content)
+        # 验证content包含<<>>格式
+        self.assertIn("<<pid>>", result.content)
+        self.assertIn("<<message>>", result.content)
+
+        # 测试多个键值对
+        content2 = "<<key1>>value1<<key1>><<key2>>value2<<key2>>"
+        result2 = ToolResultSuccess(content=content2)
+        self.assertEqual(result2.content, content2)
+
+    async def test_tool_result_failed_format(self):
+        """测试ToolResultFailed的content格式为<<>>"""
+        from linhai.tool.base import ToolResultFailed
+
+        content = "<<error>>something went wrong<<error>>"
+        result = ToolResultFailed(content=content)
+        self.assertEqual(result.content, content)
+        self.assertIn("<<error>>", result.content)
 
 
 if __name__ == "__main__":
