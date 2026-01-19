@@ -81,6 +81,12 @@ unittest 失败时，必须分析
     1. 在一个地方管理如何转为repr
     2. 保存后可以在json中直接查看object形式的参数
   - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
+- [ ] 让find_most_similar_in_files使用`<<>>`组织内容
+  - 问题：当前格式使用repr，导致文件内容字符串被转义
+  - 解决方案：仿照其他使用`<<>>`组织内容的地方，用`<<alternative>>`包裹每个可能的匹配
+- [ ] 改进OnlyReasoningPlugin的RuntimeMessage
+  - 当前的消息内容太吓人了
+  - 改进：`检测到在思考后没有输出任何内容而是在</think>标签前就输出了工具调用等，应该在</think>标签后输出实际内容`
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 
 # 注意
