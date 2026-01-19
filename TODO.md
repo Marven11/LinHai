@@ -2,12 +2,39 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 添加一个列出所有 terminal 的工具
-  - 工具列出所有机器上的所有terminal，提示每个terminal所在机器以及其他状态
-  - 同样使用`<<>>`组织内容
-- [x] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
-- [x] 添加插件：在没有使用with_secret且参数中包含`<$KEY$>`wrapper时则警告
-  - 问题: agent会误会secret的使用方法，有时会忘记使用with_secret，但是有时agent就是想向文件中写入包含`<$$>`的内容
+- [ ] 当前trojan.py仍然不支持并发处理请求
+  - 当前：为每个请求创建queue并处理，处理请求时使用非并发的循环+await
+  - 目标设计：
+    - 接收到请求后立即创建task处理对应功能
+    - task异步运行
+    - task完成后将响应写入queue
+    - 定时从响应queue中取出响应并写进stdout
+    - 去除无用的请求queue
+- [ ] 为SshMachineControl添加两个方法用于支持transfer_file功能的实现
+  - upload_file_concurrent: 接收一个bytes，分块并发上传到目标，写入到指定文件路径
+    - 检查文件路径是否已经存在，如果存在则报错
+    - 在/tmp新建临时文件夹，名字随机
+    - 将文件内容每32k分块，上传到临时文件夹中，文件名以对应的offset命名
+      - 注意文件名，需要计算需要的0的数量并补足足够的0
+    - 按照offset拼接所有文件为一个文件，然后移动到指定文件路径
+  - download_file_concurrent: 并发下载目标上的一个文件，保存到master_host上的指定路径
+    - 获取目标文件的大小，每32k分块，并发下载每一块文件，然后拼接回来，写入master_host
+  - 注意最大并发数量为8，且最多重试3次
+  - 需要对应修改trojan.py
+  - 为这两个方法添加unittest
+  - 为了接口干净，也可以为master host实现这些方法，但是完全不需要并发（因为没有网络请求），只需要简单地复制文件即可
+- [ ] 运行unittest确保在实现transfer_file之前基本正常
+- [ ] transfer_file功能: 将文件从一台机器传送到另一台机器上
+  - 参数：from_filepath, from_machine, to_filepath, to_machine
+  - 逻辑
+    - 检查from_machine和to_machine是否不同
+    - 将文件从from_machine上下载到master_host的临时路径
+    - 将文件从master_host上传到to_machine
+- [ ] 在终端中启动linhai并测试
+  - 打包当前目录为/tmp/linhai.tar.gz
+  - 确认当前时间，然后在终端中启动`uv run python -m linhai -m '@nothink 将/tmp/linhai.tar.gz上传到dell nixos的/home/cube文件夹然后退出'`
+  - 使用tab选择对话框然后使用pagedown向下滚动查看linhai的最新输出
+  - 自己登陆dell nixos然后查看/home/cube是否有对应文件，时间戳是否和linhai的启动时间一致
 
 # 代码要求
 
