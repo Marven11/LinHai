@@ -90,10 +90,19 @@ Secret系统也用于掩盖工具输出中的密码等信息，让你在不查�
 
 ### 使用说明
 
-- 在工具调用中提供和`name`, `assert_success`字段平级的`with_secret`字段，值为一个list[str]，包含所有secret键，不含`<$`包裹
-- 在工具调用中使用secret: 在`arguments`的各项参数中，使用占位符<$KEY$>引用secret值，这些引用会被自动替换为实际值。
-- 在工具返回值中使用secret: 工具结果中如果有`with_secret`中的secret，则secret值会被占位符<$KEY$>代替
-  - 如果你没有指定正确的secret值，则工具结果会被全部拦截
+with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包裹，如`["SECRET_PASSWORD"]`
+
+在工具参数中使用secret时：
+
+1. 使用with_secret包含需要使用的secret
+2. 在工具参数中使用占位符<$KEY$>引用secret值，这些引用会被自动替换为实际值。
+
+查看包含secret的工具返回值时
+
+1. 使用with_secret包含需要使用的secret
+2. 调用工具查看结果，结果中的secret值会被占位符替代，保证你看不到secret
+
+如果你没有指定正确的secret值，则工具结果会被全部隐藏
 """
 
 INTRODUCTION_ITEMS = [
