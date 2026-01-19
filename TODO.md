@@ -2,15 +2,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] linhai/machine_control/master_host/master_host.py等文件中的process_create等工具没有使用`<<>>`组织内容，而是使用了json
-  - 检查所有构造ToolResultSuccess和ToolResultFailed的地方，保证传入的不是json而是使用`<<>>`组织的内容
-  - 目标: 保证传给agent的ToolResultSuccess和ToolResultFailed完全不使用json或者其他可能转义字符串的格式
-- [x] run_command被删除，需要同时删除以下无用插件: WrongLinhaiPlugin, WrongTimeoutPlugin
-- [x] commit 9448e24删除了run_command工具，但是没有同步修改插件
-  - 这是一个较大的重构，需要rg搜索所有使用run_command的地方并修改
-  - 因为run_command被移除，当前命令的表示方式不是str而是`list[str]`，因此我们根本不需要任何bash语法解析逻辑，删除相关函数和bashlex依赖
-- [x] 为上面的功能添加unittest
-- [x] 查看修复所有unittest的错误和警告
+- [ ] 添加一个列出所有 terminal 的工具
+  - 工具列出所有机器上的所有terminal，提示每个terminal所在机器以及其他状态
+  - 同样使用`<<>>`组织内容
+- [ ] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
+- [ ] 添加插件：在没有使用with_secret且参数中包含`<$KEY$>`wrapper时则警告
+  - 问题: agent会误会secret的使用方法，有时会忘记使用with_secret，但是有时agent就是想向文件中写入包含`<$$>`的内容
 
 # 代码要求
 
@@ -42,7 +39,6 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
-- [ ] 添加一个列出所有 terminal 的工具
 - [ ] 重构工具调用结果的回调函数，仅提供一个工具调用结果的回调而不是分成多个
   - 需要规划，统计当前插件等会如何使用这些回调，重构后应该将这个回调设计成什么样
   - 当前有多个关于工具调用的回调，这不合理
@@ -72,9 +68,6 @@ unittest 失败时，必须分析
   - 设计：仅在当前机器为master_host时检查
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
-- [ ] 添加插件：在工具失败且参数中包含为list[str]的with_secret时，提醒agent with_secret应该在参数外
-- [ ] 添加插件：在没有使用with_secret且参数中包含`<$KEY$>`wrapper时则警告
-  - 问题: agent会误会secret的使用方法，有时会忘记使用with_secret，但是有时agent就是想向文件中写入包含`<$$>`的内容
 - [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
 - [ ] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
   - 这样我们可以
