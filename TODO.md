@@ -2,16 +2,15 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] trojan.py不支持process_*系列工具，需要修改并测试
-  - 根据SshMachineControl编写，确认可以对接
-  - 需要分别为SshMachineControl和trojan.py编写测试，确认它们可以正常构造、发送、接收、解析所有process_*工具的请求响应
-    - 这意味着需要为每个process_*工具，为SshMachineControl和trojan.py，为构造、发送、接收、解析分别编写unittest，总量为`2*2*4`个新unittest
-- [ ] 让find_most_similar_in_files使用`<<>>`组织内容
-  - 问题：当前格式使用repr，导致文件内容字符串被转义
-  - 解决方案：仿照其他使用`<<>>`组织内容的地方，用`<<alternative>>`包裹每个可能的匹配
-- [ ] WaitingUserPlugin没有在警告agent同时提示用户“已警告”，需要修改
 - [ ] 在提示红绿灯状态时提示agent当前的缓存比例
-  - 在prompt中修改上下文管理的prompt，删除“避免使用清理工具”的笼统要求，添加“清理工具会破坏缓存，你需要控制缓存比例在90%以上”的要求
+  - [x] 在prompt中修改上下文管理的prompt，删除“避免使用清理工具”的笼统要求，添加“清理工具会破坏缓存，你需要控制缓存比例在90%以上”的要求
+  - [?] 将linhai/cli/token_manager.py移出cli.py
+  - [ ] 在linhai/agent/orchestration.py的_build_threshold_message中根据TokenManager获取并加入当前的缓存比例信息
+- [ ] 重构linhai/agent/orchestration.py，使其完全符合深层价值观，简化到500行以内
+  - 合并所有创建toolset的逻辑，仅提供一个创建toolset的函数
+  - 删除所有wrapper函数
+    - 判断标准: 仅在本文件内被使用，且仅在一处被调用
+- [ ] 运行unittest并修复所有错误和asyncio相关警告
 
 # 代码要求
 
