@@ -120,9 +120,9 @@ class MasterHostControl:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
             stdout_data, stderr_data = b"", b""
             if process.stdout:
-                stdout_data = await process.stdout.read(1024)
+                stdout_data = await process.stdout.read(8 * 1024)
             if process.stderr:
-                stderr_data = await process.stderr.read(1024)
+                stderr_data = await process.stderr.read(8 * 1024)
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
             if unescape_ansi:
