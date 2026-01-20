@@ -37,11 +37,13 @@ class MockAnswer:
         if self.index >= len(self.tokens):
             raise StopAsyncIteration
         token_dict = self.tokens[self.index]
+
         # 创建具有reasoning_content和content属性的简单对象
         class Token:
             def __init__(self, reasoning_content, content):
                 self.reasoning_content = reasoning_content
                 self.content = content
+
         token = Token(token_dict["reasoning_content"], token_dict["content"])
         self.index += 1
         return token
@@ -140,13 +142,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 break
 
         self.assertIsNotNone(parsed_answer, "ParsedAnswer object not found")
-        
+
         # 验证解析正常完成
         completed_normally = await parsed_answer.wait_parsing()
         self.assertTrue(completed_normally, "Parsing was interrupted")
-        
+
         # 验证最终回答内容
         from linhai.llm import AssistantMessage
+
         content = "Hi there"
         self.assertEqual(self.agent.state, "waiting_user")
 
@@ -156,11 +159,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         """Test message processing functionality."""
         user_msg = UserMessage(message="Hi", name="user")
         from linhai.tool.base import ToolCallResultMessage
+
         tool_msg = ToolCallResultMessage(
             tool_name="dummy_tool",
             tool_index=0,
             result=ToolResultSuccess(content="result"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
 
         mock_answer = MockAnswer(

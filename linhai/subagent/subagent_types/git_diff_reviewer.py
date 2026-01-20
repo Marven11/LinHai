@@ -22,7 +22,10 @@ if TYPE_CHECKING:
     from linhai.agent.plugin import Plugin  # pylint: disable=reimported
     from linhai.subagent import SubAgentManager  # pylint: disable=reimported
     from linhai.subagent.main import SubAgent  # pylint: disable=reimported
-    from linhai.tool.general import TodolistManager, TodolistItem  # pylint: disable=reimported
+    from linhai.tool.general import (
+        TodolistManager,
+        TodolistItem,
+    )  # pylint: disable=reimported
     from linhai.utils import CliRuntimeNotice, generate_id  # pylint: disable=reimported
 
 
@@ -83,7 +86,6 @@ class GitDiffReviewPlugin(Plugin):
         "write_file",
         "replace_file_content",
         "modify_file_with_sed",
-        "insert_at_line",
     }
 
     def __init__(self, group_chat):

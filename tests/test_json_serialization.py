@@ -78,7 +78,7 @@ class TestJsonSerialization(unittest.TestCase):
             tool_name="test_tool",
             tool_index=0,
             result=ToolResultSuccess(content="工具执行结果"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
         json_str = original.to_json()
         restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)
@@ -92,7 +92,7 @@ class TestJsonSerialization(unittest.TestCase):
             tool_name="test_tool",
             tool_index=0,
             result=ToolResultFailed(content="工具执行错误"),
-            toolcall_argument_repr="{'arg': 'value'}",
+            toolcall_arguments={"arg": "value"},
         )
         json_str = original.to_json()
         restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)

@@ -97,7 +97,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=0,
             result=ToolResultFailed(content="test error"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
 
@@ -128,7 +128,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=0,
             result=ToolResultFailed(content="test error"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_error)
 
@@ -202,7 +202,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=0,
             result=ToolResultSuccess(content="result1"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
 
         tool_call2 = ToolCallMessage(
@@ -215,7 +215,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=1,
             result=ToolResultFailed(content="error2"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
 
         tool_call3 = ToolCallMessage(
@@ -228,7 +228,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=2,
             result=ToolResultFailed(content="error3"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
 
         self.mock_tool_manager.process_tool_call = AsyncMock(
@@ -357,13 +357,13 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=1,
             result=ToolResultSuccess(content="result1"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
         mock_result2 = ToolCallResultMessage(
             tool_name="test_tool",
             tool_index=2,
             result=ToolResultSuccess(content="result2"),
-            toolcall_argument_repr=None,
+            toolcall_arguments=None,
         )
 
         self.mock_tool_manager.process_tool_call = AsyncMock(

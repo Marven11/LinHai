@@ -147,7 +147,6 @@ class TestMasterHostControl(unittest.TestCase):
         self.assertTrue(hasattr(self.host_control, "get_absolute_path"))
 
         self.assertTrue(hasattr(self.host_control, "modify_file_with_sed"))
-        self.assertTrue(hasattr(self.host_control, "insert_at_line"))
 
     def test_terminal_operations(self):
         """测试终端操作"""
@@ -416,7 +415,7 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
             to_machine="master_host",
         )
         self.assertIsInstance(result, ToolResultFailed)
-        self.assertIn("不能在同一台机器上传输", result.content)
+        self.assertIn("源机器和目标机器相同", result.content)
 
     async def test_transfer_file_between_machines_mock(self):
         """测试机器间传输（使用mock）"""
@@ -427,10 +426,10 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
 
         mock_master = Mock(spec=MasterHostControl)
         mock_ssh = Mock(spec=SshMachineControl)
-        mock_master.download_file_concurrent = AsyncMock(
+        mock_ssh.download_file_concurrent = AsyncMock(
             return_value=ToolResultSuccess(content="<<message>>下载成功<<message>>")
         )
-        mock_ssh.upload_file_concurrent = AsyncMock(
+        mock_master.upload_file_concurrent = AsyncMock(
             return_value=ToolResultSuccess(content="<<message>>上传成功<<message>>")
         )
 
@@ -448,8 +447,8 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
         from linhai.tool.base import ToolResultSuccess
 
         self.assertIsInstance(result, ToolResultSuccess)
-        mock_master.download_file_concurrent.assert_called_once()
-        mock_ssh.upload_file_concurrent.assert_called_once()
+        mock_ssh.download_file_concurrent.assert_called_once()
+        mock_master.upload_file_concurrent.assert_called_once()
 
 
 if __name__ == "__main__":

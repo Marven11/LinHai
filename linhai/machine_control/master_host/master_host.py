@@ -24,7 +24,6 @@ from .file import (
     get_absolute_path,
     read_file_with_sed,
     modify_file_with_sed,
-    insert_at_line,
 )
 
 
@@ -270,18 +269,6 @@ class MasterHostControl:
     ) -> ToolResultSuccess | ToolResultFailed:
         """使用sed表达式修改文件"""
         return await asyncio.to_thread(modify_file_with_sed, expression, filepath)
-
-    async def insert_at_line(
-        self,
-        filepath: str,
-        line_number: int,
-        content: str,
-        expected_line_content: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """将内容插入到文件的指定行号位置"""
-        return await asyncio.to_thread(
-            insert_at_line, filepath, line_number, content, expected_line_content
-        )
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
         """获取所有终端列表"""

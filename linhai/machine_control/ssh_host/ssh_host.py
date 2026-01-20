@@ -668,24 +668,6 @@ class SshMachineControl:
             "modify_file_with_sed", {"expression": expression, "filepath": filepath}
         )
 
-    async def insert_at_line(
-        self,
-        filepath: str,
-        line_number: int,
-        content: str,
-        expected_line_content: str,
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """将内容插入到文件的指定行号位置"""
-        return await self.call_tool(
-            "insert_at_line",
-            {
-                "filepath": filepath,
-                "line_number": line_number,
-                "content": content,
-                "expected_line_content": expected_line_content,
-            },
-        )
-
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:

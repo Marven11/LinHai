@@ -2,20 +2,20 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
+- [x] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 - [x] 完全删除insert_at_line工具且清理相关代码，包括接口定义、函数实现等
-- [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
+- [x] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
   - 问题：agent有时会在一个回答中调用多个工具，在调用读取文件之后立即尝试修改，即使此时根本没有看到文件内容。这是模型幻觉
   - 设计: 插件维护一个已经读取文件的列表，在回答生成之前清空列表，调用读取文件工具时将文件路径添加到列表，调用写入文件工具时检查路径是否在列表中
   - 设计：仅在当前机器为master_host时检查
   - 添加对应unittest
-- [ ] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
+- [x] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
   - 这是一个较大的重构，需要仔细修改所有使用ToolCallResultMessage的地方
   - 这样我们可以
     1. 在一个地方管理如何转为repr
     2. 保存后可以在json中直接查看object形式的参数
   - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
-- [ ] 运行所有unittest
+- [x] 运行所有unittest
 
 # 代码要求
 

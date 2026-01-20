@@ -23,7 +23,6 @@ from .file import (
     get_absolute_path,
     read_file_with_sed,
     modify_file_with_sed,
-    insert_at_line,
 )
 
 
@@ -43,7 +42,6 @@ __all__ = [
     "get_absolute_path",
     "read_file_with_sed",
     "modify_file_with_sed",
-    "insert_at_line",
     "MasterHostControl",
     "PyteTerminal",
     "terminals",

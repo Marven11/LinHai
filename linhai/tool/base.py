@@ -138,11 +138,13 @@ class ToolSet:
 
 class ToolResultSuccess(BaseModel):
     """工具成功结果"""
+
     content: str
 
 
 class ToolResultFailed(BaseModel):
     """工具失败结果"""
+
     content: str
 
 
@@ -201,15 +203,15 @@ class ToolCallResultMessage(Message):
         tool_name: str,
         tool_index: int,
         result: ToolResultSuccess | ToolResultFailed,
-        toolcall_argument_repr: str | None = None,
+        toolcall_arguments: dict | None = None,
         max_output_length: int = 50000,
     ):
         self.tool_name = tool_name
         self.tool_index = tool_index
         self.result = result
-        self.toolcall_argument_repr = toolcall_argument_repr
+        self.toolcall_arguments = toolcall_arguments
         self.max_output_length = max_output_length
-        
+
         # 使用辅助函数处理内容
         content_str = result.content
         self.content = _handle_long_content(content_str, max_output_length)
@@ -220,23 +222,33 @@ class ToolCallResultMessage(Message):
             status = "工具执行成功"
             data_or_error = f"<<data>>{self.content}<<data>>"
         else:
-            status = "工具执行失败" 
+            status = "工具执行失败"
             data_or_error = f"<<error>>{self.content}<<error>>"
-        
+
         # 构建消息内容
         content_parts = [
             f"<<tool>>",
             f"<<name>>{self.tool_name}<<name>>",
             f"<<index>>{self.tool_index}<<index>>",
         ]
-        # 只有在失败时才包含toolcall_argument_repr
-        if isinstance(self.result, ToolResultFailed) and self.toolcall_argument_repr is not None:
-            content_parts.append(f"<<toolcall_argument>>{self.toolcall_argument_repr}<<toolcall_argument>>")
-        content_parts.extend([
-            f"<<message>>{status}<<message>>",
-            data_or_error,
-            f"<<tool>>",
-        ])
+        # 只有在失败时才包含toolcall_arguments的repr
+        if (
+            isinstance(self.result, ToolResultFailed)
+            and self.toolcall_arguments is not None
+        ):
+            r = reprlib.Repr()
+            r.maxstring = 100
+            argument_repr = r.repr(self.toolcall_arguments)
+            content_parts.append(
+                f"<<toolcall_argument>>{argument_repr}<<toolcall_argument>>"
+            )
+        content_parts.extend(
+            [
+                f"<<message>>{status}<<message>>",
+                data_or_error,
+                f"<<tool>>",
+            ]
+        )
         content = "\n".join(content_parts)
         return cast(
             LanguageModelMessage,
@@ -248,10 +260,14 @@ class ToolCallResultMessage(Message):
             "tool_name": self.tool_name,
             "tool_index": self.tool_index,
             "result": {
-                "type": "success" if isinstance(self.result, ToolResultSuccess) else "failed",
+                "type": (
+                    "success"
+                    if isinstance(self.result, ToolResultSuccess)
+                    else "failed"
+                ),
                 "content": self.result.content,
             },
-            "toolcall_argument_repr": self.toolcall_argument_repr,
+            "toolcall_arguments": self.toolcall_arguments,
             "content": self.content,
         }
         return json.dumps(data)
@@ -267,12 +283,8 @@ class ToolCallResultMessage(Message):
             tool_name=data["tool_name"],
             tool_index=data["tool_index"],
             result=result,
-            toolcall_argument_repr=data.get("toolcall_argument_repr"),
+            toolcall_arguments=data.get("toolcall_arguments"),
         )
-
-
-
-
 
 
 global_tools = ToolSet()

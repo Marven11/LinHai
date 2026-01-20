@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import inspect
 import json
 from collections import Counter
 from pathlib import Path
@@ -71,6 +72,7 @@ class ToolManager:
         for mcp_config in self.mcp_config:
             server_script_path = self.mcp_basedir / mcp_config.server_script_path
             from contextlib import AsyncExitStack
+
             exit_stack = AsyncExitStack()
             await self.mcp_connector.connect_mcp_server(
                 mcp_config.name, server_script_path.absolute().as_posix(), exit_stack
@@ -124,18 +126,21 @@ class ToolManager:
         machine_control = None
         if tool_call.on_machine is not None:
             from linhai.machine_control.main import MachineControl
+
             # machine_control应该总是存在，因为ToolManager.postinit会注册它
             # 如果不存在，说明系统初始化有问题，应该抛出异常
-            machine_control = self.group_chat.get_members("machine_control", MachineControl)
+            machine_control = self.group_chat.get_members(
+                "machine_control", MachineControl
+            )
             if tool_call.on_machine not in machine_control.machines:
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"机器未找到: {tool_call.on_machine}"
+                        level="ERROR", content=f"机器未找到: {tool_call.on_machine}"
                     ),
                 )
                 import reprlib
+
                 failed_result = ToolResultFailed(
                     content=f"机器未找到: {tool_call.on_machine}"
                 )
@@ -143,7 +148,7 @@ class ToolManager:
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     result=failed_result,
-                    toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+                    toolcall_arguments=kwargs if kwargs else None,
                 )
             original_machine = machine_control.target_machine
             machine_control.target_machine = tool_call.on_machine
@@ -168,13 +173,13 @@ class ToolManager:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 result=failed_result,
-                toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+                toolcall_arguments=kwargs if kwargs else None,
             )
 
         try:
             func = target_toolset.get_tool(tool_call.function_name)
 
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 result = await func(**kwargs)
             else:
                 result = await asyncio.to_thread(func, **kwargs)
@@ -239,7 +244,7 @@ class ToolManager:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 result=failed_result,
-                toolcall_argument_repr=reprlib.repr(kwargs) if kwargs else None,
+                toolcall_arguments=kwargs if kwargs else None,
             )
         finally:
             # 恢复原始机器

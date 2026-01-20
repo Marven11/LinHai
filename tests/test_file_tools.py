@@ -12,7 +12,6 @@ from linhai.machine_control.master_host.file import (
     replace_file_content,
     list_files,
     get_absolute_path,
-    insert_at_line,
 )
 
 
@@ -116,22 +115,6 @@ class TestFileTools(unittest.TestCase):
         result = get_absolute_path(".")
         self.assertIn("绝对路径:", result.content)
         self.assertIn(os.path.abspath("."), result.content)
-
-    def test_insert_at_line(self):
-        """测试在指定行插入内容"""
-        result = insert_at_line(
-            str(self.test_file),
-            line_number=3,
-            content="插入的新行",
-            expected_line_content="第三行内容",
-        )
-
-        self.assertIn("成功在文件", result.content)
-
-        content = self.test_file.read_text(encoding="utf-8")
-        lines = content.splitlines()
-        self.assertEqual(lines[2], "插入的新行")  # 第3行应该是插入的内容
-        self.assertEqual(lines[3], "第三行内容")  # 原来的第3行现在应该是第4行
 
 
 if __name__ == "__main__":

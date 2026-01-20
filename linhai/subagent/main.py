@@ -18,7 +18,13 @@ from linhai.llm import (
     UserMessage,
 )
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultSuccess, ToolResultFailed, ToolCallResultMessage
+from linhai.tool.base import (
+    ToolSet,
+    ToolArgInfo,
+    ToolResultSuccess,
+    ToolResultFailed,
+    ToolCallResultMessage,
+)
 from linhai.tool.general import sleep_tool
 
 
@@ -192,12 +198,13 @@ class SubAgent:
                         else:
                             try:
                                 import json
+
                                 content_str = json.dumps(raw_result, ensure_ascii=False)
                             except (TypeError, ValueError):
                                 content_str = str(raw_result)
                             result = ToolResultSuccess(content=content_str)
 
-                        # 创建ToolCallResultMessage（成功时不包含toolcall_argument_repr）
+                        # 创建ToolCallResultMessage（成功时不包含toolcall_arguments）
                         tool_result_message = ToolCallResultMessage(
                             tool_name=tool_name,
                             tool_index=tool_index,
@@ -208,19 +215,18 @@ class SubAgent:
                     except Exception as e:  # pylint: disable=broad-exception-caught
                         # 失败情况
                         result = ToolResultFailed(content=str(e))
-                        # 创建ToolCallResultMessage，包含toolcall_argument_repr
-                        import reprlib
-                        toolcall_argument_repr = reprlib.repr(tool_args)
+                        # 创建ToolCallResultMessage，包含toolcall_arguments
                         tool_result_message = ToolCallResultMessage(
                             tool_name=tool_name,
                             tool_index=tool_index,
                             result=result,
-                            toolcall_argument_repr=toolcall_argument_repr,
+                            toolcall_arguments=tool_args if tool_args else None,
                         )
                         self.messages.append(tool_result_message)
 
                         # 发送错误通知
                         from linhai.utils import CliRuntimeNotice
+
                         await self.group_chat.send_if_exists(
                             "subagent_message",
                             CliRuntimeNotice(

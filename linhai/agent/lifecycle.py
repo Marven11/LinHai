@@ -150,6 +150,7 @@ class Lifecycle:
             DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
+            FileReadWriteConflictPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
 
@@ -171,6 +172,7 @@ class Lifecycle:
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
             AppendingMessagePlugin(self.group_chat),
+            FileReadWriteConflictPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

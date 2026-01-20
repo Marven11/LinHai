@@ -18,7 +18,6 @@ class TestFileValidation(unittest.TestCase):
             replace_file_content,
             read_file_with_sed,
             modify_file_with_sed,
-            insert_at_line,
         )
 
         self.toolset.register_tool(
@@ -68,17 +67,6 @@ class TestFileValidation(unittest.TestCase):
             },
             required_args=["filepath", "expression"],
         )(modify_file_with_sed)
-
-        self.toolset.register_tool(
-            name="insert_at_line",
-            desc="将内容插入到文件的指定行号位置",
-            args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
-                "content": ToolArgInfo(desc="要插入的内容", type="str"),
-            },
-            required_args=["filepath", "line_number", "content"],
-        )(insert_at_line)
 
     def test_read_file_rejects_binary_file(self):
         """测试read_file拒绝二进制文件"""
@@ -136,19 +124,6 @@ class TestFileValidation(unittest.TestCase):
             {
                 "filepath": "./tests/test_binary.zip",
                 "expression": "s/test/replacement/",
-            },
-        )
-        self.assertIn("不是纯文本文件", str(result))
-
-    def test_insert_at_line_rejects_binary_file(self):
-        """测试insert_at_line拒绝二进制文件"""
-        result = self.toolset.call_tool(
-            "insert_at_line",
-            {
-                "filepath": "./tests/test_binary.zip",
-                "line_number": 1,
-                "content": "inserted content",
-                "expected_line_content": "dummy",
             },
         )
         self.assertIn("不是纯文本文件", str(result))

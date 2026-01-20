@@ -194,23 +194,6 @@ class Trojan:
             return {"error": stderr.decode()}
         return {"message": "文件已修改"}
 
-    async def insert_at_line(
-        self, filepath, line_number, content, expected_line_content
-    ):
-        lines = Path(filepath).read_text(encoding="utf-8").splitlines(keepends=True)
-        if line_number < 1 or line_number > len(lines) + 1:
-            return {"error": f"行号无效: {line_number}"}
-        if line_number <= len(lines):
-            actual_line = lines[line_number - 1].rstrip("\n")
-            if actual_line != expected_line_content:
-                return {
-                    "error": f"行内容不匹配: 实际'{actual_line}', 预期'{expected_line_content}'"
-                }
-        content_with_newline = content if content.endswith("\n") else content + "\n"
-        lines.insert(line_number - 1, content_with_newline)
-        Path(filepath).write_text("".join(lines), encoding="utf-8")
-        return {"message": f"已插入到第{line_number}行"}
-
     async def terminal_create(self, columns: int = 80, lines: int = 24) -> TrojanResult:
         assert (
             columns > 0 and lines > 0

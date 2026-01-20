@@ -464,35 +464,6 @@ class MachineControlToolSet(ToolSet):
             return await host_control.modify_file_with_sed(expression, filepath)
 
         @self.register_tool(
-            name="insert_at_line",
-            desc="将内容插入到文件的指定行号位置。内容将会插入到原有行之前，如行号为1则插入到开头，行号为2则插入到第二行之前，第一行之后。建议：在插入新内容时优先使用此工具，但是在多次修改文件时行号容易变化，此时不要使用此工具以避免出错。注意：调用时需提供预期插入位置的当前行内容（不含换行符）以验证行号准确性。",
-            args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "line_number": ToolArgInfo(desc="要插入的行号（从1开始）", type="int"),
-                "content": ToolArgInfo(desc="要插入的内容", type="str"),
-                "expected_line_content": ToolArgInfo(
-                    desc="预期插入位置的当前行内容（不含换行符）", type="str"
-                ),
-            },
-            required_args=[
-                "filepath",
-                "line_number",
-                "content",
-                "expected_line_content",
-            ],
-            conflict_with=[],
-        )
-        async def insert_at_line_tool(
-            filepath: str, line_number: int, content: str, expected_line_content: str
-        ) -> ToolResultSuccess | ToolResultFailed:
-            host_control = self.machine_control.machines[
-                self.machine_control.target_machine
-            ]
-            return await host_control.insert_at_line(
-                filepath, line_number, content, expected_line_content
-            )
-
-        @self.register_tool(
             name="transfer_file",
             desc="将文件从一台机器传送到另一台机器上",
             args={
@@ -609,14 +580,6 @@ class HostControl(Protocol):
 
     async def modify_file_with_sed(
         self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed: ...
-
-    async def insert_at_line(
-        self,
-        filepath: str,
-        line_number: int,
-        content: str,
-        expected_line_content: str,
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed: ...

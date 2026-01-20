@@ -931,9 +931,104 @@ def is_existing_file(path_str: str) -> bool:
         return False
 
 
+class FileReadWriteConflictPlugin(Plugin):
+    """检查读写文件冲突的插件。
+
+    问题：agent有时会在一个回答中调用多个工具，在调用读取文件之后立即尝试修改，
+    即使此时根本没有看到文件内容。这是模型幻觉。
+    """
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+        self.read_files: set[str] = set()  # 已读取文件的绝对路径集合
+
+    async def before_message_generation(
+        self, _enable_compress: bool, _disable_waiting_user_warning: bool
+    ):
+        """在消息生成前清空已读取文件列表。"""
+        self.read_files.clear()
+
+    async def after_tool_call(
+        self,
+        agent: "Agent",
+        tool_call: ToolCallMessage,
+        tool_result: Any,
+        success: bool,
+    ) -> Optional[RuntimeMessage]:
+        """工具调用后回调，检查读写文件冲突。"""
+        # 只在master_host上检查
+        from linhai.machine_control import MachineControl
+
+        try:
+            machine_control = self.group_chat.get_members(
+                "machine_control", MachineControl
+            )
+            if machine_control.target_machine != "master_host":
+                return None
+        except Exception:
+            # 如果machine_control不存在，跳过检查
+            return None
+
+        if not success:
+            return None
+
+        tool_name = tool_call.function_name
+
+        # 处理读取文件工具
+        read_file_tools = {"read_file", "read_file_with_sed"}
+        if tool_name in read_file_tools:
+            filepath = tool_call.function_arguments.get("filepath")
+            if filepath:
+                try:
+                    abs_path = str(Path(filepath).resolve())
+                    self.read_files.add(abs_path)
+                except (OSError, ValueError):
+                    # 如果路径无法解析，跳过
+                    pass
+            return None
+
+        # 处理写入文件工具
+        write_file_tools = {
+            "write_file",
+            "replace_file_content",
+            "modify_file_with_sed",
+        }
+        if tool_name in write_file_tools:
+            filepath = tool_call.function_arguments.get("filepath")
+            if not filepath:
+                return None
+
+            try:
+                abs_path = str(Path(filepath).resolve())
+            except (OSError, ValueError):
+                return None
+
+            if abs_path in self.read_files:
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING",
+                        content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}",
+                    ),
+                )
+                return RuntimeMessage(
+                    f"警告：你刚刚读取了文件{filepath!r}，然后立即尝试修改它。\n"
+                    "注意：如果你没有看到文件内容（例如在同一个回答中连续调用多个工具），\n"
+                    "这是模型幻觉。你应该先读取文件，查看内容后再决定是否修改。\n"
+                    "建议：确保在修改文件之前已经读取并理解了文件内容。"
+                )
+
+        return None
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        """注册插件回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.register_after_tool_call(self.after_tool_call)
+
+
 class WithSecretParameterPositionPlugin(Plugin):
     """检查工具调用中with_secret参数位置错误的插件"""
-    
+
     async def after_tool_call(
         self,
         agent: "Agent",
@@ -943,21 +1038,18 @@ class WithSecretParameterPositionPlugin(Plugin):
     ) -> Optional[RuntimeMessage]:
         if success:
             return None
-        
+
         arguments = tool_call.function_arguments
-        if 'with_secret' not in arguments:
+        if "with_secret" not in arguments:
             return None
-        
+
         await self.group_chat.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
-                level="WARNING",
-                content="检测到with_secret参数位置错误"
-            )
+            CliRuntimeNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
         return RuntimeMessage(
             "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
-            "正确格式：{\"name\": \"tool_name\", \"with_secret\": [\"KEY\"], \"arguments\": {...}}"
+            '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
         )
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
@@ -967,16 +1059,16 @@ class WithSecretParameterPositionPlugin(Plugin):
 
 class MissingWithSecretWarningPlugin(Plugin):
     """检查未使用with_secret但包含<$KEY$>的插件"""
-    
+
     async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
         has_with_secret = tool_call.with_secret is not None
 
         arguments_str = str(tool_call.function_arguments)
-        has_secret_pattern = re.search(r'<\$[A-Z_]+\$>', arguments_str)
-        
+        has_secret_pattern = re.search(r"<\$[A-Z_]+\$>", arguments_str)
+
         if has_secret_pattern and not has_with_secret:
             agent = self.group_chat.get_members("agent", Agent)
-            if agent and hasattr(agent, 'message_processor'):
+            if agent and hasattr(agent, "message_processor"):
                 agent.message_processor.add_new_message(
                     RuntimeMessage(
                         "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
@@ -985,13 +1077,12 @@ class MissingWithSecretWarningPlugin(Plugin):
                         "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
                     )
                 )
-            
+
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
-                    level="INFO",
-                    content="检测到可能忘记使用with_secret的工具调用"
-                )
+                    level="INFO", content="检测到可能忘记使用with_secret的工具调用"
+                ),
             )
             return False
         return False
