@@ -117,6 +117,7 @@ unittest 失败时，必须分析
   - 当前的消息内容太吓人了
   - 改进：`检测到在思考后没有输出任何内容而是在</think>标签前就输出了工具调用等，应该在</think>标签后输出实际内容`
 - [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
+- [ ] WaitingUserPlugin没有在警告agent同时提示用户“已警告”，需要修改
 
 # 注意
 
