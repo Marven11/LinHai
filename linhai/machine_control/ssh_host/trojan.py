@@ -50,6 +50,7 @@ class Trojan:
     async def process_create(self, command, wait_second=1.0):
         process = await asyncio.create_subprocess_exec(
             *command,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.current_dir,
@@ -96,6 +97,81 @@ class Trojan:
                     }
                 )
             }
+
+    async def process_stdio_write(self, pid, content):
+        assert pid in self._processes, f"进程不存在: {pid}"
+        process = self._processes[pid]
+        assert process.stdin is not None, "进程没有stdin管道"
+        process.stdin.write(content.encode())
+        await process.stdin.drain()
+        return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
+
+    async def process_stdio_read(self, pid, unescape_ansi=True):
+        assert pid in self._processes, f"进程不存在: {pid}"
+        process = self._processes[pid]
+        stdout_data = b""
+        stderr_data = b""
+        if process.stdout:
+            try:
+                stdout_data = await process.stdout.read(32 * 1024)
+            except Exception:
+                pass
+        if process.stderr:
+            try:
+                stderr_data = await process.stderr.read(32 * 1024)
+            except Exception:
+                pass
+        stdout_str = stdout_data.decode("utf-8", errors="replace")
+        stderr_str = stderr_data.decode("utf-8", errors="replace")
+        return {
+            "message": json.dumps(
+                {
+                    "pid": pid,
+                    "stdout": stdout_str,
+                    "stderr": stderr_str,
+                }
+            )
+        }
+
+    async def process_wait(self, pid, timeout):
+        assert pid in self._processes, f"进程不存在: {pid}"
+        process = self._processes[pid]
+        try:
+            await asyncio.wait_for(process.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            return {"message": json.dumps({"pid": pid, "timeout": True})}
+        stdout_data, stderr_data = b"", b""
+        if process.stdout:
+            stdout_data = await process.stdout.read()
+        if process.stderr:
+            stderr_data = await process.stderr.read()
+        stdout_str = stdout_data.decode("utf-8", errors="replace")
+        stderr_str = stderr_data.decode("utf-8", errors="replace")
+        del self._processes[pid]
+        return {
+            "message": json.dumps(
+                {
+                    "pid": pid,
+                    "returncode": process.returncode,
+                    "stdout": stdout_str,
+                    "stderr": stderr_str,
+                }
+            )
+        }
+
+    async def process_kill(self, pid, graceful=True):
+        assert pid in self._processes, f"进程不存在: {pid}"
+        process = self._processes[pid]
+        if graceful:
+            process.terminate()
+        else:
+            process.kill()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=5)
+        except asyncio.TimeoutError:
+            return {"error": f"杀死进程 {pid} 超时"}
+        del self._processes[pid]
+        return {"message": f"进程 {pid} 已被杀死"}
 
     async def change_directory(self, directory):
         os.chdir(directory)

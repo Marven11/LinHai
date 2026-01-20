@@ -81,12 +81,26 @@ class WaitingUserPlugin(Plugin):
                         f"工具调用和等待用户是互斥的，请只选择其中一种方式"
                     )
                 )
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING",
+                        content="已警告agent：工具调用和等待用户冲突"
+                    )
+                )
                 return
             if agent.state == "working" and not tool_calls and not has_waiting_marker:
                 agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
                         f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
+                    )
+                )
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING",
+                        content="已警告agent：既没有调用工具也没有等待用户"
                     )
                 )
                 return

@@ -26,7 +26,7 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
         top_n: 返回前N个最相似的结果
 
     Returns:
-        包含相似度、行号和内容的字典列表
+        使用<<alternative>>包裹的相似内容字符串
     """
 
     linenum = search_string.count("\n") + 1
@@ -41,16 +41,13 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
         similarity = difflib.SequenceMatcher(None, search_string, chunk).ratio()
         similarities.append((similarity, i, chunk))
     similarities.sort(key=lambda x: x[0], reverse=True)
-    results = [
-        {
-            "similarity": similarity,
-            "start_line": chunk_index + 1,
-            "end_line": chunk_index + linenum,
-            "content": chunk_content,
-        }
-        for similarity, chunk_index, chunk_content in similarities[:top_n]
-    ]
-    return json.dumps(results, indent=2, ensure_ascii=False)
+    results = []
+    for similarity, chunk_index, chunk_content in similarities[:top_n]:
+        start_line = chunk_index + 1
+        end_line = chunk_index + linenum
+        message = f"相似度: {similarity:.2%}, 行号: {start_line}-{end_line}"
+        results.append(f"<<alternative>><<message>>{message}<<message>><<chunk>>{chunk_content}<<chunk>><<alternative>>")
+    return "\n".join(results)
 
 
 def validate_file(file_path: Path) -> str:
