@@ -2,20 +2,13 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
-- [x] 完全删除insert_at_line工具且清理相关代码，包括接口定义、函数实现等
-- [x] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
-  - 问题：agent有时会在一个回答中调用多个工具，在调用读取文件之后立即尝试修改，即使此时根本没有看到文件内容。这是模型幻觉
-  - 设计: 插件维护一个已经读取文件的列表，在回答生成之前清空列表，调用读取文件工具时将文件路径添加到列表，调用写入文件工具时检查路径是否在列表中
-  - 设计：仅在当前机器为master_host时检查
-  - 添加对应unittest
-- [x] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
-  - 这是一个较大的重构，需要仔细修改所有使用ToolCallResultMessage的地方
-  - 这样我们可以
-    1. 在一个地方管理如何转为repr
-    2. 保存后可以在json中直接查看object形式的参数
-  - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
-- [x] 运行所有unittest
+- [ ] trojan.py不支持process_*系列工具，需要修改并测试
+  - 根据SshMachineControl编写，确认可以对接
+  - 需要分别为SshMachineControl和trojan.py编写测试，确认它们可以正常构造、发送、接收、解析所有process_*工具的请求响应
+    - 这意味着需要为每个process_*工具，为SshMachineControl和trojan.py，为构造、发送、接收、解析分别编写unittest，总量为`2*2*4`个新unittest
+- [ ] 让find_most_similar_in_files使用`<<>>`组织内容
+  - 问题：当前格式使用repr，导致文件内容字符串被转义
+  - 解决方案：仿照其他使用`<<>>`组织内容的地方，用`<<alternative>>`包裹每个可能的匹配
 
 # 代码要求
 
@@ -73,9 +66,6 @@ unittest 失败时，必须分析
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
 - [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
-- [ ] 让find_most_similar_in_files使用`<<>>`组织内容
-  - 问题：当前格式使用repr，导致文件内容字符串被转义
-  - 解决方案：仿照其他使用`<<>>`组织内容的地方，用`<<alternative>>`包裹每个可能的匹配
 - [ ] 改进OnlyReasoningPlugin的RuntimeMessage
   - 当前的消息内容太吓人了
   - 改进：`检测到在思考后没有输出任何内容而是在</think>标签前就输出了工具调用等，应该在</think>标签后输出实际内容`
