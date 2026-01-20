@@ -2,14 +2,19 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 重写linhai/machine_control/ssh_host/trojan.py使其符合深层价值观
-  - 有以下问题
-    - 过量try catch, 应该仅在_handle_request中保留一处try catch
-    - 位置错误的import
-    - 存在pyright错误
-    - 无用注释
-    - 在函数内定义辅助函数
-  - 检查代码是否精简到500行以内，如果没有则继续精简
+- [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
+- [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
+  - 问题：agent有时会在一个回答中调用多个工具，在调用读取文件之后立即尝试修改，即使此时根本没有看到文件内容。这是模型幻觉
+  - 设计: 插件维护一个已经读取文件的列表，在回答生成之前清空列表，调用读取文件工具时将文件路径添加到列表，调用写入文件工具时检查路径是否在列表中
+  - 设计：仅在当前机器为master_host时检查
+  - 添加对应unittest
+- [ ] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
+  - 这是一个较大的重构，需要仔细修改所有使用ToolCallResultMessage的地方
+  - 这样我们可以
+    1. 在一个地方管理如何转为repr
+    2. 保存后可以在json中直接查看object形式的参数
+  - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
+- [ ] 运行所有unittest
 
 # 代码要求
 
@@ -64,25 +69,15 @@ unittest 失败时，必须分析
   - 将当前历史消息存放在 context.json 中
     - 可能需要重构当前保存读取消息的方法，以标记每个消息的类型，便于恢复
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
-- [ ] 添加插件检查读写文件冲突：检查是否在读取一个文件后立即写入
-  - 问题：agent有时会在一个回答中调用多个工具，在调用读取文件之后立即尝试修改，即使此时根本没有看到文件内容。这是模型幻觉
-  - 设计: 插件维护一个已经读取文件的列表，在回答生成之前清空列表，调用读取文件工具时将文件路径添加到列表，调用写入文件工具时检查路径是否在列表中
-  - 设计：仅在当前机器为master_host时检查
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
 - [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
-- [ ] ToolCallResultMessage接受参数的repr不合理，应该接受参数本身（一个字典），然后在to_llm_message中再转换为repr
-  - 这样我们可以
-    1. 在一个地方管理如何转为repr
-    2. 保存后可以在json中直接查看object形式的参数
-  - 需要检查转为repr后是否设置了maxstring=100限制字符串长度
 - [ ] 让find_most_similar_in_files使用`<<>>`组织内容
   - 问题：当前格式使用repr，导致文件内容字符串被转义
   - 解决方案：仿照其他使用`<<>>`组织内容的地方，用`<<alternative>>`包裹每个可能的匹配
 - [ ] 改进OnlyReasoningPlugin的RuntimeMessage
   - 当前的消息内容太吓人了
   - 改进：`检测到在思考后没有输出任何内容而是在</think>标签前就输出了工具调用等，应该在</think>标签后输出实际内容`
-- [ ] asyncio.iscoroutinefunction 将在 python 3.16 中被移除，需要改成 inspect.iscoroutinefunction
 - [ ] 用户用-f指定的文件没有使用FileContentMessage，应该改正
   - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
 - [ ] WaitingUserPlugin没有在警告agent同时提示用户“已警告”，需要修改
