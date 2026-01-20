@@ -9,6 +9,8 @@ import base64
 import fcntl
 import platform
 import asyncio
+import tempfile
+import shutil
 from pathlib import Path
 from typing import TypedDict, Dict, Union, Set
 from asyncio import Semaphore
@@ -46,198 +48,168 @@ class Trojan:
         self.active_tasks: Set[asyncio.Task] = set()
 
     async def process_create(self, command, wait_second=1.0):
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.current_dir,
-            )
-            pid = str(process.pid)
-            self._processes[pid] = process
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=self.current_dir,
+        )
+        pid = str(process.pid)
+        self._processes[pid] = process
 
-            elapsed = 0.0
-            while elapsed < wait_second:
-                await asyncio.sleep(0.1)
-                elapsed += 0.1
-                if process.returncode is not None:
-                    break
-
-            stdout_data, stderr_data = b"", b""
-            if process.stdout:
-                stdout_data = await process.stdout.read()
-            if process.stderr:
-                stderr_data = await process.stderr.read()
-
-            stdout_str = stdout_data.decode("utf-8", errors="replace")
-            stderr_str = stderr_data.decode("utf-8", errors="replace")
-
+        elapsed = 0.0
+        while elapsed < wait_second:
+            await asyncio.sleep(0.1)
+            elapsed += 0.1
             if process.returncode is not None:
-                del self._processes[pid]
-                return {
-                    "message": json.dumps(
-                        {
-                            "pid": pid,
-                            "returncode": process.returncode,
-                            "stdout": stdout_str,
-                            "stderr": stderr_str,
-                        }
-                    )
-                }
-            else:
-                return {
-                    "message": json.dumps(
-                        {
-                            "pid": pid,
-                            "stdout": stdout_str,
-                            "stderr": stderr_str,
-                            "message": "程序仍然在运行",
-                        }
-                    )
-                }
-        except Exception as e:
-            return {"error": str(e)}
+                break
+
+        stdout_data, stderr_data = b"", b""
+        if process.stdout:
+            stdout_data = await process.stdout.read()
+        if process.stderr:
+            stderr_data = await process.stderr.read()
+
+        stdout_str = stdout_data.decode("utf-8", errors="replace")
+        stderr_str = stderr_data.decode("utf-8", errors="replace")
+
+        if process.returncode is not None:
+            del self._processes[pid]
+            return {
+                "message": json.dumps(
+                    {
+                        "pid": pid,
+                        "returncode": process.returncode,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                    }
+                )
+            }
+        else:
+            return {
+                "message": json.dumps(
+                    {
+                        "pid": pid,
+                        "stdout": stdout_str,
+                        "stderr": stderr_str,
+                        "message": "程序仍然在运行",
+                    }
+                )
+            }
 
     async def change_directory(self, directory):
-        try:
-            os.chdir(directory)
-            self.current_dir = os.getcwd()
-            return {"message": f"已切换到目录: {self.current_dir}"}
-        except Exception as e:
-            return {"error": str(e)}
+        os.chdir(directory)
+        self.current_dir = os.getcwd()
+        return {"message": f"已切换到目录: {self.current_dir}"}
 
     async def read_file(self, filepath, show_line_numbers=False):
-        try:
-            with open(filepath, "rb") as f:
-                content = bytearray()
-                while True:
-                    chunk = f.read(128 * 1024)
-                    if not chunk:
-                        break
-                    content.extend(chunk)
-                    await asyncio.sleep(0)
-            text_content = content.decode("utf-8")
-            if show_line_numbers:
-                lines = text_content.splitlines()
-                numbered = [f"{i+1}: {line}" for i, line in enumerate(lines)]
-                text_content = "\n".join(numbered)
-            return {"message": text_content}
-        except Exception as e:
-            return {"error": str(e)}
+        with open(filepath, "rb") as f:
+            content = bytearray()
+            while True:
+                chunk = f.read(128 * 1024)
+                if not chunk:
+                    break
+                content.extend(chunk)
+                await asyncio.sleep(0)
+        text_content = content.decode("utf-8")
+        if show_line_numbers:
+            lines = text_content.splitlines()
+            numbered = [f"{i+1}: {line}" for i, line in enumerate(lines)]
+            text_content = "\n".join(numbered)
+        return {"message": text_content}
 
     async def write_file(self, filepath, content, override=False):
-        try:
-            if os.path.exists(filepath) and not override:
-                return {"error": f"文件已存在: {filepath}"}
-            Path(filepath).write_text(content, encoding="utf-8")
-            return {"message": f"文件已写入: {filepath}"}
-        except Exception as e:
-            return {"error": str(e)}
+        if os.path.exists(filepath) and not override:
+            return {"error": f"文件已存在: {filepath}"}
+        Path(filepath).write_text(content, encoding="utf-8")
+        return {"message": f"文件已写入: {filepath}"}
 
     async def replace_file_content(self, filepath, old, new, replace_times=None):
-        try:
-            content = Path(filepath).read_text(encoding="utf-8")
-            if old not in content:
-                return {"error": f"未找到内容: {old}"}
-            if replace_times is None:
-                if content.count(old) != 1:
-                    return {"error": f"找到多次匹配: {content.count(old)}次"}
-                new_content = content.replace(old, new, 1)
-                count = 1
-            elif replace_times > 0:
-                new_content = content.replace(old, new, replace_times)
-                count = replace_times
-            elif replace_times == -1:
-                new_content = content.replace(old, new)
-                count = content.count(old)
-            else:
-                return {"error": f"无效的替换次数: {replace_times}"}
-            Path(filepath).write_text(new_content, encoding="utf-8")
-            return {"message": f"已替换{count}次"}
-        except Exception as e:
-            return {"error": str(e)}
+        content = Path(filepath).read_text(encoding="utf-8")
+        if old not in content:
+            return {"error": f"未找到内容: {old}"}
+        if replace_times is None:
+            if content.count(old) != 1:
+                return {"error": f"找到多次匹配: {content.count(old)}次"}
+            new_content = content.replace(old, new, 1)
+            count = 1
+        elif replace_times > 0:
+            new_content = content.replace(old, new, replace_times)
+            count = replace_times
+        elif replace_times == -1:
+            new_content = content.replace(old, new)
+            count = content.count(old)
+        else:
+            return {"error": f"无效的替换次数: {replace_times}"}
+        Path(filepath).write_text(new_content, encoding="utf-8")
+        return {"message": f"已替换{count}次"}
 
     async def list_files(self, dirpath):
-        try:
-            path = Path(dirpath)
-            if not path.exists():
-                return {"error": f"路径不存在: {dirpath}"}
-            items = []
-            for item in path.iterdir():
-                is_dir = item.is_dir()
-                size = item.stat().st_size if not is_dir else 0
-                items.append({"name": item.name, "is_dir": is_dir, "size": size})
-            lines = []
-            for item in items:
-                dir_mark = "📁" if item["is_dir"] else "📄"
-                size = f" ({item['size']}B)" if not item["is_dir"] else ""
-                lines.append(f"{dir_mark} {item['name']}{size}")
-            return {"message": "\n".join(lines)}
-        except Exception as e:
-            return {"error": str(e)}
+        path = Path(dirpath)
+        if not path.exists():
+            return {"error": f"路径不存在: {dirpath}"}
+        items = []
+        for item in path.iterdir():
+            is_dir = item.is_dir()
+            size = item.stat().st_size if not is_dir else 0
+            items.append({"name": item.name, "is_dir": is_dir, "size": size})
+        lines = []
+        for item in items:
+            dir_mark = "📁" if item["is_dir"] else "📄"
+            size = f" ({item['size']}B)" if not item["is_dir"] else ""
+            lines.append(f"{dir_mark} {item['name']}{size}")
+        return {"message": "\n".join(lines)}
 
     async def get_absolute_path(self, path):
-        try:
-            abs_path = Path(path).absolute()
-            return {"message": str(abs_path)}
-        except Exception as e:
-            return {"error": str(e)}
+        abs_path = Path(path).absolute()
+        return {"message": str(abs_path)}
 
     async def read_file_with_sed(self, expression, filepath):
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "sed",
-                "-n",
-                expression,
-                filepath,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                return {"error": stderr.decode()}
-            return {"message": stdout.decode()}
-        except Exception as e:
-            return {"error": str(e)}
+        process = await asyncio.create_subprocess_exec(
+            "sed",
+            "-n",
+            expression,
+            filepath,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            return {"error": stderr.decode()}
+        return {"message": stdout.decode()}
 
     async def modify_file_with_sed(self, expression: str, filepath: str) -> dict:
-        try:
-            system = platform.system()
-            if system == "Darwin":
-                cmd = ["sed", "-i", "", expression, filepath]
-            else:
-                cmd = ["sed", "-i", expression, filepath]
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                return {"error": stderr.decode()}
-            return {"message": "文件已修改"}
-        except Exception as e:
-            return {"error": str(e)}
+        system = platform.system()
+        if system == "Darwin":
+            cmd = ["sed", "-i", "", expression, filepath]
+        else:
+            cmd = ["sed", "-i", expression, filepath]
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            return {"error": stderr.decode()}
+        return {"message": "文件已修改"}
 
     async def insert_at_line(
         self, filepath, line_number, content, expected_line_content
     ):
-        try:
-            lines = Path(filepath).read_text(encoding="utf-8").splitlines(keepends=True)
-            if line_number < 1 or line_number > len(lines) + 1:
-                return {"error": f"行号无效: {line_number}"}
-            if line_number <= len(lines):
-                actual_line = lines[line_number - 1].rstrip("\n")
-                if actual_line != expected_line_content:
-                    return {
-                        "error": f"行内容不匹配: 实际'{actual_line}', 预期'{expected_line_content}'"
-                    }
-            content_with_newline = content if content.endswith("\n") else content + "\n"
-            lines.insert(line_number - 1, content_with_newline)
-            Path(filepath).write_text("".join(lines), encoding="utf-8")
-            return {"message": f"已插入到第{line_number}行"}
-        except Exception as e:
-            return {"error": str(e)}
+        lines = Path(filepath).read_text(encoding="utf-8").splitlines(keepends=True)
+        if line_number < 1 or line_number > len(lines) + 1:
+            return {"error": f"行号无效: {line_number}"}
+        if line_number <= len(lines):
+            actual_line = lines[line_number - 1].rstrip("\n")
+            if actual_line != expected_line_content:
+                return {
+                    "error": f"行内容不匹配: 实际'{actual_line}', 预期'{expected_line_content}'"
+                }
+        content_with_newline = content if content.endswith("\n") else content + "\n"
+        lines.insert(line_number - 1, content_with_newline)
+        Path(filepath).write_text("".join(lines), encoding="utf-8")
+        return {"message": f"已插入到第{line_number}行"}
 
     async def terminal_create(self, columns: int = 80, lines: int = 24) -> TrojanResult:
         assert (
@@ -360,14 +332,12 @@ class Trojan:
         return {"message": f"已关闭终端 {term_id}"}
 
     async def terminal_list(self) -> TrojanResult:
-        """返回所有终端列表"""
         if not self.terminals:
             return {"message": "<<terminals>>没有活动的终端<<terminals>>"}
 
         lines = []
         for term_id, terminal in self.terminals.items():
             try:
-                # 获取终端基本信息
                 term_info = {
                     "terminal_id": term_id,
                     "machine": "remote",
@@ -379,85 +349,65 @@ class Trojan:
                     f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<columns>>{term_info['columns']}<<columns>><<lines>>{term_info['lines']}<<lines>>"
                 )
             except Exception:
-                # 如果获取信息失败，至少返回终端ID
                 lines.append(
                     f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<screen>>无法获取终端信息<<screen>>"
                 )
         return {"message": "\n".join(lines)}
 
     async def get_file_size(self, filepath: str) -> TrojanResult:
-        try:
-            size = os.path.getsize(filepath)
-            return {"message": str(size)}
-        except Exception as e:
-            return {"error": str(e)}
+        size = os.path.getsize(filepath)
+        return {"message": str(size)}
 
     async def upload_chunk(self, chunk_data_base64: str, filepath: str) -> TrojanResult:
-        try:
-            chunk_data = base64.b64decode(chunk_data_base64)
-            Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-            with open(filepath, "wb") as f:
-                f.write(chunk_data)
-            return {"message": f"块已写入: {filepath}"}
-        except Exception as e:
-            return {"error": str(e)}
+        chunk_data = base64.b64decode(chunk_data_base64)
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+        with open(filepath, "wb") as f:
+            f.write(chunk_data)
+        return {"message": f"块已写入: {filepath}"}
 
     async def download_chunk(
         self, filepath: str, offset: int, length: int
     ) -> TrojanResult:
-        try:
-            with open(filepath, "rb") as f:
-                f.seek(offset)
-                chunk_data = f.read(length)
-                if not chunk_data:
-                    return {
-                        "error": f"偏移量超出文件范围: offset={offset}, length={length}"
-                    }
-                chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
-                return {"message": chunk_base64}
-        except Exception as e:
-            return {"error": str(e)}
+        with open(filepath, "rb") as f:
+            f.seek(offset)
+            chunk_data = f.read(length)
+            if not chunk_data:
+                return {
+                    "error": f"偏移量超出文件范围: offset={offset}, length={length}"
+                }
+            chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
+            return {"message": chunk_base64}
 
     async def concatenate_files(
         self, filepaths: list[str], output_path: str
     ) -> TrojanResult:
-        try:
-            with open(output_path, "wb") as outfile:
-                for filepath in filepaths:
-                    if not os.path.exists(filepath):
-                        return {"error": f"文件不存在: {filepath}"}
-                    with open(filepath, "rb") as infile:
-                        while True:
-                            chunk = infile.read(8192)
-                            if not chunk:
-                                break
-                            outfile.write(chunk)
-            return {"message": f"文件已拼接: {output_path}"}
-        except Exception as e:
-            return {"error": str(e)}
+        with open(output_path, "wb") as outfile:
+            for filepath in filepaths:
+                if not os.path.exists(filepath):
+                    return {"error": f"文件不存在: {filepath}"}
+                with open(filepath, "rb") as infile:
+                    while True:
+                        chunk = infile.read(8192)
+                        if not chunk:
+                            break
+                        outfile.write(chunk)
+        return {"message": f"文件已拼接: {output_path}"}
 
     async def create_temp_dir(self, prefix: str = "temp") -> TrojanResult:
-        try:
-            import tempfile
-
-            temp_dir = tempfile.mkdtemp(prefix=prefix)
-            return {"message": temp_dir}
-        except Exception as e:
-            return {"error": str(e)}
+        temp_dir = tempfile.mkdtemp(prefix=prefix)
+        return {"message": temp_dir}
 
     async def remove_path(self, path: str) -> TrojanResult:
-        try:
-            import shutil
+        if os.path.isfile(path) or os.path.islink(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            return {"error": f"路径不存在: {path}"}
+        return {"message": f"已删除: {path}"}
 
-            if os.path.isfile(path) or os.path.islink(path):
-                os.remove(path)
-            elif os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                return {"error": f"路径不存在: {path}"}
-            return {"message": f"已删除: {path}"}
-        except Exception as e:
-            return {"error": str(e)}
+    def _remove_task(self, t):
+        self.active_tasks.remove(t)
 
     async def _handle_request(self, method, params, request_id):
         async with self.semaphore:
@@ -494,11 +444,7 @@ class Trojan:
             params = request_data.get("params", {})
             task = asyncio.create_task(self._handle_request(method, params, request_id))
             self.active_tasks.add(task)
-
-            def remove_task(t):
-                self.active_tasks.remove(t)
-
-            task.add_done_callback(remove_task)
+            task.add_done_callback(self._remove_task)
 
     async def read_input(self):
         loop = asyncio.get_event_loop()
