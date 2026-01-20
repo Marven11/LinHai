@@ -16,6 +16,7 @@
     - task完成后将响应写入queue
     - 定时从响应queue中取出响应并写进stdout
     - 去除无用的请求queue
+- [ ] 重新测试第一个任务中的脚本是否可以使用
 - [ ] 为SshMachineControl添加两个方法用于支持transfer_file功能的实现
   - upload_file_concurrent: 接收一个bytes，分块并发上传到目标，写入到指定文件路径
     - 检查文件路径是否已经存在，如果存在则报错
@@ -29,6 +30,7 @@
   - 需要对应修改trojan.py
   - 为这两个方法添加unittest
   - 为了接口干净，也可以为master host实现这些方法，但是完全不需要并发（因为没有网络请求），只需要简单地复制文件即可
+- [ ] 基于第一个任务中的脚本在./tmp编写第二个脚本测试upload_file_concurrent和download_file_concurrent的功能
 - [ ] 运行unittest确保在实现transfer_file之前基本正常
 - [ ] transfer_file功能: 将文件从一台机器传送到另一台机器上
   - 参数：from_filepath, from_machine, to_filepath, to_machine
@@ -36,6 +38,7 @@
     - 检查from_machine和to_machine是否不同
     - 将文件从from_machine上下载到master_host的临时路径
     - 将文件从master_host上传到to_machine
+- [ ] 基于第一个任务中的脚本在./tmp编写第三个脚本测试transfer_file的功能
 - [ ] 在终端中启动linhai并测试
   - 打包当前目录为/tmp/linhai.tar.gz
   - 确认当前时间，然后在终端中启动`uv run python -m linhai -m '@nothink 将/tmp/linhai.tar.gz上传到dell nixos的/home/cube文件夹然后退出'`
