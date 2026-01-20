@@ -10,7 +10,8 @@ import fcntl
 import platform
 import asyncio
 from pathlib import Path
-from typing import TypedDict, Dict, Union
+from typing import TypedDict, Dict, Union, Set
+from asyncio import Semaphore
 
 
 class TerminalDict(TypedDict):
@@ -40,6 +41,9 @@ class Trojan:
         self._processes: Dict[str, asyncio.subprocess.Process] = {}
         self.stdout_lock = asyncio.Lock()
         self.request_queue = asyncio.Queue()
+        self.response_queue = asyncio.Queue()
+        self.semaphore = Semaphore(32)
+        self.active_tasks: Set[asyncio.Task] = set()
 
     async def process_create(self, command, wait_second=1.0):
         try:
@@ -71,21 +75,25 @@ class Trojan:
             if process.returncode is not None:
                 del self._processes[pid]
                 return {
-                    "message": json.dumps({
-                        "pid": pid,
-                        "returncode": process.returncode,
-                        "stdout": stdout_str,
-                        "stderr": stderr_str,
-                    })
+                    "message": json.dumps(
+                        {
+                            "pid": pid,
+                            "returncode": process.returncode,
+                            "stdout": stdout_str,
+                            "stderr": stderr_str,
+                        }
+                    )
                 }
             else:
                 return {
-                    "message": json.dumps({
-                        "pid": pid,
-                        "stdout": stdout_str,
-                        "stderr": stderr_str,
-                        "message": "程序仍然在运行",
-                    })
+                    "message": json.dumps(
+                        {
+                            "pid": pid,
+                            "stdout": stdout_str,
+                            "stderr": stderr_str,
+                            "message": "程序仍然在运行",
+                        }
+                    )
                 }
         except Exception as e:
             return {"error": str(e)}
@@ -178,7 +186,10 @@ class Trojan:
     async def read_file_with_sed(self, expression, filepath):
         try:
             process = await asyncio.create_subprocess_exec(
-                "sed", "-n", expression, filepath,
+                "sed",
+                "-n",
+                expression,
+                filepath,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -208,7 +219,9 @@ class Trojan:
         except Exception as e:
             return {"error": str(e)}
 
-    async def insert_at_line(self, filepath, line_number, content, expected_line_content):
+    async def insert_at_line(
+        self, filepath, line_number, content, expected_line_content
+    ):
         try:
             lines = Path(filepath).read_text(encoding="utf-8").splitlines(keepends=True)
             if line_number < 1 or line_number > len(lines) + 1:
@@ -221,7 +234,7 @@ class Trojan:
                     }
             content_with_newline = content if content.endswith("\n") else content + "\n"
             lines.insert(line_number - 1, content_with_newline)
-            Path(filepath).write_text(''.join(lines), encoding="utf-8")
+            Path(filepath).write_text("".join(lines), encoding="utf-8")
             return {"message": f"已插入到第{line_number}行"}
         except Exception as e:
             return {"error": str(e)}
@@ -240,7 +253,9 @@ class Trojan:
         env["LINES"] = str(lines)
 
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/env", "bash", "-i",
+            "/usr/bin/env",
+            "bash",
+            "-i",
             stdin=slave,
             stdout=slave,
             stderr=slave,
@@ -348,7 +363,7 @@ class Trojan:
         """返回所有终端列表"""
         if not self.terminals:
             return {"message": "<<terminals>>没有活动的终端<<terminals>>"}
-        
+
         lines = []
         for term_id, terminal in self.terminals.items():
             try:
@@ -360,21 +375,92 @@ class Trojan:
                     "columns": terminal["columns"],
                     "lines": terminal["lines"],
                 }
-                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<columns>>{term_info['columns']}<<columns>><<lines>>{term_info['lines']}<<lines>>")
+                lines.append(
+                    f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<columns>>{term_info['columns']}<<columns>><<lines>>{term_info['lines']}<<lines>>"
+                )
             except Exception:
                 # 如果获取信息失败，至少返回终端ID
-                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<screen>>无法获取终端信息<<screen>>")
+                lines.append(
+                    f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>remote<<machine>><<screen>>无法获取终端信息<<screen>>"
+                )
         return {"message": "\n".join(lines)}
 
-    async def process_requests(self):
-        while True:
-            request = await self.request_queue.get()
-            if request is None:
-                break
-            request_data, request_id = request
-            method = request_data.get("method")
-            params = request_data.get("params", {})
+    async def get_file_size(self, filepath: str) -> TrojanResult:
+        try:
+            size = os.path.getsize(filepath)
+            return {"message": str(size)}
+        except Exception as e:
+            return {"error": str(e)}
 
+    async def upload_chunk(self, chunk_data_base64: str, filepath: str) -> TrojanResult:
+        try:
+            chunk_data = base64.b64decode(chunk_data_base64)
+            Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+            with open(filepath, "wb") as f:
+                f.write(chunk_data)
+            return {"message": f"块已写入: {filepath}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def download_chunk(
+        self, filepath: str, offset: int, length: int
+    ) -> TrojanResult:
+        try:
+            with open(filepath, "rb") as f:
+                f.seek(offset)
+                chunk_data = f.read(length)
+                if not chunk_data:
+                    return {
+                        "error": f"偏移量超出文件范围: offset={offset}, length={length}"
+                    }
+                chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
+                return {"message": chunk_base64}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def concatenate_files(
+        self, filepaths: list[str], output_path: str
+    ) -> TrojanResult:
+        try:
+            with open(output_path, "wb") as outfile:
+                for filepath in filepaths:
+                    if not os.path.exists(filepath):
+                        return {"error": f"文件不存在: {filepath}"}
+                    with open(filepath, "rb") as infile:
+                        while True:
+                            chunk = infile.read(8192)
+                            if not chunk:
+                                break
+                            outfile.write(chunk)
+            return {"message": f"文件已拼接: {output_path}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def create_temp_dir(self, prefix: str = "temp") -> TrojanResult:
+        try:
+            import tempfile
+
+            temp_dir = tempfile.mkdtemp(prefix=prefix)
+            return {"message": temp_dir}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def remove_path(self, path: str) -> TrojanResult:
+        try:
+            import shutil
+
+            if os.path.isfile(path) or os.path.islink(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                return {"error": f"路径不存在: {path}"}
+            return {"message": f"已删除: {path}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def _handle_request(self, method, params, request_id):
+        async with self.semaphore:
             try:
                 if hasattr(self, method):
                     result = await getattr(self, method)(**params)
@@ -391,19 +477,39 @@ class Trojan:
                     "id": request_id,
                     "error": {"message": str(e)},
                 }
+            await self.response_queue.put(response)
 
-            async with self.stdout_lock:
-                print(json.dumps(response), flush=True)
+    async def process_requests(self):
+        while True:
+            request = await self.request_queue.get()
+            if request is None:
+                for task in self.active_tasks:
+                    task.cancel()
+                if self.active_tasks:
+                    await asyncio.gather(*self.active_tasks, return_exceptions=True)
+                await self.response_queue.put(None)
+                break
+            request_data, request_id = request
+            method = request_data.get("method")
+            params = request_data.get("params", {})
+            task = asyncio.create_task(self._handle_request(method, params, request_id))
+            self.active_tasks.add(task)
+
+            def remove_task(t):
+                self.active_tasks.remove(t)
+
+            task.add_done_callback(remove_task)
 
     async def read_input(self):
         loop = asyncio.get_event_loop()
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
         await loop.connect_read_pipe(lambda: protocol, sys.stdin)
-        
+
         while True:
             line = await reader.readline()
             if not line:
+                await self.request_queue.put(None)
                 break
             line = line.decode().strip()
             if not line:
@@ -415,12 +521,24 @@ class Trojan:
             except Exception:
                 pass
 
+    async def write_responses(self):
+        while True:
+            response = await self.response_queue.get()
+            if response is None:
+                break
+            async with self.stdout_lock:
+                print(json.dumps(response), flush=True)
+
 
 async def main():
     trojan = Trojan()
     reader_task = asyncio.create_task(trojan.read_input())
     processor_task = asyncio.create_task(trojan.process_requests())
-    await asyncio.gather(reader_task, processor_task)
+    writer_task = asyncio.create_task(trojan.write_responses())
+    try:
+        await asyncio.gather(reader_task, processor_task, writer_task)
+    except asyncio.CancelledError:
+        pass
 
 
 if __name__ == "__main__":

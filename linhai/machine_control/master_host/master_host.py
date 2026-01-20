@@ -285,6 +285,7 @@ class MasterHostControl:
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
         """获取所有终端列表"""
         from .terminal import terminals
+
         if not terminals:
             return ToolResultSuccess(content="<<terminals>>没有活动的终端<<terminals>>")
         lines = []
@@ -292,7 +293,40 @@ class MasterHostControl:
             # 获取终端状态信息
             try:
                 screen = terminal.get_screen()
-                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>{screen}<<screen>>")
+                lines.append(
+                    f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>{screen}<<screen>>"
+                )
             except Exception:
-                lines.append(f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>无法获取屏幕内容<<screen>>")
+                lines.append(
+                    f"<<terminal_id>>{term_id}<<terminal_id>><<machine>>master_host<<machine>><<screen>>无法获取屏幕内容<<screen>>"
+                )
         return ToolResultSuccess(content="\n".join(lines))
+
+    async def upload_file_concurrent(
+        self, data: bytes, remote_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        import os
+        import pathlib
+
+        if os.path.exists(remote_path):
+            return ToolResultFailed(content=f"文件已存在: {remote_path}")
+        try:
+            pathlib.Path(remote_path).write_bytes(data)
+            return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+        except Exception as e:
+            return ToolResultFailed(content=f"上传文件失败: {e}")
+
+    async def download_file_concurrent(
+        self, remote_path: str, local_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        import os
+        import pathlib
+
+        if not os.path.exists(remote_path):
+            return ToolResultFailed(content=f"文件不存在: {remote_path}")
+        try:
+            data = pathlib.Path(remote_path).read_bytes()
+            pathlib.Path(local_path).write_bytes(data)
+            return ToolResultSuccess(content=f"文件已下载: {local_path}")
+        except Exception as e:
+            return ToolResultFailed(content=f"下载文件失败: {e}")

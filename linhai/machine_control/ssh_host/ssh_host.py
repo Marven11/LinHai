@@ -316,14 +316,6 @@ class SshMachineControl:
             工具执行结果
         """
         try:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"在SSH机器 {self.host}:{self.port} 上执行命令: {name}",
-                ),
-            )
-
             result = await self._send_request(name, args)
             if "error" in result:
                 return ToolResultFailed(content=f"工具执行失败: {result['error']}")
@@ -545,17 +537,13 @@ class SshMachineControl:
         self, pid: str, timeout: float
     ) -> ToolResultSuccess | ToolResultFailed:
         """等待进程结束，带超时设置"""
-        return await self.call_tool(
-            "process_wait", {"pid": pid, "timeout": timeout}
-        )
+        return await self.call_tool("process_wait", {"pid": pid, "timeout": timeout})
 
     async def process_kill(
         self, pid: str, graceful: bool = True
     ) -> ToolResultSuccess | ToolResultFailed:
         """杀死进程，可选择优雅终止"""
-        return await self.call_tool(
-            "process_kill", {"pid": pid, "graceful": graceful}
-        )
+        return await self.call_tool("process_kill", {"pid": pid, "graceful": graceful})
 
     async def change_directory(
         self, directory: str
@@ -697,6 +685,208 @@ class SshMachineControl:
                 "expected_line_content": expected_line_content,
             },
         )
+
+    async def upload_file_concurrent(
+        self, data: bytes, remote_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """并发上传文件到远程机器。
+
+        Args:
+            data: 文件内容（bytes）
+            remote_path: 远程文件路径
+
+        Returns:
+            执行结果
+        """
+        try:
+            import base64
+            import math
+
+            chunk_size = 32 * 1024
+            num_chunks = math.ceil(len(data) / chunk_size)
+
+            temp_dir_result = await self.call_tool(
+                "create_temp_dir", {"prefix": "upload_"}
+            )
+            if isinstance(temp_dir_result, ToolResultFailed):
+                return ToolResultFailed(
+                    content=f"创建临时目录失败: {temp_dir_result.content}"
+                )
+            temp_dir = temp_dir_result.content
+
+            max_concurrent = 16
+            max_retries = 3
+            done_chunks = 0
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def upload_chunk_with_retry(
+                chunk_index: int, chunk_data: bytes
+            ) -> tuple[int, str]:
+                nonlocal done_chunks
+                for attempt in range(max_retries):
+                    try:
+                        async with semaphore:
+                            chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
+                            chunk_filename = f"chunk_{chunk_index:010d}"
+                            chunk_path = f"{temp_dir}/{chunk_filename}"
+                            result = await self.call_tool(
+                                "upload_chunk",
+                                {
+                                    "chunk_data_base64": chunk_base64,
+                                    "filepath": chunk_path,
+                                },
+                            )
+                            if isinstance(result, ToolResultSuccess):
+                                done_chunks += 1
+                                if done_chunks % 50 == 10:
+                                    await self.group_chat.send_if_exists(
+                                        "ui_log",
+                                        CliRuntimeNotice(
+                                            level="INFO",
+                                            content=f"上传文件已完成: {done_chunks}/{num_chunks}",
+                                        ),
+                                    )
+                                return (chunk_index, chunk_path)
+                            else:
+                                if attempt == max_retries - 1:
+                                    raise RuntimeError(f"上传块失败: {result.content}")
+                    except Exception as e:
+                        if attempt == max_retries - 1:
+                            raise e
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                raise RuntimeError("所有重试都失败")
+
+            chunk_paths = []
+            tasks = []
+            for i in range(num_chunks):
+                start = i * chunk_size
+                end = min((i + 1) * chunk_size, len(data))
+                chunk_data = data[start:end]
+                task = asyncio.create_task(upload_chunk_with_retry(i, chunk_data))
+                tasks.append(task)
+                await asyncio.sleep(0)
+
+            for i, task in enumerate(tasks):
+                try:
+                    chunk_index, chunk_path = await task
+                    chunk_paths.append((chunk_index, chunk_path))
+                except Exception as e:
+                    for t in tasks[i + 1 :]:
+                        t.cancel()
+                    await asyncio.gather(*tasks[i + 1 :], return_exceptions=True)
+                    await self.call_tool("remove_path", {"path": temp_dir})
+                    return ToolResultFailed(content=f"上传块失败: {e}")
+
+            chunk_paths.sort(key=lambda x: x[0])
+            chunk_paths_sorted = [path for _, path in chunk_paths]
+            concat_result = await self.call_tool(
+                "concatenate_files",
+                {"filepaths": chunk_paths_sorted, "output_path": remote_path},
+            )
+            if isinstance(concat_result, ToolResultFailed):
+                await self.call_tool("remove_path", {"path": temp_dir})
+                return concat_result
+
+            await self.call_tool("remove_path", {"path": temp_dir})
+            return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+
+        except Exception as e:
+            return ToolResultFailed(content=f"并发上传文件失败: {e}")
+
+    async def download_file_concurrent(
+        self, remote_path: str, local_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """从远程机器并发下载文件到本地。
+
+        Args:
+            remote_path: 远程文件路径
+            local_path: 本地保存路径
+
+        Returns:
+            执行结果
+        """
+        try:
+            import base64
+            import math
+
+            size_result = await self.call_tool(
+                "get_file_size", {"filepath": remote_path}
+            )
+            if isinstance(size_result, ToolResultFailed):
+                return ToolResultFailed(
+                    content=f"获取文件大小失败: {size_result.content}"
+                )
+
+            try:
+                file_size = int(size_result.content)
+            except ValueError:
+                return ToolResultFailed(
+                    content=f"无效的文件大小: {size_result.content}"
+                )
+
+            chunk_size = 32 * 1024
+            num_chunks = math.ceil(file_size / chunk_size)
+
+            max_concurrent = 16
+            max_retries = 3
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def download_chunk_with_retry(chunk_index: int) -> bytes:
+                for attempt in range(max_retries):
+                    try:
+                        async with semaphore:
+                            offset = chunk_index * chunk_size
+                            length = min(chunk_size, file_size - offset)
+                            result = await self.call_tool(
+                                "download_chunk",
+                                {
+                                    "filepath": remote_path,
+                                    "offset": offset,
+                                    "length": length,
+                                },
+                            )
+                            if isinstance(result, ToolResultSuccess):
+                                chunk_data = base64.b64decode(result.content)
+                                if len(chunk_data) != length:
+                                    raise RuntimeError(
+                                        f"下载块大小不匹配: 预期{length}, 实际{len(chunk_data)}"
+                                    )
+                                return chunk_data
+                            else:
+                                if attempt == max_retries - 1:
+                                    raise RuntimeError(f"下载块失败: {result.content}")
+                    except Exception as e:
+                        if attempt == max_retries - 1:
+                            raise e
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                raise RuntimeError("所有重试都失败")
+
+            chunks = [None] * num_chunks
+            tasks = []
+            for i in range(num_chunks):
+                task = asyncio.create_task(download_chunk_with_retry(i))
+                tasks.append(task)
+
+            for i, task in enumerate(tasks):
+                try:
+                    chunk_data = await task
+                    chunks[i] = chunk_data
+                except Exception as e:
+                    for t in tasks[i + 1 :]:
+                        t.cancel()
+                    await asyncio.gather(*tasks[i + 1 :], return_exceptions=True)
+                    return ToolResultFailed(content=f"下载块失败: {e}")
+
+            with open(local_path, "wb") as f:
+                for chunk_data in chunks:
+                    if chunk_data is None:
+                        return ToolResultFailed(content="块数据为None")
+                    f.write(chunk_data)
+
+            return ToolResultSuccess(content=f"文件已下载: {local_path}")
+
+        except Exception as e:
+            return ToolResultFailed(content=f"并发下载文件失败: {e}")
 
     async def _cleanup_remote_file(self, ssh_cmd: list[str], remote_path: str) -> None:
         """清理远程临时文件。

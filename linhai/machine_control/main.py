@@ -119,8 +119,6 @@ class MachineControlToolSet(ToolSet):
                 method, url, params, headers, data, follow_redirects, timeout
             )
 
-
-
         @self.register_tool(
             name="change_directory",
             desc="改变当前工作目录",
@@ -128,7 +126,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["directory"],
             conflict_with=None,
         )
-        async def change_directory_tool(directory: str) -> ToolResultSuccess | ToolResultFailed:
+        async def change_directory_tool(
+            directory: str,
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -139,7 +139,7 @@ class MachineControlToolSet(ToolSet):
             desc="创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。",
             args={
                 "command": ToolArgInfo(
-                    desc="命令列表，如[\"ls\", \"-la\"]", type="list[str]"
+                    desc='命令列表，如["ls", "-la"]', type="list[str]"
                 ),
                 "wait_second": ToolArgInfo(
                     desc="创建进程后等待的秒数，默认1.0秒", type="float"
@@ -246,7 +246,9 @@ class MachineControlToolSet(ToolSet):
                 "terminal_read_screen",
             ],
         )
-        async def create_terminal_tool(columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed:
+        async def create_terminal_tool(
+            columns: int = 80, lines: int = 24
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -303,7 +305,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["terminal_id"],
             conflict_with=["terminal_create"],
         )
-        async def read_terminal_screen_tool(terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
+        async def read_terminal_screen_tool(
+            terminal_id: str,
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -316,7 +320,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["terminal_id"],
             conflict_with=None,
         )
-        async def close_terminal_tool(terminal_id: str) -> ToolResultSuccess | ToolResultFailed:
+        async def close_terminal_tool(
+            terminal_id: str,
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -413,7 +419,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["path"],
             conflict_with=None,
         )
-        async def get_absolute_path_tool(path: str) -> ToolResultSuccess | ToolResultFailed:
+        async def get_absolute_path_tool(
+            path: str,
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -429,7 +437,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["expression", "filepath"],
             conflict_with=[],
         )
-        async def read_file_with_sed_tool(expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
+        async def read_file_with_sed_tool(
+            expression: str, filepath: str
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -445,7 +455,9 @@ class MachineControlToolSet(ToolSet):
             required_args=["expression", "filepath"],
             conflict_with=[],
         )
-        async def modify_file_with_sed_tool(expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed:
+        async def modify_file_with_sed_tool(
+            expression: str, filepath: str
+        ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
@@ -480,6 +492,33 @@ class MachineControlToolSet(ToolSet):
                 filepath, line_number, content, expected_line_content
             )
 
+        @self.register_tool(
+            name="transfer_file",
+            desc="将文件从一台机器传送到另一台机器上",
+            args={
+                "from_filepath": ToolArgInfo(desc="源文件路径", type="str"),
+                "from_machine": ToolArgInfo(desc="源机器ID", type="str"),
+                "to_filepath": ToolArgInfo(desc="目标文件路径", type="str"),
+                "to_machine": ToolArgInfo(desc="目标机器ID", type="str"),
+            },
+            required_args=[
+                "from_filepath",
+                "from_machine",
+                "to_filepath",
+                "to_machine",
+            ],
+            conflict_with=None,
+        )
+        async def transfer_file_tool(
+            from_filepath: str,
+            from_machine: str,
+            to_filepath: str,
+            to_machine: str,
+        ) -> ToolResultSuccess | ToolResultFailed:
+            return await self.machine_control.transfer_file(
+                from_filepath, from_machine, to_filepath, to_machine
+            )
+
 
 def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet:
     """注册所有工具"""
@@ -500,19 +539,33 @@ class HostControl(Protocol):
         timeout: int = 60,
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def change_directory(self, directory: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def change_directory(
+        self, directory: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def process_create(self, command: list[str], wait_second: float = 1.0) -> ToolResultSuccess | ToolResultFailed: ...
+    async def process_create(
+        self, command: list[str], wait_second: float = 1.0
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def process_stdio_write(self, pid: str, content: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def process_stdio_write(
+        self, pid: str, content: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def process_stdio_read(self, pid: str, unescape_ansi: bool = True) -> ToolResultSuccess | ToolResultFailed: ...
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def process_wait(self, pid: str, timeout: float) -> ToolResultSuccess | ToolResultFailed: ...
+    async def process_wait(
+        self, pid: str, timeout: float
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def process_kill(self, pid: str, graceful: bool) -> ToolResultSuccess | ToolResultFailed: ...
+    async def process_kill(
+        self, pid: str, graceful: bool
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_create(self, columns: int = 80, lines: int = 24) -> ToolResultSuccess | ToolResultFailed: ...
+    async def terminal_create(
+        self, columns: int = 80, lines: int = 24
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
@@ -522,9 +575,13 @@ class HostControl(Protocol):
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_read_screen(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def terminal_read_screen(
+        self, terminal_id: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def terminal_close(self, terminal_id: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def terminal_close(
+        self, terminal_id: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
@@ -538,13 +595,21 @@ class HostControl(Protocol):
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def list_files(
+        self, dirpath: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def get_absolute_path(self, path: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def get_absolute_path(
+        self, path: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def read_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def read_file_with_sed(
+        self, expression: str, filepath: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def modify_file_with_sed(self, expression: str, filepath: str) -> ToolResultSuccess | ToolResultFailed: ...
+    async def modify_file_with_sed(
+        self, expression: str, filepath: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def insert_at_line(
         self,
@@ -640,12 +705,12 @@ class MachineControl:
             # result.content 应该是格式化的终端信息
             if result.content:
                 all_terminals.append(f"机器 {machine_id}:\n{result.content}")
-        
+
         if not all_terminals:
             content = "当前所有机器上都没有终端"
         else:
             content = "\n\n".join(all_terminals)
-        
+
         return ToolResultSuccess(content=content)
 
     async def list_machines(self) -> ToolResultSuccess:
@@ -655,6 +720,87 @@ class MachineControl:
             lines.append(f"  - {machine_id}: {description}{current}")
 
         return ToolResultSuccess(content="\n".join(lines))
+
+    async def transfer_file(
+        self,
+        from_filepath: str,
+        from_machine: str,
+        to_filepath: str,
+        to_machine: str,
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """将文件从一台机器传输到另一台机器。
+
+        Args:
+            from_filepath: 源文件路径
+            from_machine: 源机器ID
+            to_filepath: 目标文件路径
+            to_machine: 目标机器ID
+
+        Returns:
+            执行结果
+        """
+        try:
+            import tempfile
+            import os
+
+            if from_machine == to_machine:
+                return ToolResultFailed(content=f"源机器和目标机器相同: {from_machine}")
+
+            if from_machine not in self.machines:
+                return ToolResultFailed(content=f"源机器不存在: {from_machine}")
+            if to_machine not in self.machines:
+                return ToolResultFailed(content=f"目标机器不存在: {to_machine}")
+
+            from_control = self.machines[from_machine]
+            to_control = self.machines[to_machine]
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".transfer") as tmp:
+                temp_path = tmp.name
+
+            try:
+                if hasattr(from_control, "download_file_concurrent"):
+                    download_result = await from_control.download_file_concurrent(
+                        from_filepath, temp_path
+                    )
+                else:
+                    download_result = ToolResultFailed(
+                        content=f"源机器 {from_machine} 不支持文件下载"
+                    )
+
+                if isinstance(download_result, ToolResultFailed):
+                    return ToolResultFailed(
+                        content=f"从源机器下载文件失败: {download_result.content}"
+                    )
+
+                with open(temp_path, "rb") as f:
+                    file_data = f.read()
+
+                if hasattr(to_control, "upload_file_concurrent"):
+                    upload_result = await to_control.upload_file_concurrent(
+                        file_data, to_filepath
+                    )
+                else:
+                    upload_result = ToolResultFailed(
+                        content=f"目标机器 {to_machine} 不支持文件上传"
+                    )
+
+                if isinstance(upload_result, ToolResultFailed):
+                    return ToolResultFailed(
+                        content=f"向目标机器上传文件失败: {upload_result.content}"
+                    )
+
+                return ToolResultSuccess(
+                    content=f"文件传输成功: {from_machine}:{from_filepath} -> {to_machine}:{to_filepath}"
+                )
+
+            finally:
+                try:
+                    os.unlink(temp_path)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            return ToolResultFailed(content=f"文件传输失败: {e}")
 
     def register_plugin(self, lifecycle):
         """注册插件到lifecycle。"""
@@ -705,7 +851,9 @@ class MachineControlPlugin:
     ) -> Optional[RuntimeMessage]:
         """在工具调用后更新连续使用on_machine的计数器并检查警告。"""
         on_machine = tool_call.on_machine
-        current_machine = self.machine_control.target_machine  # 工具调用后已恢复为原始机器
+        current_machine = (
+            self.machine_control.target_machine
+        )  # 工具调用后已恢复为原始机器
 
         if on_machine is None or on_machine != current_machine:
             # 没有使用on_machine或指定了不同的机器，重置计数器

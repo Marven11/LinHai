@@ -42,14 +42,12 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         """测试列出所有终端"""
         # 模拟get_terminals方法返回空终端列表
         mock_host_control = Mock()
-        mock_host_control.get_terminals = AsyncMock(
-            return_value=Mock(content="")
-        )
+        mock_host_control.get_terminals = AsyncMock(return_value=Mock(content=""))
         self.machine_control.machines = {"master_host": mock_host_control}
-        
+
         result = await self.machine_control.list_all_terminals()
         self.assertIn("当前所有机器上都没有终端", result.content)
-        
+
         # 测试有终端的情况
         mock_host_control.get_terminals = AsyncMock(
             return_value=Mock(content="终端1: 运行中\n终端2: 空闲")
@@ -58,7 +56,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertIn("机器 master_host", result.content)
         self.assertIn("终端1", result.content)
         self.assertIn("终端2", result.content)
-        
+
         # 测试多个机器
         mock_host_control2 = Mock()
         mock_host_control2.get_terminals = AsyncMock(
@@ -66,7 +64,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         )
         self.machine_control.machines = {
             "master_host": mock_host_control,
-            "ssh_host": mock_host_control2
+            "ssh_host": mock_host_control2,
         }
         result = await self.machine_control.list_all_terminals()
         self.assertIn("机器 master_host", result.content)
@@ -100,6 +98,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         tool_names = list(toolset.tools.keys())
         self.assertIn("list_machines", tool_names)
         self.assertIn("switch_machine", tool_names)
+        self.assertIn("transfer_file", tool_names)
 
     def test_register_plugin(self):
         """测试注册插件"""
@@ -314,6 +313,143 @@ class TestToolResultFormat(unittest.IsolatedAsyncioTestCase):
         result = ToolResultFailed(content=content)
         self.assertEqual(result.content, content)
         self.assertIn("<<error>>", result.content)
+
+
+class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
+    """测试MasterHostControl的并发文件方法"""
+
+    def setUp(self):
+        self.host_control = MasterHostControl()
+
+    async def test_upload_file_concurrent_success(self):
+        """测试upload_file_concurrent成功"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "test.bin")
+            data = b"test data" * 1000
+            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+            result = await self.host_control.upload_file_concurrent(data, test_file)
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIn("文件已上传", result.content)
+            with open(test_file, "rb") as f:
+                written_data = f.read()
+            self.assertEqual(written_data, data)
+
+    async def test_upload_file_concurrent_file_exists(self):
+        """测试upload_file_concurrent文件已存在"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "test.bin")
+            with open(test_file, "wb") as f:
+                f.write(b"existing")
+            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+            result = await self.host_control.upload_file_concurrent(
+                b"new data", test_file
+            )
+            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIn("文件已存在", result.content)
+
+    async def test_download_file_concurrent_success(self):
+        """测试download_file_concurrent成功"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source_file = os.path.join(tmpdir, "source.bin")
+            dest_file = os.path.join(tmpdir, "dest.bin")
+            data = b"download test" * 500
+            with open(source_file, "wb") as f:
+                f.write(data)
+            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+            result = await self.host_control.download_file_concurrent(
+                source_file, dest_file
+            )
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIn("文件已下载", result.content)
+            with open(dest_file, "rb") as f:
+                downloaded_data = f.read()
+            self.assertEqual(downloaded_data, data)
+
+    async def test_download_file_concurrent_file_not_found(self):
+        """测试download_file_concurrent文件不存在"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dest_file = os.path.join(tmpdir, "dest.bin")
+            from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+            result = await self.host_control.download_file_concurrent(
+                "/nonexistent", dest_file
+            )
+            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIn("文件不存在", result.content)
+
+
+class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
+    """测试MachineControl的transfer_file方法"""
+
+    def setUp(self):
+        from unittest.mock import Mock
+        from linhai.group_chat import GroupChat
+
+        self.group_chat = Mock(spec=GroupChat)
+        from linhai.machine_control import MachineControl
+
+        self.machine_control = MachineControl(self.group_chat)
+
+    async def test_transfer_file_same_machine(self):
+        """测试同一台机器传输应失败"""
+        from linhai.tool.base import ToolResultFailed
+
+        result = await self.machine_control.transfer_file(
+            from_filepath="/tmp/source",
+            from_machine="master_host",
+            to_filepath="/tmp/dest",
+            to_machine="master_host",
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("不能在同一台机器上传输", result.content)
+
+    async def test_transfer_file_between_machines_mock(self):
+        """测试机器间传输（使用mock）"""
+        from unittest.mock import Mock, AsyncMock
+        from linhai.tool.base import ToolResultSuccess
+        from linhai.machine_control.master_host.master_host import MasterHostControl
+        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+
+        mock_master = Mock(spec=MasterHostControl)
+        mock_ssh = Mock(spec=SshMachineControl)
+        mock_master.download_file_concurrent = AsyncMock(
+            return_value=ToolResultSuccess(content="<<message>>下载成功<<message>>")
+        )
+        mock_ssh.upload_file_concurrent = AsyncMock(
+            return_value=ToolResultSuccess(content="<<message>>上传成功<<message>>")
+        )
+
+        self.machine_control.machines = {
+            "master_host": mock_master,
+            "ssh_host": mock_ssh,
+        }
+
+        result = await self.machine_control.transfer_file(
+            from_filepath="/tmp/source",
+            from_machine="ssh_host",
+            to_filepath="/tmp/dest",
+            to_machine="master_host",
+        )
+        from linhai.tool.base import ToolResultSuccess
+
+        self.assertIsInstance(result, ToolResultSuccess)
+        mock_master.download_file_concurrent.assert_called_once()
+        mock_ssh.upload_file_concurrent.assert_called_once()
 
 
 if __name__ == "__main__":
