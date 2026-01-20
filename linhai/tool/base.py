@@ -222,7 +222,10 @@ class ToolCallResultMessage(Message):
             status = "工具执行成功"
             data_or_error = f"<<data>>{self.content}<<data>>"
         else:
-            status = "工具执行失败"
+            status = (
+                "错误：工具执行失败，你需要缓慢且仔细地反思并总结："
+                "1. 失败的原因 2. 用户的需求 3. 你弄错了什么 4. 如何正确完成用户的需求 5. 如何避免工具失败"
+            )
             data_or_error = f"<<error>>{self.content}<<error>>"
 
         # 构建消息内容

@@ -89,11 +89,12 @@ class WaitingUserPlugin(Plugin):
                     )
                 )
                 return
-            if agent.state == "working" and not tool_calls and not has_waiting_marker:
+            if agent.state == "working" and not tool_calls and not has_waiting_marker and full_response.strip():
                 agent.message_processor.add_new_message(
                     RuntimeMessage(
-                        f"警告：你既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用），"
-                        f"你需要使用{WAITING_USER_MARKER!r}等待用户回答，否则你收不到用户的消息"
+                        f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
+                        f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：必须使用{WAITING_USER_MARKER!r}等待用户回答"
+                        "如果需要调用工具：必须输出工具调用"
                     )
                 )
                 await self.group_chat.send_if_exists(

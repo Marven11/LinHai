@@ -391,10 +391,6 @@ class ToolCallWidget(Static):
                     else json.dumps(value.value)
                 )
 
-                new_guessed_type = self._guess_content_type(final_value)
-                if not self.guessed_content_type or new_guessed_type:
-                    self.guessed_content_type = new_guessed_type
-
                 if "\n" in final_value:
                     backticks = "`" * self.get_backtick_count(final_value)
                     self.current_content = (
@@ -406,6 +402,10 @@ class ToolCallWidget(Static):
                         self.content_before_current_value
                         + f"{self.current_key}: `{final_value}`\n"
                     )
+
+                new_guessed_type = self._guess_content_type(final_value)
+                if not self.guessed_content_type or new_guessed_type:
+                    self.guessed_content_type = new_guessed_type
 
                 self.current_value = ""
 
