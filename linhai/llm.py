@@ -812,7 +812,6 @@ class OpenAi:
             "model": self.model,
             "messages": messages,
             "stream": True,
-            "temperature": 0.1,
             "timeout": 30,
             **self.chat_completion_kwargs,
         }
