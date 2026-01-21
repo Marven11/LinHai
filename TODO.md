@@ -88,6 +88,8 @@ unittest 失败时，必须分析
   - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
 - [ ] 查看tiktoken的文档，改进当前检查工具输出长度的逻辑和配置，使用tiktoken检查工具输出的token数量
 - [ ] 修改change_directory提示的消息，使其包含原目录，如“从目录xx切换到了xx”
+- [ ] 当前linhai/machine_control/ssh_host/ssh_host.py在和trojan.py通信时没有超时机制
+  - 需要改成等待至多60秒，如果超时就抛出exception，这个exception会被ToolManager转为错误信息传给agent所以不用担心
 - [ ] 添加初始化配置的功能
 
 # 注意
