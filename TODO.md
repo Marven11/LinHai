@@ -2,11 +2,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 修改change_directory提示的消息，使其包含原目录，如“从目录xx切换到了xx”
-- [ ] 当前linhai/machine_control/ssh_host/ssh_host.py在和trojan.py通信时没有超时机制
-  - 需要改成等待至多60秒，如果超时就抛出exception，这个exception会被ToolManager转为错误信息传给agent所以不用担心
-- [ ] 用户用-f指定的文件没有使用FileContentMessage，应该改正
-  - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
+- [ ] 当前总是阻止agent重新读取文件，这不太合理
+  - 改成如下机制：
+    - 如果agent第一次重复读取文件则警告agent不要这么做并增加全局计数器
+    - 第二次再次读取文件才阻止
+    - 如果使用read_file正确读取了文件则清空全局计数器
+      - 正确读取文件：指读取的文件内容和当前最新的不相同，或者文件没有读取过
 - [ ] 编写运行unittest
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
