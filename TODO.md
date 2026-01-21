@@ -86,6 +86,15 @@ unittest 失败时，必须分析
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
 - [ ] 添加初始化配置的功能
+- [ ] 改进PreviousReasoningPlugin的功能
+  - 现在PreviousReasoningPlugin被默认关闭，因为影响模型智商。需要改进后打开
+  - 现状：API提供商会保留最近一个user消息后的所有reasoning content以提高agent智商，避免agent重复思考
+  - 现状：当前项目大量使用user消息表示工具输出等信息，导致reasoning content几乎不会被保留
+  - 现状：PreviousReasoningPlugin提取最近几个reasoning content放在最新的content中规避这个问题
+  - 问题：PreviousReasoningPlugin将思考内容reasoning content提取后放在content中，这不合理，因为agent会混淆content和reasoning content
+  - 改进：让PreviousReasoningPlugin在messages中放入SpoofedReasoningMessage而非一个简单的拼接字符串
+    - PreviousReasoningPlugin提供合适的sort value保证SpoofedReasoningMessage被排在最后面，从而让api提供商保留这个message的reasoning content
+    - SpoofedReasoningMessage包含多个reasoning content，转成llm message后为{"role": "assitant", "content": "", "reasoning_content": 那些reasoning content的内容}
 
 # 注意
 
