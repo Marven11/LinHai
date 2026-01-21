@@ -2,11 +2,18 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 在提示红绿灯状态时提示agent当前的缓存比例
-  - [x] 在prompt中修改上下文管理的prompt，删除“避免使用清理工具”的笼统要求，添加“清理工具会破坏缓存，你需要控制缓存比例在90%以上”的要求
-  - [x] 将linhai/cli/token_manager.py移出cli/
-  - [x] 在linhai/agent/orchestration.py的_build_threshold_message中根据TokenManager获取并加入当前的缓存比例信息
-- [x] 运行unittest并修复所有错误和asyncio相关警告
+- [ ] process_create的默认等待时间由1秒改为30秒，并更新描述为“最多等待时间”
+- [ ] 改进ToolCallInReasoningPlugin
+  - 问题：agent有时会在思考中尝试调用一些工具，但是在实际输出时忘掉或者认为自己“已经调用”
+  - 当前仅在agent输出中完全没有调用思考时提到的工具时提示，这不合理
+  - 目标设计：找出所有在思考消息中使用json toolcall调用但是没有在实际输出中调用的工具调用
+    - 在判断“工具是否被调用”时，我们只检查工具名，即使此时工具参数不同也视为同类调用。
+- [ ] 改进OnlyReasoningPlugin的RuntimeMessage
+  - 当前的消息内容太吓人了
+  - 而且deepseek貌似使用thinking而不是think标签
+  - 改进：`检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容`
+
+注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
 # 代码要求
 
@@ -63,21 +70,11 @@ unittest 失败时，必须分析
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
-- [ ] 启动时塞一条runtime message，告知“当前时间为...初始pwd为...” 防止agent不知道当前时间，防止切换目录后忘记当前目录
-- [ ] 改进OnlyReasoningPlugin的RuntimeMessage
-  - 当前的消息内容太吓人了
-  - 改进：`检测到在思考后没有输出任何内容而是在</think>标签前就输出了工具调用等，应该在</think>标签后输出实际内容`
 - [ ] 用户用-f指定的文件没有使用FileContentMessage，应该改正
   - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
-- [ ] 改进ToolCallInReasoningPlugin
-  - 问题：agent有时会在思考中尝试调用一些工具，但是在实际输出时忘掉或者认为自己“已经调用”
-  - 当前仅在agent输出中完全没有调用思考时提到的工具时提示，这不合理
-  - 目标设计：找出所有在思考消息中使用json toolcall调用但是没有在实际输出中调用的工具调用
-    - 在判断“工具是否被调用”时，我们只检查工具名，即使此时工具参数不同也视为同类调用。
 - [ ] 查看tiktoken的文档，改进当前检查工具输出长度的逻辑和配置，使用tiktoken检查工具输出的token数量
 - [ ] 修改change_directory提示的消息，使其包含原目录，如“从目录xx切换到了xx”
 - [ ] 添加初始化配置的功能
-- [ ] process_create的默认等待时间由1秒改为30秒，并更新描述为“最多等待时间”
 
 # 注意
 
