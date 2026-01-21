@@ -2,16 +2,30 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] process_create的默认等待时间由1秒改为30秒，并更新描述为“最多等待时间”
-- [x] 改进ToolCallInReasoningPlugin
-  - 问题：agent有时会在思考中尝试调用一些工具，但是在实际输出时忘掉或者认为自己“已经调用”
-  - 当前仅在agent输出中完全没有调用思考时提到的工具时提示，这不合理
-  - 目标设计：找出所有在思考消息中使用json toolcall调用但是没有在实际输出中调用的工具调用
-    - 在判断“工具是否被调用”时，我们只检查工具名，即使此时工具参数不同也视为同类调用。
-- [x] 改进OnlyReasoningPlugin的RuntimeMessage
-  - 当前的消息内容太吓人了
-  - 而且deepseek貌似使用thinking而不是think标签
-  - 改进：`检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容`
+- [ ] 重构linhai/agent/orchestration.py
+  - 当前问题：嵌套函数太多，逻辑分散导致难以阅读和测试
+  - 期望行为：绿灯、黄灯：不拦截，一分钟内清理过：仅拦截上下文清理工具（因为最近已经清理过），红灯且一分钟内没有清理过：拦截，仅放行上下文清理工具
+    - 注意：llm返回的上下文信息有延迟，导致刚刚清理过仍然计算得到红灯
+    - 注意：持续绿灯时可以重复提示
+      - 旧有逻辑检测上一个状态是否是绿灯，据此判断是否需要重新提示
+      - 在新实现中我们使用update_appending_message直接防止重复提示的出现，因此不需要避免“重复提示”
+  - 删除last_threshold_state状态
+  - 计算编排上下文函数
+    - 根据当前状态和当前工具计算
+    - 计算并返回以下信息：threshold_info, 红绿灯，一分钟前是否清理过，提示消息，ToolBlockDetailsDict
+    - 合并这些函数的功能: _recently_called_cleanup_tool, get_tool_block_details, _determine_threshold_state, _build_threshold_message
+      - 这意味着要删除这些函数
+  - 插件仅通过“计算编排上下文函数”获得的信息判断是否拦截，仅从其中取出消息并发送
+    - 这意味着插件完全不计算消息，不拼接字符串
+  - 获得toolset的函数
+    - 合并get_message_management_toolset和get_workflow_toolset
+  - get_large_message_reprs
+    - 完全删除，相关逻辑移动到token_manager.py中，让token_manager.py直接获取large_messages
+  - 检查linhai/agent/orchestration.py是否在500行以内，如果没有则按照深层价值观继续重构
+  - 重新读取文件逐个检查以上逻辑是否完成
+  - 重写对应unittest重点检查“计算编排上下文函数”，要求逻辑和“期望行为”相同。如果有疑问参考原有unittest判断期望行为
+- [ ] 运行并修复所有unittest
+
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
