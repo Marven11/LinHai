@@ -135,13 +135,8 @@ class AgentToolcall:
 
         tool_manager.add_toolset(dummy_toolset)
 
-        message_management_toolset = (
-            self.agent.orchestration.get_message_management_toolset()
-        )
-        tool_manager.add_toolset(message_management_toolset)
-
-        workflow_toolset = self.agent.orchestration.get_workflow_toolset()
-        tool_manager.add_toolset(workflow_toolset)
+        orchestration_toolset = self.agent.orchestration.get_orchestration_toolset()
+        tool_manager.add_toolset(orchestration_toolset)
 
     async def ensure_mcp_connector(self):
 

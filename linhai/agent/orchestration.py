@@ -47,23 +47,9 @@ class AgentContextOrchestration:
         self.group_chat.register_member("agent_context_orchestration", self)
 
         self.large_messages: set[Message] = set()
-        self.last_threshold_state: Optional[str] = None
         self.last_compress_or_clean_time: Optional[float] = None
 
         self._register_lifecycle_callbacks()
-
-    def get_large_message_reprs(self, limit: int = 3) -> list[str]:
-        """获取大消息repr列表。
-
-        Args:
-            limit: 返回的最大数量
-
-        Returns:
-            大消息repr列表
-        """
-
-        reprs = [r.repr(msg) for msg in list(self.large_messages)[:limit]]
-        return reprs
 
     async def context_garbage_clean(self) -> ToolResultSuccess | ToolResultFailed:
         """清理所有大消息。
@@ -108,152 +94,78 @@ class AgentContextOrchestration:
         self.last_compress_or_clean_time = time.time()
         return f"context_thanox: 随机删除了{len(indices_to_delete)}条消息"
 
-    def add_soft_threshold_notification(
-        self,
-        threshold_info: ThresholdInfo,
-    ) -> Optional[str]:
-        """添加软限制消息提示。
-
-        Args:
-            threshold_info: 阈值信息
-        """
-        current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
-
-        if current_state == "绿灯" and self.last_threshold_state == "绿灯":
-            return None
-
-        self.last_threshold_state = current_state
-        message_content = self._build_threshold_message(
-            current_state,
-            threshold_info["hard_limit"],
-            threshold_info["used_tokens"],
-            threshold_info["usage_ratio"],
-        )
-        return message_content
-
-    async def check_and_handle_threshold(self, agent: "Agent") -> None:
-        """检查阈值并处理相应的通知和操作引导。
-
-        Args:
-            agent: Agent实例，用于获取阈值信息和token使用量
-        """
-        # 从agent获取阈值信息（用于判断当前token使用状态）
-        threshold_info = agent.get_threshold_info()
-        if threshold_info is None:
-            return
-
-        current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
-
-        recently_called_cleanup = self._recently_called_cleanup_tool()
-
-        if current_state == "红灯" and not recently_called_cleanup:
-            hard_limit = threshold_info["hard_limit"]
-            used_tokens = threshold_info["used_tokens"]
-            if used_tokens >= hard_limit:
-                await self.context_thanox()
-
-    def _recently_called_cleanup_tool(self) -> bool:
-        """检查一分钟内是否调用过消息清理工具。
-
-        Returns:
-            bool: 如果一分钟内调用过消息清理工具返回True，否则返回False
-        """
-        if not self.last_compress_or_clean_time:
-            return False
-        time_since_last_cleanup = time.time() - self.last_compress_or_clean_time
-        return time_since_last_cleanup < 60
-
-    def _determine_tool_category(self, tool_name: str) -> Literal["cleanup", "other"]:
-        """判断工具所属类别。
-
-        Returns:
-            str: 工具类别，可能的值为：
-                "cleanup" - 消息清理工具
-                "other" - 其他工具
-        """
-        if tool_name in {
-            "context_range_compress",
-            "context_garbage_clean",
-            "context_thanox",
-        }:
-            return "cleanup"
-
-        else:
-            return "other"
-
-    def get_tool_block_details(
-        self, tool_name: str, threshold_info: ThresholdInfo | None
-    ) -> ToolBlockDetailsDict:
-        """获取工具拦截的详细信息。
+    def compute_orchestration_context(
+        self, tool_name: str, threshold_info: Optional[ThresholdInfo]
+    ) -> dict:
+        """计算编排上下文信息，合并多个函数的功能。
 
         Args:
             tool_name: 工具名称
-            threshold_info: 阈值信息，如果为None则不拦截
+            threshold_info: 阈值信息，可能为None
 
         Returns:
             包含以下键的字典：
-                blocked_category: str | None, 应该拦截的工具类别，None表示不拦截
-                actual_category: str, 当前工具的实际类别 ("cleanup", "other")
-                recently_called_cleanup: bool, 最近是否调用过清理工具
-                current_state: str, 当前阈值状态
+                threshold_info: 传入的阈值信息
+                current_state: 红绿灯状态字符串
+                recently_called_cleanup: 布尔值，一分钟内是否调用过清理工具
+                notification_message: 提示消息字符串，可能为None
+                tool_block_details: ToolBlockDetailsDict
         """
         if threshold_info is None:
             return {
-                "blocked_category": None,
-                "actual_category": "other",
-                "recently_called_cleanup": False,
+                "threshold_info": None,
                 "current_state": "绿灯",
+                "recently_called_cleanup": False,
+                "notification_message": None,
+                "tool_block_details": {
+                    "blocked_category": None,
+                    "actual_category": "other",
+                    "recently_called_cleanup": False,
+                    "current_state": "绿灯",
+                },
             }
 
-        current_state = self._determine_threshold_state(threshold_info["usage_ratio"])
-        recently_called_cleanup = self._recently_called_cleanup_tool()
-        actual_category = self._determine_tool_category(tool_name)
+        usage_ratio = threshold_info["usage_ratio"]
+        percentage = usage_ratio * 100
+        if percentage < 70:
+            current_state = "绿灯"
+        elif 70 <= percentage < 90:
+            current_state = "黄灯"
+        else:
+            current_state = "红灯"
+        
+        recently_called_cleanup = False
+        if self.last_compress_or_clean_time:
+            time_since_last_cleanup = time.time() - self.last_compress_or_clean_time
+            recently_called_cleanup = time_since_last_cleanup < 60
+        
+        actual_category = "cleanup" if tool_name in {"context_range_compress", "context_garbage_clean", "context_thanox"} else "other"
 
-        # 直接根据状态和工具类别判断blocked_category
+        # 根据状态和清理工具调用情况确定blocked_category
         if current_state == "红灯":
             if recently_called_cleanup:
-                # 红灯状态，最近调用过清理，只阻塞清理工具
                 blocked_category = "cleanup"
             else:
-                # 红灯状态，没有调用过清理，只阻塞其他工具（允许清理工具）
                 blocked_category = "other"
         else:  # 绿灯或黄灯状态
             if recently_called_cleanup:
-                # 非红灯状态，最近调用过清理，只阻塞清理工具
                 blocked_category = "cleanup"
             else:
-                # 非红灯状态，没有调用过清理，不阻塞任何工具
                 blocked_category = None
 
-        return {
+        tool_block_details: ToolBlockDetailsDict = {
             "blocked_category": blocked_category,
             "actual_category": actual_category,
             "recently_called_cleanup": recently_called_cleanup,
             "current_state": current_state,
         }
 
-    def _determine_threshold_state(self, usage_ratio: float) -> str:
-        percentage = usage_ratio * 100
-        if percentage < 70:
-            return "绿灯"
-        elif 70 <= percentage < 90:
-            return "黄灯"
-        else:
-            return "红灯"
-
-    def _build_threshold_message(
-        self, current_state: str, hard_limit: int, used_tokens: int, usage_ratio: float
-    ) -> str:
-        message_count = len(self.agent_message.messages)
-        percentage = usage_ratio * 100
-        large_count = len(self.large_messages)
-        recently_called_cleanup = self._recently_called_cleanup_tool()
-
-        recently_called_text = "有" if recently_called_cleanup else "没有"
-
-        # 获取TokenManager实例并计算缓存比例
-        cache_ratio_text = ""
-        try:
+        # 构建通知消息
+        notification_message = None
+        if current_state != "绿灯" or recently_called_cleanup:
+            large_count = len(self.large_messages)
+            recently_called_text = "有" if recently_called_cleanup else "没有"
+            cache_ratio_text = ""
             token_manager = self.group_chat.get_members("token_manager", TokenManager)
             if token_manager.cumulative_token_usage is not None:
                 input_tokens = token_manager.cumulative_token_usage.get("input_tokens", 0)
@@ -261,37 +173,24 @@ class AgentContextOrchestration:
                 if input_tokens > 0:
                     cache_ratio = (cached_input_tokens / input_tokens) * 100
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
-                else:
-                    cache_ratio_text = ", 缓存比例: 0%"
-            else:
-                cache_ratio_text = ", 缓存比例: 无数据"
-        except Exception:
-            # 如果获取失败，忽略缓存比例信息
-            cache_ratio_text = ""
-
-        # 构建基础信息
-        base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具{cache_ratio_text}"
-
-        # 根据状态和条件添加建议
-        if recently_called_cleanup:
-            # 一分钟内调用过消息清理工具
-            if current_state == "红灯":
+            base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具{cache_ratio_text}"
+            if recently_called_cleanup:
                 suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
+            elif current_state == "红灯":
+                suggestion = "建议: 立即暂停当前任务"
+            elif current_state == "黄灯":
+                suggestion = "建议: 应该调用context_garbage_clean工具" if large_count >= 5 else "建议: 应该避免读取文件，直接开始修改文件"
             else:
-                suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
-        elif current_state == "红灯":
-            # 红灯状态，没有调用过清理工具
-            suggestion = "建议: 立即暂停当前任务"
-        elif current_state == "黄灯":
-            # 黄灯状态，没有调用过清理工具
-            if large_count >= 5:
-                suggestion = "建议: 应该调用context_garbage_clean工具"
-            else:
-                suggestion = "建议: 应该避免读取文件，直接开始修改文件"
-        else:  # 绿灯状态
-            suggestion = "建议: 不要担心消息限制，立即工作"
+                suggestion = "建议: 不要担心消息限制，立即工作"
+            notification_message = f"{base_info}, {suggestion}"
 
-        return f"{base_info}, {suggestion}"
+        return {
+            "threshold_info": threshold_info,
+            "current_state": current_state,
+            "recently_called_cleanup": recently_called_cleanup,
+            "notification_message": notification_message,
+            "tool_block_details": tool_block_details,
+        }
 
     def get_status_display_pieces(self, use_nerd_font: bool = False) -> list[str]:
         """获取状态显示片段列表，用于CLI底栏。
@@ -317,11 +216,11 @@ class AgentContextOrchestration:
 
         return pieces
 
-    def get_message_management_toolset(self) -> "ToolSet":
-        """获取消息管理工具集。
+    def get_orchestration_toolset(self) -> "ToolSet":
+        """获取编排工具集，合并消息管理和工作流工具。
 
         Returns:
-            包含消息管理工具的ToolSet
+            包含编排工具的ToolSet
         """
 
         toolset = ToolSet()
@@ -347,17 +246,6 @@ class AgentContextOrchestration:
             # 记录工具调用时间用于后续判断
             self.last_compress_or_clean_time = time.time()
             return await self.context_thanox()
-
-        return toolset
-
-    def get_workflow_toolset(self) -> "ToolSet":
-        """获取工作流工具集。
-
-        Returns:
-            包含工作流工具的ToolSet
-        """
-
-        toolset = ToolSet()
 
         @toolset.register_tool(
             name="context_range_compress",
@@ -385,6 +273,8 @@ class AgentContextOrchestration:
         # 注册大消息数量通知插件
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
+
+
 
     async def _on_after_tool_call(
         self,
@@ -435,10 +325,11 @@ class RedStateToolBlockPlugin:
         if orchestration is None:
             return False
 
-        # 使用orchestration的方法获取工具拦截详情
-        details = orchestration.get_tool_block_details(
+        # 使用新的compute_orchestration_context方法获取编排上下文
+        context = orchestration.compute_orchestration_context(
             tool_call.function_name, threshold_info
         )
+        details = context["tool_block_details"]
 
         if details["blocked_category"] == details["actual_category"]:
             recently_called_cleanup = details["recently_called_cleanup"]
@@ -495,10 +386,11 @@ class AppendingMessagePlugin:
         if orchestration is None:
             return
 
-        message_content = orchestration.add_soft_threshold_notification(threshold_info)
-        if message_content is not None:
+        context = orchestration.compute_orchestration_context("", threshold_info)
+        notification_message = context["notification_message"]
+        if notification_message is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content),
+                RuntimeMessage(notification_message),
                 source="threshold_notification",
                 sort_value=0,
             )
@@ -524,10 +416,11 @@ class AppendingMessagePlugin:
         if orchestration is None:
             return
 
-        message_content = orchestration.add_soft_threshold_notification(threshold_info)
-        if message_content is not None:
+        context = orchestration.compute_orchestration_context("", threshold_info)
+        notification_message = context["notification_message"]
+        if notification_message is not None:
             agent.message_processor.update_appending_message(
-                RuntimeMessage(message_content),
+                RuntimeMessage(notification_message),
                 source="threshold_notification",
                 sort_value=0,
             )

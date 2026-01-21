@@ -84,7 +84,7 @@ class Agent:
         self.compress_tool_called_in_last_response = False
         self.current_disable_waiting_user_warning = False
 
-        self.last_threshold_state = None
+
 
         self.current_answer: Answer | None = None
 
@@ -226,7 +226,7 @@ class Agent:
         else:
             await self.generate_response()
 
-        await self.orchestration.check_and_handle_threshold(self)
+
 
     def is_last_message_user(self) -> bool:
         if not self.message_processor.get_messages():

@@ -331,7 +331,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration.should_block_tool_call = MagicMock(return_value=False)
         
         # Mock get_tool_block_details返回实际的字典
-        def mock_get_tool_block_details(tool_name, threshold_info):
+        def mock_compute_orchestration_context(tool_name, threshold_info):
             if threshold_info is None:
                 return {
                     "blocked_category": None,
@@ -372,13 +372,19 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                     blocked_category = "cleanup"
             
             return {
-                "blocked_category": blocked_category,
-                "actual_category": actual_category,
+                "threshold_info": threshold_info,
+                "current_state": current_state,
                 "recently_called_cleanup": recently_called_cleanup,
-                "current_state": current_state
+                "notification_message": None,
+                "tool_block_details": {
+                    "blocked_category": blocked_category,
+                    "actual_category": actual_category,
+                    "recently_called_cleanup": recently_called_cleanup,
+                    "current_state": current_state
+                }
             }
         
-        self.orchestration.get_tool_block_details = MagicMock(side_effect=mock_get_tool_block_details)
+        self.orchestration.compute_orchestration_context = MagicMock(side_effect=mock_compute_orchestration_context)
 
         # 设置group_chat.get_members返回值
         def get_members_side_effect(name, cls):

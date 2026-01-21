@@ -43,7 +43,18 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         
         # Mock orchestration - 使用spec确保类型匹配
         self.mock_orchestration = MagicMock(spec=AgentContextOrchestration)
-        self.mock_orchestration.add_soft_threshold_notification = MagicMock(return_value=None)
+        self.mock_orchestration.compute_orchestration_context = MagicMock(return_value={
+            "threshold_info": None,
+            "current_state": "绿灯",
+            "recently_called_cleanup": False,
+            "notification_message": "当前Token用量为40000，硬限制为80000，当前使用50.0%（绿灯状态）。",
+            "tool_block_details": {
+                "blocked_category": None,
+                "actual_category": "other",
+                "recently_called_cleanup": False,
+                "current_state": "绿灯"
+            }
+        })
         self.group_chat.register_member("agent_context_orchestration", self.mock_orchestration)
 
     async def test_openai_answer_sends_token_usage(self):
@@ -120,7 +131,18 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         
         # 设置orchestration返回通知消息
         notification_msg = "当前Token用量为40000，硬限制为80000，当前使用50.0%（绿灯状态）。"
-        self.mock_orchestration.add_soft_threshold_notification.return_value = notification_msg
+        self.mock_orchestration.compute_orchestration_context.return_value = {
+            "threshold_info": threshold_info,
+            "current_state": "绿灯",
+            "recently_called_cleanup": False,
+            "notification_message": notification_msg,
+            "tool_block_details": {
+                "blocked_category": None,
+                "actual_category": "other",
+                "recently_called_cleanup": False,
+                "current_state": "绿灯"
+            }
+        }
         
         await plugin.before_message_generation(True, False)
         

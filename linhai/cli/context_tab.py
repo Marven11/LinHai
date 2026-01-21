@@ -267,7 +267,9 @@ class ContextTabWidget(Static):
         if large_messages:
             grid.add_row(Text(f"当前有{len(large_messages)}条大消息", style="bold"))
             # 获取大消息的repr列表，最多显示3条
-            repr_list = orchestration.get_large_message_reprs(limit=3)
+            repr_list = []
+            for msg in list(orchestration.large_messages)[:3]:
+                repr_list.append(reprlib.Repr(maxstring=60).repr(str(msg)))
             for i, repr_msg in enumerate(repr_list, 1):
                 grid.add_row(f"  {i}.", repr_msg)
             if len(large_messages) > 3:

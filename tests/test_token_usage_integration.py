@@ -80,7 +80,18 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         # Mock orchestration - 使用spec确保类型匹配
         mock_orchestration = MagicMock(spec=AgentContextOrchestration)
         notification_msg = "当前Token用量为40000，硬限制为80000，当前使用50.0%（绿灯状态）。"
-        mock_orchestration.add_soft_threshold_notification = MagicMock(return_value=notification_msg)
+        mock_orchestration.compute_orchestration_context = MagicMock(return_value={
+            "threshold_info": threshold_info,
+            "current_state": "绿灯",
+            "recently_called_cleanup": False,
+            "notification_message": notification_msg,
+            "tool_block_details": {
+                "blocked_category": None,
+                "actual_category": "other",
+                "recently_called_cleanup": False,
+                "current_state": "绿灯"
+            }
+        })
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
         
         # 导入并测试AppendingMessagePlugin
@@ -93,7 +104,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         
         # 验证调用
         mock_agent.get_threshold_info.assert_called_once()
-        mock_orchestration.add_soft_threshold_notification.assert_called_once_with(threshold_info)
+        mock_orchestration.compute_orchestration_context.assert_called_once_with("", threshold_info)
         mock_agent.message_processor.update_appending_message.assert_called_once()
         
         # 验证参数
