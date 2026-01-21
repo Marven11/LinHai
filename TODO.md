@@ -2,30 +2,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 重构linhai/agent/orchestration.py
-  - 当前问题：嵌套函数太多，逻辑分散导致难以阅读和测试
-  - 期望行为：绿灯、黄灯：不拦截，一分钟内清理过：仅拦截上下文清理工具（因为最近已经清理过），红灯且一分钟内没有清理过：拦截，仅放行上下文清理工具
-    - 注意：llm返回的上下文信息有延迟，导致刚刚清理过仍然计算得到红灯
-    - 注意：持续绿灯时可以重复提示
-      - 旧有逻辑检测上一个状态是否是绿灯，据此判断是否需要重新提示
-      - 在新实现中我们使用update_appending_message直接防止重复提示的出现，因此不需要避免“重复提示”
-  - 删除last_threshold_state状态
-  - 计算编排上下文函数
-    - 根据当前状态和当前工具计算
-    - 计算并返回以下信息：threshold_info, 红绿灯，一分钟前是否清理过，提示消息，ToolBlockDetailsDict
-    - 合并这些函数的功能: _recently_called_cleanup_tool, get_tool_block_details, _determine_threshold_state, _build_threshold_message
-      - 这意味着要删除这些函数
-  - 插件仅通过“计算编排上下文函数”获得的信息判断是否拦截，仅从其中取出消息并发送
-    - 这意味着插件完全不计算消息，不拼接字符串
-  - 获得toolset的函数
-    - 合并get_message_management_toolset和get_workflow_toolset
-  - get_large_message_reprs
-    - 完全删除，相关逻辑移动到token_manager.py中，让token_manager.py直接获取large_messages
-  - 检查linhai/agent/orchestration.py是否在500行以内，如果没有则按照深层价值观继续重构
-  - 重新读取文件逐个检查以上逻辑是否完成
-  - 重写对应unittest重点检查“计算编排上下文函数”，要求逻辑和“期望行为”相同。如果有疑问参考原有unittest判断期望行为
-- [x] 运行并修复所有unittest
-
+- [ ] 修改change_directory提示的消息，使其包含原目录，如“从目录xx切换到了xx”
+- [ ] 当前linhai/machine_control/ssh_host/ssh_host.py在和trojan.py通信时没有超时机制
+  - 需要改成等待至多60秒，如果超时就抛出exception，这个exception会被ToolManager转为错误信息传给agent所以不用担心
+- [ ] 用户用-f指定的文件没有使用FileContentMessage，应该改正
+  - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
+- [ ] 编写运行unittest
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
@@ -84,12 +66,7 @@ unittest 失败时，必须分析
   - 将规划文件、被删除的消息、大消息等都放进这个文件夹
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
-- [ ] 用户用-f指定的文件没有使用FileContentMessage，应该改正
-  - 每当用户用-f指定一个文件时仅仅放入FileContentMessage即可，不需要添加“用户用-f指定...”和“文件内容如下”这些提示
 - [ ] 查看tiktoken的文档，改进当前检查工具输出长度的逻辑和配置，使用tiktoken检查工具输出的token数量
-- [ ] 修改change_directory提示的消息，使其包含原目录，如“从目录xx切换到了xx”
-- [ ] 当前linhai/machine_control/ssh_host/ssh_host.py在和trojan.py通信时没有超时机制
-  - 需要改成等待至多60秒，如果超时就抛出exception，这个exception会被ToolManager转为错误信息传给agent所以不用担心
 - [ ] 添加初始化配置的功能
 
 # 注意
