@@ -93,7 +93,8 @@ class Trojan:
                         "pid": pid,
                         "stdout": stdout_str,
                         "stderr": stderr_str,
-                        "message": "程序仍然在运行",
+                        "message": f"等待失败，程序在{wait_second}秒后在运行。"
+                        "建议使用process_*系列工具进行读写stdio或者进一步等待程序",
                     }
                 )
             }

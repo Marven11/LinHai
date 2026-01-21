@@ -87,7 +87,8 @@ class MasterHostControl:
                 )
             else:
                 return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<message>>程序仍然在运行<<message>>"
+                    content=f"<<pid>>{pid}<<pid>><<message>>等待失败，程序在{wait_second}秒后在运行。"
+                    "建议使用process_*系列工具进行读写stdio或者进一步等待程序<<message>>"
                 )
         except Exception as e:
             return ToolResultFailed(content=str(e))
