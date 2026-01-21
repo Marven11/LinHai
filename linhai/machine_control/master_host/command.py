@@ -19,7 +19,8 @@ def change_directory(directory: str) -> ToolResultSuccess | ToolResultFailed:
          成功消息或错误信息
     """
     try:
+        old_dir = os.getcwd()
         os.chdir(directory)
-        return ToolResultSuccess(content=f"Changed directory to: {directory}")
+        return ToolResultSuccess(content=f"从目录{old_dir}切换到了{directory}")
     except OSError as e:
         return ToolResultFailed(content=f"Error changing directory: {str(e)}")

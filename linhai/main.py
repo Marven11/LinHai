@@ -103,11 +103,14 @@ def main():
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
+                    from linhai.agent.base import FileContentMessage
+
                     init_messages.append(
-                        f"用户使用-f选项指定了文件路径: {str(file_path)}"
-                    )
-                    init_messages.append(
-                        f"文件内容如下（注意：文件内容可能已过时，在历史压缩后需要重新读取）:\n{content}"
+                        FileContentMessage(
+                            filepath=str(file_path),
+                            content=content,
+                            show_line_numbers=False,
+                        )
                     )
             except FileNotFoundError:
                 print(f"错误: 文件 {file_path} 未找到")

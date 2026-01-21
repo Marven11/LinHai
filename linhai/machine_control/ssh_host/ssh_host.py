@@ -293,12 +293,19 @@ class SshMachineControl:
 
         self.results[request_id] = None
         try:
-            while self.results[request_id] is None:
-                await asyncio.sleep(0.01)
-            result = self.results.pop(request_id)
-            if result is None:
-                raise ConnectionError("未收到响应")
-            return result
+
+            async def wait_for_response() -> Dict[str, object]:
+                while self.results[request_id] is None:
+                    await asyncio.sleep(0.01)
+                result = self.results.pop(request_id)
+                if result is None:
+                    raise ConnectionError("未收到响应")
+                return result
+
+            return await asyncio.wait_for(wait_for_response(), timeout=60.0)
+        except asyncio.TimeoutError:
+            self.results.pop(request_id, None)
+            raise ConnectionError("请求超时（60秒）")
         except Exception as e:
             self.results.pop(request_id, None)
             raise e

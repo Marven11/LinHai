@@ -113,7 +113,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(callable(call_args[0][0]))
 
 
-class TestMasterHostControl(unittest.TestCase):
+class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
     """MasterHostControl测试类"""
 
     def setUp(self):
@@ -133,9 +133,27 @@ class TestMasterHostControl(unittest.TestCase):
         self.assertTrue(hasattr(self.host_control, "process_wait"))
         self.assertTrue(hasattr(self.host_control, "process_kill"))
 
-    def test_change_directory(self):
+    async def test_change_directory(self):
         """测试改变目录"""
-        self.assertTrue(hasattr(self.host_control, "change_directory"))
+        import os
+        from unittest.mock import patch
+        from linhai.tool.base import ToolResultSuccess
+
+        with (
+            patch(
+                "linhai.machine_control.master_host.command.os.getcwd"
+            ) as mock_getcwd,
+            patch("linhai.machine_control.master_host.command.os.chdir") as mock_chdir,
+        ):
+            mock_getcwd.return_value = "/old/dir"
+            mock_chdir.return_value = None
+
+            result = await self.host_control.change_directory("/new/dir")
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertEqual(result.content, "从目录/old/dir切换到了/new/dir")
+            mock_getcwd.assert_called_once()
+            mock_chdir.assert_called_once_with("/new/dir")
 
     def test_file_operations(self):
         """测试文件操作"""
