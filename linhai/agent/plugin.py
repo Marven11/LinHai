@@ -432,7 +432,7 @@ class OnlyReasoningPlugin(Plugin):
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_appending_message(
                 RuntimeMessage(
-                    "错误：不要只思考，不输出！你需要在</think>后输出内容以调用工具或回复用户！"
+                    "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容"
                 ),
                 source="only_reasoning",
                 sort_value=0,
@@ -521,21 +521,19 @@ class ToolCallInReasoningPlugin(Plugin):
             str(tool_call.get("name", "未知工具")) for tool_call in tool_calls
         }
 
-        if not reasoning_tool_names.isdisjoint(actual_tool_names):
+        missing_tools = reasoning_tool_names - actual_tool_names
+        if not missing_tools:
             return
 
-        tool_names = [
-            tool_call.get("name", "未知工具") for tool_call in tool_calls_in_reasoning
-        ]
-        unique_tool_names = list(set(tool_names))
+        missing_tool_names = list(missing_tools)
 
-        if len(unique_tool_names) == 1:
-            agent_warning_message = f"警告：你在推理内容中调用了工具'{unique_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
-            ui_warning_message = f"推理内容中检测到工具调用: {unique_tool_names[0]}"
+        if len(missing_tool_names) == 1:
+            agent_warning_message = f"警告：你在推理内容中调用了工具'{missing_tool_names[0]}'，但推理内容中的工具调用不会实际执行！"
+            ui_warning_message = f"推理内容中检测到工具调用: {missing_tool_names[0]}"
         else:
-            agent_warning_message = f"警告：你在推理内容中调用了工具{unique_tool_names}，但推理内容中的工具调用不会实际执行！"
+            agent_warning_message = f"警告：你在推理内容中调用了工具{missing_tool_names}，但推理内容中的工具调用不会实际执行！"
             ui_warning_message = (
-                f"推理内容中检测到工具调用: {', '.join(unique_tool_names)}"
+                f"推理内容中检测到工具调用: {', '.join(missing_tool_names)}"
             )
 
         agent.message_processor.add_new_message(RuntimeMessage(agent_warning_message))

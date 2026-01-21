@@ -2,13 +2,13 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] process_create的默认等待时间由1秒改为30秒，并更新描述为“最多等待时间”
-- [ ] 改进ToolCallInReasoningPlugin
+- [x] process_create的默认等待时间由1秒改为30秒，并更新描述为“最多等待时间”
+- [x] 改进ToolCallInReasoningPlugin
   - 问题：agent有时会在思考中尝试调用一些工具，但是在实际输出时忘掉或者认为自己“已经调用”
   - 当前仅在agent输出中完全没有调用思考时提到的工具时提示，这不合理
   - 目标设计：找出所有在思考消息中使用json toolcall调用但是没有在实际输出中调用的工具调用
     - 在判断“工具是否被调用”时，我们只检查工具名，即使此时工具参数不同也视为同类调用。
-- [ ] 改进OnlyReasoningPlugin的RuntimeMessage
+- [x] 改进OnlyReasoningPlugin的RuntimeMessage
   - 当前的消息内容太吓人了
   - 而且deepseek貌似使用thinking而不是think标签
   - 改进：`检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容`
