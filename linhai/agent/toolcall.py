@@ -168,7 +168,7 @@ class AgentToolcall:
             self.agent.state = "working"
 
         if self.early_return:
-            msg = f"工具调用被跳过: {tool_call.function_name}"
+            msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
             self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             await self.group_chat.send_if_exists(
                 "ui_log",
