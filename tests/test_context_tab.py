@@ -95,7 +95,7 @@ class TestContextTab(unittest.TestCase):
         )
 
         # 对于Mock对象，需要设置spec
-        from linhai.cli.token_manager import TokenManager
+        from linhai.token_manager import TokenManager
 
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
@@ -182,7 +182,7 @@ class TestContextTab(unittest.TestCase):
         mock_agent.last_token_usage_object = None
 
         # 设置token_manager的current_token_usage
-        from linhai.cli.token_manager import TokenManager
+        from linhai.token_manager import TokenManager
 
         mock_token_usage = AnswerTokenUsage(
             input_tokens=1000,

@@ -80,6 +80,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_member = MagicMock()
         self.group_chat.receive = AsyncMock()
         self.group_chat.send = AsyncMock()
+        self.group_chat.send_if_exists = AsyncMock()
         self.group_chat.is_empty = MagicMock(return_value=True)
         self.group_chat.get_members = MagicMock()
 

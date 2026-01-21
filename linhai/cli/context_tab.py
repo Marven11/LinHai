@@ -151,7 +151,7 @@ class ContextTabWidget(Static):
         if not self.group_chat.has_member("token_manager"):
             raise RuntimeError("token_manager should be registered in group_chat")
 
-        from linhai.cli.token_manager import TokenManager
+        from linhai.token_manager import TokenManager
 
         token_manager = self.group_chat.get_members("token_manager", TokenManager)
 

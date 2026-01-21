@@ -4,9 +4,9 @@
 
 - [ ] 在提示红绿灯状态时提示agent当前的缓存比例
   - [x] 在prompt中修改上下文管理的prompt，删除“避免使用清理工具”的笼统要求，添加“清理工具会破坏缓存，你需要控制缓存比例在90%以上”的要求
-  - [?] 将linhai/cli/token_manager.py移出cli/
-  - [ ] 在linhai/agent/orchestration.py的_build_threshold_message中根据TokenManager获取并加入当前的缓存比例信息
-- [ ] 运行unittest并修复所有错误和asyncio相关警告
+  - [x] 将linhai/cli/token_manager.py移出cli/
+  - [x] 在linhai/agent/orchestration.py的_build_threshold_message中根据TokenManager获取并加入当前的缓存比例信息
+- [x] 运行unittest并修复所有错误和asyncio相关警告
 
 # 代码要求
 

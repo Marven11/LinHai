@@ -584,6 +584,14 @@ class HostControl(Protocol):
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed: ...
 
+    async def download_file_concurrent(
+        self, remote_path: str, local_path: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def upload_file_concurrent(
+        self, data: bytes, remote_path: str
+    ) -> ToolResultSuccess | ToolResultFailed: ...
+
 
 class MachineControl:
     """机器控制管理器，负责注册工具和切换机器。"""

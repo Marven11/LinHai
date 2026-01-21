@@ -33,7 +33,7 @@ from .components import (
     FooterWidget,
 )
 from .context_tab import ContextTabWidget
-from .token_manager import TokenManager
+from ..token_manager import TokenManager
 from .command_handler import CommandHandler
 
 ASCII_ART = r"""

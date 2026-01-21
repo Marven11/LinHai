@@ -9,7 +9,7 @@ from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolResultSuccess
 
 
-class TestFileReadWriteConflictPlugin(unittest.TestCase):
+class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
     """测试文件读写冲突插件"""
     
     def setUp(self):
@@ -44,7 +44,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
         read_tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
-            tool_call_id="test-1",
+            assert_success=True,
             with_secret=[],
         )
         read_result = ToolResultSuccess(
@@ -67,7 +67,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
                 "content": "新内容",
                 "override": True,
             },
-            tool_call_id="test-2",
+            assert_success=True,
             with_secret=[],
         )
         write_result = ToolResultSuccess(
@@ -83,8 +83,8 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
         
         # 应该返回警告消息
         self.assertIsNotNone(result)
-        self.assertIn("警告", result.content)
-        self.assertIn(str(self.test_file), result.content)
+        self.assertIn("警告", result.message)
+        self.assertIn(str(self.test_file), result.message)
         
         # 应该调用了send_if_exists发送UI日志
         self.group_chat.send_if_exists.assert_called_once()
@@ -105,7 +105,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
         read_tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
-            tool_call_id="test-1",
+            assert_success=True,
             with_secret=[],
         )
         read_result = ToolResultSuccess(
@@ -127,7 +127,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
                 "content": "新内容",
                 "override": True,
             },
-            tool_call_id="test-2",
+            assert_success=True,
             with_secret=[],
         )
         write_result = ToolResultSuccess(
@@ -156,7 +156,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
         read_tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
-            tool_call_id="test-1",
+            assert_success=True,
             with_secret=[],
         )
         read_result = ToolResultSuccess(
@@ -178,7 +178,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
                 "content": "新内容",
                 "override": True,
             },
-            tool_call_id="test-2",
+            assert_success=True,
             with_secret=[],
         )
         write_result = ToolResultSuccess(
@@ -206,7 +206,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
                 "filepath": str(self.test_file),
                 "expression": "1p",
             },
-            tool_call_id="test-1",
+            assert_success=True,
             with_secret=[],
         )
         read_result = ToolResultSuccess(
@@ -228,7 +228,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
                 "old": "测试内容",
                 "new": "新内容",
             },
-            tool_call_id="test-2",
+            assert_success=True,
             with_secret=[],
         )
         write_result = ToolResultSuccess(
@@ -253,7 +253,7 @@ class TestFileReadWriteConflictPlugin(unittest.TestCase):
         read_tool_call = ToolCallMessage(
             function_name="read_file",
             function_arguments={"filepath": str(self.test_file)},
-            tool_call_id="test-1",
+            assert_success=True,
             with_secret=[],
         )
         read_result = ToolResultSuccess(

@@ -14,6 +14,7 @@ from linhai.group_chat import GroupChat
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
+from linhai.token_manager import TokenManager
 from .base import Message, RuntimeMessage
 from .message import AgentMessage
 
@@ -250,8 +251,26 @@ class AgentContextOrchestration:
 
         recently_called_text = "有" if recently_called_cleanup else "没有"
 
+        # 获取TokenManager实例并计算缓存比例
+        cache_ratio_text = ""
+        try:
+            token_manager = self.group_chat.get_members("token_manager", TokenManager)
+            if token_manager.cumulative_token_usage is not None:
+                input_tokens = token_manager.cumulative_token_usage.get("input_tokens", 0)
+                cached_input_tokens = token_manager.cumulative_token_usage.get("cached_input_tokens", 0)
+                if input_tokens > 0:
+                    cache_ratio = (cached_input_tokens / input_tokens) * 100
+                    cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
+                else:
+                    cache_ratio_text = ", 缓存比例: 0%"
+            else:
+                cache_ratio_text = ", 缓存比例: 无数据"
+        except Exception:
+            # 如果获取失败，忽略缓存比例信息
+            cache_ratio_text = ""
+
         # 构建基础信息
-        base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具"
+        base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具{cache_ratio_text}"
 
         # 根据状态和条件添加建议
         if recently_called_cleanup:

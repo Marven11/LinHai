@@ -1,9 +1,12 @@
 """Token management logic for CLI."""
 
-from typing import Dict, Optional
+from __future__ import annotations
+from typing import Dict, Optional, TYPE_CHECKING
 from linhai.llm import AnswerTokenUsage
-from linhai.agent import Agent
 from linhai.group_chat import GroupChat
+
+if TYPE_CHECKING:
+    from linhai.agent import Agent
 
 
 class TokenManager:
