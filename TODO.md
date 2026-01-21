@@ -8,7 +8,21 @@
     - 第二次再次读取文件才阻止
     - 如果使用read_file正确读取了文件则清空全局计数器
       - 正确读取文件：指读取的文件内容和当前最新的不相同，或者文件没有读取过
+- [ ] 当前init_message(s)的定义很混乱
+  - 问题: agent和cli都使用了init_messages，但是都有各自的处理逻辑
+  - 问题：有多处地方都构造了init_message，这不合理
+  - 要求
+    - 传入init_messages时去除init_messages的默认参数
+    - init_messages的定义改为list[Message]，永远不为None
+    - 每个使用init_messages的地方都要有合适的类型注释
+    - cli显示init_messages时只提取UserMessage，忽略其他类型的Message
+    - 应该只有_create_init_messages负责根据args创建逻辑，而不是从外部传入
+- [ ] 更新MESSAGE_DESIGN.md
+  - ToolResultMessage 和 ToolErrorMessage 已经被删除，需要更新
 - [ ] 编写运行unittest
+  - _create_init_messages可以创建对应message
+  - -f和-m可以正常工作，最终创建的init message中有对应内容
+  - ..
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 

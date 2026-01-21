@@ -10,6 +10,7 @@ from textual import events
 from textual_autocomplete import AutoComplete, DropdownItem
 
 from linhai.agent import Agent, Lifecycle
+from linhai.agent.base import Message
 from linhai.config import CLIConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import (
@@ -93,7 +94,7 @@ class CLIApp(App):
         self,
         group_chat: GroupChat,
         cli_config: CLIConfig,
-        init_messages: list[str] | None = None,
+        init_messages: list[str | Message] | None = None,
     ):
         super().__init__()
         self.theme = cli_config.theme
@@ -107,7 +108,8 @@ class CLIApp(App):
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
-        self.init_messages = init_messages
+        init_messages = init_messages or []
+        self.init_messages = [s for s in init_messages if isinstance(s, str)]
 
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None

@@ -6,7 +6,7 @@ import argparse
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
-from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage
+from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage, UserMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.issue import IssueManager
 from linhai.tool.base import global_tools
@@ -75,6 +75,7 @@ def create_agent_build_context(
 
 async def create_agent_from_config(
     context: AgentBuildContext,
+    init_messages
 ) -> Agent:
     """创建Agent实例（从配置对象）
 
@@ -89,13 +90,14 @@ async def create_agent_from_config(
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
     todolist_manager = TodolistManager(context["group_chat"])
-    init_messages = await _create_init_messages(context)
     agent = Agent(
         llms=llms,
         llm_name=context["llm_name"],
         compress_threshold=context["config"].agent.compress_threshold,
         group_chat=context["group_chat"],
-        init_messages=init_messages,
+        init_messages=await _create_init_messages(context) + [
+            UserMessage(m) if isinstance(m, str) else m for m in init_messages
+        ],
     )
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()

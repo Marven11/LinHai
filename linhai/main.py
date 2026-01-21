@@ -12,6 +12,7 @@ import sys
 
 
 from linhai.cli import CLIApp
+from linhai.agent.base import Message
 from linhai.group_chat import GroupChat
 
 
@@ -24,7 +25,7 @@ def run_tests():
     return result.wasSuccessful()
 
 
-async def run(args, init_messages: list[str] | None):
+async def run(args, init_messages: list[str | Message] | None):
     """运行LinHai应用"""
     from linhai.config import load_config
     from linhai.agent.create import create_agent_from_config
@@ -45,7 +46,7 @@ async def run(args, init_messages: list[str] | None):
         llm_name=args.llm,
         checklist_path=args.checklist,
     )
-    _agent = await create_agent_from_config(context)
+    _agent = await create_agent_from_config(context, init_messages)
 
     app = CLIApp(
         group_chat=group_chat,
@@ -94,7 +95,7 @@ def main():
     )
     args = parser.parse_args()
 
-    init_messages = []
+    init_messages: list[str | Message] = []
     if args.message:
         for msg in args.message:
             init_messages.append(msg)
