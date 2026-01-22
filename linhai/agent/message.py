@@ -25,7 +25,7 @@ class AgentMessage:
     """基础消息管理器，负责管理基础消息队列和相关操作。"""
 
     def __init__(
-        self, group_chat: GroupChat, init_messages: Optional[Sequence[Message]] = None
+        self, group_chat: GroupChat, init_messages: Sequence[Message]
     ):
         """初始化基础消息管理器。
 
@@ -35,7 +35,7 @@ class AgentMessage:
         self.group_chat = group_chat
         self.group_chat.register_member("agent_message", self)
 
-        self.messages: List[Message] = list(init_messages) if init_messages else []
+        self.messages: List[Message] = list(init_messages)
         self.appending_messages: dict[str, AppendingMessageEntry] = {}
         self.queued_messages: List[Message] = []
 

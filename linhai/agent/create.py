@@ -198,12 +198,7 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
     """
     init_messages: list[Message] = [SystemMessage(context["group_chat"])]
 
-    cli_args = context.get("cli_args", argparse.Namespace())
-    # 确保cli_args有message和file属性
-    if not hasattr(cli_args, "message"):
-        cli_args.message = None
-    if not hasattr(cli_args, "file"):
-        cli_args.file = None
+    cli_args = context.get("cli_args", argparse.Namespace)
 
     if context["config"].memory and context["config_basedir"]:
         memory_file_path = (
