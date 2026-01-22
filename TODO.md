@@ -72,6 +72,14 @@ unittest 失败时，必须分析
 - [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
+- [ ] 当前max_output_length的处理逻辑有问题
+  - 问题: FileContentMessage没有响应max_output_length
+  - 问题：其他使用max_output_length的Message从init参数中读取max_output_length，这不合理
+  - 问题：ToolManager直接将message转为str以将其视为字符串看待
+  - 解决：
+    - 让所有message类都不直接接收max_output_length
+    - 让ToolManager在工具返回message时检查是否符合max_output_length，不要
+      - 方法：转为llm_message，然后提取content，不要直接转为string
 - [ ] 添加初始化配置的功能
 
 # 注意
