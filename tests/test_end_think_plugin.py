@@ -33,7 +33,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
 </think>
 其他内容"""
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertTrue(result)
 
@@ -43,7 +45,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
    </think>   
 其他内容"""
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertTrue(result)
 
@@ -52,7 +56,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         current_content = """这是一些内容包含</think>标记
 但不是单独一行"""
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()
@@ -64,7 +70,9 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         current_content = """这是一些正常的内容
 没有任何问题"""
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertFalse(result)
         self.agent.group_chat.send.assert_not_called()

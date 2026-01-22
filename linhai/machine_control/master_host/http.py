@@ -83,11 +83,15 @@ async def http_request(
                         content = response.content.decode(encoding)
                         return ToolResultSuccess(content=content)
                     except UnicodeDecodeError:
-                        return ToolResultFailed(content=f"无法使用编码 {encoding} 解码响应内容")
+                        return ToolResultFailed(
+                            content=f"无法使用编码 {encoding} 解码响应内容"
+                        )
                 else:
                     try:
                         return ToolResultSuccess(content=response.text)
                     except UnicodeDecodeError:
-                        return ToolResultFailed(content="无法解码响应内容，可能是二进制数据")
+                        return ToolResultFailed(
+                            content="无法解码响应内容，可能是二进制数据"
+                        )
     except httpx.RequestError as e:
         return ToolResultFailed(content=f"请求失败: {str(e)}")

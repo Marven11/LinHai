@@ -28,9 +28,10 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         group_chat.register_member("tool_manager", mock_tool_manager)
-        
+
         # 注册一个mock的token_manager，因为compute_orchestration_context需要它
         from linhai.token_manager import TokenManager
+
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
@@ -183,42 +184,75 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 测试消息清理工具
-        context = self.orchestration.compute_orchestration_context("context_range_compress", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "context_range_compress", threshold_info
+        )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 
-        context = self.orchestration.compute_orchestration_context("context_garbage_clean", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "context_garbage_clean", threshold_info
+        )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 
-        context = self.orchestration.compute_orchestration_context("context_thanox", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "context_thanox", threshold_info
+        )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 
         # 测试其他工具
-        context = self.orchestration.compute_orchestration_context("read_file", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "read_file", threshold_info
+        )
         self.assertEqual(context["tool_block_details"]["actual_category"], "other")
 
     def test_determine_threshold_state(self):
         """测试阈值状态判断。"""
         # 通过compute_orchestration_context测试状态判断
-        threshold_info = {"hard_limit": 100000, "used_tokens": 30000, "remaining_tokens": 70000, "usage_ratio": 0.3}
+        threshold_info = {
+            "hard_limit": 100000,
+            "used_tokens": 30000,
+            "remaining_tokens": 70000,
+            "usage_ratio": 0.3,
+        }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "绿灯")
-        
-        threshold_info = {"hard_limit": 100000, "used_tokens": 55000, "remaining_tokens": 45000, "usage_ratio": 0.55}
+
+        threshold_info = {
+            "hard_limit": 100000,
+            "used_tokens": 55000,
+            "remaining_tokens": 45000,
+            "usage_ratio": 0.55,
+        }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "绿灯")
-        
-        threshold_info = {"hard_limit": 100000, "used_tokens": 75000, "remaining_tokens": 25000, "usage_ratio": 0.75}
+
+        threshold_info = {
+            "hard_limit": 100000,
+            "used_tokens": 75000,
+            "remaining_tokens": 25000,
+            "usage_ratio": 0.75,
+        }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "黄灯")
-        
-        threshold_info = {"hard_limit": 100000, "used_tokens": 95000, "remaining_tokens": 5000, "usage_ratio": 0.95}
+
+        threshold_info = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95,
+        }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "红灯")
 
     def test_recently_called_cleanup_tool(self):
         """测试最近调用清理工具判断。"""
         # 初始状态应该为False
-        threshold_info = {"hard_limit": 100000, "used_tokens": 30000, "remaining_tokens": 70000, "usage_ratio": 0.3}
+        threshold_info = {
+            "hard_limit": 100000,
+            "used_tokens": 30000,
+            "remaining_tokens": 70000,
+            "usage_ratio": 0.3,
+        }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertFalse(context["recently_called_cleanup"])
 
@@ -247,7 +281,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = time.time() - 30
 
         # 测试正常工具（如read_file）不应该被阻塞
-        context = self.orchestration.compute_orchestration_context("read_file", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "read_file", threshold_info
+        )
         details = context["tool_block_details"]
 
         # 验证：当前状态应该是红灯
@@ -276,7 +312,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.orchestration.last_compress_or_clean_time = time.time() - 70
 
         # 测试正常工具（如read_file）应该被阻塞
-        context = self.orchestration.compute_orchestration_context("read_file", threshold_info)
+        context = self.orchestration.compute_orchestration_context(
+            "read_file", threshold_info
+        )
         details = context["tool_block_details"]
 
         # 验证：当前状态应该是红灯

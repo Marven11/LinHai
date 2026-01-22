@@ -73,6 +73,8 @@ class TestCreateAgent(unittest.TestCase):
         mock_agent.return_value = mock_agent_instance
 
         import asyncio
+        import argparse
+        cli_args = argparse.Namespace(message=None, file=None)
 
         context = create_agent_build_context(
             group_chat=self.group_chat,
@@ -81,6 +83,7 @@ class TestCreateAgent(unittest.TestCase):
             llm_name="test_llm",
             git_diff_reviewer=False,
             violation_checker=False,
+            cli_args=cli_args,
             checklist_path=None,
         )
         result = asyncio.run(create_agent_from_config(context))
@@ -148,6 +151,8 @@ class TestCreateAgent(unittest.TestCase):
             mock_agent.return_value = Mock()
 
             import asyncio
+            import argparse
+            cli_args = argparse.Namespace(message=None, file=None)
 
             context = create_agent_build_context(
                 group_chat=self.group_chat,
@@ -156,6 +161,7 @@ class TestCreateAgent(unittest.TestCase):
                 llm_name="llm1",
                 git_diff_reviewer=False,
                 violation_checker=False,
+                cli_args=cli_args,
                 checklist_path=None,
             )
             asyncio.run(create_agent_from_config(context))
@@ -280,6 +286,11 @@ class TestCreateInitMessages(unittest.TestCase):
         mock_global_memory.return_value = Mock()
 
         import asyncio
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
 
         context = {
             "group_chat": group_chat,
@@ -289,6 +300,7 @@ class TestCreateInitMessages(unittest.TestCase):
             "git_diff_reviewer": False,
             "violation_checker": False,
             "checklist_path": None,
+            "cli_args": mock_cli_args,
         }
         result = asyncio.run(_create_init_messages(context))
 

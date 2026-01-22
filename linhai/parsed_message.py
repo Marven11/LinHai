@@ -19,6 +19,7 @@ class ParsedAnswer:
         self.parsing_task = None
         self.interrupted = False
         from .cli.token_parser import TokenParser
+
         self.token_parser = TokenParser()
         self.current_segment = None
 
@@ -30,7 +31,9 @@ class ParsedAnswer:
         content = parsed_token["content"]
         if self.current_segment is None:
             # 创建segment并立即放入队列
-            self.current_segment = Segment(segment_type=token_type, content=content, is_finished=False)
+            self.current_segment = Segment(
+                segment_type=token_type, content=content, is_finished=False
+            )
             await self.segment_queue.put(self.current_segment)
             await self.lifecycle.trigger_after_segment(self, self.current_segment)
         elif self.current_segment["segment_type"] == token_type:
@@ -40,7 +43,9 @@ class ParsedAnswer:
             # 类型变化：直接创建新segment并放入队列（丢掉前一个）
             self.current_segment["is_finished"] = True
             await self.lifecycle.trigger_after_segment(self, self.current_segment)
-            self.current_segment = Segment(segment_type=token_type, content=content, is_finished=False)
+            self.current_segment = Segment(
+                segment_type=token_type, content=content, is_finished=False
+            )
             await self.segment_queue.put(self.current_segment)
 
     async def _finish_current_segment(self):

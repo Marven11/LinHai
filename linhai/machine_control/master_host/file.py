@@ -46,7 +46,9 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
         start_line = chunk_index + 1
         end_line = chunk_index + linenum
         message = f"相似度: {similarity:.2%}, 行号: {start_line}-{end_line}"
-        results.append(f"<<alternative>><<message>>{message}<<message>><<chunk>>{chunk_content}<<chunk>><<alternative>>")
+        results.append(
+            f"<<alternative>><<message>>{message}<<message>><<chunk>>{chunk_content}<<chunk>><<alternative>>"
+        )
     return "\n".join(results)
 
 

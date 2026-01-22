@@ -19,12 +19,12 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         from unittest.mock import MagicMock
 
         group_chat = GroupChat()
-        
+
         # 注册一个Mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         group_chat.register_member("tool_manager", mock_tool_manager)
-        
+
         self.init_messages = [
             SystemMessage(
                 group_chat=group_chat,

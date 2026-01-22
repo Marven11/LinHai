@@ -84,6 +84,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             def __init__(self, content):
                 self.content = content
                 from linhai.llm import AnswerToken
+
                 self.tokens = [AnswerToken(reasoning_content=None, content=content)]
                 self.index = 0
 

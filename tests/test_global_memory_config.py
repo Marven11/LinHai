@@ -31,10 +31,17 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         # 为SystemMessage初始化提供mock的tool_manager
         from linhai.tool.main import ToolManager
         from unittest.mock import Mock
+        import argparse
 
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         self.group_chat.register_member("tool_manager", mock_tool_manager)
+
+        # 注册cli_args模拟对象
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        self.group_chat.register_member("cli_args", mock_cli_args)
 
     def tearDown(self):
         """测试后清理"""

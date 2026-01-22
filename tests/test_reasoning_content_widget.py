@@ -16,11 +16,13 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         self.widget = ReasoningContentWidget(
-            role=self.role, sender_name=self.sender_name, theme="nord",
-            segment=self.mock_segment
+            role=self.role,
+            sender_name=self.sender_name,
+            theme="nord",
+            segment=self.mock_segment,
         )
         self.widget.content_str += self.content
 
@@ -116,11 +118,10 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += multi_line_content
         widget.is_expanded = False
@@ -142,11 +143,10 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += content_with_special_chars
         widget.is_expanded = False
@@ -158,17 +158,16 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         self.assertEqual(len(rendered_content), 1)
 
-    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
     def test_stop_method(self, mock_set_timer):
         """Test that finish_streaming method stops the timer."""
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += "test content"
         mock_timer = Mock()
@@ -176,32 +175,32 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
-        
+
         # 配置 mock_set_timer 以停止定时器并清除timer
         def stop_and_clear(*args, **kwargs):
             mock_timer.stop()
             widget.timer = None
+
         mock_set_timer.side_effect = stop_and_clear
 
         # finish_streaming已删除，直接停止timer
         if widget.timer:
             widget.timer.stop()
             widget.timer = None
-        
+
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
     def test_stop_method_actual_timer(self, mock_set_timer):
         """Test finish_streaming method with actual timer behavior."""
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += "test content"
 
@@ -210,42 +209,43 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
-        
+
         # 配置 mock_set_timer 以停止定时器并清除timer
         def stop_and_clear(*args, **kwargs):
             mock_timer.stop()
             widget.timer = None
+
         mock_set_timer.side_effect = stop_and_clear
 
         # finish_streaming已删除，直接停止timer
         if widget.timer:
             widget.timer.stop()
             widget.timer = None
-        
+
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    @patch('linhai.cli.components.ReasoningContentWidget.set_timer')
+    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
     def test_stop_method_without_timer(self, mock_set_timer):
         """Test finish_streaming method when there is no timer."""
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += "test content"
         widget.timer = None
 
         # 模拟 update 方法以避免 Textual 上下文错误
         widget.update = Mock()
-        
+
         # 配置 mock_set_timer 以避免错误，并清除timer
         def clear_timer(*args, **kwargs):
             widget.timer = None
+
         mock_set_timer.side_effect = clear_timer
 
         # finish_streaming已删除，timer已经是None
@@ -256,11 +256,10 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += "test content"
 
@@ -279,11 +278,10 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += "测试内容"
         widget.is_expanded = False
@@ -306,11 +304,10 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_segment = {
             "segment_type": "reasoning",
             "content": "",
-            "is_finished": False
+            "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord",
-            segment=mock_segment
+            role="assistant", sender_name="test", theme="nord", segment=mock_segment
         )
         widget.content_str += long_content
         widget.is_expanded = False

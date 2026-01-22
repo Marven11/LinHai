@@ -41,8 +41,6 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin.before_tool_call
         )
 
-
-
     async def test_block_git_command_with_unanswered_issues(self):
         """测试有未解答issue时阻止git命令。"""
         self.issue_manager.has_unanswered_issues.return_value = True

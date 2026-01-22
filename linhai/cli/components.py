@@ -633,7 +633,7 @@ class NormalContentWidget(Static):
         """更新普通消息显示，按字符换行"""
         if self._segment["is_finished"] and self.timer:
             self.timer.stop()
-        
+
         segment_content = self._segment["content"]
         if segment_content != self.content_str:
             self.content_str = segment_content
@@ -660,7 +660,9 @@ class MessageWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str, parsed_answer: ParsedAnswer):
+    def __init__(
+        self, role: str, sender_name: str, theme: str, parsed_answer: ParsedAnswer
+    ):
         super().__init__()
         self.role = role
         self.sender_name = sender_name

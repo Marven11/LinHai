@@ -252,6 +252,7 @@ class TodolistManager:
     def postinit(self):
         """后初始化：创建todolist工具集并添加到tool_manager"""
         from linhai.tool.main import ToolManager
+
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         todolist_toolset = create_agent_todolist_toolset(self)
         tool_manager.add_toolset(todolist_toolset)

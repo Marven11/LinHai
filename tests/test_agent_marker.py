@@ -32,6 +32,7 @@ class MockAnswer:
         """Initialize MockAnswer with content."""
         self.content = content
         from linhai.llm import AnswerToken
+
         self.tokens = [AnswerToken(reasoning_content=None, content=content)]
         self.index = 0
 

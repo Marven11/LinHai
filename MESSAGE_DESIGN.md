@@ -72,10 +72,6 @@ SubAgent 系统消息，用于表示 SubAgent 的系统角色消息。与 `Syste
 
 运行时消息，用于表示运行时产生的消息（如错误、警告、信息等）。在转换为 LLM 消息时，使用 `<<runtime>>` 标签包裹。
 
-### ToolResultMessage 和 ToolErrorMessage
-
-工具结果消息和工具错误消息，用于表示工具调用的结果或错误。在转换为 LLM 消息时，使用 `<<tool>>` 标签包裹，内部使用 `<<message>>`、`<<data>>`、`<<error>>` 等标签结构化内容。
-
 ## 消息传递与处理
 
 ### AgentMessage

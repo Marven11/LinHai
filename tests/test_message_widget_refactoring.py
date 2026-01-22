@@ -19,17 +19,17 @@ from linhai.cli.components import (
 
 class MockAnswer(Answer):
     """模拟Answer对象，用于测试。"""
-    
+
     def __init__(self, tokens: list[AnswerToken]):
         self.tokens = tokens
         self.interrupted = False
         self.truncated = False
         self._iter = None
-    
+
     def __aiter__(self):
         self._iter = iter(self.tokens)
         return self
-    
+
     async def __anext__(self) -> AnswerToken:
         if self.interrupted or self.truncated or self._iter is None:
             raise StopAsyncIteration
@@ -37,22 +37,22 @@ class MockAnswer(Answer):
             return next(self._iter)
         except StopIteration:
             raise StopAsyncIteration
-    
+
     def get_message(self):
         return None
-    
+
     def get_reasoning_message(self) -> str | None:
         return None
-    
+
     def interrupt(self):
         self.interrupted = True
-    
+
     def truncate(self):
         self.truncated = True
-    
+
     def get_current_content(self) -> str:
         return ""
-    
+
     def get_token_usage(self):
         return None
 
@@ -109,6 +109,14 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             llm_name=context["llm_names"][context["current_llm_index"]],
         )
 
+        # 注册cli_args模拟对象
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        self.group_chat.register_member("cli_args", mock_cli_args)
+
         # 创建CLIApp
         self.app = CLIApp(self.group_chat, self.cli_config)
 
@@ -142,16 +150,18 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 ),
             ]
             mock_answer = MockAnswer(tokens)
-            
+
             # 使用Agent内部的lifecycle和agent本身
             lifecycle = self.agent.lifecycle
             agent = self.agent
-            
+
             # 创建ParsedAnswer并发送
-            parsed_answer = ParsedAnswer(answer=mock_answer, lifecycle=lifecycle, agent=agent)
+            parsed_answer = ParsedAnswer(
+                answer=mock_answer, lifecycle=lifecycle, agent=agent
+            )
             await parsed_answer.start_parsing()
             await self.group_chat.send("parsed_agent_answer", parsed_answer)
-            
+
             # 等待解析完成
             await asyncio.sleep(2.0)  # 大幅增加等待时间，确保widget切换完成
             await pilot.pause(2.0)
@@ -163,7 +173,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 for child in container.children:
                     # 检查类型名是否包含MessageWidget
                     child_type = type(child).__name__
-                    if "MessageWidget" in child_type and "UserMessageWidget" not in child_type:
+                    if (
+                        "MessageWidget" in child_type
+                        and "UserMessageWidget" not in child_type
+                    ):
                         message_widget = child
                         break
                 if message_widget is not None:
@@ -171,7 +184,7 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 # 等待一下再重试
                 await asyncio.sleep(0.1)
                 await pilot.pause(0.1)
-            
+
             # 如果还是没找到，检查是否有其他widget
             if message_widget is None:
                 for child in container.children:
@@ -181,7 +194,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                         message_widget = child
                         break
 
-            self.assertIsNotNone(message_widget, f"message_widget not found in {len(container.children)} children")
+            self.assertIsNotNone(
+                message_widget,
+                f"message_widget not found in {len(container.children)} children",
+            )
             # 打印container children信息以便调试
             for i, child in enumerate(container.children):
                 print(f"Container child {i}: {type(child).__name__}")
@@ -192,37 +208,55 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             # 首先等待一下，确保widget完全创建
             await asyncio.sleep(0.1)
             await pilot.pause(0.1)
-            
+
             tool_widgets = []
             # 方法1：检查current_widget
-            if hasattr(message_widget, 'current_widget') and message_widget.current_widget:
+            if (
+                hasattr(message_widget, "current_widget")
+                and message_widget.current_widget
+            ):
                 if type(message_widget.current_widget).__name__ == "ToolCallWidget":
                     tool_widgets.append(message_widget.current_widget)
-            
+
             # 方法2：在children中查找
             if not tool_widgets:
-                tool_widgets = [child for child in message_widget.children 
-                               if type(child).__name__ == "ToolCallWidget"]
-            
+                tool_widgets = [
+                    child
+                    for child in message_widget.children
+                    if type(child).__name__ == "ToolCallWidget"
+                ]
+
             # 方法3：使用walk_children深度查找
             if not tool_widgets:
                 for child in message_widget.walk_children():
                     if type(child).__name__ == "ToolCallWidget":
                         tool_widgets.append(child)
                         break
-            
+
             # 打印调试信息
-            print(f"[test_complete_message_flow] Found {len(tool_widgets)} ToolCallWidget(s)")
-            if hasattr(message_widget, 'current_widget'):
-                print(f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}")
-            print(f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}")
-            
+            print(
+                f"[test_complete_message_flow] Found {len(tool_widgets)} ToolCallWidget(s)"
+            )
+            if hasattr(message_widget, "current_widget"):
+                print(
+                    f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}"
+                )
+            print(
+                f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}"
+            )
+
             # 修改断言：由于只找到了ReasoningContentWidget，检查其内容
-            reasoning_widgets = [child for child in message_widget.children 
-                                if type(child).__name__ == "ReasoningContentWidget"]
-            self.assertEqual(len(reasoning_widgets), 1, 
-                           f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}")
-            
+            reasoning_widgets = [
+                child
+                for child in message_widget.children
+                if type(child).__name__ == "ReasoningContentWidget"
+            ]
+            self.assertEqual(
+                len(reasoning_widgets),
+                1,
+                f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}",
+            )
+
             # 验证内容包含工具调用
             if reasoning_widgets:
                 reasoning_widget = reasoning_widgets[0]
@@ -249,16 +283,18 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 AnswerToken(content="", reasoning_content="思考第3部分"),
             ]
             mock_answer = MockAnswer(tokens)
-            
+
             # 使用Agent内部的lifecycle和agent本身
             lifecycle = self.agent.lifecycle
             agent = self.agent
-            
+
             # 创建ParsedAnswer并发送
-            parsed_answer = ParsedAnswer(answer=mock_answer, lifecycle=lifecycle, agent=agent)
+            parsed_answer = ParsedAnswer(
+                answer=mock_answer, lifecycle=lifecycle, agent=agent
+            )
             await parsed_answer.start_parsing()
             await self.group_chat.send("parsed_agent_answer", parsed_answer)
-            
+
             # 等待解析完成
             await asyncio.sleep(2.0)  # 大幅增加等待时间，确保widget切换完成
             await pilot.pause(2.0)
@@ -270,7 +306,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 for child in container.children:
                     # 检查类型名是否包含MessageWidget
                     child_type = type(child).__name__
-                    if "MessageWidget" in child_type and "UserMessageWidget" not in child_type:
+                    if (
+                        "MessageWidget" in child_type
+                        and "UserMessageWidget" not in child_type
+                    ):
                         message_widget = child
                         break
                 if message_widget is not None:
@@ -278,7 +317,7 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 # 等待一下再重试
                 await asyncio.sleep(0.1)
                 await pilot.pause(0.1)
-            
+
             # 如果还是没找到，检查是否有其他widget
             if message_widget is None:
                 for child in container.children:
@@ -288,16 +327,25 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                         message_widget = child
                         break
 
-            self.assertIsNotNone(message_widget, f"message_widget not found in {len(container.children)} children")
+            self.assertIsNotNone(
+                message_widget,
+                f"message_widget not found in {len(container.children)} children",
+            )
             # 打印container children信息以便调试
             for i, child in enumerate(container.children):
                 print(f"Container child {i}: {type(child).__name__}")
             # 验证只创建了一个ReasoningContentWidget
             # 在MessageWidget的children中查找ReasoningContentWidget
-            reasoning_widgets = [child for child in message_widget.children 
-                                 if type(child).__name__ == "ReasoningContentWidget"]
-            self.assertEqual(len(reasoning_widgets), 1, 
-                           f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}")
+            reasoning_widgets = [
+                child
+                for child in message_widget.children
+                if type(child).__name__ == "ReasoningContentWidget"
+            ]
+            self.assertEqual(
+                len(reasoning_widgets),
+                1,
+                f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}",
+            )
             # 验证内容已累积
             # 验证内容已累积（通过reasoning_widgets[0]访问）
             if reasoning_widgets:
@@ -327,16 +375,18 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 AnswerToken(content="回答第3部分", reasoning_content=""),
             ]
             mock_answer = MockAnswer(tokens)
-            
+
             # 使用Agent内部的lifecycle和agent本身
             lifecycle = self.agent.lifecycle
             agent = self.agent
-            
+
             # 创建ParsedAnswer并发送
-            parsed_answer = ParsedAnswer(answer=mock_answer, lifecycle=lifecycle, agent=agent)
+            parsed_answer = ParsedAnswer(
+                answer=mock_answer, lifecycle=lifecycle, agent=agent
+            )
             await parsed_answer.start_parsing()
             await self.group_chat.send("parsed_agent_answer", parsed_answer)
-            
+
             # 等待解析完成
             await asyncio.sleep(2.0)  # 大幅增加等待时间，确保widget切换完成
             await pilot.pause(2.0)
@@ -348,7 +398,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 for child in container.children:
                     # 检查类型名是否包含MessageWidget
                     child_type = type(child).__name__
-                    if "MessageWidget" in child_type and "UserMessageWidget" not in child_type:
+                    if (
+                        "MessageWidget" in child_type
+                        and "UserMessageWidget" not in child_type
+                    ):
                         message_widget = child
                         break
                 if message_widget is not None:
@@ -356,7 +409,7 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 # 等待一下再重试
                 await asyncio.sleep(0.1)
                 await pilot.pause(0.1)
-            
+
             # 如果还是没找到，检查是否有其他widget
             if message_widget is None:
                 for child in container.children:
@@ -366,7 +419,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                         message_widget = child
                         break
 
-            self.assertIsNotNone(message_widget, f"message_widget not found in {len(container.children)} children")
+            self.assertIsNotNone(
+                message_widget,
+                f"message_widget not found in {len(container.children)} children",
+            )
             # 打印container children信息以便调试
             for i, child in enumerate(container.children):
                 print(f"Container child {i}: {type(child).__name__}")
@@ -375,37 +431,58 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             # 首先等待一下，确保widget完全创建
             await asyncio.sleep(0.1)
             await pilot.pause(0.1)
-            
+
             normal_widgets = []
             # 方法1：检查current_widget
-            if hasattr(message_widget, 'current_widget') and message_widget.current_widget:
-                if type(message_widget.current_widget).__name__ == "NormalContentWidget":
+            if (
+                hasattr(message_widget, "current_widget")
+                and message_widget.current_widget
+            ):
+                if (
+                    type(message_widget.current_widget).__name__
+                    == "NormalContentWidget"
+                ):
                     normal_widgets.append(message_widget.current_widget)
-            
+
             # 方法2：在children中查找
             if not normal_widgets:
-                normal_widgets = [child for child in message_widget.children 
-                               if type(child).__name__ == "NormalContentWidget"]
-            
+                normal_widgets = [
+                    child
+                    for child in message_widget.children
+                    if type(child).__name__ == "NormalContentWidget"
+                ]
+
             # 方法3：使用walk_children深度查找
             if not normal_widgets:
                 for child in message_widget.walk_children():
                     if type(child).__name__ == "NormalContentWidget":
                         normal_widgets.append(child)
                         break
-            
+
             # 打印调试信息
-            print(f"[test_multiple_normal_tokens_single_widget] Found {len(normal_widgets)} NormalContentWidget(s)")
-            if hasattr(message_widget, 'current_widget'):
-                print(f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}")
-            print(f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}")
-            
+            print(
+                f"[test_multiple_normal_tokens_single_widget] Found {len(normal_widgets)} NormalContentWidget(s)"
+            )
+            if hasattr(message_widget, "current_widget"):
+                print(
+                    f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}"
+                )
+            print(
+                f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}"
+            )
+
             # 修改断言：由于只找到了ReasoningContentWidget，检查其内容
-            reasoning_widgets = [child for child in message_widget.children 
-                                if type(child).__name__ == "ReasoningContentWidget"]
-            self.assertEqual(len(reasoning_widgets), 1, 
-                           f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}")
-            
+            reasoning_widgets = [
+                child
+                for child in message_widget.children
+                if type(child).__name__ == "ReasoningContentWidget"
+            ]
+            self.assertEqual(
+                len(reasoning_widgets),
+                1,
+                f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}",
+            )
+
             # 验证内容包含预期文本
             if reasoning_widgets:
                 reasoning_widget = reasoning_widgets[0]
@@ -444,16 +521,18 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 ),
             ]
             mock_answer = MockAnswer(tokens)
-            
+
             # 使用Agent内部的lifecycle和agent本身
             lifecycle = self.agent.lifecycle
             agent = self.agent
-            
+
             # 创建ParsedAnswer并发送
-            parsed_answer = ParsedAnswer(answer=mock_answer, lifecycle=lifecycle, agent=agent)
+            parsed_answer = ParsedAnswer(
+                answer=mock_answer, lifecycle=lifecycle, agent=agent
+            )
             await parsed_answer.start_parsing()
             await self.group_chat.send("parsed_agent_answer", parsed_answer)
-            
+
             # 等待解析完成
             await asyncio.sleep(2.0)  # 大幅增加等待时间，确保widget切换完成
             await pilot.pause(2.0)
@@ -465,7 +544,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 for child in container.children:
                     # 检查类型名是否包含MessageWidget
                     child_type = type(child).__name__
-                    if "MessageWidget" in child_type and "UserMessageWidget" not in child_type:
+                    if (
+                        "MessageWidget" in child_type
+                        and "UserMessageWidget" not in child_type
+                    ):
                         message_widget = child
                         break
                 if message_widget is not None:
@@ -473,7 +555,7 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                 # 等待一下再重试
                 await asyncio.sleep(0.1)
                 await pilot.pause(0.1)
-            
+
             # 如果还是没找到，检查是否有其他widget
             if message_widget is None:
                 for child in container.children:
@@ -483,7 +565,10 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
                         message_widget = child
                         break
 
-            self.assertIsNotNone(message_widget, f"message_widget not found in {len(container.children)} children")
+            self.assertIsNotNone(
+                message_widget,
+                f"message_widget not found in {len(container.children)} children",
+            )
             # 打印container children信息以便调试
             for i, child in enumerate(container.children):
                 print(f"Container child {i}: {type(child).__name__}")
@@ -494,37 +579,55 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             # 首先等待一下，确保widget完全创建
             await asyncio.sleep(0.1)
             await pilot.pause(0.1)
-            
+
             tool_widgets = []
             # 方法1：检查current_widget
-            if hasattr(message_widget, 'current_widget') and message_widget.current_widget:
+            if (
+                hasattr(message_widget, "current_widget")
+                and message_widget.current_widget
+            ):
                 if type(message_widget.current_widget).__name__ == "ToolCallWidget":
                     tool_widgets.append(message_widget.current_widget)
-            
+
             # 方法2：在children中查找
             if not tool_widgets:
-                tool_widgets = [child for child in message_widget.children 
-                               if type(child).__name__ == "ToolCallWidget"]
-            
+                tool_widgets = [
+                    child
+                    for child in message_widget.children
+                    if type(child).__name__ == "ToolCallWidget"
+                ]
+
             # 方法3：使用walk_children深度查找
             if not tool_widgets:
                 for child in message_widget.walk_children():
                     if type(child).__name__ == "ToolCallWidget":
                         tool_widgets.append(child)
                         break
-            
+
             # 打印调试信息
-            print(f"[test_complete_message_flow] Found {len(tool_widgets)} ToolCallWidget(s)")
-            if hasattr(message_widget, 'current_widget'):
-                print(f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}")
-            print(f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}")
-            
+            print(
+                f"[test_complete_message_flow] Found {len(tool_widgets)} ToolCallWidget(s)"
+            )
+            if hasattr(message_widget, "current_widget"):
+                print(
+                    f"message_widget.current_widget type: {type(message_widget.current_widget).__name__ if message_widget.current_widget else None}"
+                )
+            print(
+                f"message_widget.children: {[type(c).__name__ for c in message_widget.children]}"
+            )
+
             # 修改断言：由于只找到了ReasoningContentWidget，检查其内容
-            reasoning_widgets = [child for child in message_widget.children 
-                                if type(child).__name__ == "ReasoningContentWidget"]
-            self.assertEqual(len(reasoning_widgets), 1, 
-                           f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}")
-            
+            reasoning_widgets = [
+                child
+                for child in message_widget.children
+                if type(child).__name__ == "ReasoningContentWidget"
+            ]
+            self.assertEqual(
+                len(reasoning_widgets),
+                1,
+                f"Expected exactly one ReasoningContentWidget, found {len(reasoning_widgets)}",
+            )
+
             # 验证内容包含预期文本
             if reasoning_widgets:
                 reasoning_widget = reasoning_widgets[0]

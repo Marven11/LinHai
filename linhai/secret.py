@@ -158,7 +158,6 @@ class SecretInterceptorPlugin:
 
     async def after_tool_call(self, _agent, tool_call, tool_result, _success) -> Any:
 
-
         with_secret = tool_call.with_secret
         msg = tool_result
 

@@ -32,9 +32,7 @@ class TestHttpRequestTool(unittest.TestCase):
                 "follow_redirects": ToolArgInfo(
                     desc="是否跟随重定向，默认True", type="bool"
                 ),
-                "timeout": ToolArgInfo(
-                    desc="超时时间（秒），默认60秒", type="int"
-                ),
+                "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="int"),
             },
             required_args=["method", "url"],
         )(http_request)
@@ -71,14 +69,16 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/image.png"}
             )
         )
-        
+
         # 从ToolResultMessage中提取文件路径
         self.assertIn("二进制内容已保存到临时文件: ", result.content)
         # 提取路径：查找"二进制内容已保存到临时文件: "之后的内容
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
+            "二进制内容已保存到临时文件: "
+        )
         # 路径可能在<<data>>标记中，我们需要提取到下一个标记前
-        temp_path = result.content[path_start:].split('<<')[0].strip()
-        
+        temp_path = result.content[path_start:].split("<<")[0].strip()
+
         self.assertTrue(os.path.exists(temp_path))
         self.assertTrue(temp_path.endswith(".bin"))
 
@@ -189,12 +189,14 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
             )
         )
-        
+
         # 从ToolResultMessage中提取文件路径
         self.assertIn("二进制内容已保存到临时文件: ", result.content)
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
-        temp_path = result.content[path_start:].split('<<')[0].strip()
-        
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
+            "二进制内容已保存到临时文件: "
+        )
+        temp_path = result.content[path_start:].split("<<")[0].strip()
+
         self.assertTrue(os.path.exists(temp_path))
         self.assertTrue(temp_path.endswith(".bin"))
         os.unlink(temp_path)
@@ -213,16 +215,17 @@ class TestHttpRequestTool(unittest.TestCase):
                 {"method": "GET", "url": "http://example.com/archive.zip"},
             )
         )
-        
+
         # 从ToolResultMessage中提取文件路径
         self.assertIn("二进制内容已保存到临时文件: ", result.content)
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len("二进制内容已保存到临时文件: ")
-        temp_path = result.content[path_start:].split('<<')[0].strip()
-        
+        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
+            "二进制内容已保存到临时文件: "
+        )
+        temp_path = result.content[path_start:].split("<<")[0].strip()
+
         self.assertTrue(os.path.exists(temp_path))
         self.assertTrue(temp_path.endswith(".bin"))
         os.unlink(temp_path)
-
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_timeout_parameter(self, mock_request):

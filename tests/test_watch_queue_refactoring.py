@@ -19,6 +19,13 @@ class TestQueueListeningMethods(unittest.TestCase):
         mock_agent = MagicMock(spec=Agent)
         self.group_chat.register_member("agent", mock_agent)
 
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        self.group_chat.register_member("cli_args", mock_cli_args)
+
         self.app = CLIApp(self.group_chat, cli_config=CLIConfig())
 
         self.app.query_one = MagicMock()
@@ -35,10 +42,14 @@ class TestQueueListeningMethods(unittest.TestCase):
         """测试方法签名"""
         import inspect
 
-        self.assertTrue(inspect.iscoroutinefunction(self.app.watch_parsed_agent_answer_queue))
+        self.assertTrue(
+            inspect.iscoroutinefunction(self.app.watch_parsed_agent_answer_queue)
+        )
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_ui_log_queue))
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_exit_signal_queue))
-        self.assertTrue(inspect.iscoroutinefunction(self.app.watch_subagent_message_queue))
+        self.assertTrue(
+            inspect.iscoroutinefunction(self.app.watch_subagent_message_queue)
+        )
         self.assertTrue(inspect.iscoroutinefunction(self.app.watch_token_usage_queue))
 
     def test_group_chat_registration(self):

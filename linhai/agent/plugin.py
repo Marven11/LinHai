@@ -84,12 +84,16 @@ class WaitingUserPlugin(Plugin):
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
-                        level="WARNING",
-                        content="已警告agent：工具调用和等待用户冲突"
-                    )
+                        level="WARNING", content="已警告agent：工具调用和等待用户冲突"
+                    ),
                 )
                 return
-            if agent.state == "working" and not tool_calls and not has_waiting_marker and full_response.strip():
+            if (
+                agent.state == "working"
+                and not tool_calls
+                and not has_waiting_marker
+                and full_response.strip()
+            ):
                 agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
@@ -101,8 +105,8 @@ class WaitingUserPlugin(Plugin):
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
-                        content="已警告agent：既没有调用工具也没有等待用户"
-                    )
+                        content="已警告agent：既没有调用工具也没有等待用户",
+                    ),
                 )
                 return
 
@@ -345,6 +349,11 @@ class DirectoryChangePlugin(Plugin):
         """在消息生成前检查目录是否更改。"""
 
         agent = self.group_chat.get_members("agent", Agent)
+        
+        # 检查插件是否启用
+        context = getattr(agent, "context", {})
+        if not context.get("enable_directory_change_detection", False):
+            return
 
         current_directory = Path.cwd().resolve()
 
@@ -691,26 +700,49 @@ class DuplicateFileReadPlugin(Plugin):
         if recent_file_messages:
             latest_message = recent_file_messages[0]
             if tool_result == latest_message:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO",
-                        content="模型重复读取相同文件，已阻止",
-                    ),
-                )
-                content = latest_message.content
-                reprobj = reprlib.Repr(maxstring=100)
-
-                preview = reprobj.repr(content)
                 self.counter += 1
-                return RuntimeMessage(
-                    f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
-                    f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
-                    f"文件内容预览：{preview}\n"
-                    f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
-                )
-            self.counter = 0
-            return None
+                if self.counter == 1:
+                    # 第一次重复：只警告，不拦截工具结果
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING",
+                            content="模型第一次重复读取相同文件，已警告",
+                        ),
+                    )
+                    content = latest_message.content
+                    reprobj = reprlib.Repr(maxstring=100)
+                    preview = reprobj.repr(content)
+                    agent.message_processor.add_new_message(
+                        RuntimeMessage(
+                            f"警告：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，这是第一次警告！\n"
+                            f"文件内容预览：{preview}\n"
+                            f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                        )
+                    )
+                    return None
+                else:
+                    # 第二次重复：阻止并覆盖工具结果
+                    await self.group_chat.send_if_exists(
+                        "ui_log",
+                        CliRuntimeNotice(
+                            level="WARNING",
+                            content="模型第二次重复读取相同文件，已阻止",
+                        ),
+                    )
+                    content = latest_message.content
+                    reprobj = reprlib.Repr(maxstring=100)
+                    preview = reprobj.repr(content)
+                    return RuntimeMessage(
+                        f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
+                        f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
+                        f"文件内容预览：{preview}\n"
+                        f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
+                    )
+            else:
+                # 读取了新文件或文件内容变化：清空计数器
+                self.counter = 0
+                return None
 
         self.counter = 0
         return None

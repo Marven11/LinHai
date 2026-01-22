@@ -110,9 +110,9 @@ class MemoryConfig(BaseModel):
 
 class SecretSubConfig(BaseModel):
     """Secret子配置类型定义。"""
-    
+
     config_path: str = Field(default="")
-    
+
     def __str__(self) -> str:
         """返回Secret子配置的字符串表示"""
         return f"SecretSubConfig(config_path={self.config_path})"

@@ -14,11 +14,9 @@ from linhai.llm import SystemMessage
 from linhai.agent.base import RuntimeMessage
 
 
-
-
-
 class ToolCall(TypedDict):
     """工具调用参数的具体类型定义。"""
+
     name: str
     arguments: Dict[str, Union[str, int, float, bool, None]]
 
@@ -33,7 +31,7 @@ class TaskPlanningPromptPlugin(Plugin):
 
     async def before_agent_loop(self, agent: Agent) -> None:
         """在Agent循环开始前添加任务规划提示。
-        
+
         这是插件系统的标准设计模式：通过副作用修改SystemMessage状态。
         返回None符合插件接口规范，允许其他插件继续处理。
         """
@@ -95,24 +93,28 @@ class TaskPlanningEnforcementPlugin(Plugin):
                 break
 
         if has_planning:
-    
+
             self.no_planning_counter = 0
-            self.group_chat.get_members("agent", Agent).message_processor.update_appending_message(
+            self.group_chat.get_members(
+                "agent", Agent
+            ).message_processor.update_appending_message(
                 None, source="task_planning_reminder", sort_value=0
             )
         elif tool_calls:
-    
+
             self.no_planning_counter += 1
 
             if self.no_planning_counter == 1:
-    
+
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="INFO", content="Agent没有输出任务规划，已提醒"
                     ),
                 )
-                self.group_chat.get_members("agent", Agent).message_processor.update_appending_message(
+                self.group_chat.get_members(
+                    "agent", Agent
+                ).message_processor.update_appending_message(
                     RuntimeMessage(
                         "注意：你没有输出任务规划！如果连续3次不输出任务规划，将会被打断回答。"
                     ),
@@ -120,8 +122,10 @@ class TaskPlanningEnforcementPlugin(Plugin):
                     sort_value=0,
                 )
             elif self.no_planning_counter == 2:
-    
-                self.group_chat.get_members("agent", Agent).message_processor.update_appending_message(
+
+                self.group_chat.get_members(
+                    "agent", Agent
+                ).message_processor.update_appending_message(
                     RuntimeMessage(
                         "警告：你已经连续2次没有输出任务规划！如果下一次仍然不输出任务规划，将会被打断回答！"
                     ),
@@ -129,10 +133,10 @@ class TaskPlanningEnforcementPlugin(Plugin):
                     sort_value=0,
                 )
             elif self.no_planning_counter >= 3:
-    
+
                 await self.group_chat.get_members("agent", Agent).interrupt(
                     "错误：你已经连续3次没有输出任务规划！你必须先在调用工具前输出任务规划！",
-                    "Agent连续3次未输出任务规划，已打断"
+                    "Agent连续3次未输出任务规划，已打断",
                 )
                 await self.group_chat.send_if_exists(
                     "ui_log",

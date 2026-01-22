@@ -1,5 +1,6 @@
 """Command-line interface for LinHai agent."""
 
+import argparse
 import asyncio
 from typing import Dict, List, Optional, Union
 
@@ -94,7 +95,6 @@ class CLIApp(App):
         self,
         group_chat: GroupChat,
         cli_config: CLIConfig,
-        init_messages: list[str | Message] | None = None,
     ):
         super().__init__()
         self.theme = cli_config.theme
@@ -108,8 +108,13 @@ class CLIApp(App):
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
-        init_messages = init_messages or []
-        self.init_messages = [s for s in init_messages if isinstance(s, str)]
+        # 从cli_args构建init_messages
+        cli_args = group_chat.get_members("cli_args", argparse.Namespace)
+        self.init_messages = list(cli_args.message or [])
+        if cli_args.file:
+            self.init_messages.extend(
+                [f"<Filepath {file_path}>" for file_path in cli_args.file]
+            )
 
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None

@@ -25,7 +25,7 @@ def run_tests():
     return result.wasSuccessful()
 
 
-async def run(args, init_messages: list[str | Message] | None):
+async def run(args):
     """运行LinHai应用"""
     from linhai.config import load_config
     from linhai.agent.create import create_agent_from_config
@@ -45,12 +45,12 @@ async def run(args, init_messages: list[str | Message] | None):
         violation_checker=args.violation_checker,
         llm_name=args.llm,
         checklist_path=args.checklist,
+        cli_args=args,
     )
-    _agent = await create_agent_from_config(context, init_messages)
+    _agent = await create_agent_from_config(context)
 
     app = CLIApp(
         group_chat=group_chat,
-        init_messages=init_messages,
         cli_config=config.cli,
     )
 
@@ -95,32 +95,7 @@ def main():
     )
     args = parser.parse_args()
 
-    init_messages: list[str | Message] = []
-    if args.message:
-        for msg in args.message:
-            init_messages.append(msg)
-    if args.file:
-        for file_path in args.file:
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read().strip()
-                    from linhai.agent.base import FileContentMessage
-
-                    init_messages.append(
-                        FileContentMessage(
-                            filepath=str(file_path),
-                            content=content,
-                            show_line_numbers=False,
-                        )
-                    )
-            except FileNotFoundError:
-                print(f"错误: 文件 {file_path} 未找到")
-                sys.exit(1)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                print(f"错误: 读取文件时发生错误: {e}")
-                sys.exit(1)
-
-    return_code = asyncio.run(run(args, init_messages))
+    return_code = asyncio.run(run(args))
     sys.exit(return_code)
 
 

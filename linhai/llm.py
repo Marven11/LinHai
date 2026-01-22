@@ -1,4 +1,5 @@
 """LLM模块，定义语言模型相关的消息类和协议。"""
+
 from __future__ import annotations
 from typing import (
     Sequence,
@@ -601,9 +602,11 @@ class MinimaxAnswer:
         # 解析响应
         message = response.choices[0].message
         # 对于openai库，我们只能使用getattr
-        self.reasoning_content = getattr(getattr(message, 'reasoning_details', None), "text", None)
-        self.content = getattr(message, 'content', None) or ""
-        usage = getattr(response, 'usage', None)
+        self.reasoning_content = getattr(
+            getattr(message, "reasoning_details", None), "text", None
+        )
+        self.content = getattr(message, "content", None) or ""
+        usage = getattr(response, "usage", None)
 
         self.tokens = []
         self.interrupted = False
@@ -615,23 +618,28 @@ class MinimaxAnswer:
         self.cached_input_tokens = cached_input_tokens
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken] = []
-        
+
         # 如果llm_instance存在，更新previous_input_tokens
         if self.llm_instance is not None and self.input_tokens > 0:
             self.llm_instance.previous_input_tokens = self.input_tokens
-        
+
         # 注意：token_usage现在在OpenAi类中发送，不在这里发送
         # 确保toyield只包含AnswerToken
         if self.reasoning_content:
-            self.toyield.append(AnswerToken(
-                reasoning_content=self.reasoning_content,
-                content="",
-            ))
+            self.toyield.append(
+                AnswerToken(
+                    reasoning_content=self.reasoning_content,
+                    content="",
+                )
+            )
         if self.content:
-            self.toyield.append(AnswerToken(
-                reasoning_content=None,
-                content=self.content,
-            ))
+            self.toyield.append(
+                AnswerToken(
+                    reasoning_content=None,
+                    content=self.content,
+                )
+            )
+
     def __aiter__(self):
         return self
 
@@ -779,8 +787,6 @@ class OpenAi:
 
         return 0
 
-
-
     async def answer_stream(
         self,
         history: Sequence[Message],
@@ -846,14 +852,26 @@ class OpenAi:
                     # 对于minimax，使用非流式请求并返回MinimaxAnswer
                     response = await self.openai.chat.completions.create(**params)
                     # 提取usage并直接发送token_usage，不放在toyield里
-                    usage = getattr(response, 'usage', None)
+                    usage = getattr(response, "usage", None)
                     if usage:
                         await self.group_chat.send(
                             "token_usage",
                             AnswerTokenUsage(
-                                input_tokens=usage.prompt_tokens if hasattr(usage, 'prompt_tokens') else 0,
-                                output_tokens=usage.completion_tokens if hasattr(usage, 'completion_tokens') else 0,
-                                total_tokens=usage.total_tokens if hasattr(usage, 'total_tokens') else 0,
+                                input_tokens=(
+                                    usage.prompt_tokens
+                                    if hasattr(usage, "prompt_tokens")
+                                    else 0
+                                ),
+                                output_tokens=(
+                                    usage.completion_tokens
+                                    if hasattr(usage, "completion_tokens")
+                                    else 0
+                                ),
+                                total_tokens=(
+                                    usage.total_tokens
+                                    if hasattr(usage, "total_tokens")
+                                    else 0
+                                ),
                                 cached_input_tokens=cached_input_tokens,
                             ),
                         )

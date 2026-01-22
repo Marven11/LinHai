@@ -22,12 +22,12 @@ class TestCLITabs(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
         from linhai.llm import AnswerTokenUsage
-        
+
         # 配置mock_agent以支持ContextTabWidget
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
-            "usage_ratio": 0.75
+            "usage_ratio": 0.75,
         }
         mock_agent.last_token_usage = AnswerTokenUsage(
             input_tokens=1000,
@@ -35,19 +35,26 @@ class TestCLITabs(unittest.TestCase):
             total_tokens=1200,
             cached_input_tokens=500,
         )
-        
+
         mock_agent_message = Mock(spec=AgentMessage)
         mock_agent_message.messages = []
         mock_agent_message.appending_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 
-        
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
 
-        app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
+        # 注册cli_args模拟对象
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        group_chat.register_member("cli_args", mock_cli_args)
+
+        app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
 
         async def _run_test():
             async with app.run_test() as pilot:
@@ -78,12 +85,12 @@ class TestCLITabs(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
         from linhai.llm import AnswerTokenUsage
-        
+
         # 配置mock_agent以支持ContextTabWidget
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
-            "usage_ratio": 0.75
+            "usage_ratio": 0.75,
         }
         mock_agent.last_token_usage = AnswerTokenUsage(
             input_tokens=1000,
@@ -91,19 +98,26 @@ class TestCLITabs(unittest.TestCase):
             total_tokens=1200,
             cached_input_tokens=500,
         )
-        
+
         mock_agent_message = Mock(spec=AgentMessage)
         mock_agent_message.messages = []
         mock_agent_message.appending_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 
-        
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
 
-        app = CLIApp(group_chat=group_chat, init_messages=None, cli_config=CLIConfig())
+        # 注册cli_args模拟对象
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        group_chat.register_member("cli_args", mock_cli_args)
+
+        app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
 
         async with app.run_test() as pilot:
             agent_pane = pilot.app.query_one("#agent-tab")

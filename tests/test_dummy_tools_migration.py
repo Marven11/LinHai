@@ -62,7 +62,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
@@ -97,7 +97,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
@@ -133,7 +133,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
@@ -172,7 +172,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
@@ -217,7 +217,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
@@ -263,7 +263,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
                 assert_success=True,
                 with_secret=None,
             ),
-            tool_index=1
+            tool_index=1,
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")

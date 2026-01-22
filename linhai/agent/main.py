@@ -38,7 +38,7 @@ class Agent:
         llms: list[LanguageModel],
         compress_threshold: int | float,
         group_chat: GroupChat,
-        init_messages: Sequence[Message],
+        init_messages: list[Message],
         llm_name: str | None = None,
     ):
         self.llms = llms
@@ -83,8 +83,6 @@ class Agent:
 
         self.compress_tool_called_in_last_response = False
         self.current_disable_waiting_user_warning = False
-
-
 
         self.current_answer: Answer | None = None
 
@@ -225,8 +223,6 @@ class Agent:
                 raise RuntimeError("处理消息时出错") from e
         else:
             await self.generate_response()
-
-
 
     def is_last_message_user(self) -> bool:
         if not self.message_processor.get_messages():

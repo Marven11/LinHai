@@ -102,7 +102,7 @@ class IssueManager:
     def postinit(self):
         """后初始化：创建issue工具集并添加到tool_manager"""
         from linhai.tool.main import ToolManager
-        
+
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         issue_toolset = create_issue_toolset(self)
         tool_manager.add_toolset(issue_toolset)

@@ -15,6 +15,7 @@ from .base import Message, RuntimeMessage
 
 class AppendingMessageEntry(TypedDict):
     """附加消息条目，包含源标识符、消息内容和排序值。"""
+
     source: str
     message: Message
     sort_value: int
@@ -79,7 +80,9 @@ class AgentMessage:
             消息列表
         """
         # 按sort_value排序，然后提取message
-        sorted_entries = sorted(self.appending_messages.values(), key=lambda x: x["sort_value"])
+        sorted_entries = sorted(
+            self.appending_messages.values(), key=lambda x: x["sort_value"]
+        )
         appending_messages = [entry["message"] for entry in sorted_entries]
         return self.messages + appending_messages
 
@@ -155,7 +158,9 @@ class AgentMessage:
         if message in self.messages:
             self.messages.remove(message)
 
-    def update_appending_message(self, message: Message | None, source: str, sort_value: int) -> None:
+    def update_appending_message(
+        self, message: Message | None, source: str, sort_value: int
+    ) -> None:
         """更新或移除appending message。
 
         Args:
@@ -171,7 +176,7 @@ class AgentMessage:
             self.appending_messages[source] = {
                 "source": source,
                 "message": message,
-                "sort_value": sort_value
+                "sort_value": sort_value,
             }
 
     def add_queued_message(self, msg: Message) -> None:

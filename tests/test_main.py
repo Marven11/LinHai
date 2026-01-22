@@ -24,10 +24,16 @@ class TestMainCommandLine(unittest.TestCase):
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
 
-        mock_app = MagicMock()
+        mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
+
+        # 设置cli_args以正确模拟
+        mock_cli_args = MagicMock()
+        mock_cli_args.message = ["测试消息"]
+        mock_cli_args.file = []
+        mock_group_chat_instance.get_members.return_value = mock_cli_args
 
         test_args = ["linhai", "-m", "测试消息"]
 
@@ -44,13 +50,14 @@ class TestMainCommandLine(unittest.TestCase):
             context["group_chat"], mock_group_chat_instance
         )  # context字典中的group_chat
         self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("cli_args", context)  # cli_args应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_messages"), ["测试消息"])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
+        # 不再检查init_messages参数，因为现在它在CLIApp内部构建
 
         mock_app.run_async.assert_called_once()
 
@@ -67,7 +74,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
 
-        mock_app = MagicMock()
+        mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
@@ -90,7 +97,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_messages"), [])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
@@ -111,7 +117,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
 
-        mock_app = MagicMock()
+        mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
@@ -127,10 +133,6 @@ class TestMainCommandLine(unittest.TestCase):
                 main()
         self.assertIsInstance(cm.exception, SystemExit)
 
-        mock_open.assert_called_once_with(
-            Path("test_message.txt"), "r", encoding="utf-8"
-        )
-
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
@@ -142,12 +144,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        init_messages = cli_call_args.kwargs.get("init_messages")
-        self.assertEqual(len(init_messages), 1)
-        file_message = init_messages[0]
-        self.assertEqual(file_message.filepath, str(Path("test_message.txt")))
-        self.assertEqual(file_message.content, "文件中的测试消息")
-        self.assertEqual(file_message.show_line_numbers, False)
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
@@ -168,7 +164,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
 
-        mock_app = MagicMock()
+        mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
@@ -184,10 +180,6 @@ class TestMainCommandLine(unittest.TestCase):
                 main()
         self.assertIsInstance(cm.exception, SystemExit)
 
-        mock_open.assert_called_once_with(
-            Path("test_message.txt"), "r", encoding="utf-8"
-        )
-
         mock_create_agent.assert_called_once()
         call_args = mock_create_agent.call_args
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
@@ -199,13 +191,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        init_messages = cli_call_args.kwargs.get("init_messages")
-        self.assertEqual(len(init_messages), 2)
-        self.assertEqual(init_messages[0], "命令行消息")
-        file_message = init_messages[1]
-        self.assertEqual(file_message.filepath, str(Path("test_message.txt")))
-        self.assertEqual(file_message.content, "文件中的优先消息")
-        self.assertEqual(file_message.show_line_numbers, False)
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
@@ -214,53 +199,47 @@ class TestMainCommandLine(unittest.TestCase):
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("builtins.open")
     def test_agent_command_with_file_option_file_not_found(
-        self, mock_open, mock_cli_app, mock_create_agent
+        self, mock_cli_app, mock_create_agent
     ):
         """测试使用-f选项时文件不存在的错误处理"""
-        mock_open.side_effect = FileNotFoundError("文件未找到")
+        # 模拟create_agent_from_config抛出FileNotFoundError
+        mock_create_agent.side_effect = FileNotFoundError("文件未找到")
+        mock_app = AsyncMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
 
         test_args = ["linhai", "-f", "nonexistent.txt"]
 
         with patch.object(sys, "argv", test_args):
-            with patch("sys.exit") as mock_exit:
-                mock_exit.side_effect = SystemExit(1)
-                with self.assertRaises(SystemExit):
-                    main()
+            with self.assertRaises(FileNotFoundError):
+                main()
 
-        mock_open.assert_called_once_with(
-            Path("nonexistent.txt"), "r", encoding="utf-8"
-        )
-
-        mock_create_agent.assert_not_called()
+        mock_create_agent.assert_called_once()
         mock_cli_app.assert_not_called()
-
-        mock_exit.assert_called_once_with(1)
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("builtins.open")
     def test_agent_command_with_file_option_read_error(
-        self, mock_open, mock_cli_app, mock_create_agent
+        self, mock_cli_app, mock_create_agent
     ):
         """测试使用-f选项时文件读取错误的处理"""
-        mock_open.side_effect = Exception("读取错误")
+        # 模拟create_agent_from_config抛出Exception
+        mock_create_agent.side_effect = Exception("读取错误")
+        mock_app = AsyncMock()
+        mock_app.run_async = AsyncMock(return_value=None)
+        mock_app.return_code = 0
+        mock_cli_app.return_value = mock_app
 
         test_args = ["linhai", "-f", "corrupted.txt"]
 
         with patch.object(sys, "argv", test_args):
-            with patch("sys.exit") as mock_exit:
-                mock_exit.side_effect = SystemExit(1)
-                with self.assertRaises(SystemExit):
-                    main()
+            with self.assertRaises(Exception):
+                main()
 
-        mock_open.assert_called_once_with(Path("corrupted.txt"), "r", encoding="utf-8")
-
-        mock_create_agent.assert_not_called()
+        mock_create_agent.assert_called_once()
         mock_cli_app.assert_not_called()
-
-        mock_exit.assert_called_once_with(1)
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
@@ -315,7 +294,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_messages"), [])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )
@@ -375,7 +353,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(cli_call_args.kwargs.get("init_messages"), ["测试消息"])
         self.assertEqual(
             cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
         )

@@ -33,6 +33,7 @@ class AgentBuildContext(TypedDict):
     checklist_path: Optional[Path]
     git_diff_reviewer: bool
     violation_checker: bool
+    cli_args: argparse.Namespace
 
 
 def create_agent_build_context(
@@ -41,6 +42,7 @@ def create_agent_build_context(
     config_basedir: Path,
     git_diff_reviewer: bool,
     violation_checker: bool,
+    cli_args: argparse.Namespace,
     llm_name: Optional[str] = None,
     checklist_path: Optional[Path] = None,
 ) -> AgentBuildContext:
@@ -70,12 +72,12 @@ def create_agent_build_context(
         "checklist_path": checklist_path,
         "git_diff_reviewer": git_diff_reviewer,
         "violation_checker": violation_checker,
+        "cli_args": cli_args,
     }
 
 
 async def create_agent_from_config(
     context: AgentBuildContext,
-    init_messages
 ) -> Agent:
     """创建Agent实例（从配置对象）
 
@@ -95,9 +97,7 @@ async def create_agent_from_config(
         llm_name=context["llm_name"],
         compress_threshold=context["config"].agent.compress_threshold,
         group_chat=context["group_chat"],
-        init_messages=await _create_init_messages(context) + [
-            UserMessage(m) if isinstance(m, str) else m for m in init_messages
-        ],
+        init_messages=await _create_init_messages(context),
     )
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()
@@ -117,20 +117,11 @@ async def create_agent_from_config(
 async def _create_subagent(
     context: AgentBuildContext, llms: list[LanguageModel], agent: Agent
 ) -> None:
-    """创建SubAgent相关组件
-
-    Args:
-        context: Agent构建上下文
-        llms: LLM实例列表
-        agent: Agent实例，用于注册插件
-    """
-    from linhai.subagent import SubAgentManager
-    from linhai.subagent.issue import IssueManager
-
     if context["git_diff_reviewer"]:
         from linhai.subagent.subagent_types.git_diff_reviewer import GitDiffReviewPlugin
 
         GitDiffReviewPlugin(context["group_chat"]).register(agent.lifecycle)
+
     if context["violation_checker"]:
         from linhai.subagent.subagent_types.violation_checker import (
             ViolationCheckerPlugin,
@@ -139,29 +130,20 @@ async def _create_subagent(
         ViolationCheckerPlugin(context["group_chat"]).register(agent.lifecycle)
 
     if context["config"].subagent and context["config"].subagent.enable:
+        from linhai.subagent import SubAgentManager
+        from linhai.subagent.issue import IssueManager
+
         subagent_manager = SubAgentManager(
             context["group_chat"], context["config"].subagent, llms
         )
         issue_manager = IssueManager(context["group_chat"])
-    return None
-
-    return agent
 
 
 async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageModel]:
-    """创建LLM实例列表
-
-    Args:
-        context: Agent构建上下文
-
-    Returns:
-        LLM实例列表
-    """
 
     async def notification_callback(
         level: Literal["INFO", "WARNING", "ERROR"], content: str
     ) -> None:
-        """发送通知到ui_log队列"""
         notice = CliRuntimeNotice(level=level, content=content)
         await context["group_chat"].send_if_exists("ui_log", notice)
 
@@ -183,7 +165,6 @@ async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageMo
 
 
 async def _create_tool_manager(context: "AgentBuildContext"):
-    """创建ToolManager实例"""
     from linhai.machine_control import MachineControl
 
     tool_manager = ToolManager(
@@ -196,9 +177,7 @@ async def _create_tool_manager(context: "AgentBuildContext"):
 
     machine_control = MachineControl(context["group_chat"])
 
-    # 初始化Secret系统（如果配置了secret.config_path）
     if context["config"].tools.secret.config_path:
-
         initialize_secret_system(
             group_chat=context["group_chat"],
             secret_config_path=context["config"].tools.secret.config_path,
@@ -209,7 +188,7 @@ async def _create_tool_manager(context: "AgentBuildContext"):
 
 
 async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
-    """创建初始化消息列表
+    """创建初始化消息列表。
 
     Args:
         context: Agent构建上下文
@@ -219,19 +198,22 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
     """
     init_messages: list[Message] = [SystemMessage(context["group_chat"])]
 
-    # 计算memory_file_path
-    memory_file_path = None
+    cli_args = context.get("cli_args", argparse.Namespace())
+    # 确保cli_args有message和file属性
+    if not hasattr(cli_args, "message"):
+        cli_args.message = None
+    if not hasattr(cli_args, "file"):
+        cli_args.file = None
+
     if context["config"].memory and context["config_basedir"]:
         memory_file_path = (
             context["config_basedir"] / context["config"].memory.file_path
         )
-
-    user_global_memory = (
-        Path(memory_file_path).absolute()
-        if memory_file_path
-        else Path("~/.config/linhai/LINHAI.md").expanduser()
-    )
-    init_messages.append(GlobalMemory(user_global_memory))
+        init_messages.append(GlobalMemory(Path(memory_file_path).absolute()))
+    else:
+        init_messages.append(
+            GlobalMemory(Path("~/.config/linhai/LINHAI.md").expanduser())
+        )
 
     if context["checklist_path"]:
         from .base import ChecklistMessage
@@ -254,5 +236,26 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
     for filepath in project_memory_filepaths:
         if filepath.exists():
             init_messages.append(PathMemory(filepath))
+
+    from linhai.llm import UserMessage
+    from linhai.agent.base import FileContentMessage
+
+    if cli_args.message:
+        for msg in cli_args.message:
+            init_messages.append(UserMessage(msg))
+
+    if not cli_args.file:
+        return init_messages
+
+    for file_path in cli_args.file:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            init_messages.append(
+                FileContentMessage(
+                    filepath=str(file_path),
+                    content=content,
+                    show_line_numbers=False,
+                )
+            )
 
     return init_messages

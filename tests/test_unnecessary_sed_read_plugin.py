@@ -407,16 +407,28 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
             plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
         )
+        self.assertIsNone(result)
+        # 检查是否发送了警告
+        self.group_chat.send_if_exists.assert_called_once()
 
-        # 应该被阻止，因为内容相同
-        self.assertIsNotNone(result)
+        # 重置模拟，准备第二次调用
+        self.group_chat.send_if_exists.reset_mock()
+
+        # 第二次调用：应该返回RuntimeMessage（阻止）
+        result2 = asyncio.run(
+            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+        )
+
+        # 应该被阻止，因为内容相同且是第二次重复
+        self.assertIsNotNone(result2)
         from linhai.agent.base import RuntimeMessage
 
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result.message)
+        self.assertIsInstance(result2, RuntimeMessage)
+        self.assertIn("错误：你已经读取过文件", result2.message)
         self.group_chat.send_if_exists.assert_called_once()
 
     @patch("linhai.agent.plugin.Path")
@@ -583,14 +595,27 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
             plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
         )
+        self.assertIsNone(result)
+        # 检查是否发送了警告
+        self.group_chat.send_if_exists.assert_called_once()
 
-        # 应该拦截，因为最新消息内容相同
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result.message)
+        # 重置模拟，准备第二次调用
+        self.group_chat.send_if_exists.reset_mock()
+
+        # 第二次调用：应该返回RuntimeMessage（阻止）
+        result2 = asyncio.run(
+            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+        )
+
+        # 应该被阻止，因为最新消息内容相同且是第二次重复
+        self.assertIsNotNone(result2)
+        self.assertIsInstance(result2, RuntimeMessage)
+        self.assertIn("错误：你已经读取过文件", result2.message)
+        self.group_chat.send_if_exists.assert_called_once()
 
     @patch("linhai.agent.plugin.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
@@ -744,17 +769,28 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
             plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
         )
+        self.assertIsNone(result)
+        # 检查是否发送了警告
+        self.group_chat.send_if_exists.assert_called_once()
 
-        # 应该拦截，因为好消息的内容与当前读取相同
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, RuntimeMessage)
-        self.assertIn("错误：你已经读取过文件", result.message)
-
-        # 重置模拟，确保没有意外调用
+        # 重置模拟，准备第二次调用
+        self.group_chat.send_if_exists.reset_mock()
         mock_path.reset_mock()
+
+        # 第二次调用：应该返回RuntimeMessage（阻止）
+        result2 = asyncio.run(
+            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+        )
+
+        # 应该拦截，因为好消息的内容与当前读取相同且是第二次重复
+        self.assertIsNotNone(result2)
+        self.assertIsInstance(result2, RuntimeMessage)
+        self.assertIn("错误：你已经读取过文件", result2.message)
+        self.group_chat.send_if_exists.assert_called_once()
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):
         """测试工具调用失败时返回None。"""

@@ -418,7 +418,5 @@ model = "deepseek-chat"
             os.unlink(temp_file)
 
 
-
-
 if __name__ == "__main__":
     unittest.main()

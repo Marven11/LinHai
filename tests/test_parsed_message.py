@@ -28,6 +28,7 @@ class MockAnswer(Answer):
     def get_message(self):
         content = "".join(tok.content for tok in self.tokens)
         from linhai.llm import AssistantMessage
+
         return AssistantMessage(message=content)
 
     def get_current_content(self):
@@ -52,6 +53,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
         # Simulate tokens: two normal tokens, one toolcall, then another normal
         from linhai.llm import AnswerToken
+
         tokens = [
             AnswerToken(reasoning_content=None, content="Hello "),
             AnswerToken(reasoning_content=None, content="world! "),
@@ -62,26 +64,31 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
         # Mock token parser to return parsed tokens
         from linhai.cli.token_parser import TokenParser
+
         parser = TokenParser()
         # We'll mock the receive_token to return appropriate parsed tokens
         # For simplicity, we'll directly use the parser and assume it works
         # In real test, we might need to mock it differently
-        
+
         parsed = ParsedAnswer(answer, lifecycle, agent)
         # Replace token_parser with a mock that returns controlled parsed tokens
         parsed.token_parser = MagicMock()
         # Simulate parsed tokens: first two are "normal", third is "toolcall", fourth is "normal"
-        parsed.token_parser.receive_token = MagicMock(side_effect=[
-            [{"token_type": "normal", "content": "Hello "}],
-            [{"token_type": "normal", "content": "world! "}],
-            [{"token_type": "toolcall", "content": "```json toolcall\n{}"}],
-            [{"token_type": "normal", "content": "After tool"}],
-        ])
+        parsed.token_parser.receive_token = MagicMock(
+            side_effect=[
+                [{"token_type": "normal", "content": "Hello "}],
+                [{"token_type": "normal", "content": "world! "}],
+                [{"token_type": "toolcall", "content": "```json toolcall\n{}"}],
+                [{"token_type": "normal", "content": "After tool"}],
+            ]
+        )
         parsed.token_parser.clear = MagicMock(return_value=[])
 
         segments = []
+
         async def mock_put(segment):
             segments.append(segment)
+
         parsed.segment_queue.put = AsyncMock(side_effect=mock_put)
 
         await parsed.start_parsing()
@@ -110,6 +117,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
         agent = MagicMock()
         from linhai.llm import AnswerToken
+
         tokens = [
             AnswerToken(reasoning_content=None, content="First"),
             AnswerToken(reasoning_content=None, content="Second"),
@@ -117,12 +125,16 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
         parsed = ParsedAnswer(answer, lifecycle, agent)
         parsed.token_parser = MagicMock()
-        parsed.token_parser.receive_token = MagicMock(return_value=[{"token_type": "normal", "content": "First"}])
+        parsed.token_parser.receive_token = MagicMock(
+            return_value=[{"token_type": "normal", "content": "First"}]
+        )
         parsed.token_parser.clear = MagicMock(return_value=[])
 
         segments = []
+
         async def mock_put(segment):
             segments.append(segment)
+
         parsed.segment_queue.put = AsyncMock(side_effect=mock_put)
 
         task = asyncio.create_task(parsed.start_parsing())

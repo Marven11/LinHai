@@ -49,6 +49,8 @@ default_llm = "test"
         self.cli_args.checklist = None
         self.cli_args.git_diff_reviewer = False
         self.cli_args.violation_checker = False
+        self.cli_args.message = None
+        self.cli_args.file = None
         self.group_chat.register_member("cli_args", self.cli_args)
 
     def tearDown(self):

@@ -17,7 +17,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
             stream=mock_stream,
             group_chat=mock_group_chat,
             compatibility=None,
-            cached_input_tokens=0
+            cached_input_tokens=0,
         )
 
         answer.truncate()
@@ -34,7 +34,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
             stream=mock_stream,
             group_chat=mock_group_chat,
             compatibility=None,
-            cached_input_tokens=0
+            cached_input_tokens=0,
         )
 
         answer.interrupt()
@@ -48,9 +48,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
             side_effect=[
                 MagicMock(
                     choices=[
-                        MagicMock(
-                            delta=MagicMock(content="test", reasoning_content="")
-                        )
+                        MagicMock(delta=MagicMock(content="test", reasoning_content=""))
                     ],
                     usage=None,
                 ),
@@ -70,7 +68,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
             stream=mock_stream,
             group_chat=mock_group_chat,
             compatibility=None,
-            cached_input_tokens=0
+            cached_input_tokens=0,
         )
 
         tokens = []
@@ -131,7 +129,7 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
             stream=mock_stream,
             group_chat=mock_group_chat,
             compatibility=None,
-            cached_input_tokens=0
+            cached_input_tokens=0,
         )
 
         tokens = []

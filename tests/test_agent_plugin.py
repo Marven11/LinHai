@@ -57,7 +57,9 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertFalse(result)
         self.agent.interrupt.assert_not_called()
@@ -287,7 +289,9 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
 ```
 """
 
-        result = await self.plugin.after_token_generation(self.agent, self.answer, current_content)
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, current_content
+        )
 
         self.assertFalse(result)
 
@@ -329,7 +333,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration = MagicMock()
         self.orchestration.last_compress_or_clean_time = None
         self.orchestration.should_block_tool_call = MagicMock(return_value=False)
-        
+
         # Mock get_tool_block_details返回实际的字典
         def mock_compute_orchestration_context(tool_name, threshold_info):
             if threshold_info is None:
@@ -337,9 +341,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                     "blocked_category": None,
                     "actual_category": "other",
                     "recently_called_cleanup": False,
-                    "current_state": "绿灯"
+                    "current_state": "绿灯",
                 }
-            
+
             current_state = "绿灯"
             usage_ratio = threshold_info["usage_ratio"]
             if usage_ratio >= 0.9:
@@ -348,19 +352,26 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 current_state = "黄灯"
             elif usage_ratio >= 0.5:
                 current_state = "绿灯"
-            
-            recently_called_cleanup = self.orchestration.last_compress_or_clean_time is not None and \
-                (time.time() - self.orchestration.last_compress_or_clean_time) < 60
-            
-            actual_category = "cleanup" if tool_name in ["context_range_compress", "context_garbage_clean", "context_thanox"] else "other"
-            
+
+            recently_called_cleanup = (
+                self.orchestration.last_compress_or_clean_time is not None
+                and (time.time() - self.orchestration.last_compress_or_clean_time) < 60
+            )
+
+            actual_category = (
+                "cleanup"
+                if tool_name
+                in ["context_range_compress", "context_garbage_clean", "context_thanox"]
+                else "other"
+            )
+
             # 根据 should_block_tool_call 的逻辑映射到具体的 blocked_category
             should_block = False
             if recently_called_cleanup:
                 should_block = actual_category == "cleanup"
             elif current_state == "红灯":
                 should_block = actual_category != "cleanup"
-            
+
             blocked_category = None
             if should_block:
                 if current_state == "红灯":
@@ -370,7 +381,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                         blocked_category = "other"
                 else:
                     blocked_category = "cleanup"
-            
+
             return {
                 "threshold_info": threshold_info,
                 "current_state": current_state,
@@ -380,11 +391,13 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                     "blocked_category": blocked_category,
                     "actual_category": actual_category,
                     "recently_called_cleanup": recently_called_cleanup,
-                    "current_state": current_state
-                }
+                    "current_state": current_state,
+                },
             }
-        
-        self.orchestration.compute_orchestration_context = MagicMock(side_effect=mock_compute_orchestration_context)
+
+        self.orchestration.compute_orchestration_context = MagicMock(
+            side_effect=mock_compute_orchestration_context
+        )
 
         # 设置group_chat.get_members返回值
         def get_members_side_effect(name, cls):
@@ -408,7 +421,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 "context_thanox",
             },
         )
-
 
     def test_register(self):
         """测试注册插件。"""
@@ -482,8 +494,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
-
-
     def test_all_allowed_tools(self):
         """测试所有允许的清理类工具。"""
         # 设置模拟
@@ -543,7 +553,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             "remaining_tokens": 4000,
             "usage_ratio": 0.95,
         }  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.last_compress_or_clean_time = (
+            time.time() - 30
+        )  # 30秒前清理过
         self.orchestration.should_block_tool_call.return_value = True  # 应该拦截
 
         # 创建清理工具调用
@@ -584,7 +596,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             "remaining_tokens": 4000,
             "usage_ratio": 0.95,
         }  # 95%使用率，红灯
-        self.orchestration.last_compress_or_clean_time = time.time() - 30  # 30秒前清理过
+        self.orchestration.last_compress_or_clean_time = (
+            time.time() - 30
+        )  # 30秒前清理过
         self.orchestration.should_block_tool_call.return_value = False  # 不应该拦截
 
         # 创建其他工具调用

@@ -133,13 +133,18 @@ class AgentContextOrchestration:
             current_state = "黄灯"
         else:
             current_state = "红灯"
-        
+
         recently_called_cleanup = False
         if self.last_compress_or_clean_time:
             time_since_last_cleanup = time.time() - self.last_compress_or_clean_time
             recently_called_cleanup = time_since_last_cleanup < 60
-        
-        actual_category = "cleanup" if tool_name in {"context_range_compress", "context_garbage_clean", "context_thanox"} else "other"
+
+        actual_category = (
+            "cleanup"
+            if tool_name
+            in {"context_range_compress", "context_garbage_clean", "context_thanox"}
+            else "other"
+        )
 
         # 根据状态和清理工具调用情况确定blocked_category
         if current_state == "红灯":
@@ -168,8 +173,12 @@ class AgentContextOrchestration:
             cache_ratio_text = ""
             token_manager = self.group_chat.get_members("token_manager", TokenManager)
             if token_manager.cumulative_token_usage is not None:
-                input_tokens = token_manager.cumulative_token_usage.get("input_tokens", 0)
-                cached_input_tokens = token_manager.cumulative_token_usage.get("cached_input_tokens", 0)
+                input_tokens = token_manager.cumulative_token_usage.get(
+                    "input_tokens", 0
+                )
+                cached_input_tokens = token_manager.cumulative_token_usage.get(
+                    "cached_input_tokens", 0
+                )
                 if input_tokens > 0:
                     cache_ratio = (cached_input_tokens / input_tokens) * 100
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
@@ -179,7 +188,11 @@ class AgentContextOrchestration:
             elif current_state == "红灯":
                 suggestion = "建议: 立即暂停当前任务"
             elif current_state == "黄灯":
-                suggestion = "建议: 应该调用context_garbage_clean工具" if large_count >= 5 else "建议: 应该避免读取文件，直接开始修改文件"
+                suggestion = (
+                    "建议: 应该调用context_garbage_clean工具"
+                    if large_count >= 5
+                    else "建议: 应该避免读取文件，直接开始修改文件"
+                )
             else:
                 suggestion = "建议: 不要担心消息限制，立即工作"
             notification_message = f"{base_info}, {suggestion}"
@@ -273,8 +286,6 @@ class AgentContextOrchestration:
         # 注册大消息数量通知插件
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
-
-
 
     async def _on_after_tool_call(
         self,

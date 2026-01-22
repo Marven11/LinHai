@@ -73,6 +73,14 @@ class TestContextTab(unittest.TestCase):
             "remaining_tokens": 2000,
             "usage_ratio": 0.75,
         }
+
+        # 注册cli_args模拟对象
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        group_chat.register_member("cli_args", mock_cli_args)
         from linhai.llm import AnswerTokenUsage
 
         mock_token_usage = AnswerTokenUsage(
@@ -109,9 +117,7 @@ class TestContextTab(unittest.TestCase):
             # 直接注册token_manager到group_chat，这样ContextTabWidget就不会抛出RuntimeError
             group_chat.register_member("token_manager", mock_token_manager)
 
-            app = CLIApp(
-                group_chat=group_chat, init_messages=None, cli_config=CLIConfig()
-            )
+            app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
 
         async def _run_test():
             async with app.run_test() as pilot:

@@ -37,7 +37,9 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回终端ID
-            self.mock_call_tool.return_value = ToolResultSuccess(content="term_123456789")
+            self.mock_call_tool.return_value = ToolResultSuccess(
+                content="term_123456789"
+            )
 
             result = await self.ssh_control.terminal_create(columns=80, lines=24)
             self.assertIsInstance(result, ToolResultSuccess)
@@ -55,8 +57,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回成功消息
-            self.mock_call_tool.return_value = ToolResultSuccess(content=
-                "已发送字符串: echo hello"
+            self.mock_call_tool.return_value = ToolResultSuccess(
+                content="已发送字符串: echo hello"
             )
 
             result = await self.ssh_control.terminal_send_string(
@@ -81,8 +83,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回成功消息
-            self.mock_call_tool.return_value = ToolResultSuccess(content=
-                "已发送按键: ['enter', 'a', 'b']"
+            self.mock_call_tool.return_value = ToolResultSuccess(
+                content="已发送按键: ['enter', 'a', 'b']"
             )
 
             result = await self.ssh_control.terminal_send_keys(
@@ -105,20 +107,17 @@ class TestSshTerminal(unittest.TestCase):
         async def test():
             # 模拟远程调用返回base64编码的屏幕内容（trojan.py实际返回格式）
             import base64
+
             # 注意：trojan.py中terminal_read_screen返回的是base64编码的字节流
             # 我们这里模拟base64编码的字符串，然后解码后比较
             raw_output = b"hello world\n$"
-            mock_output = base64.b64encode(raw_output).decode('utf-8')
-            self.mock_call_tool.return_value = ToolResultSuccess(content=
-                mock_output
-            )
+            mock_output = base64.b64encode(raw_output).decode("utf-8")
+            self.mock_call_tool.return_value = ToolResultSuccess(content=mock_output)
 
-            result = await self.ssh_control.terminal_read_screen(
-                terminal_id="term_123"
-            )
+            result = await self.ssh_control.terminal_read_screen(terminal_id="term_123")
             self.assertIsInstance(result, ToolResultSuccess)
             # ssh_host.py中的terminal_read_screen方法会解码base64
-            self.assertEqual(result.content, raw_output.decode('utf-8'))
+            self.assertEqual(result.content, raw_output.decode("utf-8"))
 
             # 验证call_tool被正确调用
             self.mock_call_tool.assert_called_once_with(
@@ -132,13 +131,11 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回关闭消息
-            self.mock_call_tool.return_value = ToolResultSuccess(content=
-                "已关闭终端 term_123"
+            self.mock_call_tool.return_value = ToolResultSuccess(
+                content="已关闭终端 term_123"
             )
 
-            result = await self.ssh_control.terminal_close(
-                terminal_id="term_123"
-            )
+            result = await self.ssh_control.terminal_close(terminal_id="term_123")
             self.assertIsInstance(result, ToolResultSuccess)
             self.assertIn("已关闭终端", result.content)
 
@@ -156,9 +153,9 @@ class TestSshTerminal(unittest.TestCase):
         async def test():
             # 模拟返回数据
             raw_output = b"test output\n$"
-            expected_output = raw_output.decode('utf-8')  # 解码后的字符串
-            base64_output = base64.b64encode(raw_output).decode('utf-8')  # base64编码
-            
+            expected_output = raw_output.decode("utf-8")  # 解码后的字符串
+            base64_output = base64.b64encode(raw_output).decode("utf-8")  # base64编码
+
             # 创建终端
             self.mock_call_tool.side_effect = [
                 ToolResultSuccess(content="term_123"),  # create
@@ -184,9 +181,7 @@ class TestSshTerminal(unittest.TestCase):
             self.assertEqual(read_result.content, expected_output)
 
             # 4. 关闭终端
-            close_result = await self.ssh_control.terminal_close(
-                terminal_id="term_123"
-            )
+            close_result = await self.ssh_control.terminal_close(terminal_id="term_123")
             self.assertIn("已关闭终端", close_result.content)
 
             # 验证总共调用了4次call_tool
@@ -199,8 +194,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "工具执行失败: 终端不存在"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="工具执行失败: 终端不存在"
             )
 
             result = await self.ssh_control.terminal_read_screen(
@@ -216,8 +211,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误信息
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "终端尺寸必须大于0: columns=0, lines=24"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="终端尺寸必须大于0: columns=0, lines=24"
             )
 
             # 注意：实际实现中参数验证在远程端，这里模拟远程返回错误
@@ -232,8 +227,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "终端不存在: term_nonexistent"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_send_keys(
@@ -249,8 +244,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "终端不存在: term_nonexistent"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_send_string(
@@ -266,8 +261,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "终端不存在: term_nonexistent"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_read_screen(
@@ -283,8 +278,8 @@ class TestSshTerminal(unittest.TestCase):
 
         async def test():
             # 模拟远程调用返回错误
-            self.mock_call_tool.return_value = ToolResultFailed(content=
-                "终端不存在: term_nonexistent"
+            self.mock_call_tool.return_value = ToolResultFailed(
+                content="终端不存在: term_nonexistent"
             )
 
             result = await self.ssh_control.terminal_close(
