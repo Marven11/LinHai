@@ -525,19 +525,19 @@ class SshMachineControl:
         )
 
     async def process_stdio_write(
-        self, pid: str, content: str
+        self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
         """向进程的标准输入写入内容"""
         return await self.call_tool(
-            "process_stdio_write", {"pid": pid, "content": content}
+            "process_stdio_write", {"pid": pid, "content": content, "with_enter": with_enter}
         )
 
     async def process_stdio_read(
-        self, pid: str, unescape_ansi: bool = True
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """读取进程的标准输出和标准错误内容"""
         return await self.call_tool(
-            "process_stdio_read", {"pid": pid, "unescape_ansi": unescape_ansi}
+            "process_stdio_read", {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout}
         )
 
     async def process_wait(

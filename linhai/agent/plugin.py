@@ -14,7 +14,7 @@ import linhai.agent as linhai_agent
 from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
-from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage
+from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage, SpoofedReasoningMessage
 from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
 from ..utils import CliRuntimeNotice
 from linhai.tool.base import ToolCallResultMessage
@@ -483,13 +483,13 @@ class PreviousReasoningPlugin(Plugin):
             if isinstance(msg, AssistantMessage) and msg.reasoning_message
         ]
         if msgs:
-            previous_reasoning_msg = PreviousReasoningMessage(msgs[-6:])
+            previous_reasoning_msg = SpoofedReasoningMessage(msgs[-6:])
             agent.message_processor.update_appending_message(
-                previous_reasoning_msg, source="previous_reasoning", sort_value=-100
+                previous_reasoning_msg, source="previous_reasoning", sort_value=1000
             )
         else:
             agent.message_processor.update_appending_message(
-                None, source="previous_reasoning", sort_value=-100
+                None, source="previous_reasoning", sort_value=1000
             )
 
     def register(self, lifecycle):

@@ -162,17 +162,18 @@ class MachineControlToolSet(ToolSet):
             args={
                 "pid": ToolArgInfo(desc="进程ID", type="str"),
                 "content": ToolArgInfo(desc="要写入的内容", type="str"),
+                "with_enter": ToolArgInfo(desc="是否在末尾添加回车", type="bool"),
             },
-            required_args=["pid", "content"],
+            required_args=["pid", "content", "with_enter"],
             conflict_with=None,
         )
         async def process_stdio_write_tool(
-            pid: str, content: str
+            pid: str, content: str, with_enter: bool
         ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
-            return await host_control.process_stdio_write(pid, content)
+            return await host_control.process_stdio_write(pid, content, with_enter)
 
         @self.register_tool(
             name="process_stdio_read",
@@ -182,17 +183,20 @@ class MachineControlToolSet(ToolSet):
                 "unescape_ansi": ToolArgInfo(
                     desc="是否反转义ANSI序列，默认为True", type="bool"
                 ),
+                "timeout": ToolArgInfo(
+                    desc="超时时间（秒），默认60秒", type="float"
+                ),
             },
             required_args=["pid"],
             conflict_with=None,
         )
         async def process_stdio_read_tool(
-            pid: str, unescape_ansi: bool = True
+            pid: str, unescape_ansi: bool = True, timeout: float = 60.0
         ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
-            return await host_control.process_stdio_read(pid, unescape_ansi)
+            return await host_control.process_stdio_read(pid, unescape_ansi, timeout)
 
         @self.register_tool(
             name="process_wait",
@@ -519,11 +523,11 @@ class HostControl(Protocol):
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_stdio_write(
-        self, pid: str, content: str
+        self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_stdio_read(
-        self, pid: str, unescape_ansi: bool = True
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_wait(

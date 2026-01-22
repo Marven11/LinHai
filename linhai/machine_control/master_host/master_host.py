@@ -94,7 +94,7 @@ class MasterHostControl:
             return ToolResultFailed(content=str(e))
 
     async def process_stdio_write(
-        self, pid: str, content: str
+        self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
         """向进程的标准输入写入内容"""
         try:
@@ -103,6 +103,8 @@ class MasterHostControl:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
             if process.stdin is None:
                 return ToolResultFailed(content=f"进程 {pid} 没有标准输入")
+            if with_enter:
+                content = content + "\n"
             process.stdin.write(content.encode("utf-8"))
             await process.stdin.drain()
             return ToolResultSuccess(
@@ -112,7 +114,7 @@ class MasterHostControl:
             return ToolResultFailed(content=str(e))
 
     async def process_stdio_read(
-        self, pid: str, unescape_ansi: bool = True
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """读取进程的标准输出和标准错误内容"""
         try:
@@ -121,9 +123,9 @@ class MasterHostControl:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
             stdout_data, stderr_data = b"", b""
             if process.stdout:
-                stdout_data = await process.stdout.read(8 * 1024)
+                stdout_data = await asyncio.wait_for(process.stdout.read(8 * 1024), timeout=timeout)
             if process.stderr:
-                stderr_data = await process.stderr.read(8 * 1024)
+                stderr_data = await asyncio.wait_for(process.stderr.read(8 * 1024), timeout=timeout)
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
             if unescape_ansi:
@@ -135,6 +137,8 @@ class MasterHostControl:
             return ToolResultSuccess(
                 content=f"<<pid>>{pid}<<pid>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
             )
+        except asyncio.TimeoutError:
+            return ToolResultFailed(content=f"读取进程 {pid} 的输出超时（{timeout}秒）")
         except Exception as e:
             return ToolResultFailed(content=str(e))
 

@@ -71,6 +71,7 @@ class AssistantMessage(TypedDict, total=False):
     tool_calls: Iterable[ChatCompletionMessageToolCallParam]
     function_call: Optional[FunctionCall]
     audio: Optional[Audio]
+    reasoning_content: str
 
 
 LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage]

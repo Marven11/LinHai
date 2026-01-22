@@ -621,3 +621,100 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent.get_threshold_info.assert_called_once()
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
+
+
+class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PreviousReasoningPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        from linhai.agent.plugin import PreviousReasoningPlugin
+        from linhai.llm import AssistantMessage
+        
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.get_messages = MagicMock(return_value=[])
+        self.agent.message_processor.update_appending_message = MagicMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.plugin = PreviousReasoningPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.tool_calls = []
+        
+        # 创建一些模拟的AssistantMessage，带有reasoning_message
+        self.mock_messages = [
+            AssistantMessage(message="msg1", reasoning_message="reasoning1"),
+            AssistantMessage(message="msg2", reasoning_message="reasoning2"),
+            AssistantMessage(message="msg3", reasoning_message="reasoning3"),
+            AssistantMessage(message="msg4", reasoning_message="reasoning4"),
+            AssistantMessage(message="msg5", reasoning_message="reasoning5"),
+            AssistantMessage(message="msg6", reasoning_message="reasoning6"),
+            AssistantMessage(message="msg7", reasoning_message="reasoning7"),
+        ]
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_after_message_generation_with_reasoning_messages(self):
+        """测试有推理消息时创建SpoofedReasoningMessage。"""
+        # 设置模拟消息
+        self.agent.message_processor.get_messages.return_value = self.mock_messages
+        
+        await self.plugin.after_message_generation(
+            self.answer, "full response", self.tool_calls
+        )
+        
+        # 验证update_appending_message被调用，并且传递了SpoofedReasoningMessage
+        self.agent.message_processor.update_appending_message.assert_called_once()
+        call_args = self.agent.message_processor.update_appending_message.call_args
+        
+        # 检查第一个参数是SpoofedReasoningMessage实例
+        message_instance = call_args[0][0]
+        self.assertEqual(message_instance.__class__.__name__, "SpoofedReasoningMessage")
+        
+        # 检查reasoning_contents包含最近的6个推理消息
+        self.assertEqual(len(message_instance.reasoning_contents), 6)
+        self.assertEqual(message_instance.reasoning_contents, ["reasoning2", "reasoning3", "reasoning4", "reasoning5", "reasoning6", "reasoning7"])
+        
+        # 检查source和sort_value
+        self.assertEqual(call_args[1]["source"], "previous_reasoning")
+        self.assertEqual(call_args[1]["sort_value"], -100)
+
+    async def test_after_message_generation_no_reasoning_messages(self):
+        """测试没有推理消息时清除appending message。"""
+        # 设置没有推理消息的模拟消息
+        messages_without_reasoning = [
+            AssistantMessage(message="msg1", reasoning_message=None),
+            AssistantMessage(message="msg2", reasoning_message=None),
+        ]
+        self.agent.message_processor.get_messages.return_value = messages_without_reasoning
+        
+        await self.plugin.after_message_generation(
+            self.answer, "full response", self.tool_calls
+        )
+        
+        # 验证update_appending_message被调用，传递None
+        self.agent.message_processor.update_appending_message.assert_called_once()
+        call_args = self.agent.message_processor.update_appending_message.call_args
+        self.assertIsNone(call_args[0][0])
+        self.assertEqual(call_args[1]["source"], "previous_reasoning")
+        self.assertEqual(call_args[1]["sort_value"], -100)
+
+    async def test_after_message_generation_spoofed_reasoning_message_format(self):
+        """测试SpoofedReasoningMessage的格式符合预期。"""
+        from linhai.agent.base import SpoofedReasoningMessage
+        
+        # 创建SpoofedReasoningMessage实例
+        reasoning_contents = ["reasoning1", "reasoning2", "reasoning3"]
+        message = SpoofedReasoningMessage(reasoning_contents)
+        
+        # 检查to_llm_message返回的格式
+        llm_message = message.to_llm_message()
+        self.assertEqual(llm_message["role"], "assistant")
+        self.assertEqual(llm_message["content"], "")
+        self.assertEqual(llm_message["reasoning_content"], "reasoning1\nreasoning2\nreasoning3")

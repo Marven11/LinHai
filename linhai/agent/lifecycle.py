@@ -142,7 +142,7 @@ class Lifecycle:
             WeirdTokenPlugin,
             EndThinkPlugin,
             OnlyReasoningPlugin,
-            # PreviousReasoningPlugin,
+            PreviousReasoningPlugin,
             ToolCallInReasoningPlugin,
             SingleToolCallReminderPlugin,
             JsonCodeBlockPlugin,
@@ -162,8 +162,7 @@ class Lifecycle:
             WeirdTokenPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
             OnlyReasoningPlugin(self.group_chat),
-            # 貌似会影响模型性能，默认关闭
-            # PreviousReasoningPlugin(self.group_chat),
+            PreviousReasoningPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),

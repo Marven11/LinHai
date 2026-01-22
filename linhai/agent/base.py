@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from reprlib import Repr
+from typing import cast
 
 import linhai
 from linhai.llm import (
@@ -356,6 +357,48 @@ class PreviousReasoningMessage(Message):
             + "<<previous_reasoning>>"
         )
         return {"role": "user", "content": content}
+
+    def to_json(self) -> str:
+        """转换为JSON字符串。"""
+        data = {"reasoning_contents": self.reasoning_contents}
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(
+        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+    ):  # pylint: disable=unused-argument
+        """从JSON字符串创建实例。"""
+        data = json.loads(json_str)
+        return cls(reasoning_contents=data["reasoning_contents"])
+
+
+class SpoofedReasoningMessage(Message):
+    """伪造的推理消息，用于保留之前的推理内容。
+
+    此消息的to_llm_message返回一个包含reasoning_content字段的字典，
+    以便API提供商保留推理内容。
+    """
+
+    def __init__(self, reasoning_contents: list[str]):
+        self.reasoning_contents = reasoning_contents
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。
+
+        返回格式：
+        {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": "合并后的推理内容"
+        }
+        """
+        from linhai.type_hints import AssistantMessage
+        reasoning_content = "\n".join(self.reasoning_contents)
+        return {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": reasoning_content,
+        }
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""

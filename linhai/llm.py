@@ -267,7 +267,7 @@ class AssistantMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        msg = {"role": "assistant", "content": self.message}
+        msg = {"role": "assistant", "content": self.message, "reasoning_content": self.reasoning_message}
         return cast(LanguageModelMessage, msg)
 
     def __repr__(self) -> str:
