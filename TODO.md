@@ -85,6 +85,9 @@ unittest 失败时，必须分析
 - [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
+- [ ] 给process_stdio_read工具加上超时参数，默认60秒超时
+- [ ] 给process_stdio_write工具加上必填参数with_enter，为True时在内容的末尾加上`\n`
+  - 问题：agent总是忘记输入回车，导致填写出错
 - [ ] 添加初始化配置的功能
 - [ ] 改进PreviousReasoningPlugin的功能
   - 现在PreviousReasoningPlugin被默认关闭，因为影响模型智商。需要改进后打开
