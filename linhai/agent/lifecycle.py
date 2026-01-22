@@ -162,7 +162,8 @@ class Lifecycle:
             WeirdTokenPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
             OnlyReasoningPlugin(self.group_chat),
-            PreviousReasoningPlugin(self.group_chat),
+            # 不兼容deepseek api，可能因为最后一个消息是assistant消息
+            # PreviousReasoningPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),
