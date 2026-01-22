@@ -2,27 +2,20 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前总是阻止agent重新读取文件，这不太合理
-  - 改成如下机制：
-    - 如果agent第一次重复读取文件则警告agent不要这么做并增加全局计数器
-    - 第二次再次读取文件才阻止
-    - 如果使用read_file正确读取了文件则清空全局计数器
-      - 正确读取文件：指读取的文件内容和当前最新的不相同，或者文件没有读取过
-- [ ] 当前init_message(s)的定义很混乱
-  - 问题: agent和cli都使用了init_messages，但是都有各自的处理逻辑
-  - 问题：有多处地方都构造了init_message，这不合理
-  - 要求
-    - 传入init_messages时去除init_messages的默认参数
-    - init_messages的定义改为list[Message]，永远不为None
-    - 每个使用init_messages的地方都要有合适的类型注释
-    - cli显示init_messages时只提取UserMessage，忽略其他类型的Message
-    - 应该只有_create_init_messages负责根据args创建逻辑，而不是从外部传入
-- [ ] 更新MESSAGE_DESIGN.md
-  - ToolResultMessage 和 ToolErrorMessage 已经被删除，需要更新
+- [ ] 给process_stdio_read工具加上超时参数，默认60秒超时
+- [ ] 给process_stdio_write工具加上必填参数with_enter，为True时在内容的末尾加上`\n`
+  - 问题：agent总是忘记输入回车，导致填写出错
+- [ ] 改进PreviousReasoningPlugin的功能
+  - 这是一个较为大型的改进，认真规划
+  - 现在PreviousReasoningPlugin被默认关闭，因为影响模型智商。需要改进后打开
+  - 现状：API提供商会保留最近一个user消息后的所有reasoning content以提高agent智商，避免agent重复思考
+  - 现状：当前项目大量使用user消息表示工具输出等信息，导致reasoning content几乎不会被保留
+  - 现状：PreviousReasoningPlugin提取最近几个reasoning content放在最新的content中规避这个问题
+  - 问题：PreviousReasoningPlugin将思考内容reasoning content提取后放在content中，这不合理，因为agent会混淆content和reasoning content
+  - 改进：让PreviousReasoningPlugin在messages中放入SpoofedReasoningMessage而非一个简单的拼接字符串
+    - PreviousReasoningPlugin提供合适的sort value保证SpoofedReasoningMessage被排在最后面，从而让api提供商保留这个message的reasoning content
+    - SpoofedReasoningMessage包含多个reasoning content，转成llm message后为{"role": "assitant", "content": "", "reasoning_content": 那些reasoning content的内容}
 - [ ] 编写运行unittest
-  - _create_init_messages可以创建对应message
-  - -f和-m可以正常工作，最终创建的init message中有对应内容
-  - ..
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
@@ -85,19 +78,7 @@ unittest 失败时，必须分析
 - [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
-- [ ] 给process_stdio_read工具加上超时参数，默认60秒超时
-- [ ] 给process_stdio_write工具加上必填参数with_enter，为True时在内容的末尾加上`\n`
-  - 问题：agent总是忘记输入回车，导致填写出错
 - [ ] 添加初始化配置的功能
-- [ ] 改进PreviousReasoningPlugin的功能
-  - 现在PreviousReasoningPlugin被默认关闭，因为影响模型智商。需要改进后打开
-  - 现状：API提供商会保留最近一个user消息后的所有reasoning content以提高agent智商，避免agent重复思考
-  - 现状：当前项目大量使用user消息表示工具输出等信息，导致reasoning content几乎不会被保留
-  - 现状：PreviousReasoningPlugin提取最近几个reasoning content放在最新的content中规避这个问题
-  - 问题：PreviousReasoningPlugin将思考内容reasoning content提取后放在content中，这不合理，因为agent会混淆content和reasoning content
-  - 改进：让PreviousReasoningPlugin在messages中放入SpoofedReasoningMessage而非一个简单的拼接字符串
-    - PreviousReasoningPlugin提供合适的sort value保证SpoofedReasoningMessage被排在最后面，从而让api提供商保留这个message的reasoning content
-    - SpoofedReasoningMessage包含多个reasoning content，转成llm message后为{"role": "assitant", "content": "", "reasoning_content": 那些reasoning content的内容}
 
 # 注意
 
