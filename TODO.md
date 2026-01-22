@@ -2,20 +2,14 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 给process_stdio_read工具加上超时参数，默认60秒超时
-- [ ] 给process_stdio_write工具加上必填参数with_enter，为True时在内容的末尾加上`\n`
-  - 问题：agent总是忘记输入回车，导致填写出错
-- [ ] 改进PreviousReasoningPlugin的功能
-  - 这是一个较为大型的改进，认真规划
-  - 现在PreviousReasoningPlugin被默认关闭，因为影响模型智商。需要改进后打开
-  - 现状：API提供商会保留最近一个user消息后的所有reasoning content以提高agent智商，避免agent重复思考
-  - 现状：当前项目大量使用user消息表示工具输出等信息，导致reasoning content几乎不会被保留
-  - 现状：PreviousReasoningPlugin提取最近几个reasoning content放在最新的content中规避这个问题
-  - 问题：PreviousReasoningPlugin将思考内容reasoning content提取后放在content中，这不合理，因为agent会混淆content和reasoning content
-  - 改进：让PreviousReasoningPlugin在messages中放入SpoofedReasoningMessage而非一个简单的拼接字符串
-    - PreviousReasoningPlugin提供合适的sort value保证SpoofedReasoningMessage被排在最后面，从而让api提供商保留这个message的reasoning content
-    - SpoofedReasoningMessage包含多个reasoning content，转成llm message后为{"role": "assitant", "content": "", "reasoning_content": 那些reasoning content的内容}
-- [ ] 编写运行unittest
+- [ ] 当前agent在使用SshMachineControl时在某些工具失败时会直接卡死而不是立即返回错误
+  - 问题：如replace_file_content修改不存在的文件时会导致卡死，工具60秒后超时，但本应立即返回文件不存在
+  - 编写临时脚本测试
+    - 因为你没法直接debug整个tui应用，所以必须编写临时脚本测试
+    - 连接dell nixos并测试使用replace_file_content工具，记录运行时间
+  - 严格按照DEBUG.md输出，一步步找到原因，修复这个问题
+  - 在终端启动linhai测试
+    - uv run python -m linhai -m '@nothink 测试连接ssh功能，连接dell nixos并尝试在/tmp修改一个不存在的工具，测试replace_file_content工具是否会正常报错，然后回到master_host在/tmp/ssh_report.md编写报告并退出，报告replace_file_content是否正常报错，一个个调用工具'
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
