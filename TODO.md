@@ -2,6 +2,8 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
+- [ ] 当前linhai/machine_control/ssh_host/ssh_host.py有类型错误，需要修复
+  - 成因是返回值没有对应的typeddict
 - [ ] 当前agent在使用SshMachineControl时在某些工具失败时会直接卡死而不是立即返回错误
   - 问题：如replace_file_content修改不存在的文件时会导致卡死，工具60秒后超时，但本应立即返回文件不存在
   - 编写临时脚本测试
