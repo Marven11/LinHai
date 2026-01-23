@@ -1,6 +1,6 @@
 """SSH机器控制类，用于通过SSH连接远程机器并执行工具。"""
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, cast
 import asyncio
 import json
 import tempfile
@@ -37,7 +37,7 @@ class SshMachineControl:
         self.stdin = None
         self.stdout = None
         self.stderr = None
-        self.results: Dict[str, Optional[Dict[str, object]]] = {}
+        self.results: Dict[str, object] = {}
         self.reader_task: Optional[asyncio.Task] = None
 
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
@@ -300,7 +300,7 @@ class SshMachineControl:
                 result = self.results.pop(request_id)
                 if result is None:
                     raise ConnectionError("未收到响应")
-                return result
+                return cast(Dict[str, object], result)
 
             return await asyncio.wait_for(wait_for_response(), timeout=60.0)
         except asyncio.TimeoutError:
@@ -322,15 +322,22 @@ class SshMachineControl:
         Returns:
             工具执行结果
         """
-        try:
-            result = await self._send_request(name, args)
-            if "error" in result:
-                return ToolResultFailed(content=f"工具执行失败: {result['error']}")
+        response = await self._send_request(name, args)  # 现在response是整个响应
+        if "error" in response:
+            # 错误响应
+            error_content = response["error"]
+            if isinstance(error_content, dict) and "message" in error_content:
+                error_message = error_content["message"]
+            else:
+                error_message = str(error_content)
+            return ToolResultFailed(content=f"工具执行失败: {error_message}")
+        result = response.get("result")
+        if result is None:
+            return ToolResultFailed(content="响应中缺少result字段")
+        if "message" in result:
             return ToolResultSuccess(content=str(result["message"]))
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-            return ToolResultFailed(content=f"调用工具失败: {e}")
+        else:
+            return ToolResultSuccess(content=str(result))
 
     async def _read_responses(self) -> None:
         while True:
@@ -344,9 +351,17 @@ class SshMachineControl:
                 response = json.loads(line.decode())
                 response_id = response.get("id")
                 if response_id is not None:
-                    self.results[response_id] = response.get("result")
-            except Exception:
-                break
+                    self.results[response_id] = response  # 存储整个响应
+            except Exception as e:
+                # 记录异常但继续循环，避免因单个响应解析失败而终止
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="ERROR",
+                        content=f"读取响应时出错: {e}",
+                    ),
+                )
+                continue
 
     async def close(self):
         if self.reader_task:
