@@ -4,14 +4,14 @@
 
 - [ ] 当前linhai/machine_control/ssh_host/ssh_host.py有类型错误，需要修复
   - 成因是返回值没有对应的typeddict
-- [ ] 当前agent在使用SshMachineControl时在某些工具失败时会直接卡死而不是立即返回错误
-  - 问题：如replace_file_content修改不存在的文件时会导致卡死，工具60秒后超时，但本应立即返回文件不存在
-  - 编写临时脚本测试
-    - 因为你没法直接debug整个tui应用，所以必须编写临时脚本测试
-    - 连接dell nixos并测试使用replace_file_content工具，记录运行时间
-  - 严格按照DEBUG.md输出，一步步找到原因，修复这个问题
-  - 在终端启动linhai测试
-    - uv run python -m linhai -m '@nothink 测试连接ssh功能，连接dell nixos并尝试在/tmp修改一个不存在的工具，测试replace_file_content工具是否会正常报错，然后回到master_host在/tmp/ssh_report.md编写报告并退出，报告replace_file_content是否正常报错，一个个调用工具'
+- [ ] 当前max_output_length的处理逻辑有问题
+  - 问题: FileContentMessage没有响应max_output_length
+  - 问题：其他使用max_output_length的Message从init参数中读取max_output_length，这不合理
+  - 问题：ToolManager直接将message转为str以将其视为字符串看待
+  - 解决：
+    - 让所有message类都不直接接收max_output_length
+    - 让ToolManager在工具返回message时检查是否符合max_output_length，不要
+      - 方法：转为llm_message，然后提取content，不要直接转为string
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
@@ -74,14 +74,6 @@ unittest 失败时，必须分析
 - [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
-- [ ] 当前max_output_length的处理逻辑有问题
-  - 问题: FileContentMessage没有响应max_output_length
-  - 问题：其他使用max_output_length的Message从init参数中读取max_output_length，这不合理
-  - 问题：ToolManager直接将message转为str以将其视为字符串看待
-  - 解决：
-    - 让所有message类都不直接接收max_output_length
-    - 让ToolManager在工具返回message时检查是否符合max_output_length，不要
-      - 方法：转为llm_message，然后提取content，不要直接转为string
 - [ ] 添加初始化配置的功能
 
 # 注意
