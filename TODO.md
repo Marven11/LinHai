@@ -74,6 +74,10 @@ unittest 失败时，必须分析
 - [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
   - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
   - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
+- [ ] 让process_create在程序超时仍然运行的时候读取当前的stdout和stderr的已有内容并返回
+  - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
+  - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
+  - 添加unittest检查读取stdout+stderr时，一个超时后另一个的内容是否会正常返回
 - [ ] 添加初始化配置的功能
 
 # 注意
