@@ -630,7 +630,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """设置测试环境。"""
         from linhai.agent.plugin import PreviousReasoningPlugin
         from linhai.llm import AssistantMessage
-        
+
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
@@ -640,7 +640,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = PreviousReasoningPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
-        
+
         # 创建一些模拟的AssistantMessage，带有reasoning_message
         self.mock_messages = [
             AssistantMessage(message="msg1", reasoning_message="reasoning1"),
@@ -664,26 +664,36 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试有推理消息时创建SpoofedReasoningMessage。"""
         # 设置模拟消息
         self.agent.message_processor.get_messages.return_value = self.mock_messages
-        
+
         await self.plugin.after_message_generation(
             self.answer, "full response", self.tool_calls
         )
-        
+
         # 验证update_appending_message被调用，并且传递了SpoofedReasoningMessage
         self.agent.message_processor.update_appending_message.assert_called_once()
         call_args = self.agent.message_processor.update_appending_message.call_args
-        
+
         # 检查第一个参数是SpoofedReasoningMessage实例
         message_instance = call_args[0][0]
         self.assertEqual(message_instance.__class__.__name__, "SpoofedReasoningMessage")
-        
+
         # 检查reasoning_contents包含最近的6个推理消息
         self.assertEqual(len(message_instance.reasoning_contents), 6)
-        self.assertEqual(message_instance.reasoning_contents, ["reasoning2", "reasoning3", "reasoning4", "reasoning5", "reasoning6", "reasoning7"])
-        
+        self.assertEqual(
+            message_instance.reasoning_contents,
+            [
+                "reasoning2",
+                "reasoning3",
+                "reasoning4",
+                "reasoning5",
+                "reasoning6",
+                "reasoning7",
+            ],
+        )
+
         # 检查source和sort_value
         self.assertEqual(call_args[1]["source"], "previous_reasoning")
-        self.assertEqual(call_args[1]["sort_value"], -100)
+        self.assertEqual(call_args[1]["sort_value"], 1000)
 
     async def test_after_message_generation_no_reasoning_messages(self):
         """测试没有推理消息时清除appending message。"""
@@ -692,29 +702,33 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             AssistantMessage(message="msg1", reasoning_message=None),
             AssistantMessage(message="msg2", reasoning_message=None),
         ]
-        self.agent.message_processor.get_messages.return_value = messages_without_reasoning
-        
+        self.agent.message_processor.get_messages.return_value = (
+            messages_without_reasoning
+        )
+
         await self.plugin.after_message_generation(
             self.answer, "full response", self.tool_calls
         )
-        
+
         # 验证update_appending_message被调用，传递None
         self.agent.message_processor.update_appending_message.assert_called_once()
         call_args = self.agent.message_processor.update_appending_message.call_args
         self.assertIsNone(call_args[0][0])
         self.assertEqual(call_args[1]["source"], "previous_reasoning")
-        self.assertEqual(call_args[1]["sort_value"], -100)
+        self.assertEqual(call_args[1]["sort_value"], 1000)
 
     async def test_after_message_generation_spoofed_reasoning_message_format(self):
         """测试SpoofedReasoningMessage的格式符合预期。"""
         from linhai.agent.base import SpoofedReasoningMessage
-        
+
         # 创建SpoofedReasoningMessage实例
         reasoning_contents = ["reasoning1", "reasoning2", "reasoning3"]
         message = SpoofedReasoningMessage(reasoning_contents)
-        
+
         # 检查to_llm_message返回的格式
         llm_message = message.to_llm_message()
         self.assertEqual(llm_message["role"], "assistant")
         self.assertEqual(llm_message["content"], "")
-        self.assertEqual(llm_message["reasoning_content"], "reasoning1\nreasoning2\nreasoning3")
+        self.assertEqual(
+            llm_message["reasoning_content"], "reasoning1\nreasoning2\nreasoning3"
+        )

@@ -76,7 +76,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             self.fail(f"current_llm tool failed: {result.content}")  # type: ignore
 
         self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("primary", str(result.content))  # type: ignore
+        self.assertIn("primary", str(result))
 
     async def test_switch_llm_tool_success(self):
         """Test successful LLM switching."""
@@ -93,7 +93,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("已切换到LLM: secondary", str(result.content))  # type: ignore
+        self.assertIn("已切换到LLM: secondary", str(result))
 
         self.assertEqual(self.agent.current_llm_index, 1)
 
@@ -112,8 +112,8 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             self.fail(f"switch_llm tool failed: {result.content}")
 
         self.assertIsInstance(result, ToolCallResultMessage)
-        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result.content))  # type: ignore
-        self.assertIn("可用的LLM包括: primary, secondary", str(result.content))  # type: ignore
+        self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result))
+        self.assertIn("可用的LLM包括: primary, secondary", str(result))
 
         self.assertEqual(self.agent.current_llm_index, 0)
 

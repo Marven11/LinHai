@@ -137,7 +137,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
-        content = getattr(result, "content", "")
+        content = result.result.content
         self.assertIn("12345", content)
         self.assertIn("12.35 k", content)
 
@@ -176,7 +176,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
-        content = getattr(result, "content", "")
+        content = result.result.content
         self.assertEqual("暂无token用量信息", content)
 
     async def test_context_thanox_tool_call_with_sufficient_messages(self):
@@ -221,7 +221,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
-        content = getattr(result, "content", "")
+        content = result.result.content
         self.assertIn("context_thanox: 随机删除了", content)
         self.assertIn("条消息", content)
 
@@ -267,7 +267,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(type(result).__name__, "ToolCallResultMessage")
-        content = getattr(result, "content", "")
+        content = result.result.content
         self.assertEqual("消息数量不足，无需删除", content)
 
 

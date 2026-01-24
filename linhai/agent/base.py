@@ -393,6 +393,7 @@ class SpoofedReasoningMessage(Message):
         }
         """
         from linhai.type_hints import AssistantMessage
+
         reasoning_content = "\n".join(self.reasoning_contents)
         return {
             "role": "assistant",

@@ -24,7 +24,7 @@ class TestIssueManager(unittest.IsolatedAsyncioTestCase):
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
-        self.agent_message = AgentMessage(self.group_chat)
+        self.agent_message = AgentMessage(self.group_chat, [])
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager
@@ -124,7 +124,7 @@ class TestIssueAsync(unittest.TestCase):
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
-        self.agent_message = AgentMessage(self.group_chat)
+        self.agent_message = AgentMessage(self.group_chat, [])
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager
@@ -181,7 +181,7 @@ file_path = "memory.md"
         self.agent = Mock(spec=Agent)
         self.agent.state = "working"  # 添加state属性
         self.group_chat.register_member("agent", self.agent)
-        self.agent_message = AgentMessage(self.group_chat)
+        self.agent_message = AgentMessage(self.group_chat, [])
 
         # 创建模拟的subagent_manager和subagent
         from linhai.subagent.main import SubAgentManager

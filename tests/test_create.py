@@ -74,6 +74,7 @@ class TestCreateAgent(unittest.TestCase):
 
         import asyncio
         import argparse
+
         cli_args = argparse.Namespace(message=None, file=None)
 
         context = create_agent_build_context(
@@ -152,6 +153,7 @@ class TestCreateAgent(unittest.TestCase):
 
             import asyncio
             import argparse
+
             cli_args = argparse.Namespace(message=None, file=None)
 
             context = create_agent_build_context(

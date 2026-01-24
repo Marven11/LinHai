@@ -148,53 +148,6 @@ class ToolResultFailed(BaseModel):
     content: str
 
 
-def _handle_long_content(content_str: str, max_output_length: int = 50000) -> str:
-    """处理长内容，必要时分块保存到文件，返回处理后的消息内容。"""
-    if len(content_str) > max_output_length:
-        line_count = content_str.count("\n") + 1
-        if line_count > 1000:
-            lines = content_str.split("\n")
-            file_paths = []
-            for i in range(0, len(lines), 800):
-                chunk_lines = lines[i : i + 800]
-                chunk_content = "\n".join(chunk_lines)
-                start_line = i + 1
-                end_line = min(i + 800, len(lines))
-                with tempfile.NamedTemporaryFile(
-                    mode="w",
-                    suffix=f"_lines_{start_line}-{end_line}.txt",
-                    delete=False,
-                    encoding="utf-8",
-                ) as temp_file:
-                    temp_file.write(chunk_content)
-                    file_paths.append(temp_file.name)
-            file_info = "\n".join([f"- {path}" for path in file_paths])
-            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按行分块保存到以下临时文件（每800行一个文件）：\n{file_info}"
-        else:
-            file_paths = []
-            for i in range(0, len(content_str), 10000):
-                chunk_content = content_str[i : i + 10000]
-                start_char = i + 1
-                end_char = min(i + 10000, len(content_str))
-                with tempfile.NamedTemporaryFile(
-                    mode="w",
-                    suffix=f"_chars_{start_char}-{end_char}.txt",
-                    delete=False,
-                    encoding="utf-8",
-                ) as temp_file:
-                    temp_file.write(chunk_content)
-                    file_paths.append(temp_file.name)
-            file_info = "\n".join([f"- {path}" for path in file_paths])
-            message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按字符分块保存到以下临时文件（每10000字符一个文件）：\n{file_info}"
-        r = reprlib.Repr()
-        r.maxstring = 500
-        preview = r.repr(content_str)
-        message_content += f"\n\n预览: {preview}"
-    else:
-        message_content = content_str
-    return message_content
-
-
 class ToolCallResultMessage(Message):
     """工具调用结果消息，包装ToolResultSuccess或ToolResultFailed"""
 
@@ -204,29 +157,22 @@ class ToolCallResultMessage(Message):
         tool_index: int,
         result: ToolResultSuccess | ToolResultFailed,
         toolcall_arguments: dict | None = None,
-        max_output_length: int = 50000,
     ):
         self.tool_name = tool_name
         self.tool_index = tool_index
         self.result = result
         self.toolcall_arguments = toolcall_arguments
-        self.max_output_length = max_output_length
-
-        # 使用辅助函数处理内容
-        content_str = result.content
-        self.content = _handle_long_content(content_str, max_output_length)
 
     def to_llm_message(self) -> LanguageModelMessage:
-        # 根据result类型决定消息内容
         if isinstance(self.result, ToolResultSuccess):
             status = "工具执行成功"
-            data_or_error = f"<<data>>{self.content}<<data>>"
+            data_or_error = f"<<data>>{self.result.content}<<data>>"
         else:
             status = (
                 "错误：工具执行失败，你需要缓慢且仔细地反思并总结："
                 "1. 失败的原因 2. 用户的需求 3. 你弄错了什么 4. 如何正确完成用户的需求 5. 如何避免工具失败"
             )
-            data_or_error = f"<<error>>{self.content}<<error>>"
+            data_or_error = f"<<error>>{self.result.content}<<error>>"
 
         # 构建消息内容
         content_parts = [
@@ -271,7 +217,7 @@ class ToolCallResultMessage(Message):
                 "content": self.result.content,
             },
             "toolcall_arguments": self.toolcall_arguments,
-            "content": self.content,
+            "content": self.result.content,
         }
         return json.dumps(data)
 

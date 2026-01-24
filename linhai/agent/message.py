@@ -24,9 +24,7 @@ class AppendingMessageEntry(TypedDict):
 class AgentMessage:
     """基础消息管理器，负责管理基础消息队列和相关操作。"""
 
-    def __init__(
-        self, group_chat: GroupChat, init_messages: Sequence[Message]
-    ):
+    def __init__(self, group_chat: GroupChat, init_messages: Sequence[Message]):
         """初始化基础消息管理器。
 
         Args:

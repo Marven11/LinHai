@@ -69,6 +69,7 @@ default_llm = "test"
             "checklist_path": None,
             "git_diff_reviewer": self.cli_args.git_diff_reviewer,
             "violation_checker": self.cli_args.violation_checker,
+            "cli_args": self.cli_args,
         }
         return await create_agent_from_config(context)
 

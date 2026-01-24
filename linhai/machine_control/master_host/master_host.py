@@ -123,9 +123,13 @@ class MasterHostControl:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
             stdout_data, stderr_data = b"", b""
             if process.stdout:
-                stdout_data = await asyncio.wait_for(process.stdout.read(8 * 1024), timeout=timeout)
+                stdout_data = await asyncio.wait_for(
+                    process.stdout.read(8 * 1024), timeout=timeout
+                )
             if process.stderr:
-                stderr_data = await asyncio.wait_for(process.stderr.read(8 * 1024), timeout=timeout)
+                stderr_data = await asyncio.wait_for(
+                    process.stderr.read(8 * 1024), timeout=timeout
+                )
             stdout_str = stdout_data.decode("utf-8", errors="replace")
             stderr_str = stderr_data.decode("utf-8", errors="replace")
             if unescape_ansi:

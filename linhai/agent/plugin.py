@@ -14,7 +14,12 @@ import linhai.agent as linhai_agent
 from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
-from .base import RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage, SpoofedReasoningMessage
+from .base import (
+    RuntimeMessage,
+    WAITING_USER_MARKER,
+    PreviousReasoningMessage,
+    SpoofedReasoningMessage,
+)
 from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
 from ..utils import CliRuntimeNotice
 from linhai.tool.base import ToolCallResultMessage
@@ -349,7 +354,7 @@ class DirectoryChangePlugin(Plugin):
         """在消息生成前检查目录是否更改。"""
 
         agent = self.group_chat.get_members("agent", Agent)
-        
+
         # 检查插件是否启用
         context = getattr(agent, "context", {})
         if not context.get("enable_directory_change_detection", False):

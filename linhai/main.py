@@ -71,10 +71,15 @@ def main():
         help="配置文件路径",
     )
     parser.add_argument(
-        "-m", "--message", type=str, action="append", help="初始用户消息"
+        "-m", "--message", type=str, action="append", default=[], help="初始用户消息"
     )
     parser.add_argument(
-        "-f", "--file", type=Path, action="append", help="从文件中读取初始用户消息"
+        "-f",
+        "--file",
+        type=Path,
+        action="append",
+        default=[],
+        help="从文件中读取初始用户消息",
     )
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")

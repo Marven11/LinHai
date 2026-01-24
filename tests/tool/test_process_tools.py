@@ -119,11 +119,11 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         import asyncio
 
         self.assertTrue(inspect.iscoroutinefunction(tool_func))
-        
+
         # 检查with_enter参数是否存在且为必填参数（无默认值）
         signature = inspect.signature(tool_func)
-        self.assertIn('with_enter', signature.parameters)
-        param = signature.parameters['with_enter']
+        self.assertIn("with_enter", signature.parameters)
+        param = signature.parameters["with_enter"]
         self.assertEqual(param.default, inspect.Parameter.empty)
 
     def test_process_stdio_read_tool_definition(self):
@@ -149,11 +149,11 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         import asyncio
 
         self.assertTrue(inspect.iscoroutinefunction(tool_func))
-        
+
         # 检查timeout参数是否存在且默认值为60.0
         signature = inspect.signature(tool_func)
-        self.assertIn('timeout', signature.parameters)
-        param = signature.parameters['timeout']
+        self.assertIn("timeout", signature.parameters)
+        param = signature.parameters["timeout"]
         self.assertEqual(param.default, 60.0)
 
     def test_process_wait_tool_definition(self):

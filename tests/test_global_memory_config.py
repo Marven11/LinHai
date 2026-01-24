@@ -75,6 +75,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
+                "cli_args": mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -119,6 +120,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
+                "cli_args": mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -164,6 +166,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
+                "cli_args": mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 

@@ -24,6 +24,8 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.git_diff_reviewer = False
         cli_args.violation_checker = False
         cli_args.checklist = False
+        cli_args.message = []
+        cli_args.file = []
         self.group_chat.register_member("cli_args", cli_args)
         self.cli_args = cli_args
 
@@ -73,6 +75,7 @@ server_script_path = "{server_path}"
             "checklist_path": None,
             "git_diff_reviewer": self.cli_args.git_diff_reviewer,
             "violation_checker": self.cli_args.violation_checker,
+            "cli_args": self.cli_args,
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

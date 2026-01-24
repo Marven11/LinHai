@@ -183,9 +183,7 @@ class MachineControlToolSet(ToolSet):
                 "unescape_ansi": ToolArgInfo(
                     desc="是否反转义ANSI序列，默认为True", type="bool"
                 ),
-                "timeout": ToolArgInfo(
-                    desc="超时时间（秒），默认60秒", type="float"
-                ),
+                "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="float"),
             },
             required_args=["pid"],
             conflict_with=None,

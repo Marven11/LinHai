@@ -25,6 +25,13 @@ class TestSubAgentEnabled(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = Mock()
         self.group_chat.add_postinit = Mock(return_value=None)
 
+        # 创建模拟的cli_args对象
+        self.cli_args = Mock()
+        self.cli_args.git_diff_reviewer = False
+        self.cli_args.violation_checker = False
+        self.cli_args.message = []
+        self.cli_args.file = []
+
     def create_test_config(self, subagent_enabled: bool):
         """创建测试配置文件。"""
         config_content = f"""
@@ -134,6 +141,7 @@ model = "test-model"
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
+                "cli_args": self.cli_args,
             }
             agent = await create_agent_from_config(context)
 
@@ -180,6 +188,7 @@ model = "test-model"
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
+                "cli_args": self.cli_args,
             }
             agent = await create_agent_from_config(context)
 
