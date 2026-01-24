@@ -122,7 +122,7 @@ class CLIApp(App):
 
         self.token_manager = TokenManager(group_chat)
 
-        self.is_user_scroll_to_end = False
+        self.is_user_scroll_to_end = True
 
         self.subagent_current_messages: Dict[str, MessageWidget] = {}
 
