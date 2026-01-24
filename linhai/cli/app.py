@@ -405,6 +405,7 @@ class CLIApp(App):
             ],
         )
         self.mount(self.autocomplete)
+        self.set_focus(input_element)
 
         cliapp_tool = ToolSet()
 
