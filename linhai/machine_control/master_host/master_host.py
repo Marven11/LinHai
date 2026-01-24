@@ -190,10 +190,10 @@ class MasterHostControl:
                     await asyncio.wait_for(process.wait(), timeout=5.0)
                 except asyncio.TimeoutError:
                     process.kill()
-                    await process.wait()
+                    await asyncio.wait_for(process.wait(), timeout=5.0)
             else:
                 process.kill()
-                await process.wait()
+                await asyncio.wait_for(process.wait(), timeout=5.0)
             del self._processes[pid]
             return ToolResultSuccess(
                 content=f"<<pid>>{pid}<<pid>><<message>>进程已终止<<message>>"
