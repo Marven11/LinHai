@@ -2,22 +2,9 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 当前有很诡异的历史记录保存功能，应该删除
-  - 问题: 现在好像有代码会调用to_json保存每个message到.cache还是.local/share里，而且是每一次生成消息就生成一个新的文件
-  - 目标：完全清理这些代码，为之后的工作做准备
-  - 状态：已清理~/.local/share/linhai/history/目录，代码中未发现相关保存逻辑
-- [x] conversation 系统
-  - 新建linhai/agent/conversation.py完成主要代码
-  - 为每次对话创建一个文件夹`~/.local/share/conversation/xxx`，注意没有 s
-    - 注意：我们未来可能会移动这个文件夹，为了代码的整洁性我们不能在其他地方计算这个文件夹的路径
-    - 其他用到这个文件夹的地方都要通过linhai/agent/conversation.py的逻辑获取这个路径
-  - 将当前历史消息存放在conversation/xxx/context.json 中
-    - 可能需要重构当前保存读取消息的方法，以标记每个消息的类型，便于恢复
-    - 需要特别编写unittest测试从文件中恢复messages历史
-  - 将被分块的大消息放在conversation/xxx/splited_large_message/中
-  - 让context_garbage_clean和context_range_compress将被删除的消息dump到conversation/xxx/cleaned_messages/中，并返回路径，而不是直接删除
-  - 整理以上改动和功能新增列表，仔细编写unittest测试每一个改动和每一个新增的功能
-  - 提示：你可以使用jq
+- [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
+  - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入当前conversation文件夹并返回路径
+  - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在本地文件以便agent后续处理”
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
@@ -66,9 +53,6 @@ unittest 失败时，必须分析
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
 - [ ] 查看tiktoken的文档，改进当前检查工具输出长度的逻辑和配置，使用tiktoken检查工具输出的token数量
-- [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
-  - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入/tmp文件
-  - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在/tmp文件以便agent后续处理”
 - [ ] 让process_create在程序超时仍然运行的时候读取当前的stdout和stderr的已有内容并返回
   - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
   - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
