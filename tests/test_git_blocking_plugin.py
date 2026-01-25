@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 
 from linhai.subagent.plugin import GitBlockingPlugin
-from linhai.llm import ToolCallMessage
 
 
 class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
@@ -37,8 +36,8 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_before_tool_call.assert_called_once_with(
-            self.plugin.before_tool_call
+        lifecycle.register_on_tool_result.assert_called_once_with(
+            self.plugin.on_tool_result
         )
 
     async def test_block_git_command_with_unanswered_issues(self):
@@ -47,14 +46,15 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat.send_if_exists = AsyncMock()
 
-        tool_call = ToolCallMessage(
-            assert_success=True,
+        result = await self.plugin.on_tool_result(
+            tool_name="process_create",
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments={"command": ["git", "status"]},
             with_secret=None,
-            function_name="process_create",
-            function_arguments={"command": ["git", "status"]},
+            is_tool_failed_duplicated_error=False,
         )
-
-        result = await self.plugin.before_tool_call(tool_call)
         self.assertTrue(result)
         self.group_chat.send_if_exists.assert_called_once()
 
@@ -62,14 +62,15 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         """测试没有未解答issue时允许git命令。"""
         self.issue_manager.has_unanswered_issues.return_value = False
 
-        tool_call = ToolCallMessage(
-            assert_success=True,
+        result = await self.plugin.on_tool_result(
+            tool_name="process_create",
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments={"command": ["git", "status"]},
             with_secret=None,
-            function_name="process_create",
-            function_arguments={"command": ["git", "status"]},
+            is_tool_failed_duplicated_error=False,
         )
-
-        result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.add_new_message.assert_not_called()
 
@@ -77,13 +78,14 @@ class TestGitBlockingPlugin(unittest.IsolatedAsyncioTestCase):
         """测试忽略非命令工具。"""
         self.issue_manager.has_unanswered_issues.return_value = True
 
-        tool_call = ToolCallMessage(
-            assert_success=True,
+        result = await self.plugin.on_tool_result(
+            tool_name="read_file",
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments={"filepath": "test.txt"},
             with_secret=None,
-            function_name="read_file",
-            function_arguments={"filepath": "test.txt"},
+            is_tool_failed_duplicated_error=False,
         )
-
-        result = await self.plugin.before_tool_call(tool_call)
         self.assertFalse(result)
         self.agent.message_processor.add_new_message.assert_not_called()

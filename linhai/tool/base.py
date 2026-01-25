@@ -141,11 +141,17 @@ class ToolResultSuccess(BaseModel):
 
     content: str
 
+    def to_json(self) -> str:
+        return self.model_dump_json()
+
 
 class ToolResultFailed(BaseModel):
     """工具失败结果"""
 
     content: str
+
+    def to_json(self) -> str:
+        return self.model_dump_json()
 
 
 class ToolCallResultMessage(Message):

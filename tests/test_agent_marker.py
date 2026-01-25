@@ -10,7 +10,7 @@ from linhai.agent import Agent
 from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
 from linhai.agent.plugin import WaitingUserPlugin
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 
 
 r = reprlib.Repr()
@@ -94,6 +94,10 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = False
 
         self.lifecycle_mock = MagicMock()
+        
+        from linhai.machine_control import MachineControl
+        self.mock_machine_control = MagicMock(spec=MachineControl)
+        self.mock_machine_control.target_machine = "master_host"
 
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "agent":
@@ -106,6 +110,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.lifecycle_mock
             elif member_type == "agent_context_orchestration":
                 return self.agent.orchestration
+            elif member_type == "machine_control":
+                return self.mock_machine_control
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members.side_effect = get_members_side_effect

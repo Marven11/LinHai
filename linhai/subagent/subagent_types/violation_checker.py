@@ -1,12 +1,13 @@
 """违规检查SubAgent类型实现，包含专用插件。"""
 
-from typing import Any
+from typing import Any, Literal, Union
 import asyncio
 
 
 from linhai.llm import ToolCallMessage
 from linhai.utils import CliRuntimeNotice, generate_id
 from linhai.agent.plugin import Plugin
+from linhai.agent.base import RuntimeMessage
 from linhai.subagent.main import SubAgent
 from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PROMPT
 
@@ -57,60 +58,66 @@ class ViolationCheckerSubAgent(SubAgent):
 class ViolationCheckerPlugin(Plugin):
     """基于lifecycle事件驱动violation checker subagent协作的Plugin。"""
 
-    async def tool_failure(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        error: Any,
-    ) -> None:
-        """在工具调用失败时启动subagent检查规则违反。"""
-        assert agent.current_answer is not None
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, "RuntimeMessage"]:
+        """处理工具调用结果，在工具失败或冲突时启动subagent检查规则违反。"""
+        if status == "failed":
+            # 工具调用失败情况（包括冲突）
+            from linhai.subagent import SubAgentManager
+            from linhai.agent import Agent
+            
+            agent = self.group_chat.get_members("agent", Agent)
+            assert agent.current_answer is not None
 
-        full_response = agent.current_answer.get_current_content()
-        if full_response.count("```json toolcall") <= 1:
-            return
+            full_response = agent.current_answer.get_current_content()
+            if full_response.count("```json toolcall") <= 1:
+                return None
 
-        interrupt_msg = CliRuntimeNotice(
-            level="WARNING", content="启动SubAgent检查工具调用"
-        )
-        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+            if is_tool_failed_duplicated_error:
+                # 工具冲突情况
+                interrupt_msg = CliRuntimeNotice(
+                    level="WARNING", content="启动SubAgent检查工具冲突"
+                )
+                check_context = f"""**工具冲突详情:**
+- 冲突工具名称: {tool_name}
+- 工具参数: {toolcall_arguments}
+- 错误信息: {result_content}"""
+            else:
+                # 普通工具失败
+                interrupt_msg = CliRuntimeNotice(
+                    level="WARNING", content="启动SubAgent检查工具调用"
+                )
+                check_context = f"""**失败的工具调用详情:**
+- 工具名称: {tool_name}
+- 工具参数: {toolcall_arguments}
+- 错误信息: {result_content}"""
+            
+            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-        from linhai.subagent import SubAgentManager  # pylint: disable=reimported
-
-        subagent_manager = self.group_chat.get_members(
-            "subagent_manager", SubAgentManager
-        )
-
-        asyncio.create_task(
-            self._check_violations(subagent_manager, full_response, tool_call, error)
-        )
-
-    async def tool_conflict(
-        self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        conflicting_tools: list[str],
-    ) -> None:
-        """在工具调用冲突时启动subagent检查规则违反。"""
-        interrupt_msg = CliRuntimeNotice(
-            level="WARNING", content="启动SubAgent检查工具冲突"
-        )
-        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-
-        from linhai.subagent import SubAgentManager  # pylint: disable=reimported
-
-        subagent_manager = self.group_chat.get_members(
-            "subagent_manager", SubAgentManager
-        )
-        assert agent.current_answer is not None
-
-        full_response = agent.current_answer.get_current_content()
-
-        asyncio.create_task(
-            self._check_conflict_violations(
-                subagent_manager, full_response, tool_call, conflicting_tools
+            subagent_manager = self.group_chat.get_members(
+                "subagent_manager", SubAgentManager
             )
-        )
+
+            task_message = VIOLATION_CHECKER_USER_PROMPT.format(
+                agent_full_response=full_response, check_context=check_context
+            )
+
+            await subagent_manager.create_subagent(
+                agent_type="violation_checker",
+                name=generate_id("violation_subagent"),
+                task_message=task_message,
+                max_answer_times=1,
+            )
+        
+        return None
 
     async def _check_violations(
         self,
@@ -162,5 +169,4 @@ class ViolationCheckerPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到lifecycle回调。"""
-        lifecycle.register_tool_failure(self.tool_failure)
-        lifecycle.register_tool_conflict(self.tool_conflict)
+        lifecycle.register_on_tool_result(self.on_tool_result)

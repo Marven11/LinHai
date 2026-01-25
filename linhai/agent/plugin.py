@@ -7,7 +7,7 @@ import re
 import reprlib
 import time
 
-from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union
+from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union, Literal
 
 from linhai.agent import Agent
 import linhai.agent as linhai_agent
@@ -649,46 +649,43 @@ class DuplicateFileReadPlugin(Plugin):
 
     def register(self, lifecycle):
         """注册插件回调。"""
-        lifecycle.register_after_tool_call(self._after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
-    async def _after_tool_call(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
-        """工具调用后回调，检查是否重复读取文件。"""
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        """工具调用结果回调，检查是否重复读取文件。"""
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
+        from linhai.agent.base import FileContentMessage
 
         machine_control = self.group_chat.get_members("machine_control", MachineControl)
         if machine_control.target_machine != "master_host":
             return None
 
-        if not success:
+        if status != "success":
             return None
 
-        tool_name = tool_call.function_name
         if tool_name != "read_file":
             return None
 
-        filepath = tool_call.function_arguments.get("filepath")
+        if toolcall_arguments is None:
+            return None
+        filepath = toolcall_arguments.get("filepath")
         if not filepath:
             return None
 
-        if isinstance(tool_result, FileContentMessage):
-            return await self._handle_read_file(agent, filepath, tool_result)
+        from linhai.agent.main import Agent
 
-        return None
-
-    async def _handle_read_file(
-        self, agent: "Agent", filepath: str, tool_result: FileContentMessage
-    ) -> Optional[RuntimeMessage]:
-        """处理read_file工具的重复读取检查。"""
-        try:
-            absolute_filepath = str(Path(filepath).resolve())
-        except (OSError, ValueError):
+        agent = self.group_chat.get_members("agent", Agent)
+        if agent is None:
             return None
 
         recent_file_messages = []
@@ -696,15 +693,17 @@ class DuplicateFileReadPlugin(Plugin):
             if not isinstance(message, FileContentMessage):
                 continue
             try:
-                if str(Path(message.filepath).resolve()) == absolute_filepath:
+                if str(Path(message.filepath).resolve()) == str(
+                    Path(filepath).resolve()
+                ):
                     recent_file_messages.append(message)
             except (OSError, ValueError):
-                # 如果历史消息中的路径无法解析，跳过该消息
                 continue
 
         if recent_file_messages:
             latest_message = recent_file_messages[0]
-            if tool_result == latest_message:
+
+            if result_content == latest_message.content:
                 self.counter += 1
                 if self.counter == 1:
                     # 第一次重复：只警告，不拦截工具结果
@@ -715,12 +714,11 @@ class DuplicateFileReadPlugin(Plugin):
                             content="模型第一次重复读取相同文件，已警告",
                         ),
                     )
-                    content = latest_message.content
                     reprobj = reprlib.Repr(maxstring=100)
-                    preview = reprobj.repr(content)
+                    preview = reprobj.repr(result_content)
                     agent.message_processor.add_new_message(
                         RuntimeMessage(
-                            f"警告：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，这是第一次警告！\n"
+                            f"警告：你已经读取过文件{filepath}，内容和上一次完全相同，这是第一次警告！\n"
                             f"文件内容预览：{preview}\n"
                             f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
                         )
@@ -735,11 +733,10 @@ class DuplicateFileReadPlugin(Plugin):
                             content="模型第二次重复读取相同文件，已阻止",
                         ),
                     )
-                    content = latest_message.content
                     reprobj = reprlib.Repr(maxstring=100)
-                    preview = reprobj.repr(content)
+                    preview = reprobj.repr(result_content)
                     return RuntimeMessage(
-                        f"错误：你已经读取过文件{tool_result.filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
+                        f"错误：你已经读取过文件{filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
                         f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
                         f"文件内容预览：{preview}\n"
                         f"不要重复读取文件拖延时间！你应该立即修改文件而不是继续拖延！"
@@ -766,15 +763,18 @@ class UnnecessarySedReadPlugin(Plugin):
 
     def register(self, lifecycle):
         """注册插件回调。"""
-        lifecycle.register_after_tool_call(self._after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
-    async def _after_tool_call(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的小块读取。"""
 
         # 只在master_host上拦截
@@ -784,20 +784,27 @@ class UnnecessarySedReadPlugin(Plugin):
         if machine_control.target_machine != "master_host":
             return None
 
-        if not success:
+        if status != "success":
             return None
 
         # 如果使用了read_file，重置警告计数
-        if tool_call.function_name == "read_file":
+        if tool_name == "read_file":
             self.warning_count = 0
             return None
 
-        if tool_call.function_name != "read_file_with_sed":
+        if tool_name != "read_file_with_sed":
             return None
 
-        filepath = tool_call.function_arguments.get("filepath")
+        if toolcall_arguments is None:
+            return None
+
+        filepath = toolcall_arguments.get("filepath")
         if not filepath:
             return None
+
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
 
         # 检查文件是否过小或已读取
         is_small_file = await self._is_small_file(filepath)
@@ -856,15 +863,18 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
     def register(self, lifecycle):
         """注册插件回调。"""
-        lifecycle.register_after_tool_call(self._after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
-    async def _after_tool_call(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
         # 只在master_host上拦截
         from linhai.machine_control import MachineControl
@@ -873,15 +883,16 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if machine_control.target_machine != "master_host":
             return None
 
-        if not success:
+        if status != "success":
             return None
 
-        tool_name = tool_call.function_name
         if tool_name != "process_create":
             return None
 
-        arguments = tool_call.function_arguments
-        command_list = arguments.get("command", [])
+        if toolcall_arguments is None:
+            return None
+
+        command_list = toolcall_arguments.get("command", [])
 
         if not command_list:
             return None
@@ -890,6 +901,10 @@ class UnnecessaryRunCommandPlugin(Plugin):
         cmd = command_list[0]
         if cmd not in READ_FILE_COMMANDS:
             return None
+
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_members("agent", Agent)
 
         # 提取可能的文件参数
         file_args = []
@@ -998,14 +1013,17 @@ class FileReadWriteConflictPlugin(Plugin):
         """在消息生成前清空已读取文件列表。"""
         self.read_files.clear()
 
-    async def after_tool_call(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
-        """工具调用后回调，检查读写文件冲突。"""
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        """工具结果回调，检查读写文件冲突。"""
         # 只在master_host上检查
         from linhai.machine_control import MachineControl
 
@@ -1019,15 +1037,15 @@ class FileReadWriteConflictPlugin(Plugin):
             # 如果machine_control不存在，跳过检查
             return None
 
-        if not success:
+        if status != "success":
             return None
-
-        tool_name = tool_call.function_name
 
         # 处理读取文件工具
         read_file_tools = {"read_file", "read_file_with_sed"}
         if tool_name in read_file_tools:
-            filepath = tool_call.function_arguments.get("filepath")
+            filepath = (
+                toolcall_arguments.get("filepath") if toolcall_arguments else None
+            )
             if filepath:
                 try:
                     abs_path = str(Path(filepath).resolve())
@@ -1044,7 +1062,9 @@ class FileReadWriteConflictPlugin(Plugin):
             "modify_file_with_sed",
         }
         if tool_name in write_file_tools:
-            filepath = tool_call.function_arguments.get("filepath")
+            filepath = (
+                toolcall_arguments.get("filepath") if toolcall_arguments else None
+            )
             if not filepath:
                 return None
 
@@ -1073,70 +1093,84 @@ class FileReadWriteConflictPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_after_tool_call(self.after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
 
 class WithSecretParameterPositionPlugin(Plugin):
     """检查工具调用中with_secret参数位置错误的插件"""
 
-    async def after_tool_call(
+    async def on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
-        if success:
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        if status != "failed":
             return None
 
-        arguments = tool_call.function_arguments
-        if "with_secret" not in arguments:
-            return None
-
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(level="WARNING", content="检测到with_secret参数位置错误"),
-        )
-        return RuntimeMessage(
-            "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
-            '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
-        )
+        if toolcall_arguments and "with_secret" in toolcall_arguments:
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING", content="检测到with_secret参数位置错误"
+                ),
+            )
+            return RuntimeMessage(
+                "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
+                '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
+            )
+        return None
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到after_tool_call回调。"""
-        lifecycle.register_after_tool_call(self.after_tool_call)
+        """注册到on_tool_result回调。"""
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
 
 class MissingWithSecretWarningPlugin(Plugin):
     """检查未使用with_secret但包含<$KEY$>的插件"""
 
-    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        has_with_secret = tool_call.with_secret is not None
+    async def on_tool_result(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        if status != "skipped":
+            return None
 
-        arguments_str = str(tool_call.function_arguments)
-        has_secret_pattern = re.search(r"<\$[A-Z_]+\$>", arguments_str)
+        if toolcall_arguments:
+            arguments_str = str(toolcall_arguments)
+            has_secret_pattern = re.search(r"<\$[A-Z_]+\$>", arguments_str)
+            if has_secret_pattern and not with_secret:
+                from linhai.agent import Agent
 
-        if has_secret_pattern and not has_with_secret:
-            agent = self.group_chat.get_members("agent", Agent)
-            if agent and hasattr(agent, "message_processor"):
-                agent.message_processor.add_new_message(
-                    RuntimeMessage(
-                        "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
-                        "请确认：\n"
-                        "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
-                        "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
+                agent = self.group_chat.get_members("agent", Agent)
+                if agent and hasattr(agent, "message_processor"):
+                    agent.message_processor.add_new_message(
+                        RuntimeMessage(
+                            "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
+                            "请确认：\n"
+                            "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
+                            "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
+                        )
                     )
-                )
 
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO", content="检测到可能忘记使用with_secret的工具调用"
-                ),
-            )
-            return False
-        return False
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="INFO", content="检测到可能忘记使用with_secret的工具调用"
+                    ),
+                )
+        return None
 
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
-        """注册到before_tool_call回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        """注册到on_tool_result回调。"""
+        lifecycle.register_on_tool_result(self.on_tool_result)

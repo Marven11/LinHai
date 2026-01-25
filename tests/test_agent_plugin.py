@@ -426,8 +426,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_before_tool_call.assert_called_once_with(
-            self.plugin.before_tool_call
+        lifecycle.register_on_tool_result.assert_called_once_with(
+            self.plugin.on_tool_result
         )
 
     def test_green_state_not_block(self):
@@ -455,7 +455,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        ))
 
         # 验证不阻止
         self.assertFalse(result)
@@ -486,7 +494,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        ))
 
         # 验证允许调用
         self.assertFalse(result)
@@ -537,7 +553,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             # 调用插件
             import asyncio
 
-            result = asyncio.run(self.plugin.before_tool_call(tool_call))
+            result = asyncio.run(self.plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        ))
 
             # 验证允许调用
             self.assertFalse(result, f"工具 {tool_name} 应该被允许")
@@ -571,7 +595,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        ))
 
         # 验证阻止
         self.assertTrue(result)
@@ -614,7 +646,15 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.before_tool_call(tool_call))
+        result = asyncio.run(self.plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        ))
 
         # 验证不阻止
         self.assertFalse(result)

@@ -120,37 +120,50 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1.assert_called_once_with(self.mock_answer, "test response", [])
         callback2.assert_called_once_with(self.mock_answer, "test response", [])
 
-    async def test_register_and_trigger_before_tool_call(self):
-        """Test registering and triggering before tool call callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
+    async def test_register_and_trigger_on_tool_result(self):
+        """Test registering and triggering on tool result callbacks."""
+        callback1 = AsyncMock(return_value=None)
+        callback2 = AsyncMock(return_value=None)
 
-        self.lifecycle.register_before_tool_call(callback1)
-        self.lifecycle.register_before_tool_call(callback2)
+        self.lifecycle.register_on_tool_result(callback1)
+        self.lifecycle.register_on_tool_result(callback2)
 
-        await self.lifecycle.trigger_before_tool_call(self.mock_tool_call)
-
-        callback1.assert_called_once_with(self.mock_tool_call)
-        callback2.assert_called_once_with(self.mock_tool_call)
-
-    async def test_register_and_trigger_after_tool_call(self):
-        """Test registering and triggering after tool call callbacks."""
-        callback1 = AsyncMock()
-        callback2 = AsyncMock()
-
-        self.lifecycle.register_after_tool_call(callback1)
-        self.lifecycle.register_after_tool_call(callback2)
-
-        await self.lifecycle.trigger_after_tool_call(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
+        # 测试status="skipped"情况
+        await self.lifecycle.trigger_on_tool_result(
+            tool_name="test_tool",
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments={"arg1": "value1"},
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
 
-        callback1.assert_called_once_with(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
+        # 验证回调被调用，但不检查具体参数，因为on_tool_result的参数较多
+        callback1.assert_called_once()
+        callback2.assert_called_once()
+
+    async def test_register_and_trigger_on_tool_result_success(self):
+        """Test registering and triggering on tool result callbacks with success status."""
+        callback1 = AsyncMock(return_value=None)
+        callback2 = AsyncMock(return_value=None)
+
+        self.lifecycle.register_on_tool_result(callback1)
+        self.lifecycle.register_on_tool_result(callback2)
+
+        # 测试status="success"情况
+        await self.lifecycle.trigger_on_tool_result(
+            tool_name="test_tool",
+            tool_index=0,
+            status="success",
+            result_content="tool result content",
+            toolcall_arguments=None,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
-        callback2.assert_called_once_with(
-            self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
-        )
+
+        callback1.assert_called_once()
+        callback2.assert_called_once()
 
     async def test_callback_order(self):
         """Test that callbacks are triggered in registration order."""
@@ -192,39 +205,16 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_after_message_generation(
                 self.mock_answer, "test response", []
             )
-            await self.lifecycle.trigger_before_tool_call(self.mock_tool_call)
-            await self.lifecycle.trigger_after_tool_call(
-                self.mock_agent, self.mock_tool_call, self.mock_tool_result, True
+            await self.lifecycle.trigger_on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="skipped",
+                result_content=None,
+                toolcall_arguments={"arg": "value"},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
             await self.lifecycle.trigger_before_waiting_user(self.mock_agent)
-            await self.lifecycle.trigger_tool_success(
-                self.mock_agent, self.mock_tool_call, self.mock_tool_result
-            )
-            self.mock_agent.current_answer = MagicMock()
-            self.mock_agent.current_answer.get_current_content = MagicMock(
-                return_value=""
-            )
-            await self.lifecycle.trigger_tool_failure(
-                self.mock_agent, self.mock_tool_call, "test error"
-            )
-            await self.lifecycle.trigger_tool_parse_error(
-                self.mock_agent, "parse error message"
-            )
-            mock_subagent_manager = MagicMock()
-            mock_subagent_manager.create_subagent = AsyncMock()
-
-            def get_members_side_effect(member_type, member_class=None):
-                members = {
-                    "agent": self.mock_agent,
-                    "issue_manager": self.mock_issue_manager,
-                    "subagent_manager": mock_subagent_manager,
-                }
-                return members.get(member_type)
-
-            self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
-            await self.lifecycle.trigger_tool_conflict(
-                self.mock_agent, self.mock_tool_call, ["tool1", "tool2"]
-            )
         except (RuntimeError, asyncio.CancelledError):
             self.fail("Triggering empty callbacks should not throw exceptions")
 

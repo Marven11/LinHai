@@ -6,7 +6,7 @@ from __future__ import annotations
 import random
 import time
 import reprlib
-from typing import Optional, Literal, TypedDict, TYPE_CHECKING
+from typing import Optional, Literal, TypedDict, TYPE_CHECKING, Union
 
 from linhai.agent.workflow import context_range_compress
 from linhai.llm import ToolCallMessage
@@ -281,22 +281,28 @@ class AgentContextOrchestration:
         from .lifecycle import Lifecycle
 
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
-        lifecycle.register_after_tool_call(self._on_after_tool_call)
+        lifecycle.register_on_tool_result(self._on_tool_result)
 
         # 注册大消息数量通知插件
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
 
-    async def _on_after_tool_call(
+    async def _on_tool_result(
         self,
-        _agent: "Agent",
-        _tool_call: ToolCallMessage,
-        tool_result_msg: Message,
-        _success: bool,
-    ) -> Optional[RuntimeMessage]:
-        tool_result_content = str(tool_result_msg)
-        if len(tool_result_content) > 3000:
-            self.large_messages.add(tool_result_msg)
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        if status == "success" and result_content is not None:
+            if len(result_content) > 3000:
+                from linhai.agent.base import RuntimeMessage
+
+                self.large_messages.add(RuntimeMessage(result_content))
+        return None
 
 
 class RedStateToolBlockPlugin:
@@ -313,15 +319,26 @@ class RedStateToolBlockPlugin:
             "context_thanox",
         }
 
-    async def before_tool_call(
+    async def on_tool_result(
         self,
-        tool_call: ToolCallMessage,
-    ) -> bool:
-        """在工具调用前检查是否需要拦截。
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, "RuntimeMessage"]:
+        """检查是否需要跳过工具调用。
 
         Returns:
-            bool: 如果应该拦截返回True，否则返回False
+            None: 没有特殊处理
+            bool: 仅当status为"skipped"时有效，True表示跳过工具调用
+            RuntimeMessage: 替换工具结果
         """
+        if status != "skipped":
+            return None
+
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -331,15 +348,13 @@ class RedStateToolBlockPlugin:
 
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
-            return False
+            return None
 
         if orchestration is None:
-            return False
+            return None
 
         # 使用新的compute_orchestration_context方法获取编排上下文
-        context = orchestration.compute_orchestration_context(
-            tool_call.function_name, threshold_info
-        )
+        context = orchestration.compute_orchestration_context(tool_name, threshold_info)
         details = context["tool_block_details"]
 
         if details["blocked_category"] == details["actual_category"]:
@@ -347,25 +362,25 @@ class RedStateToolBlockPlugin:
             current_state = details["current_state"]
 
             if details["blocked_category"] == "cleanup" and recently_called_cleanup:
-                error_msg = f"一分钟内已经调用过消息清理工具，禁止调用{tool_call.function_name}工具"
-                ui_msg = f"一分钟内已调用过消息清理工具，禁止调用{tool_call.function_name}工具"
+                error_msg = f"一分钟内已经调用过消息清理工具，禁止调用{tool_name}工具"
+                ui_msg = f"一分钟内已调用过消息清理工具，禁止调用{tool_name}工具"
             else:
                 error_msg = (
                     f"错误：当前处于{current_state}状态（token使用率{threshold_info['usage_ratio']*100:.1f}%），"
-                    f"禁止调用{tool_call.function_name}工具！"
+                    f"禁止调用{tool_name}工具！"
                     "红灯状态下只允许调用消息管理工具。"
                 )
-                ui_msg = f"{current_state}状态下阻止调用{tool_call.function_name}工具，请先调用消息清理类工具"
+                ui_msg = f"{current_state}状态下阻止调用{tool_name}工具，请先调用消息清理类工具"
 
             # 添加错误消息到agent
             await agent.interrupt(error_msg, ui_msg)
             return True
 
-        return False
+        return None
 
     def register(self, lifecycle):
         """注册插件回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
 
 class AppendingMessagePlugin:

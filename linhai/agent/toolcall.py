@@ -6,11 +6,10 @@ from linhai.tool.base import (
     ToolArgInfo,
     ToolCallResultMessage,
     ToolResultFailed,
-    ToolResultSuccess,
 )
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
-from linhai.utils import generate_id, CliRuntimeNotice
+from linhai.utils import CliRuntimeNotice
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -46,7 +45,7 @@ class AgentToolcall:
             str | None: 冲突工具的名字，没有冲突返回None
         """
 
-        # 获取当前工具定义
+
         tool_def = None
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         for toolset in tool_manager.toolsets:
@@ -57,7 +56,7 @@ class AgentToolcall:
         if not tool_def:
             return None
 
-        # 检查当前工具的conflict_with是否包含已调用工具
+
         conflict_with = tool_def["conflict_with"]
         if conflict_with is None:
             conflict_with = []
@@ -186,8 +185,15 @@ class AgentToolcall:
                 ),
             )
 
-            await self.agent.lifecycle.trigger_tool_conflict(
-                self.agent, tool_call, self.called_tools_in_round
+
+            await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="failed",
+                result_content=f"工具调用冲突: {tool_call.function_name} 与 {self.called_tools_in_round}",
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=True,
             )
 
             self.agent.message_processor.add_new_message(RuntimeMessage(conflict_msg))
@@ -206,8 +212,17 @@ class AgentToolcall:
             tool_call.function_name in compress_tools
         )
 
-        should_block = await self.agent.lifecycle.trigger_before_tool_call(tool_call)
-        if should_block:
+
+        skip_result = await self.agent.lifecycle.trigger_on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=tool_index,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=None,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        )
+        if skip_result is True:
             self.early_return = True
             return True
 
@@ -226,8 +241,15 @@ class AgentToolcall:
             if isinstance(tool_result, ToolCallResultMessage) and isinstance(
                 tool_result.result, ToolResultFailed
             ):
-                await self.agent.lifecycle.trigger_tool_failure(
-                    self.agent, tool_call, tool_result
+
+                await self.agent.lifecycle.trigger_on_tool_result(
+                    tool_name=tool_call.function_name,
+                    tool_index=tool_index,
+                    status="failed",
+                    result_content=tool_result.result.content,
+                    toolcall_arguments=tool_call.function_arguments,
+                    with_secret=tool_call.with_secret,
+                    is_tool_failed_duplicated_error=False,
                 )
                 msg = f"工具调用失败: {tool_result.result.content}"
 
@@ -237,28 +259,40 @@ class AgentToolcall:
                 else:
                     return False
 
-            await self.agent.lifecycle.trigger_tool_success(
-                self.agent, tool_call, tool_result
-            )
 
-            replacement_message = await self.agent.lifecycle.trigger_after_tool_call(
-                self.agent, tool_call, tool_result, True
+            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="success",
+                result_content=str(tool_result),
+                toolcall_arguments=None,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
             )
-            if replacement_message is not None:
-                tool_result = replacement_message
+            if isinstance(replacement_result, RuntimeMessage):
+                tool_result = replacement_result
 
             await self._handle_tool_result(tool_call, tool_result)
             return False
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
 
-            await self.agent.lifecycle.trigger_tool_failure(self.agent, tool_call, e)
+
+            await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="failed",
+                result_content=str(e),
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
             msg = f"工具调用失败: {str(e)} {repr(e)}"
 
             self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             return False
 
     async def _handle_tool_result(
-        self, tool_call: ToolCallMessage, tool_result: Message
+        self, _tool_call: ToolCallMessage, tool_result: Message
     ):
         """处理工具调用结果。"""
 

@@ -46,7 +46,7 @@ class TestConversationHistory(unittest.TestCase):
         mock_lifecycle = Mock(spec=Lifecycle)
         mock_lifecycle.register_before_message_generation = Mock()
         mock_lifecycle.register_after_message_generation = Mock()
-        mock_lifecycle.register_before_tool_call = Mock()
+        mock_lifecycle.register_on_tool_result = Mock()
 
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "tool_manager":

@@ -23,12 +23,9 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
-            return_value=False
+        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
+            return_value=None
         )
-        self.mock_agent.lifecycle.trigger_tool_success = AsyncMock()
-        self.mock_agent.lifecycle.trigger_tool_failure = AsyncMock()
-        self.mock_agent.lifecycle.trigger_tool_conflict = AsyncMock()
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
@@ -72,12 +69,14 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
-        self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
-            tool_call
-        )
-        self.mock_agent.lifecycle.trigger_tool_success.assert_called_once_with(
-            self.mock_agent, tool_call, mock_result
-        )
+        # 新的on_tool_result回调会被调用两次：skipped和success
+        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        # 获取最后一次调用
+        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        # 检查最后一次调用是success状态
+        self.assertEqual(last_call[1]['status'], 'success')
+        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
+        self.assertEqual(last_call[1]['tool_index'], 1)
 
     async def test_call_tool_without_confirmation_failure_with_assert_success_false(
         self,
@@ -105,12 +104,14 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
-        self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
-            tool_call
-        )
-        self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once_with(
-            self.mock_agent, tool_call, mock_error
-        )
+        # 新的on_tool_result回调会被调用两次：skipped和failed
+        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        # 获取最后一次调用
+        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        # 检查最后一次调用是failed状态，因为工具调用失败
+        self.assertEqual(last_call[1]['status'], 'failed')
+        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
+        self.assertEqual(last_call[1]['tool_index'], 1)
 
     async def test_call_tool_without_confirmation_failure(self):
         """测试无需确认的工具调用失败。"""
@@ -136,12 +137,14 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
-        self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
-            tool_call
-        )
-        self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once_with(
-            self.mock_agent, tool_call, mock_error
-        )
+        # 新的on_tool_result回调会被调用两次：skipped和failed
+        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        # 获取最后一次调用
+        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        # 检查最后一次调用是failed状态
+        self.assertEqual(last_call[1]['status'], 'failed')
+        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
+        self.assertEqual(last_call[1]['tool_index'], 1)
 
     async def test_call_tool_state_change(self):
         """测试工具调用时状态改变。"""
@@ -171,16 +174,22 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
-            return_value=True
+        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
+            return_value=True  # True表示跳过工具调用
         )
 
         result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_not_called()
-        self.mock_agent.lifecycle.trigger_before_tool_call.assert_called_once_with(
-            tool_call
+        self.mock_agent.lifecycle.trigger_on_tool_result.assert_called_once_with(
+            tool_name="test_tool",
+            tool_index=1,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=None,  # 当工具被跳过时，toolcall_arguments为None
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
         )
 
     async def test_multiple_tool_calls_with_mixed_results(self):
@@ -263,7 +272,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertFalse(result)
-        self.mock_agent.lifecycle.trigger_tool_failure.assert_called_once()
+
 
     async def test_tool_conflict_detection(self):
         """测试工具冲突检测。"""

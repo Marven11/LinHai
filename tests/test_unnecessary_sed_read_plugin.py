@@ -50,8 +50,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_tool_call.assert_called_once_with(
-            self.plugin._after_tool_call
+        lifecycle.register_on_tool_result.assert_called_once_with(
+            self.plugin.on_tool_result
         )
 
     @patch("linhai.agent.plugin.Path")
@@ -72,16 +72,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content="test result"),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
@@ -95,7 +86,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
         result = asyncio.run(
-            self.plugin._after_tool_call(self.agent, tool_call, "test result", False)
+            self.plugin.on_tool_result("read_file_with_sed", 0, "failed", "test result", {"filepath": "/tmp/test.txt"}, None, False)
         )
         self.assertIsNone(result)
 
@@ -117,16 +108,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
@@ -152,16 +134,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         large_result = "x" * 10000  # 刚好10000字符
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=large_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         # 结果很大，但插件仍然会警告
         self.assertIsNotNone(result)
@@ -191,16 +164,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         # 文件不存在，但插件仍然会警告
         self.assertIsNotNone(result)
@@ -230,16 +194,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
@@ -264,16 +219,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
@@ -301,16 +247,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
         )
         # 新逻辑：第一次警告
         self.assertIsNotNone(result)
@@ -355,16 +292,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(
-                self.agent,
-                tool_call,
-                ToolCallResultMessage(
-                    tool_name="test_tool",
-                    tool_index=1,
-                    result=ToolResultSuccess(content=self.small_result),
-                ),
-                True,
-            )
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "test content", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该允许，因为没有完整读取
@@ -409,7 +337,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -420,7 +348,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该被阻止，因为内容相同且是第二次重复
@@ -461,7 +389,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该允许，因为没有历史消息
@@ -502,7 +430,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该允许，因为内容不同
@@ -546,7 +474,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该允许，因为不在master_host上
@@ -597,7 +525,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -608,7 +536,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该被阻止，因为最新消息内容相同且是第二次重复
@@ -662,7 +590,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该允许，因为最新消息内容不同
@@ -696,7 +624,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 路径解析失败，应返回None
@@ -771,7 +699,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -783,7 +711,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         # 应该拦截，因为好消息的内容与当前读取相同且是第二次重复
@@ -806,7 +734,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, "result", False)
+            plugin.on_tool_result("read_file_with_sed", 0, "failed", "result", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         self.assertIsNone(result)
@@ -825,7 +753,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, "result", True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         self.assertIsNone(result)
@@ -844,7 +772,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, "result", True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         self.assertIsNone(result)
@@ -863,7 +791,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, "just a string result", True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "just a string result", {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         self.assertIsNone(result)
@@ -891,7 +819,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin._after_tool_call(self.agent, tool_call, new_file_content, True)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
         )
 
         self.assertIsNone(result)

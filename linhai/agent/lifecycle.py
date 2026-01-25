@@ -3,9 +3,9 @@
 from typing import (
     Callable,
     Awaitable,
-    Any,
     TypeAlias,
-    Optional,
+    Literal,
+    Union,
     TYPE_CHECKING,
 )
 from linhai.agent.base import RuntimeMessage
@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 from linhai.llm import (
     Answer,
-    ToolCallMessage,
 )
 
 
@@ -38,16 +37,17 @@ AfterMessageGenerationCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
-BeforeToolCallCallback: TypeAlias = Callable[[ToolCallMessage], Awaitable[bool]]
-
-AfterToolCallCallback: TypeAlias = Callable[
+OnToolResultCallback: TypeAlias = Callable[
     [
-        "Agent",
-        ToolCallMessage,
-        Any,
+        str,
+        int,
+        Literal["skipped", "success", "failed"],
+        str | None,
+        dict | None,
+        list[str] | None,
         bool,
     ],
-    Awaitable[Optional["RuntimeMessage"]],
+    Awaitable[Union[None, bool, "RuntimeMessage"]],
 ]
 
 AfterTokenGenerationCallback: TypeAlias = Callable[
@@ -80,26 +80,6 @@ BeforeWaitingUserCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
-ToolSuccessCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, Any],
-    Awaitable[None],
-]
-
-ToolFailureCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, Any],
-    Awaitable[None],
-]
-
-ToolParseErrorCallback: TypeAlias = Callable[
-    ["Agent", str],
-    Awaitable[None],
-]
-
-ToolConflictCallback: TypeAlias = Callable[
-    ["Agent", ToolCallMessage, list[str]],
-    Awaitable[None],
-]
-
 BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 
@@ -116,18 +96,13 @@ class Lifecycle:
         self._after_message_generation_callbacks: list[
             AfterMessageGenerationCallback
         ] = []
-        self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
-        self._after_tool_call_callbacks: list[AfterToolCallCallback] = []
+        self._on_tool_result_callbacks: list[OnToolResultCallback] = []
         self._after_token_generation_callbacks: list[AfterTokenGenerationCallback] = []
         self._before_parsing_callbacks: list[BeforeParsingCallback] = []
         self._after_segment_callbacks: list[AfterSegmentCallback] = []
         self._after_parsing_callbacks: list[AfterParsingCallback] = []
         self._parsing_error_callbacks: list[ParsingErrorCallback] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
-        self._tool_success_callbacks: list[ToolSuccessCallback] = []
-        self._tool_failure_callbacks: list[ToolFailureCallback] = []
-        self._tool_parse_error_callbacks: list[ToolParseErrorCallback] = []
-        self._tool_conflict_callbacks: list[ToolConflictCallback] = []
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
 
         self._plugins = self._register_default_plugins()
@@ -142,7 +117,6 @@ class Lifecycle:
             WeirdTokenPlugin,
             EndThinkPlugin,
             OnlyReasoningPlugin,
-            PreviousReasoningPlugin,
             ToolCallInReasoningPlugin,
             SingleToolCallReminderPlugin,
             JsonCodeBlockPlugin,
@@ -193,13 +167,9 @@ class Lifecycle:
         """注册消息生成后的回调。"""
         self._after_message_generation_callbacks.append(callback)
 
-    def register_before_tool_call(self, callback: BeforeToolCallCallback):
-        """注册工具调用前的回调。"""
-        self._before_tool_call_callbacks.append(callback)
-
-    def register_after_tool_call(self, callback: AfterToolCallCallback):
-        """注册工具调用后的回调。"""
-        self._after_tool_call_callbacks.append(callback)
+    def register_on_tool_result(self, callback: OnToolResultCallback):
+        """注册工具结果回调。"""
+        self._on_tool_result_callbacks.append(callback)
 
     def register_after_token_generation(self, callback: AfterTokenGenerationCallback):
         """注册token生成后的回调。"""
@@ -224,22 +194,6 @@ class Lifecycle:
     def register_parsing_error(self, callback: ParsingErrorCallback):
         """注册解析错误的回调。"""
         self._parsing_error_callbacks.append(callback)
-
-    def register_tool_success(self, callback: ToolSuccessCallback):
-        """注册工具成功回调。"""
-        self._tool_success_callbacks.append(callback)
-
-    def register_tool_failure(self, callback: ToolFailureCallback):
-        """注册工具失败回调。"""
-        self._tool_failure_callbacks.append(callback)
-
-    def register_tool_parse_error(self, callback: ToolParseErrorCallback):
-        """注册工具解析错误回调。"""
-        self._tool_parse_error_callbacks.append(callback)
-
-    def register_tool_conflict(self, callback: ToolConflictCallback):
-        """注册工具冲突回调。"""
-        self._tool_conflict_callbacks.append(callback)
 
     def register_before_agent_loop(self, callback: BeforeAgentLoopCallback):
         """注册Agent循环开始前的回调。"""
@@ -277,34 +231,36 @@ class Lifecycle:
         for callback in self._after_message_generation_callbacks:
             await callback(answer, full_response, tool_calls)
 
-    async def trigger_before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        """触发工具调用前的事件。callback返回True表示应该打断当前Answer"""
-        should_block = False
-        for callback in self._before_tool_call_callbacks:
-            result = await callback(tool_call)
-            if result:
-                should_block = True
-        return should_block
-
-    async def trigger_after_tool_call(
+    async def trigger_on_tool_result(
         self,
-        agent: "Agent",
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional["RuntimeMessage"]:
-        """触发工具调用后的事件。
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, "RuntimeMessage"]:
+        """触发工具结果事件。
 
         返回:
-            如果任何回调返回了RuntimeMessage，则返回该RuntimeMessage以替换原始工具结果，
-            否则返回None
+            None: 没有特殊处理
+            bool: 仅当status为"skipped"时有效，True表示跳过工具调用
+            RuntimeMessage: 替换工具结果
         """
-        replacement_message = None
-        for callback in self._after_tool_call_callbacks:
-            result = await callback(agent, tool_call, tool_result, success)
-            if result is not None and isinstance(result, RuntimeMessage):
-                replacement_message = result
-        return replacement_message
+        for callback in self._on_tool_result_callbacks:
+            result = await callback(
+                tool_name,
+                tool_index,
+                status,
+                result_content,
+                toolcall_arguments,
+                with_secret,
+                is_tool_failed_duplicated_error,
+            )
+            if result is not None:
+                return result
+        return None
 
     async def trigger_before_waiting_user(self, agent: "Agent"):
         """触发等待用户前的事件。"""
@@ -334,32 +290,6 @@ class Lifecycle:
         """触发解析错误事件。"""
         for callback in self._parsing_error_callbacks:
             await callback(parsed_answer, error)
-
-    async def trigger_tool_success(
-        self, agent: "Agent", tool_call: ToolCallMessage, tool_result: Any
-    ):
-        """触发工具成功事件。"""
-        for callback in self._tool_success_callbacks:
-            await callback(agent, tool_call, tool_result)
-
-    async def trigger_tool_failure(
-        self, agent: "Agent", tool_call: ToolCallMessage, error: Any
-    ):
-        """触发工具失败事件。"""
-        for callback in self._tool_failure_callbacks:
-            await callback(agent, tool_call, error)
-
-    async def trigger_tool_parse_error(self, agent: "Agent", error_message: str):
-        """触发工具解析错误事件。"""
-        for callback in self._tool_parse_error_callbacks:
-            await callback(agent, error_message)
-
-    async def trigger_tool_conflict(
-        self, agent: "Agent", tool_call: ToolCallMessage, conflicting_tools: list[str]
-    ):
-        """触发工具冲突事件。"""
-        for callback in self._tool_conflict_callbacks:
-            await callback(agent, tool_call, conflicting_tools)
 
     async def trigger_before_agent_loop(self, agent: "Agent"):
         """触发Agent循环开始前事件。"""

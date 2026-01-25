@@ -1,7 +1,7 @@
 """Secret management module for LinHai agent."""
 
 import re
-from typing import Any, TypedDict
+from typing import Any, TypedDict, Literal, Union
 import tomllib
 from pathlib import Path
 
@@ -138,57 +138,73 @@ class SecretInterceptorPlugin:
         self.group_chat = group_chat
         self.secrets_dict = secrets_dict
 
-    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        with_secret = tool_call.with_secret
-        if not with_secret:
-            return False
+    async def on_tool_result(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        if status == "skipped":
+            # 替代原来的before_tool_call逻辑
+            if not with_secret:
+                return None
 
-        missing_keys = [key for key in with_secret if key not in self.secrets_dict]
+            missing_keys = [key for key in with_secret if key not in self.secrets_dict]
 
-        if missing_keys:
-            agent = self.group_chat.get_members("agent", Agent)
-            error_msg = f"以下secret键未找到: {missing_keys}。请检查secret配置文件。"
-            agent.message_processor.add_new_message(RuntimeMessage(error_msg))
-            return True
+            if missing_keys:
+                agent = self.group_chat.get_members("agent", Agent)
+                error_msg = f"以下secret键未找到: {missing_keys}。请检查secret配置文件。"
+                agent.message_processor.add_new_message(RuntimeMessage(error_msg))
+                return True  # 跳过工具调用
 
-        tool_call.function_arguments = replace_secrets_in_object(
-            tool_call.function_arguments, self.secrets_dict, with_secret
-        )
-        return False
-
-    async def after_tool_call(self, _agent, tool_call, tool_result, _success) -> Any:
-
-        with_secret = tool_call.with_secret
-        msg = tool_result
-
-        if with_secret:
-            llm_tool_result = tool_result.to_llm_message()
-            masked_result = mask_secrets_in_object(
-                llm_tool_result["content"], self.secrets_dict, with_secret
+            # 替换参数中的secret键
+            replaced_arguments = replace_secrets_in_object(
+                toolcall_arguments, self.secrets_dict, with_secret
             )
+            # 注意：这里无法直接修改toolcall_arguments，需要在调用时处理
+            return None
 
-            keys_str = ", ".join(with_secret)
-            message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_result}<<content>><<masked>>"
-            msg = RuntimeMessage(message)
+        elif status == "success":
+            # 替代原来的after_tool_call逻辑
+            if result_content is None:
+                return None
+            
+            # 情况1: 有with_secret参数，需要掩码secret值
+            if with_secret:
+                masked_content = mask_secrets_in_object(
+                    result_content, self.secrets_dict, with_secret
+                )
+                
+                keys_str = ", ".join(with_secret)
+                message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_content}<<content>><<masked>>"
+                return RuntimeMessage(message)
+            
+            # 情况2: 没有with_secret参数，但结果中包含secret值，需要拦截
+            result_str = str(result_content)
+            contains_secrets = []
+            for key, secret_info in self.secrets_dict.items():
+                if secret_info["value"] in result_str:
+                    contains_secrets.append(key)
+            
+            if contains_secrets:
+                message = (
+                    f"工具调用的结果包含secret值{contains_secrets}，已拦截。"
+                    "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
+                )
+                return RuntimeMessage(message)
+            
+            return None
 
-        result_str = str(msg)
-        contains_secrets = []
-        for key, secret_info in self.secrets_dict.items():
-            if secret_info["value"] in result_str:
-                contains_secrets.append(key)
+        return None  # 对于failed状态不做特殊处理
 
-        if contains_secrets:
-            message = (
-                f"工具调用的结果包含secret值{contains_secrets}，已拦截。"
-                "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
-            )
-            return RuntimeMessage(message)
 
-        return None if msg is tool_result else msg
 
     def register(self, lifecycle):
-        lifecycle.register_before_tool_call(self.before_tool_call)
-        lifecycle.register_after_tool_call(self.after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
 
 def initialize_secret_system(

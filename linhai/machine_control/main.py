@@ -1,6 +1,6 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
-from typing import Dict, Optional, Protocol, Union, Any
+from typing import Dict, Optional, Protocol, Union, Any, Literal
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import Message, ToolCallMessage
@@ -800,58 +800,70 @@ class MachineControlPlugin:
             sort_value=0,
         )
 
-    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
-        """在工具调用前检查on_machine参数并提示切换。"""
-        on_machine = tool_call.on_machine
-        if on_machine is not None:
-            current_machine = self.machine_control.target_machine
-            if on_machine != current_machine:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO",
-                        content=f"正在切换到机器 {on_machine} 执行工具 {tool_call.function_name}",
-                    ),
-                )
-        return False  # 不打断工具调用
-
-    async def after_tool_call(
+    async def on_tool_result(
         self,
-        agent: Agent,
-        tool_call: ToolCallMessage,
-        tool_result: Any,
-        success: bool,
-    ) -> Optional[RuntimeMessage]:
-        """在工具调用后更新连续使用on_machine的计数器并检查警告。"""
-        on_machine = tool_call.on_machine
-        current_machine = (
-            self.machine_control.target_machine
-        )  # 工具调用后已恢复为原始机器
-
-        if on_machine is None or on_machine != current_machine:
-            # 没有使用on_machine或指定了不同的机器，重置计数器
-            self.consecutive_same_on_machine_count = 0
-            self.last_on_machine = None
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        """处理工具调用的结果，合并了原来的before_tool_call和after_tool_call功能。"""
+        from linhai.utils import CliRuntimeNotice
+        
+        # 对于skipped状态，执行原before_tool_call的逻辑
+        if status == "skipped":
+            # 检查toolcall_arguments中是否包含on_machine参数
+            if toolcall_arguments and "on_machine" in toolcall_arguments:
+                on_machine = toolcall_arguments["on_machine"]
+                if on_machine is not None:
+                    current_machine = self.machine_control.target_machine
+                    if on_machine != current_machine:
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="INFO",
+                                content=f"正在切换到机器 {on_machine} 执行工具 {tool_name}",
+                            ),
+                        )
+            return None  # 不跳过工具调用
+        
+        # 对于success状态，执行原after_tool_call的逻辑
+        elif status == "success":
+            # 检查toolcall_arguments中是否包含on_machine参数
+            if toolcall_arguments and "on_machine" in toolcall_arguments:
+                on_machine = toolcall_arguments["on_machine"]
+                current_machine = self.machine_control.target_machine
+                
+                if on_machine is None or on_machine != current_machine:
+                    # 没有使用on_machine或指定了不同的机器，重置计数器
+                    self.consecutive_same_on_machine_count = 0
+                    self.last_on_machine = None
+                else:
+                    # 使用on_machine且与当前机器相同
+                    if self.last_on_machine == on_machine:
+                        self.consecutive_same_on_machine_count += 1
+                    else:
+                        self.consecutive_same_on_machine_count = 1
+                        self.last_on_machine = on_machine
+                    
+                    if self.consecutive_same_on_machine_count >= 3:
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="WARNING",
+                                content=f"连续{self.consecutive_same_on_machine_count}次工具调用都指定了相同的on_machine '{on_machine}'，且未切换机器。请确认是否需要频繁指定。",
+                            ),
+                        )
+            return None  # 不替换工具结果
+        
+        # 对于failed状态，不需要特殊处理
         else:
-            # 使用on_machine且与当前机器相同
-            if self.last_on_machine == on_machine:
-                self.consecutive_same_on_machine_count += 1
-            else:
-                self.consecutive_same_on_machine_count = 1
-                self.last_on_machine = on_machine
-
-            if self.consecutive_same_on_machine_count >= 3:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"连续{self.consecutive_same_on_machine_count}次工具调用都指定了相同的on_machine '{on_machine}'，且未切换机器。请确认是否需要频繁指定。",
-                    ),
-                )
-        return None  # 不替换工具结果
+            return None
 
     def register(self, lifecycle):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_before_tool_call(self.before_tool_call)
-        lifecycle.register_after_tool_call(self.after_tool_call)
+        lifecycle.register_on_tool_result(self.on_tool_result)

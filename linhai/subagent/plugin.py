@@ -8,7 +8,7 @@ from linhai.utils import CliRuntimeNotice
 from linhai.agent.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, Union
 
 if TYPE_CHECKING:
     from linhai.agent import Agent, Lifecycle
@@ -17,31 +17,43 @@ if TYPE_CHECKING:
 class GitBlockingPlugin(Plugin):
     """阻止Agent在有未解答issue时使用git命令的Plugin。"""
 
-    async def before_tool_call(self, tool_call: ToolCallMessage) -> bool:
+    async def on_tool_result(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        result_content: str | None,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
         """检查是否有未解答的issue，如果有则阻止使用git命令。"""
+        if status != "skipped":
+            return None
+
         from linhai.agent import Agent
         from linhai.subagent.issue import IssueManager
 
         issue_manager = self.group_chat.get_members("issue_manager", IssueManager)
         if not issue_manager or not issue_manager.has_unanswered_issues():
-            return False
+            return None
 
-        tool_name = tool_call.function_name
         if tool_name != "process_create":
-            return False
+            return None
 
-        arguments = tool_call.function_arguments
-        command_list = arguments["command"]
+        if toolcall_arguments is None:
+            return None
 
+        command_list = toolcall_arguments.get("command")
         if not command_list:
-            return False
+            return None
         cmd = command_list[0]
         if not (
             cmd == "git"
             or cmd.startswith("git-")
             or os.path.basename(cmd) in ("git", "git.exe")
         ):
-            return False
+            return None
 
         agent = self.group_chat.get_members("agent", Agent)
         unanswered = issue_manager.get_unanswered_issues()
@@ -70,8 +82,8 @@ class GitBlockingPlugin(Plugin):
         return True
 
     def register(self, lifecycle: "Lifecycle"):
-        """注册到before_tool_call回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        """注册到on_tool_result回调。"""
+        lifecycle.register_on_tool_result(self.on_tool_result)
 
 
 class IssueWaitingUserPlugin(Plugin):

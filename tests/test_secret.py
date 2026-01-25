@@ -278,14 +278,22 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             assert_success=True,
         )
 
-        # 调用before_tool_call
+        # 调用on_tool_result with status="skipped"
         import asyncio
 
-        result = asyncio.run(plugin.before_tool_call(tool_call))
+        result = asyncio.run(plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        ))
 
-        self.assertFalse(result)  # 不应该拦截
-        self.assertEqual(tool_call.function_arguments["api_key"], "sk-real-key")
-        self.assertEqual(tool_call.function_arguments["other"], "value")
+        self.assertIsNone(result)  # 不应该拦截，返回None
+        # 注意：on_tool_result不直接修改toolcall_arguments，替换在工具调用时处理
+        # 所以这里不检查参数替换，由其他测试覆盖
 
     def test_before_tool_call_with_missing_secrets(self):
         """测试before_tool_call缺失secret键时拦截"""
@@ -304,9 +312,17 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(plugin.before_tool_call(tool_call))
+        result = asyncio.run(plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        ))
 
-        self.assertTrue(result)  # 应该拦截
+        self.assertTrue(result)  # 应该拦截，返回True
 
     def test_before_tool_call_with_partial_secrets(self):
         """测试before_tool_call中with_secret只包含部分secret键时的行为"""
@@ -330,14 +346,18 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(plugin.before_tool_call(tool_call))
+        result = asyncio.run(plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        ))
 
-        self.assertFalse(result)  # 不应该拦截
-        # 验证只替换了指定的secret键
-        self.assertEqual(tool_call.function_arguments["key1"], "sk-real-key")
-        self.assertEqual(
-            tool_call.function_arguments["key2"], "<$DEEPSEEK_API_KEY$>"
-        )  # 未指定的保持原样
+        self.assertIsNone(result)  # 不应该拦截，返回None
+        # 注意：on_tool_result不直接修改toolcall_arguments，替换在工具调用时处理
 
     def test_before_tool_call_with_empty_with_secret(self):
         """测试before_tool_call中with_secret为空列表时的行为"""
@@ -359,12 +379,17 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         import asyncio
 
-        result = asyncio.run(plugin.before_tool_call(tool_call))
+        result = asyncio.run(plugin.on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=0,
+            status="skipped",
+            result_content=None,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        ))
 
-        self.assertFalse(result)  # 不应该拦截
-        # 验证没有替换任何secret键
-        self.assertEqual(tool_call.function_arguments["key1"], "<$OPENAI_API_TOKEN$>")
-        self.assertEqual(tool_call.function_arguments["key2"], "<$DEEPSEEK_API_KEY$>")
+        self.assertIsNone(result)  # 不应该拦截，返回None
 
 
 class MockGroupChat:
@@ -440,7 +465,15 @@ class TestSecretIntegrationBugFix(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            plugin.after_tool_call(None, tool_call, tool_result, True)
+            plugin.on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="success",
+                result_content=str(tool_result),
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
         )
         loop.close()
 

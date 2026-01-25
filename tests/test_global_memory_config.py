@@ -28,7 +28,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
 
         self.group_chat = GroupChat()
 
-        # 为SystemMessage初始化提供mock的tool_manager
         from linhai.tool.main import ToolManager
         from unittest.mock import Mock
         import argparse
@@ -37,11 +36,10 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         mock_tool_manager.get_tools_info.return_value = []
         self.group_chat.register_member("tool_manager", mock_tool_manager)
 
-        # 注册cli_args模拟对象
-        mock_cli_args = argparse.Namespace()
-        mock_cli_args.message = None
-        mock_cli_args.file = None
-        self.group_chat.register_member("cli_args", mock_cli_args)
+        self.mock_cli_args = argparse.Namespace()
+        self.mock_cli_args.message = None
+        self.mock_cli_args.file = None
+        self.group_chat.register_member("cli_args", self.mock_cli_args)
 
     def tearDown(self):
         """测试后清理"""
@@ -57,14 +55,13 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            # 创建模拟的config对象
             from unittest.mock import Mock
 
             mock_config = Mock()
             mock_memory = Mock()
             mock_memory.file_path = str(
                 memory_file.relative_to(memory_file.parent)
-            )  # 相对路径
+            )
             mock_config.memory = mock_memory
 
             context = {
@@ -75,7 +72,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
-                "cli_args": mock_cli_args,
+                "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -104,7 +101,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            # 创建模拟的config对象
             from unittest.mock import Mock
 
             mock_config = Mock()
@@ -120,7 +116,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
-                "cli_args": mock_cli_args,
+                "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -152,7 +148,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
         asyncio.set_event_loop(loop)
 
         try:
-            # 创建模拟的config对象，memory为None
             from unittest.mock import Mock
 
             mock_config = Mock()
@@ -166,7 +161,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "checklist_path": None,
                 "git_diff_reviewer": False,
                 "violation_checker": False,
-                "cli_args": mock_cli_args,
+                "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -202,7 +197,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
             asyncio.set_event_loop(loop)
 
             try:
-                # 创建模拟的config对象
                 from unittest.mock import Mock
 
                 mock_config = Mock()
@@ -216,6 +210,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                     "checklist_path": None,
                     "git_diff_reviewer": False,
                     "violation_checker": False,
+                    "cli_args": self.mock_cli_args,
                 }
                 init_messages = loop.run_until_complete(_create_init_messages(context))
 
@@ -232,7 +227,6 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                         ):
                             file_found = True
                             break
-                    # 如果内存消息中没有找到，检查文件是否实际创建
                     if not file_found:
                         file_path = Path("./") / filename
                         if file_path.exists():

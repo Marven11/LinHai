@@ -39,7 +39,6 @@ class TestToolConflictRefactor(unittest.TestCase):
         mcp_config: list[MCPConfig] = []
         mcp_basedir = Path(".")
 
-        # 创建真实的ToolManager实例，并设置到group_chat中
         tool_manager = ToolManager(
             group_chat=self.agent_mock.group_chat,
             toolsets=[],
@@ -48,7 +47,6 @@ class TestToolConflictRefactor(unittest.TestCase):
             mcp_basedir=mcp_basedir,
         )
 
-        # 将tool_manager设置为group_chat.get_members的返回值
         def get_members_side_effect(member_type, _member_class=None):
             if member_type == "tool_manager":
                 return tool_manager
@@ -130,22 +128,19 @@ class TestToolConflictRefactor(unittest.TestCase):
     def _setup_async_mocks(self) -> None:
         self.toolcall.agent.group_chat.send_if_exists = AsyncMock()
         self.toolcall.agent.lifecycle = Mock()
-        self.toolcall.agent.lifecycle.trigger_tool_conflict = AsyncMock()
+        self.toolcall.agent.lifecycle.trigger_on_tool_result = AsyncMock()
         self.toolcall.agent.message_processor = Mock()
         self.toolcall.agent.message_processor.add_new_message = Mock()
 
     def _verify_error_message_content(self) -> None:
-        add_new_message_calls = self.toolcall.agent.message_processor.add_new_message.call_args_list  # type: ignore
+        add_new_message_calls = self.toolcall.agent.message_processor.add_new_message.call_args_list
         self.assertGreater(len(add_new_message_calls), 0)
 
-        conflict_messages = [
-            args[0].message
-            for call in add_new_message_calls
-            for args in [call[0]]
-            if len(args) > 0
-            and isinstance(args[0], RuntimeMessage)
-            and "工具调用冲突" in args[0].message
-        ]
+        conflict_messages = []
+        for call in add_new_message_calls:
+            args = call[0]
+            if len(args) > 0 and isinstance(args[0], RuntimeMessage) and "工具调用冲突" in args[0].message:
+                conflict_messages.append(args[0].message)
 
         self.assertGreater(len(conflict_messages), 0)
         message_content = conflict_messages[0]
@@ -173,7 +168,7 @@ class TestToolConflictRefactor(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(self.toolcall.early_return)
-        self.toolcall.agent.lifecycle.trigger_tool_conflict.assert_called_once()  # type: ignore
+        self.toolcall.agent.lifecycle.trigger_on_tool_result.assert_called_once()
         self._verify_error_message_content()
 
 

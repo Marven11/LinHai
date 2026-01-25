@@ -85,6 +85,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat.register_queue("parsed_agent_answer")
 
+        from linhai.machine_control import MachineControl
+        self.mock_machine_control = MagicMock(spec=MachineControl)
+        self.mock_machine_control.target_machine = "master_host"
+        self.group_chat.register_member("machine_control", self.mock_machine_control)
+
         from linhai.subagent.issue import IssueManager
 
         self.issue_manager = IssueManager(self.group_chat)
