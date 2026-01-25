@@ -10,6 +10,7 @@ from linhai.llm import (
     AssistantMessage,
     SystemMessage,
 )
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 repr_obj = Repr()
@@ -135,15 +136,10 @@ def _collect_deleted_user_messages(
     agent: "linhai.agent.Agent", start_id: int, end_id: int
 ) -> list[str]:
     """收集被删除的用户消息内容"""
-    deleted_user_messages = []
     from linhai.llm import UserMessage
-
-    for msg in agent.message_processor.messages[start_id : end_id + 1]:
-        if isinstance(msg, UserMessage):
-            content = msg.message
-            if content:
-                deleted_user_messages.append(content)
-    return deleted_user_messages
+    
+    messages_slice = agent.message_processor.messages[start_id:end_id + 1]
+    return [msg.message for msg in messages_slice if isinstance(msg, UserMessage) and msg.message]
 
 
 def _process_compression_range(
@@ -176,11 +172,15 @@ async def _execute_message_deletion(
     deleted_user_messages = _collect_deleted_user_messages(agent, start_id, end_id)
 
     range_size = end_id - start_id + 1
-    deleted_messages = await agent.message_processor.delete_message_range(
-        start_id, end_id
-    )
-    agent.message_processor.add_new_message(
-        RuntimeMessage(f"历史压缩已删除{range_size}条消息（从{start_id}到{end_id}）")
+
+    # 执行实际的消息删除并获取被删除的消息
+    deleted_messages = await agent.message_processor.delete_message_range(start_id, end_id)
+    
+    # 保存被删除的消息到conversation系统 - 乐观假设硬盘可写
+    from linhai.agent.conversation import get_current_conversation
+    conv = get_current_conversation()
+    saved_path = conv.save_cleaned_messages(
+        deleted_messages, prefix="range_compress"
     )
 
     if deleted_user_messages:
@@ -191,7 +191,7 @@ async def _execute_message_deletion(
         )
 
 
-async def context_range_compress(agent: "linhai.agent.Agent") -> str:
+async def context_range_compress(agent: "linhai.agent.Agent") -> ToolResultSuccess | ToolResultFailed:
     """
     压缩指定范围的历史消息以减少上下文长度。
 
@@ -212,7 +212,7 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
     passed, error_msg = _check_token_threshold(agent)
     if not passed:
         agent.message_processor.add_new_message(RuntimeMessage(error_msg))
-        return f"历史压缩未执行：{error_msg}"
+        return ToolResultFailed(content=f"历史压缩未执行：{error_msg}")
 
     await agent.message_processor.filter_messages(
         lambda msg: not isinstance(msg, CompressRangeRequest)
@@ -237,7 +237,7 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
 
         range_result = _process_compression_range(agent, full_response)
         if isinstance(range_result, str):
-            return range_result
+            return ToolResultFailed(content=range_result)
 
         start_id, end_id = range_result
 
@@ -254,11 +254,11 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> str:
             RuntimeMessage(wrapped_summary),
         )
 
-        return (
+        return ToolResultSuccess(content=(
             "历史压缩成功完成，现在请继续工作！"
             "注意：每次进行历史压缩都需要重新调用compress_history_range工具！"
             "注意：历史压缩不能仅输出总结和ID，必须先调用工具！"
-        )
+        ))
     finally:
 
         await agent.message_processor.filter_messages(

@@ -17,6 +17,7 @@ from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from .base import Message, RuntimeMessage
 from .message import AgentMessage
+from .conversation import get_current_conversation
 
 if TYPE_CHECKING:
     from .main import Agent
@@ -57,42 +58,46 @@ class AgentContextOrchestration:
         Returns:
             清理结果消息。如果当前大消息少于5条则返回失败消息。
         """
-        if len(self.large_messages) < 5:
-            error_msg = f"错误：当前只有{len(self.large_messages)}条大消息，需要至少5条大消息才能清理"
-            return ToolResultFailed(content=error_msg)
+        large_count = len(self.large_messages)
+        if large_count < 5:
+            return ToolResultFailed(content=f"需要至少5条大消息，当前只有{large_count}条")
 
-        await self.agent_message.count_invalidate_cache()
-        removed_messages = []
-
-        for message in self.large_messages:
+        # 删除大消息
+        removed_messages = list(self.large_messages)
+        for message in removed_messages:
             await self.agent_message.remove_message(message)
-            removed_messages.append(r.repr(str(message)))
-
         self.large_messages.clear()
         self.last_compress_or_clean_time = time.time()
 
-        result_lines = [f"已清理 {len(removed_messages)} 条大消息:"]
-        result_lines.extend(removed_messages)
-        return ToolResultSuccess(content="\n".join(result_lines))
+        conv = get_current_conversation()
+        saved_path = conv.save_cleaned_messages(removed_messages, prefix="garbage_clean")
+        result = f"清理了{large_count}条大消息，保存到: {saved_path}"
+        return ToolResultSuccess(content=result)
 
-    async def context_thanox(self) -> str:
+    async def context_thanox(self) -> ToolResultSuccess | ToolResultFailed:
         """随机删除一半消息（不包括前5条系统消息）。
 
         Returns:
-            str: 删除结果消息
+            删除结果消息或失败消息。
         """
         messages = self.agent_message.messages
         if len(messages) <= 10:
-            return "消息数量不足，无需删除"
+            return ToolResultFailed(content="消息数量不足，无需删除")
 
-        await self.agent_message.count_invalidate_cache()
         indices_to_delete = random.sample(range(5, len(messages)), len(messages) // 2)
 
-        await self.agent_message.replace_messages(
-            [msg for idx, msg in enumerate(messages) if idx not in indices_to_delete]
-        )
+        deleted_messages = []
+        for idx in sorted(indices_to_delete, reverse=True):
+            deleted_messages.append(messages[idx])
+            await self.agent_message.remove_message(messages[idx])
+
         self.last_compress_or_clean_time = time.time()
-        return f"context_thanox: 随机删除了{len(indices_to_delete)}条消息"
+
+        # 直接保存到conversation，让错误自然抛出
+        conv = get_current_conversation()
+        saved_path = conv.save_cleaned_messages(deleted_messages, prefix="thanox")
+        result = f"context_thanox: 随机删除了{len(indices_to_delete)}条消息，保存到: {saved_path}"
+        return ToolResultSuccess(content=result)
 
     def compute_orchestration_context(
         self, tool_name: str, threshold_info: Optional[ThresholdInfo]
@@ -146,7 +151,6 @@ class AgentContextOrchestration:
             else "other"
         )
 
-        # 根据状态和清理工具调用情况确定blocked_category
         if current_state == "红灯":
             if recently_called_cleanup:
                 blocked_category = "cleanup"
@@ -165,7 +169,6 @@ class AgentContextOrchestration:
             "current_state": current_state,
         }
 
-        # 构建通知消息
         notification_message = None
         if current_state != "绿灯" or recently_called_cleanup:
             large_count = len(self.large_messages)
@@ -245,7 +248,6 @@ class AgentContextOrchestration:
             required_args=[],
         )
         async def context_garbage_clean_tool() -> ToolResultSuccess | ToolResultFailed:
-            # 记录工具调用时间用于后续判断
             self.last_compress_or_clean_time = time.time()
             return await self.context_garbage_clean()
 
@@ -255,8 +257,7 @@ class AgentContextOrchestration:
             args={},
             required_args=[],
         )
-        async def context_thanox_tool() -> str:
-            # 记录工具调用时间用于后续判断
+        async def context_thanox_tool() -> ToolResultSuccess | ToolResultFailed:
             self.last_compress_or_clean_time = time.time()
             return await self.context_thanox()
 
@@ -266,7 +267,7 @@ class AgentContextOrchestration:
             args={},
             required_args=[],
         )
-        async def context_range_compress_tool() -> str:
+        async def context_range_compress_tool() -> ToolResultSuccess | ToolResultFailed:
             from linhai.agent import Agent
 
             agent = self.group_chat.get_members("agent", Agent)
@@ -283,7 +284,6 @@ class AgentContextOrchestration:
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
         lifecycle.register_on_tool_result(self._on_tool_result)
 
-        # 注册大消息数量通知插件
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
 
@@ -353,7 +353,6 @@ class RedStateToolBlockPlugin:
         if orchestration is None:
             return None
 
-        # 使用新的compute_orchestration_context方法获取编排上下文
         context = orchestration.compute_orchestration_context(tool_name, threshold_info)
         details = context["tool_block_details"]
 
@@ -372,7 +371,6 @@ class RedStateToolBlockPlugin:
                 )
                 ui_msg = f"{current_state}状态下阻止调用{tool_name}工具，请先调用消息清理类工具"
 
-            # 添加错误消息到agent
             await agent.interrupt(error_msg, ui_msg)
             return True
 
@@ -487,7 +485,7 @@ class LargeMessageCountPlugin:
         large_count = len(orchestration.large_messages)
 
         if large_count < 5:
-            # 大消息少于5条时，添加提示不能调用context_garbage_clean
+
             message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_garbage_clean"
             agent.message_processor.update_appending_message(
                 RuntimeMessage(message_content),
@@ -495,7 +493,7 @@ class LargeMessageCountPlugin:
                 sort_value=0,
             )
         else:
-            # 大消息至少5条时，删除提示
+
             agent.message_processor.update_appending_message(
                 None, source="large_message_count", sort_value=0
             )

@@ -145,7 +145,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            5,
+            6,  # System + user + assistant + error msg + conv save msg + possible RuntimeMessage
             format_messages_for_assert(messages),
         )
         error_msgs = [
@@ -187,7 +187,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            6,
+            7,  # System + user + assistant + tool msg + assistant + error msg + conv save msg
             format_messages_for_assert(messages),
         )
         error_msgs = [
@@ -219,7 +219,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            5,
+            6,  # System + user + assistant + warning msg + conv save msg + possible RuntimeMessage
             format_messages_for_assert(messages),
         )
         warning_msgs = [
@@ -249,7 +249,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            3,  # System + user + assistant
+            4,  # System + user + assistant + conversation保存消息
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         self.assertEqual(self.agent.state, "waiting_user")
@@ -276,7 +276,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            4,  # System + user + assistant + RuntimeMessage
+            5,  # System + user + assistant + tool result + conversation保存消息
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         runtime_msgs = [
@@ -297,7 +297,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             len(self.agent.message_processor.get_messages()),
-            3,  # System + user + assistant
+            4,  # System + user + assistant + conversation保存消息
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
         self.assertEqual(self.agent.state, "waiting_user")

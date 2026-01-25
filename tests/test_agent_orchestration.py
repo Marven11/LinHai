@@ -9,6 +9,9 @@ from linhai.agent.message import AgentMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
+from linhai.agent.lifecycle import Lifecycle
+from linhai.tool.main import ToolManager
+from linhai.token_manager import TokenManager
 
 
 class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
@@ -18,9 +21,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         """设置测试环境。"""
         group_chat = GroupChat()
         # 注册一个mock的lifecycle以避免RuntimeError
-        from linhai.agent.lifecycle import Lifecycle
-        from linhai.tool.main import ToolManager
-
         mock_lifecycle = Mock(spec=Lifecycle)
         group_chat.register_member("lifecycle", mock_lifecycle)
 
@@ -30,8 +30,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         group_chat.register_member("tool_manager", mock_tool_manager)
 
         # 注册一个mock的token_manager，因为compute_orchestration_context需要它
-        from linhai.token_manager import TokenManager
-
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
@@ -50,19 +48,27 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     async def test_context_thanox(self):
         """测试随机删除历史消息。"""
-        for i in range(10):
-            self.message_processor.add_new_message(UserMessage(message=f"Message {i}"))
+        # 模拟conversation系统
+        mock_conv = Mock()
+        mock_conv.save_cleaned_messages.return_value = "/tmp/test_saved_messages.json"
+        
+        with patch('linhai.agent.orchestration.get_current_conversation', return_value=mock_conv):
+            for i in range(10):
+                self.message_processor.add_new_message(UserMessage(message=f"Message {i}"))
 
-        original_count = len(self.message_processor.get_messages())
-        result = await self.orchestration.context_thanox()
+            original_count = len(self.message_processor.get_messages())
+            result = await self.orchestration.context_thanox()
 
-        self.assertIn("context_thanox", result)
-        self.assertLess(len(self.message_processor.get_messages()), original_count)
+            self.assertIsInstance(result.content, str)
+            self.assertIn("context_thanox", result.content)
+            self.assertLess(len(self.message_processor.get_messages()), original_count)
+            # 验证save_cleaned_messages被调用
+            mock_conv.save_cleaned_messages.assert_called_once()
 
     async def test_context_thanox_insufficient_messages(self):
         """测试消息不足时的不删除。"""
         result = await self.orchestration.context_thanox()
-        self.assertEqual(result, "消息数量不足，无需删除")
+        self.assertEqual(result.content, "消息数量不足，无需删除")
 
     def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
@@ -117,28 +123,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertIn("一分钟内有调用过消息清理工具", result)
         # 消息数量应该仍然是3
         self.assertEqual(len(self.message_processor.messages), 3)
-
-    @patch("linhai.agent.message.Path")
-    @patch("linhai.agent.message.json")
-    async def test_save_conversation_history(self, _mock_json, mock_path):
-        """测试保存对话历史。"""
-        mock_home = Mock()
-        mock_home.__truediv__ = Mock(return_value=mock_home)  # 链式调用返回自己
-        mock_path.home.return_value = mock_home
-        mock_home.mkdir.return_value = None
-
-        mock_file = Mock()
-        mock_file.__enter__ = Mock(return_value=mock_file)
-        mock_file.__exit__ = Mock(return_value=None)
-        mock_file.write = Mock()
-
-        mock_open = Mock(return_value=mock_file)
-
-        with patch("builtins.open", mock_open):
-            await self.message_processor.save_conversation_history()
-
-        mock_home.mkdir.assert_called_once_with(parents=True, exist_ok=True)
-        mock_open.assert_called_once()
 
     def test_get_status_display_piece(self):
         """测试获取状态显示片段。"""

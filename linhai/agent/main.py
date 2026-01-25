@@ -86,6 +86,17 @@ class Agent:
 
         self.current_answer: Answer | None = None
 
+        # 初始化conversation系统
+        try:
+            from linhai.agent.conversation import init_conversation
+            self.conversation_manager = init_conversation()
+        except Exception as e:
+            from .base import RuntimeMessage
+            self.message_processor.add_new_message(
+                RuntimeMessage(f"警告: 无法初始化conversation系统: {e}")
+            )
+            self.conversation_manager = None
+
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
@@ -386,8 +397,20 @@ class Agent:
             answer, full_response, tool_calls
         )
 
-        await self.save_conversation_history()
-
+        # 保存对话历史到conversation系统
+        if self.conversation_manager is not None:
+            try:
+                saved_path = self.conversation_manager.save_context(
+                    self.message_processor.get_messages()
+                )
+                self.message_processor.add_new_message(
+                    RuntimeMessage(f"对话历史已保存到: {saved_path}")
+                )
+            except Exception as e:
+                self.message_processor.add_new_message(
+                    RuntimeMessage(f"警告: 无法保存对话历史: {e}")
+                )
+        
         self.current_answer = None
         return answer
 
@@ -434,10 +457,6 @@ class Agent:
         self.message_processor.add_new_message(
             RuntimeMessage(f"已启动git diff reviewer: {result}")
         )
-
-    async def save_conversation_history(self):
-        """保存对话历史到文件。"""
-        await self.message_processor.save_conversation_history()
 
     async def run(self):
         """

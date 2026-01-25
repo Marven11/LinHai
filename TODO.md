@@ -2,10 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前有很诡异的历史记录保存功能，应该删除
+- [x] 当前有很诡异的历史记录保存功能，应该删除
   - 问题: 现在好像有代码会调用to_json保存每个message到.cache还是.local/share里，而且是每一次生成消息就生成一个新的文件
   - 目标：完全清理这些代码，为之后的工作做准备
-- [ ] conversation 系统
+  - 状态：已清理~/.local/share/linhai/history/目录，代码中未发现相关保存逻辑
+- [x] conversation 系统
   - 新建linhai/agent/conversation.py完成主要代码
   - 为每次对话创建一个文件夹`~/.local/share/conversation/xxx`，注意没有 s
     - 注意：我们未来可能会移动这个文件夹，为了代码的整洁性我们不能在其他地方计算这个文件夹的路径

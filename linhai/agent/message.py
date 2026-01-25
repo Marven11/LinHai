@@ -193,29 +193,3 @@ class AgentMessage:
             )
             self.messages.extend(self.queued_messages)
             self.queued_messages = []
-
-    async def save_conversation_history(self, save_dir: Optional[Path] = None) -> None:
-        """保存对话历史到文件。
-
-        Args:
-            save_dir: 保存目录，默认为用户home目录下的.linhai/conversations
-        """
-        if save_dir is None:
-            save_dir = Path.home() / ".local" / "share" / "linhai" / "conversations"
-        save_dir.mkdir(parents=True, exist_ok=True)
-
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"conversation_{timestamp}.json"
-        filepath = save_dir / filename
-
-        history_data = []
-        for msg in self.messages:
-            msg_dict = json.loads(msg.to_json())
-            history_data.append(msg_dict)
-
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(history_data, f, ensure_ascii=False, indent=2)
-
-        except (IOError, OSError) as e:
-            raise RuntimeError(f"保存对话历史失败: {e}")
