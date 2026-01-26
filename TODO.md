@@ -57,6 +57,13 @@ unittest 失败时，必须分析
   - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
   - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
   - 添加unittest检查读取stdout+stderr时，一个超时后另一个的内容是否会正常返回
+- [ ] 添加一个llm manager
+  - 当前问题: 
+    - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
+    - 但是llm api有时会返回429或者报告文本长度过长，我们希望在这个时候临时轮换llm，但是agent不应该实现这个逻辑
+    - 而且当前Agent类需要管理当前使用什么llm，这不太合理
+    - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
+  - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
 
 # 注意
