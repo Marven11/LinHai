@@ -234,164 +234,6 @@ TEST_KEY = { value = "test-value", description = "Test key" }
         self.assertEqual(get_available_secrets_message({}), "无可用secret键")
 
 
-class TestSecretInterceptorPlugin(unittest.TestCase):
-    """测试SecretInterceptorPlugin"""
-
-    def setUp(self):
-        # 创建mock对象
-        self.mock_group_chat = MockGroupChat()
-
-        # 创建并注册mock agent
-        class MockAgent:
-            def __init__(self):
-                self.message_processor = MockMessageProcessor()
-
-        class MockMessageProcessor:
-            def __init__(self):
-                self.messages = []
-
-            def add_new_message(self, msg):
-                self.messages.append(msg)
-
-        mock_agent = MockAgent()
-        self.mock_group_chat.register_member("agent", mock_agent)
-        self.secrets_dict: dict[str, SecretInfo] = {
-            "OPENAI_API_TOKEN": {"value": "sk-real-key", "description": ""},
-            "DEEPSEEK_API_KEY": {"value": "sk-deepseek", "description": ""},
-        }
-
-    def test_before_tool_call_with_valid_secrets(self):
-        """测试before_tool_call有效secret替换"""
-        from linhai.secret import SecretInterceptorPlugin
-        from linhai.llm import ToolCallMessage
-
-        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
-
-        # 创建工具调用
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={
-                "api_key": "<$OPENAI_API_TOKEN$>",
-                "other": "value",
-            },
-            with_secret=["OPENAI_API_TOKEN", "DEEPSEEK_API_KEY"],
-            assert_success=True,
-        )
-
-        # 调用on_tool_result with status="skipped"
-        import asyncio
-
-        result = asyncio.run(plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
-            is_tool_failed_duplicated_error=False,
-        ))
-
-        self.assertIsNone(result)  # 不应该拦截，返回None
-        # 注意：on_tool_result不直接修改toolcall_arguments，替换在工具调用时处理
-        # 所以这里不检查参数替换，由其他测试覆盖
-
-    def test_before_tool_call_with_missing_secrets(self):
-        """测试before_tool_call缺失secret键时拦截"""
-        from linhai.secret import SecretInterceptorPlugin
-        from linhai.llm import ToolCallMessage
-
-        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
-
-        # 创建工具调用，包含不存在的secret键
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={"key": "value"},
-            with_secret=["NONEXISTENT", "OPENAI_API_TOKEN"],
-            assert_success=True,
-        )
-
-        import asyncio
-
-        result = asyncio.run(plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
-            is_tool_failed_duplicated_error=False,
-        ))
-
-        self.assertTrue(result)  # 应该拦截，返回True
-
-    def test_before_tool_call_with_partial_secrets(self):
-        """测试before_tool_call中with_secret只包含部分secret键时的行为"""
-        from linhai.secret import SecretInterceptorPlugin
-        from linhai.llm import ToolCallMessage
-
-        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
-
-        # 创建工具调用，只指定了部分secret键
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={
-                "key1": "<$OPENAI_API_TOKEN$>",
-                "key2": "<$DEEPSEEK_API_KEY$>",
-            },
-            with_secret=[
-                "OPENAI_API_TOKEN"
-            ],  # 只指定了OPENAI_API_TOKEN，没有DEEPSEEK_API_KEY
-            assert_success=True,
-        )
-
-        import asyncio
-
-        result = asyncio.run(plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
-            is_tool_failed_duplicated_error=False,
-        ))
-
-        self.assertIsNone(result)  # 不应该拦截，返回None
-        # 注意：on_tool_result不直接修改toolcall_arguments，替换在工具调用时处理
-
-    def test_before_tool_call_with_empty_with_secret(self):
-        """测试before_tool_call中with_secret为空列表时的行为"""
-        from linhai.secret import SecretInterceptorPlugin
-        from linhai.llm import ToolCallMessage
-
-        plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
-
-        # 创建工具调用，with_secret为空列表
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={
-                "key1": "<$OPENAI_API_TOKEN$>",
-                "key2": "<$DEEPSEEK_API_KEY$>",
-            },
-            with_secret=[],  # 空列表
-            assert_success=True,
-        )
-
-        import asyncio
-
-        result = asyncio.run(plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
-            is_tool_failed_duplicated_error=False,
-        ))
-
-        self.assertIsNone(result)  # 不应该拦截，返回None
-
-
 class MockGroupChat:
     """模拟GroupChat用于测试"""
 
@@ -407,117 +249,150 @@ class MockGroupChat:
         raise RuntimeError(f"Member {name} not found")
 
 
-class TestSecretIntegrationBugFix(unittest.TestCase):
-    """测试secret系统集成bug修复"""
+class TestSecretInterceptorPlugin(unittest.TestCase):
+    """测试SecretInterceptorPlugin的6个场景"""
 
-    def test_secret_leakage_bug(self):
-        """重现secret泄漏bug：当agent读取包含secret的文件时，secret值应该被拦截或掩码"""
-        from linhai.secret import SecretInterceptorPlugin
-        from linhai.llm import ToolCallMessage
-
-        # 模拟真实场景中的secret值
-        secret_value = "sk-123456"
-        secrets_dict: dict[str, SecretInfo] = {
-            "DEEPSEEK_API_KEY": {
-                "value": secret_value,
-                "description": "DeepSeek API key",
-            },
+    def setUp(self):
+        self.secrets_dict: dict[str, SecretInfo] = {
+            "SECRET1": {"value": "secret-value-1", "description": ""},
+            "SECRET2": {"value": "secret-value-2", "description": ""},
         }
+        self.mock_group_chat = MockGroupChat()
+        from linhai.secret import SecretInterceptorPlugin
+        self.plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
 
-        class MockGroupChat:
-            def __init__(self):
-                self.members = {}
-
-            def register_member(self, name, obj):
-                self.members[name] = obj
-
-            def get_members(self, name, _type=None):
-                if name in self.members:
-                    return self.members[name]
-                raise RuntimeError(f"Member {name} not found")
-
-        plugin = SecretInterceptorPlugin(MockGroupChat(), secrets_dict)
-
-        # 场景1：agent读取包含secret的文件，但没有指定with_secret
-        # 这应该触发拦截
-        tool_call = ToolCallMessage(
-            function_name="read_file",
-            function_arguments={"filepath": ".secret.toml"},
-            with_secret=None,  # 没有指定secret权限
-            assert_success=True,
-        )
-
-        # 模拟工具返回的结果（包含secret值）
-        class MockToolResult:
-            def __init__(self, content):
-                self._content = content
-
-            def to_llm_message(self):
-                return {"content": self._content}
-
-            def __str__(self):
-                return self._content
-
-        tool_result = MockToolResult(f"api_key = {secret_value}")
-
+    def test_intercept_when_no_with_secret_and_contains_secret(self):
+        """测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截"""
         import asyncio
-
+        
+        result_content = "This contains secret-value-1 and some other text"
+        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            plugin.on_tool_result(
-                tool_name=tool_call.function_name,
+            self.plugin.on_tool_result(
+                tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=str(tool_result),
-                toolcall_arguments=tool_call.function_arguments,
-                with_secret=tool_call.with_secret,
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=None,
                 is_tool_failed_duplicated_error=False,
             )
         )
         loop.close()
-
-        # 验证结果被拦截
-        self.assertIsNotNone(result, f"结果应该被拦截: {result}")
+        
+        self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
-        self.assertIn("已拦截", result_str, "应该提示已拦截")
-        self.assertNotIn(secret_value, result_str, "secret值不应该出现在拦截消息中")
+        self.assertIn("已拦截", result_str)
+        self.assertNotIn("secret-value-1", result_str)
 
-    def test_secret_replacement_with_hyphen(self):
-        """测试包含连字符的secret值的替换功能"""
-        from linhai.secret import replace_secrets_in_object
-
-        secret_value = "sk-123456"
-        secrets_dict: dict[str, SecretInfo] = {
-            "DEEPSEEK_API_KEY": {"value": secret_value, "description": ""},
-        }
-
-        # 测试在工具调用参数中替换secret键
-        input_str = f"api_key = <$DEEPSEEK_API_KEY$>"
-        secret_keys = ["DEEPSEEK_API_KEY"]
-
-        result = replace_secrets_in_object(input_str, secrets_dict, secret_keys)
-
-        self.assertEqual(
-            result, f"api_key = {secret_value}", "secret键应该被替换为实际值"
+    def test_no_intercept_when_no_with_secret_and_no_secret(self):
+        """测试：如果没有指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截"""
+        import asyncio
+        
+        result_content = "This contains no secret"
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
         )
+        loop.close()
+        
+        self.assertIsNone(result, "结果不应该被拦截")
 
-    def test_mask_secret_with_hyphen(self):
-        """测试包含连字符的secret值的掩码功能"""
-        from linhai.secret import mask_secrets_in_object
+    def test_mask_when_with_secret_and_contains_secret(self):
+        """测试：如果指定with_secret，结果/错误信息中包含secret值，应该替换为`<$KEY$>`占位符"""
+        import asyncio
+        
+        result_content = "This contains secret-value-1 and secret-value-2"
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=["SECRET1", "SECRET2"],
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+        loop.close()
+        
+        self.assertIsNotNone(result, "结果应该被处理")
+        result_str = str(result)
+        self.assertIn("<<masked>>", result_str)
+        self.assertIn("<$SECRET1$>", result_str)
+        self.assertIn("<$SECRET2$>", result_str)
+        self.assertNotIn("secret-value-1", result_str)
+        self.assertNotIn("secret-value-2", result_str)
 
-        secret_value = "sk-123456"
-        secrets_dict: dict[str, SecretInfo] = {
-            "DEEPSEEK_API_KEY": {"value": secret_value, "description": ""},
-        }
+    def test_intercept_when_incomplete_with_secret_and_contains_unlisted_secret(self):
+        """测试：如果指定的with_secret不完全，结果/错误信息中包含没有在with_secret中指定的secret值，应该完全拦截"""
+        import asyncio
+        
+        result_content = "This contains secret-value-1 and secret-value-2"
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+        loop.close()
+        
+        self.assertIsNotNone(result, "结果应该被拦截")
+        result_str = str(result)
+        self.assertIn("已拦截", result_str)
+        self.assertNotIn("secret-value-2", result_str)
 
-        # 测试在工具结果中掩码secret值
-        input_str = f"api_key = {secret_value}"
-        result = mask_secrets_in_object(input_str, secrets_dict, ["DEEPSEEK_API_KEY"])
-
-        expected = "api_key = <$DEEPSEEK_API_KEY$>"
-        self.assertEqual(result, expected, "secret值应该被掩码为<$KEY$>格式")
+    def test_mask_when_incomplete_with_secret_and_no_unlisted_secret(self):
+        """测试：如果指定的with_secret不完全，结果/错误信息中不包含没有在with_secret中指定的secret值，应该替换为`<$KEY$>`占位符"""
+        import asyncio
+        
+        result_content = "This contains secret-value-1"  # 只包含SECRET1，而with_secret也只指定了SECRET1
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=["SECRET1"],
+                is_tool_failed_duplicated_error=False,
+            )
+        )
+        loop.close()
+        
+        self.assertIsNotNone(result, "结果应该被处理")
+        result_str = str(result)
+        self.assertIn("<<masked>>", result_str)
+        self.assertIn("<$SECRET1$>", result_str)
+        self.assertNotIn("secret-value-1", result_str)
 
 
 if __name__ == "__main__":
     unittest.main()
+

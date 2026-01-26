@@ -6,9 +6,7 @@ import tomllib
 from pathlib import Path
 
 from .exceptions import ConfigValidationError
-from .llm import ToolCallMessage
 from .agent.base import RuntimeMessage
-from .agent import Agent
 from .agent.conversation import get_current_conversation
 import time
 
@@ -101,7 +99,6 @@ def recursive_string_replace(obj: object, replace_map: dict[str, str]) -> object
 def replace_secrets_in_object(
     obj: Any, secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
 ) -> Any:
-    """在工具调用前替换参数中的secret键，确保工具能访问敏感信息。"""
     replace_map = filter_secrets_by_keys(secrets_dict, secret_keys)
     return recursive_string_replace(obj, replace_map)
 
@@ -109,7 +106,6 @@ def replace_secrets_in_object(
 def mask_secrets_in_object(
     obj: Any, secrets_dict: dict[str, SecretInfo], with_secret: list[str]
 ) -> Any:
-    """在工具返回结果后掩码secret值，保护敏感信息不泄露。"""
     replace_map: dict[str, str] = {}
     for key in with_secret:
         if key in secrets_dict:
@@ -135,10 +131,50 @@ def get_available_secrets_message(secrets_dict: dict[str, SecretInfo]) -> str:
     return "当前可用secret键: " + "; ".join(items)
 
 
+def contains_any_secret(obj: Any, secrets_dict: dict[str, SecretInfo]) -> bool:
+    secret_values = {secret_info["value"] for secret_info in secrets_dict.values()}
+    
+    if isinstance(obj, str):
+        for secret_value in secret_values:
+            if secret_value in obj:
+                return True
+        return False
+
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            if contains_any_secret(value, secrets_dict):
+                return True
+        return False
+
+    elif isinstance(obj, list):
+        for item in obj:
+            if contains_any_secret(item, secrets_dict):
+                return True
+        return False
+
+    else:
+        return False
+
+
 class SecretInterceptorPlugin:
     def __init__(self, group_chat, secrets_dict: dict[str, SecretInfo]):
         self.group_chat = group_chat
         self.secrets_dict = secrets_dict
+
+    async def on_before_tool_call(
+        self,
+        _tool_name: str,
+        _tool_index: int,
+        toolcall_arguments: dict | None,
+        with_secret: list[str] | None,
+    ) -> Union[None, bool]:
+        if not with_secret:
+            return None
+
+        replace_secrets_in_object(
+            toolcall_arguments, self.secrets_dict, with_secret
+        )
+        return None
 
     async def on_tool_result(
         self,
@@ -150,66 +186,42 @@ class SecretInterceptorPlugin:
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
+        _ = (tool_index, toolcall_arguments, is_tool_failed_duplicated_error)
         if status == "skipped":
-            # 替代原来的before_tool_call逻辑
-            if not with_secret:
-                return None
-
-            missing_keys = [key for key in with_secret if key not in self.secrets_dict]
-
-            if missing_keys:
-                agent = self.group_chat.get_members("agent", Agent)
-                error_msg = f"以下secret键未找到: {missing_keys}。请检查secret配置文件。"
-                agent.message_processor.add_new_message(RuntimeMessage(error_msg))
-                return True  # 跳过工具调用
-
-            # 替换参数中的secret键
-            replaced_arguments = replace_secrets_in_object(
-                toolcall_arguments, self.secrets_dict, with_secret
-            )
-            # 注意：这里无法直接修改toolcall_arguments，需要在调用时处理
             return None
 
-        elif status == "success":
-            # 替代原来的after_tool_call逻辑
+        elif status in ["success", "failed"]:
             if result_content is None:
                 return None
-            
+
             if with_secret:
-                masked_content = mask_secrets_in_object(
+                result_content = mask_secrets_in_object(
                     result_content, self.secrets_dict, with_secret
                 )
-                
-                keys_str = ", ".join(with_secret)
-                message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_content}<<content>><<masked>>"
-                return RuntimeMessage(message)
-            
-            result_str = str(result_content)
-            contains_secrets = []
-            for key, secret_info in self.secrets_dict.items():
-                if secret_info["value"] in result_str:
-                    contains_secrets.append(key)
-            
-            if contains_secrets:
+
+            if contains_any_secret(result_content, self.secrets_dict):
                 conversation = get_current_conversation()
                 timestamp = int(time.time())
                 filename = f"secret_intercepted_{timestamp}_{tool_name}.txt"
                 filepath = conversation.conversation_dir / filename
-                filepath.write_text(result_str, encoding="utf-8")
-                
+                filepath.write_text(str(result_content), encoding="utf-8")
+
                 message = (
-                    f"工具调用的结果包含secret值{contains_secrets}，已拦截。"
+                    f"工具调用的结果包含未指定的secret值，已拦截。"
                     f"原始内容已保存到文件: {filepath}"
                 )
                 return RuntimeMessage(message)
-            
+
+            if with_secret:
+                message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
+                return RuntimeMessage(message)
+
             return None
 
-        return None  # 对于failed状态不做特殊处理
-
-
+        return None
 
     def register(self, lifecycle):
+        lifecycle.register_on_before_tool_call(self.on_before_tool_call)
         lifecycle.register_on_tool_result(self.on_tool_result)
 
 

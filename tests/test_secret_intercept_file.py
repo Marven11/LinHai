@@ -82,8 +82,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         result_str = str(result)
         self.assertIn("已拦截", result_str)
         self.assertIn(str(expected_filepath), result_str)
-        self.assertIn("DEEPSEEK_API_KEY", result_str)
-        self.assertIn("SSH_PASSWORD", result_str)
+        # 注意：新实现不再在消息中包含具体的secret键名
 
     @patch("linhai.secret.get_current_conversation")
     def test_on_tool_result_with_secret_specified_masks_content(self, mock_get_conversation):
