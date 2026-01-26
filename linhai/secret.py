@@ -9,6 +9,8 @@ from .exceptions import ConfigValidationError
 from .llm import ToolCallMessage
 from .agent.base import RuntimeMessage
 from .agent import Agent
+from .agent.conversation import get_current_conversation
+import time
 
 
 class SecretInfo(TypedDict):
@@ -173,7 +175,6 @@ class SecretInterceptorPlugin:
             if result_content is None:
                 return None
             
-            # 情况1: 有with_secret参数，需要掩码secret值
             if with_secret:
                 masked_content = mask_secrets_in_object(
                     result_content, self.secrets_dict, with_secret
@@ -183,7 +184,6 @@ class SecretInterceptorPlugin:
                 message = f"<<masked>><<message>>工具内容包含{keys_str}secret的内容，已替换<<message>><<content>>{masked_content}<<content>><<masked>>"
                 return RuntimeMessage(message)
             
-            # 情况2: 没有with_secret参数，但结果中包含secret值，需要拦截
             result_str = str(result_content)
             contains_secrets = []
             for key, secret_info in self.secrets_dict.items():
@@ -191,9 +191,15 @@ class SecretInterceptorPlugin:
                     contains_secrets.append(key)
             
             if contains_secrets:
+                conversation = get_current_conversation()
+                timestamp = int(time.time())
+                filename = f"secret_intercepted_{timestamp}_{tool_name}.txt"
+                filepath = conversation.conversation_dir / filename
+                filepath.write_text(result_str, encoding="utf-8")
+                
                 message = (
                     f"工具调用的结果包含secret值{contains_secrets}，已拦截。"
-                    "如果需要查看内容则需要使用with_secret指定对应的键，其中的secret值会被secret键拦截"
+                    f"原始内容已保存到文件: {filepath}"
                 )
                 return RuntimeMessage(message)
             
