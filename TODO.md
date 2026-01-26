@@ -2,9 +2,20 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前拦截带有secret的返回值时会直接丢弃内容，这不合理
-  - 需要修改逻辑，在拦截带有secret的工具输出时将原工具输出写入当前conversation文件夹并返回路径
-  - 需要修改README介绍secret system的功能，并警告用户“这个功能仅用来防止隐私被泄漏给API提供商，且此功能会将带有secret的内容临时保存在本地文件以便agent后续处理”
+- [ ] 当前SecretInterceptorPlugin有很大问题
+  - 使用Test Driven Development，删除测试当前被重构逻辑的测试
+    - 测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截
+    - 测试：如果没有指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截
+    - 测试：如果指定with_secret，结果/错误信息中包含secret值，应该替换为`<$KEY$>`占位符
+    - 测试：如果指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截
+    - 测试：如果指定的with_secret不完全，结果/错误信息中包含没有在with_secret中指定的secret值，应该完全拦截
+    - 测试：如果指定的with_secret不完全，结果/错误信息中不包含没有在with_secret中指定的secret值，应该替换为`<$KEY$>`占位符
+  - 重写
+    - 当工具成功/失败时
+      - 如果指定了with_secret: 替换其中的secret值为对应的`<$KEY$>`占位符并**跳出if让后面的逻辑检查替换后的结果**而不是直接退出
+      - 如果（仍然）包含任何secret值：拦截
+    - 当工具被跳过时：什么都不做
+- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
