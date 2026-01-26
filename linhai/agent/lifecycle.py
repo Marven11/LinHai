@@ -121,7 +121,6 @@ class Lifecycle:
             SingleToolCallReminderPlugin,
             JsonCodeBlockPlugin,
             RuntimeImitationPlugin,
-            DuplicateFileReadPlugin,
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
             FileReadWriteConflictPlugin,
@@ -142,7 +141,8 @@ class Lifecycle:
             SingleToolCallReminderPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),
             RuntimeImitationPlugin(self.group_chat),
-            DuplicateFileReadPlugin(self.group_chat),
+            # 貌似会影响模型性能，我们可能不需要这么严格的上下文控制
+            # DuplicateFileReadPlugin(self.group_chat),
             UnnecessarySedReadPlugin(self.group_chat),
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
