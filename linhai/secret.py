@@ -161,21 +161,6 @@ class SecretInterceptorPlugin:
         self.group_chat = group_chat
         self.secrets_dict = secrets_dict
 
-    async def on_before_tool_call(
-        self,
-        _tool_name: str,
-        _tool_index: int,
-        toolcall_arguments: dict | None,
-        with_secret: list[str] | None,
-    ) -> Union[None, bool]:
-        if not with_secret:
-            return None
-
-        replace_secrets_in_object(
-            toolcall_arguments, self.secrets_dict, with_secret
-        )
-        return None
-
     async def on_tool_result(
         self,
         tool_name: str,
@@ -221,7 +206,6 @@ class SecretInterceptorPlugin:
         return None
 
     def register(self, lifecycle):
-        lifecycle.register_on_before_tool_call(self.on_before_tool_call)
         lifecycle.register_on_tool_result(self.on_tool_result)
 
 
