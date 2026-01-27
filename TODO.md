@@ -2,31 +2,40 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 当前SecretInterceptorPlugin有很大问题
-  - 使用Test Driven Development，删除测试当前被重构逻辑的测试
-    - 测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截
-    - 测试：如果没有指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截
-    - 测试：如果指定with_secret，结果/错误信息中包含secret值，应该替换为`<$KEY$>`占位符
-    - 测试：如果指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截
-    - 测试：如果指定的with_secret不完全，结果/错误信息中包含没有在with_secret中指定的secret值，应该完全拦截
-    - 测试：如果指定的with_secret不完全，结果/错误信息中不包含没有在with_secret中指定的secret值，应该替换为`<$KEY$>`占位符
-  - 重写
-    - 当工具成功/失败时
-      - 如果指定了with_secret: 替换其中的secret值为对应的`<$KEY$>`占位符并**跳出if让后面的逻辑检查替换后的结果**而不是直接退出
-      - 如果（仍然）包含任何secret值：拦截
-    - 当工具被跳过时：什么都不做
-- [x] 当前SecretInterceptorPlugin还是有问题：没有根据with_secret处理工具调用参数中的`<$KEY$>`占位符
-  - 使用Test Driven Development，删除测试当前被重构逻辑的测试
-    - 如果没有指定with_secret，参数中包含`<$KEY$>`占位符，什么都不做 - 已实现并测试通过
-    - 如果指定了with_secret，参数中不包含`<$KEY$>`占位符，什么都不做 - 已实现并测试通过
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，递归替换 - 已实现并测试通过
-    - 如果指定了with_secret但是其中的secret没有找到，报错找不到secret - 已实现并测试通过
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，报错找不到secret - 已实现并测试通过
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是`<$KEY$>`占位符没有在with_secret中指定，不替换这个占位符 - 已实现并测试通过
-    - 如果指定了wit_secret，参数非常复杂，嵌套很深，在一个很深的嵌套中有一个很长的字符串包含多个对应的`<$KEY$>`占位符，替换 - 已实现并测试通过
-  - 编写逻辑实现with_secret替换工具调用参数的功能，功能和prompt.py中描述的一致
-    - 递归替换所有在with_secret中指定了的参数 - 已实现
-- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+- [ ] 使用tiktoken检查工具输出的token数量
+  - uv添加tiktoken
+  - 下载tiktoken的文档到./docs
+  - 下载deepseek有关tokenizer的文档到./docs
+  - 当前问题：每个工具的输出长度按照字符数量计算，但是模型的上下文限制按照token数量计算
+  - 当前问题：对每个工具输出分别进行长度限制
+  - 破坏性修改
+    - 删除max_output_length选项
+    - 删除handle_long_content, _save_chunk函数
+    - 破坏当前linhai/tool/main.py中所有和检查工具输出长度相关的逻辑
+  - Test Driven Development
+    - 当只有一个工具，工具输出长度小于消息限制长度的1/3时，检查是否正常返回内容
+    - 当只有一个工具，工具输出长度大于消息限制长度的1/3时，检查是否返回了runtime message，其中是否包含了多个文件路径
+    - 当只有一个工具，工具输出长度大于消息限制长度的1/3，但是触发了trigger_on_tool_result被替换为小于1/3的消息，检查是否正常返回被替换的内容
+    - 当有2个工具，每个工具输出长度远小于消息限制长度的1/3时，检查每个工具被正常返回
+    - 当有2个工具，每个工具输出长度稍微大于消息限制长度的1/3时，检查是否都返回了runtime message，其中是否都包含了多个文件路径
+    - 当有5个工具，每个工具的输出长度都小于消息限制长度的1/5，检查是否正常返回内容
+    - 当有5个工具，每个工具的输出长度都等于消息限制长度的1/3，检查是否前三个消息正常返回，后两个被暂存，返回runtime message
+    - 当有10个工具，每个工具的输出长度都约为消息限制长度的1/5，检查是否前面几个消息正常返回，后面的被暂存，返回runtime message
+    - 当有三个工具，只有第二个工具输出长度略大于消息限制长度的1/3，第一、第三个工具输出长度远小于消息限制长度的1/3，检查是否只有第二个工具输出被分割保存，其他正常返回
+    - 检查暂存的工具输出是否保存到配置的conversation目录的long_toolcall子目录
+  - 在完成TDD测试后完成设计
+    - 新的工具长度限制系统
+      - 消息限制长度：每个消息中调用的多个工具的结果的总长度
+      - 在linhai/agent/toolcall.py中实现
+      - start_new_tool_call_round时清空当前工具总长度counter
+      - 将拿到的message通过to_llm_message拿到content，然后通过tiktoken库计算长度
+        - tokenizer和deepseek保持一致即可，tokenizer即使错了长度也不会差太多
+      - 如果一个工具的长度大于消息限制长度的1/3，认为这个工具本身长度过长，忽略工具总长度counter，分割保存到conversation目录的long_toolcall子目录，返回所有文件路径的runtime message
+      - 如果当前工具累加到counter会导致长度超出限制，则不分割保存到conversation目录的long_toolcall子目录，返回文件路径的runtime mesasge
+      - 以上生成的runtime message一般很短，不需要计入长度
+      - 将长度累加到工具总长度counter中
+    - 新的选项: max_toolcall_token_in_round: 配置的消息限制长度，默认30000
+- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
   - 已运行所有unittest并通过（包括新添加的测试）
   - 之前测试失败的原因：
     1. on_tool_result中未处理conversation未初始化的异常 - 已修复
@@ -78,39 +87,6 @@ unittest 失败时，必须分析
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
-- [ ] 使用tiktoken检查工具输出的token数量
-  - uv添加tiktoken
-  - 下载tiktoken的文档到./docs
-  - 下载deepseek有关tokenizer的文档到./docs
-  - 当前问题：每个工具的输出长度按照字符数量计算，但是模型的上下文限制按照token数量计算
-  - 当前问题：对每个工具输出分别进行长度限制
-  - 破坏性修改
-    - 删除max_output_length选项
-    - 删除handle_long_content, _save_chunk函数
-    - 破坏当前linhai/tool/main.py中所有和检查工具输出长度相关的逻辑
-  - Test Driven Development
-    - 当只有一个工具，工具输出长度小于消息限制长度的1/3时，检查是否正常返回内容
-    - 当只有一个工具，工具输出长度大于消息限制长度的1/3时，检查是否返回了runtime message，其中是否包含了多个文件路径
-    - 当只有一个工具，工具输出长度大于消息限制长度的1/3，但是触发了trigger_on_tool_result被替换为小于1/3的消息，检查是否正常返回被替换的内容
-    - 当有2个工具，每个工具输出长度远小于消息限制长度的1/3时，检查每个工具被正常返回
-    - 当有2个工具，每个工具输出长度稍微大于消息限制长度的1/3时，检查是否都返回了runtime message，其中是否都包含了多个文件路径
-    - 当有5个工具，每个工具的输出长度都小于消息限制长度的1/5，检查是否正常返回内容
-    - 当有5个工具，每个工具的输出长度都等于消息限制长度的1/3，检查是否前三个消息正常返回，后两个被暂存，返回runtime message
-    - 当有10个工具，每个工具的输出长度都约为消息限制长度的1/5，检查是否前面几个消息正常返回，后面的被暂存，返回runtime message
-    - 当有三个工具，只有第二个工具输出长度略大于消息限制长度的1/3，第一、第三个工具输出长度远小于消息限制长度的1/3，检查是否只有第二个工具输出被分割保存，其他正常返回
-    - 检查暂存的工具输出是否保存到配置的conversation目录的long_toolcall子目录
-  - 在完成TDD测试后完成设计
-    - 新的工具长度限制系统
-      - 消息限制长度：每个消息中调用的多个工具的结果的总长度
-      - 在linhai/agent/toolcall.py中实现
-      - start_new_tool_call_round时清空当前工具总长度counter
-      - 将拿到的message通过to_llm_message拿到content，然后通过tiktoken库计算长度
-        - tokenizer和deepseek保持一致即可，tokenizer即使错了长度也不会差太多
-      - 如果一个工具的长度大于消息限制长度的1/3，认为这个工具本身长度过长，忽略工具总长度counter，分割保存到conversation目录的long_toolcall子目录，返回所有文件路径的runtime message
-      - 如果当前工具累加到counter会导致长度超出限制，则不分割保存到conversation目录的long_toolcall子目录，返回文件路径的runtime mesasge
-      - 以上生成的runtime message一般很短，不需要计入长度
-      - 将长度累加到工具总长度counter中
-    - 新的选项: max_toolcall_token_in_round: 配置的消息限制长度，默认30000
 - [ ] 让process_create在程序超时仍然运行的时候读取当前的stdout和stderr的已有内容并返回
   - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
   - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
