@@ -68,6 +68,7 @@ unittest 失败时，必须分析
   - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
   - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
   - 添加unittest检查读取stdout+stderr时，一个超时后另一个的内容是否会正常返回
+- [ ] 让process_stdio_read顺便检查当前程序是否已经退出，如果退出则在消息中加上“注意：当前程序{pid}已经退出”
 - [ ] 添加一个llm manager
   - 当前问题: 
     - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
