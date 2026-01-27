@@ -82,6 +82,15 @@ BeforeWaitingUserCallback: TypeAlias = Callable[
 
 BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
+BeforeToolCallCallback: TypeAlias = Callable[
+    [
+        str,  # tool_name
+        dict,  # toolcall_arguments
+        list[str] | None,  # with_secret
+    ],
+    Awaitable[dict | None],  # 返回替换后的参数，None表示不修改
+]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -104,6 +113,7 @@ class Lifecycle:
         self._parsing_error_callbacks: list[ParsingErrorCallback] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
+        self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
 
         self._plugins = self._register_default_plugins()
 
@@ -199,6 +209,10 @@ class Lifecycle:
         """注册Agent循环开始前的回调。"""
         self._before_agent_loop_callbacks.append(callback)
 
+    def register_before_tool_call(self, callback: BeforeToolCallCallback):
+        """注册工具调用前的回调。"""
+        self._before_tool_call_callbacks.append(callback)
+
     async def trigger_after_token_generation(
         self, agent: "Agent", answer: Answer, current_content: str
     ) -> bool:
@@ -290,6 +304,20 @@ class Lifecycle:
         """触发解析错误事件。"""
         for callback in self._parsing_error_callbacks:
             await callback(parsed_answer, error)
+
+    async def trigger_before_tool_call(
+        self,
+        tool_name: str,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+    ) -> dict | None:
+        """触发工具调用前的事件，返回修改后的参数或None。"""
+        modified_arguments = toolcall_arguments
+        for callback in self._before_tool_call_callbacks:
+            result = await callback(tool_name, modified_arguments, with_secret)
+            if result is not None:
+                modified_arguments = result
+        return modified_arguments
 
     async def trigger_before_agent_loop(self, agent: "Agent"):
         """触发Agent循环开始前事件。"""

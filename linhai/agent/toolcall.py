@@ -234,6 +234,15 @@ class AgentToolcall:
     async def _call_tool(self, tool_call: ToolCallMessage, tool_index: int) -> bool:
         """调用工具。"""
 
+        # 触发工具调用前的回调，允许插件修改参数（如替换secret占位符）
+        modified_arguments = await self.agent.lifecycle.trigger_before_tool_call(
+            tool_name=tool_call.function_name,
+            toolcall_arguments=tool_call.function_arguments,
+            with_secret=tool_call.with_secret,
+        )
+        if modified_arguments is not None:
+            tool_call.function_arguments = modified_arguments
+
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         try:
             tool_result = await tool_manager.process_tool_call(tool_call, tool_index)

@@ -259,40 +259,53 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         }
         self.mock_group_chat = MockGroupChat()
         from linhai.secret import SecretInterceptorPlugin
+
         self.plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
 
     def test_intercept_when_no_with_secret_and_contains_secret(self):
         """测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截"""
         import asyncio
-        
+        from unittest.mock import patch, Mock
+
         result_content = "This contains secret-value-1 and some other text"
+
+        # 模拟conversation环境
+        mock_conversation = Mock()
+        mock_filepath = Mock()
+        mock_filepath.write_text = Mock(return_value=None)
+        mock_conversation.conversation_dir = Mock()
+        # 模拟 Path / str 操作
+        mock_conversation.conversation_dir.__truediv__ = Mock(return_value=mock_filepath)
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(
-            self.plugin.on_tool_result(
-                tool_name="test_tool",
-                tool_index=0,
-                status="success",
-                result_content=result_content,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
+        with patch('linhai.secret.get_current_conversation', return_value=mock_conversation):
+            result = loop.run_until_complete(
+                self.plugin.on_tool_result(
+                    tool_name="test_tool",
+                    tool_index=0,
+                    status="success",
+                    result_content=result_content,
+                    toolcall_arguments={},
+                    with_secret=None,
+                    is_tool_failed_duplicated_error=False,
+                )
             )
-        )
         loop.close()
-        
+
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
         self.assertIn("已拦截", result_str)
         self.assertNotIn("secret-value-1", result_str)
+        # 验证write_text被调用
+        mock_filepath.write_text.assert_called_once()
 
     def test_no_intercept_when_no_with_secret_and_no_secret(self):
         """测试：如果没有指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截"""
         import asyncio
-        
+
         result_content = "This contains no secret"
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
@@ -307,15 +320,15 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             )
         )
         loop.close()
-        
+
         self.assertIsNone(result, "结果不应该被拦截")
 
     def test_mask_when_with_secret_and_contains_secret(self):
         """测试：如果指定with_secret，结果/错误信息中包含secret值，应该替换为`<$KEY$>`占位符"""
         import asyncio
-        
+
         result_content = "This contains secret-value-1 and secret-value-2"
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
@@ -330,7 +343,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             )
         )
         loop.close()
-        
+
         self.assertIsNotNone(result, "结果应该被处理")
         result_str = str(result)
         self.assertIn("<<masked>>", result_str)
@@ -342,35 +355,47 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
     def test_intercept_when_incomplete_with_secret_and_contains_unlisted_secret(self):
         """测试：如果指定的with_secret不完全，结果/错误信息中包含没有在with_secret中指定的secret值，应该完全拦截"""
         import asyncio
-        
+        from unittest.mock import patch, Mock
+
         result_content = "This contains secret-value-1 and secret-value-2"
+
+        # 模拟conversation环境
+        mock_conversation = Mock()
+        mock_filepath = Mock()
+        mock_filepath.write_text = Mock(return_value=None)
+        mock_conversation.conversation_dir = Mock()
+        # 模拟 Path / str 操作
+        mock_conversation.conversation_dir.__truediv__ = Mock(return_value=mock_filepath)
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(
-            self.plugin.on_tool_result(
-                tool_name="test_tool",
-                tool_index=0,
-                status="success",
-                result_content=result_content,
-                toolcall_arguments={},
-                with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
-                is_tool_failed_duplicated_error=False,
+        with patch('linhai.secret.get_current_conversation', return_value=mock_conversation):
+            result = loop.run_until_complete(
+                self.plugin.on_tool_result(
+                    tool_name="test_tool",
+                    tool_index=0,
+                    status="success",
+                    result_content=result_content,
+                    toolcall_arguments={},
+                    with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
+                    is_tool_failed_duplicated_error=False,
+                )
             )
-        )
         loop.close()
-        
+
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
         self.assertIn("已拦截", result_str)
         self.assertNotIn("secret-value-2", result_str)
+        # 验证write_text被调用
+        mock_filepath.write_text.assert_called_once()
 
     def test_mask_when_incomplete_with_secret_and_no_unlisted_secret(self):
         """测试：如果指定的with_secret不完全，结果/错误信息中不包含没有在with_secret中指定的secret值，应该替换为`<$KEY$>`占位符"""
         import asyncio
-        
+
         result_content = "This contains secret-value-1"  # 只包含SECRET1，而with_secret也只指定了SECRET1
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
@@ -385,14 +410,194 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
             )
         )
         loop.close()
-        
+
         self.assertIsNotNone(result, "结果应该被处理")
         result_str = str(result)
         self.assertIn("<<masked>>", result_str)
         self.assertIn("<$SECRET1$>", result_str)
         self.assertNotIn("secret-value-1", result_str)
 
+    def test_before_tool_call_no_with_secret(self):
+        """测试：如果没有指定with_secret，参数中包含`<$KEY$>`占位符，什么都不做"""
+        import asyncio
+
+        toolcall_arguments = {"key": "API key is <$SECRET1$>"}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=None,
+            )
+        )
+        loop.close()
+
+        self.assertIsNone(result, "应该返回None")
+
+    def test_before_tool_call_with_secret_no_placeholder(self):
+        """测试：如果指定了with_secret，参数中不包含`<$KEY$>`占位符，什么都不做"""
+        import asyncio
+
+        toolcall_arguments = {"key": "API key without placeholder"}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["SECRET1"],
+            )
+        )
+        loop.close()
+
+        # 应该返回相同的参数，因为没有占位符需要替换
+        self.assertEqual(result, toolcall_arguments)
+
+    def test_before_tool_call_with_secret_and_placeholder(self):
+        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，递归替换"""
+        import asyncio
+
+        toolcall_arguments = {
+            "key": "API key is <$SECRET1$>",
+            "nested": {"inner": "Nested <$SECRET2$>"},
+            "list": ["Item with <$SECRET1$>", "Plain item"],
+        }
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["SECRET1", "SECRET2"],
+            )
+        )
+        loop.close()
+
+        expected = {
+            "key": "API key is secret-value-1",
+            "nested": {"inner": "Nested secret-value-2"},
+            "list": ["Item with secret-value-1", "Plain item"],
+        }
+        self.assertEqual(result, expected)
+
+    def test_before_tool_call_secret_not_found(self):
+        """测试：如果指定了with_secret但是其中的secret没有找到，报错找不到secret"""
+        import asyncio
+
+        toolcall_arguments = {"key": "API key is <$NONEXISTENT$>"}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        with self.assertRaises(KeyError) as cm:
+            loop.run_until_complete(
+                self.plugin.before_tool_call(
+                    tool_name="test_tool",
+                    toolcall_arguments=toolcall_arguments,
+                    with_secret=["NONEXISTENT"],
+                )
+            )
+        loop.close()
+
+        # 错误消息应该包含相关信息
+        self.assertIn("NONEXISTENT", str(cm.exception))
+
+    def test_before_tool_call_with_placeholder_in_with_secret(self):
+        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，报错找不到secret"""
+        import asyncio
+
+        toolcall_arguments = {"key": "API key is <$SECRET1$>"}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        with self.assertRaises(KeyError) as cm:
+            loop.run_until_complete(
+                self.plugin.before_tool_call(
+                    tool_name="test_tool",
+                    toolcall_arguments=toolcall_arguments,
+                    with_secret=["<$SECRET1$>"],  # 包含占位符而不是KEY
+                )
+            )
+        loop.close()
+
+        # 错误消息应该包含相关信息
+        self.assertIn("<$SECRET1$>", str(cm.exception))
+
+    def test_before_tool_call_placeholder_not_in_with_secret(self):
+        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是`<$KEY$>`占位符没有在with_secret中指定，不替换这个占位符"""
+        import asyncio
+
+        toolcall_arguments = {
+            "key1": "API key is <$SECRET1$>",
+            "key2": "Another key is <$SECRET2$>",
+        }
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["SECRET1"],  # 只指定了SECRET1，不替换SECRET2
+            )
+        )
+        loop.close()
+
+        expected = {
+            "key1": "API key is secret-value-1",
+            "key2": "Another key is <$SECRET2$>",  # 保持原样
+        }
+        self.assertEqual(result, expected)
+
+    def test_before_tool_call_complex_nested_structure(self):
+        """测试：如果指定了with_secret，参数非常复杂，嵌套很深，在一个很深的嵌套中有一个很长的字符串包含多个对应的`<$KEY$>`占位符，替换"""
+        import asyncio
+
+        toolcall_arguments = {
+            "level1": {
+                "level2": [
+                    {"level3": "Deep nested <$SECRET1$> and <$SECRET2$>"},
+                    "Just a string",
+                    {"another": {"deep": "Very <$SECRET1$> deep"}},
+                ],
+                "simple": "Simple <$SECRET2$> here",
+            },
+            "list_of_dicts": [
+                {"key": "First <$SECRET1$>"},
+                {"key": "Second <$SECRET2$>"},
+            ],
+        }
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["SECRET1", "SECRET2"],
+            )
+        )
+        loop.close()
+
+        expected = {
+            "level1": {
+                "level2": [
+                    {"level3": "Deep nested secret-value-1 and secret-value-2"},
+                    "Just a string",
+                    {"another": {"deep": "Very secret-value-1 deep"}},
+                ],
+                "simple": "Simple secret-value-2 here",
+            },
+            "list_of_dicts": [
+                {"key": "First secret-value-1"},
+                {"key": "Second secret-value-2"},
+            ],
+        }
+        self.assertEqual(result, expected)
+
 
 if __name__ == "__main__":
     unittest.main()
-

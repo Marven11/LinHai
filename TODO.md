@@ -15,18 +15,22 @@
       - 如果指定了with_secret: 替换其中的secret值为对应的`<$KEY$>`占位符并**跳出if让后面的逻辑检查替换后的结果**而不是直接退出
       - 如果（仍然）包含任何secret值：拦截
     - 当工具被跳过时：什么都不做
-- [ ] 当前SecretInterceptorPlugin还是有问题：没有根据with_secret处理工具调用参数中的`<$KEY$>`占位符
+- [x] 当前SecretInterceptorPlugin还是有问题：没有根据with_secret处理工具调用参数中的`<$KEY$>`占位符
   - 使用Test Driven Development，删除测试当前被重构逻辑的测试
-    - 如果没有指定with_secret，参数中包含`<$KEY$>`占位符，什么都不做
-    - 如果指定了with_secret，参数中不包含`<$KEY$>`占位符，什么都不做
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，递归替换
-    - 如果指定了with_secret但是其中的secret没有找到，报错找不到secret
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，报错找不到secret
-    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是`<$KEY$>`占位符没有在with_secret中指定，不替换这个占位符
-    - 如果指定了wit_secret，参数非常复杂，嵌套很深，在一个很深的嵌套中有一个很长的字符串包含多个对应的`<$KEY$>`占位符，替换
+    - 如果没有指定with_secret，参数中包含`<$KEY$>`占位符，什么都不做 - 已实现并测试通过
+    - 如果指定了with_secret，参数中不包含`<$KEY$>`占位符，什么都不做 - 已实现并测试通过
+    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，递归替换 - 已实现并测试通过
+    - 如果指定了with_secret但是其中的secret没有找到，报错找不到secret - 已实现并测试通过
+    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，报错找不到secret - 已实现并测试通过
+    - 如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是`<$KEY$>`占位符没有在with_secret中指定，不替换这个占位符 - 已实现并测试通过
+    - 如果指定了wit_secret，参数非常复杂，嵌套很深，在一个很深的嵌套中有一个很长的字符串包含多个对应的`<$KEY$>`占位符，替换 - 已实现并测试通过
   - 编写逻辑实现with_secret替换工具调用参数的功能，功能和prompt.py中描述的一致
-    - 递归替换所有在with_secret中指定了的参数
-- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+    - 递归替换所有在with_secret中指定了的参数 - 已实现
+- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+  - 已运行所有unittest并通过（包括新添加的测试）
+  - 之前测试失败的原因：
+    1. on_tool_result中未处理conversation未初始化的异常 - 已修复
+    2. before_tool_call的错误消息断言不准确 - 已修复
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 

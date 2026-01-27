@@ -133,7 +133,7 @@ def get_available_secrets_message(secrets_dict: dict[str, SecretInfo]) -> str:
 
 def contains_any_secret(obj: Any, secrets_dict: dict[str, SecretInfo]) -> bool:
     secret_values = {secret_info["value"] for secret_info in secrets_dict.values()}
-    
+
     if isinstance(obj, str):
         for secret_value in secret_values:
             if secret_value in obj:
@@ -205,8 +205,33 @@ class SecretInterceptorPlugin:
 
         return None
 
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+    ) -> dict | None:
+        if with_secret is None:
+            return None
+
+        cleaned_keys: list[str] = []
+        for key in with_secret:
+            cleaned_key = key
+            if key.startswith("<$") and key.endswith("$>"):
+                raise KeyError(
+                    f"Secret键 '{key}' 未找到，请使用 'KEY' 而不是 '<$KEY$>' 格式"
+                )
+            cleaned_keys.append(cleaned_key)
+            if cleaned_key not in self.secrets_dict:
+                raise KeyError(f"Secret键 '{key}' 未找到")
+
+        return replace_secrets_in_object(
+            toolcall_arguments, self.secrets_dict, cleaned_keys
+        )
+
     def register(self, lifecycle):
         lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_before_tool_call(self.before_tool_call)
 
 
 def initialize_secret_system(
