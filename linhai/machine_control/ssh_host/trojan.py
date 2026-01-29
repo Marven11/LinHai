@@ -65,16 +65,15 @@ class Trojan:
             if process.returncode is not None:
                 break
 
-        stdout_data, stderr_data = b"", b""
-        if process.stdout:
-            stdout_data = await process.stdout.read()
-        if process.stderr:
-            stderr_data = await process.stderr.read()
-
-        stdout_str = stdout_data.decode("utf-8", errors="replace")
-        stderr_str = stderr_data.decode("utf-8", errors="replace")
-
         if process.returncode is not None:
+            stdout_data, stderr_data = b"", b""
+            if process.stdout:
+                stdout_data = await process.stdout.read()
+            if process.stderr:
+                stderr_data = await process.stderr.read()
+
+            stdout_str = stdout_data.decode("utf-8", errors="replace")
+            stderr_str = stderr_data.decode("utf-8", errors="replace")
             del self._processes[pid]
             return {
                 "message": json.dumps(
@@ -87,17 +86,67 @@ class Trojan:
                 )
             }
         else:
+            stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
+                process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
+            )
+
+            message = f"等待失败，程序在{wait_second}秒后在运行。"
+            if timeout_msg:
+                message += f" {timeout_msg}"
+            if stdout_str or stderr_str:
+                message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+            else:
+                message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
+
             return {
                 "message": json.dumps(
                     {
                         "pid": pid,
                         "stdout": stdout_str,
                         "stderr": stderr_str,
-                        "message": f"等待失败，程序在{wait_second}秒后在运行。"
-                        "建议使用process_*系列工具进行读写stdio或者进一步等待程序",
+                        "message": message,
                     }
                 )
             }
+
+    async def _read_process_stdio(
+        self,
+        process: asyncio.subprocess.Process,
+        timeout: float = 2.0,
+        max_read_size: int = 32 * 1024,
+        check_exit: bool = False,
+    ) -> tuple[str, str, str | None, str | None]:
+        stdout_str, stderr_str = "", ""
+        timeout_msg = ""
+        exit_note = None
+
+        if process.stdout:
+            try:
+                stdout_data = await asyncio.wait_for(
+                    process.stdout.read(max_read_size), timeout=timeout
+                )
+                stdout_str = stdout_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stdout超时；"
+
+        if process.stderr:
+            try:
+                stderr_data = await asyncio.wait_for(
+                    process.stderr.read(max_read_size), timeout=timeout
+                )
+                stderr_str = stderr_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stderr超时；"
+
+        if check_exit and process.returncode is not None:
+            exit_note = f"注意：当前程序{process.pid}已经退出\n"
+
+        if timeout_msg:
+            timeout_msg = timeout_msg.rstrip("；")
+        else:
+            timeout_msg = None
+
+        return stdout_str, stderr_str, timeout_msg, exit_note
 
     async def process_stdio_write(self, pid, content):
         assert pid in self._processes, f"进程不存在: {pid}"
@@ -110,28 +159,21 @@ class Trojan:
     async def process_stdio_read(self, pid, unescape_ansi=True):
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
-        stdout_data = b""
-        stderr_data = b""
-        if process.stdout:
-            try:
-                stdout_data = await process.stdout.read(32 * 1024)
-            except Exception:
-                pass
-        if process.stderr:
-            try:
-                stderr_data = await process.stderr.read(32 * 1024)
-            except Exception:
-                pass
-        stdout_str = stdout_data.decode("utf-8", errors="replace")
-        stderr_str = stderr_data.decode("utf-8", errors="replace")
+        stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
+            process, timeout=3600.0, max_read_size=32 * 1024, check_exit=True
+        )
+        
+        result_data = {
+            "pid": pid,
+            "stdout": stdout_str,
+            "stderr": stderr_str,
+        }
+        
+        if exit_note:
+            result_data["exit_note"] = exit_note
+            
         return {
-            "message": json.dumps(
-                {
-                    "pid": pid,
-                    "stdout": stdout_str,
-                    "stderr": stderr_str,
-                }
-            )
+            "message": json.dumps(result_data)
         }
 
     async def process_wait(self, pid, timeout):

@@ -125,6 +125,88 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         # 由于http_request需要网络，我们只测试方法存在
         self.assertTrue(hasattr(self.host_control, "http_request"))
 
+    async def test_process_create_immediate_exit(self):
+        """测试process_create - 进程立即退出"""
+        with patch("asyncio.create_subprocess_exec") as mock_create:
+            mock_process = AsyncMock()
+            mock_process.pid = 12345
+            mock_process.returncode = 0
+            mock_process.stdout = AsyncMock()
+            mock_process.stdout.read = AsyncMock(return_value=b"output")
+            mock_process.stderr = AsyncMock()
+            mock_process.stderr.read = AsyncMock(return_value=b"")
+            mock_create.return_value = mock_process
+            
+            result = await self.host_control.process_create(["echo", "test"], 1.0)
+            self.assertIn("12345", result.content)
+            self.assertIn("output", result.content)
+            self.assertIn("0", result.content)
+
+    async def test_process_create_timeout_with_output(self):
+        """测试process_create - 超时但有输出"""
+        with patch("asyncio.create_subprocess_exec") as mock_create, \
+             patch("time.perf_counter") as mock_time, \
+             patch("asyncio.sleep"):
+            
+            mock_process = AsyncMock()
+            mock_process.pid = 12346
+            mock_process.returncode = None  # 进程仍在运行
+            mock_process.stdout = AsyncMock()
+            # 实际代码中，如果读取超时会记录超时信息，不会重试
+            mock_process.stdout.read = AsyncMock(side_effect=asyncio.TimeoutError())
+            mock_process.stderr = AsyncMock()
+            mock_process.stderr.read = AsyncMock(return_value=b"error output")
+            mock_create.return_value = mock_process
+            
+            mock_time.side_effect = [0.0, 0.5, 1.0, 1.5]  # 模拟时间流逝
+            
+            result = await self.host_control.process_create(["sleep", "5"], 1.0)
+            self.assertIn("12346", result.content)
+            self.assertIn("等待失败", result.content)
+            self.assertIn("读取stdout超时", result.content)
+            self.assertIn("error output", result.content)
+
+    async def test_process_stdio_read_with_exited_process(self):
+        """测试process_stdio_read - 进程已退出"""
+        # 创建一个模拟的MasterHostControl实例
+        host_control = MasterHostControl()
+        
+        # 模拟一个已退出的进程
+        mock_process = AsyncMock()
+        mock_process.pid = 12347
+        mock_process.returncode = 0  # 进程已退出
+        mock_process.stdout = AsyncMock()
+        mock_process.stdout.read = AsyncMock(return_value=b"final output")
+        mock_process.stderr = AsyncMock()
+        mock_process.stderr.read = AsyncMock(return_value=b"")
+        
+        # 直接设置_processes字典，绕过process_create
+        host_control._processes["12347"] = mock_process
+        
+        result = await host_control.process_stdio_read("12347")
+        self.assertIn("12347", result.content)
+        self.assertIn("注意：当前程序12347已经退出", result.content)
+        self.assertIn("final output", result.content)
+
+    async def test_process_stdio_read_with_running_process(self):
+        """测试process_stdio_read - 进程仍在运行"""
+        host_control = MasterHostControl()
+        
+        mock_process = AsyncMock()
+        mock_process.pid = 12348
+        mock_process.returncode = None  # 进程仍在运行
+        mock_process.stdout = AsyncMock()
+        mock_process.stdout.read = AsyncMock(return_value=b"ongoing output")
+        mock_process.stderr = AsyncMock()
+        mock_process.stderr.read = AsyncMock(return_value=b"")
+        
+        host_control._processes["12348"] = mock_process
+        
+        result = await host_control.process_stdio_read("12348")
+        self.assertIn("12348", result.content)
+        self.assertNotIn("注意：当前程序12348已经退出", result.content)
+        self.assertIn("ongoing output", result.content)
+
     def test_process_operations(self):
         """测试进程操作"""
         self.assertTrue(hasattr(self.host_control, "process_create"))

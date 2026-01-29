@@ -86,12 +86,62 @@ class MasterHostControl:
                     content=f"<<pid>>{pid}<<pid>><<returncode>>{process.returncode}<<returncode>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
                 )
             else:
+                stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
+                    process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
+                )
+
+                message = f"等待失败，程序在{wait_second}秒后在运行。"
+                if timeout_msg:
+                    message += f" {timeout_msg}"
+                if stdout_str or stderr_str:
+                    message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+                else:
+                    message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
+
                 return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<message>>等待失败，程序在{wait_second}秒后在运行。"
-                    "建议使用process_*系列工具进行读写stdio或者进一步等待程序<<message>>"
+                    content=f"<<pid>>{pid}<<pid>><<message>>{message}<<message>>"
                 )
         except Exception as e:
             return ToolResultFailed(content=str(e))
+
+    async def _read_process_stdio(
+        self,
+        process: asyncio.subprocess.Process,
+        timeout: float = 2.0,
+        max_read_size: int = 32 * 1024,
+        check_exit: bool = False,
+    ) -> tuple[str, str, str | None, str | None]:
+        stdout_str, stderr_str = "", ""
+        timeout_msg = ""
+        exit_note = None
+
+        if process.stdout:
+            try:
+                stdout_data = await asyncio.wait_for(
+                    process.stdout.read(max_read_size), timeout=timeout
+                )
+                stdout_str = stdout_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stdout超时；"
+
+        if process.stderr:
+            try:
+                stderr_data = await asyncio.wait_for(
+                    process.stderr.read(max_read_size), timeout=timeout
+                )
+                stderr_str = stderr_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stderr超时；"
+
+        if check_exit and process.returncode is not None:
+            exit_note = f"注意：当前程序{process.pid}已经退出\n"
+
+        if timeout_msg:
+            timeout_msg = timeout_msg.rstrip("；")
+        else:
+            timeout_msg = None
+
+        return stdout_str, stderr_str, timeout_msg, exit_note
 
     async def process_stdio_write(
         self, pid: str, content: str, with_enter: bool
@@ -121,28 +171,19 @@ class MasterHostControl:
             process = self._processes.get(pid)
             if process is None:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
-            stdout_data, stderr_data = b"", b""
-            if process.stdout:
-                stdout_data = await asyncio.wait_for(
-                    process.stdout.read(8 * 1024), timeout=timeout
-                )
-            if process.stderr:
-                stderr_data = await asyncio.wait_for(
-                    process.stderr.read(8 * 1024), timeout=timeout
-                )
-            stdout_str = stdout_data.decode("utf-8", errors="replace")
-            stderr_str = stderr_data.decode("utf-8", errors="replace")
+            stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
+                process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
+            )
             if unescape_ansi:
                 import re
-
                 ansi_escape = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
                 stdout_str = ansi_escape.sub("", stdout_str)
                 stderr_str = ansi_escape.sub("", stderr_str)
+            if timeout_msg:
+                return ToolResultFailed(content=f"读取进程 {pid} 的输出超时（{timeout}秒）")
             return ToolResultSuccess(
-                content=f"<<pid>>{pid}<<pid>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
+                content=f"<<pid>>{pid}<<pid>><<stdout>>{exit_note or ''}{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
             )
-        except asyncio.TimeoutError:
-            return ToolResultFailed(content=f"读取进程 {pid} 的输出超时（{timeout}秒）")
         except Exception as e:
             return ToolResultFailed(content=str(e))
 
@@ -287,7 +328,6 @@ class MasterHostControl:
             return ToolResultSuccess(content="<<terminals>>没有活动的终端<<terminals>>")
         lines = []
         for term_id, terminal in terminals.items():
-            # 获取终端状态信息
             try:
                 screen = terminal.get_screen()
                 lines.append(

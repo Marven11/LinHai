@@ -542,10 +542,28 @@ class SshMachineControl:
         self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """读取进程的标准输出和标准错误内容"""
-        return await self.call_tool(
+        result = await self.call_tool(
             "process_stdio_read",
             {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
         )
+        
+        if isinstance(result, ToolResultFailed):
+            return result
+        
+        try:
+            # 解析远程返回的JSON数据
+            import json
+            data = json.loads(result.content)
+            pid = data.get("pid", "")
+            stdout = data.get("stdout", "")
+            stderr = data.get("stderr", "")
+            exit_note = data.get("exit_note", "")
+            
+            # 构建与master_host一致的返回格式
+            formatted_content = f"<<pid>>{pid}<<pid>><<stdout>>{exit_note}{stdout}<<stdout>><<stderr>>{stderr}<<stderr>>"
+            return ToolResultSuccess(content=formatted_content)
+        except Exception as e:
+            return ToolResultFailed(content=f"解析远程返回数据失败: {e}")
 
     async def process_wait(
         self, pid: str, timeout: float
