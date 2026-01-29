@@ -2,16 +2,13 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 重构linhai/agent/workflow.py中的context_range_compress逻辑
-  - 问题: 文件过长，且包含无用的功能
-  - 问题：当前不需要检查删除比例是否需要警告的功能
-  - 删除
-    - _check_token_threshold这个wrapper函数
-    - _collect_deleted_user_messages这个wrapper函数，考虑直接从deleted_messages中提取用户消息，这只需要一个列表推导式
-    - 检查删除比例是否需要警告的功能
-  - 合并_calculate_display_interval和_prepare_messages_for_compression
-  - 简化linhai/agent/workflow.py到200行以内并保证功能不变（除了删除比例是否需要警告的功能）（需要检查unittest是否通过）
-- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+- [ ] 修复agent生成消息时如何处理接收到的用户消息
+  - 当前问题：在agent生成token时如果接收到用户消息时不会响应用户输入的`/`命令等，既不会响应`/queue`又不会响应`@llm`等
+  - 需要先添加测试
+    - agent输出token时用户输入`/queue 等下需要实现` - 应该不打断而是添加到queued消息中
+    - agent输出token时用户输入`@llm2 继续` - 应该切换到llm2
+  - 需要参考当前解析用户输入的方式完整支持所有`/`命令和`@`
+- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
