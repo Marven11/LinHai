@@ -26,6 +26,9 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
             return_value=None
         )
+        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
+            return_value=None
+        )
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []

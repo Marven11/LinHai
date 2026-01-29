@@ -121,12 +121,12 @@ class SecretSubConfig(BaseModel):
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
-    max_output_length: int = Field(default=50000, ge=1)
     secret: SecretSubConfig = Field(default_factory=SecretSubConfig)
+    max_toolcall_token_in_round: int = Field(default=30000, ge=1)
 
     def __str__(self) -> str:
         """返回工具配置的字符串表示"""
-        return f"ToolConfig(max_output_length={self.max_output_length}, secret={self.secret})"
+        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, secret={self.secret})"
 
 
 class SubAgentConfig(BaseModel):

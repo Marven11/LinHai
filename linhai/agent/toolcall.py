@@ -1,5 +1,7 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
+import tiktoken
+import time
 from typing import TYPE_CHECKING
 from linhai.tool.base import (
     ToolSet,
@@ -25,6 +27,8 @@ class AgentToolcall:
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
+        self.current_round_token_count = 0
+        self.max_token_limit = 30000
 
         self._register_default_toolsets()
 
@@ -45,7 +49,6 @@ class AgentToolcall:
             str | None: 冲突工具的名字，没有冲突返回None
         """
 
-
         tool_def = None
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         for toolset in tool_manager.toolsets:
@@ -55,7 +58,6 @@ class AgentToolcall:
 
         if not tool_def:
             return None
-
 
         conflict_with = tool_def["conflict_with"]
         if conflict_with is None:
@@ -146,6 +148,17 @@ class AgentToolcall:
         """开始新一轮工具调用，清空已调用工具记录"""
         self.called_tools_in_round = []
         self.early_return = False
+        self.current_round_token_count = 0
+
+        # 获取配置中的token限制
+        if (
+            hasattr(self.agent, "config")
+            and self.agent.config
+            and hasattr(self.agent.config, "tools")
+        ):
+            self.max_token_limit = self.agent.config.tools.max_toolcall_token_in_round
+        else:
+            self.max_token_limit = 30000  # 默认值
 
     async def call_tool(self, tool_call: ToolCallMessage, tool_index: int):
         """
@@ -185,7 +198,6 @@ class AgentToolcall:
                 ),
             )
 
-
             await self.agent.lifecycle.trigger_on_tool_result(
                 tool_name=tool_call.function_name,
                 tool_index=0,
@@ -212,7 +224,6 @@ class AgentToolcall:
             tool_call.function_name in compress_tools
         )
 
-
         skip_result = await self.agent.lifecycle.trigger_on_tool_result(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
@@ -230,6 +241,118 @@ class AgentToolcall:
         if result:
             self.early_return = True
         return result
+
+    async def _tool_result_token_management(
+        self,
+        tool_call: ToolCallMessage,
+        tool_index: int,
+        tool_result: ToolCallResultMessage | RuntimeMessage,
+    ) -> tuple[Message, bool]:
+        """处理工具结果的token管理
+
+        返回:
+            tuple[Message, bool]: (处理后的消息, 是否需要跳过后续处理)
+        """
+        # 获取工具结果内容
+        result_content = ""
+        if isinstance(tool_result, ToolCallResultMessage):
+            # 使用to_llm_message获取格式化后的完整消息内容
+            result_content = tool_result.to_llm_message()["content"]
+        elif isinstance(tool_result, RuntimeMessage):
+            result_content = tool_result.message
+        else:
+            result_content = str(tool_result)
+
+        # 计算token数量
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+        token_count = len(tokenizer.encode(result_content))
+
+        # 检查单个工具输出是否超过限制的1/3
+        single_tool_limit = self.max_token_limit // 3
+        if token_count > single_tool_limit:
+            # 分割保存到long_toolcall目录
+            from linhai.agent.conversation import get_current_conversation
+
+            conversation = get_current_conversation()
+            conversation_dir = conversation.conversation_dir
+            long_toolcall_dir = conversation_dir / "long_toolcall"
+            long_toolcall_dir.mkdir(exist_ok=True)
+
+            # 保存整个内容到一个文件
+            timestamp = int(time.time())
+            filename = f"{tool_call.function_name}_{timestamp}.txt"
+            filepath = long_toolcall_dir / filename
+            filepath.write_text(result_content, encoding="utf-8")
+
+            # 返回runtime message
+            runtime_msg = f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepath}"
+            runtime_message = RuntimeMessage(runtime_msg)
+
+            # 触发on_tool_result回调
+            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="success",
+                result_content=str(runtime_message),
+                toolcall_arguments=None,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
+            if isinstance(replacement_result, RuntimeMessage):
+                runtime_message = replacement_result
+
+            return runtime_message, True
+
+        # 检查累计token数是否超过限制
+        if self.current_round_token_count + token_count > self.max_token_limit:
+            # 保存到long_toolcall目录
+            from linhai.agent.conversation import get_current_conversation
+
+            conversation = get_current_conversation()
+            conversation_dir = conversation.conversation_dir
+            long_toolcall_dir = conversation_dir / "long_toolcall"
+            long_toolcall_dir.mkdir(exist_ok=True)
+
+            timestamp = int(time.time())
+            filename = f"{tool_call.function_name}_{timestamp}.txt"
+            filepath = long_toolcall_dir / filename
+            filepath.write_text(result_content, encoding="utf-8")
+
+            runtime_msg = f"当前轮次token总数已达限制（已使用{self.current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
+            runtime_message = RuntimeMessage(runtime_msg)
+
+            # 触发on_tool_result回调
+            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="success",
+                result_content=str(runtime_message),
+                toolcall_arguments=None,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
+            if isinstance(replacement_result, RuntimeMessage):
+                runtime_message = replacement_result
+
+            return runtime_message, True
+
+        # 正常情况：累加token数
+        self.current_round_token_count += token_count
+
+        # 触发on_tool_result回调
+        replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+            tool_name=tool_call.function_name,
+            tool_index=tool_index,
+            status="success",
+            result_content=str(tool_result),
+            toolcall_arguments=None,
+            with_secret=tool_call.with_secret,
+            is_tool_failed_duplicated_error=False,
+        )
+        if isinstance(replacement_result, RuntimeMessage):
+            tool_result = replacement_result
+
+        return tool_result, False
 
     async def _call_tool(self, tool_call: ToolCallMessage, tool_index: int) -> bool:
         """调用工具。"""
@@ -251,15 +374,18 @@ class AgentToolcall:
                 tool_result.result, ToolResultFailed
             ):
 
+                # 使用to_llm_message获取格式化后的完整消息内容
+                formatted_content = tool_result.to_llm_message()["content"]
                 await self.agent.lifecycle.trigger_on_tool_result(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
-                    result_content=tool_result.result.content,
+                    result_content=formatted_content,
                     toolcall_arguments=tool_call.function_arguments,
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,
                 )
+                # 构建简化的失败消息
                 msg = f"工具调用失败: {tool_result.result.content}"
 
                 self.agent.message_processor.add_new_message(RuntimeMessage(msg))
@@ -268,23 +394,20 @@ class AgentToolcall:
                 else:
                     return False
 
-
-            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                status="success",
-                result_content=str(tool_result),
-                toolcall_arguments=None,
-                with_secret=tool_call.with_secret,
-                is_tool_failed_duplicated_error=False,
+            # 使用新的token管理方法处理工具结果
+            processed_result, skip_handle = await self._tool_result_token_management(
+                tool_call, tool_index, tool_result
             )
-            if isinstance(replacement_result, RuntimeMessage):
-                tool_result = replacement_result
 
-            await self._handle_tool_result(tool_call, tool_result)
+            if skip_handle:
+                # 如果是被跳过的情况（如保存到文件），直接处理结果
+                await self._handle_tool_result(tool_call, processed_result)
+                return False
+
+            # 正常情况，处理工具结果
+            await self._handle_tool_result(tool_call, processed_result)
             return False
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
-
 
             await self.agent.lifecycle.trigger_on_tool_result(
                 tool_name=tool_call.function_name,

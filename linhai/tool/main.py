@@ -6,8 +6,6 @@
 import asyncio
 import inspect
 import json
-import tempfile
-import reprlib
 from collections import Counter
 from pathlib import Path
 from typing import Awaitable
@@ -26,49 +24,7 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 
 
-def _save_chunk(chunk_content: str, suffix: str) -> str:
-    """将内容块保存到临时文件并返回文件路径"""
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=suffix, delete=False) as f:
-        f.write(chunk_content)
-        return f.name
 
-
-def handle_long_content(content_str: str, max_output_length: int = 50000) -> str:
-    if len(content_str) <= max_output_length:
-        return content_str
-
-    line_count = content_str.count("\n") + 1
-    use_lines = line_count > 1000
-    chunk_size = 800 if use_lines else 10000
-
-    file_paths = []
-    if use_lines:
-        lines = content_str.split("\n")
-        total = len(lines)
-        for i in range(0, total, chunk_size):
-            chunk_content = "\n".join(lines[i : i + chunk_size])
-            start_idx = i + 1
-            end_idx = min(i + chunk_size, total)
-            suffix = f"_lines_{start_idx}-{end_idx}.txt"
-            file_paths.append(_save_chunk(chunk_content, suffix))
-    else:
-        total = len(content_str)
-        for i in range(0, total, chunk_size):
-            chunk_content = content_str[i : i + chunk_size]
-            start_idx = i + 1
-            end_idx = min(i + chunk_size, total)
-            suffix = f"_chars_{start_idx}-{end_idx}.txt"
-            file_paths.append(_save_chunk(chunk_content, suffix))
-
-    file_info = "\n".join([f"- {path}" for path in file_paths])
-    chunk_type = "行" if use_lines else "字符"
-    message_content = f"内容过长（超过{len(content_str)}字符，共{line_count}行）。已按{chunk_type}分块保存到以下临时文件（每{chunk_size}{chunk_type}一个文件）：\n{file_info}"
-
-    r = reprlib.Repr()
-    r.maxstring = 500
-    preview = r.repr(content_str)
-    message_content += f"\n\n预览: {preview}"
-    return message_content
 
 
 class ToolManager:
@@ -132,10 +88,7 @@ class ToolManager:
             toolsets += self.mcp_connector.get_toolsets()
         return toolsets
 
-    def _process_content_length(self, content: str, max_len: int) -> str:
-        if len(content) > max_len:
-            return handle_long_content(content, max_len)
-        return content
+
 
     def add_toolset(self, toolset: ToolSet):
         existing_names = set(
@@ -225,10 +178,6 @@ class ToolManager:
             )
 
         try:
-            if self.config and self.config.max_output_length is not None:
-                max_output_length = self.config.max_output_length
-            else:
-                max_output_length = 50000
 
             func = target_toolset.get_tool(tool_call.function_name)
 
@@ -259,9 +208,7 @@ class ToolManager:
             if isinstance(result, Message):
                 llm_msg = result.to_llm_message()
                 content = llm_msg.get("content", "")
-                processed_content = self._process_content_length(
-                    content, max_output_length
-                )
+                processed_content = content
                 result_type = (
                     ToolResultFailed
                     if isinstance(result, ToolResultFailed)
@@ -283,9 +230,7 @@ class ToolManager:
             else:
                 tool_result = ToolResultSuccess(content=str(result))
 
-            processed_content = self._process_content_length(
-                tool_result.content, max_output_length
-            )
+            processed_content = tool_result.content
             if isinstance(tool_result, ToolResultFailed):
                 tool_result = ToolResultFailed(content=processed_content)
             else:

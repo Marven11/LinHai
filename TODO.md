@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 使用tiktoken检查工具输出的token数量
+- [x] 使用tiktoken检查工具输出的token数量
   - uv添加tiktoken
   - 下载tiktoken的文档到./docs
   - 下载deepseek有关tokenizer的文档到./docs
@@ -35,7 +35,7 @@
       - 以上生成的runtime message一般很短，不需要计入长度
       - 将长度累加到工具总长度counter中
     - 新的选项: max_toolcall_token_in_round: 配置的消息限制长度，默认30000
-- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
   - 已运行所有unittest并通过（包括新添加的测试）
   - 之前测试失败的原因：
     1. on_tool_result中未处理conversation未初始化的异常 - 已修复

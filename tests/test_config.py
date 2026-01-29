@@ -101,7 +101,7 @@ compress_threshold = 60000
 file_path = "./test_memory.md"
 
 [tools]
-max_output_length = 2000
+max_toolcall_token_in_round = 2000
 """
         temp_file = create_temp_config(config_content)
         try:
@@ -116,7 +116,7 @@ max_output_length = 2000
             self.assertEqual(config.memory.file_path, "./test_memory.md")
             self.assertIsNotNone(config.tools)
             assert config.tools is not None
-            self.assertEqual(config.tools.max_output_length, 2000)
+            self.assertEqual(config.tools.max_toolcall_token_in_round, 2000)
         finally:
             os.unlink(temp_file)
 
@@ -185,7 +185,7 @@ model = "test_model"
             self.assertEqual(config.memory.file_path, "")
             # tools现在有默认值，不再是None
             self.assertIsNotNone(config.tools)
-            self.assertEqual(config.tools.max_output_length, 50000)
+            self.assertEqual(config.tools.max_toolcall_token_in_round, 30000)
         finally:
             os.unlink(temp_file)
 
@@ -242,7 +242,7 @@ compress_threshold = 0.8
 file_path = "./test_memory.md"
 
 [tools]
-max_output_length = 2000
+max_toolcall_token_in_round = 2000
 """
         temp_file = create_temp_config(config_content)
         try:
@@ -261,7 +261,7 @@ max_output_length = 2000
             self.assertEqual(config.memory.file_path, "./test_memory.md")
             self.assertIsNotNone(config.tools)
             assert config.tools is not None
-            self.assertEqual(config.tools.max_output_length, 2000)
+            self.assertEqual(config.tools.max_toolcall_token_in_round, 2000)
         finally:
             os.unlink(temp_file)
 
