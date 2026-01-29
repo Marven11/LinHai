@@ -2,44 +2,16 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 使用tiktoken检查工具输出的token数量
-  - uv添加tiktoken
-  - 下载tiktoken的文档到./docs
-  - 下载deepseek有关tokenizer的文档到./docs
-  - 当前问题：每个工具的输出长度按照字符数量计算，但是模型的上下文限制按照token数量计算
-  - 当前问题：对每个工具输出分别进行长度限制
-  - 破坏性修改
-    - 删除max_output_length选项
-    - 删除handle_long_content, _save_chunk函数
-    - 破坏当前linhai/tool/main.py中所有和检查工具输出长度相关的逻辑
-  - Test Driven Development
-    - 当只有一个工具，工具输出长度小于消息限制长度的1/3时，检查是否正常返回内容
-    - 当只有一个工具，工具输出长度大于消息限制长度的1/3时，检查是否返回了runtime message，其中是否包含了多个文件路径
-    - 当只有一个工具，工具输出长度大于消息限制长度的1/3，但是触发了trigger_on_tool_result被替换为小于1/3的消息，检查是否正常返回被替换的内容
-    - 当有2个工具，每个工具输出长度远小于消息限制长度的1/3时，检查每个工具被正常返回
-    - 当有2个工具，每个工具输出长度稍微大于消息限制长度的1/3时，检查是否都返回了runtime message，其中是否都包含了多个文件路径
-    - 当有5个工具，每个工具的输出长度都小于消息限制长度的1/5，检查是否正常返回内容
-    - 当有5个工具，每个工具的输出长度都等于消息限制长度的1/3，检查是否前三个消息正常返回，后两个被暂存，返回runtime message
-    - 当有10个工具，每个工具的输出长度都约为消息限制长度的1/5，检查是否前面几个消息正常返回，后面的被暂存，返回runtime message
-    - 当有三个工具，只有第二个工具输出长度略大于消息限制长度的1/3，第一、第三个工具输出长度远小于消息限制长度的1/3，检查是否只有第二个工具输出被分割保存，其他正常返回
-    - 检查暂存的工具输出是否保存到配置的conversation目录的long_toolcall子目录
-  - 在完成TDD测试后完成设计
-    - 新的工具长度限制系统
-      - 消息限制长度：每个消息中调用的多个工具的结果的总长度
-      - 在linhai/agent/toolcall.py中实现
-      - start_new_tool_call_round时清空当前工具总长度counter
-      - 将拿到的message通过to_llm_message拿到content，然后通过tiktoken库计算长度
-        - tokenizer和deepseek保持一致即可，tokenizer即使错了长度也不会差太多
-      - 如果一个工具的长度大于消息限制长度的1/3，认为这个工具本身长度过长，忽略工具总长度counter，分割保存到conversation目录的long_toolcall子目录，返回所有文件路径的runtime message
-      - 如果当前工具累加到counter会导致长度超出限制，则不分割保存到conversation目录的long_toolcall子目录，返回文件路径的runtime mesasge
-      - 以上生成的runtime message一般很短，不需要计入长度
-      - 将长度累加到工具总长度counter中
-    - 新的选项: max_toolcall_token_in_round: 配置的消息限制长度，默认30000
-- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
-  - 已运行所有unittest并通过（包括新添加的测试）
-  - 之前测试失败的原因：
-    1. on_tool_result中未处理conversation未初始化的异常 - 已修复
-    2. before_tool_call的错误消息断言不准确 - 已修复
+- [ ] 重构linhai/agent/workflow.py中的context_range_compress逻辑
+  - 问题: 文件过长，且包含无用的功能
+  - 问题：当前不需要检查删除比例是否需要警告的功能
+  - 删除
+    - _check_token_threshold这个wrapper函数
+    - _collect_deleted_user_messages这个wrapper函数，考虑直接从deleted_messages中提取用户消息，这只需要一个列表推导式
+    - 检查删除比例是否需要警告的功能
+  - 合并_calculate_display_interval和_prepare_messages_for_compression
+  - 简化linhai/agent/workflow.py到200行以内并保证功能不变（除了删除比例是否需要警告的功能）（需要检查unittest是否通过）
+- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
