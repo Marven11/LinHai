@@ -110,7 +110,7 @@ class CLIApp(App):
 
         # 从cli_args构建init_messages
         cli_args = group_chat.get_members("cli_args", argparse.Namespace)
-        self.init_messages = list(cli_args.message or [])
+        self.init_messages = list(cli_args.message.copy() or [])
         if cli_args.file:
             self.init_messages += [f"[{file_path.name}]({file_path})" for file_path in cli_args.file]
 
