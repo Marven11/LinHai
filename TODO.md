@@ -2,6 +2,12 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
+- [ ] 当前处理`/`和`@`的逻辑极为混乱，需要重构
+  - 这是一个较为大型的重构，需要仔细规划
+  - 统计当前linhai/cli/app.py支持什么`/`命令，linhai/cli/command_handler.py又支持什么
+  - 删除handle_user_message，清理linhai/cli/app.py处理`/`命令的逻辑，让receive_one_user_message直接使用linhai/cli/command_handler.py
+  - 将所有处理`/`和`@`的逻辑都移动到linhai/cli/command_handler.py中
+  - 编写unittest测试所有`/`命令
 - [ ] 修复agent生成消息时如何处理接收到的用户消息
   - 当前问题：在agent生成token时如果接收到用户消息时不会响应用户输入的`/`命令等，既不会响应`/queue`又不会响应`@llm`等
   - 需要先添加测试
