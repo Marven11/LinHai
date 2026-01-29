@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 重构linhai/agent/workflow.py中的context_range_compress逻辑
+- [x] 重构linhai/agent/workflow.py中的context_range_compress逻辑
   - 问题: 文件过长，且包含无用的功能
   - 问题：当前不需要检查删除比例是否需要警告的功能
   - 删除
@@ -11,7 +11,7 @@
     - 检查删除比例是否需要警告的功能
   - 合并_calculate_display_interval和_prepare_messages_for_compression
   - 简化linhai/agent/workflow.py到200行以内并保证功能不变（除了删除比例是否需要警告的功能）（需要检查unittest是否通过）
-- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
