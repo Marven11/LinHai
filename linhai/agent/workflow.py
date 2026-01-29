@@ -39,10 +39,19 @@ def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
         displayed_messages = (total_messages + interval - 1) // interval
 
     filtered_messages = [
-        f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}"
+        (
+            i,
+            f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}",
+        )
         for i, msg in enumerate(messages)
         if i % interval == 0
     ]
+    if len(filtered_messages) > 50:
+        filtered_messages = [
+            msg for i, msg in filtered_messages if i + 50 < total_messages
+        ]
+    else:
+        filtered_messages = [msg for i, msg in filtered_messages]
 
     return "\n".join(filtered_messages)
 
@@ -100,7 +109,9 @@ def _validate_compression_range(
     return True, ""
 
 
-async def context_range_compress(agent: "linhai.agent.Agent") -> ToolResultSuccess | ToolResultFailed:
+async def context_range_compress(
+    agent: "linhai.agent.Agent",
+) -> ToolResultSuccess | ToolResultFailed:
     """
     压缩指定范围的历史消息以减少上下文长度。
 
@@ -153,22 +164,28 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> ToolResultSucce
                 summary_message_index, summary_message_index
             )
 
-        deleted_messages = await agent.message_processor.delete_message_range(start_id, end_id)
-        
-        conv = get_current_conversation()
-        conv.save_cleaned_messages(
-            deleted_messages, prefix="range_compress"
+        deleted_messages = await agent.message_processor.delete_message_range(
+            start_id, end_id
         )
 
+        conv = get_current_conversation()
+        conv.save_cleaned_messages(deleted_messages, prefix="range_compress")
+
         deleted_user_messages = [
-            msg.message for msg in deleted_messages if isinstance(msg, UserMessage) and msg.message
+            msg.message
+            for msg in deleted_messages
+            if isinstance(msg, UserMessage) and msg.message
         ]
 
         if deleted_user_messages:
-            user_messages_summary = "\n".join(f"- {msg}" for msg in deleted_user_messages)
+            user_messages_summary = "\n".join(
+                f"- {msg}" for msg in deleted_user_messages
+            )
             await agent.message_processor.insert_message(
                 start_id + 1,
-                RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
+                RuntimeMessage(
+                    f"历史压缩已删除以下用户消息：\n{user_messages_summary}"
+                ),
             )
 
         wrapped_summary = f"历史压缩总结（已删除的消息范围：{start_id}-{end_id}）：\n{summary_content}"
@@ -177,11 +194,13 @@ async def context_range_compress(agent: "linhai.agent.Agent") -> ToolResultSucce
             RuntimeMessage(wrapped_summary),
         )
 
-        return ToolResultSuccess(content=(
-            "历史压缩成功完成，现在请继续工作！"
-            "注意：每次进行历史压缩都需要重新调用compress_history_range工具！"
-            "注意：历史压缩不能仅输出总结和ID，必须先调用工具！"
-        ))
+        return ToolResultSuccess(
+            content=(
+                "历史压缩成功完成，现在请继续工作！"
+                "注意：每次进行历史压缩都需要重新调用compress_history_range工具！"
+                "注意：历史压缩不能仅输出总结和ID，必须先调用工具！"
+            )
+        )
     finally:
 
         await agent.message_processor.filter_messages(
