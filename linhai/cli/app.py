@@ -112,9 +112,7 @@ class CLIApp(App):
         cli_args = group_chat.get_members("cli_args", argparse.Namespace)
         self.init_messages = list(cli_args.message or [])
         if cli_args.file:
-            self.init_messages.extend(
-                [f"[{file_path.name}]({file_path})" for file_path in cli_args.file]
-            )
+            self.init_messages += [f"[{file_path.name}]({file_path})" for file_path in cli_args.file]
 
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
