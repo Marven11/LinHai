@@ -71,6 +71,8 @@ unittest 失败时，必须分析
     - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
+- [ ] 将conversation的目录从.local/share/conversation改成.local/share/linhai/conversation
+  - 记得添加unittest
 
 # 注意
 
