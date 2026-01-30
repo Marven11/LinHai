@@ -291,7 +291,7 @@ class RuntimeMessageWidget(Static):
     def __init__(self, level: str, content: str):
         super().__init__()
         self.level = level
-        self.content = content
+        self.content_str = content
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -300,7 +300,7 @@ class RuntimeMessageWidget(Static):
             classes=f"runtime-level runtime-level-{self.level.lower()}",
         )
         yield Static(
-            self.content,
+            self.content_str,
             classes=f"runtime-content runtime-content-{self.level.lower()}",
         )
 

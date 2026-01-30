@@ -428,6 +428,9 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
+    def support_image(self) -> bool:
+        raise NotImplementedError()
+
 
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
@@ -706,6 +709,7 @@ class OpenAi:
         model: str,
         openai_config: dict,
         chat_completion_kwargs: dict,
+        support_image: bool,
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
@@ -738,6 +742,10 @@ class OpenAi:
         self.previous_history: Sequence[Message] | None = None
         self.previous_input_tokens: int | None = None
         self._minimax_warning_sent: bool = False
+        self._support_image = support_image
+    
+    def support_image(self):
+        return self._support_image
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。
@@ -763,12 +771,17 @@ class OpenAi:
         """
         if self.previous_history is None or self.previous_input_tokens is None:
             return 0
-
+        previous_history_llm = [
+            msg.to_llm_message() for msg in self.previous_history
+        ]
+        current_history_llm = [
+            msg.to_llm_message() for msg in current_history
+        ]
         previous_content = "".join(
-            msg.to_llm_message().get("content", "") for msg in self.previous_history
+            msg["content"] for msg in previous_history_llm if "content" in msg and isinstance(msg["content"], str)
         )
         current_content = "".join(
-            msg.to_llm_message().get("content", "") for msg in current_history
+            msg["content"] for msg in current_history_llm if "content" in msg and isinstance(msg["content"], str)
         )
 
         same_prefix_chars = 0

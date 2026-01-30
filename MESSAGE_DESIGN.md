@@ -72,6 +72,22 @@ SubAgent 系统消息，用于表示 SubAgent 的系统角色消息。与 `Syste
 
 运行时消息，用于表示运行时产生的消息（如错误、警告、信息等）。在转换为 LLM 消息时，使用 `<<runtime>>` 标签包裹。
 
+### ImageMessage
+
+图片消息，用于表示图片数据。在内存中保存图片的原始bytes数据，支持转换为base64格式用于API调用。
+
+**关键特性：**
+- 在内存中保存图片bytes数据，避免频繁磁盘IO
+- 支持转换为base64编码用于API调用
+- 支持生成data URL格式的图片URL
+- 在`to_llm_message`方法中根据当前LLM配置决定处理方式：
+  - 如果LLM支持图像（`support_image=True`）：返回符合OpenAI格式的image_url消息
+  - 如果LLM不支持图像：保存到临时文件，返回文本消息告知文件路径
+
+**使用场景：**
+- 多模态LLM（如kimi k2.5）可以直接接收图片数据
+- 非多模态LLM可以通过临时文件路径间接处理图片
+
 ## 消息传递与处理
 
 ### AgentMessage

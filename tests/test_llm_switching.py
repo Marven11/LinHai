@@ -117,13 +117,13 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.agent.current_llm_index, 0)
 
-    async def test_llm_selection(self):
+    def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""
-        selected_llm = await self.agent.get_current_model()
+        selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm1)
 
         self.agent.current_llm_index = 1
-        selected_llm = await self.agent.get_current_model()
+        selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 
 

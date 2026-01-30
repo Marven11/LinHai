@@ -244,7 +244,7 @@ class Agent:
         if not handled:
             self.message_processor.add_new_message(msg)
 
-    async def get_current_model(self) -> LanguageModel:
+    def get_current_model(self) -> LanguageModel:
         """
         根据当前LLM索引选择合适的模型。
 
@@ -283,7 +283,7 @@ class Agent:
             enable_compress, disable_waiting_user_warning
         )
 
-        model = await self.get_current_model()
+        model = self.get_current_model()
 
         answer: Answer = await model.answer_stream(
             self.message_processor.get_messages()

@@ -62,6 +62,21 @@ class UserMessage(TypedDict, total=False):
     name: str
 
 
+class ChatCompletionContentPartImageParam(TypedDict):
+    """Image content part for chat completion."""
+
+    type: Required[Literal["image_url"]]
+    image_url: Required[dict]
+
+
+class UserMultiModalMessage(TypedDict, total=False):
+    """User multimodal message type definition, supports text and image content."""
+
+    role: Required[Literal["user"]]
+    content: list[ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam]
+    name: str
+
+
 class AssistantMessage(TypedDict, total=False):
     """Assistant message type definition."""
 
@@ -74,7 +89,7 @@ class AssistantMessage(TypedDict, total=False):
     reasoning_content: str
 
 
-LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage]
+LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage, UserMultiModalMessage]
 
 
 class ThresholdInfo(TypedDict):
@@ -93,4 +108,7 @@ __all__ = [
     "LanguageModelMessage",
     "AgentState",
     "ThresholdInfo",
+    "ChatCompletionContentPartTextParam",
+    "ChatCompletionContentPartImageParam",
+    "UserMultiModalMessage",
 ]

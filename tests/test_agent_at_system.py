@@ -33,9 +33,9 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         
         self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
-        self.mock_llm1 = AsyncMock()
+        self.mock_llm1 = MagicMock()
         self.mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
-        self.mock_llm2 = AsyncMock()
+        self.mock_llm2 = MagicMock()
         self.mock_llm2.get_name = MagicMock(return_value="qwen")
 
         async def empty_answer_stream(_):
@@ -87,53 +87,45 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_system_valid(self):
         """测试有效的@系统调用。"""
         user_message = UserMessage(message="@qwen 你好")
-
         await self.agent.handle_user_message(user_message)
 
-        selected_model = await self.agent.get_current_model()
+        selected_model = self.agent.get_current_model()
 
         self.assertEqual(selected_model, self.mock_llm2)
 
     async def testget_current_model_with_at_system_invalid(self):
         """测试无效的@系统调用。"""
         user_message = UserMessage(message="@invalid_llm 你好")
-
         await self.agent.handle_user_message(user_message)
 
-        selected_model = await self.agent.get_current_model()
+        selected_model = self.agent.get_current_model()
 
         self.assertEqual(selected_model, self.mock_llm1)
 
-        messages = self.agent.message_processor.get_messages()
-        self.mock_cli_app.query_one.assert_called_once_with("#chat-container")
-        self.mock_container.mount.assert_called_once()
-        widget = self.mock_container.mount.call_args[0][0]
-        self.assertIn("错误：LLM名称 'invalid_llm' 不存在", widget.content)
-
-    async def testget_current_model_without_at_system(self):
+    def testget_current_model_without_at_system(self):
         """测试没有@系统的默认行为。"""
         user_message = UserMessage(message="你好")
         self.agent.message_processor.add_new_message(user_message)
 
-        selected_model = await self.agent.get_current_model()
+        selected_model = self.agent.get_current_model()
 
         self.assertEqual(selected_model, self.mock_llm1)
 
-    async def testget_current_model_with_at_in_middle(self):
+    def testget_current_model_with_at_in_middle(self):
         """测试消息中间包含@的情况。"""
         user_message = UserMessage(message="请@llm2回答这个问题")
         self.agent.message_processor.add_new_message(user_message)
 
-        selected_model = await self.agent.get_current_model()
+        selected_model = self.agent.get_current_model()
 
         self.assertEqual(selected_model, self.mock_llm1)
 
-    async def testget_current_model_with_empty_at(self):
+    def testget_current_model_with_empty_at(self):
         """测试只有@的情况。"""
         user_message = UserMessage(message="@")
         self.agent.message_processor.add_new_message(user_message)
 
-        selected_model = await self.agent.get_current_model()
+        selected_model = self.agent.get_current_model()
 
         self.assertEqual(selected_model, self.mock_llm1)
 

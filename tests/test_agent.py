@@ -378,7 +378,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_container.mount.assert_called_once()
         widget = mock_container.mount.call_args[0][0]
         self.assertIsInstance(widget, RuntimeMessageWidget)
-        self.assertIn("错误：LLM名称 'invalid' 不存在", widget.content)
+        self.assertIn("错误：LLM名称 'invalid' 不存在", widget.content_str)
         
         agent.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="Hello world"))

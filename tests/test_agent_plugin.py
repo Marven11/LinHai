@@ -30,7 +30,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
                 RuntimeMessage(msg or "Agent被插件打断")
             )
         )  # 添加interrupt mock并模拟添加消息
-        self.agent.get_current_model = AsyncMock()
+        self.agent.get_current_model = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = WeirdTokenPlugin(self.group_chat)
@@ -241,7 +241,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = MagicMock()
         self.agent.interrupt = AsyncMock()
-        self.agent.get_current_model = AsyncMock()
+        self.agent.get_current_model = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
@@ -262,7 +262,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         """测试工具调用超过限制时使用truncate。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "minimax"
-        self.agent.get_current_model = AsyncMock(return_value=mock_model)
+        self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         self.agent.message_processor.get_messages.return_value = [
             AssistantMessage(message="previous message")

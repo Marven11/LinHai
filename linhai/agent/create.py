@@ -102,7 +102,10 @@ async def create_agent_from_config(
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
     todolist_manager = TodolistManager(context["group_chat"])
-    
+
+    from linhai.multimodal import MultimodalToolsetManager
+    multimodal_manager = MultimodalToolsetManager(context["group_chat"])
+
     register_conversation_folder(context["group_chat"])
     
     agent = Agent(
@@ -114,6 +117,7 @@ async def create_agent_from_config(
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
     machine_control.register_plugin(agent.lifecycle)
+    multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()
     if context["config"].agent.enable_task_planning:
         from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin
@@ -182,6 +186,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageMo
             token_limit=llm_config.token_limit,
             compatibility=llm_config.compatibility,
             name=llm_config.name,
+            support_image=llm_config.support_image,
         )
         llms.append(llm)
     return llms

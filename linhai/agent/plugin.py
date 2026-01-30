@@ -163,7 +163,7 @@ class PromptFastAgentPlugin(Plugin):
 
     async def before_agent_loop(self, agent: "Agent"):
         """在Agent循环开始前添加特定模型提示。"""
-        model = await agent.get_current_model()
+        model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility not in [
             "minimax",
@@ -202,7 +202,7 @@ class PromptFastAgentPlugin(Plugin):
         answer: Answer,
         current_content: str,  # pylint: disable=unused-argument
     ):
-        model = await agent.get_current_model()
+        model = agent.get_current_model()
         if not isinstance(model, OpenAi) or model.compatibility not in [
             "minimax",
             "glm",
@@ -289,7 +289,7 @@ class WeirdTokenPlugin(Plugin):
     ):
         """检查`<｜end▁of▁[a-z]+｜>`和minimax的<tool_call>"""
         pattern = r"<｜end▁of▁[a-z]+｜>"
-        model = await agent.get_current_model()
+        model = agent.get_current_model()
 
         for line in current_content.split("\n"):
             if re.search(pattern, line):
@@ -436,7 +436,7 @@ class OnlyReasoningPlugin(Plugin):
         _tool_calls: List[Dict[str, JsonValue]],
     ):
         agent = self.group_chat.get_members("agent", Agent)
-        model = await agent.get_current_model()
+        model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return
@@ -605,7 +605,7 @@ class RuntimeImitationPlugin(Plugin):
         current_content: str,  # pylint: disable=unused-argument
     ):
         """检查deepseek是否在模仿runtime输出并阻断。"""
-        model = await agent.get_current_model()
+        model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return False

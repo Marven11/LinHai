@@ -204,7 +204,11 @@ class ToolManager:
 
             if isinstance(result, Awaitable):
                 result = await result
-
+            
+            from ..multimodal import ImageMessage
+            if isinstance(result, ImageMessage):
+                return result
+            
             if isinstance(result, Message):
                 llm_msg = result.to_llm_message()
                 content = llm_msg.get("content", "")

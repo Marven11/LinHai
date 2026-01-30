@@ -17,6 +17,7 @@ class LLMConfig(BaseModel):
     name: str = Field(..., min_length=1)
     type: str = Field(default="openai")
     compatibility: str = Field(default="")
+    support_image: bool = Field(default=False)
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
