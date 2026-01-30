@@ -27,31 +27,16 @@ def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
     ]
     total_messages = len(messages)
 
-    if total_messages < 200:
-        interval = 1
-    else:
-        interval = ((total_messages - 200) // 200) + 2
-
-    displayed_messages = (total_messages + interval - 1) // interval
-
-    while displayed_messages >= 200:
-        interval += 1
-        displayed_messages = (total_messages + interval - 1) // interval
+    interval = 1 if total_messages < 200 else (total_messages + 199) // 200
+    max_index = total_messages - 50 if total_messages >= 50 else total_messages
 
     filtered_messages = [
-        (
-            i,
-            f"- id: {i} role: {msg['role']!r} content: {repr_obj.repr(msg.get('content', None))}",
-        )
-        for i, msg in enumerate(messages)
-        if i % interval == 0
+        f"- id: {i} role: {messages[i]['role']!r} content: {repr_obj.repr(messages[i].get('content', None))}"
+        for i in range(0, max_index, interval)
     ]
+
     if len(filtered_messages) > 50:
-        filtered_messages = [
-            msg for i, msg in filtered_messages if i + 50 < total_messages
-        ]
-    else:
-        filtered_messages = [msg for i, msg in filtered_messages]
+        filtered_messages = filtered_messages[:50]
 
     return "\n".join(filtered_messages)
 
@@ -142,7 +127,7 @@ async def context_range_compress(
         answer = await agent.generate_response(
             enable_compress=False, disable_waiting_user_warning=True
         )
-        assistant_message = cast(AssistantMessage, answer.get_message())  # type: ignore
+        assistant_message = cast(AssistantMessage, answer.get_message())
         full_response = assistant_message.message
 
         summary_message_index = len(agent.message_processor.messages) - 1

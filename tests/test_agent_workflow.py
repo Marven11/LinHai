@@ -78,7 +78,77 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
     async def test_context_range_compress_as_tool(self):
         """Test calling context_range_compress as a regular tool."""
+        pass
 
+    async def test_prepare_messages_excludes_last_50(self):
+        """Test that _prepare_messages_for_compression excludes last 50 messages when total >= 50."""
+        from linhai.agent.workflow import _prepare_messages_for_compression
+        from linhai.agent.base import RuntimeMessage
+        
+        mock_agent = MagicMock()
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(30)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        self.assertIsInstance(result, str)
+        lines = result.splitlines()
+        self.assertEqual(len(lines), 30)
+        
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(50)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        lines = result.splitlines()
+        self.assertEqual(len(lines), 0)
+        
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(100)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        lines = result.split('\n')
+        self.assertEqual(len(lines), 50)
+        for line in lines:
+            if line.startswith('- id:'):
+                import re
+                match = re.search(r'id: (\d+)', line)
+                if match:
+                    msg_id = int(match.group(1))
+                    self.assertLess(msg_id, 50)
+        
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(49)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        lines = result.split('\n')
+        self.assertEqual(len(lines), 49)
+        
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(51)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        lines = result.split('\n')
+        self.assertEqual(len(lines), 1)
+        if lines[0].startswith('- id:'):
+            import re
+            match = re.search(r'id: (\d+)', lines[0])
+            if match:
+                msg_id = int(match.group(1))
+                self.assertEqual(msg_id, 0)
+        
+        mock_messages = [RuntimeMessage(f"Message {i}") for i in range(200)]
+        mock_agent.message_processor.messages = mock_messages
+        
+        result = _prepare_messages_for_compression(mock_agent)
+        lines = result.split('\n')
+        self.assertLess(len(lines), 75)
+        for line in lines:
+            if line.startswith('- id:'):
+                import re
+                match = re.search(r'id: (\d+)', line)
+                if match:
+                    msg_id = int(match.group(1))
+                    self.assertLess(msg_id, 150)
+    
     async def test_context_range_compress_functionality(self):
         """Test the context_range_compress function with mock data."""
         mock_agent = MagicMock()
