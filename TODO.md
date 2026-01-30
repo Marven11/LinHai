@@ -58,11 +58,6 @@ unittest 失败时，必须分析
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
 - [ ] 在配置中支持对机器设置命令白名单
   - 可能需要考虑如何实现检测通过终端执行的命令
-- [ ] 让process_create在程序超时仍然运行的时候读取当前的stdout和stderr的已有内容并返回
-  - 读取成功时在消息中添加“至今为止该进程已输出到stdout/stderr的内容”
-  - 读取stdout/stderr超时则跳过并在message中添加读取stdout/stderr超时
-  - 添加unittest检查读取stdout+stderr时，一个超时后另一个的内容是否会正常返回
-- [ ] 让process_stdio_read顺便检查当前程序是否已经退出，如果退出则在消息中加上“注意：当前程序{pid}已经退出”
 - [ ] 添加一个llm manager
   - 当前问题: 
     - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
@@ -71,6 +66,8 @@ unittest 失败时，必须分析
     - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
+- [ ] 分离plugin.py到一个文件夹中，同类的放在一起。需要重新运行unittest以确认没有破坏性更改
+  - 一个个移动插件，以避免大量输出或错误输出
 - [ ] 将conversation的目录从.local/share/conversation改成.local/share/linhai/conversation
   - 记得添加unittest
 
