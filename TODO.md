@@ -3,6 +3,8 @@
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
 - [ ] 当前处理`/`和`@`的逻辑极为混乱，需要重构
+  - 问题: linhai/cli和linhai/agent都处理了命令，且各个命令的实现散落在各处
+  - 期望：将所有命令的实现移动到linhai/cli/command_handler.py中，并让linhai/agent统一处理命令和`@`，linhai/cli完全不处理命令，除了tab补全
   - 这是一个较为大型的重构，需要仔细规划
   - 统计当前linhai/cli/app.py支持什么`/`命令，linhai/cli/command_handler.py又支持什么
   - 删除handle_user_message，清理linhai/cli/app.py处理`/`命令的逻辑，让receive_one_user_message直接使用linhai/cli/command_handler.py
