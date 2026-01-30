@@ -22,7 +22,7 @@ from .base import (
 )
 from ..llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
 from ..utils import CliRuntimeNotice
-from linhai.tool.base import ToolCallResultMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 READ_FILE_COMMANDS = {
@@ -1128,6 +1128,60 @@ class WithSecretParameterPositionPlugin(Plugin):
     def register(self, lifecycle: "linhai_agent.Lifecycle"):
         """注册到on_tool_result回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
+
+
+class CommandWhitelistPlugin(Plugin):
+    """命令白名单插件，检查process_create命令是否在配置的允许列表中。
+
+    注意：这个插件不是通过lifecycle的_register_default_plugins方法注册的，
+    因为它需要config参数来获取allowed_commands配置。它是在create.py中
+    根据配置动态注册的（当config.allowed_commands不为空时）。
+    """
+
+    def __init__(self, group_chat, config):
+        super().__init__(group_chat)
+        self.config = config
+        self.allowed_commands = config.agent.allowed_commands
+
+    def register(self, lifecycle):
+        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.register_before_tool_call(self.before_tool_call)
+
+    async def before_message_generation(self, agent, context, appending_message):
+        if self.allowed_commands:
+            allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
+            agent.message_processor.update_appending_message(
+                RuntimeMessage(f"允许的命令: {allowed_str}"),
+                source="command_whitelist",
+                sort_value=10,
+            )
+
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        tool_index: int,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+        agent,
+        context,
+    ) -> Union[None, bool, ToolResultSuccess, ToolResultFailed]:
+        if tool_name == "process_create":
+            command = toolcall_arguments.get("command")
+            if command is None:
+                return ToolResultFailed(content="process_create缺少command参数")
+            # 检查命令是否在白名单中
+            if self.allowed_commands and not any(
+                len(allowed) <= len(command)
+                and all(
+                    cmd_elem == allowed_elem
+                    for cmd_elem, allowed_elem in zip(command, allowed)
+                )
+                for allowed in self.allowed_commands
+            ):
+                return ToolResultFailed(
+                    content=f"命令 {' '.join(command)} 不在白名单中。允许的命令: {self.allowed_commands}"
+                )
+        return None
 
 
 class MissingWithSecretWarningPlugin(Plugin):

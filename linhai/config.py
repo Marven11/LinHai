@@ -78,6 +78,7 @@ class AgentConfig(BaseModel):
     mcp: list[MCPConfig] = Field(default_factory=list)
     enable_directory_change_detection: bool = Field(default=False)
     enable_task_planning: bool = Field(default=False)
+    allowed_commands: list[list[str]] = Field(default_factory=list)
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
