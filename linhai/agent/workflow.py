@@ -13,7 +13,9 @@ from linhai.llm import (
 )
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
-from linhai.agent.conversation import get_current_conversation
+from pathlib import Path
+from .conversation import save_cleaned_messages
+
 
 
 repr_obj = Repr()
@@ -158,8 +160,8 @@ async def context_range_compress(
             start_id, end_id
         )
 
-        conv = get_current_conversation()
-        conv.save_cleaned_messages(deleted_messages, prefix="range_compress")
+        conversation_dir = agent.group_chat.get_members("conversation_folder", Path)
+        save_cleaned_messages(conversation_dir, deleted_messages, prefix="range_compress")
 
         deleted_user_messages = [
             msg.message

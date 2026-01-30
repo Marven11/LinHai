@@ -392,7 +392,6 @@ class SpoofedReasoningMessage(Message):
             "reasoning_content": "合并后的推理内容"
         }
         """
-        from linhai.type_hints import AssistantMessage
 
         reasoning_content = "\n".join(self.reasoning_contents)
         return {

@@ -12,6 +12,7 @@ from linhai.subagent.issue import IssueManager
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
 from linhai.tool.general import TodolistManager
+from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
 
@@ -101,6 +102,9 @@ async def create_agent_from_config(
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
     todolist_manager = TodolistManager(context["group_chat"])
+    
+    register_conversation_folder(context["group_chat"])
+    
     agent = Agent(
         llms=llms,
         llm_name=context["llm_name"],

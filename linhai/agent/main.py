@@ -85,16 +85,6 @@ class Agent:
 
         self.current_answer: Answer | None = None
 
-        try:
-            from linhai.agent.conversation import init_conversation
-            self.conversation_manager = init_conversation()
-        except Exception as e:
-            from .base import RuntimeMessage
-            self.message_processor.add_new_message(
-                RuntimeMessage(f"警告: 无法初始化conversation系统: {e}")
-            )
-            self.conversation_manager = None
-
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
@@ -368,19 +358,6 @@ class Agent:
         await self.lifecycle.trigger_after_message_generation(
             answer, full_response, tool_calls
         )
-
-        if self.conversation_manager is not None:
-            try:
-                saved_path = self.conversation_manager.save_context(
-                    self.message_processor.get_messages()
-                )
-                self.message_processor.add_new_message(
-                    RuntimeMessage(f"对话历史已保存到: {saved_path}")
-                )
-            except Exception as e:
-                self.message_processor.add_new_message(
-                    RuntimeMessage(f"警告: 无法保存对话历史: {e}")
-                )
 
         self.current_answer = None
         return answer

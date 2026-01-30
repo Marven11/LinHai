@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .exceptions import ConfigValidationError
 from .agent.base import RuntimeMessage
-from .agent.conversation import get_current_conversation
+from .agent.conversation import save_secret_intercepted
 import time
 
 
@@ -185,11 +185,8 @@ class SecretInterceptorPlugin:
                 )
 
             if contains_any_secret(result_content, self.secrets_dict):
-                conversation = get_current_conversation()
-                timestamp = int(time.time())
-                filename = f"secret_intercepted_{timestamp}_{tool_name}.txt"
-                filepath = conversation.conversation_dir / filename
-                filepath.write_text(str(result_content), encoding="utf-8")
+                conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+                filepath = save_secret_intercepted(conversation_dir, str(result_content), tool_name)
 
                 message = (
                     f"工具调用的结果包含未指定的secret值，已拦截。"

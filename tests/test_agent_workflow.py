@@ -1,7 +1,7 @@
 """Unit tests for agent workflow functionality."""
 import reprlib
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
@@ -133,6 +133,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
+        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  
             _ = message  
@@ -168,7 +169,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-        result = await context_range_compress(mock_agent)
+        with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
+            mock_save.return_value = Path("/tmp/test.json")
+            result = await context_range_compress(mock_agent)
         self.assertTrue(result)
     async def test_compress_threshold_trigger(self):
         """Test that compression is triggered when token threshold is exceeded."""
@@ -177,6 +180,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
+        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  
             _ = message  
@@ -200,13 +204,16 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-        result = await context_range_compress(mock_agent)
+        with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
+            mock_save.return_value = Path("/tmp/test.json")
+            result = await context_range_compress(mock_agent)
         self.assertTrue(result)
     async def test_workflow_with_small_range(self):
         """Test context_range_compress with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
+        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  
             _ = message  
@@ -230,7 +237,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-        result = await context_range_compress(mock_agent)
+        with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
+            mock_save.return_value = Path("/tmp/test.json")
+            result = await context_range_compress(mock_agent)
         self.assertTrue(result)
     async def test_tool_manager_has_no_workflow_methods(self):
         """Test that ToolManager no longer has workflow-specific methods."""
@@ -273,6 +282,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
+        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  
             _ = message  
@@ -337,7 +347,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.insert_message = AsyncMock(
             side_effect=insert_message_side_effect
         )
-        result = await context_range_compress(mock_agent)
+        with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
+            mock_save.return_value = Path("/tmp/test.json")
+            result = await context_range_compress(mock_agent)
         self.assertTrue(result)
         runtime_messages = [
             msg
@@ -437,6 +449,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
+        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name  
             _ = message  
@@ -468,7 +481,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             return_value=mock_messages[1:3]
         )
         mock_agent.message_processor.insert_message = AsyncMock()
-        result = await context_range_compress(mock_agent)
+        with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
+            mock_save.return_value = Path("/tmp/test.json")
+            result = await context_range_compress(mock_agent)
         mock_group_chat.send_if_exists.assert_called_once()
         call_args = mock_group_chat.send_if_exists.call_args
         self.assertEqual(

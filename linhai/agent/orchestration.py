@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 import random
+from pathlib import Path
 import time
 import reprlib
 from typing import Optional, Literal, TypedDict, TYPE_CHECKING, Union
@@ -17,7 +18,7 @@ from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from .base import Message, RuntimeMessage
 from .message import AgentMessage
-from .conversation import get_current_conversation
+from .conversation import save_cleaned_messages
 
 if TYPE_CHECKING:
     from .main import Agent
@@ -69,8 +70,8 @@ class AgentContextOrchestration:
         self.large_messages.clear()
         self.last_compress_or_clean_time = time.time()
 
-        conv = get_current_conversation()
-        saved_path = conv.save_cleaned_messages(removed_messages, prefix="garbage_clean")
+        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        saved_path = save_cleaned_messages(conversation_dir, removed_messages, prefix="garbage_clean")
         result = f"清理了{large_count}条大消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 
@@ -93,9 +94,8 @@ class AgentContextOrchestration:
 
         self.last_compress_or_clean_time = time.time()
 
-        # 直接保存到conversation，让错误自然抛出
-        conv = get_current_conversation()
-        saved_path = conv.save_cleaned_messages(deleted_messages, prefix="thanox")
+        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        saved_path = save_cleaned_messages(conversation_dir, deleted_messages, prefix="thanox")
         result = f"context_thanox: 随机删除了{len(indices_to_delete)}条消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 

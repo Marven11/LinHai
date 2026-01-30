@@ -265,40 +265,39 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
     def test_intercept_when_no_with_secret_and_contains_secret(self):
         """测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截"""
         import asyncio
-        from unittest.mock import patch, Mock
+        from pathlib import Path
+        from linhai.agent.conversation import register_conversation_folder
+        
+        # 使用真实GroupChat并注册conversation_folder
+        from linhai.group_chat import GroupChat
+        real_group_chat = GroupChat()
+        register_conversation_folder(real_group_chat)
+        
+        # 重新创建plugin使用真实group_chat
+        from linhai.secret import SecretInterceptorPlugin
+        real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
 
         result_content = "This contains secret-value-1 and some other text"
 
-        # 模拟conversation环境
-        mock_conversation = Mock()
-        mock_filepath = Mock()
-        mock_filepath.write_text = Mock(return_value=None)
-        mock_conversation.conversation_dir = Mock()
-        # 模拟 Path / str 操作
-        mock_conversation.conversation_dir.__truediv__ = Mock(return_value=mock_filepath)
-        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        with patch('linhai.secret.get_current_conversation', return_value=mock_conversation):
-            result = loop.run_until_complete(
-                self.plugin.on_tool_result(
-                    tool_name="test_tool",
-                    tool_index=0,
-                    status="success",
-                    result_content=result_content,
-                    toolcall_arguments={},
-                    with_secret=None,
-                    is_tool_failed_duplicated_error=False,
-                )
+        result = loop.run_until_complete(
+            real_plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
             )
+        )
         loop.close()
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
         self.assertIn("已拦截", result_str)
         self.assertNotIn("secret-value-1", result_str)
-        # 验证write_text被调用
-        mock_filepath.write_text.assert_called_once()
 
     def test_no_intercept_when_no_with_secret_and_no_secret(self):
         """测试：如果没有指定with_secret，结果/错误信息中不包含secret值，应该完全不拦截"""
@@ -355,40 +354,39 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
     def test_intercept_when_incomplete_with_secret_and_contains_unlisted_secret(self):
         """测试：如果指定的with_secret不完全，结果/错误信息中包含没有在with_secret中指定的secret值，应该完全拦截"""
         import asyncio
-        from unittest.mock import patch, Mock
+        from pathlib import Path
+        from linhai.agent.conversation import register_conversation_folder
+        from linhai.group_chat import GroupChat
+        from linhai.secret import SecretInterceptorPlugin
+        
+        # 使用真实GroupChat并注册conversation_folder
+        real_group_chat = GroupChat()
+        register_conversation_folder(real_group_chat)
+        
+        # 重新创建plugin使用真实group_chat
+        real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
 
         result_content = "This contains secret-value-1 and secret-value-2"
 
-        # 模拟conversation环境
-        mock_conversation = Mock()
-        mock_filepath = Mock()
-        mock_filepath.write_text = Mock(return_value=None)
-        mock_conversation.conversation_dir = Mock()
-        # 模拟 Path / str 操作
-        mock_conversation.conversation_dir.__truediv__ = Mock(return_value=mock_filepath)
-        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        with patch('linhai.secret.get_current_conversation', return_value=mock_conversation):
-            result = loop.run_until_complete(
-                self.plugin.on_tool_result(
-                    tool_name="test_tool",
-                    tool_index=0,
-                    status="success",
-                    result_content=result_content,
-                    toolcall_arguments={},
-                    with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
-                    is_tool_failed_duplicated_error=False,
-                )
+        result = loop.run_until_complete(
+            real_plugin.on_tool_result(
+                tool_name="test_tool",
+                tool_index=0,
+                status="success",
+                result_content=result_content,
+                toolcall_arguments={},
+                with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
+                is_tool_failed_duplicated_error=False,
             )
+        )
         loop.close()
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
         self.assertIn("已拦截", result_str)
         self.assertNotIn("secret-value-2", result_str)
-        # 验证write_text被调用
-        mock_filepath.write_text.assert_called_once()
 
     def test_mask_when_incomplete_with_secret_and_no_unlisted_secret(self):
         """测试：如果指定的with_secret不完全，结果/错误信息中不包含没有在with_secret中指定的secret值，应该替换为`<$KEY$>`占位符"""

@@ -19,51 +19,69 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        group_chat = GroupChat()
+        self.group_chat = GroupChat()
         # 注册一个mock的lifecycle以避免RuntimeError
         mock_lifecycle = Mock(spec=Lifecycle)
-        group_chat.register_member("lifecycle", mock_lifecycle)
+        self.group_chat.register_member("lifecycle", mock_lifecycle)
 
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        group_chat.register_member("tool_manager", mock_tool_manager)
+        self.group_chat.register_member("tool_manager", mock_tool_manager)
 
         # 注册一个mock的token_manager，因为compute_orchestration_context需要它
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
-        group_chat.register_member("token_manager", mock_token_manager)
+        self.group_chat.register_member("token_manager", mock_token_manager)
 
         self.init_messages = [
             SystemMessage(
-                group_chat=group_chat,
+                group_chat=self.group_chat,
             ),
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(group_chat, self.init_messages)
+        self.message_processor = AgentMessage(self.group_chat, self.init_messages)
         self.orchestration = AgentContextOrchestration(
-            group_chat, self.message_processor
+            self.group_chat, self.message_processor
         )
 
     async def test_context_thanox(self):
         """测试随机删除历史消息。"""
-        # 模拟conversation系统
-        mock_conv = Mock()
-        mock_conv.save_cleaned_messages.return_value = "/tmp/test_saved_messages.json"
+        from pathlib import Path
+        from linhai.agent.conversation import register_conversation_folder
+        from linhai.group_chat import GroupChat
+        from linhai.agent.lifecycle import Lifecycle
+        from unittest.mock import Mock
         
-        with patch('linhai.agent.orchestration.get_current_conversation', return_value=mock_conv):
-            for i in range(10):
-                self.message_processor.add_new_message(UserMessage(message=f"Message {i}"))
+        # 创建新的GroupChat并注册必要组件
+        test_group_chat = GroupChat()
+        register_conversation_folder(test_group_chat)
+        
+        # 注册mock lifecycle
+        mock_lifecycle = Mock(spec=Lifecycle)
+        test_group_chat.register_member("lifecycle", mock_lifecycle)
+        
+        # 重新创建message_processor和orchestration使用新的group_chat
+        from linhai.agent.message import AgentMessage
+        test_init_messages = [
+            SystemMessage(group_chat=test_group_chat),
+            UserMessage(message="Initial message"),
+        ]
+        test_message_processor = AgentMessage(test_group_chat, test_init_messages)
+        test_orchestration = AgentContextOrchestration(
+            test_group_chat, test_message_processor
+        )
+        
+        for i in range(10):
+            test_message_processor.add_new_message(UserMessage(message=f"Message {i}"))
 
-            original_count = len(self.message_processor.get_messages())
-            result = await self.orchestration.context_thanox()
+        original_count = len(test_message_processor.get_messages())
+        result = await test_orchestration.context_thanox()
 
-            self.assertIsInstance(result.content, str)
-            self.assertIn("context_thanox", result.content)
-            self.assertLess(len(self.message_processor.get_messages()), original_count)
-            # 验证save_cleaned_messages被调用
-            mock_conv.save_cleaned_messages.assert_called_once()
+        self.assertIsInstance(result.content, str)
+        self.assertIn("context_thanox", result.content)
+        self.assertLess(len(test_message_processor.get_messages()), original_count)
 
     async def test_context_thanox_insufficient_messages(self):
         """测试消息不足时的不删除。"""

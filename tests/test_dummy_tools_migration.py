@@ -20,6 +20,10 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         """Set up test fixtures."""
         self.group_chat = GroupChat()
 
+        # 注册conversation_folder
+        from linhai.agent.conversation import register_conversation_folder
+        register_conversation_folder(self.group_chat)
+
         from linhai.tool.base import global_tools
         from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig

@@ -3,6 +3,7 @@
 import tiktoken
 import time
 from typing import TYPE_CHECKING, cast, Any
+from pathlib import Path
 from linhai.tool.base import (
     ToolSet,
     ToolArgInfo,
@@ -147,10 +148,7 @@ class AgentToolcall:
         single_tool_limit: int
     ) -> str:
         """分割并保存过大的工具输出到文件。"""
-        from linhai.agent.conversation import get_current_conversation
-
-        conversation = get_current_conversation()
-        conversation_dir = conversation.conversation_dir
+        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
         long_toolcall_dir = conversation_dir / "long_toolcall"
         long_toolcall_dir.mkdir(exist_ok=True)
 
@@ -182,10 +180,7 @@ class AgentToolcall:
         current_round_token_count: int
     ) -> str:
         """保存当前轮次超限的工具输出到文件。"""
-        from linhai.agent.conversation import get_current_conversation
-
-        conversation = get_current_conversation()
-        conversation_dir = conversation.conversation_dir
+        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
         long_toolcall_dir = conversation_dir / "long_toolcall"
         long_toolcall_dir.mkdir(exist_ok=True)
 
