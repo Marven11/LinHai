@@ -15,7 +15,23 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = Mock(spec=GroupChat)
-        self.group_chat.get_members = Mock(return_value=Mock())
+        self.mock_todolist_manager = Mock()
+        self.mock_cli_app = Mock()
+        self.mock_container = Mock()
+        self.mock_cli_app.query_one = Mock(return_value=self.mock_container)
+        self.mock_cli_app.should_auto_scroll = Mock(return_value=True)
+        
+        def get_members_side_effect(name, cls):
+            if name == "todolist_manager":
+                return self.mock_todolist_manager
+            elif name == "cli_app":
+                return self.mock_cli_app
+            elif name == "agent":
+                return self.agent
+            else:
+                return Mock()
+        
+        self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
         self.mock_llm1 = AsyncMock()
         self.mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
@@ -89,14 +105,10 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(selected_model, self.mock_llm1)
 
         messages = self.agent.message_processor.get_messages()
-        self.assertTrue(
-            any(
-                isinstance(msg, RuntimeMessage)
-                and "错误：用户指定的LLM名称'invalid_llm'不存在，请向用户报告这一点"
-                in str(msg)
-                for msg in messages
-            )
-        )
+        self.mock_cli_app.query_one.assert_called_once_with("#chat-container")
+        self.mock_container.mount.assert_called_once()
+        widget = self.mock_container.mount.call_args[0][0]
+        self.assertIn("错误：LLM名称 'invalid_llm' 不存在", widget.content)
 
     async def testget_current_model_without_at_system(self):
         """测试没有@系统的默认行为。"""

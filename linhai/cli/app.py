@@ -108,9 +108,8 @@ class CLIApp(App):
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
-        # 从cli_args构建init_messages
         cli_args = group_chat.get_members("cli_args", argparse.Namespace)
-        self.init_messages = list(cli_args.message.copy() or [])
+        self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
         if cli_args.file:
             self.init_messages += [f"[{file_path.name}]({file_path})" for file_path in cli_args.file]
 
@@ -124,7 +123,7 @@ class CLIApp(App):
 
         self.subagent_current_messages: Dict[str, MessageWidget] = {}
 
-        self.completions = []  # 初始化为空，等待agent注册后再生成
+        self.completions = []  
         self.command_completions = self._generate_command_completions()
         self.autocomplete = None
 
@@ -187,7 +186,6 @@ class CLIApp(App):
         while True:
             output = await self.group_chat.receive("parsed_agent_answer")
             if isinstance(output, ParsedAnswer):
-                # 为每个ParsedAnswer启动独立的处理任务
                 asyncio.create_task(self._handle_single_parsed_answer(output))
             else:
                 raise RuntimeError(
@@ -256,8 +254,6 @@ class CLIApp(App):
         self, wrapper: SubAgentParsedAnswerWrapper
     ) -> None:
         """处理SubAgent的ParsedAnswer"""
-        # SubAgent的ParsedAnswer应该像主Agent的ParsedAnswer一样处理
-        # 使用MessageWidget显示，传递segment给子widget
         subagent_name = wrapper.subagent_name
         parsed_answer = wrapper.parsed_answer
 
@@ -389,7 +385,6 @@ class CLIApp(App):
             self.group_chat.get_members("agent", Agent).run()
         )
 
-        # 启动自动滚动定时器
         self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
 
         input_element = self.query_one("#input")
@@ -535,7 +530,7 @@ class CLIApp(App):
             widget.remove()
 
         if await self._process_todolist_command(message_text):
-            input_element.value = ""  # 清除输入框
+            input_element.value = ""
             return
 
         await self._handle_regular_message(message_text)

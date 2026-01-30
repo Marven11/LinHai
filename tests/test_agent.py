@@ -14,6 +14,7 @@ from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
 from linhai.llm import SystemMessage, OpenAi
+from linhai.cli.components import RuntimeMessageWidget
 
 
 class MockAnswerToken(TypedDict):
@@ -38,7 +39,6 @@ class MockAnswer:
             raise StopAsyncIteration
         token_dict = self.tokens[self.index]
 
-        # 创建具有reasoning_content和content属性的简单对象
         class Token:
             def __init__(self, reasoning_content, content):
                 self.reasoning_content = reasoning_content
@@ -75,15 +75,22 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
 
         config = {
-            "llms": [self.mock_llm],  # 改为列表
-            "llm_names": ["test_llm"],  # 添加llm_names字段
-            "current_llm_index": 0,  # 添加当前LLM索引
+            "llms": [self.mock_llm],  
+            "llm_names": ["test_llm"],  
+            "current_llm_index": 0,  
             "compress_threshold": 800,
         }
 
         self.group_chat = GroupChat()
 
         self.group_chat.register_queue("parsed_agent_answer")
+
+        from linhai.cli.app import CLIApp
+        mock_cli_app = MagicMock(spec=CLIApp)
+        mock_container = MagicMock()
+        mock_cli_app.query_one.return_value = mock_container
+        mock_cli_app.should_auto_scroll.return_value = True
+        self.group_chat.register_member("cli_app", mock_cli_app)
 
         from linhai.machine_control import MachineControl
         self.mock_machine_control = MagicMock(spec=MachineControl)
@@ -110,7 +117,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             )
         ]
 
-        # 将llms和llm_names合并为llms_with_names
         self.agent = Agent(
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
@@ -138,21 +144,18 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.handle_user_message(test_msg)
         await self.agent.generate_response()
 
-        # 新设计：接收ParsedAnswer对象而不是token
         parsed_answer = None
         while not self.agent.group_chat.is_empty("parsed_agent_answer"):
             item = await self.agent.group_chat.receive("parsed_agent_answer")
-            if hasattr(item, "segment_queue"):  # ParsedAnswer对象
+            if hasattr(item, "segment_queue"):  
                 parsed_answer = item
                 break
 
         self.assertIsNotNone(parsed_answer, "ParsedAnswer object not found")
 
-        # 验证解析正常完成
         completed_normally = await parsed_answer.wait_parsing()
         self.assertTrue(completed_normally, "Parsing was interrupted")
 
-        # 验证最终回答内容
         from linhai.llm import AssistantMessage
 
         content = "Hi there"
@@ -181,7 +184,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
-        # 系统消息 + 用户消息 + 助手回复 + 可能的RuntimeMessage
         self.assertGreaterEqual(
             len(messages),
             3,
@@ -189,7 +191,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.assertLessEqual(
             len(messages),
-            5,  # 系统消息 + 用户消息 + 助手回复 + 可能的RuntimeMessage + conversation保存消息
+            5,  
             f"Messages: {[str(msg) for msg in messages]}",
         )
         self.assertEqual(
@@ -212,7 +214,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
-        # 系统消息 + 用户消息 + 助手回复 + 工具消息 + 助手回复 + 可能的RuntimeMessage
         self.assertGreaterEqual(
             len(messages),
             5,
@@ -220,20 +221,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.assertLessEqual(
             len(messages),
-            8,  # 系统消息 + 用户消息 + 助手回复 + conversation保存消息 + 工具结果 + 助手回复 + conversation保存消息 + RuntimeMessage通知
+            8,  
             f"Messages: {[str(msg) for msg in messages]}",
         )
-        # 由于conversation系统的引入，现在消息顺序为：
-        # 0: 系统消息
-        # 1: 用户消息
-        # 2: 助手回复（Processing...）
-        # 3: conversation保存消息（第一次生成回答后保存）
-        # 4: 工具结果消息（dummy_tool）
-        # 5: 助手回复（Tool processed）
-        # 6: conversation保存消息（第二次生成回答后保存）
-        # 7: RuntimeMessage通知（大消息数量提示）
         
-        # 查找工具结果消息
         tool_result_found = False
         for msg in messages:
             content = msg.to_llm_message().get("content", "")
@@ -246,7 +237,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 break
         self.assertTrue(tool_result_found, "未找到工具结果消息")
         
-        # 查找第二个助手回复（Tool processed）
         assistant_reply_found = False
         for msg in messages:
             content = msg.to_llm_message().get("content", "")
@@ -326,83 +316,91 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
     async def test_at_system_logic(self):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""
+        new_group_chat = GroupChat()
+        
+        from linhai.cli.app import CLIApp
+        mock_cli_app = MagicMock(spec=CLIApp)
+        mock_container = MagicMock()
+        mock_cli_app.query_one.return_value = mock_container
+        mock_cli_app.should_auto_scroll.return_value = True
+        new_group_chat.register_member("cli_app", mock_cli_app)
+        
+        from linhai.tool.main import ToolManager
+        from linhai.config import ToolConfig
+        from pathlib import Path
+        mock_tool_manager = MagicMock(spec=ToolManager)
+        mock_tool_manager.group_chat = new_group_chat
+        new_group_chat.register_member("tool_manager", mock_tool_manager)
+        
         mock_llm1 = MagicMock(spec=OpenAi)
         mock_llm2 = MagicMock(spec=OpenAi)
-
+        
         async def empty_answer_stream(_):
-            """返回一个空的答案流。"""
-
             class EmptyAnswer:
-                """空的答案流类。"""
-
                 def __aiter__(self):
-                    """返回迭代器自身。"""
                     return self
-
                 async def __anext__(self):
-                    """引发StopAsyncIteration。"""
                     raise StopAsyncIteration
-
                 def get_message(self):
-                    """返回空消息。"""
                     return AssistantMessage(message="")
-
                 def get_current_content(self):
-                    """返回空内容。"""
                     return ""
-
                 def get_reasoning_message(self):
-                    """返回None。"""
                     return None
-
             return EmptyAnswer()
-
+        
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)
         mock_llm2.answer_stream = AsyncMock(side_effect=empty_answer_stream)
-
-        # 直接设置Agent的内部属性，因为context属性已删除
-        self.agent._llms = [mock_llm1, mock_llm2]
-        self.agent._llm_names = ["deepseek-reasoning", "qwen"]
-        self.agent._current_llm_index = 0  # 默认使用第一个
-
-        await self.agent.handle_user_message(UserMessage(message="@qwen Hello"))
-        # 不检查内部状态，只验证get_current_model返回正确的模型
-        model = await self.agent.get_current_model()
-        self.assertIsNotNone(model)  # 应该返回一个模型，具体实现可能已改变
-
-        self.agent._current_llm_index = 0  # 重置索引
-        await self.agent.handle_user_message(UserMessage(message="@invalid command"))
-        # 不检查内部状态，只验证get_current_model返回正确的模型
-        model = await self.agent.get_current_model()
-        self.assertIsNotNone(model)  # 应该返回一个模型
-        messages = self.agent.message_processor.get_messages()
-        self.assertTrue(
-            any(
-                isinstance(msg, RuntimeMessage)
-                and "错误：用户指定的LLM名称'invalid'不存在，请向用户报告这一点"
-                in str(msg)
-                for msg in messages
-            )
+        mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
+        mock_llm2.get_name = MagicMock(return_value="qwen")
+        
+        from linhai.agent import Agent
+        agent = Agent(
+            llms=[mock_llm1, mock_llm2],
+            compress_threshold=800,
+            group_chat=new_group_chat,
+            init_messages=[],
+            llm_name="deepseek-reasoning",
         )
-
-        self.agent._current_llm_index = 0  # 重置索引
-        await self.agent.handle_user_message(UserMessage(message="Hello world"))
-        # 不检查内部状态，只验证get_current_model返回正确的模型
-        model = await self.agent.get_current_model()
-        self.assertIsNotNone(model)  # 应该返回一个模型
-
-        self.agent._current_llm_index = 0  # 重置索引
-        await self.agent.handle_user_message(UserMessage(message="@qwen first"))
-        # 不检查内部状态，只验证get_current_model返回正确的模型
-        await self.agent.handle_user_message(UserMessage(message="Normal message"))
-        # 不检查内部状态
-        await self.agent.handle_user_message(
+        
+        await agent.handle_user_message(UserMessage(message="@qwen Hello"))
+        self.assertEqual(agent.current_llm_index, 1)
+        self.assertEqual(agent.llm_names[1], "qwen")
+        
+        mock_cli_app.reset_mock()
+        mock_container.reset_mock()
+        
+        agent.current_llm_index = 0
+        await agent.handle_user_message(UserMessage(message="@invalid command"))
+        self.assertEqual(agent.current_llm_index, 0)
+        
+        mock_cli_app.query_one.assert_called_once_with("#chat-container")
+        mock_container.mount.assert_called_once()
+        widget = mock_container.mount.call_args[0][0]
+        self.assertIsInstance(widget, RuntimeMessageWidget)
+        self.assertIn("错误：LLM名称 'invalid' 不存在", widget.content)
+        
+        agent.current_llm_index = 0
+        await agent.handle_user_message(UserMessage(message="Hello world"))
+        self.assertEqual(agent.current_llm_index, 0)
+        
+        await agent.handle_user_message(UserMessage(message="@qwen first"))
+        self.assertEqual(agent.current_llm_index, 1)
+        
+        await agent.handle_user_message(UserMessage(message="Normal message"))
+        self.assertEqual(agent.current_llm_index, 1)
+        
+        await agent.handle_user_message(
             UserMessage(message="@deepseek-reasoning second")
         )
-        # 不检查内部状态
-        model = await self.agent.get_current_model()
-        self.assertIsNotNone(model)  # 应该返回一个模型
+        self.assertEqual(agent.current_llm_index, 0)
 
+
+    async def test_queue_command(self):
+        """测试/queue命令，将消息加入排队列表。"""
+        await self.agent.handle_user_message(UserMessage(message="/queue 等下需要实现"))
+        self.assertEqual(len(self.agent.queued_messages), 1)
+        self.assertEqual(self.agent.queued_messages[0].message, "等下需要实现")
 
 if __name__ == "__main__":
     unittest.main()

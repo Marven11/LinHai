@@ -12,6 +12,7 @@ from linhai.tool.base import (
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
 from linhai.utils import CliRuntimeNotice
+from linhai.config import Config
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -246,7 +247,7 @@ class AgentToolcall:
         self,
         tool_call: ToolCallMessage,
         tool_index: int,
-        tool_result: ToolCallResultMessage | RuntimeMessage,
+        tool_result: Message,
     ) -> tuple[Message, bool]:
         """处理工具结果的token管理
 
@@ -257,7 +258,9 @@ class AgentToolcall:
         result_content = ""
         if isinstance(tool_result, ToolCallResultMessage):
             # 使用to_llm_message获取格式化后的完整消息内容
-            result_content = tool_result.to_llm_message()["content"]
+            llm_msg = tool_result.to_llm_message()
+            assert "content" in llm_msg
+            result_content = llm_msg["content"]
         elif isinstance(tool_result, RuntimeMessage):
             result_content = tool_result.message
         else:
@@ -375,7 +378,9 @@ class AgentToolcall:
             ):
 
                 # 使用to_llm_message获取格式化后的完整消息内容
-                formatted_content = tool_result.to_llm_message()["content"]
+                llm_msg = tool_result.to_llm_message()
+                assert "content" in llm_msg
+                formatted_content = llm_msg["content"]
                 await self.agent.lifecycle.trigger_on_tool_result(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,

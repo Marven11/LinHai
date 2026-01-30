@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前处理`/`和`@`的逻辑极为混乱，需要重构
+- [x] 当前处理`/`和`@`的逻辑极为混乱，需要重构
   - 问题: linhai/cli和linhai/agent都处理了命令，且各个命令的实现散落在各处
   - 期望：将所有命令的实现移动到linhai/cli/command_handler.py中，并让linhai/agent统一处理命令和`@`，linhai/cli完全不处理命令，除了tab补全
   - 这是一个较为大型的重构，需要仔细规划
@@ -10,13 +10,13 @@
   - 删除handle_user_message，清理linhai/cli/app.py处理`/`命令的逻辑，让receive_one_user_message直接使用linhai/cli/command_handler.py
   - 将所有处理`/`和`@`的逻辑都移动到linhai/cli/command_handler.py中
   - 编写unittest测试所有`/`命令
-- [ ] 修复agent生成消息时如何处理接收到的用户消息
+- [x] 修复agent生成消息时如何处理接收到的用户消息
   - 当前问题：在agent生成token时如果接收到用户消息时不会响应用户输入的`/`命令等，既不会响应`/queue`又不会响应`@llm`等
   - 需要先添加测试
     - agent输出token时用户输入`/queue 等下需要实现` - 应该不打断而是添加到queued消息中
     - agent输出token时用户输入`@llm2 继续` - 应该切换到llm2
   - 需要参考当前解析用户输入的方式完整支持所有`/`命令和`@`
-- [ ] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
+- [x] 运行所有unittest并修复，需要先确认unittest为什么失败：环境模拟不完整/unittest过时/实现错误
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 

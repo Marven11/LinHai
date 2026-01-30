@@ -46,11 +46,9 @@ class Agent:
         for llm in llms:
             name = llm.get_name()
             if not isinstance(name, str):
-                # 对于测试中的Mock对象，使用默认名称
                 name = str(name) if name is not None else "unknown-llm"
             self.llm_names.append(name)
 
-        # 根据llm_name计算当前LLM索引
         if llm_name is None:
             self.current_llm_index = 0
         elif llm_name in self.llm_names:
@@ -86,7 +84,6 @@ class Agent:
 
         self.current_answer: Answer | None = None
 
-        # 初始化conversation系统
         try:
             from linhai.agent.conversation import init_conversation
             self.conversation_manager = init_conversation()
@@ -101,7 +98,6 @@ class Agent:
 
         self.queued_messages: list = []
 
-        # 注册after_token_generation回调用于用户打断检测
         self.lifecycle.register_after_token_generation(self.after_token_generation)
 
     def get_threshold_info(self) -> ThresholdInfo | None:
@@ -162,10 +158,8 @@ class Agent:
         if self.current_answer:
             self.current_answer.interrupt()
 
-            # 总是添加agent_message到message_processor
             self.message_processor.add_new_message(RuntimeMessage(agent_message))
 
-            # 使用ui_notice或默认消息
             if ui_notice is not None:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
             else:
@@ -244,37 +238,19 @@ class Agent:
         return isinstance(msg, UserMessage)
 
     async def handle_user_message(self, msg: "Message"):
-        """处理并加入用户的消息"""
+        """处理并加入用户的消息，首先尝试通过CommandHandler处理命令"""
         from linhai.llm import UserMessage
 
         assert isinstance(msg, UserMessage)
 
         content = msg.message.strip()
 
-        parsed_input = parse_user_input(content)
+        from linhai.cli.command_handler import CommandHandler
 
-        if parsed_input.switch_model:
-            llm_name = parsed_input.switch_model
-            if llm_name in self.llm_names:
-                self.current_llm_index = self.llm_names.index(llm_name)
-                self.message_processor.add_new_message(
-                    RuntimeMessage(f"用户把你的底层LLM切换为了{llm_name!r}")
-                )
-            else:
+        handler = CommandHandler(self.group_chat)
+        handled = await handler.handle_command(content)
 
-                self.message_processor.add_new_message(
-                    RuntimeMessage(
-                        f"错误：用户指定的LLM名称{llm_name!r}不存在，请向用户报告这一点"
-                    )
-                )
-
-        if parsed_input.command == "queue":
-            self.queued_messages.append(msg)
-        elif parsed_input.command == "subagent_start":
-            await self.handle_subagent_start_command()
-        elif parsed_input.command in ["quit", "exit"]:
-            await self.group_chat.send("exit_signal", {"return_code": 0})
-        else:
+        if not handled:
             self.message_processor.add_new_message(msg)
 
     async def get_current_model(self) -> LanguageModel:
@@ -324,20 +300,15 @@ class Agent:
 
         self.current_answer = answer
 
-        # 创建ParsedAnswer并开始解析
         parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
         await parsed_answer.start_parsing()
 
-        # 发送ParsedAnswer到新队列
         await self.group_chat.send("parsed_agent_answer", parsed_answer)
 
-        # 等待解析完成
         completed_normally = await parsed_answer.wait_parsing()
         if not completed_normally:
-            # 被中断，直接返回，不执行后续工具调用等
             return answer
 
-        # 获取完整的回答消息
         from linhai.llm import AssistantMessage
 
         chat_message = cast(AssistantMessage, answer.get_message())
@@ -397,7 +368,6 @@ class Agent:
             answer, full_response, tool_calls
         )
 
-        # 保存对话历史到conversation系统
         if self.conversation_manager is not None:
             try:
                 saved_path = self.conversation_manager.save_context(
@@ -410,7 +380,7 @@ class Agent:
                 self.message_processor.add_new_message(
                     RuntimeMessage(f"警告: 无法保存对话历史: {e}")
                 )
-        
+
         self.current_answer = None
         return answer
 
@@ -441,12 +411,10 @@ class Agent:
             "subagent_manager", SubAgentManager
         )
 
-        # 生成唯一的subagent名称
         from linhai.utils import generate_id
 
         subagent_name = generate_id("git_diff_reviewer")
 
-        # 创建subagent执行git diff审查
         result = await subagent_manager.create_subagent(
             agent_type="git_diff_reviewer",
             name=subagent_name,
