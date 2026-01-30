@@ -70,6 +70,7 @@ unittest 失败时，必须分析
 - [ ] kimi k2.5 有时会使用`<|tool_calls_section_begin|><|tool_call_begin|>`这样的格式调用工具
   - 特征是`<|tool_calls_section_begin|><|tool_call_begin|>`出现在第一行且没有正常的json toolcall格式
   - 添加插件，当发现输出符合这个特征时提醒正确的工具调用格式
+- [ ] 更新_split_and_save_large_output，将规则修改为分割成3块，而不是根据limit长度动态确定
 - [ ] 将conversation的目录从.local/share/conversation改成.local/share/linhai/conversation
   - 记得添加unittest
 
