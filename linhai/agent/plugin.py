@@ -48,7 +48,7 @@ AnyMessage = Union[
     PathMemory,
     FileContentMessage,
     PreviousReasoningMessage,
-    ToolCallResultMessage,
+    ToolCallMessage,
 ]
 
 
