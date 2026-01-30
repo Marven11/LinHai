@@ -67,6 +67,9 @@ unittest 失败时，必须分析
 - [ ] 分离plugin.py到一个文件夹中，同类的放在一起。需要重新运行unittest以确认没有破坏性更改
   - 一个个移动插件，以避免大量输出或错误输出
 - [ ] 删除context_thanox工具，完全剥夺agent手动调用thanox的能力，因为agent可能会觉得这个工具是“更方便”的清理上下文的方式
+- [ ] kimi k2.5 有时会使用`<|tool_calls_section_begin|><|tool_call_begin|>`这样的格式调用工具
+  - 特征是`<|tool_calls_section_begin|><|tool_call_begin|>`出现在第一行且没有正常的json toolcall格式
+  - 添加插件，当发现输出符合这个特征时提醒正确的工具调用格式
 - [ ] 将conversation的目录从.local/share/conversation改成.local/share/linhai/conversation
   - 记得添加unittest
 
