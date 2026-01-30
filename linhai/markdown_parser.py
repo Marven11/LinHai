@@ -26,6 +26,18 @@ class CodeBlockRenderer(mistune.HTMLRenderer):
         return super().block_code(code, info)
 
 
+def check_jsonl(tool_call: str):
+    """检查（错误的）工具调用是否是jsonl，有时agent(kimi k2.5)会在一个code block中输出多个json"""
+    if tool_call.count("\n") == 0:
+        return False
+    try:
+        _ = [
+            json.loads(line.strip()) for line in tool_call.splitlines() if line.strip()
+        ]
+        return True
+    except json.JSONDecodeError:
+        return False
+
 def extract_json_blocks(markdown_text: str) -> List[Any]:
     """
     从Markdown文本中提取所有JSON代码块
@@ -129,10 +141,33 @@ def extract_tool_calls_with_errors(
                 tool_calls.append(data)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])
-                errors.append(
+                error_message = (
                     f"工具调用解析出错：第{i+1}个code block中的JSON格式无效: {str(e)}\n"
                     f"错误位置: 第{e.lineno}行, 第{e.colno}列\n"
                     f"错误附近内容:\n{context_str}\n"
+                )
+                if check_jsonl(block["content"]):
+                    error_message += ("在一个code block中发现了多个json数据，你是不是在一个code block中输出了多个json object了？\n"
+                    """
+多工具调用的正确格式是:
+
+```json toolcall
+{"name": "toolcall1", "arguments": {...}}
+```
+
+```json toolcall
+{"name": "toolcall2", "arguments": {...}}
+```
+
+而不是:
+
+```json toolcall
+{"name": "toolcall1", "arguments": {...}}
+{"name": "toolcall2", "arguments": {...}}
+```
+""")
+                errors.append(
+                    error_message
                 )
                 continue
             except (ValueError, TypeError) as e:
