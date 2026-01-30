@@ -7,13 +7,11 @@ from linhai.tool.base import (
     ToolSet,
     ToolArgInfo,
     ToolCallResultMessage,
-    ToolResultSuccess,
     ToolResultFailed,
 )
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
 from linhai.utils import CliRuntimeNotice
-from linhai.config import Config
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -23,18 +21,14 @@ if TYPE_CHECKING:
 class AgentToolcall:
     """工具调用处理器，负责管理工具注册、调用和结果处理。"""
 
-    def __init__(self, agent: "Agent"):
+    def __init__(self, agent: "Agent", max_toolcall_token_in_round: int = 30000):
         self.agent = agent
         self.group_chat = agent.group_chat
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
         self.current_round_token_count = 0
-        config = getattr(agent, 'config', None)
-        if config is not None:
-            self.max_token_limit = config.tools.max_toolcall_token_in_round
-        else:
-            self.max_token_limit = 30000
+        self.max_token_limit = max_toolcall_token_in_round
 
         self._register_default_toolsets()
 
@@ -82,7 +76,7 @@ class AgentToolcall:
     def _register_llm_toolset(self):
         """注册LLM切换工具集。"""
         llm_toolset = ToolSet()
-        llm_names = getattr(self.agent, "llm_names", [])
+        llm_names = self.agent.llm_names
         if not isinstance(llm_names, list):
             llm_names = []
 
@@ -145,8 +139,65 @@ class AgentToolcall:
         orchestration_toolset = self.agent.orchestration.get_orchestration_toolset()
         tool_manager.add_toolset(orchestration_toolset)
 
-    async def ensure_mcp_connector(self):
+    def _split_and_save_large_output(
+        self, 
+        result_content: str, 
+        token_count: int, 
+        tool_name: str, 
+        single_tool_limit: int
+    ) -> str:
+        """分割并保存过大的工具输出到文件。"""
+        from linhai.agent.conversation import get_current_conversation
 
+        conversation = get_current_conversation()
+        conversation_dir = conversation.conversation_dir
+        long_toolcall_dir = conversation_dir / "long_toolcall"
+        long_toolcall_dir.mkdir(exist_ok=True)
+
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+        tokens = tokenizer.encode(result_content)
+        parts = []
+        for i in range(0, len(tokens), single_tool_limit):
+            part_tokens = tokens[i:i + single_tool_limit]
+            parts.append(tokenizer.decode(part_tokens))
+
+        timestamp = int(time.time())
+        filepaths = []
+        for idx, part_content in enumerate(parts):
+            filename = f"{tool_name}_{timestamp}_part{idx+1}.txt"
+            filepath = long_toolcall_dir / filename
+            filepath.write_text(part_content, encoding="utf-8")
+            filepaths.append(str(filepath))
+
+        if len(parts) > 1:
+            return f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已分割保存到 {len(parts)} 个文件: {', '.join(filepaths)}"
+        else:
+            return f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepaths[0]}"
+
+    def _save_output_to_file(
+        self, 
+        result_content: str, 
+        token_count: int, 
+        tool_name: str, 
+        current_round_token_count: int
+    ) -> str:
+        """保存当前轮次超限的工具输出到文件。"""
+        from linhai.agent.conversation import get_current_conversation
+
+        conversation = get_current_conversation()
+        conversation_dir = conversation.conversation_dir
+        long_toolcall_dir = conversation_dir / "long_toolcall"
+        long_toolcall_dir.mkdir(exist_ok=True)
+
+        timestamp = int(time.time())
+        filename = f"{tool_name}_{timestamp}.txt"
+        filepath = long_toolcall_dir / filename
+        filepath.write_text(result_content, encoding="utf-8")
+
+        return f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
+
+    async def ensure_mcp_connector(self):
+        """确保MCP连接器已准备就绪。"""
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         await tool_manager.ensure_mcp_connector()
 
@@ -249,10 +300,9 @@ class AgentToolcall:
         返回:
             tuple[Message, bool]: (处理后的消息, 是否需要跳过后续处理)
         """
-        # 获取工具结果内容
+
         result_content = ""
         if isinstance(tool_result, ToolCallResultMessage):
-            # 使用to_llm_message获取格式化后的完整消息内容
             llm_msg = tool_result.to_llm_message()
             assert "content" in llm_msg
             result_content = llm_msg["content"]
@@ -266,31 +316,9 @@ class AgentToolcall:
 
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:
-            from linhai.agent.conversation import get_current_conversation
-
-            conversation = get_current_conversation()
-            conversation_dir = conversation.conversation_dir
-            long_toolcall_dir = conversation_dir / "long_toolcall"
-            long_toolcall_dir.mkdir(exist_ok=True)
-
-            tokens = tokenizer.encode(result_content)
-            parts = []
-            for i in range(0, len(tokens), single_tool_limit):
-                part_tokens = tokens[i:i + single_tool_limit]
-                parts.append(tokenizer.decode(part_tokens))
-
-            timestamp = int(time.time())
-            filepaths = []
-            for idx, part_content in enumerate(parts):
-                filename = f"{tool_call.function_name}_{timestamp}_part{idx+1}.txt"
-                filepath = long_toolcall_dir / filename
-                filepath.write_text(part_content, encoding="utf-8")
-                filepaths.append(str(filepath))
-
-            if len(parts) > 1:
-                runtime_msg = f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已分割保存到 {len(parts)} 个文件: {', '.join(filepaths)}"
-            else:
-                runtime_msg = f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepaths[0]}"
+            runtime_msg = self._split_and_save_large_output(
+                result_content, token_count, tool_call.function_name, single_tool_limit
+            )
             runtime_message = RuntimeMessage(runtime_msg)
 
             replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
@@ -308,19 +336,9 @@ class AgentToolcall:
             return runtime_message, True
 
         if self.current_round_token_count + token_count > self.max_token_limit:
-            from linhai.agent.conversation import get_current_conversation
-
-            conversation = get_current_conversation()
-            conversation_dir = conversation.conversation_dir
-            long_toolcall_dir = conversation_dir / "long_toolcall"
-            long_toolcall_dir.mkdir(exist_ok=True)
-
-            timestamp = int(time.time())
-            filename = f"{tool_call.function_name}_{timestamp}.txt"
-            filepath = long_toolcall_dir / filename
-            filepath.write_text(result_content, encoding="utf-8")
-
-            runtime_msg = f"当前轮次token总数已达限制（已使用{self.current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
+            runtime_msg = self._save_output_to_file(
+                result_content, token_count, tool_call.function_name, self.current_round_token_count
+            )
             runtime_message = RuntimeMessage(runtime_msg)
 
             replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
@@ -372,7 +390,7 @@ class AgentToolcall:
                 tool_result.result, ToolResultFailed
             ):
 
-                # 使用to_llm_message获取格式化后的完整消息内容
+
                 llm_msg = tool_result.to_llm_message()
                 assert "content" in llm_msg
                 formatted_content = llm_msg["content"]

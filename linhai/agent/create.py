@@ -17,7 +17,7 @@ from linhai.secret import initialize_secret_system
 
 from .base import GlobalMemory, PathMemory
 
-from .main import Agent  # 避免循环导入
+from .main import Agent
 
 
 class AgentBuildContext(TypedDict):
@@ -29,7 +29,8 @@ class AgentBuildContext(TypedDict):
     group_chat: GroupChat
     config: Config
     config_basedir: Path
-    llm_name: str  # 注意：这个字段不能为None，必须是有效的LLM名称
+    llm_name: str
+    max_toolcall_token_in_round: int
     checklist_path: Optional[Path]
     git_diff_reviewer: bool
     violation_checker: bool
@@ -47,12 +48,12 @@ def create_agent_build_context(
     checklist_path: Optional[Path] = None,
 ) -> AgentBuildContext:
     """创建Agent构建上下文，包含验证逻辑。"""
-    # 处理llm_name逻辑
+
     llm_configs = config.llm
     llm_config_names = [llm_config.name for llm_config in llm_configs]
 
     if llm_name is None:
-        # 配置要求选择第一个llm
+
         if not llm_config_names:
             raise ValueError("配置中没有可用的LLM")
         resolved_llm_name = llm_config_names[0]
@@ -64,11 +65,19 @@ def create_agent_build_context(
     else:
         resolved_llm_name = llm_name
 
+
+    max_toolcall_token = (
+        config.tools.max_toolcall_token_in_round 
+        if config.tools.max_toolcall_token_in_round is not None 
+        else 30000
+    )
+
     return {
         "group_chat": group_chat,
         "config": config,
         "config_basedir": config_basedir,
         "llm_name": resolved_llm_name,
+        "max_toolcall_token_in_round": max_toolcall_token,
         "checklist_path": checklist_path,
         "git_diff_reviewer": git_diff_reviewer,
         "violation_checker": violation_checker,
@@ -87,7 +96,7 @@ async def create_agent_from_config(
     Returns:
         Agent实例
     """
-    from .main import Agent  # 避免循环导入
+    from .main import Agent
 
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
@@ -98,6 +107,7 @@ async def create_agent_from_config(
         compress_threshold=context["config"].agent.compress_threshold,
         group_chat=context["group_chat"],
         init_messages=await _create_init_messages(context),
+        max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
     machine_control.register_plugin(agent.lifecycle)
     tool_manager.register_lifecycle()

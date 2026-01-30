@@ -40,6 +40,7 @@ class Agent:
         group_chat: GroupChat,
         init_messages: list[Message],
         llm_name: str | None = None,
+        max_toolcall_token_in_round: int = 30000,
     ):
         self.llms = llms
         self.llm_names = []
@@ -73,7 +74,7 @@ class Agent:
         self.orchestration = AgentContextOrchestration(
             group_chat, self.message_processor
         )
-        self.toolcall_processor = AgentToolcall(self)
+        self.toolcall_processor = AgentToolcall(self, max_toolcall_token_in_round)
 
         self.last_token_usage = None
         self.current_enable_compress = True

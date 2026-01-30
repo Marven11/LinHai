@@ -66,6 +66,7 @@ default_llm = "test"
             "config": self.config,
             "config_basedir": Path("."),
             "llm_name": None,
+            "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
             "git_diff_reviewer": self.cli_args.git_diff_reviewer,
             "violation_checker": self.cli_args.violation_checker,
