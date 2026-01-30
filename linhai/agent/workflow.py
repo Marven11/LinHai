@@ -27,16 +27,21 @@ def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
     ]
     total_messages = len(messages)
 
-    interval = 1 if total_messages < 200 else (total_messages + 199) // 200
-    max_index = total_messages - 50 if total_messages >= 50 else total_messages
+    if total_messages < 50:
+        max_index = total_messages
+    else:
+        max_index = total_messages - 50
+
+    if total_messages < 200:
+        interval = 1
+    else:
+        interval = ((max_index - 1) // 200) + 2
 
     filtered_messages = [
         f"- id: {i} role: {messages[i]['role']!r} content: {repr_obj.repr(messages[i].get('content', None))}"
         for i in range(0, max_index, interval)
     ]
 
-    if len(filtered_messages) > 50:
-        filtered_messages = filtered_messages[:50]
 
     return "\n".join(filtered_messages)
 

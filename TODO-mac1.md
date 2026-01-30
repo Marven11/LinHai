@@ -1,0 +1,7 @@
+# 任务
+
+当前有大量unittest错误或者出现警告，尤其是消息长度相关的unittest
+
+尤其是tests.test_workflow_message_prepare，这个东西是因为某次重构context_range_compress导致的，找到那个commit并读取那个commit的TODO.md以理解这个重构的期望，然后据此修复
+
+需要修复所有unittest错误和警告，直到`uv run python -m unittest`返回码0正常退出

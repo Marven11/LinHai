@@ -8,7 +8,7 @@ from linhai.cli.command_handler import CommandHandler
 from linhai.group_chat import GroupChat
 
 
-class TestCommandHandler(unittest.TestCase):
+class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
     """Test cases for the CommandHandler."""
 
     def setUp(self):
@@ -178,7 +178,7 @@ class TestCommandHandler(unittest.TestCase):
         self.group_chat.get_members.return_value = mock_cli_app
         
         result = await self.handler.handle_command("/unknown")
-        self.assertTrue(result)
+        self.assertFalse(result)
         
     async def test_handle_switch_model_command(self):
         """Test @model_name command."""

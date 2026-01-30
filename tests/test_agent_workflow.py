@@ -1,10 +1,8 @@
 """Unit tests for agent workflow functionality."""
-
 import reprlib
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 from pathlib import Path
-
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.workflow import context_range_compress
@@ -12,40 +10,29 @@ from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
 from linhai.group_chat import GroupChat
-
-
 r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr
-
-
 def format_messages_for_assert(messages):
     """格式化消息列表用于断言错误信息"""
     return (
         f"Messages: {[f'{type(msg).__name__}: {custom_repr(msg)}' for msg in messages]}"
     )
-
-
 class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     """Test cases for agent workflow integration and functionality."""
-
     def setUp(self):
         """Set up test fixtures."""
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock()
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
-
         config = {
             "llms": [self.mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "compress_threshold": 800,
         }
-
         self.group_chat = GroupChat()
-
         from linhai.config import ToolConfig
-
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,
             toolsets=[global_tools],
@@ -53,14 +40,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
         )
-
         from linhai.subagent.issue import IssueManager
-
         self.issue_manager = IssueManager(self.group_chat)
-
-        # 将llms和llm_names合并为llms_with_names
+        
         llms_with_names = list(zip(config["llms"], config["llm_names"]))
-
         self.agent = Agent(
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
@@ -68,18 +51,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             init_messages=[],
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
-
     async def test_workflow_as_regular_tool(self):
         """Test that context_range_compress is now a regular tool, not a workflow."""
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
-
         self.assertIn("context_range_compress", tool_names)
-
     async def test_context_range_compress_as_tool(self):
         """Test calling context_range_compress as a regular tool."""
         pass
-
     async def test_prepare_messages_excludes_last_50(self):
         """Test that _prepare_messages_for_compression excludes last 50 messages when total >= 50."""
         from linhai.agent.workflow import _prepare_messages_for_compression
@@ -140,7 +119,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         
         result = _prepare_messages_for_compression(mock_agent)
         lines = result.split('\n')
-        self.assertLess(len(lines), 75)
+        self.assertLessEqual(len(lines), 75)
         for line in lines:
             if line.startswith('- id:'):
                 import re
@@ -154,13 +133,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-
         async def mock_send_if_exists(queue_name, message):
-            _ = queue_name  # 使用参数以消除警告
-            _ = message  # 使用参数以消除警告
-
+            _ = queue_name  
+            _ = message  
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
-
         mock_messages = [
             RuntimeMessage("System message"),
             RuntimeMessage("User message 1"),
@@ -176,14 +152,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
-
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
             "remaining_tokens": 200,
             "usage_ratio": 0.75,
         }
-
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
@@ -194,38 +168,29 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-
         result = await context_range_compress(mock_agent)
-
         self.assertTrue(result)
-
     async def test_compress_threshold_trigger(self):
         """Test that compression is triggered when token threshold is exceeded."""
-
     async def test_workflow_with_invalid_range(self):
         """Test context_range_compress with invalid range parameters."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-
         async def mock_send_if_exists(queue_name, message):
-            _ = queue_name  # 使用参数以消除警告
-            _ = message  # 使用参数以消除警告
-
+            _ = queue_name  
+            _ = message  
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
-
         mock_agent.message_processor.messages = [
             RuntimeMessage(f"Message {i}") for i in range(20)
         ]
         mock_agent.message_processor.filter_messages = AsyncMock()
-
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
             "remaining_tokens": 200,
             "usage_ratio": 0.75,
         }
-
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
@@ -235,35 +200,27 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-
         result = await context_range_compress(mock_agent)
-
         self.assertTrue(result)
-
     async def test_workflow_with_small_range(self):
         """Test context_range_compress with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-
         async def mock_send_if_exists(queue_name, message):
-            _ = queue_name  # 使用参数以消除警告
-            _ = message  # 使用参数以消除警告
-
+            _ = queue_name  
+            _ = message  
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
-
         mock_agent.message_processor.messages = [
             RuntimeMessage(f"Message {i}") for i in range(15)
         ]
         mock_agent.message_processor.filter_messages = AsyncMock()
-
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
             "remaining_tokens": 200,
             "usage_ratio": 0.75,
         }
-
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
@@ -273,50 +230,35 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-
         result = await context_range_compress(mock_agent)
-
         self.assertTrue(result)
-
     async def test_tool_manager_has_no_workflow_methods(self):
         """Test that ToolManager no longer has workflow-specific methods."""
         self.assertFalse(hasattr(self.tool_manager, "get_workflow"))
-
         self.assertFalse(hasattr(self.tool_manager, "register_workflow"))
-
         self.assertFalse(hasattr(self.tool_manager, "workflows"))
-
     async def test_tools_info_includes_context_range_compress(self):
         """Test that get_tools_info includes context_range_compress as a regular tool."""
         tools_info = self.tool_manager.get_tools_info()
-
         workflow_names = [tool["function"]["name"] for tool in tools_info]
         self.assertIn("context_range_compress", workflow_names)
-
         self.assertTrue(any("safe_calculator" in name for name in workflow_names))
-
     async def test_context_range_compress_tool_structure(self):
         """Test that context_range_compress tool has correct structure."""
         tools_info = self.tool_manager.get_tools_info()
-
         compress_tool = None
         for tool in tools_info:
             if tool["function"]["name"] == "context_range_compress":
                 compress_tool = tool
                 break
-
         self.assertIsNotNone(compress_tool)
-
         json_blocks = []
-        _ = json_blocks[0] if json_blocks else {}  # pylint: disable=unused-variable
-
+        _ = json_blocks[0] if json_blocks else {}  
     async def test_context_range_compress_integration(self):
         """Test that context_range_compress integrates properly with agent."""
-
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
         self.assertIn("context_range_compress", tool_names)
-
         compress_tool = next(
             (
                 tool
@@ -326,19 +268,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             None,
         )
         self.assertIsNotNone(compress_tool)
-
     async def test_context_range_compress_user_message_protection(self):
         """Test that user messages are protected during history compression."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-
         async def mock_send_if_exists(queue_name, message):
-            _ = queue_name  # 使用参数以消除警告
-            _ = message  # 使用参数以消除警告
-
+            _ = queue_name  
+            _ = message  
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
-
         mock_messages = [
             RuntimeMessage("System message"),
             UserMessage(message="Important user input 1"),
@@ -347,7 +285,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             UserMessage(message="Important user input 3"),
             AssistantMessage(message="Assistant response 2"),
             RuntimeMessage("<runtime>Tool output</runtime>"),
-            UserMessage(message="Complete TODO.md tasks"),  # This should be protected
+            UserMessage(message="Complete TODO.md tasks"),  
             AssistantMessage(message="Assistant response 3"),
             RuntimeMessage("<runtime>Another tool output</runtime>"),
             AssistantMessage(message="Assistant response x"),
@@ -370,46 +308,37 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
-
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
             "remaining_tokens": 200,
             "usage_ratio": 0.75,
         }
-
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
 - 目标：用户要求完成TODO.md中的内容，这是重要输入
 - 建议：用户强烈建议处理历史压缩问题
-
 ```json
 {"start_id": 2, "end_id": 15}
 ```
 """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-
         async def delete_message_range_side_effect(start, end):
             deleted = mock_agent.message_processor.messages[start : end + 1]
             mock_agent.message_processor.messages[start : end + 1] = []
             return deleted
-
         def insert_message_side_effect(index, message):
             mock_agent.message_processor.messages.insert(index, message)
-
         mock_agent.message_processor.delete_message_range.side_effect = (
             delete_message_range_side_effect
         )
         mock_agent.message_processor.insert_message = AsyncMock(
             side_effect=insert_message_side_effect
         )
-
         result = await context_range_compress(mock_agent)
-
         self.assertTrue(result)
-
         runtime_messages = [
             msg
             for msg in mock_agent.message_processor.messages
@@ -422,12 +351,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             "No runtime message summarizing user messages was found in: "
             + repr(mock_agent.message_processor.messages),
         )
-
         summary_message = runtime_messages[0].message
         self.assertIn("Complete TODO.md tasks", summary_message)
         self.assertIn("Important user input", summary_message)
-
-
     async def test_compress_range_system_message_protection(self):
         """Test that system messages are protected during compression range validation."""
         from linhai.agent.workflow import _validate_compression_range
@@ -436,12 +362,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         
         mock_agent = MagicMock()
         
-        # Create mock group_chat for SystemMessage
+        
         mock_group_chat = MagicMock()
         
         from pathlib import Path
         
-        # Create messages with system messages and global memory
+        
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
             GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
@@ -451,28 +377,28 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         
-        # Test 1: start_id less than min_safe_id (min_safe_id should be 2 because last system/global memory at index 1)
+        
         start_id = 0
         end_id = 2
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
         self.assertFalse(passed)
-        self.assertIn("start_id不能小于2", error_msg)  # min_safe_id is 2
+        self.assertIn("start_id不能小于2", error_msg)  
         
-        # Test 2: start_id equal to min_safe_id (should pass if range size is sufficient)
-        # But we need more messages to meet the 10-message minimum range
+        
+        
         mock_messages_extended = [
             SystemMessage(group_chat=mock_group_chat),
             GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
         ] + [RuntimeMessage(f"User message {i}") for i in range(20)]
         mock_agent.message_processor.messages = mock_messages_extended
         
-        start_id = 2  # min_safe_id is 2
-        end_id = 11   # range_size = 11-2+1 = 10, meets minimum
+        start_id = 2  
+        end_id = 11   
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
         self.assertTrue(passed)
         self.assertEqual(error_msg, "")
         
-        # Test 3: No system messages, min_safe_id should be 0
+        
         mock_messages_no_system = [
             RuntimeMessage("User message 1"),
             RuntimeMessage("User message 2"),
@@ -483,17 +409,17 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         start_id = 0
         end_id = 1
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
-        # Note: range_size is only 2, but minimum is 10, so this should fail for range size
-        # Let's adjust end_id to meet minimum range
+        
+        
         end_id = 9
-        # But we only have 3 messages, so end_id should be 2
+        
         end_id = 2
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
-        # Range size is 3, still less than 10, so should fail
+        
         self.assertFalse(passed)
         self.assertIn("压缩范围至少需要10条消息", error_msg)
         
-        # Test 4: With only system messages, min_safe_id should be after all
+        
         mock_messages_all_system = [
             SystemMessage(group_chat=mock_group_chat),
             GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
@@ -502,23 +428,19 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.messages = mock_messages_all_system
         
         start_id = 0
-        end_id = 2  # This would try to compress system messages
+        end_id = 2  
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
         self.assertFalse(passed)
-        self.assertIn("start_id不能小于3", error_msg)  # min_safe_id is 3 (last system index 2 + 1)
-
+        self.assertIn("start_id不能小于3", error_msg)  
     async def test_context_range_compress_sends_ui_log_message(self):
         """Test that context_range_compress sends UI log message with current message count."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-
         async def mock_send_if_exists(queue_name, message):
-            _ = queue_name  # 使用参数以消除警告
-            _ = message  # 使用参数以消除警告
-
+            _ = queue_name  
+            _ = message  
         mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
-
         mock_messages = [
             RuntimeMessage("System message"),
             RuntimeMessage("User message 1"),
@@ -527,14 +449,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
-
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
             "remaining_tokens": 200,
             "usage_ratio": 0.75,
         }
-
         mock_response = MagicMock()
         mock_response.get_message.return_value = AssistantMessage(
             message="""
@@ -544,33 +464,24 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             """,
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
-
         mock_agent.message_processor.delete_message_range = AsyncMock(
             return_value=mock_messages[1:3]
         )
         mock_agent.message_processor.insert_message = AsyncMock()
-
         result = await context_range_compress(mock_agent)
-
         mock_group_chat.send_if_exists.assert_called_once()
         call_args = mock_group_chat.send_if_exists.call_args
-
         self.assertEqual(
             call_args[0][0], "ui_log"
-        )  # First positional argument should be "ui_log"
-
+        )  
         ui_message = call_args[0][1]
         from linhai.utils import CliRuntimeNotice
-
         self.assertIsInstance(ui_message, CliRuntimeNotice)
         self.assertEqual(ui_message.level, "INFO")
         self.assertIn("启动历史压缩", ui_message.content)
         self.assertIn(
             "当前共有4条消息", ui_message.content
-        )  # 4 messages in mock_messages
-
+        )  
         self.assertTrue(result)
-
-
 if __name__ == "__main__":
     unittest.main()

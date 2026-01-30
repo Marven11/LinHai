@@ -120,6 +120,11 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试前准备"""
         self.host_control = MasterHostControl()
 
+    def tearDown(self):
+        """测试后清理，避免ResourceWarning"""
+        # 清理进程字典，防止子进程未关闭警告
+        self.host_control._processes.clear()
+
     def test_http_request(self):
         """测试HTTP请求"""
         # 由于http_request需要网络，我们只测试方法存在
