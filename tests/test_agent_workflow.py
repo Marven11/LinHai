@@ -428,6 +428,85 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Important user input", summary_message)
 
 
+    async def test_compress_range_system_message_protection(self):
+        """Test that system messages are protected during compression range validation."""
+        from linhai.agent.workflow import _validate_compression_range
+        from linhai.agent.base import GlobalMemory
+        from linhai.llm import SystemMessage
+        
+        mock_agent = MagicMock()
+        
+        # Create mock group_chat for SystemMessage
+        mock_group_chat = MagicMock()
+        
+        from pathlib import Path
+        
+        # Create messages with system messages and global memory
+        mock_messages = [
+            SystemMessage(group_chat=mock_group_chat),
+            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            RuntimeMessage("User message 1"),
+            RuntimeMessage("User message 2"),
+            RuntimeMessage("User message 3"),
+        ]
+        mock_agent.message_processor.messages = mock_messages
+        
+        # Test 1: start_id less than min_safe_id (min_safe_id should be 2 because last system/global memory at index 1)
+        start_id = 0
+        end_id = 2
+        passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
+        self.assertFalse(passed)
+        self.assertIn("start_id不能小于2", error_msg)  # min_safe_id is 2
+        
+        # Test 2: start_id equal to min_safe_id (should pass if range size is sufficient)
+        # But we need more messages to meet the 10-message minimum range
+        mock_messages_extended = [
+            SystemMessage(group_chat=mock_group_chat),
+            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+        ] + [RuntimeMessage(f"User message {i}") for i in range(20)]
+        mock_agent.message_processor.messages = mock_messages_extended
+        
+        start_id = 2  # min_safe_id is 2
+        end_id = 11   # range_size = 11-2+1 = 10, meets minimum
+        passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
+        self.assertTrue(passed)
+        self.assertEqual(error_msg, "")
+        
+        # Test 3: No system messages, min_safe_id should be 0
+        mock_messages_no_system = [
+            RuntimeMessage("User message 1"),
+            RuntimeMessage("User message 2"),
+            RuntimeMessage("User message 3"),
+        ]
+        mock_agent.message_processor.messages = mock_messages_no_system
+        
+        start_id = 0
+        end_id = 1
+        passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
+        # Note: range_size is only 2, but minimum is 10, so this should fail for range size
+        # Let's adjust end_id to meet minimum range
+        end_id = 9
+        # But we only have 3 messages, so end_id should be 2
+        end_id = 2
+        passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
+        # Range size is 3, still less than 10, so should fail
+        self.assertFalse(passed)
+        self.assertIn("压缩范围至少需要10条消息", error_msg)
+        
+        # Test 4: With only system messages, min_safe_id should be after all
+        mock_messages_all_system = [
+            SystemMessage(group_chat=mock_group_chat),
+            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            SystemMessage(group_chat=mock_group_chat),
+        ]
+        mock_agent.message_processor.messages = mock_messages_all_system
+        
+        start_id = 0
+        end_id = 2  # This would try to compress system messages
+        passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
+        self.assertFalse(passed)
+        self.assertIn("start_id不能小于3", error_msg)  # min_safe_id is 3 (last system index 2 + 1)
+
     async def test_context_range_compress_sends_ui_log_message(self):
         """Test that context_range_compress sends UI log message with current message count."""
         mock_agent = MagicMock()

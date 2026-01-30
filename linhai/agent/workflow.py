@@ -76,7 +76,7 @@ def _validate_compression_range(
     min_safe_id = 0 if max_system_index == -1 else max_system_index + 1
 
     if start_id < min_safe_id:
-        return False, f"start_id不能小于{min_safe_id},已经更正为{min_safe_id}"
+        return False, f"start_id不能小于{min_safe_id}"
 
     if start_id < 0 or end_id < 0:
         return False, "消息ID不能为负数"

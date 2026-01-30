@@ -55,10 +55,11 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         result = self.prepare_func(agent)
         displayed_ids = extract_displayed_ids(result)
 
-        # 应该显示所有199条消息
-        self.assertEqual(len(displayed_ids), 199)
-        # ID应该是连续的0-198
-        self.assertEqual(displayed_ids, list(range(199)))
+        # 由于新添加的截断逻辑，当filtered_messages超过50条时，只保留i+50 < total_messages的消息
+        # 199条消息，间隔1，过滤后199条>50，触发截断，保留i < 149，所以显示0到148，共149条
+        self.assertEqual(len(displayed_ids), 149)
+        # ID应该是连续的0-148
+        self.assertEqual(displayed_ids, list(range(149)))
 
     def test_exactly_200_messages(self):
         """测试正好200条消息的情况：应间隔显示，显示数量严格少于200条"""
@@ -70,10 +71,11 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
 
         # 显示数量应严格少于200条
         self.assertLess(len(displayed_ids), 200)
-        # 间隔应为2，显示100条消息
-        self.assertEqual(len(displayed_ids), 100)
-        # 应该显示偶数ID（0, 2, 4, ... 198）
-        expected_ids = list(range(0, 200, 2))
+        # 间隔应为2，但过滤后100条>50，触发截断，保留i+50<200的消息，即i<150
+        # 所以显示0,2,4,...,148，共75条消息
+        self.assertEqual(len(displayed_ids), 75)
+        # 应该显示偶数ID（0, 2, 4, ... 148）
+        expected_ids = list(range(0, 150, 2))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_201_messages(self):
@@ -85,8 +87,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        self.assertEqual(len(displayed_ids), 101)  # ceil(201/2) = 101
-        expected_ids = list(range(0, 201, 2))
+        # 间隔2，过滤后101条>50，触发截断，保留i+50<201的消息，即i<151
+        # 所以显示0,2,4,...,150，共76条消息
+        self.assertEqual(len(displayed_ids), 76)
+        expected_ids = list(range(0, 151, 2))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_399_messages(self):
@@ -101,10 +105,11 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        # 399条消息，间隔2会显示200条（违反规则），所以算法会调整为间隔3，显示133条
-        self.assertEqual(len(displayed_ids), 133)
+        # 间隔3，过滤后133条>50，触发截断，保留i+50<399的消息，即i<349
+        # 所以显示0,3,6,...,348，共117条消息
+        self.assertEqual(len(displayed_ids), 117)
         # 间隔应为3
-        expected_ids = list(range(0, 399, 3))
+        expected_ids = list(range(0, 349, 3))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_400_messages(self):
@@ -116,9 +121,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        # ceil(400/3) = 134
-        self.assertEqual(len(displayed_ids), 134)
-        expected_ids = list(range(0, 400, 3))
+        # 间隔3，过滤后134条>50，触发截断，保留i+50<400的消息，即i<350
+        # 所以显示0,3,6,...,348，共117条消息
+        self.assertEqual(len(displayed_ids), 117)
+        expected_ids = list(range(0, 350, 3))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_599_messages(self):
@@ -130,10 +136,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        # 算法会确保显示数量少于200条，间隔可能调整为4
-        # 599/4 = 149.75，ceil后150
-        self.assertEqual(len(displayed_ids), 150)
-        expected_ids = list(range(0, 599, 4))
+        # 间隔4，过滤后150条>50，触发截断，保留i+50<599的消息，即i<549
+        # 所以显示0,4,8,...,548，共138条消息
+        self.assertEqual(len(displayed_ids), 138)
+        expected_ids = list(range(0, 549, 4))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_600_messages(self):
@@ -145,8 +151,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        self.assertEqual(len(displayed_ids), 150)  # 600/4 = 150
-        expected_ids = list(range(0, 600, 4))
+        # 间隔4，过滤后150条>50，触发截断，保留i+50<600的消息，即i<550
+        # 所以显示0,4,8,...,548，共138条消息
+        self.assertEqual(len(displayed_ids), 138)
+        expected_ids = list(range(0, 550, 4))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_799_messages(self):
@@ -158,9 +166,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        # 799/5 = 159.8，ceil后160
-        self.assertEqual(len(displayed_ids), 160)
-        expected_ids = list(range(0, 799, 5))
+        # 间隔5，过滤后160条>50，触发截断，保留i+50<799的消息，即i<749
+        # 所以显示0,5,10,...,745，共150条消息
+        self.assertEqual(len(displayed_ids), 150)
+        expected_ids = list(range(0, 750, 5))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_1000_messages(self):
@@ -172,9 +181,10 @@ class TestPrepareMessagesForCompression(unittest.TestCase):
         displayed_ids = extract_displayed_ids(result)
 
         self.assertLess(len(displayed_ids), 200)
-        # 1000/6 ≈ 166.67，ceil后167
-        self.assertEqual(len(displayed_ids), 167)
-        expected_ids = list(range(0, 1000, 6))
+        # 间隔6，过滤后167条>50，触发截断，保留i+50<1000的消息，即i<950
+        # 所以显示0,6,12,...,948，共159条消息
+        self.assertEqual(len(displayed_ids), 159)
+        expected_ids = list(range(0, 950, 6))
         self.assertEqual(displayed_ids, expected_ids)
 
     def test_message_content_format(self):
