@@ -67,19 +67,28 @@ unittest 失败时，必须分析
 - [ ] 将PLANNING固化为内置功能，通过--plan参数开启
 - [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
-- [ ] 分离context_garbage_clean为context_garbage_clean_step1和context_garbage_clean_step2
-  - 问题：kimi k2.5完全无法理解如何进行上下文压缩，会在调用一次context_garbage_clean后又调用一次而不是输出start_id和end_id，导致context_garbage_clean失败
+- [ ] 分离context_compress_range为context_compress_range_step1和context_compress_range_step2
+  - 问题：kimi k2.5完全无法理解如何进行上下文压缩，会在调用一次context_compress_range后又调用一次而不是输出start_id和end_id，导致context_compress_range失败
   - 破坏性重构
     - 删除workflow.py和对应的测试
   - 方案
     - MessagesListSummerizeMessage: 
       - 返回当前的消息列表总结
-      - 在对应的gc_session_id被invalidate时不展示当前的消息列表总结，而是提示“id为xxx的消息列表已无效”
-    - context_garbage_clean_step1: 生成一个gc_session_id，并返回当前的消息列表总结
-    - context_garbage_clean_step2: 
-      - 参数gc_session_id: 验证是否存在
-      - 参数description: 包含“待办任务”等内容，插入被删除的消息位置
+      - 在对应的range_clean_id被invalidate时不展示当前的消息列表总结，而是提示“id为xxx的消息列表已无效”
+    - context_compress_range_step1: 生成一个range_clean_id，并返回当前的消息列表总结，消息列表总结和改进前一致
+    - context_compress_range_step2: 
+      - 参数range_clean_id: 验证是否存在
+      - 参数description: 包含“待办任务”等内容，插入被删除的消息位置（这点和之前不同）。我们不要求agent直接输出
       - 参数start_id和end_id: 和原start_id和end_id功能相同
+    - 修改对应的prompt
+      - 删除一系列消息分为两步 step1和step2 需要调用对应的工具
+      - 在description中包含待办任务等内容而不是直接输出
+  - unittest
+    - 正确调用step1之后调用step2应该正确删除消息并invalidte id，对应的MessagesListSummerizeMessage无效化
+    - 正确调用step1但是没有调用step2应该不删除消息
+    - 调用两次step1并在调用step2时使用第一次调用step1的range_clean_id，提供第一次调用step1范围内的id，正常删除并invalidate id
+    - 调用两次step1并在调用step2时使用第一次调用step1的range_clean_id，提供超出第一次调用step1范围内的id（如提供第二次调用step1范围内的id），提示错误
+    - 正确调用step1但是调用step2时提供了错误的id，提示错误
 
 # 注意
 
