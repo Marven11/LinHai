@@ -225,6 +225,60 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             tool_call1, 1, tool_result1
         )
         
+        # 修改mock group_chat以返回conversation_folder
+        from pathlib import Path
+        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
+        
+        for i in range(5):
+            content = "x" * 100
+            tool_result = ToolCallResultMessage(
+                tool_name=f"test_tool{i}",
+                tool_index=i+1,
+                result=ToolResultSuccess(content=content),
+                toolcall_arguments=None,
+            )
+            
+            tool_call = ToolCallMessage(
+                function_name=f"test_tool{i}",
+                function_arguments={},
+                assert_success=False,
+                with_secret=None,
+            )
+            
+            result, skip_handle = await self.toolcall_processor._tool_result_token_management(
+                tool_call, i+1, tool_result
+            )
+            
+            self.assertFalse(skip_handle)
+            total_tokens = self.toolcall_processor.current_round_token_count
+        
+        self.assertLess(total_tokens, self.toolcall_processor.max_token_limit)
+
+    async def test_three_tools_second_tool_long_output(self):
+        """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
+        # 修改mock group_chat以返回conversation_folder
+        from pathlib import Path
+        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
+        
+        content1 = "x" * 100
+        tool_result1 = ToolCallResultMessage(
+            tool_name="test_tool1",
+            tool_index=1,
+            result=ToolResultSuccess(content=content1),
+            toolcall_arguments=None,
+        )
+        
+        tool_call1 = ToolCallMessage(
+            function_name="test_tool1",
+            function_arguments={},
+            assert_success=False,
+            with_secret=None,
+        )
+        
+        result1, skip_handle1 = await self.toolcall_processor._tool_result_token_management(
+            tool_call1, 1, tool_result1
+        )
+        
         self.assertFalse(skip_handle1)
         
         content2 = "x" * 12000

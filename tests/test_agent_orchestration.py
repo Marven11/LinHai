@@ -46,48 +46,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             self.group_chat, self.message_processor
         )
 
-    async def test_context_thanox(self):
-        """测试随机删除历史消息。"""
-        from pathlib import Path
-        from linhai.agent.conversation import register_conversation_folder
-        from linhai.group_chat import GroupChat
-        from linhai.agent.lifecycle import Lifecycle
-        from unittest.mock import Mock
-        
-        # 创建新的GroupChat并注册必要组件
-        test_group_chat = GroupChat()
-        register_conversation_folder(test_group_chat)
-        
-        # 注册mock lifecycle
-        mock_lifecycle = Mock(spec=Lifecycle)
-        test_group_chat.register_member("lifecycle", mock_lifecycle)
-        
-        # 重新创建message_processor和orchestration使用新的group_chat
-        from linhai.agent.message import AgentMessage
-        test_init_messages = [
-            SystemMessage(group_chat=test_group_chat),
-            UserMessage(message="Initial message"),
-        ]
-        test_message_processor = AgentMessage(test_group_chat, test_init_messages)
-        test_orchestration = AgentContextOrchestration(
-            test_group_chat, test_message_processor
-        )
-        
-        for i in range(10):
-            test_message_processor.add_new_message(UserMessage(message=f"Message {i}"))
-
-        original_count = len(test_message_processor.get_messages())
-        result = await test_orchestration.context_thanox()
-
-        self.assertIsInstance(result.content, str)
-        self.assertIn("context_thanox", result.content)
-        self.assertLess(len(test_message_processor.get_messages()), original_count)
-
-    async def test_context_thanox_insufficient_messages(self):
-        """测试消息不足时的不删除。"""
-        result = await self.orchestration.context_thanox()
-        self.assertEqual(result.content, "消息数量不足，无需删除")
-
     def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
         threshold_info: ThresholdInfo = {
@@ -193,11 +151,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         context = self.orchestration.compute_orchestration_context(
             "context_garbage_clean", threshold_info
-        )
-        self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
-
-        context = self.orchestration.compute_orchestration_context(
-            "context_thanox", threshold_info
         )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 

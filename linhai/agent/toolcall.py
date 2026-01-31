@@ -258,9 +258,8 @@ class AgentToolcall:
 
         compress_tools = [
             "context_range_compress",
-            "mark_messages_as_garbage",
             "context_garbage_clean",
-            "context_thanox",
+            "mark_messages_as_garbage",
         ]
         self.agent.compress_tool_called_in_last_response = (
             tool_call.function_name in compress_tools

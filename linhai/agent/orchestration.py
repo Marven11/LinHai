@@ -75,30 +75,6 @@ class AgentContextOrchestration:
         result = f"清理了{large_count}条大消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 
-    async def context_thanox(self) -> ToolResultSuccess | ToolResultFailed:
-        """随机删除一半消息（不包括前5条系统消息）。
-
-        Returns:
-            删除结果消息或失败消息。
-        """
-        messages = self.agent_message.messages
-        if len(messages) <= 10:
-            return ToolResultFailed(content="消息数量不足，无需删除")
-
-        indices_to_delete = random.sample(range(5, len(messages)), len(messages) // 2)
-
-        deleted_messages = []
-        for idx in sorted(indices_to_delete, reverse=True):
-            deleted_messages.append(messages[idx])
-            await self.agent_message.remove_message(messages[idx])
-
-        self.last_compress_or_clean_time = time.time()
-
-        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
-        saved_path = save_cleaned_messages(conversation_dir, deleted_messages, prefix="thanox")
-        result = f"context_thanox: 随机删除了{len(indices_to_delete)}条消息，保存到: {saved_path}"
-        return ToolResultSuccess(content=result)
-
     def compute_orchestration_context(
         self, tool_name: str, threshold_info: Optional[ThresholdInfo]
     ) -> dict:
@@ -147,7 +123,7 @@ class AgentContextOrchestration:
         actual_category = (
             "cleanup"
             if tool_name
-            in {"context_range_compress", "context_garbage_clean", "context_thanox"}
+            in {"context_range_compress", "context_garbage_clean"}
             else "other"
         )
 
@@ -252,16 +228,6 @@ class AgentContextOrchestration:
             return await self.context_garbage_clean()
 
         @toolset.register_tool(
-            name="context_thanox",
-            desc="随机删除一半消息（不包括前5条系统消息）。",
-            args={},
-            required_args=[],
-        )
-        async def context_thanox_tool() -> ToolResultSuccess | ToolResultFailed:
-            self.last_compress_or_clean_time = time.time()
-            return await self.context_thanox()
-
-        @toolset.register_tool(
             name="context_range_compress",
             desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
             args={},
@@ -316,7 +282,6 @@ class RedStateToolBlockPlugin:
         self.CLEANUP_TOOLS = {
             "context_range_compress",
             "context_garbage_clean",
-            "context_thanox",
         }
 
     async def on_tool_result(

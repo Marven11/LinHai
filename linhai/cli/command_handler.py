@@ -8,13 +8,13 @@ from linhai.input_parser import parse_user_input
 
 
 class CommandHandler:
-    """处理CLI命令，这些命令不会发送给agent。"""
+    """处理CLI命令,这些命令不会发送给agent."""
 
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
     async def handle_command(self, message_text: str) -> bool:
-        """处理命令，返回True表示已处理，False表示不是命令。"""
+        """处理命令,返回True表示已处理,False表示不是命令."""
         parsed_input = parse_user_input(message_text)
 
         if parsed_input.switch_model:
@@ -27,10 +27,7 @@ class CommandHandler:
                 return await self._handle_todolist_add(message_text)
             elif parsed_input.command == "todolist_delete":
                 return await self._handle_todolist_delete(message_text)
-            elif (
-                parsed_input.command == "context_garbage_clean"
-                or parsed_input.command == "context_thanox"
-            ):
+            elif parsed_input.command == "context_garbage_clean":
                 return await self._handle_context_tool_command(message_text)
             elif parsed_input.command == "queue":
                 return await self._handle_queue_command(message_text)
@@ -70,7 +67,7 @@ class CommandHandler:
         assert todolist_manager is not None
 
         todolist_id = todolist_manager.add_todolist(content)
-        await self._show_success_message(f"成功添加todolist，ID: {todolist_id}")
+        await self._show_success_message(f"成功添加todolist,ID: {todolist_id}")
         return True
 
     async def _handle_todolist_delete(self, message_text: str) -> bool:
@@ -121,7 +118,7 @@ class CommandHandler:
             container.scroll_end(animate=False)
 
     async def _handle_queue_command(self, message_text: str) -> bool:
-        """处理/queue命令，将消息加入排队列表。"""
+        """处理/queue命令,将消息加入排队列表."""
         from linhai.agent import Agent
         from linhai.llm import UserMessage
 
@@ -138,11 +135,11 @@ class CommandHandler:
         queued_msg = UserMessage(message=queue_content)
         agent.queued_messages.append(queued_msg)
 
-        await self._show_success_message("消息已加入排队列表，将在下次回答后处理")
+        await self._show_success_message("消息已加入排队列表,将在下次回答后处理")
         return True
 
     async def _handle_subagent_start_command(self) -> bool:
-        """处理/subagent_start命令，手动启动git diff reviewer。"""
+        """处理/subagent_start命令,手动启动git diff reviewer."""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -154,14 +151,14 @@ class CommandHandler:
         return True
 
     async def _handle_quit_command(self) -> bool:
-        """处理/quit和/exit命令，发送退出信号。"""
+        """处理/quit和/exit命令,发送退出信号."""
         await self.group_chat.send("exit_signal", {"return_code": 0})
         return True
 
     async def _handle_help_command(self) -> bool:
-        """处理/help命令，显示帮助信息。"""
+        """处理/help命令,显示帮助信息."""
         help_text = """可用命令:
-/queue <消息> - 将消息加入排队列表，在下次回答后处理
+/queue <消息> - 将消息加入排队列表,在下次回答后处理
 /todolist_list - 显示所有待办事项
 /todolist_add <内容> - 添加待办事项
 /todolist_delete <id> - 删除待办事项
@@ -173,13 +170,13 @@ class CommandHandler:
 
 上下文工具:
 /context_garbage_clean - 清理大消息
-/context_thanox - 随机删除一半消息"""
+"""
 
         await self._show_runtime_message("INFO", help_text)
         return True
 
     async def _handle_status_command(self) -> bool:
-        """处理/status命令，显示状态信息。"""
+        """处理/status命令,显示状态信息."""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -202,7 +199,7 @@ class CommandHandler:
         return True
 
     async def _handle_switch_model(self, model_name: str) -> bool:
-        """处理@切换模型命令。"""
+        """处理@切换模型命令."""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -215,22 +212,21 @@ class CommandHandler:
             await self._show_success_message(f"已将底层LLM切换为 {model_name!r}")
         else:
             await self._show_error_message(
-                f"错误：LLM名称 {model_name!r} 不存在。可用的LLM包括: {', '.join(agent.llm_names)}"
+                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: {', '.join(agent.llm_names)}"
             )
 
         return True
 
     async def _handle_context_tool_command(self, message_text: str) -> bool:
-        """处理上下文工具命令：/context_garbage_clean 和 /context_thanox。"""
         parsed_input = parse_user_input(message_text)
         if not parsed_input.command:
             await self._show_error_message("错误：无法解析命令")
             return True
 
-        supported_commands = ["context_garbage_clean", "context_thanox"]
+        supported_commands = ["context_garbage_clean"]
         if parsed_input.command not in supported_commands:
             await self._show_error_message(
-                f"错误：不支持的命令 '{parsed_input.command}'，支持的命令有: {', '.join(supported_commands)}"
+                f"错误：不支持的命令 '{parsed_input.command}',支持的命令有: {', '.join(supported_commands)}"
             )
             return True
 

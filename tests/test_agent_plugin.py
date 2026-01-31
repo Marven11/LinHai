@@ -361,7 +361,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             actual_category = (
                 "cleanup"
                 if tool_name
-                in ["context_range_compress", "context_garbage_clean", "context_thanox"]
+                in ["context_range_compress", "context_garbage_clean"]
                 else "other"
             )
 
@@ -418,7 +418,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             {
                 "context_range_compress",
                 "context_garbage_clean",
-                "context_thanox",
             },
         )
 
@@ -532,7 +531,6 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         allowed_tools = [
             "context_range_compress",
             "context_garbage_clean",
-            "context_thanox",
         ]
 
         for tool_name in allowed_tools:
