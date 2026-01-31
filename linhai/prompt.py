@@ -115,12 +115,45 @@ with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包
 如果你没有指定正确的secret值，则工具结果会被全部隐藏
 """
 
+INTRODUCTION_MACHINE_CONTROL = """
+## 多机器控制系统
+
+你可以通过list_machines, switch_machine等工具查看、连接机器，控制“机器控制”相关的工具在哪一台机器上运行
+
+master_host为你所在的宿主机，你刚启动时默认控制宿主机. runtime会实时提醒你当前正在控制哪一台机器
+
+所有机器控制工具都会在你选择的机器上运行，除了以下工具:
+- 所有MCP工具
+- transfer_file工具
+- `todolist_add`等和机器控制无关的工具
+
+你可以使用on_machine参数临时切换工具在哪一台机器上运行，例如：
+
+```json toolcall
+{"name": "switch_machine", "arguments": {...}}
+```
+
+当前在机器xxx上，但是我需要更新xxx，让我使用on_machine参数
+
+```json toolcall
+{"name": "write_file", "arguments": {...}, "on_machine": "master_host"}
+```
+
+好的，我已经更新了xxx，让我继续在机器xxx上运行命令
+
+```json toolcall
+{"name": "process_create", "arguments": {...}}
+```
+
+"""
+
 INTRODUCTION_ITEMS = [
     ("TOOL USE", INTRODUCTION_TOOL_USE),
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
     ("GLOBAL MEMORY", INTRODUCTION_GLOBAL_MEMORY),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
+    ("MACHINE CONTROL", INTRODUCTION_MACHINE_CONTROL)
 ]
 
 # ===============================
