@@ -1130,6 +1130,51 @@ class WithSecretParameterPositionPlugin(Plugin):
         lifecycle.register_on_tool_result(self.on_tool_result)
 
 
+class KimiK25ToolCallPlugin(Plugin):
+    """处理kimi k2.5特殊工具调用格式的插件。
+
+    kimi k2.5有时会使用`<|tool_calls_section_begin|><|tool_call_begin|>`这样的格式调用工具，
+    特征是这个字符串出现在第一行且没有正常的json toolcall格式。
+    插件检测到这种格式时提醒agent正确的工具调用格式。
+    """
+
+    async def after_message_generation(
+        self,
+        _answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
+    ):
+        if not full_response:
+            return
+
+        has_kimi_marker = "<|tool_calls_section_begin|><|tool_call_begin|>" in full_response
+        has_correct_format = "```json toolcall" in full_response
+        
+        if has_kimi_marker and not has_correct_format:
+            agent = self.group_chat.get_members("agent", Agent)
+            if agent:
+                agent.message_processor.add_new_message(
+                    RuntimeMessage(
+                        "警告：检测到kimi k2.5的特殊工具调用格式`<|tool_calls_section_begin|><|tool_call_begin|>`，"
+                        "但没有正确的`json toolcall`代码块格式。\n"
+                        "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
+                        "```json toolcall\n"
+                        "{\"name\": \"tool_name\", \"arguments\": {...}}\n"
+                        "```"
+                    )
+                )
+                await self.group_chat.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(
+                        level="WARNING",
+                        content="检测到kimi k2.5特殊工具调用格式，已提醒模型"
+                    ),
+                )
+
+    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class CommandWhitelistPlugin(Plugin):
     """命令白名单插件，检查process_create命令是否在配置的允许列表中。
 

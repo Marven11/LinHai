@@ -134,6 +134,7 @@ class Lifecycle:
             UnnecessarySedReadPlugin,
             UnnecessaryRunCommandPlugin,
             FileReadWriteConflictPlugin,
+            KimiK25ToolCallPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
 
@@ -158,6 +159,7 @@ class Lifecycle:
             RedStateToolBlockPlugin(self.group_chat),
             AppendingMessagePlugin(self.group_chat),
             FileReadWriteConflictPlugin(self.group_chat),
+            KimiK25ToolCallPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

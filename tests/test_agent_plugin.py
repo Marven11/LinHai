@@ -770,3 +770,67 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             llm_message["reasoning_content"], "reasoning1\nreasoning2\nreasoning3"
         )
+
+
+class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试KimiK25ToolCallPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.add_new_message = MagicMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.group_chat.send_if_exists = AsyncMock()
+        from linhai.agent.plugin import KimiK25ToolCallPlugin
+        self.plugin = KimiK25ToolCallPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_after_message_generation_with_kimi_format_no_json_toolcall(self):
+        """测试检测到kimi特殊格式但没有json toolcall时发送警告。"""
+        full_response = "<|tool_calls_section_begin|><|tool_call_begin|>\n{\"name\": \"tool1\", \"arguments\": {}}"
+        
+        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
+        
+        self.agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("检测到kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.group_chat.send_if_exists.assert_called_once()
+
+    async def test_after_message_generation_with_kimi_format_with_json_toolcall(self):
+        """测试检测到kimi特殊格式但已有json toolcall时不警告。"""
+        full_response = "<|tool_calls_section_begin|><|tool_call_begin|>\n```json toolcall\n{\"name\": \"tool1\", \"arguments\": {}}\n```"
+        
+        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
+        
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
+
+    async def test_after_message_generation_without_kimi_format(self):
+        """测试没有kimi特殊格式时不处理。"""
+        full_response = "正常的工具调用"
+        
+        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
+        
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
+
+    async def test_after_message_generation_empty_response(self):
+        """测试空响应时不处理。"""
+        full_response = ""
+        
+        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
+        
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
