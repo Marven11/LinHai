@@ -89,6 +89,8 @@ unittest 失败时，必须分析
     - 调用两次step1并在调用step2时使用第一次调用step1的range_clean_id，提供第一次调用step1范围内的id，正常删除并invalidate id
     - 调用两次step1并在调用step2时使用第一次调用step1的range_clean_id，提供超出第一次调用step1范围内的id（如提供第二次调用step1范围内的id），提示错误
     - 正确调用step1但是调用step2时提供了错误的id，提示错误
+- [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
+  - TODO 需要仔细规划
 
 # 注意
 
