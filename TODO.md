@@ -67,8 +67,6 @@ unittest 失败时，必须分析
 - [ ] 将PLANNING固化为内置功能，通过--plan参数开启
 - [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
-- [ ] 分离plugin.py到一个文件夹中，同类的放在一起。需要重新运行unittest以确认没有破坏性更改
-  - 一个个移动插件，以避免大量输出或错误输出
 - [ ] 分离context_garbage_clean为context_garbage_clean_step1和context_garbage_clean_step2
   - 问题：kimi k2.5完全无法理解如何进行上下文压缩，会在调用一次context_garbage_clean后又调用一次而不是输出start_id和end_id，导致context_garbage_clean失败
   - 破坏性重构
