@@ -2,17 +2,21 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal, Union
+from typing import TYPE_CHECKING, Literal, Union
 import reprlib
 import time
 
 from linhai.agent import Agent
+from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import FileContentMessage, RuntimeMessage, GlobalMemory, PathMemory
 from linhai.group_chat import GroupChat
 from linhai.machine_control import MachineControl
 from linhai.utils import CliRuntimeNotice
 
 from .helpers import READ_FILE_COMMANDS, is_small_file, is_already_read, is_existing_file
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent as linhai_agent
 
 
 class Plugin(ABC):
@@ -379,7 +383,7 @@ class FileReadWriteConflictPlugin(Plugin):
 
         return None
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_on_tool_result(self.on_tool_result)
@@ -421,6 +425,6 @@ class DirectoryChangePlugin(Plugin):
                 if not has_duplicate:
                     agent.message_processor.add_new_message(PathMemory(filepath))
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到before_message_generation回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)

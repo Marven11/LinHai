@@ -19,6 +19,25 @@ if TYPE_CHECKING:
     from .main import Agent
 
 
+def _extract_text_content(content: Any) -> str:
+    """从可能是字符串或列表的内容中提取纯文本。
+    
+    处理OpenAI API返回的多模态内容，将列表格式的内容转换为纯文本。
+    """
+    if isinstance(content, str):
+        return content
+    
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                if item.get("type") == "text":
+                    text_parts.append(str(item.get("text", "")))
+        return "".join(text_parts)
+    
+    return str(content)
+
+
 class AgentToolcall:
     """工具调用处理器，负责管理工具注册、调用和结果处理。"""
 
@@ -313,12 +332,12 @@ class AgentToolcall:
             result_content = str(tool_result)
 
         tokenizer = tiktoken.get_encoding("cl100k_base")
-        token_count = len(tokenizer.encode(result_content))
+        token_count = len(tokenizer.encode(_extract_text_content(result_content)))
 
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:
             runtime_msg = self._split_and_save_large_output(
-                result_content, token_count, tool_call.function_name, single_tool_limit
+                _extract_text_content(result_content), token_count, tool_call.function_name, single_tool_limit
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
@@ -338,7 +357,7 @@ class AgentToolcall:
 
         if self.current_round_token_count + token_count > self.max_token_limit:
             runtime_msg = self._save_output_to_file(
-                result_content, token_count, tool_call.function_name, self.current_round_token_count
+                _extract_text_content(result_content), token_count, tool_call.function_name, self.current_round_token_count
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
@@ -394,7 +413,7 @@ class AgentToolcall:
 
                 llm_msg = tool_result.to_llm_message()
                 assert "content" in llm_msg
-                formatted_content = llm_msg["content"]
+                formatted_content = _extract_text_content(llm_msg["content"])
                 await self.agent.lifecycle.trigger_on_tool_result(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,

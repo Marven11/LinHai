@@ -3,9 +3,10 @@
 import re
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 
 from linhai.agent import Agent
+from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage, RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage, SpoofedReasoningMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
@@ -14,6 +15,9 @@ from linhai.utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 from .helpers import JsonValue
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent as linhai_agent
 
 
 class Plugin(ABC):
@@ -85,7 +89,7 @@ class WaitingUserPlugin(Plugin):
             else:
                 agent.state = "waiting_user"
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -106,7 +110,7 @@ class WrongEndPlugin(Plugin):
                 RuntimeMessage(f"警告: 输出了错误的token: {regex_result!r}")
             )
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -128,7 +132,7 @@ class EndThinkPlugin(Plugin):
                 return True
         return False
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
         lifecycle.register_after_token_generation(self.after_token_generation)
 
@@ -234,7 +238,7 @@ class JsonCodeBlockPlugin(Plugin):
                 "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
             )
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -275,7 +279,7 @@ class KimiK25ToolCallPlugin(Plugin):
                     ),
                 )
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
@@ -315,6 +319,6 @@ class RuntimeImitationPlugin(Plugin):
 
         return False
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
         lifecycle.register_after_token_generation(self.after_token_generation)

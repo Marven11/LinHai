@@ -2,13 +2,17 @@
 
 import re
 from abc import ABC, abstractmethod
-from typing import Literal, Union
+from typing import TYPE_CHECKING, Literal, Union
 
 from linhai.agent import Agent
+from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent as linhai_agent
 
 
 class Plugin(ABC):
@@ -51,7 +55,7 @@ class WithSecretParameterPositionPlugin(Plugin):
             )
         return None
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到on_tool_result回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 
@@ -95,7 +99,7 @@ class MissingWithSecretWarningPlugin(Plugin):
                 )
         return None
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到on_tool_result回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 

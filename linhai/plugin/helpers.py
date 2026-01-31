@@ -3,9 +3,12 @@
 from pathlib import Path
 import reprlib
 import time
-from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union, Literal
+from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union, Literal, TYPE_CHECKING
 
 from linhai.agent.base import FileContentMessage
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent as linhai_agent
 
 JsonValue: TypeAlias = Union[
     str, int, float, bool, List["JsonValue"], Dict[str, "JsonValue"], None
@@ -37,7 +40,7 @@ async def is_small_file(filepath: str) -> bool:
         return False
 
 
-async def is_already_read(agent: "Agent", filepath: str) -> bool:
+async def is_already_read(agent: "linhai_agent", filepath: str) -> bool:
     """检查文件是否已被读取（最新FileContentMessage内容与硬盘文件内容相同）。"""
     try:
         abs_path = Path(filepath).resolve()

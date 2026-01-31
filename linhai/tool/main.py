@@ -212,6 +212,7 @@ class ToolManager:
             if isinstance(result, Message):
                 llm_msg = result.to_llm_message()
                 content = llm_msg.get("content", "")
+                assert isinstance(content, str), "Possible unfiltered complex content: " + repr(content)
                 processed_content = content
                 result_type = (
                     ToolResultFailed

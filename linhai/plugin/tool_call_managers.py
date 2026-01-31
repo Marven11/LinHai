@@ -3,9 +3,10 @@
 import re
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from linhai.agent import Agent
+from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls
@@ -13,6 +14,9 @@ from linhai.llm import Answer, OpenAi
 from linhai.utils import CliRuntimeNotice
 
 from .helpers import JsonValue
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent as linhai_agent
 
 
 class Plugin(ABC):
@@ -108,7 +112,7 @@ class PromptFastAgentPlugin(Plugin):
         self.speeding_counter = 0
         return False
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册before_agent_loop和after_token_generation回调。"""
         lifecycle.register_before_agent_loop(self.before_agent_loop)
         lifecycle.register_after_token_generation(self.after_token_generation)
@@ -185,7 +189,7 @@ class WeirdTokenPlugin(Plugin):
                 return True
         return False
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
         lifecycle.register_after_token_generation(self.after_token_generation)
 
@@ -226,7 +230,7 @@ class SingleToolCallReminderPlugin(Plugin):
                 None, source="single_tool_call_reminder", sort_value=0
             )
 
-    def register(self, lifecycle: "linhai_agent.Lifecycle"):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
