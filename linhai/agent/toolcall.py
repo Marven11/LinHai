@@ -155,8 +155,15 @@ class AgentToolcall:
         tokenizer = tiktoken.get_encoding("cl100k_base")
         tokens = tokenizer.encode(result_content)
         parts = []
-        for i in range(0, len(tokens), single_tool_limit // 2):
-            part_tokens = tokens[i:i + single_tool_limit // 2]
+        total_tokens = len(tokens)
+        chunk_size = total_tokens // 3
+        for i in range(3):
+            start = i * chunk_size
+            if i == 2:
+                end = total_tokens
+            else:
+                end = (i + 1) * chunk_size
+            part_tokens = tokens[start:end]
             parts.append(tokenizer.decode(part_tokens))
 
         timestamp = int(time.time())
