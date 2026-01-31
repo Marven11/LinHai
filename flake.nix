@@ -56,6 +56,7 @@
               textual-autocomplete
               chardet
               bashlex
+              tiktoken
               pkgs.nodejs # for MCPs like `npx -y chrome-devtools-mcp@latest`
             ];
 
