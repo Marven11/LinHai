@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 import asyncio
 
-from linhai.agent.plugin import OnlyReasoningPlugin
+from linhai.plugin import OnlyReasoningPlugin
 from linhai.group_chat import GroupChat
 from linhai.llm import Answer, OpenAi
 from linhai.agent.base import RuntimeMessage

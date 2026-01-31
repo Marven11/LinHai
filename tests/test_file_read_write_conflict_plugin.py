@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
 import tempfile
 
-from linhai.agent.plugin import FileReadWriteConflictPlugin
+from linhai.plugin import FileReadWriteConflictPlugin
 from linhai.group_chat import GroupChat
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolResultSuccess

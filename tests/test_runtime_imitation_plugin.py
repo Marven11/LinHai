@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.agent.plugin import RuntimeImitationPlugin
+from linhai.plugin import RuntimeImitationPlugin
 from linhai.llm import OpenAi
 
 

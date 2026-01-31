@@ -3,7 +3,7 @@
 import unittest
 import time
 from unittest.mock import MagicMock, AsyncMock
-from linhai.agent.plugin import (
+from linhai.plugin import (
     WeirdTokenPlugin,
     DirectoryChangePlugin,
     PromptFastAgentPlugin,
@@ -147,7 +147,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
-        from linhai.agent.plugin import SingleToolCallReminderPlugin
+        from linhai.plugin import SingleToolCallReminderPlugin
 
         self.plugin = SingleToolCallReminderPlugin(self.group_chat)
         self.answer = MagicMock()
@@ -666,7 +666,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        from linhai.agent.plugin import PreviousReasoningPlugin
+        from linhai.plugin import PreviousReasoningPlugin
         from linhai.llm import AssistantMessage
 
         self.agent = MagicMock()
@@ -783,7 +783,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
-        from linhai.agent.plugin import KimiK25ToolCallPlugin
+        from linhai.plugin import KimiK25ToolCallPlugin
         self.plugin = KimiK25ToolCallPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []

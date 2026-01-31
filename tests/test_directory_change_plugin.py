@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
-from linhai.agent.plugin import DirectoryChangePlugin
+from linhai.plugin import DirectoryChangePlugin
 from linhai.agent.base import PathMemory, GlobalMemory
 from linhai.group_chat import GroupChat
 

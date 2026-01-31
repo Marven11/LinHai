@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
-from linhai.agent.plugin import UnnecessaryRunCommandPlugin
+from linhai.plugin import UnnecessaryRunCommandPlugin
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import ToolCallMessage
 
@@ -113,8 +113,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -139,8 +139,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -165,8 +165,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -191,8 +191,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -217,8 +217,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -243,8 +243,8 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
-        with patch("linhai.agent.plugin.Path.is_file", return_value=True):
-            with patch("linhai.agent.plugin.is_already_read", return_value=True):
+        with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
+            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,

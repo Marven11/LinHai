@@ -119,7 +119,7 @@ class Lifecycle:
 
     def _register_default_plugins(self):
         """注册默认的Plugin。"""
-        from .plugin import (
+        from linhai.plugin import (
             WaitingUserPlugin,
             WrongEndPlugin,
             PromptFastAgentPlugin,
@@ -147,7 +147,7 @@ class Lifecycle:
             EndThinkPlugin(self.group_chat),
             OnlyReasoningPlugin(self.group_chat),
             # 不兼容deepseek api，可能因为最后一个消息是assistant消息
-            # PreviousReasoningPlugin(self.group_chat),
+            # linhai.plugin.PreviousReasoningPlugin(self.group_chat),
             ToolCallInReasoningPlugin(self.group_chat),
             SingleToolCallReminderPlugin(self.group_chat),
             JsonCodeBlockPlugin(self.group_chat),

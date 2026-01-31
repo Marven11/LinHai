@@ -6,7 +6,7 @@ from typing import Dict, List, Union, TypedDict
 
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat
-from linhai.agent.plugin import Plugin
+from linhai.plugin import Plugin
 import linhai.agent as linhai_agent
 from ..llm import Answer
 from ..utils import CliRuntimeNotice

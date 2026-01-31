@@ -7,7 +7,7 @@ import subprocess
 
 
 from linhai.agent.base import RuntimeMessage
-from linhai.agent.plugin import Plugin
+from linhai.plugin import Plugin
 from linhai.llm import Answer, UserMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.main import SubAgent
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from linhai.agent import Agent, Lifecycle
-    from linhai.agent.plugin import Plugin  # pylint: disable=reimported
+    from linhai.plugin import Plugin  # pylint: disable=reimported
     from linhai.subagent import SubAgentManager  # pylint: disable=reimported
     from linhai.subagent.main import SubAgent  # pylint: disable=reimported
     from linhai.tool.general import (

@@ -6,7 +6,7 @@ import asyncio
 
 from linhai.llm import ToolCallMessage
 from linhai.utils import CliRuntimeNotice, generate_id
-from linhai.agent.plugin import Plugin
+from linhai.plugin import Plugin
 from linhai.agent.base import RuntimeMessage
 from linhai.subagent.main import SubAgent
 from .prompts import VIOLATION_CHECKER_SYSTEM_PROMPT, VIOLATION_CHECKER_USER_PROMPT
@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from linhai.agent import Agent, Lifecycle
-    from linhai.agent.plugin import Plugin  # pylint: disable=reimported
+    from linhai.plugin import Plugin  # pylint: disable=reimported
     from linhai.subagent import SubAgentManager  # pylint: disable=reimported
     from linhai.subagent.main import SubAgent  # pylint: disable=reimported
     from linhai.utils import CliRuntimeNotice, generate_id  # pylint: disable=reimported

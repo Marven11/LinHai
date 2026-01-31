@@ -125,13 +125,13 @@ async def create_agent_from_config(
         TaskPlanningPromptPlugin(context["group_chat"]).register(agent.lifecycle)
         TaskPlanningEnforcementPlugin(context["group_chat"]).register(agent.lifecycle)
     if context["config"].agent.enable_directory_change_detection:
-        from .plugin import DirectoryChangePlugin
+        from linhai.plugin import DirectoryChangePlugin
 
         DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
 
     # 注册CommandWhitelistPlugin如果配置了allowed_commands
     if context["config"].agent.allowed_commands:
-        from .plugin import CommandWhitelistPlugin
+        from linhai.plugin import CommandWhitelistPlugin
 
         CommandWhitelistPlugin(context["group_chat"], context["config"]).register(
             agent.lifecycle

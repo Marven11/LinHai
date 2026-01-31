@@ -5,7 +5,7 @@ import os
 
 from linhai.llm import ToolCallMessage, Answer
 from linhai.utils import CliRuntimeNotice
-from linhai.agent.plugin import Plugin
+from linhai.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
 
 from typing import TYPE_CHECKING, Literal, Union

@@ -6,7 +6,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from pathlib import Path
 
-from linhai.agent.plugin import UnnecessarySedReadPlugin
+from linhai.plugin import UnnecessarySedReadPlugin
 from linhai.llm import ToolCallMessage
 from linhai.agent.base import FileContentMessage
 from linhai.agent.base import RuntimeMessage
@@ -54,7 +54,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             self.plugin.on_tool_result
         )
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     def test_not_read_file_with_sed(self, mock_path):
         """测试非read_file_with_sed工具调用。"""
         tool_call = ToolCallMessage(
@@ -76,7 +76,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     def test_failed_tool_call(self, mock_path):
         """测试失败的工具调用。"""
         tool_call = ToolCallMessage(
@@ -85,12 +85,13 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             assert_success=True,
             with_secret=None,
         )
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file_with_sed", 0, "failed", "test result", {"filepath": "/tmp/test.txt"}, None, False)
+            self.plugin.on_tool_result("read_file_with_sed", 0, "failed", "test result", {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     def test_no_filepath(self, mock_path):
         """测试没有文件路径的情况。"""
         tool_call = ToolCallMessage(
@@ -112,7 +113,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_large_result(self, mock_open, mock_path):
         """测试结果长度大于等于10000字符的情况。"""
@@ -143,7 +144,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("警告：检测到不必要的sed读取", result.message)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_file_not_exists(self, mock_open, mock_path):
         """测试文件不存在的情况。"""
@@ -173,7 +174,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("警告：检测到不必要的sed读取", result.message)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", side_effect=IOError("文件读取错误"))
     def test_file_read_error(self, mock_open, mock_path):
         """测试文件读取错误的情况。"""
@@ -198,7 +199,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line\n" * 2100)
     def test_large_line_count(self, mock_open, mock_path):
         """测试文件行数大于等于1600行的情况。"""
@@ -223,7 +224,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_first_call(self, mock_open, mock_path):
         """测试第一次调用。"""
@@ -257,7 +258,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIn("警告：检测到不必要的sed读取", result.message)
         self.assertEqual(self.plugin.warning_count, 1)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch(
         "builtins.open", new_callable=mock_open, read_data=b"line1\\nline2\\nline3\\n"
     )
@@ -265,7 +266,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self, mock_open, mock_path
     ):
         """测试当没有完整读取文件时，DuplicateFileReadPlugin允许read_file_with_sed。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -292,14 +293,14 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "test content", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "test content", {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为没有完整读取
         self.assertIsNone(result)
         self.group_chat.send_if_exists.assert_not_called()
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch(
         "builtins.open", new_callable=mock_open, read_data=b"line1\\nline2\\nline3\\n"
     )
@@ -307,7 +308,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self, mock_open, mock_path
     ):
         """测试DuplicateFileReadPlugin在重复读取相同内容时阻止read_file。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -337,7 +338,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -348,7 +349,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
 
         # 应该被阻止，因为内容相同且是第二次重复
@@ -359,11 +360,11 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIn("错误：你已经读取过文件", result2.message)
         self.group_chat.send_if_exists.assert_called_once()
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_allows_first_read(self, mock_open, mock_path):
         """测试第一次读取文件应允许。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -389,19 +390,19 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为没有历史消息
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_allows_different_content(
         self, mock_open, mock_path
     ):
         """测试读取相同文件但内容不同应允许。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -430,19 +431,19 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为内容不同
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_ignores_on_non_master_host(
         self, mock_open, mock_path
     ):
         """测试不在master_host上时应忽略。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -474,7 +475,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为不在master_host上
@@ -483,13 +484,13 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         # 恢复master_host
         self.mock_machine_control.target_machine = "master_host"
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_handles_multiple_messages_latest_same(
         self, mock_open, mock_path
     ):
         """测试多个历史消息，最新相同应拦截。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -525,7 +526,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -536,7 +537,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
 
         # 应该被阻止，因为最新消息内容相同且是第二次重复
@@ -545,13 +546,13 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIn("错误：你已经读取过文件", result2.message)
         self.group_chat.send_if_exists.assert_called_once()
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_handles_multiple_messages_latest_different(
         self, mock_open, mock_path
     ):
         """测试多个历史消息，最新不同应允许。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -590,19 +591,19 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为最新消息内容不同
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_handles_resolve_error_current_path(
         self, mock_open, mock_path
     ):
         """测试当前文件路径解析失败时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -623,20 +624,21 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/some/file.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 路径解析失败，应返回None
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_handles_resolve_error_historical_path(
         self, mock_open, mock_path
     ):
         """测试历史消息文件路径解析失败时跳过该消息。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -699,7 +701,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -711,7 +713,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
         )
 
         # 应该拦截，因为好消息的内容与当前读取相同且是第二次重复
@@ -722,7 +724,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):
         """测试工具调用失败时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -733,15 +735,16 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "failed", "result", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "failed", "result", {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_non_read_file_tool(self):
         """测试非read_file工具时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -752,15 +755,16 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_missing_filepath(self):
         """测试缺少filepath参数时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -771,15 +775,16 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_non_file_content_message(self):
         """测试tool_result不是FileContentMessage时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -790,18 +795,19 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "just a string result", {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", "just a string result", {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
-    @patch("linhai.agent.plugin.Path")
+    @patch("pathlib.Path")
     def test_duplicate_file_read_plugin_returns_none_on_value_error_resolve(
         self, mock_path
     ):
         """测试当前文件路径解析抛出ValueError时返回None。"""
-        from linhai.agent.plugin import DuplicateFileReadPlugin
+        from linhai.plugin import DuplicateFileReadPlugin
 
         plugin = DuplicateFileReadPlugin(self.group_chat)
 
@@ -818,8 +824,9 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             with_secret=None,
         )
 
+        absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": "/tmp/test.txt"}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)

@@ -5,7 +5,7 @@ Test command whitelist functionality.
 import unittest
 from unittest.mock import Mock
 from linhai.config import Config
-from linhai.agent.plugin import CommandWhitelistPlugin
+from linhai.plugin import CommandWhitelistPlugin
 from linhai.tool.base import ToolResultFailed
 
 
