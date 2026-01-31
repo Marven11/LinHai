@@ -64,6 +64,9 @@ unittest 失败时，必须分析
     - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
+- [ ] 将PLANNING固化为内置功能，通过--plan参数开启
+- [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
+- [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 分离plugin.py到一个文件夹中，同类的放在一起。需要重新运行unittest以确认没有破坏性更改
   - 一个个移动插件，以避免大量输出或错误输出
 
