@@ -118,17 +118,12 @@ class SshMachineControl:
                 ),
             )
             cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
-            try:
-                cleanup_process = await asyncio.create_subprocess_exec(
-                    *cleanup_cmd,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await cleanup_process.wait()
-            except (
-                Exception
-            ):  # pylint: disable=broad-exception-caught  # pylint: disable=broad-exception-caught
-                pass
+            cleanup_process = await asyncio.create_subprocess_exec(
+                *cleanup_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(cleanup_process.wait(), timeout=60.0)
             raise RuntimeError(f"写入远程文件失败: {error_msg}")
 
         return remote_path
@@ -175,111 +170,98 @@ class SshMachineControl:
             "ConnectTimeout=10",
         ]
 
-        try:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
-                ),
-            )
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
+            ),
+        )
 
-            self.trojan_path = Path(tempfile.mktemp(suffix=".py"))
-            trojan_file_path = Path(__file__).parent / "trojan.py"
-            if not trojan_file_path.exists():
-                raise FileNotFoundError(f"trojan.py文件不存在: {trojan_file_path}")
-            trojan_content = trojan_file_path.read_text(
-                encoding="utf-8"
-            )  # pylint: disable=unspecified-encoding
-            self.trojan_path.write_text(trojan_content, encoding="utf-8")
+        self.trojan_path = Path(tempfile.mktemp(suffix=".py"))
+        trojan_file_path = Path(__file__).parent / "trojan.py"
+        if not trojan_file_path.exists():
+            raise FileNotFoundError(f"trojan.py文件不存在: {trojan_file_path}")
+        trojan_content = trojan_file_path.read_text(
+            encoding="utf-8"
+        )  # pylint: disable=unspecified-encoding
+        self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"检查远程机器Python版本: {self.host}:{self.port}",
-                ),
-            )
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"检查远程机器Python版本: {self.host}:{self.port}",
+            ),
+        )
 
-            if not await self._check_python_version(ssh_cmd):
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
-                    ),
-                )
-                if self.trojan_path and self.trojan_path.exists():
-                    self.trojan_path.unlink(missing_ok=True)
-                return False
-
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
-                ),
-            )
-
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"复制控制程序到远程机器: {self.host}:{self.port}",
-                ),
-            )
-
-            remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
-            self.remote_trojan_path = remote_trojan_path
-
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"控制程序已复制到远程机器: {self.host}:{self.port}",
-                ),
-            )
-
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
-                ),
-            )
-
-            if not await self._start_trojan_process(ssh_cmd, remote_trojan_path):
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"启动远程控制程序失败: {self.host}:{self.port}",
-                    ),
-                )
-                await self._cleanup_remote_file(ssh_cmd, remote_trojan_path)
-                if self.trojan_path and self.trojan_path.exists():
-                    self.trojan_path.unlink(missing_ok=True)
-                return False
-
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"远程控制程序启动成功: {self.host}:{self.port}",
-                ),
-            )
-
-            self.reader_task = asyncio.create_task(self._read_responses())
-
-            return True
-
-        except Exception as e:
+        if not await self._check_python_version(ssh_cmd):
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
-                    content=f"SSH连接失败: {self.host}:{self.port}, 错误: {str(e)}",
+                    content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
                 ),
             )
-            await self._cleanup_on_connect_failure(ssh_cmd)
+            if self.trojan_path and self.trojan_path.exists():
+                self.trojan_path.unlink(missing_ok=True)
             return False
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
+            ),
+        )
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"复制控制程序到远程机器: {self.host}:{self.port}",
+            ),
+        )
+
+        remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
+        self.remote_trojan_path = remote_trojan_path
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"控制程序已复制到远程机器: {self.host}:{self.port}",
+            ),
+        )
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
+            ),
+        )
+
+        if not await self._start_trojan_process(ssh_cmd, remote_trojan_path):
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="ERROR",
+                    content=f"启动远程控制程序失败: {self.host}:{self.port}",
+                ),
+            )
+            if self.trojan_path and self.trojan_path.exists():
+                self.trojan_path.unlink(missing_ok=True)
+            return False
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"远程控制程序启动成功: {self.host}:{self.port}",
+            ),
+        )
+
+        self.reader_task = asyncio.create_task(self._read_responses())
+
+        return True
 
     async def _send_request(
         self, method: str, params: Dict[str, object]
@@ -322,9 +304,8 @@ class SshMachineControl:
         Returns:
             工具执行结果
         """
-        response = await self._send_request(name, args)  # 现在response是整个响应
+        response = await self._send_request(name, args)
         if "error" in response:
-            # 错误响应
             error_content = response["error"]
             if isinstance(error_content, dict) and "message" in error_content:
                 error_message = error_content["message"]
@@ -351,9 +332,10 @@ class SshMachineControl:
                 response = cast(JsonRpcResponse, json.loads(line.decode()))
                 response_id = response.get("id")
                 if response_id is not None:
-                    self.results[response_id] = response  # 存储整个响应
+                    self.results[response_id] = response
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                # 记录异常但继续循环，避免因单个响应解析失败而终止
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -370,143 +352,10 @@ class SshMachineControl:
                 await self.reader_task
             except asyncio.CancelledError:
                 pass
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO", content=f"正在关闭SSH连接: {self.host}:{self.port}"
-            ),
-        )
 
         if self.process:
-            try:
-                self.process.terminate()
-            except ProcessLookupError:
-                pass
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content=f"终止进程时出错: {str(e)}"
-                    ),
-                )
-            finally:
-                try:
-                    await self.process.wait()
-                except Exception as e:
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING", content=f"等待进程结束时出错: {str(e)}"
-                        ),
-                    )
-
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO", content=f"远程进程已终止: {self.host}:{self.port}"
-            ),
-        )
-
-        if self.trojan_path and self.trojan_path.exists():
-            try:
-                self.trojan_path.unlink()
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"
-                    ),
-                )
-
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO", content=f"本地临时文件已清理: {self.host}:{self.port}"
-            ),
-        )
-
-        if self.remote_trojan_path:
-            try:
-                ssh_cmd = [
-                    "ssh",
-                    f"{self.username}@{self.host}",
-                    "-p",
-                    str(self.port),
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "ConnectTimeout=5",
-                ]
-                cleanup_cmd = ssh_cmd + [f"rm -f {self.remote_trojan_path}"]
-                process = await asyncio.create_subprocess_exec(
-                    *cleanup_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                try:
-                    stdout, stderr = (
-                        await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                            process.communicate(), timeout=10
-                        )
-                    )  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                    if process.returncode != 0:
-                        error_msg = stderr.decode()
-                        await self.group_chat.send_if_exists(
-                            "ui_log",
-                            CliRuntimeNotice(
-                                level="WARNING",
-                                content=f"删除远程临时文件失败，返回码: {process.returncode}, 错误: {error_msg}",
-                            ),
-                        )
-                        await self.group_chat.send_if_exists(
-                            "ui_log",
-                            CliRuntimeNotice(
-                                level="WARNING",
-                                content=f"删除远程临时文件失败: {self.host}:{self.port}",
-                            ),
-                        )
-                    else:
-                        await self.group_chat.send_if_exists(
-                            "ui_log",
-                            CliRuntimeNotice(
-                                level="INFO",
-                                content=f"远程临时文件已清理: {self.host}:{self.port}",
-                            ),
-                        )
-                except asyncio.TimeoutError:
-                    process.kill()
-                    await process.wait()
-
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING",
-                            content=f"删除远程临时文件超时: {self.host}:{self.port}",
-                        ),
-                    )
-                except Exception as e:
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="ERROR",
-                            content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}",
-                        ),
-                    )
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"删除远程临时文件时出错: {self.host}:{self.port}, 错误: {str(e)}",
-                    ),
-                )
-
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO", content=f"SSH连接已完全关闭: {self.host}:{self.port}"
-            ),
-        )
+            self.process.terminate()
+            await asyncio.wait_for(self.process.wait(), timeout=60.0)
 
     async def http_request(
         self,
@@ -550,20 +399,15 @@ class SshMachineControl:
         if isinstance(result, ToolResultFailed):
             return result
         
-        try:
-            # 解析远程返回的JSON数据
-            import json
-            data = json.loads(result.content)
-            pid = data.get("pid", "")
-            stdout = data.get("stdout", "")
-            stderr = data.get("stderr", "")
-            exit_note = data.get("exit_note", "")
-            
-            # 构建与master_host一致的返回格式
-            formatted_content = f"<<pid>>{pid}<<pid>><<stdout>>{exit_note}{stdout}<<stdout>><<stderr>>{stderr}<<stderr>>"
-            return ToolResultSuccess(content=formatted_content)
-        except Exception as e:
-            return ToolResultFailed(content=f"解析远程返回数据失败: {e}")
+        import json
+        data = json.loads(result.content)
+        pid = data.get("pid", "")
+        stdout = data.get("stdout", "")
+        stderr = data.get("stderr", "")
+        exit_note = data.get("exit_note", "")
+        
+        formatted_content = f"<<pid>>{pid}<<pid>><<stdout>>{exit_note}{stdout}<<stdout>><<stderr>>{stderr}<<stderr>>"
+        return ToolResultSuccess(content=formatted_content)
 
     async def process_wait(
         self, pid: str, timeout: float
@@ -618,16 +462,10 @@ class SshMachineControl:
         """读取远程终端屏幕内容"""
         result = await self.call_tool("terminal_read_screen", {"term_id": terminal_id})
         if isinstance(result, ToolResultSuccess):
-            # 解码base64
             import base64
-
-            try:
-                decoded_bytes = base64.b64decode(result.content)
-                # 将字节流解码为字符串，使用utf-8并用替换字符替换无法解码的字节
-                decoded_str = decoded_bytes.decode("utf-8", errors="replace")
-                return ToolResultSuccess(content=decoded_str)
-            except Exception as e:
-                return ToolResultFailed(content=f"解码终端屏幕内容失败: {e}")
+            decoded_bytes = base64.b64decode(result.content)
+            decoded_str = decoded_bytes.decode("utf-8", errors="replace")
+            return ToolResultSuccess(content=decoded_str)
         return result
 
     async def terminal_close(
@@ -667,10 +505,10 @@ class SshMachineControl:
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed:
         """替换文件内容"""
-        params: dict[str, str | int] = {"filepath": filepath, "old": old, "new": new}
+        params: Dict[str, Any] = {"filepath": filepath, "old": old, "new": new}
         if replace_times is not None:
             params["replace_times"] = replace_times
-        return await self.call_tool("replace_file_content", params)  # type: ignore
+        return await self.call_tool("replace_file_content", params)
 
     async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         """列出指定文件夹中的文件"""
@@ -710,100 +548,67 @@ class SshMachineControl:
         Returns:
             执行结果
         """
-        try:
-            import base64
-            import math
+        import base64
+        import math
 
-            chunk_size = 32 * 1024
-            num_chunks = math.ceil(len(data) / chunk_size)
+        chunk_size = 32 * 1024
+        num_chunks = math.ceil(len(data) / chunk_size)
 
-            temp_dir_result = await self.call_tool(
-                "create_temp_dir", {"prefix": "upload_"}
+        temp_dir_result = await self.call_tool(
+            "create_temp_dir", {"prefix": "upload_"}
+        )
+        if isinstance(temp_dir_result, ToolResultFailed):
+            return ToolResultFailed(
+                content=f"创建临时目录失败: {temp_dir_result.content}"
             )
-            if isinstance(temp_dir_result, ToolResultFailed):
-                return ToolResultFailed(
-                    content=f"创建临时目录失败: {temp_dir_result.content}"
+        temp_dir = temp_dir_result.content
+
+        max_concurrent = 16
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def upload_chunk(
+            chunk_index: int, chunk_data: bytes
+        ) -> tuple[int, str]:
+            async with semaphore:
+                chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
+                chunk_filename = f"chunk_{chunk_index:010d}"
+                chunk_path = f"{temp_dir}/{chunk_filename}"
+                result = await self.call_tool(
+                    "upload_chunk",
+                    {
+                        "chunk_data_base64": chunk_base64,
+                        "filepath": chunk_path,
+                    },
                 )
-            temp_dir = temp_dir_result.content
+                if isinstance(result, ToolResultFailed):
+                    raise RuntimeError(f"上传块失败: {result.content}")
+                return (chunk_index, chunk_path)
 
-            max_concurrent = 16
-            max_retries = 3
-            done_chunks = 0
-            semaphore = asyncio.Semaphore(max_concurrent)
+        chunk_paths = []
+        tasks = []
+        for i in range(num_chunks):
+            start = i * chunk_size
+            end = min((i + 1) * chunk_size, len(data))
+            chunk_data = data[start:end]
+            task = asyncio.create_task(upload_chunk(i, chunk_data))
+            tasks.append(task)
 
-            async def upload_chunk_with_retry(
-                chunk_index: int, chunk_data: bytes
-            ) -> tuple[int, str]:
-                nonlocal done_chunks
-                for attempt in range(max_retries):
-                    try:
-                        async with semaphore:
-                            chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
-                            chunk_filename = f"chunk_{chunk_index:010d}"
-                            chunk_path = f"{temp_dir}/{chunk_filename}"
-                            result = await self.call_tool(
-                                "upload_chunk",
-                                {
-                                    "chunk_data_base64": chunk_base64,
-                                    "filepath": chunk_path,
-                                },
-                            )
-                            if isinstance(result, ToolResultSuccess):
-                                done_chunks += 1
-                                if done_chunks % 50 == 10:
-                                    await self.group_chat.send_if_exists(
-                                        "ui_log",
-                                        CliRuntimeNotice(
-                                            level="INFO",
-                                            content=f"上传文件已完成: {done_chunks}/{num_chunks}",
-                                        ),
-                                    )
-                                return (chunk_index, chunk_path)
-                            else:
-                                if attempt == max_retries - 1:
-                                    raise RuntimeError(f"上传块失败: {result.content}")
-                    except Exception as e:
-                        if attempt == max_retries - 1:
-                            raise e
-                        await asyncio.sleep(1.0 * (attempt + 1))
-                raise RuntimeError("所有重试都失败")
+        for task in tasks:
+            chunk_index, chunk_path = await task
+            chunk_paths.append((chunk_index, chunk_path))
 
-            chunk_paths = []
-            tasks = []
-            for i in range(num_chunks):
-                start = i * chunk_size
-                end = min((i + 1) * chunk_size, len(data))
-                chunk_data = data[start:end]
-                task = asyncio.create_task(upload_chunk_with_retry(i, chunk_data))
-                tasks.append(task)
-                await asyncio.sleep(0)
-
-            for i, task in enumerate(tasks):
-                try:
-                    chunk_index, chunk_path = await task
-                    chunk_paths.append((chunk_index, chunk_path))
-                except Exception as e:
-                    for t in tasks[i + 1 :]:
-                        t.cancel()
-                    await asyncio.gather(*tasks[i + 1 :], return_exceptions=True)
-                    await self.call_tool("remove_path", {"path": temp_dir})
-                    return ToolResultFailed(content=f"上传块失败: {e}")
-
-            chunk_paths.sort(key=lambda x: x[0])
-            chunk_paths_sorted = [path for _, path in chunk_paths]
-            concat_result = await self.call_tool(
-                "concatenate_files",
-                {"filepaths": chunk_paths_sorted, "output_path": remote_path},
-            )
-            if isinstance(concat_result, ToolResultFailed):
-                await self.call_tool("remove_path", {"path": temp_dir})
-                return concat_result
-
+        chunk_paths.sort(key=lambda x: x[0])
+        chunk_paths_sorted = [path for _, path in chunk_paths]
+        concat_result = await self.call_tool(
+            "concatenate_files",
+            {"filepaths": chunk_paths_sorted, "output_path": remote_path},
+        )
+        if isinstance(concat_result, ToolResultFailed):
             await self.call_tool("remove_path", {"path": temp_dir})
-            return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+            return concat_result
 
-        except Exception as e:
-            return ToolResultFailed(content=f"并发上传文件失败: {e}")
+        await self.call_tool("remove_path", {"path": temp_dir})
+        return ToolResultSuccess(content=f"文件已上传: {remote_path}")
 
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
@@ -817,139 +622,62 @@ class SshMachineControl:
         Returns:
             执行结果
         """
-        try:
-            import base64
-            import math
+        import base64
+        import math
 
-            size_result = await self.call_tool(
-                "get_file_size", {"filepath": remote_path}
+        size_result = await self.call_tool(
+            "get_file_size", {"filepath": remote_path}
+        )
+        if isinstance(size_result, ToolResultFailed):
+            return ToolResultFailed(
+                content=f"获取文件大小失败: {size_result.content}"
             )
-            if isinstance(size_result, ToolResultFailed):
-                return ToolResultFailed(
-                    content=f"获取文件大小失败: {size_result.content}"
+
+        file_size = int(size_result.content)
+
+        chunk_size = 32 * 1024
+        num_chunks = math.ceil(file_size / chunk_size)
+
+        max_concurrent = 16
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def download_chunk(chunk_index: int) -> bytes:
+            async with semaphore:
+                offset = chunk_index * chunk_size
+                length = min(chunk_size, file_size - offset)
+                result = await self.call_tool(
+                    "download_chunk",
+                    {
+                        "filepath": remote_path,
+                        "offset": offset,
+                        "length": length,
+                    },
                 )
-
-            try:
-                file_size = int(size_result.content)
-            except ValueError:
-                return ToolResultFailed(
-                    content=f"无效的文件大小: {size_result.content}"
-                )
-
-            chunk_size = 32 * 1024
-            num_chunks = math.ceil(file_size / chunk_size)
-
-            max_concurrent = 16
-            max_retries = 3
-            semaphore = asyncio.Semaphore(max_concurrent)
-
-            async def download_chunk_with_retry(chunk_index: int) -> bytes:
-                for attempt in range(max_retries):
-                    try:
-                        async with semaphore:
-                            offset = chunk_index * chunk_size
-                            length = min(chunk_size, file_size - offset)
-                            result = await self.call_tool(
-                                "download_chunk",
-                                {
-                                    "filepath": remote_path,
-                                    "offset": offset,
-                                    "length": length,
-                                },
-                            )
-                            if isinstance(result, ToolResultSuccess):
-                                chunk_data = base64.b64decode(result.content)
-                                if len(chunk_data) != length:
-                                    raise RuntimeError(
-                                        f"下载块大小不匹配: 预期{length}, 实际{len(chunk_data)}"
-                                    )
-                                return chunk_data
-                            else:
-                                if attempt == max_retries - 1:
-                                    raise RuntimeError(f"下载块失败: {result.content}")
-                    except Exception as e:
-                        if attempt == max_retries - 1:
-                            raise e
-                        await asyncio.sleep(1.0 * (attempt + 1))
-                raise RuntimeError("所有重试都失败")
-
-            chunks = [None] * num_chunks
-            tasks = []
-            for i in range(num_chunks):
-                task = asyncio.create_task(download_chunk_with_retry(i))
-                tasks.append(task)
-
-            for i, task in enumerate(tasks):
-                try:
-                    chunk_data = await task
-                    chunks[i] = chunk_data
-                except Exception as e:
-                    for t in tasks[i + 1 :]:
-                        t.cancel()
-                    await asyncio.gather(*tasks[i + 1 :], return_exceptions=True)
-                    return ToolResultFailed(content=f"下载块失败: {e}")
-
-            with open(local_path, "wb") as f:
-                for chunk_data in chunks:
-                    if chunk_data is None:
-                        return ToolResultFailed(content="块数据为None")
-                    f.write(chunk_data)
-
-            return ToolResultSuccess(content=f"文件已下载: {local_path}")
-
-        except Exception as e:
-            return ToolResultFailed(content=f"并发下载文件失败: {e}")
-
-    async def _cleanup_remote_file(self, ssh_cmd: list[str], remote_path: str) -> None:
-        """清理远程临时文件。
-
-        Args:
-            ssh_cmd: SSH命令列表
-            remote_path: 远程文件路径
-        """
-        try:
-            cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
-            process = await asyncio.create_subprocess_exec(
-                *cleanup_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            try:
-                stdout, stderr = (
-                    await asyncio.wait_for(  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                        process.communicate(), timeout=10
+                if isinstance(result, ToolResultFailed):
+                    raise RuntimeError(f"下载块失败: {result.content}")
+                chunk_data = base64.b64decode(result.content)
+                if len(chunk_data) != length:
+                    raise RuntimeError(
+                        f"下载块大小不匹配: 预期{length}, 实际{len(chunk_data)}"
                     )
-                )  # pylint: disable=unused-variable  # pylint: disable=unused-variable
-                if process.returncode != 0:
-                    error_msg = stderr.decode()
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING",
-                            content=f"清理远程文件失败，返回码: {process.returncode}, 错误: {error_msg}",
-                        ),
-                    )
-            except asyncio.TimeoutError:
-                process.kill()
-                await process.wait()
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(level="WARNING", content="清理远程文件超时"),
-                )
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="ERROR", content=f"清理远程文件时出错: {str(e)}"
-                    ),
-                )
-        except Exception as e:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="ERROR", content=f"清理远程文件时出错: {str(e)}"
-                ),
-            )
+                return chunk_data
+
+        chunks: list[bytes] = []
+        tasks = []
+        for i in range(num_chunks):
+            task = asyncio.create_task(download_chunk(i))
+            tasks.append(task)
+
+        for task in tasks:
+            chunk_data = await task
+            chunks.append(chunk_data)
+
+        with open(local_path, "wb") as f:
+            for chunk_data in chunks:
+                f.write(chunk_data)
+
+        return ToolResultSuccess(content=f"文件已下载: {local_path}")
+
 
     async def _cleanup_on_connect_failure(self, ssh_cmd: list[str]) -> None:
         """连接失败时清理所有资源。
@@ -957,15 +685,5 @@ class SshMachineControl:
         Args:
             ssh_cmd: SSH命令列表
         """
-        if self.remote_trojan_path:
-            await self._cleanup_remote_file(ssh_cmd, self.remote_trojan_path)
         if self.trojan_path and self.trojan_path.exists():
-            try:
-                self.trojan_path.unlink(missing_ok=True)
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content=f"删除本地临时文件时出错: {str(e)}"
-                    ),
-                )
+            self.trojan_path.unlink(missing_ok=True)
