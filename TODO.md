@@ -91,6 +91,26 @@ unittest 失败时，必须分析
     - 正确调用step1但是调用step2时提供了错误的id，提示错误
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
   - TODO 需要仔细规划
+- [ ] 完全删除当前内置的todolist功能，并删除todolist_add等工具
+  - 问题：这个功能是脆弱且完全不被使用的
+  - 需要完全删除实现等
+  - 需要让subagent完全不依赖这个todolist功能
+  - 需要直接删除工具定义等
+  - 需要删除unittest
+- [ ] 重构cli提升速度
+  - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
+  - 当前问题：没有一个良好的机制遍历MessageWidget中的ToolCallWidget中的工具调用是否正确，以及获取工具名
+  - 当前问题：没有一个良好的机制同时将MessageWidget和其对应的RuntimeMessageWidget移动到历史消息中
+    - 可能需要加上一个widget将二者包裹起来，或者直接将RuntimeMessageWidget塞进MessageWidget
+  - 规划
+    - 重构设计界面，不再直接将所有消息都堆在页面中
+    - 消息列表瀑布流界面
+      - 最上面是“展开历史消息”方框按钮
+      - 然后是一系列只占一行的“被折叠的消息”和runtime message交替出现
+        - 每个被折叠的消息只占一行，其中显示[-]表示可以点击展开，然后跟着一系列工具名，如`[-] read_file, read_file`
+        - 如果工具调用有错则不展示工具名而是`<bad toolcall>`
+        - 可以点击展开，点击展示原有的消息
+      - 然后是最新的消息和最新的runtime message
 
 # 注意
 
