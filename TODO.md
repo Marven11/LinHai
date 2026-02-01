@@ -115,6 +115,18 @@ unittest 失败时，必须分析
   - 既然工具都被调用或者被跳过了，那说明工具调用肯定已经准备好了，参数不可能不存在
   - 修改这个参数的定义并
   - 仔细删除所有检查这个参数是否为None的地方
+- [ ] 为secret添加一个disabled_in_toolcall_argument选项
+  - 问题：有时候我们需要阻止secret泄漏,但是不希望agent在工具调用中使用secret以防止secret泄漏到其他地方
+  - 设计: 
+    - 部分secret可以被设置为disabled_in_toolcall_argument，被设置为disabled_in_toolcall_argument的secret不会在函数参数中被替换，仅可以在结果中被替换
+    - disabled_in_toolcall_argument默认为False
+  - 添加测试
+    - 在prompt中有相关说明，说明disabled_in_toolcall_argument的作用：
+      - “disabled_in_toolcall_argument用于非常机密的secret，disabled_in_toolcall_argument=True的secret禁止在函数参数中使用以完全避免泄漏”
+      - “这意味着你不能查看也不能使用这些secret，只能用with_secret将这些secret遮住”
+    - 在secret被列出时同时提供disabled_in_toolcall_argument的值
+    - 同时使用with_secret指定一个disabled_in_toolcall_argument=True的secret1和一个disabled_in_toolcall_argument=False的secret2
+      - 如果函数参数中有secret2则报错“secret被禁止在函数参数中使用”
 
 # 注意
 
