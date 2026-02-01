@@ -11,6 +11,7 @@ from .base import (
     RuntimeMessage,
 )
 from linhai.parsed_message import ParsedAnswer
+from .workflow import RangeCleanManager
 from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
@@ -75,6 +76,8 @@ class Agent:
             group_chat, self.message_processor
         )
         self.toolcall_processor = AgentToolcall(self, max_toolcall_token_in_round)
+
+        range_clean_manager = RangeCleanManager(group_chat)
 
         self.last_token_usage = None
         self.current_enable_compress = True

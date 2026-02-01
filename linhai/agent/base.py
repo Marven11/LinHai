@@ -21,28 +21,47 @@ repr_obj.maxstring = 100
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 
 
-class CompressRangeRequest(Message):
-    """压缩范围请求消息类，用于处理历史消息压缩。"""
+class MessagesListSummerizeMessage(Message):
+    """消息列表总结消息类，用于处理历史消息压缩的第一步。"""
 
-    def __init__(self, messages_summerization: str, message_length: int):
+    def __init__(
+        self, messages_summerization: str, message_length: int, range_clean_id: str
+    ):
         self.messages_summerization = messages_summerization
         self.message_length = message_length
+        self.range_clean_id = range_clean_id
+        self._valid = True
+
+    def invalidate(self):
+        self._valid = False
+
+    def is_valid(self) -> bool:
+        return self._valid
 
     def to_llm_message(self) -> LanguageModelMessage:
-
+        if not self._valid:
+            return {
+                "role": "user",
+                "content": f"[消息列表已无效，ID: {self.range_clean_id}]",
+            }
         prompt = COMPRESS_RANGE_PROMPT.replace(
-            "{|SUMMERIZATION|}", self.messages_summerization
-        ).replace("{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5)))
+            "{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5))
+        ).replace("{|SUMMERIZATION|}", self.messages_summerization)
         return {
             "role": "user",
-            "content": f"<<runtime>>{prompt}<<runtime>>",
+            "content": f"<<range_clean_summary>>\n"
+            f"<<range_clean_id>>{self.range_clean_id}<<range_clean_id>>\n"
+            f"<<message_count>>{self.message_length}<<message_count>>\n"
+            f"<<content>>{prompt}<<content>>\n"
+            f"<<range_clean_summary>>",
         }
 
     def to_json(self) -> str:
-
         data = {
             "messages_summerization": self.messages_summerization,
             "message_length": self.message_length,
+            "range_clean_id": self.range_clean_id,
+            "_valid": self._valid,
         }
         return json.dumps(data)
 
@@ -50,12 +69,14 @@ class CompressRangeRequest(Message):
     def from_json(
         cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
     ):  # pylint: disable=unused-argument
-
         data = json.loads(json_str)
-        return cls(
+        instance = cls(
             messages_summerization=data["messages_summerization"],
             message_length=data["message_length"],
+            range_clean_id=data["range_clean_id"],
         )
+        instance._valid = data.get("_valid", True)
+        return instance
 
 
 class RuntimeMessage(Message):

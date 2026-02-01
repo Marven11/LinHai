@@ -361,7 +361,11 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             actual_category = (
                 "cleanup"
                 if tool_name
-                in ["context_range_compress", "context_garbage_clean"]
+                in [
+                    "context_compress_range_step1",
+                    "context_compress_range_step2",
+                    "context_garbage_clean",
+                ]
                 else "other"
             )
 
@@ -416,7 +420,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertEqual(
             self.plugin.CLEANUP_TOOLS,
             {
-                "context_range_compress",
+                "context_compress_range_step1",
+                "context_compress_range_step2",
                 "context_garbage_clean",
             },
         )
@@ -454,15 +459,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        ))
+        result = asyncio.run(
+            self.plugin.on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="skipped",
+                result_content=None,
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
 
         # 验证不阻止
         self.assertFalse(result)
@@ -493,15 +500,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        ))
+        result = asyncio.run(
+            self.plugin.on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="skipped",
+                result_content=None,
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
 
         # 验证允许调用
         self.assertFalse(result)
@@ -551,15 +560,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             # 调用插件
             import asyncio
 
-            result = asyncio.run(self.plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        ))
+            result = asyncio.run(
+                self.plugin.on_tool_result(
+                    tool_name=tool_call.function_name,
+                    tool_index=0,
+                    status="skipped",
+                    result_content=None,
+                    toolcall_arguments=tool_call.function_arguments,
+                    with_secret=None,
+                    is_tool_failed_duplicated_error=False,
+                )
+            )
 
             # 验证允许调用
             self.assertFalse(result, f"工具 {tool_name} 应该被允许")
@@ -593,15 +604,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        ))
+        result = asyncio.run(
+            self.plugin.on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="skipped",
+                result_content=None,
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
 
         # 验证阻止
         self.assertTrue(result)
@@ -644,15 +657,17 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 调用插件
         import asyncio
 
-        result = asyncio.run(self.plugin.on_tool_result(
-            tool_name=tool_call.function_name,
-            tool_index=0,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        ))
+        result = asyncio.run(
+            self.plugin.on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=0,
+                status="skipped",
+                result_content=None,
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=None,
+                is_tool_failed_duplicated_error=False,
+            )
+        )
 
         # 验证不阻止
         self.assertFalse(result)
@@ -784,6 +799,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
         from linhai.plugin import KimiK25ToolCallPlugin
+
         self.plugin = KimiK25ToolCallPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
@@ -798,10 +814,12 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_kimi_format_no_json_toolcall(self):
         """测试检测到kimi特殊格式但没有json toolcall时发送警告。"""
-        full_response = "<|tool_calls_section_begin|><|tool_call_begin|>\n{\"name\": \"tool1\", \"arguments\": {}}"
-        
-        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
-        
+        full_response = '<|tool_calls_section_begin|><|tool_call_begin|>\n{"name": "tool1", "arguments": {}}'
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
         self.agent.message_processor.add_new_message.assert_called_once()
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
@@ -810,27 +828,33 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_kimi_format_with_json_toolcall(self):
         """测试检测到kimi特殊格式但已有json toolcall时不警告。"""
-        full_response = "<|tool_calls_section_begin|><|tool_call_begin|>\n```json toolcall\n{\"name\": \"tool1\", \"arguments\": {}}\n```"
-        
-        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
-        
+        full_response = '<|tool_calls_section_begin|><|tool_call_begin|>\n```json toolcall\n{"name": "tool1", "arguments": {}}\n```'
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_kimi_format(self):
         """测试没有kimi特殊格式时不处理。"""
         full_response = "正常的工具调用"
-        
-        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
-        
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_empty_response(self):
         """测试空响应时不处理。"""
         full_response = ""
-        
-        await self.plugin.after_message_generation(self.answer, full_response, self.tool_calls)
-        
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()

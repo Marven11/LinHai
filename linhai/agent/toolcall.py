@@ -21,12 +21,12 @@ if TYPE_CHECKING:
 
 def _extract_text_content(content: Any) -> str:
     """从可能是字符串或列表的内容中提取纯文本。
-    
+
     处理OpenAI API返回的多模态内容，将列表格式的内容转换为纯文本。
     """
     if isinstance(content, str):
         return content
-    
+
     if isinstance(content, list):
         text_parts = []
         for item in content:
@@ -34,7 +34,7 @@ def _extract_text_content(content: Any) -> str:
                 if item.get("type") == "text":
                     text_parts.append(str(item.get("text", "")))
         return "".join(text_parts)
-    
+
     return str(content)
 
 
@@ -160,11 +160,11 @@ class AgentToolcall:
         tool_manager.add_toolset(orchestration_toolset)
 
     def _split_and_save_large_output(
-        self, 
-        result_content: str, 
-        token_count: int, 
-        tool_name: str, 
-        single_tool_limit: int
+        self,
+        result_content: str,
+        token_count: int,
+        tool_name: str,
+        single_tool_limit: int,
     ) -> str:
         """分割并保存过大的工具输出到文件。"""
         conversation_dir = self.group_chat.get_members("conversation_folder", Path)
@@ -199,11 +199,11 @@ class AgentToolcall:
             return f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepaths[0]}"
 
     def _save_output_to_file(
-        self, 
-        result_content: str, 
-        token_count: int, 
-        tool_name: str, 
-        current_round_token_count: int
+        self,
+        result_content: str,
+        token_count: int,
+        tool_name: str,
+        current_round_token_count: int,
     ) -> str:
         """保存当前轮次超限的工具输出到文件。"""
         conversation_dir = self.group_chat.get_members("conversation_folder", Path)
@@ -283,7 +283,8 @@ class AgentToolcall:
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
-            "context_range_compress",
+            "context_compress_range_step1",
+            "context_compress_range_step2",
             "context_garbage_clean",
             "mark_messages_as_garbage",
         ]
@@ -337,7 +338,10 @@ class AgentToolcall:
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:
             runtime_msg = self._split_and_save_large_output(
-                _extract_text_content(result_content), token_count, tool_call.function_name, single_tool_limit
+                _extract_text_content(result_content),
+                token_count,
+                tool_call.function_name,
+                single_tool_limit,
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
@@ -357,7 +361,10 @@ class AgentToolcall:
 
         if self.current_round_token_count + token_count > self.max_token_limit:
             runtime_msg = self._save_output_to_file(
-                _extract_text_content(result_content), token_count, tool_call.function_name, self.current_round_token_count
+                _extract_text_content(result_content),
+                token_count,
+                tool_call.function_name,
+                self.current_round_token_count,
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
@@ -409,7 +416,6 @@ class AgentToolcall:
             if isinstance(tool_result, ToolCallResultMessage) and isinstance(
                 tool_result.result, ToolResultFailed
             ):
-
 
                 llm_msg = tool_result.to_llm_message()
                 assert "content" in llm_msg

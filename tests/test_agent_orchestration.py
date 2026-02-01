@@ -145,7 +145,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试消息清理工具
         context = self.orchestration.compute_orchestration_context(
-            "context_range_compress", threshold_info
+            "context_compress_range_step1", threshold_info
         )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 

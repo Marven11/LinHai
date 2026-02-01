@@ -82,7 +82,7 @@ runtime会根据上下文消耗量百分比，用红绿灯状态提醒你当前�
 - 黄灯：根据缓存命中比例考虑是否清理上下文
 - 红灯：上下文即将耗尽！当上下文耗尽时你会立马崩溃！
   - 优先考虑token限制问题，此时应该放下手中的任何任务，直接使用工具清理消息！
-  - 此时消息非常多，如果已有至少5条大消息，则调用context_garbage_clean清理大消息；否则，使用context_range_compress删除大约一半消息！
+  - 此时消息非常多，如果已有至少5条大消息，则调用context_garbage_clean清理大消息；否则，使用context_compress_range_*删除大约一半消息！
 
 清理工具会破坏缓存，导致缓存命中率下降，你需要控制缓存比例在90%以上，只在必要时清理上下文
 """
@@ -153,7 +153,7 @@ INTRODUCTION_ITEMS = [
     ("GLOBAL MEMORY", INTRODUCTION_GLOBAL_MEMORY),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
-    ("MACHINE CONTROL", INTRODUCTION_MACHINE_CONTROL)
+    ("MACHINE CONTROL", INTRODUCTION_MACHINE_CONTROL),
 ]
 
 # ===============================
@@ -278,18 +278,22 @@ COMPRESS_RANGE_PROMPT = """
 
 ## 格式要求
 
-- 首先输出待办任务等内容，格式为markdown，每个方面占一段，包含多个bullet point
-  - 待办任务非常重要！你需要用`[ ]`等标记出已经完成的和未完成的任务！
-- 然后以markdown code block的形式输出**一个**JSON对象，包含以下字段：
+- 首先给出一个描述字符串（description），用于说明压缩的内容和原因，以及保留的重要信息。
+- 然后给出start_id和end_id
   - `start_id`: 要压缩范围的起始消息ID（包含）
   - `end_id`: 要压缩范围的结束消息ID（包含）
 
 ## 重要规则
 
-- 你必须先输出以上JSON对象，等待历史压缩完毕后再调用其他工具！
+- 压缩历史消息分为两步：
+  1. 首先调用`context_compress_range_step1`工具生成消息列表总结和range_clean_id。
+  2. 然后查看消息列表总结，选择要压缩的范围，调用`context_compress_range_step2`工具，提供range_clean_id、start_id、end_id和description。
 
 # 输出示例
 
+## description实例
+
+```
 ## 主要目标
 
 - 用户要求...
@@ -321,13 +325,12 @@ COMPRESS_RANGE_PROMPT = """
 
 - 目标：用户要求...，已经完成/未完成
 - 建议：用户强烈建议...
-
-```json
-{
-    "start_id": 15,
-    "end_id": 24
-}
 ```
+
+## start_id和end_id示例
+
+start_id: `14`
+end_id: `24`
 
 # 当前历史信息和编号
 

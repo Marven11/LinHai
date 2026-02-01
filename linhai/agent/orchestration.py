@@ -9,10 +9,13 @@ import time
 import reprlib
 from typing import Optional, Literal, TypedDict, TYPE_CHECKING, Union
 
-from linhai.agent.workflow import context_range_compress
+from linhai.agent.workflow import (
+    context_compress_range_step1,
+    context_compress_range_step2,
+)
 from linhai.llm import ToolCallMessage
 from linhai.group_chat import GroupChat
-from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
@@ -61,7 +64,9 @@ class AgentContextOrchestration:
         """
         large_count = len(self.large_messages)
         if large_count < 5:
-            return ToolResultFailed(content=f"需要至少5条大消息，当前只有{large_count}条")
+            return ToolResultFailed(
+                content=f"需要至少5条大消息，当前只有{large_count}条"
+            )
 
         # 删除大消息
         removed_messages = list(self.large_messages)
@@ -71,7 +76,9 @@ class AgentContextOrchestration:
         self.last_compress_or_clean_time = time.time()
 
         conversation_dir = self.group_chat.get_members("conversation_folder", Path)
-        saved_path = save_cleaned_messages(conversation_dir, removed_messages, prefix="garbage_clean")
+        saved_path = save_cleaned_messages(
+            conversation_dir, removed_messages, prefix="garbage_clean"
+        )
         result = f"清理了{large_count}条大消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 
@@ -123,11 +130,17 @@ class AgentContextOrchestration:
         actual_category = (
             "cleanup"
             if tool_name
-            in {"context_range_compress", "context_garbage_clean"}
+            in {
+                "context_compress_range_step1",
+                "context_compress_range_step2",
+                "context_garbage_clean",
+            }
             else "other"
         )
+        if tool_name == "context_compress_range_step2":
+            blocked_category = None
+        elif current_state == "红灯":
 
-        if current_state == "红灯":
             if recently_called_cleanup:
                 blocked_category = "cleanup"
             else:
@@ -163,7 +176,7 @@ class AgentContextOrchestration:
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
             base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具{cache_ratio_text}"
             if recently_called_cleanup:
-                suggestion = "建议: 不要担心消息限制，继续工作，在这一分钟过去后runtime会另行通知"
+                suggestion = "建议: 继续，在上下文实际长度更新之后runtime会另行通知"
             elif current_state == "红灯":
                 suggestion = "建议: 立即暂停当前任务"
             elif current_state == "黄灯":
@@ -228,16 +241,47 @@ class AgentContextOrchestration:
             return await self.context_garbage_clean()
 
         @toolset.register_tool(
-            name="context_range_compress",
-            desc="压缩指定范围的历史消息：总结并删除指定范围内的消息。调用这个工具来开始压缩指定范围的流程。",
+            name="context_compress_range_step1",
+            desc="压缩范围第一步：生成消息列表总结并返回range_clean_id。",
             args={},
             required_args=[],
         )
-        async def context_range_compress_tool() -> ToolResultSuccess | ToolResultFailed:
-            from linhai.agent import Agent
+        async def context_compress_range_step1_tool() -> (
+            ToolResultSuccess | ToolResultFailed
+        ):
+            result = await context_compress_range_step1(self.group_chat)
+            self.last_compress_or_clean_time = time.time()
+            return result
 
-            agent = self.group_chat.get_members("agent", Agent)
-            result = await context_range_compress(agent)
+        @toolset.register_tool(
+            name="context_compress_range_step2",
+            desc="压缩范围第二步：使用range_clean_id确认删除范围并执行删除。",
+            args={
+                "range_clean_id": ToolArgInfo(
+                    desc="range_clean_id，从第一步获取",
+                    type="str",
+                ),
+                "start_id": ToolArgInfo(
+                    desc="开始删除的消息ID",
+                    type="int",
+                ),
+                "end_id": ToolArgInfo(
+                    desc="结束删除的消息ID",
+                    type="int",
+                ),
+                "description": ToolArgInfo(
+                    desc="描述删除内容，建议包含待办任务",
+                    type="str",
+                ),
+            },
+            required_args=["range_clean_id", "start_id", "end_id", "description"],
+        )
+        async def context_compress_range_step2_tool(
+            range_clean_id: str, start_id: int, end_id: int, description: str
+        ) -> ToolResultSuccess | ToolResultFailed:
+            result = await context_compress_range_step2(
+                self.group_chat, range_clean_id, start_id, end_id, description
+            )
             self.last_compress_or_clean_time = time.time()
             return result
 
@@ -280,7 +324,8 @@ class RedStateToolBlockPlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
         self.CLEANUP_TOOLS = {
-            "context_range_compress",
+            "context_compress_range_step1",
+            "context_compress_range_step2",
             "context_garbage_clean",
         }
 
