@@ -127,6 +127,10 @@ unittest 失败时，必须分析
     - 在secret被列出时同时提供disabled_in_toolcall_argument的值
     - 同时使用with_secret指定一个disabled_in_toolcall_argument=True的secret1和一个disabled_in_toolcall_argument=False的secret2
       - 如果函数参数中有secret2则报错“secret被禁止在函数参数中使用”
+- [ ] 修改process_create的参数，从command改成argv，以明确传入的是一个进程的argv，避免理解错误而传入bash语法相关内容
+- [ ] 添加一个插件检查process_create的参数
+  - 问题：模型经常会在参数中传入bash的`&&`, `|`, `2&>1`等语法，如`["cd", "xxx", "&&", "xxx"]`
+  - 设计：添加一个插件，如果模型传入了错误的参数则添加runtime消息提醒
 
 # 注意
 
