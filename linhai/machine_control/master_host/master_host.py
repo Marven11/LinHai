@@ -53,12 +53,12 @@ class MasterHostControl:
         )
 
     async def process_create(
-        self, command: list[str], wait_second: float = 1.0
+        self, argv: list[str], wait_second: float = 1.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """创建一个进程，等待一段时间后检查状态"""
         try:
             process = await asyncio.create_subprocess_exec(
-                *command,
+                *argv,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -96,7 +96,9 @@ class MasterHostControl:
                 if stdout_str or stderr_str:
                     message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_str}\nstderr:\n{stderr_str}"
                 else:
-                    message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
+                    message += (
+                        " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
+                    )
 
                 return ToolResultSuccess(
                     content=f"<<pid>>{pid}<<pid>><<message>>{message}<<message>>"
@@ -171,16 +173,21 @@ class MasterHostControl:
             process = self._processes.get(pid)
             if process is None:
                 return ToolResultFailed(content=f"找不到进程 {pid}")
-            stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
-                process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
+            stdout_str, stderr_str, timeout_msg, exit_note = (
+                await self._read_process_stdio(
+                    process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
+                )
             )
             if unescape_ansi:
                 import re
+
                 ansi_escape = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
                 stdout_str = ansi_escape.sub("", stdout_str)
                 stderr_str = ansi_escape.sub("", stderr_str)
             if timeout_msg:
-                return ToolResultFailed(content=f"读取进程 {pid} 的输出超时（{timeout}秒）")
+                return ToolResultFailed(
+                    content=f"读取进程 {pid} 的输出超时（{timeout}秒）"
+                )
             return ToolResultSuccess(
                 content=f"<<pid>>{pid}<<pid>><<stdout>>{exit_note or ''}{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
             )

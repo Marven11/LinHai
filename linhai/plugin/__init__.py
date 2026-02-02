@@ -33,9 +33,16 @@ from .security_config import (
     WithSecretParameterPositionPlugin,
     MissingWithSecretWarningPlugin,
     CommandWhitelistPlugin,
+    ProcessArgvCheckerPlugin,
 )
 
-from .helpers import is_small_file, is_already_read, is_existing_file, JsonValue, READ_FILE_COMMANDS
+from .helpers import (
+    is_small_file,
+    is_already_read,
+    is_existing_file,
+    JsonValue,
+    READ_FILE_COMMANDS,
+)
 
 __all__ = [
     "Plugin",
@@ -60,6 +67,7 @@ __all__ = [
     "WithSecretParameterPositionPlugin",
     "MissingWithSecretWarningPlugin",
     "CommandWhitelistPlugin",
+    "ProcessArgvCheckerPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",

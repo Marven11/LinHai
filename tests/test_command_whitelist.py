@@ -61,7 +61,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         result = await plugin.before_tool_call(
             "process_create",
             0,
-            {"command": ["ls", "-lah"]},
+            {"argv": ["ls", "-lah"]},
             None,
             agent,
             context,
@@ -81,7 +81,7 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         result = await plugin.before_tool_call(
             "process_create",
             0,
-            {"command": ["git", "commit"]},
+            {"argv": ["git", "commit"]},
             None,
             agent,
             context,

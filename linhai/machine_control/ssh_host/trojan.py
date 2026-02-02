@@ -47,9 +47,9 @@ class Trojan:
         self.semaphore = Semaphore(32)
         self.active_tasks: Set[asyncio.Task] = set()
 
-    async def process_create(self, command, wait_second=1.0):
+    async def process_create(self, argv, wait_second=1.0):
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *argv,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -162,19 +162,17 @@ class Trojan:
         stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
             process, timeout=3600.0, max_read_size=32 * 1024, check_exit=True
         )
-        
+
         result_data = {
             "pid": pid,
             "stdout": stdout_str,
             "stderr": stderr_str,
         }
-        
+
         if exit_note:
             result_data["exit_note"] = exit_note
-            
-        return {
-            "message": json.dumps(result_data)
-        }
+
+        return {"message": json.dumps(result_data)}
 
     async def process_wait(self, pid, timeout):
         assert pid in self._processes, f"进程不存在: {pid}"

@@ -371,11 +371,11 @@ class SshMachineControl:
         return ToolResultFailed(content="SSH机器不支持http_request工具")
 
     async def process_create(
-        self, command: list[str], wait_second: float = 1.0
+        self, argv: list[str], wait_second: float = 1.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """创建一个进程，等待一段时间后检查状态"""
         return await self.call_tool(
-            "process_create", {"command": command, "wait_second": wait_second}
+            "process_create", {"argv": argv, "wait_second": wait_second}
         )
 
     async def process_stdio_write(
@@ -395,17 +395,18 @@ class SshMachineControl:
             "process_stdio_read",
             {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
         )
-        
+
         if isinstance(result, ToolResultFailed):
             return result
-        
+
         import json
+
         data = json.loads(result.content)
         pid = data.get("pid", "")
         stdout = data.get("stdout", "")
         stderr = data.get("stderr", "")
         exit_note = data.get("exit_note", "")
-        
+
         formatted_content = f"<<pid>>{pid}<<pid>><<stdout>>{exit_note}{stdout}<<stdout>><<stderr>>{stderr}<<stderr>>"
         return ToolResultSuccess(content=formatted_content)
 
@@ -463,6 +464,7 @@ class SshMachineControl:
         result = await self.call_tool("terminal_read_screen", {"term_id": terminal_id})
         if isinstance(result, ToolResultSuccess):
             import base64
+
             decoded_bytes = base64.b64decode(result.content)
             decoded_str = decoded_bytes.decode("utf-8", errors="replace")
             return ToolResultSuccess(content=decoded_str)
@@ -554,9 +556,7 @@ class SshMachineControl:
         chunk_size = 32 * 1024
         num_chunks = math.ceil(len(data) / chunk_size)
 
-        temp_dir_result = await self.call_tool(
-            "create_temp_dir", {"prefix": "upload_"}
-        )
+        temp_dir_result = await self.call_tool("create_temp_dir", {"prefix": "upload_"})
         if isinstance(temp_dir_result, ToolResultFailed):
             return ToolResultFailed(
                 content=f"创建临时目录失败: {temp_dir_result.content}"
@@ -566,9 +566,7 @@ class SshMachineControl:
         max_concurrent = 16
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def upload_chunk(
-            chunk_index: int, chunk_data: bytes
-        ) -> tuple[int, str]:
+        async def upload_chunk(chunk_index: int, chunk_data: bytes) -> tuple[int, str]:
             async with semaphore:
                 chunk_base64 = base64.b64encode(chunk_data).decode("utf-8")
                 chunk_filename = f"chunk_{chunk_index:010d}"
@@ -625,13 +623,9 @@ class SshMachineControl:
         import base64
         import math
 
-        size_result = await self.call_tool(
-            "get_file_size", {"filepath": remote_path}
-        )
+        size_result = await self.call_tool("get_file_size", {"filepath": remote_path})
         if isinstance(size_result, ToolResultFailed):
-            return ToolResultFailed(
-                content=f"获取文件大小失败: {size_result.content}"
-            )
+            return ToolResultFailed(content=f"获取文件大小失败: {size_result.content}")
 
         file_size = int(size_result.content)
 
@@ -677,7 +671,6 @@ class SshMachineControl:
                 f.write(chunk_data)
 
         return ToolResultSuccess(content=f"文件已下载: {local_path}")
-
 
     async def _cleanup_on_connect_failure(self, ssh_cmd: list[str]) -> None:
         """连接失败时清理所有资源。

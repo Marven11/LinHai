@@ -135,18 +135,75 @@ class CommandWhitelistPlugin(Plugin):
         context,
     ) -> Union[None, bool, ToolResultSuccess, ToolResultFailed]:
         if tool_name == "process_create":
-            command = toolcall_arguments.get("command")
-            if command is None:
-                return ToolResultFailed(content="process_create缺少command参数")
+            argv = toolcall_arguments.get("argv")
+            if argv is None:
+                return ToolResultFailed(content="process_create缺少argv参数")
             if self.allowed_commands and not any(
-                len(allowed) <= len(command)
+                len(allowed) <= len(argv)
                 and all(
                     cmd_elem == allowed_elem
-                    for cmd_elem, allowed_elem in zip(command, allowed)
+                    for cmd_elem, allowed_elem in zip(argv, allowed)
                 )
                 for allowed in self.allowed_commands
             ):
                 return ToolResultFailed(
-                    content=f"命令 {' '.join(command)} 不在白名单中。允许的命令: {self.allowed_commands}"
+                    content=f"命令 {' '.join(argv)} 不在白名单中。允许的命令: {self.allowed_commands}"
                 )
+        return None
+
+
+class ProcessArgvCheckerPlugin(Plugin):
+    """检查process_create的argv参数是否包含bash语法操作符的插件。"""
+
+    BASH_OPERATORS = [
+        "&&",
+        "||",
+        "|",
+        ">",
+        ">>",
+        "<",
+        "<<",
+        "2>&1",
+        ";",
+        "\n",
+        "$(",
+        "`",
+        "&",
+        "${",
+    ]
+
+    def __init__(self, group_chat):
+        super().__init__(group_chat)
+
+    def register(self, lifecycle):
+        lifecycle.register_before_tool_call(self.before_tool_call)
+
+    async def before_tool_call(
+        self,
+        tool_name: str,
+        tool_index: int,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+        agent,
+        context,
+    ) -> Union[None, bool, ToolResultSuccess, ToolResultFailed]:
+        if tool_name == "process_create":
+            argv = toolcall_arguments.get("argv")
+            if argv is None:
+                return None
+
+            warnings = [
+                f"参数[{i}]: '{arg}' 包含可能的bash操作符"
+                for i, arg in enumerate(argv)
+                if any(op in arg for op in self.BASH_OPERATORS)
+            ]
+
+            if warnings:
+                warning_msg = (
+                    "警告：process_create的argv参数中包含可能的bash语法操作符:"
+                    + repr(warnings)
+                    + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
+                )
+                agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
+
         return None

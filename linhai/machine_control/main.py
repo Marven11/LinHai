@@ -138,23 +138,23 @@ class MachineControlToolSet(ToolSet):
             name="process_create",
             desc="创建一个进程，等待一段时间后检查状态。如果进程已退出则返回退出码和输出，否则返回运行中状态。",
             args={
-                "command": ToolArgInfo(
-                    desc='命令列表，如["ls", "-la"]', type="list[str]"
+                "argv": ToolArgInfo(
+                    desc='进程参数列表，如["ls", "-l", "-a"]', type="list[str]"
                 ),
                 "wait_second": ToolArgInfo(
                     desc="创建进程后等待的秒数，最多等待时间", type="float"
                 ),
             },
-            required_args=["command"],
+            required_args=["argv"],
             conflict_with=None,
         )
         async def process_create_tool(
-            command: list[str], wait_second: float = 30.0
+            argv: list[str], wait_second: float = 30.0
         ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
-            return await host_control.process_create(command, wait_second)
+            return await host_control.process_create(argv, wait_second)
 
         @self.register_tool(
             name="process_stdio_write",
@@ -517,7 +517,7 @@ class HostControl(Protocol):
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_create(
-        self, command: list[str], wait_second: float = 30.0
+        self, argv: list[str], wait_second: float = 30.0
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_stdio_write(
@@ -812,7 +812,7 @@ class MachineControlPlugin:
     ) -> Union[None, bool, RuntimeMessage]:
         """处理工具调用的结果，合并了原来的before_tool_call和after_tool_call功能。"""
         from linhai.utils import CliRuntimeNotice
-        
+
         # 对于skipped状态，执行原before_tool_call的逻辑
         if status == "skipped":
             # 检查toolcall_arguments中是否包含on_machine参数
@@ -829,14 +829,14 @@ class MachineControlPlugin:
                             ),
                         )
             return None  # 不跳过工具调用
-        
+
         # 对于success状态，执行原after_tool_call的逻辑
         elif status == "success":
             # 检查toolcall_arguments中是否包含on_machine参数
             if toolcall_arguments and "on_machine" in toolcall_arguments:
                 on_machine = toolcall_arguments["on_machine"]
                 current_machine = self.machine_control.target_machine
-                
+
                 if on_machine is None or on_machine != current_machine:
                     # 没有使用on_machine或指定了不同的机器，重置计数器
                     self.consecutive_same_on_machine_count = 0
@@ -848,7 +848,7 @@ class MachineControlPlugin:
                     else:
                         self.consecutive_same_on_machine_count = 1
                         self.last_on_machine = on_machine
-                    
+
                     if self.consecutive_same_on_machine_count >= 3:
                         await self.group_chat.send_if_exists(
                             "ui_log",
@@ -858,7 +858,7 @@ class MachineControlPlugin:
                             ),
                         )
             return None  # 不替换工具结果
-        
+
         # 对于failed状态，不需要特殊处理
         else:
             return None
