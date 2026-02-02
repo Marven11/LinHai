@@ -284,7 +284,7 @@ class KimiK25ToolCallPlugin(Plugin):
 
 
 class RuntimeImitationPlugin(Plugin):
-    """阻断deepseek模型模仿runtime输出的插件。"""
+    """阻断deepseek等模型模仿runtime输出的插件。"""
 
     async def after_token_generation(
         self,
@@ -292,11 +292,7 @@ class RuntimeImitationPlugin(Plugin):
         answer: Answer,
         current_content: str,
     ):
-        """检查deepseek是否在模仿runtime输出并阻断。"""
-        model = agent.get_current_model()
-
-        if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
-            return False
+        """检查deepseek等是否在模仿runtime输出并阻断。"""
 
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
