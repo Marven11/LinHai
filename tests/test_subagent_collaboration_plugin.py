@@ -67,11 +67,13 @@ class TestViolationCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_members.side_effect = lambda member_type, member_class=None: mock_subagent_manager if member_type == "subagent_manager" else mock_agent
 
         # 调用on_tool_result模拟工具失败
+        mock_message = MagicMock()
+        mock_message.to_llm_message.return_value = {"content": "测试错误"}
         result = await self.plugin.on_tool_result(
             tool_name="test_tool",
             tool_index=0,
             status="failed",
-            result_content="测试错误",
+            message=mock_message,
             toolcall_arguments={},
             with_secret=None,
             is_tool_failed_duplicated_error=False,

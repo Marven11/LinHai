@@ -9,7 +9,7 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage
-from linhai.tool.base import ToolResultSuccess
+from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools
@@ -301,7 +301,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.answer_stream.return_value = mock_answer
 
         self.tool_manager.process_tool_call = AsyncMock(
-            return_value=ToolResultSuccess(content="工具执行成功")
+            return_value=ToolCallResultMessage(
+                tool_name="add_numbers",
+                tool_index=0,
+                result=ToolResultSuccess(content="工具执行成功"),
+                toolcall_arguments=None,
+            )
         )
 
         await self.agent.handle_user_message(UserMessage(message="Calculate 2+2"))

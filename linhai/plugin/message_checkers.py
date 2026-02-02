@@ -7,7 +7,15 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage, RuntimeMessage, WAITING_USER_MARKER, PreviousReasoningMessage, SpoofedReasoningMessage
+from linhai.agent.base import (
+    GlobalMemory,
+    PathMemory,
+    FileContentMessage,
+    RuntimeMessage,
+    WAITING_USER_MARKER,
+    PreviousReasoningMessage,
+    SpoofedReasoningMessage,
+)
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
 from linhai.llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
@@ -27,7 +35,7 @@ class Plugin(ABC):
         self.group_chat = group_chat
 
     @abstractmethod
-    def register(self, lifecycle) -> None:
+    def register(self, lifecycle: "Lifecycle") -> None:
         """将Plugin注册到Lifecycle中。"""
 
 
@@ -173,7 +181,7 @@ class OnlyReasoningPlugin(Plugin):
                 None, source="only_reasoning", sort_value=0
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -204,7 +212,7 @@ class PreviousReasoningPlugin(Plugin):
                 None, source="previous_reasoning", sort_value=1000
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
 
@@ -257,7 +265,7 @@ class KimiK25ToolCallPlugin(Plugin):
 
         has_kimi_marker = "<|tool_call_begin|>" in full_response
         has_correct_format = "```json toolcall" in full_response
-        
+
         if has_kimi_marker and not has_correct_format:
             agent = self.group_chat.get_members("agent", Agent)
             if agent:
@@ -266,16 +274,16 @@ class KimiK25ToolCallPlugin(Plugin):
                         "警告：检测到kimi k2.5的特殊工具调用格式`<|tool_call_begin|>`，"
                         "但没有正确的`json toolcall`代码块格式。\n"
                         "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
-                        '```json toolcall\n'
+                        "```json toolcall\n"
                         '{"name": "tool_name", "arguments": {...}}\n'
-                        '```'
+                        "```"
                     )
                 )
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
-                        content="检测到kimi k2.5特殊工具调用格式，已提醒模型"
+                        content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
                     ),
                 )
 

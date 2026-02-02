@@ -8,12 +8,24 @@ import time
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import FileContentMessage, RuntimeMessage, GlobalMemory, PathMemory
+from linhai.agent.base import (
+    FileContentMessage,
+    RuntimeMessage,
+    GlobalMemory,
+    PathMemory,
+)
+from linhai.tool.base import ToolCallResultMessage
 from linhai.group_chat import GroupChat
 from linhai.machine_control import MachineControl
 from linhai.utils import CliRuntimeNotice
+from linhai.llm import Message
 
-from .helpers import READ_FILE_COMMANDS, is_small_file, is_already_read, is_existing_file
+from .helpers import (
+    READ_FILE_COMMANDS,
+    is_small_file,
+    is_already_read,
+    is_existing_file,
+)
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -26,7 +38,7 @@ class Plugin(ABC):
         self.group_chat = group_chat
 
     @abstractmethod
-    def register(self, lifecycle) -> None:
+    def register(self, lifecycle: "Lifecycle") -> None:
         """将Plugin注册到Lifecycle中。"""
 
 
@@ -37,7 +49,7 @@ class DuplicateFileReadPlugin(Plugin):
         super().__init__(group_chat)
         self.counter = 0
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 
@@ -46,7 +58,7 @@ class DuplicateFileReadPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -73,21 +85,23 @@ class DuplicateFileReadPlugin(Plugin):
             return None
 
         recent_file_messages = []
-        for message in reversed(list(agent.message_processor.get_messages())):
-            if not isinstance(message, FileContentMessage):
+        for msg in reversed(list(agent.message_processor.get_messages())):
+            if not isinstance(msg, FileContentMessage):
                 continue
             try:
-                if str(Path(message.filepath).resolve()) == str(
-                    Path(filepath).resolve()
-                ):
-                    recent_file_messages.append(message)
+                if str(Path(msg.filepath).resolve()) == str(Path(filepath).resolve()):
+                    recent_file_messages.append(msg)
             except (OSError, ValueError):
                 continue
 
         if recent_file_messages:
             latest_message = recent_file_messages[0]
 
-            if result_content == latest_message.content:
+            if message is None:
+                return None
+            actual_content = str(message.to_llm_message().get("content", ""))
+
+            if message == latest_message:
                 self.counter += 1
                 if self.counter == 1:
                     await self.group_chat.send_if_exists(
@@ -98,7 +112,7 @@ class DuplicateFileReadPlugin(Plugin):
                         ),
                     )
                     reprobj = reprlib.Repr(maxstring=100)
-                    preview = reprobj.repr(result_content)
+                    preview = reprobj.repr(actual_content)
                     agent.message_processor.add_new_message(
                         RuntimeMessage(
                             f"警告：你已经读取过文件{filepath}，内容和上一次完全相同，这是第一次警告！\n"
@@ -116,7 +130,7 @@ class DuplicateFileReadPlugin(Plugin):
                         ),
                     )
                     reprobj = reprlib.Repr(maxstring=100)
-                    preview = reprobj.repr(result_content)
+                    preview = reprobj.repr(actual_content)
                     return RuntimeMessage(
                         f"错误：你已经读取过文件{filepath}，内容和上一次完全相同，本条重复内容已自动隐藏。\n"
                         f"警告：你已经重复读取{self.counter}次文件！这是非常低效的行为！立即停止重复读取！{"！！！" * self.counter}"
@@ -139,7 +153,7 @@ class UnnecessarySedReadPlugin(Plugin):
         self.warning_count = 0
         self.last_reset_time = time.time()
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 
@@ -148,7 +162,7 @@ class UnnecessarySedReadPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -220,7 +234,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         self.warning_count = 0
         self.last_reset_time = time.time()
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 
@@ -229,7 +243,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -318,7 +332,7 @@ class FileReadWriteConflictPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,

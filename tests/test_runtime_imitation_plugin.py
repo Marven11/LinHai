@@ -122,8 +122,9 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
             self.agent, self.answer, current_content
         )
 
-        self.assertFalse(result)
-        self.agent.interrupt.assert_not_called()
+        # main branch修改后，现在对所有模型都会检查<<tool>>标签
+        self.assertTrue(result)
+        self.agent.interrupt.assert_called_once()
 
     async def test_after_token_generation_tool_xml_start(self):
         """测试以<tool>{开头的XML格式工具调用被拦截。"""

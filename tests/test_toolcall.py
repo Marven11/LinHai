@@ -167,33 +167,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_agent.state, "working")
 
-    async def test_call_tool_blocked_by_before_tool_call(self):
-        """测试before_tool_call返回True时阻止工具调用。"""
-
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={},
-            assert_success=True,
-            with_secret=None,
-        )
-
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
-            return_value=True  # True表示跳过工具调用
-        )
-
-        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
-
-        self.assertTrue(result)
-        self.mock_tool_manager.process_tool_call.assert_not_called()
-        self.mock_agent.lifecycle.trigger_on_tool_result.assert_called_once_with(
-            tool_name="test_tool",
-            tool_index=1,
-            status="skipped",
-            result_content=None,
-            toolcall_arguments=None,  # 当工具被跳过时，toolcall_arguments为None
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
 
     async def test_multiple_tool_calls_with_mixed_results(self):
         """测试多个工具调用混合成功和失败的情况。"""

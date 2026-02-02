@@ -1,6 +1,7 @@
 """测试UnnecessarySedReadPlugin插件。"""
 
 import unittest
+from unittest.mock import MagicMock
 import time
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
@@ -70,14 +71,21 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
             ToolResultSuccess,
             ToolResultFailed,
         )
-
+        
+        mock_message = MagicMock()
+        mock_message.to_llm_message.return_value = {"content": "test result"}
+        
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
     @patch("pathlib.Path")
     def test_failed_tool_call(self, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试失败的工具调用。"""
         tool_call = ToolCallMessage(
             function_name="read_file_with_sed",
@@ -93,6 +101,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
     @patch("pathlib.Path")
     def test_no_filepath(self, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试没有文件路径的情况。"""
         tool_call = ToolCallMessage(
             function_name="read_file_with_sed",
@@ -109,13 +121,17 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_large_result(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试结果长度大于等于10000字符的情况。"""
         mock_path.return_value.is_file.return_value = True
 
@@ -135,7 +151,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         large_result = "x" * 10000  # 刚好10000字符
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         # 结果很大，但插件仍然会警告
         self.assertIsNotNone(result)
@@ -147,6 +163,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_file_not_exists(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试文件不存在的情况。"""
         mock_path.return_value.is_file.return_value = False
 
@@ -165,7 +185,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         # 文件不存在，但插件仍然会警告
         self.assertIsNotNone(result)
@@ -177,6 +197,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     @patch("pathlib.Path")
     @patch("builtins.open", side_effect=IOError("文件读取错误"))
     def test_file_read_error(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试文件读取错误的情况。"""
         mock_path.return_value.is_file.return_value = True
 
@@ -195,13 +219,17 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line\n" * 2100)
     def test_large_line_count(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试文件行数大于等于1600行的情况。"""
         mock_path.return_value.is_file.return_value = True
 
@@ -220,13 +248,17 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         self.assertIsNone(result)
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\n")
     def test_first_call(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试第一次调用。"""
         mock_path.return_value.is_file.return_value = True
         # 模拟resolve返回绝对路径
@@ -248,7 +280,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result("read_file_with_sed", 0, "success", "test result", {"filepath": "./test.py"}, None, False)
+            self.plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": "./test.py"}, None, False)
         )
         # 新逻辑：第一次警告
         self.assertIsNotNone(result)
@@ -265,6 +297,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_allows_sed_when_no_full_read(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试当没有完整读取文件时，DuplicateFileReadPlugin允许read_file_with_sed。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -293,7 +329,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "test content", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": absolute_path}, None, False)
         )
 
         # 应该允许，因为没有完整读取
@@ -338,7 +374,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -349,7 +385,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该被阻止，因为内容相同且是第二次重复
@@ -363,6 +399,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
     def test_duplicate_file_read_plugin_allows_first_read(self, mock_open, mock_path):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试第一次读取文件应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -401,6 +441,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_allows_different_content(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试读取相同文件但内容不同应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -442,6 +486,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_ignores_on_non_master_host(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试不在master_host上时应忽略。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -489,6 +537,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_handles_multiple_messages_latest_same(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试多个历史消息，最新相同应拦截。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -526,7 +578,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -537,7 +589,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该被阻止，因为最新消息内容相同且是第二次重复
@@ -551,6 +603,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_handles_multiple_messages_latest_different(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试多个历史消息，最新不同应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -602,6 +658,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_handles_resolve_error_current_path(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试当前文件路径解析失败时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -637,6 +697,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
     def test_duplicate_file_read_plugin_handles_resolve_error_historical_path(
         self, mock_open, mock_path
     ):
+
+        mock_message = MagicMock()
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试历史消息文件路径解析失败时跳过该消息。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -701,7 +765,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
@@ -713,7 +777,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result("read_file", 0, "success", "line1\nline2\nline3\n", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file", 0, "success", new_file_content, {"filepath": absolute_path}, None, False)
         )
 
         # 应该拦截，因为好消息的内容与当前读取相同且是第二次重复
@@ -723,6 +787,12 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.group_chat.send_if_exists.assert_called_once()
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):
+
+
+        mock_message = MagicMock()
+
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试工具调用失败时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -743,6 +813,12 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_non_read_file_tool(self):
+
+
+        mock_message = MagicMock()
+
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试非read_file工具时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -757,12 +833,18 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_missing_filepath(self):
+
+
+        mock_message = MagicMock()
+
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试缺少filepath参数时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -777,12 +859,18 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "result", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)
 
     def test_duplicate_file_read_plugin_returns_none_on_non_file_content_message(self):
+
+
+        mock_message = MagicMock()
+
+
+        mock_message.to_llm_message.return_value = {"content": "test result"}
         """测试tool_result不是FileContentMessage时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
@@ -797,7 +885,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result("read_file_with_sed", 0, "success", "just a string result", {"filepath": absolute_path}, None, False)
+            plugin.on_tool_result("read_file_with_sed", 0, "success", mock_message, {"filepath": absolute_path}, None, False)
         )
 
         self.assertIsNone(result)

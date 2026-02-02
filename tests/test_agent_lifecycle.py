@@ -7,6 +7,7 @@ from typing import TypedDict, Any
 
 from linhai.agent import Lifecycle
 from linhai.llm import UserMessage, AssistantMessage
+from linhai.agent.base import RuntimeMessage
 
 
 class MockAnswerToken(TypedDict):
@@ -133,7 +134,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=0,
             status="skipped",
-            result_content=None,
+            message=None,
             toolcall_arguments={"arg1": "value1"},
             with_secret=None,
             is_tool_failed_duplicated_error=False,
@@ -156,7 +157,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             tool_name="test_tool",
             tool_index=0,
             status="success",
-            result_content="tool result content",
+            message=RuntimeMessage("tool result content"),
             toolcall_arguments=None,
             with_secret=None,
             is_tool_failed_duplicated_error=False,
@@ -209,7 +210,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="skipped",
-                result_content=None,
+                message=None,
                 toolcall_arguments={"arg": "value"},
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,

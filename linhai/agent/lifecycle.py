@@ -9,6 +9,7 @@ from typing import (
     TYPE_CHECKING,
 )
 from linhai.agent.base import RuntimeMessage
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 
 from linhai.llm import (
     Answer,
+    Message,
 )
 
 
@@ -42,7 +44,7 @@ OnToolResultCallback: TypeAlias = Callable[
         str,
         int,
         Literal["skipped", "success", "failed"],
-        str | None,
+        Message | None,
         dict | None,
         list[str] | None,
         bool,
@@ -84,11 +86,11 @@ BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 BeforeToolCallCallback: TypeAlias = Callable[
     [
-        str,  # tool_name
-        dict,  # toolcall_arguments
-        list[str] | None,  # with_secret
+        str,
+        dict,
+        list[str] | None,
     ],
-    Awaitable[dict | None],  # 返回替换后的参数，None表示不修改
+    Awaitable[Union[ToolResultSuccess, ToolResultFailed, dict, None]],
 ]
 
 
@@ -252,7 +254,7 @@ class Lifecycle:
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -269,7 +271,7 @@ class Lifecycle:
                 tool_name,
                 tool_index,
                 status,
-                result_content,
+                message,
                 toolcall_arguments,
                 with_secret,
                 is_tool_failed_duplicated_error,
@@ -312,13 +314,16 @@ class Lifecycle:
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> dict | None:
+    ) -> Union[ToolResultFailed, ToolResultSuccess, dict, None]:
         """触发工具调用前的事件，返回修改后的参数或None。"""
         modified_arguments = toolcall_arguments
         for callback in self._before_tool_call_callbacks:
             result = await callback(tool_name, modified_arguments, with_secret)
-            if result is not None:
+            if isinstance(result, (ToolResultFailed, ToolResultSuccess)):
+                return result
+            elif isinstance(result, dict):
                 modified_arguments = result
+            assert result is None
         return modified_arguments
 
     async def trigger_before_agent_loop(self, agent: "Agent"):

@@ -3,6 +3,7 @@
 """
 
 from __future__ import annotations
+import tiktoken
 import random
 from pathlib import Path
 import time
@@ -13,7 +14,10 @@ from linhai.agent.workflow import (
     context_compress_range_step1,
     context_compress_range_step2,
 )
-from linhai.llm import ToolCallMessage
+from .lifecycle import Lifecycle
+from linhai.llm import ToolCallMessage, Answer
+from linhai.tool.base import ToolCallResultMessage
+from linhai.multimodal import ImageMessage
 from linhai.group_chat import GroupChat
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils import CliRuntimeNotice
@@ -68,7 +72,6 @@ class AgentContextOrchestration:
                 content=f"需要至少5条大消息，当前只有{large_count}条"
             )
 
-        # 删除大消息
         removed_messages = list(self.large_messages)
         for message in removed_messages:
             await self.agent_message.remove_message(message)
@@ -140,16 +143,17 @@ class AgentContextOrchestration:
         if tool_name == "context_compress_range_step2":
             blocked_category = None
         elif current_state == "红灯":
-
             if recently_called_cleanup:
                 blocked_category = "cleanup"
             else:
                 blocked_category = "other"
-        else:  # 绿灯或黄灯状态
+        elif current_state == "黄灯":
             if recently_called_cleanup:
                 blocked_category = "cleanup"
             else:
                 blocked_category = None
+        else:
+            blocked_category = None
 
         tool_block_details: ToolBlockDetailsDict = {
             "blocked_category": blocked_category,
@@ -293,6 +297,7 @@ class AgentContextOrchestration:
 
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
         lifecycle.register_on_tool_result(self._on_tool_result)
+        lifecycle.register_before_message_generation(self._before_message_generation)
 
         large_message_plugin = LargeMessageCountPlugin(self.group_chat)
         large_message_plugin.register(lifecycle)
@@ -302,17 +307,29 @@ class AgentContextOrchestration:
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
-        if status == "success" and result_content is not None:
-            if len(result_content) > 3000:
-                from linhai.agent.base import RuntimeMessage
-
-                self.large_messages.add(RuntimeMessage(result_content))
+        if isinstance(message, ImageMessage):
+            self.large_messages.add(message)
+        elif status == "success" and message is not None:
+            tokenizer = tiktoken.get_encoding("cl100k_base")
+            content = str(message.to_llm_message().get("content", ""))
+            token_count = len(tokenizer.encode(content))
+            if token_count > 800:
+                self.large_messages.add(message)
         return None
+
+    async def _before_message_generation(
+        self, enable_compress: bool, disable_waiting_user_warning: bool
+    ) -> None:
+        """在消息生成前清理无效的大消息引用。"""
+        valid_messages = set(self.agent_message.messages)
+        self.large_messages = {
+            msg for msg in self.large_messages if msg in valid_messages
+        }
 
 
 class RedStateToolBlockPlugin:
@@ -334,7 +351,7 @@ class RedStateToolBlockPlugin:
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -386,7 +403,7 @@ class RedStateToolBlockPlugin:
 
         return None
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_on_tool_result(self.on_tool_result)
 
@@ -431,7 +448,7 @@ class AppendingMessagePlugin:
 
     async def after_message_generation(
         self,
-        _answer: dict,
+        _answer: Answer,
         _full_response: str,
         _tool_calls: list[dict],
     ) -> None:
@@ -459,7 +476,7 @@ class AppendingMessagePlugin:
                 sort_value=0,
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)
@@ -508,6 +525,6 @@ class LargeMessageCountPlugin:
                 None, source="large_message_count", sort_value=0
             )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)

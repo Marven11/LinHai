@@ -10,6 +10,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.llm import Message
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -22,7 +23,7 @@ class Plugin(ABC):
         self.group_chat = group_chat
 
     @abstractmethod
-    def register(self, lifecycle) -> None:
+    def register(self, lifecycle: "Lifecycle") -> None:
         """将Plugin注册到Lifecycle中。"""
 
 
@@ -34,7 +35,7 @@ class WithSecretParameterPositionPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -68,7 +69,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -112,12 +113,18 @@ class CommandWhitelistPlugin(Plugin):
         self.config = config
         self.allowed_commands = config.agent.allowed_commands
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_before_tool_call(self.before_tool_call)
 
-    async def before_message_generation(self, agent, context, appending_message):
-        if self.allowed_commands:
+    async def before_message_generation(
+        self, enable_compress: bool, disable_waiting_user_warning: bool
+    ) -> None:
+        from linhai.agent import Agent
+        from linhai.agent.base import RuntimeMessage
+
+        agent = self.group_chat.get_members("agent", Agent)
+        if agent and self.allowed_commands:
             allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
             agent.message_processor.update_appending_message(
                 RuntimeMessage(f"允许的命令: {allowed_str}"),
@@ -128,12 +135,9 @@ class CommandWhitelistPlugin(Plugin):
     async def before_tool_call(
         self,
         tool_name: str,
-        tool_index: int,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-        agent,
-        context,
-    ) -> Union[None, bool, ToolResultSuccess, ToolResultFailed]:
+    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
         if tool_name == "process_create":
             argv = toolcall_arguments.get("argv")
             if argv is None:

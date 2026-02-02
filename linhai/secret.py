@@ -8,6 +8,9 @@ from pathlib import Path
 from .exceptions import ConfigValidationError
 from .agent.base import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
+from .llm import Message
+from .agent.lifecycle import Lifecycle
+from .tool.base import ToolResultSuccess, ToolResultFailed
 import time
 
 
@@ -19,12 +22,9 @@ class SecretInfo(TypedDict):
 def load_secrets_from_config(
     config_path: str, base_dir: str | Path
 ) -> dict[str, SecretInfo]:
-    # 如果config_path为空或非字符串，后续操作会自然失败
     config_path = config_path.strip()
-    # 只对config_path进行expanduser处理，base_dir由调用者处理
     path = Path(config_path).expanduser()
 
-    # base_dir直接转换为Path对象，不处理expanduser
     base_dir = Path(base_dir)
 
     if not path.is_absolute():
@@ -166,7 +166,7 @@ class SecretInterceptorPlugin:
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -176,8 +176,10 @@ class SecretInterceptorPlugin:
             return None
 
         elif status in ["success", "failed"]:
-            if result_content is None:
+            if message is None:
                 return None
+
+            result_content = str(message.to_llm_message().get("content", ""))
 
             if with_secret:
                 result_content = mask_secrets_in_object(
@@ -185,18 +187,22 @@ class SecretInterceptorPlugin:
                 )
 
             if contains_any_secret(result_content, self.secrets_dict):
-                conversation_dir = self.group_chat.get_members("conversation_folder", Path)
-                filepath = save_secret_intercepted(conversation_dir, str(result_content), tool_name)
+                conversation_dir = self.group_chat.get_members(
+                    "conversation_folder", Path
+                )
+                filepath = save_secret_intercepted(
+                    conversation_dir, str(result_content), tool_name
+                )
 
-                message = (
+                return_message = (
                     f"工具调用的结果包含未指定的secret值，已拦截。"
                     f"原始内容已保存到文件: {filepath}"
                 )
-                return RuntimeMessage(message)
+                return RuntimeMessage(return_message)
 
             if with_secret:
-                message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
-                return RuntimeMessage(message)
+                return_message = f"<<masked>><<message>>工具内容包含{with_secret!r}secret的内容，已替换<<message>><<content>>{result_content}<<content>><<masked>>"
+                return RuntimeMessage(return_message)
 
             return None
 
@@ -207,7 +213,7 @@ class SecretInterceptorPlugin:
         tool_name: str,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-    ) -> dict | None:
+    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
         if with_secret is None:
             return None
 
@@ -226,7 +232,7 @@ class SecretInterceptorPlugin:
             toolcall_arguments, self.secrets_dict, cleaned_keys
         )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         lifecycle.register_on_tool_result(self.on_tool_result)
         lifecycle.register_before_tool_call(self.before_tool_call)
 
@@ -264,7 +270,6 @@ def initialize_secret_system(
 
         group_chat.add_postinit(add_secret_rule)
 
-    # 添加postinit回调来注册插件到lifecycle
     def register_plugin_to_lifecycle():
         from linhai.agent.lifecycle import Lifecycle
 

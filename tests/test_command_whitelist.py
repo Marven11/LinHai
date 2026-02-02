@@ -60,11 +60,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         
         result = await plugin.before_tool_call(
             "process_create",
-            0,
             {"argv": ["ls", "-lah"]},
             None,
-            agent,
-            context,
         )
         self.assertIsNone(result)
 
@@ -80,11 +77,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         
         result = await plugin.before_tool_call(
             "process_create",
-            0,
             {"argv": ["git", "commit"]},
             None,
-            agent,
-            context,
         )
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("不在白名单中", result.content)
@@ -101,11 +95,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         
         result = await plugin.before_tool_call(
             "read_file",
-            0,
             {"filepath": "test.txt"},
             None,
-            agent,
-            context,
         )
         self.assertIsNone(result)
 

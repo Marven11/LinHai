@@ -2,6 +2,7 @@
 
 from typing import Dict, Optional, Protocol, Union, Any, Literal
 from linhai.agent import Agent
+from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import Message, ToolCallMessage
 from linhai.group_chat import GroupChat
@@ -641,7 +642,6 @@ class MachineControl:
             host=host, group_chat=self.group_chat, port=port, username=username
         )
 
-        # 尝试连接
         try:
             connected = await ssh_control.connect()
             if not connected:
@@ -652,7 +652,6 @@ class MachineControl:
         self.machines[machine_id] = ssh_control
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
 
-        # 发送CliRuntimeNotice提醒用户SSH连接成功
         actual_username = username if username is not None else ssh_control.username
         await self.group_chat.send_if_exists(
             "ui_log",
@@ -675,7 +674,7 @@ class MachineControl:
                 return ToolResultFailed(
                     content=f"获取机器 {machine_id} 的终端列表失败: {result.content}"
                 )
-            # result.content 应该是格式化的终端信息
+
             if result.content:
                 all_terminals.append(f"机器 {machine_id}:\n{result.content}")
 
@@ -775,9 +774,8 @@ class MachineControl:
         except Exception as e:
             return ToolResultFailed(content=f"文件传输失败: {e}")
 
-    def register_plugin(self, lifecycle):
+    def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
-        # 创建一个插件，用于在appending_message中添加当前机器提示
         plugin = MachineControlPlugin(self.group_chat, self)
         plugin.register(lifecycle)
 
@@ -805,7 +803,7 @@ class MachineControlPlugin:
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
@@ -813,9 +811,8 @@ class MachineControlPlugin:
         """处理工具调用的结果，合并了原来的before_tool_call和after_tool_call功能。"""
         from linhai.utils import CliRuntimeNotice
 
-        # 对于skipped状态，执行原before_tool_call的逻辑
         if status == "skipped":
-            # 检查toolcall_arguments中是否包含on_machine参数
+
             if toolcall_arguments and "on_machine" in toolcall_arguments:
                 on_machine = toolcall_arguments["on_machine"]
                 if on_machine is not None:
@@ -828,11 +825,11 @@ class MachineControlPlugin:
                                 content=f"正在切换到机器 {on_machine} 执行工具 {tool_name}",
                             ),
                         )
-            return None  # 不跳过工具调用
+            return None
 
         # 对于success状态，执行原after_tool_call的逻辑
         elif status == "success":
-            # 检查toolcall_arguments中是否包含on_machine参数
+
             if toolcall_arguments and "on_machine" in toolcall_arguments:
                 on_machine = toolcall_arguments["on_machine"]
                 current_machine = self.machine_control.target_machine
@@ -857,13 +854,13 @@ class MachineControlPlugin:
                                 content=f"连续{self.consecutive_same_on_machine_count}次工具调用都指定了相同的on_machine '{on_machine}'，且未切换机器。请确认是否需要频繁指定。",
                             ),
                         )
-            return None  # 不替换工具结果
+            return None
 
         # 对于failed状态，不需要特殊处理
         else:
             return None
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_on_tool_result(self.on_tool_result)

@@ -12,6 +12,7 @@ from linhai.secret import (
     get_available_secrets_message,
     SecretInfo,
 )
+from linhai.agent.base import RuntimeMessage
 
 
 class TestSecretFunctions(unittest.TestCase):
@@ -286,7 +287,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments={},
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
@@ -312,7 +313,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments={},
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
@@ -335,7 +336,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments={},
                 with_secret=["SECRET1", "SECRET2"],
                 is_tool_failed_duplicated_error=False,
@@ -375,7 +376,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments={},
                 with_secret=["SECRET1"],  # 只指定了SECRET1，但结果包含SECRET2
                 is_tool_failed_duplicated_error=False,
@@ -401,7 +402,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments={},
                 with_secret=["SECRET1"],
                 is_tool_failed_duplicated_error=False,

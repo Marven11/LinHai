@@ -3,7 +3,7 @@
 import shlex
 import os
 
-from linhai.llm import ToolCallMessage, Answer
+from linhai.llm import ToolCallMessage, Answer, Message
 from linhai.utils import CliRuntimeNotice
 from linhai.plugin import Plugin
 from linhai.agent.base import RuntimeMessage, WAITING_USER_MARKER
@@ -22,7 +22,7 @@ class GitBlockingPlugin(Plugin):
         tool_name: str,
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
-        result_content: str | None,
+        message: Message | None,
         toolcall_arguments: dict | None,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,

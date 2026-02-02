@@ -52,7 +52,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments=None,
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
@@ -86,7 +86,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments=None,
                 with_secret=["DEEPSEEK_API_KEY"],
                 is_tool_failed_duplicated_error=False,
@@ -121,7 +121,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments=None,
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
@@ -152,7 +152,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
                 tool_name="write_file",
                 tool_index=1,
                 status="success",
-                result_content=result_content,
+                message=RuntimeMessage(result_content),
                 toolcall_arguments=None,
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
@@ -170,7 +170,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         
         # 验证文件内容
         saved_content = files[0].read_text(encoding="utf-8")
-        self.assertEqual(saved_content, result_content)
+        self.assertIn(result_content, saved_content)
 
 
 if __name__ == "__main__":

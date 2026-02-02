@@ -26,7 +26,7 @@ class Plugin(ABC):
         self.group_chat = group_chat
 
     @abstractmethod
-    def register(self, lifecycle) -> None:
+    def register(self, lifecycle: "Lifecycle") -> None:
         """将Plugin注册到Lifecycle中。"""
 
 
@@ -149,7 +149,7 @@ class SlowStartPlugin(Plugin):
         if len(tool_calls) < 5:
             self.enabled = False
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册after_token_generation和after_message_generation回调。"""
         lifecycle.register_after_token_generation(self.after_token_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)
@@ -284,6 +284,6 @@ class ToolCallInReasoningPlugin(Plugin):
             CliRuntimeNotice(level="WARNING", content=ui_warning_message),
         )
 
-    def register(self, lifecycle):
+    def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)

@@ -270,7 +270,9 @@ class AgentToolcall:
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="failed",
-                result_content=f"工具调用冲突: {tool_call.function_name} 与 {self.called_tools_in_round}",
+                message=RuntimeMessage(
+                    f"工具调用冲突: {tool_call.function_name} 与 {self.called_tools_in_round}"
+                ),
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=True,
@@ -296,7 +298,7 @@ class AgentToolcall:
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="skipped",
-            result_content=None,
+            message=RuntimeMessage(f"工具调用被跳过: {tool_call.function_name}"),
             toolcall_arguments=None,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
@@ -349,7 +351,7 @@ class AgentToolcall:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
-                result_content=str(runtime_message),
+                message=runtime_message,
                 toolcall_arguments=None,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
@@ -372,7 +374,7 @@ class AgentToolcall:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
-                result_content=str(runtime_message),
+                message=runtime_message,
                 toolcall_arguments=None,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
@@ -388,7 +390,7 @@ class AgentToolcall:
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="success",
-            result_content=str(tool_result),
+            message=tool_result,
             toolcall_arguments=None,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
@@ -401,13 +403,28 @@ class AgentToolcall:
     async def _call_tool(self, tool_call: ToolCallMessage, tool_index: int) -> bool:
         """调用工具。"""
 
-        modified_arguments = await self.agent.lifecycle.trigger_before_tool_call(
+        from linhai.tool.base import ToolResultFailed
+
+        before_result = await self.agent.lifecycle.trigger_before_tool_call(
             tool_name=tool_call.function_name,
             toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
         )
-        if modified_arguments is not None:
-            tool_call.function_arguments = modified_arguments
+        if isinstance(before_result, ToolResultFailed):
+            await self.agent.lifecycle.trigger_on_tool_result(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="failed",
+                message=RuntimeMessage(before_result.content),
+                toolcall_arguments=tool_call.function_arguments,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
+            msg = f"工具调用失败: {before_result.content}"
+            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            return True
+        elif isinstance(before_result, dict):
+            tool_call.function_arguments = before_result
 
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         try:
@@ -424,7 +441,7 @@ class AgentToolcall:
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
-                    result_content=formatted_content,
+                    message=RuntimeMessage(formatted_content),
                     toolcall_arguments=tool_call.function_arguments,
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,
@@ -453,7 +470,7 @@ class AgentToolcall:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
-                result_content=str(e),
+                message=RuntimeMessage(str(e)),
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,

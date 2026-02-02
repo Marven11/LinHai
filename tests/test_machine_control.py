@@ -296,7 +296,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             tool_name=tool_call.function_name,
             tool_index=0,
             status="skipped",
-            result_content=None,
+            message=None,
             toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
@@ -330,7 +330,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             tool_name=tool_call.function_name,
             tool_index=0,
             status="skipped",
-            result_content=None,
+            message=None,
             toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
@@ -358,7 +358,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             tool_name=tool_call.function_name,
             tool_index=0,
             status="success",  # 工具调用成功后处理
-            result_content=None,
+            message=None,
             toolcall_arguments=tool_call.function_arguments,  # 包含on_machine键
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
@@ -389,7 +389,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             tool_name=tool_call.function_name,
             tool_index=0,
             status="success",  # 工具调用成功后处理
-            result_content=None,
+            message=None,
             toolcall_arguments=tool_call.function_arguments,  # 包含on_machine键
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
