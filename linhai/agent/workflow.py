@@ -119,16 +119,6 @@ def _validate_compression_range(
     agent: "linhai.agent.Agent", start_id: int, end_id: int
 ) -> tuple[bool, str]:
     """验证压缩范围的有效性，返回(是否有效, 错误消息)"""
-    max_system_index = -1
-    for i, msg in enumerate(agent.message_processor.messages):
-        if isinstance(msg, (SystemMessage, GlobalMemory)):
-            max_system_index = i
-
-    min_safe_id = 0 if max_system_index == -1 else max_system_index + 1
-
-    if start_id < min_safe_id:
-        return False, f"start_id不能小于{min_safe_id}"
-
     if start_id < 0 or end_id < 0:
         return False, "消息ID不能为负数"
 
