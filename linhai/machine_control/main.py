@@ -804,7 +804,7 @@ class MachineControlPlugin:
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -813,7 +813,7 @@ class MachineControlPlugin:
 
         if status == "skipped":
 
-            if toolcall_arguments and "on_machine" in toolcall_arguments:
+            if "on_machine" in toolcall_arguments:
                 on_machine = toolcall_arguments["on_machine"]
                 if on_machine is not None:
                     current_machine = self.machine_control.target_machine
@@ -830,7 +830,7 @@ class MachineControlPlugin:
         # 对于success状态，执行原after_tool_call的逻辑
         elif status == "success":
 
-            if toolcall_arguments and "on_machine" in toolcall_arguments:
+            if "on_machine" in toolcall_arguments:
                 on_machine = toolcall_arguments["on_machine"]
                 current_machine = self.machine_control.target_machine
 

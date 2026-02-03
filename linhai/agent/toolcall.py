@@ -299,7 +299,7 @@ class AgentToolcall:
             tool_index=tool_index,
             status="skipped",
             message=RuntimeMessage(f"工具调用被跳过: {tool_call.function_name}"),
-            toolcall_arguments=None,
+            toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
@@ -352,7 +352,7 @@ class AgentToolcall:
                 tool_index=tool_index,
                 status="success",
                 message=runtime_message,
-                toolcall_arguments=None,
+                toolcall_arguments=tool_call.function_arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
@@ -375,7 +375,7 @@ class AgentToolcall:
                 tool_index=tool_index,
                 status="success",
                 message=runtime_message,
-                toolcall_arguments=None,
+                toolcall_arguments=tool_call.function_arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
@@ -391,7 +391,7 @@ class AgentToolcall:
             tool_index=tool_index,
             status="success",
             message=tool_result,
-            toolcall_arguments=None,
+            toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )

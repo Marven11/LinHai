@@ -167,7 +167,7 @@ class SecretInterceptorPlugin:
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:

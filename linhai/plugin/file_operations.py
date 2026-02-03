@@ -59,7 +59,7 @@ class DuplicateFileReadPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -74,8 +74,7 @@ class DuplicateFileReadPlugin(Plugin):
         if tool_name != "read_file":
             return None
 
-        if toolcall_arguments is None:
-            return None
+
         filepath = toolcall_arguments.get("filepath")
         if not filepath:
             return None
@@ -163,7 +162,7 @@ class UnnecessarySedReadPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -182,8 +181,7 @@ class UnnecessarySedReadPlugin(Plugin):
         if tool_name != "read_file_with_sed":
             return None
 
-        if toolcall_arguments is None:
-            return None
+
 
         filepath = toolcall_arguments.get("filepath")
         if not filepath:
@@ -244,7 +242,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -259,8 +257,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if tool_name != "process_create":
             return None
 
-        if toolcall_arguments is None:
-            return None
+
 
         command_list = toolcall_arguments.get("command", [])
 
@@ -333,7 +330,7 @@ class FileReadWriteConflictPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:

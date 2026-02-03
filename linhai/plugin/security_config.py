@@ -36,14 +36,14 @@ class WithSecretParameterPositionPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         if status != "failed":
             return None
 
-        if toolcall_arguments and "with_secret" in toolcall_arguments:
+        if "with_secret" in toolcall_arguments:
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -70,7 +70,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -185,12 +185,9 @@ class ProcessArgvCheckerPlugin(Plugin):
     async def before_tool_call(
         self,
         tool_name: str,
-        tool_index: int,
         toolcall_arguments: dict,
         with_secret: list[str] | None,
-        agent,
-        context,
-    ) -> Union[None, bool, ToolResultSuccess, ToolResultFailed]:
+    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
         if tool_name == "process_create":
             argv = toolcall_arguments.get("argv")
             if argv is None:
@@ -203,11 +200,14 @@ class ProcessArgvCheckerPlugin(Plugin):
             ]
 
             if warnings:
+                from linhai.agent import Agent
+                from linhai.agent.base import RuntimeMessage
                 warning_msg = (
                     "警告：process_create的argv参数中包含可能的bash语法操作符:"
                     + repr(warnings)
                     + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
                 )
+                agent = self.group_chat.get_members("agent", Agent)
                 agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
 
         return None

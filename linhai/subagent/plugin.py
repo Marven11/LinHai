@@ -23,7 +23,7 @@ class GitBlockingPlugin(Plugin):
         tool_index: int,
         status: Literal["skipped", "success", "failed"],
         message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
@@ -41,8 +41,7 @@ class GitBlockingPlugin(Plugin):
         if tool_name != "process_create":
             return None
 
-        if toolcall_arguments is None:
-            return None
+
 
         command_list = toolcall_arguments.get("command")
         if not command_list:

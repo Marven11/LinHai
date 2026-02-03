@@ -33,11 +33,8 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         
         result = await self.plugin.before_tool_call(
             tool_name="process_create",
-            tool_index=0,
             toolcall_arguments=toolcall_arguments,
             with_secret=None,
-            agent=Mock(),
-            context=Mock(),
         )
         
         self.assertIsNone(result)
@@ -48,11 +45,8 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         
         result = await self.plugin.before_tool_call(
             tool_name="other_tool",
-            tool_index=0,
             toolcall_arguments=toolcall_arguments,
             with_secret=None,
-            agent=Mock(),
-            context=Mock(),
         )
         
         self.assertIsNone(result)
@@ -62,15 +56,16 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         toolcall_arguments = {"argv": ["echo", "test", "123"]}
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
+        mock_agent.message_processor.add_new_message = Mock()
+        
+        # 模拟group_chat.get_members返回mock_agent
+        from linhai.agent import Agent
+        self.plugin.group_chat.get_members = Mock(return_value=mock_agent)
         
         result = await self.plugin.before_tool_call(
             tool_name="process_create",
-            tool_index=0,
             toolcall_arguments=toolcall_arguments,
             with_secret=None,
-            agent=mock_agent,
-            context=Mock(),
         )
         
         self.assertIsNone(result)
@@ -92,15 +87,16 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                 toolcall_arguments = {"argv": argv}
                 mock_agent = Mock()
                 mock_agent.message_processor = Mock()
-                mock_agent.message_processor.add_new_message = AsyncMock()
+                mock_agent.message_processor.add_new_message = Mock()
+                
+                # 模拟group_chat.get_members返回mock_agent
+                from linhai.agent import Agent
+                self.plugin.group_chat.get_members = Mock(return_value=mock_agent)
                 
                 result = await self.plugin.before_tool_call(
                     tool_name="process_create",
-                    tool_index=0,
                     toolcall_arguments=toolcall_arguments,
                     with_secret=None,
-                    agent=mock_agent,
-                    context=Mock(),
                 )
                 
                 self.assertIsNone(result)  # 不阻止工具调用
@@ -119,15 +115,16 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         toolcall_arguments = {"argv": ["echo", "test", "&&", "ls", ">", "out.txt"]}
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = AsyncMock()
+        mock_agent.message_processor.add_new_message = Mock()
+        
+        # 模拟group_chat.get_members返回mock_agent
+        from linhai.agent import Agent
+        self.plugin.group_chat.get_members = Mock(return_value=mock_agent)
         
         result = await self.plugin.before_tool_call(
             tool_name="process_create",
-            tool_index=0,
             toolcall_arguments=toolcall_arguments,
             with_secret=None,
-            agent=mock_agent,
-            context=Mock(),
         )
         
         self.assertIsNone(result)

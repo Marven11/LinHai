@@ -124,7 +124,7 @@ class ToolManager:
         """
         await self.ensure_mcp_connector()
 
-        kwargs = tool_call.function_arguments if tool_call.function_arguments else {}
+        kwargs = tool_call.function_arguments
 
         # 处理on_machine参数
         original_machine = None
@@ -151,7 +151,7 @@ class ToolManager:
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     result=failed_result,
-                    toolcall_arguments=kwargs if kwargs else None,
+                    toolcall_arguments=kwargs,
                 )
             original_machine = machine_control.target_machine
             machine_control.target_machine = tool_call.on_machine
@@ -174,7 +174,7 @@ class ToolManager:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 result=failed_result,
-                toolcall_arguments=kwargs if kwargs else None,
+                toolcall_arguments=kwargs,
             )
 
         try:
@@ -223,9 +223,7 @@ class ToolManager:
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     result=result_type(content=processed_content),
-                    toolcall_arguments=(
-                        kwargs if isinstance(result, ToolResultFailed) else None
-                    ),
+                    toolcall_arguments=kwargs if isinstance(result, ToolResultFailed) else {},
                 )
 
             if isinstance(result, ToolResultSuccess) or isinstance(
@@ -245,6 +243,7 @@ class ToolManager:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 result=tool_result,
+                toolcall_arguments={},
             )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -260,7 +259,7 @@ class ToolManager:
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 result=failed_result,
-                toolcall_arguments=kwargs if kwargs else None,
+                toolcall_arguments=kwargs,
             )
         finally:
             # 恢复原始机器

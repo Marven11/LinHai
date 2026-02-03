@@ -162,7 +162,7 @@ class ToolCallResultMessage(Message):
         tool_name: str,
         tool_index: int,
         result: ToolResultSuccess | ToolResultFailed,
-        toolcall_arguments: dict | None = None,
+        toolcall_arguments: dict,
     ):
         self.tool_name = tool_name
         self.tool_index = tool_index
@@ -187,10 +187,7 @@ class ToolCallResultMessage(Message):
             f"<<index>>{self.tool_index}<<index>>",
         ]
         # 只有在失败时才包含toolcall_arguments的repr
-        if (
-            isinstance(self.result, ToolResultFailed)
-            and self.toolcall_arguments is not None
-        ):
+        if isinstance(self.result, ToolResultFailed) and self.toolcall_arguments:
             r = reprlib.Repr()
             r.maxstring = 100
             argument_repr = r.repr(self.toolcall_arguments)
@@ -238,7 +235,7 @@ class ToolCallResultMessage(Message):
             tool_name=data["tool_name"],
             tool_index=data["tool_index"],
             result=result,
-            toolcall_arguments=data.get("toolcall_arguments"),
+            toolcall_arguments=data.get("toolcall_arguments", {}),
         )
 
 

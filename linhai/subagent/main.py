@@ -186,6 +186,7 @@ class SubAgent:
                             tool_name=tool_name,
                             tool_index=tool_index,
                             result=result,
+                            toolcall_arguments={},
                         )
                         self.messages.append(tool_result_message)
 
@@ -197,7 +198,7 @@ class SubAgent:
                             tool_name=tool_name,
                             tool_index=tool_index,
                             result=result,
-                            toolcall_arguments=tool_args if tool_args else None,
+                            toolcall_arguments=tool_args,
                         )
                         self.messages.append(tool_result_message)
 
