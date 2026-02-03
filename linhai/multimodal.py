@@ -236,7 +236,7 @@ class MultimodalToolsetManager:
                 desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
                 args={
                     "image_path": ToolArgInfo(
-                        desc="图片文件的绝对路径", type="str"
+                        desc="图片文件的路径", type="str"
                     ),
                     "quality": ToolArgInfo(
                         desc="图片质量，compressed表示压缩图像，raw表示原始图像", type="str"
