@@ -64,7 +64,28 @@ unittest 失败时，必须分析
     - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
-- [ ] 将PLANNING固化为内置功能，通过--plan参数开启
+- [ ] 将PLANNING固化为内置功能，通过--planning参数开启
+  - 问题：当前PLANNING.md只是一个保存在全局记忆目录的prompt markdown，仅为个人使用设计，没有融合到项目中
+  - 目标：我们需要更加精致地整合，将PLANNING.md的功能融入到项目中
+  - 规划
+    - 在prompt.py添加一个全局变量PLANNING_MODE_PROMPT,内容和PLANNING.md完全一致，仅在规划文件夹上有所不同
+    - 在linhai/agent/新建planning.py文件放置实现
+    - 实现PlanningPromptMessage
+      - 用于展示PLANNING_MODE_PROMPT的内容
+      - 我们之后还要自定义生成的内容，所以实现为一个单独的Message而非直接使用RuntimeMessage会更加方便
+  - `--planning`参数的功能
+    - 为agent在conversation文件夹创建一个planning/文件夹，并在其中新建三个.md文件
+    - 在用户指定这个参数时将PlanningPromptMessage加入到pinned messages中
+    - 在PlanningPromptMessage中包含prompt和文件夹中三个.md的绝对路径
+  - 添加测试
+    - PlanningPromptMessage正确展示了三个.md文件的绝对路径和PLANNING_MODE_PROMPT的内容
+    - 使用--planning参数时将PlanningPromptMessage加入到pinning messages中并创建文件夹
+- [ ] 为planning添加插件，提醒修改STATUS.md和TODOLIST.md
+- [ ] 我们需要移除当前的残废subagent功能以便重构
+  - 搜索subagent, reviewer和violation三个关键字，整理哪里需要修改
+  - 删除subagent文件夹和对应的测试，调整其他地方的实现以清理有关subagent功能的代码
+  - 搜索subagent, reviewer和violation三个关键字，确认有无遗漏，有问题则重新规划删除并重新确认
+  - 运行所有unittest，确保所有相关unittest均被删除，所有无关unittest均运行正常，如果有问题则重新规划
 - [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
