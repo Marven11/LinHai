@@ -105,6 +105,29 @@ unittest 失败时，必须分析
     - 在secret被列出时同时提供disabled_in_toolcall_argument的值
     - 同时使用with_secret指定一个disabled_in_toolcall_argument=True的secret1和一个disabled_in_toolcall_argument=False的secret2
       - 如果函数参数中有secret2则报错“secret被禁止在函数参数中使用”
+- [ ] 为load_image和ImageMessage加上指定图片质量的功能
+  - 当前问题：
+    - agent不支持预览图片，查看图片时只能完整加载图片
+    - 这也导致每张图片都被标记为大消息
+    - 这也导致如果加载了过大的图片
+  - 需要添加
+    - 为load_image添加一个必要参数quality
+      - 可为compressed或者raw
+      - 当为compressed的时候将图片等比例压缩到大约512x512的分辨率
+        - 尝试使用公式(h * w / 512 / 512) ** 0.5估算放大倍率
+    - 修改ImageMessage
+      - 添加文字消息说明当前是被压缩的图像还是原始图像，图像分辨率又怎么了
+      - 文字消息尽量简洁，例如“下方的图像以原始分辨率加载/被...，原始分辨率为xxx，....”
+      - 提供一个估算Token用量的函数，根据当前的分辨率估算token用量
+        - 我们知道kimi k2处理一张图片时会先经过2x2下采样然后14x14分块，所以对应原图应该是一块28x28的区域为一个token
+        - 因此可以使用公式估算celi(h / 28) * celi(w / 28)
+    - 修改当前处理大消息的逻辑
+      - 对于ImageMessage，根据估算的token量是否大于800判断是否需要标记为大消息
+  - 测试
+    - load_image的quality参数
+    - 压缩图像是否会正常等比例压缩
+    - ImageMessage的估算token用量功能是否对于压缩图像和原始图像都工作正常
+    - 大消息是否可以正确标记过大的ImageMessage为大消息
 
 # 注意
 
