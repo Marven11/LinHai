@@ -25,10 +25,13 @@ class TestImageMessage(TestCase):
             mime_type="image/jpeg",
             filename="test.jpg",
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         self.assertEqual(msg.image_bytes, image_bytes)
         self.assertEqual(msg.mime_type, "image/jpeg")
         self.assertEqual(msg.filename, "test.jpg")
+        self.assertEqual(msg.quality, "raw")
 
     def test_to_base64(self):
         """Test converting to base64."""
@@ -38,6 +41,8 @@ class TestImageMessage(TestCase):
             mime_type="image/png",
             filename=None,
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         expected = base64.b64encode(image_bytes).decode("utf-8")
         self.assertEqual(msg.to_data_url().split(",")[1], expected)
@@ -50,6 +55,8 @@ class TestImageMessage(TestCase):
             mime_type="image/png",
             filename=None,
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         base64_data = base64.b64encode(image_bytes).decode("utf-8")
         expected = f"data:image/png;base64,{base64_data}"
@@ -63,6 +70,8 @@ class TestImageMessage(TestCase):
             mime_type="image/png",
             filename="test.png",
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         temp_path = msg.save_to_temp_file()
         self.assertTrue(temp_path.exists())
@@ -77,6 +86,8 @@ class TestImageMessage(TestCase):
             mime_type="image/gif",
             filename=None,
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         repr_str = repr(msg)
         self.assertIn("ImageMessage", repr_str)
@@ -90,11 +101,15 @@ class TestImageMessage(TestCase):
             mime_type="image/webp",
             filename="test.webp",
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         json_str = msg.to_json()
         data = json.loads(json_str)
         self.assertEqual(data["mime_type"], "image/webp")
         self.assertEqual(data["filename"], "test.webp")
+        self.assertEqual(data["width"], 100)
+        self.assertEqual(data["height"], 100)
         decoded = base64.b64decode(data["image_bytes"])
         self.assertEqual(decoded, image_bytes)
 
@@ -106,6 +121,8 @@ class TestImageMessage(TestCase):
             mime_type="image/bmp",
             filename="test.bmp",
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
         json_str = original.to_json()
 
@@ -115,6 +132,8 @@ class TestImageMessage(TestCase):
         self.assertEqual(restored.image_bytes, image_bytes)
         self.assertEqual(restored.mime_type, "image/bmp")
         self.assertEqual(restored.filename, "test.bmp")
+        self.assertEqual(restored.width, 100)
+        self.assertEqual(restored.height, 100)
 
 
 class TestLoadImage(TestCase):
@@ -126,26 +145,34 @@ class TestLoadImage(TestCase):
 
     def test_load_image_success(self):
         """Test loading an existing image file."""
+        from PIL import Image
+        from io import BytesIO
+        
+        img = Image.new('RGB', (100, 100), color='red')
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        png_data = buffer.getvalue()
+        
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-            f.write(b"fake_png_data")
+            f.write(png_data)
             temp_path = f.name
 
         try:
-            result = load_image(temp_path, self.mock_group_chat)
+            result = load_image(temp_path, self.mock_group_chat, quality="raw")
             self.assertIsInstance(result, ImageMessage)
-            self.assertEqual(result.image_bytes, b"fake_png_data")
             self.assertEqual(result.mime_type, "image/png")
             self.assertEqual(result.filename, Path(temp_path).name)
         finally:
             Path(temp_path).unlink()
 
     def test_load_image_not_found(self):
-        """Test loading a non-existent file raises error."""
         with self.assertRaises(FileNotFoundError):
-            load_image("/nonexistent/path/image.png", self.mock_group_chat)
+            load_image("/nonexistent/path/image.png", self.mock_group_chat, quality="raw")
 
     def test_load_image_different_mime_types(self):
-        """Test loading files with different extensions."""
+        from PIL import Image
+        from io import BytesIO
+        
         test_cases = [
             (".jpg", "image/jpeg"),
             (".jpeg", "image/jpeg"),
@@ -156,15 +183,49 @@ class TestLoadImage(TestCase):
 
         for ext, expected_mime in test_cases:
             with self.subTest(ext=ext):
+                img = Image.new('RGB', (100, 100), color='red')
+                buffer = BytesIO()
+                format_map = {
+                    ".jpg": "JPEG",
+                    ".jpeg": "JPEG",
+                    ".gif": "GIF",
+                    ".webp": "WEBP",
+                    ".bmp": "BMP",
+                }
+                img.save(buffer, format=format_map[ext])
+                image_data = buffer.getvalue()
+                
                 with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-                    f.write(b"fake_data")
+                    f.write(image_data)
                     temp_path = f.name
 
                 try:
-                    result = load_image(temp_path, self.mock_group_chat)
+                    result = load_image(temp_path, self.mock_group_chat, quality="raw")
                     self.assertEqual(result.mime_type, expected_mime)
                 finally:
                     Path(temp_path).unlink()
+
+    def test_load_image_quality_parameter(self):
+        from PIL import Image
+        from io import BytesIO
+        
+        img = Image.new('RGB', (100, 100), color='red')
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        png_data = buffer.getvalue()
+        
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            f.write(png_data)
+            temp_path = f.name
+
+        try:
+            result = load_image(temp_path, self.mock_group_chat, quality="raw")
+            self.assertEqual(result.quality, "raw")
+            
+            result2 = load_image(temp_path, self.mock_group_chat, quality="compressed")
+            self.assertEqual(result2.quality, "compressed")
+        finally:
+            Path(temp_path).unlink()
 
 
 class TestImageMessageToLlmMessage(TestCase):
@@ -187,6 +248,8 @@ class TestImageMessageToLlmMessage(TestCase):
             mime_type="image/png",
             filename=None,
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
 
         result = msg.to_llm_message()
@@ -197,7 +260,6 @@ class TestImageMessageToLlmMessage(TestCase):
 
     def test_to_llm_message_with_unsupported_llm(self):
         """Test conversion when LLM does not support images."""
-        # 设置LLM不支持图片
         self.mock_llm.support_image = MagicMock(return_value=False)
 
         image_bytes = b"fake_image"
@@ -206,6 +268,8 @@ class TestImageMessageToLlmMessage(TestCase):
             mime_type="image/png",
             filename=None,
             group_chat=self.mock_group_chat,
+            width=100,
+            height=100,
         )
 
         with patch.object(msg, "save_to_temp_file") as mock_save:

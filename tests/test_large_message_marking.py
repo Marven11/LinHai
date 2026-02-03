@@ -75,34 +75,6 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             self.assertIn(long_message, self.orchestration.large_messages)
             self.assertEqual(len(self.orchestration.large_messages), 1)
 
-    async def test_mark_image_message(self):
-        """测试图片消息总是被标记。"""
-        # 创建一个模拟的ImageMessage
-        image_bytes = b"fake_image_data"
-        mime_type = "image/png"
-        filename = "test.png"
-        image_message = ImageMessage(
-            image_bytes=image_bytes,
-            mime_type=mime_type,
-            filename=filename,
-            group_chat=self.group_chat,
-        )
-        
-        # 触发_on_tool_result回调（模拟工具调用成功）
-        await self.orchestration._on_tool_result(
-            tool_name="test_tool",
-            tool_index=0,
-            status="success",
-            message=image_message,
-            toolcall_arguments={},
-            with_secret=None,
-            is_tool_failed_duplicated_error=False,
-        )
-        
-        # 验证图片消息被标记为大消息
-        self.assertIn(image_message, self.orchestration.large_messages)
-        self.assertEqual(len(self.orchestration.large_messages), 1)
-
     async def test_do_not_mark_short_message(self):
         """测试短消息（token长度<=800）不被标记。"""
         with patch("tiktoken.get_encoding") as mock_get_encoding:

@@ -8,7 +8,9 @@ import base64
 import json
 import tempfile
 from pathlib import Path
-from typing import cast
+from typing import cast, Literal
+from PIL import Image
+from io import BytesIO
 
 from linhai.llm import Message
 from linhai.agent.lifecycle import Lifecycle
@@ -25,6 +27,9 @@ class ImageMessage(Message):
         mime_type: str,
         filename: str | None,
         group_chat: GroupChat,
+        width: int,
+        height: int,
+        quality: Literal["compressed", "raw"] = "raw",
     ):
         """初始化图片消息。
 
@@ -33,11 +38,17 @@ class ImageMessage(Message):
             mime_type: 图片的MIME类型
             filename: 原始文件名（可选，None表示未知）
             group_chat: GroupChat实例（用于动态获取LLM支持状态）
+            width: 图片宽度
+            height: 图片高度
+            quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
         """
         self.image_bytes = image_bytes
         self.mime_type = mime_type
         self.filename = filename
         self.group_chat = group_chat
+        self.quality = quality
+        self.width = width
+        self.height = height
 
     def to_data_url(self) -> str:
         """生成data URL格式的图片URL。"""
@@ -80,11 +91,19 @@ class ImageMessage(Message):
             }
         else:
             temp_path = self.save_to_temp_file()
-            content = f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
+            estimated_tokens = self.estimated_tokens()
+            quality_desc = "原始分辨率" if self.quality == "raw" else "压缩后"
+            content = f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片（{quality_desc}，估算token用量: {estimated_tokens}）<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
             return cast(LanguageModelMessage, {"role": "user", "content": content})
 
     def __repr__(self) -> str:
-        return f"ImageMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type})"
+        return f"ImageMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type}, quality={self.quality}, width={self.width}, height={self.height})"
+
+    def estimated_tokens(self) -> int:
+        import math
+        tokens_h = math.ceil(self.height / 28)
+        tokens_w = math.ceil(self.width / 28)
+        return tokens_h * tokens_w
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
@@ -92,6 +111,9 @@ class ImageMessage(Message):
             "image_bytes": base64.b64encode(self.image_bytes).decode("utf-8"),
             "mime_type": self.mime_type,
             "filename": self.filename,
+            "quality": self.quality,
+            "width": self.width,
+            "height": self.height,
         }
         return json.dumps(data)
 
@@ -107,15 +129,19 @@ class ImageMessage(Message):
             mime_type=data.get("mime_type", "image/png"),
             filename=data.get("filename"),
             group_chat=group_chat,
+            quality=data.get("quality", "raw"),
+            width=data.get("width", 0),
+            height=data.get("height", 0),
         )
 
 
-def load_image(image_path: str, group_chat: GroupChat) -> ImageMessage:
+def load_image(image_path: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]) -> ImageMessage:
     """加载图片文件并返回ImageMessage。
 
     Args:
         image_path: 图片文件路径
         group_chat: GroupChat实例（用于动态获取LLM支持状态）
+        quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
 
     Returns:
         ImageMessage: 包含图片数据的消息对象
@@ -135,15 +161,38 @@ def load_image(image_path: str, group_chat: GroupChat) -> ImageMessage:
         ".webp": "image/webp",
         ".bmp": "image/bmp",
     }.get(path.suffix.lower(), "image/png")
-
-    with open(path, "rb") as f:
-        image_bytes = f.read()
-
+    
+    with Image.open(path) as img:
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        width, height = img.size
+        
+        if quality == "compressed":
+            target_area = 512 * 512
+            current_area = width * height
+            if current_area > target_area:
+                scale = (target_area / current_area) ** 0.5
+                new_width = int(width * scale)
+                new_height = int(height * scale)
+                img.thumbnail((new_width, new_height), Image.Resampling.LANCZOS)
+                width, height = img.size
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=85, optimize=True)
+            image_bytes = buffer.getvalue()
+            mime_type = "image/jpeg"
+        else:
+            buffer = BytesIO()
+            img.save(buffer, format=img.format if img.format else "PNG")
+            image_bytes = buffer.getvalue()
+    
     return ImageMessage(
         image_bytes=image_bytes,
         mime_type=mime_type,
         filename=path.name,
         group_chat=group_chat,
+        quality=quality,
+        width=width,
+        height=height,
     )
 
 
@@ -164,10 +213,7 @@ class MultimodalToolsetManager:
         self.group_chat = group_chat
         self.group_chat.register_member("multimodal_toolset_manager", self)
 
-        # 创建一个ToolSet，用于存放load_image工具
         self._toolset = ToolSet()
-
-        # 添加到ToolManager
         from linhai.tool.main import ToolManager
         tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
         tool_manager.add_toolset(self._toolset)
@@ -192,11 +238,14 @@ class MultimodalToolsetManager:
                     "image_path": ToolArgInfo(
                         desc="图片文件的绝对路径", type="str"
                     ),
+                    "quality": ToolArgInfo(
+                        desc="图片质量，compressed表示压缩图像，raw表示原始图像", type="str"
+                    ),
                 },
                 required_args=["image_path"],
             )
-            def _load_image(image_path) -> ImageMessage:
-                return load_image(image_path, self.group_chat)
+            def _load_image(image_path, quality: Literal["compressed", "raw"] = "raw") -> ImageMessage:
+                return load_image(image_path, self.group_chat, quality)
         elif not should_have and has_tool:
             del self._toolset.tools["load_image"]
 
