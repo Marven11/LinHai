@@ -168,7 +168,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.update_appending_message = MagicMock()
+        self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(5):
             await self.plugin.after_message_generation(
@@ -177,7 +177,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.single_tool_call_count, 5)
         call_args_list = (
-            self.agent.message_processor.update_appending_message.call_args_list
+            self.agent.message_processor.update_notification_message.call_args_list
         )
         last_call_args = call_args_list[-1]
         self.assertIsInstance(last_call_args[0][0], RuntimeMessage)
@@ -188,7 +188,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         """测试调用多个工具时重置计数器。"""
         full_response = "一些内容"
 
-        self.agent.message_processor.update_appending_message = MagicMock()
+        self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(4):
             await self.plugin.after_message_generation(
@@ -205,7 +205,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.single_tool_call_count, 0)
 
-        last_call_args = self.agent.message_processor.update_appending_message.call_args
+        last_call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertEqual(last_call_args[0][0], None)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
@@ -213,7 +213,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         """测试没有调用工具时重置计数器。"""
         full_response = "一些内容"
 
-        self.agent.message_processor.update_appending_message = MagicMock()
+        self.agent.message_processor.update_notification_message = MagicMock()
 
         for _ in range(3):
             await self.plugin.after_message_generation(
@@ -226,7 +226,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.single_tool_call_count, 0)
 
-        last_call_args = self.agent.message_processor.update_appending_message.call_args
+        last_call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertEqual(last_call_args[0][0], None)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
@@ -687,7 +687,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.update_appending_message = MagicMock()
+        self.agent.message_processor.update_notification_message = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_members = MagicMock(return_value=self.agent)
         self.plugin = PreviousReasoningPlugin(self.group_chat)
@@ -722,9 +722,9 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, "full response", self.tool_calls
         )
 
-        # 验证update_appending_message被调用，并且传递了SpoofedReasoningMessage
-        self.agent.message_processor.update_appending_message.assert_called_once()
-        call_args = self.agent.message_processor.update_appending_message.call_args
+        # 验证update_notification_message被调用，并且传递了SpoofedReasoningMessage
+        self.agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.agent.message_processor.update_notification_message.call_args
 
         # 检查第一个参数是SpoofedReasoningMessage实例
         message_instance = call_args[0][0]
@@ -749,7 +749,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["sort_value"], 1000)
 
     async def test_after_message_generation_no_reasoning_messages(self):
-        """测试没有推理消息时清除appending message。"""
+        """测试没有推理消息时清除notification message。"""
         # 设置没有推理消息的模拟消息
         messages_without_reasoning = [
             AssistantMessage(message="msg1", reasoning_message=None),
@@ -763,9 +763,9 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
             self.answer, "full response", self.tool_calls
         )
 
-        # 验证update_appending_message被调用，传递None
-        self.agent.message_processor.update_appending_message.assert_called_once()
-        call_args = self.agent.message_processor.update_appending_message.call_args
+        # 验证update_notification_message被调用，传递None
+        self.agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.agent.message_processor.update_notification_message.call_args
         self.assertIsNone(call_args[0][0])
         self.assertEqual(call_args[1]["source"], "previous_reasoning")
         self.assertEqual(call_args[1]["sort_value"], 1000)

@@ -77,7 +77,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             llms=self.config["llms"],
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[],
+            pinned_messages=[],
             llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
 

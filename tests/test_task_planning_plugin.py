@@ -97,7 +97,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock(spec=Agent)
         agent.context = {"config": mock_config, "enable_task_planning": True}
         agent.message_processor = MagicMock()
-        agent.message_processor.update_appending_message = MagicMock()
+        agent.message_processor.update_notification_message = MagicMock()
         self.group_chat.register_member("agent", agent)
 
         # Enable plugin
@@ -109,7 +109,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         await self.plugin.after_message_generation(AsyncMock(), full_response, [])
 
         # self.assertEqual(self.plugin.no_planning_counter, 0)  # 插件属性可能已改变
-        agent.message_processor.update_appending_message.assert_called_with(
+        agent.message_processor.update_notification_message.assert_called_with(
             None, source="task_planning_reminder", sort_value=0
         )
 
@@ -122,7 +122,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock(spec=Agent)
         agent.context = {"config": mock_config, "enable_task_planning": True}
         agent.message_processor = MagicMock()
-        agent.message_processor.update_appending_message = MagicMock()
+        agent.message_processor.update_notification_message = MagicMock()
         self.group_chat.register_member("agent", agent)
 
         # Enable plugin
@@ -137,7 +137,7 @@ class TestTaskPlanningEnforcementPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         # self.assertEqual(self.plugin.no_planning_counter, 1)  # 插件属性可能已改变
-        agent.message_processor.update_appending_message.assert_called()
+        agent.message_processor.update_notification_message.assert_called()
 
         # Second missing planning
         await self.plugin.after_message_generation(

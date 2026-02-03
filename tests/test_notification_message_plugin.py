@@ -1,9 +1,9 @@
-"""AppendingMessagePlugin类的单元测试。"""
+"""NotificationMessagePlugin类的单元测试。"""
 
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
 
-from linhai.agent.orchestration import AppendingMessagePlugin
+from linhai.agent.orchestration import NotificationMessagePlugin
 from linhai.group_chat import GroupChat
 from linhai.agent.main import Agent
 from linhai.agent.message import AgentMessage
@@ -11,20 +11,20 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.type_hints import ThresholdInfo
 
 
-class TestAppendingMessagePlugin(unittest.IsolatedAsyncioTestCase):
-    """AppendingMessagePlugin类的测试用例。"""
+class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
+    """NotificationMessagePlugin类的测试用例。"""
 
     async def asyncSetUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        self.plugin = AppendingMessagePlugin(self.group_chat)
+        self.plugin = NotificationMessagePlugin(self.group_chat)
 
         # 创建模拟的Agent和AgentContextOrchestration
         self.agent = Mock(spec=Agent)
         self.agent.get_threshold_info = Mock()
         # 添加message_processor mock
         self.agent.message_processor = Mock()
-        self.agent.message_processor.update_appending_message = Mock()
+        self.agent.message_processor.update_notification_message = Mock()
 
         self.orchestration = Mock(spec=AgentContextOrchestration)
         self.orchestration.compute_orchestration_context = Mock(
@@ -64,7 +64,7 @@ class TestAppendingMessagePlugin(unittest.IsolatedAsyncioTestCase):
         self.orchestration.compute_orchestration_context.assert_called_once_with(
             "", threshold_info
         )
-        self.agent.message_processor.update_appending_message.assert_called_once()
+        self.agent.message_processor.update_notification_message.assert_called_once()
 
     async def test_after_message_generation_without_threshold_info(self):
         """测试无阈值信息时的消息生成后回调。"""

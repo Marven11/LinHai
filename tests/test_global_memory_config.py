@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 import asyncio
 
-from linhai.agent.create import _create_init_messages
+from linhai.agent.create import _create_pinned_messages
 from linhai.group_chat import GroupChat
 from linhai.agent.base import GlobalMemory
 
@@ -74,7 +74,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "violation_checker": False,
                 "cli_args": self.mock_cli_args,
             }
-            init_messages = loop.run_until_complete(_create_init_messages(context))
+            init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -118,7 +118,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "violation_checker": False,
                 "cli_args": self.mock_cli_args,
             }
-            init_messages = loop.run_until_complete(_create_init_messages(context))
+            init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -163,7 +163,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "violation_checker": False,
                 "cli_args": self.mock_cli_args,
             }
-            init_messages = loop.run_until_complete(_create_init_messages(context))
+            init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
             memory_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalMemory)
@@ -212,7 +212,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                     "violation_checker": False,
                     "cli_args": self.mock_cli_args,
                 }
-                init_messages = loop.run_until_complete(_create_init_messages(context))
+                init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
                 memory_messages = [
                     msg for msg in init_messages if isinstance(msg, GlobalMemory)

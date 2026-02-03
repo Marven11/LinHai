@@ -62,7 +62,7 @@ class TestContextTab(unittest.TestCase):
             RuntimeMessage("测试运行时消息"),
         ]
         mock_agent_message.messages = mock_messages
-        mock_agent_message.appending_messages = {}
+        mock_agent_message.notification_messages = {}
 
         mock_orchestration.large_messages = {}
 
@@ -161,7 +161,7 @@ class TestContextTab(unittest.TestCase):
             RuntimeMessage("测试运行时消息"),
         ]
         mock_agent_message.messages = mock_messages
-        mock_agent_message.appending_messages = {}
+        mock_agent_message.notification_messages = {}
 
         mock_orchestration.large_messages = {
             "largemessage_1": mock_messages[0],

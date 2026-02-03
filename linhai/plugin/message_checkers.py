@@ -163,7 +163,7 @@ class OnlyReasoningPlugin(Plugin):
         reasoning_content = answer.get_reasoning_message()
 
         if reasoning_content and not full_response.strip():
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 RuntimeMessage(
                     "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容"
                 ),
@@ -177,7 +177,7 @@ class OnlyReasoningPlugin(Plugin):
                 ),
             )
         else:
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 None, source="only_reasoning", sort_value=0
             )
 
@@ -204,11 +204,11 @@ class PreviousReasoningPlugin(Plugin):
         ]
         if msgs:
             previous_reasoning_msg = SpoofedReasoningMessage(msgs[-6:])
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 previous_reasoning_msg, source="previous_reasoning", sort_value=1000
             )
         else:
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 None, source="previous_reasoning", sort_value=1000
             )
 

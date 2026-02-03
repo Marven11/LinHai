@@ -97,7 +97,7 @@ class TaskPlanningEnforcementPlugin(Plugin):
             self.no_planning_counter = 0
             self.group_chat.get_members(
                 "agent", Agent
-            ).message_processor.update_appending_message(
+            ).message_processor.update_notification_message(
                 None, source="task_planning_reminder", sort_value=0
             )
         elif tool_calls:
@@ -114,7 +114,7 @@ class TaskPlanningEnforcementPlugin(Plugin):
                 )
                 self.group_chat.get_members(
                     "agent", Agent
-                ).message_processor.update_appending_message(
+                ).message_processor.update_notification_message(
                     RuntimeMessage(
                         "注意：你没有输出任务规划！如果连续3次不输出任务规划，将会被打断回答。"
                     ),
@@ -125,7 +125,7 @@ class TaskPlanningEnforcementPlugin(Plugin):
 
                 self.group_chat.get_members(
                     "agent", Agent
-                ).message_processor.update_appending_message(
+                ).message_processor.update_notification_message(
                     RuntimeMessage(
                         "警告：你已经连续2次没有输出任务规划！如果下一次仍然不输出任务规划，将会被打断回答！"
                     ),

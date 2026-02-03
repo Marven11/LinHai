@@ -790,9 +790,9 @@ class MachineControlPlugin:
         self.last_on_machine: Optional[str] = None
 
     async def before_message_generation(self, *_args, **_kwargs):
-        """在消息生成前更新appending_message。"""
+        """在消息生成前更新notification_message。"""
         agent = self.group_chat.get_members("agent", Agent)
-        agent.message_processor.update_appending_message(
+        agent.message_processor.update_notification_message(
             RuntimeMessage(f"当前在{self.machine_control.target_machine}上"),
             source="machine_control",
             sort_value=0,

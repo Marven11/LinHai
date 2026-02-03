@@ -39,7 +39,7 @@ class Agent:
         llms: list[LanguageModel],
         compress_threshold: int | float,
         group_chat: GroupChat,
-        init_messages: list[Message],
+        pinned_messages: list[Message],
         llm_name: str | None = None,
         max_toolcall_token_in_round: int = 30000,
     ):
@@ -71,7 +71,7 @@ class Agent:
         self.state: AgentState = "waiting_user"
 
         self.lifecycle = Lifecycle(group_chat)
-        self.message_processor = AgentMessage(group_chat, init_messages)
+        self.message_processor = AgentMessage(group_chat, pinned_messages)
         self.orchestration = AgentContextOrchestration(
             group_chat, self.message_processor
         )

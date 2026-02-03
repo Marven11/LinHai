@@ -59,7 +59,7 @@ class TestToolSystemPrompt(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages,
+            pinned_messages=init_messages,
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
 

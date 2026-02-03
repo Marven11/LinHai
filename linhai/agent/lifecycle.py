@@ -138,7 +138,7 @@ class Lifecycle:
             FileReadWriteConflictPlugin,
             KimiK25ToolCallPlugin,
         )
-        from .orchestration import RedStateToolBlockPlugin, AppendingMessagePlugin
+        from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
         plugins = [
             WaitingUserPlugin(self.group_chat),
@@ -159,7 +159,7 @@ class Lifecycle:
             UnnecessarySedReadPlugin(self.group_chat),
             UnnecessaryRunCommandPlugin(self.group_chat),
             RedStateToolBlockPlugin(self.group_chat),
-            AppendingMessagePlugin(self.group_chat),
+            NotificationMessagePlugin(self.group_chat),
             FileReadWriteConflictPlugin(self.group_chat),
             KimiK25ToolCallPlugin(self.group_chat),
         ]

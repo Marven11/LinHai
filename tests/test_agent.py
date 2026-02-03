@@ -111,7 +111,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
-        init_messages = [
+        pinned_messages = [
             SystemMessage(
                 group_chat=self.group_chat,
             )
@@ -121,7 +121,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages,
+            pinned_messages=pinned_messages,
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
@@ -364,7 +364,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             llms=[mock_llm1, mock_llm2],
             compress_threshold=800,
             group_chat=new_group_chat,
-            init_messages=[],
+            pinned_messages=[],
             llm_name="deepseek-reasoning",
         )
         

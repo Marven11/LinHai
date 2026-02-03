@@ -56,8 +56,8 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         finally:
             group_chat.send = original_send
 
-    async def test_appending_message_plugin_integration(self):
-        """测试AppendingMessagePlugin的基本集成。"""
+    async def test_notification_message_plugin_integration(self):
+        """测试NotificationMessagePlugin的基本集成。"""
         # 使用mock避免复杂导入
         from linhai.group_chat import GroupChat
         from linhai.agent.base import RuntimeMessage
@@ -73,7 +73,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         }
         mock_agent.get_threshold_info = MagicMock(return_value=threshold_info)
         mock_agent.message_processor = MagicMock()
-        mock_agent.message_processor.update_appending_message = MagicMock()
+        mock_agent.message_processor.update_notification_message = MagicMock()
 
         group_chat.register_member("agent", mock_agent)
 
@@ -98,10 +98,10 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         )
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
 
-        # 导入并测试AppendingMessagePlugin
-        from linhai.agent.orchestration import AppendingMessagePlugin
+        # 导入并测试NotificationMessagePlugin
+        from linhai.agent.orchestration import NotificationMessagePlugin
 
-        plugin = AppendingMessagePlugin(group_chat)
+        plugin = NotificationMessagePlugin(group_chat)
 
         # 测试before_message_generation
         await plugin.before_message_generation(True, False)
@@ -111,10 +111,10 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         mock_orchestration.compute_orchestration_context.assert_called_once_with(
             "", threshold_info
         )
-        mock_agent.message_processor.update_appending_message.assert_called_once()
+        mock_agent.message_processor.update_notification_message.assert_called_once()
 
         # 验证参数
-        call_args = mock_agent.message_processor.update_appending_message.call_args
+        call_args = mock_agent.message_processor.update_notification_message.call_args
         runtime_message = call_args[0][0]
         self.assertIsInstance(runtime_message, RuntimeMessage)
         self.assertEqual(runtime_message.message, notification_msg)

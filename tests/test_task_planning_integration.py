@@ -123,7 +123,7 @@ class TestTaskPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             llms=self.context["llms"],
             compress_threshold=self.context["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[self.system_message],
+            pinned_messages=[self.system_message],
             llm_name=self.context["llm_names"][self.context["current_llm_index"]],
         )
 

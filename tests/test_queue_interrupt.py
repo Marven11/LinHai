@@ -83,7 +83,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 52428,
         }
 
-        self.init_messages = []
+        self.pinned_messages = []
 
         from linhai.subagent.issue import IssueManager
 
@@ -106,7 +106,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             llms=self.config["llms"],
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=self.init_messages,
+            pinned_messages=self.pinned_messages,
             llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
 

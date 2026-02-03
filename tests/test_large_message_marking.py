@@ -39,11 +39,11 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         conversation_folder = Path(temp_dir)
         self.group_chat.register_member("conversation_folder", conversation_folder)
         
-        self.init_messages = [
+        self.pinned_messages = [
             SystemMessage(group_chat=self.group_chat),
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(self.group_chat, self.init_messages)
+        self.message_processor = AgentMessage(self.group_chat, self.pinned_messages)
         self.orchestration = AgentContextOrchestration(
             self.group_chat, self.message_processor
         )
@@ -142,8 +142,8 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         self.assertIn(msg3, remaining_messages)
         
         # 验证消息顺序和数量
-        # 初始消息有2个，加上3个普通消息，总共应该是5个
-        self.assertEqual(len(remaining_messages), 5)
+        # 3个普通消息应该保留（msg1, msg2, msg3）
+        self.assertEqual(len(remaining_messages), 3)
 
 
 if __name__ == "__main__":

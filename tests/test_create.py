@@ -10,7 +10,7 @@ from linhai.agent.create import (
     create_agent_from_config,
     _create_llm_instances,
     _create_tool_manager,
-    _create_init_messages,
+    _create_pinned_messages,
 )
 from linhai.agent.create import create_agent_build_context
 from linhai.group_chat import GroupChat
@@ -27,12 +27,12 @@ class TestCreateAgent(unittest.TestCase):
 
     @patch("linhai.agent.create._create_llm_instances")
     @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_init_messages")
+    @patch("linhai.agent.create._create_pinned_messages")
     @patch("linhai.agent.main.Agent")
     def test_create_agent_success(
         self,
         mock_agent,
-        mock_init_messages,
+        mock_pinned_messages,
         mock_tool_manager,
         mock_llm_instances,
     ):
@@ -68,7 +68,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_llm_instances.return_value = [mock_llm]  # type: ignore
 
         mock_tool_manager.return_value = (Mock(), Mock())
-        mock_init_messages.return_value = [Mock()]
+        mock_pinned_messages.return_value = [Mock()]
         mock_agent_instance = Mock()
         mock_agent.return_value = mock_agent_instance
 
@@ -91,7 +91,7 @@ class TestCreateAgent(unittest.TestCase):
 
         mock_llm_instances.assert_called_once()
         mock_tool_manager.assert_called_once()
-        mock_init_messages.assert_called_once()
+        mock_pinned_messages.assert_called_once()
         mock_agent.assert_called_once()
         self.assertEqual(result, mock_agent_instance)
 
@@ -135,7 +135,7 @@ class TestCreateAgent(unittest.TestCase):
         with (
             patch("linhai.agent.create._create_llm_instances") as mock_llm_instances,
             patch("linhai.agent.create._create_tool_manager") as mock_tool_manager,
-            patch("linhai.agent.create._create_init_messages") as mock_init_messages,
+            patch("linhai.agent.create._create_pinned_messages") as mock_pinned_messages,
             patch("linhai.agent.main.Agent") as mock_agent,
         ):
 
@@ -148,7 +148,7 @@ class TestCreateAgent(unittest.TestCase):
             mock_llm_instances.return_value = [mock_llm, mock_llm]  # type: ignore
 
             mock_tool_manager.return_value = (Mock(), Mock())
-            mock_init_messages.return_value = [Mock()]
+            mock_pinned_messages.return_value = [Mock()]
             mock_agent.return_value = Mock()
 
             import asyncio
@@ -270,13 +270,13 @@ class TestCreateToolManager(unittest.TestCase):
         self.assertIsNotNone(result)
 
 
-class TestCreateInitMessages(unittest.TestCase):
+class TestCreatePinnedMessages(unittest.TestCase):
     """测试初始化消息创建功能"""
 
     @patch("linhai.agent.create.GlobalMemory")
     @patch("linhai.agent.create.SystemMessage")
     @patch("linhai.agent.create.Path")
-    def test_create_init_messages(
+    def test_create_pinned_messages(
         self, mock_path, mock_system_message, mock_global_memory
     ):
         """测试创建初始化消息"""
@@ -304,7 +304,7 @@ class TestCreateInitMessages(unittest.TestCase):
             "checklist_path": None,
             "cli_args": mock_cli_args,
         }
-        result = asyncio.run(_create_init_messages(context))
+        result = asyncio.run(_create_pinned_messages(context))
 
         self.assertGreater(len(result), 0)
         mock_system_message.assert_called_once()

@@ -15,7 +15,7 @@ from linhai.llm import (
 )
 from linhai.group_chat import GroupChat
 from linhai.agent import Agent
-from linhai.agent.orchestration import AppendingMessagePlugin, AgentContextOrchestration
+from linhai.agent.orchestration import NotificationMessagePlugin, AgentContextOrchestration
 from linhai.cli.app import CLIApp
 from linhai.token_manager import TokenManager
 
@@ -33,11 +33,11 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         self.mock_stream = AsyncMock()
         self.mock_stream.__anext__ = AsyncMock()
 
-        # Mock agent for AppendingMessagePlugin - 使用spec确保类型匹配
+        # Mock agent for NotificationMessagePlugin - 使用spec确保类型匹配
         self.mock_agent = MagicMock(spec=Agent)
         self.mock_agent.get_threshold_info = MagicMock(return_value=None)
         self.mock_agent.message_processor = MagicMock()
-        self.mock_agent.message_processor.update_appending_message = MagicMock()
+        self.mock_agent.message_processor.update_notification_message = MagicMock()
 
         self.group_chat.register_member("agent", self.mock_agent)
 
@@ -116,15 +116,15 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         finally:
             self.group_chat.send = original_send
 
-    async def test_appending_message_plugin_before_message_generation(self):
-        """测试AppendingMessagePlugin的before_message_generation钩子。"""
-        plugin = AppendingMessagePlugin(self.group_chat)
+    async def test_notification_message_plugin_before_message_generation(self):
+        """测试NotificationMessagePlugin的before_message_generation钩子。"""
+        plugin = NotificationMessagePlugin(self.group_chat)
 
         # 测试threshold_info为None的情况
         await plugin.before_message_generation(True, False)
 
-        # 验证没有调用update_appending_message
-        self.mock_agent.message_processor.update_appending_message.assert_not_called()
+        # 验证没有调用update_notification_message
+        self.mock_agent.message_processor.update_notification_message.assert_not_called()
 
         # 测试有threshold_info的情况
         threshold_info = {
@@ -153,9 +153,9 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
         await plugin.before_message_generation(True, False)
 
-        # 验证调用了update_appending_message
-        self.mock_agent.message_processor.update_appending_message.assert_called_once()
-        call_args = self.mock_agent.message_processor.update_appending_message.call_args
+        # 验证调用了update_notification_message
+        self.mock_agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.update_notification_message.call_args
         runtime_message = call_args[0][0]
         self.assertEqual(runtime_message.message, notification_msg)
         self.assertEqual(call_args[1]["source"], "threshold_notification")

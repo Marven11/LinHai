@@ -53,7 +53,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             llms=mock_config["llms"],
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[],
+            pinned_messages=[],
             llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 

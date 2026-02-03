@@ -53,7 +53,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
             llms=llms_list,
             compress_threshold=compress_threshold_val,
             group_chat=self.group_chat,
-            init_messages=self.init_messages,
+            pinned_messages=self.init_messages,
             llm_name=llm_name_val,
         )
 

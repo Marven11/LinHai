@@ -126,7 +126,7 @@ class CommandWhitelistPlugin(Plugin):
         agent = self.group_chat.get_members("agent", Agent)
         if agent and self.allowed_commands:
             allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 RuntimeMessage(f"允许的命令: {allowed_str}"),
                 source="command_whitelist",
                 sort_value=10,

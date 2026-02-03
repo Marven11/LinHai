@@ -69,8 +69,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertIn("黄灯状态", result)
         self.assertIn("上下文占用量", result)
         self.assertIn("条大消息", result)
-        # 消息数量应该仍然是3，因为通知没有被添加，只是返回
-        self.assertEqual(len(self.message_processor.messages), 3)
+        # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息），因为通知没有被添加，只是返回
+        self.assertEqual(len(self.message_processor.get_messages()), 3)
 
     def test_add_soft_threshold_notification_with_compress_tool(self):
         """测试压缩工具调用后不添加通知。"""
@@ -97,8 +97,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         assert result is not None
         self.assertIn("绿灯状态", result)
         self.assertIn("一分钟内有调用过消息清理工具", result)
-        # 消息数量应该仍然是3
-        self.assertEqual(len(self.message_processor.messages), 3)
+        # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息）
+        self.assertEqual(len(self.message_processor.get_messages()), 3)
 
     def test_get_status_display_piece(self):
         """测试获取状态显示片段。"""
@@ -118,7 +118,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 应该包含消息计数 - 格式已改为 '4 msgs', '1 large'
         for piece in pieces:
             if "msgs" in piece:
-                self.assertIn("4", piece)  # 消息数量
+                self.assertIn("4", piece)  # 总消息数量: 2条pinned_messages + 2条普通消息
             elif "large" in piece:
                 self.assertIn("1", piece)  # 大消息数量
 
@@ -129,7 +129,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # nerd字体使用图标，所以我们检查是否包含消息数量
         for piece in nerd_pieces:
             if "\uf27a" in piece:  # 消息图标
-                self.assertIn("4", piece)  # 消息数量
+                self.assertIn("4", piece)  # 总消息数量: 2条pinned_messages + 2条普通消息
             elif "\uf1c0" in piece:  # 大消息图标
                 self.assertIn("1", piece)
 

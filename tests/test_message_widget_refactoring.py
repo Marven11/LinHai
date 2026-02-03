@@ -105,7 +105,7 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             llms=context["llms"],
             compress_threshold=context["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=[],
+            pinned_messages=[],
             llm_name=context["llm_names"][context["current_llm_index"]],
         )
 

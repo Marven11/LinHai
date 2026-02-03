@@ -46,7 +46,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         
         with patch("linhai.agent.create._create_llm_instances") as mock_create_llms, \
              patch("linhai.agent.create._create_tool_manager") as mock_create_tools, \
-             patch("linhai.agent.create._create_init_messages") as mock_create_msgs, \
+             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs, \
              patch("linhai.agent.create._create_subagent") as mock_create_subagent:
             
             
@@ -116,7 +116,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         
         with patch("linhai.agent.create._create_llm_instances") as mock_create_llms, \
              patch("linhai.agent.create._create_tool_manager") as mock_create_tools, \
-             patch("linhai.agent.create._create_init_messages") as mock_create_msgs, \
+             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs, \
              patch("linhai.agent.create._create_subagent") as mock_create_subagent:
             
             

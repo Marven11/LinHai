@@ -116,7 +116,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat.get_members.side_effect = get_members_side_effect
 
-        init_messages = [
+        pinned_messages = [
             SystemMessage(
                 group_chat=self.group_chat,
             )
@@ -126,7 +126,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages,
+            pinned_messages=pinned_messages,
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
 

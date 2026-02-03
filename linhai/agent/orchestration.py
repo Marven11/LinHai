@@ -210,7 +210,7 @@ class AgentContextOrchestration:
         Returns:
             状态显示片段列表，每个片段是一个独立的显示单元
         """
-        message_count = len(self.agent_message.messages)
+        message_count = len(self.agent_message.get_messages())
         large_count = len(self.large_messages)
 
         pieces = []
@@ -408,10 +408,10 @@ class RedStateToolBlockPlugin:
         lifecycle.register_on_tool_result(self.on_tool_result)
 
 
-class AppendingMessagePlugin:
-    """添加appending message的插件。
+class NotificationMessagePlugin:
+    """添加notification message的插件。
 
-    将添加appending message的实现拆分成一个新的plugin类。
+    将添加notification message的实现拆分成一个新的plugin类。
     """
 
     def __init__(self, group_chat: GroupChat):
@@ -422,7 +422,7 @@ class AppendingMessagePlugin:
         _enable_compress: bool,
         _disable_waiting_user_warning: bool,
     ) -> None:
-        """在消息生成前添加appending message。"""
+        """在消息生成前添加notification message。"""
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -440,7 +440,7 @@ class AppendingMessagePlugin:
         context = orchestration.compute_orchestration_context("", threshold_info)
         notification_message = context["notification_message"]
         if notification_message is not None:
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 RuntimeMessage(notification_message),
                 source="threshold_notification",
                 sort_value=0,
@@ -452,7 +452,7 @@ class AppendingMessagePlugin:
         _full_response: str,
         _tool_calls: list[dict],
     ) -> None:
-        """在消息生成后添加appending message。"""
+        """在消息生成后添加notification message。"""
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -470,7 +470,7 @@ class AppendingMessagePlugin:
         context = orchestration.compute_orchestration_context("", threshold_info)
         notification_message = context["notification_message"]
         if notification_message is not None:
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 RuntimeMessage(notification_message),
                 source="threshold_notification",
                 sort_value=0,
@@ -485,9 +485,9 @@ class AppendingMessagePlugin:
 class LargeMessageCountPlugin:
     """大消息数量通知插件。
 
-    根据大消息数量动态管理appending_message：
+    根据大消息数量动态管理notification_message：
     - 大消息少于5条时：提示不能调用context_garbage_clean
-    - 大消息至少5条时：删除提示（不添加appending_message）
+    - 大消息至少5条时：删除提示（不添加notification_message）
     """
 
     def __init__(self, group_chat: GroupChat):
@@ -498,7 +498,7 @@ class LargeMessageCountPlugin:
         _enable_compress: bool,
         _disable_waiting_user_warning: bool,
     ) -> None:
-        """在消息生成前根据大消息数量管理appending_message。"""
+        """在消息生成前根据大消息数量管理notification_message。"""
         from .main import Agent
 
         agent = self.group_chat.get_members("agent", Agent)
@@ -514,14 +514,14 @@ class LargeMessageCountPlugin:
         if large_count < 5:
 
             message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_garbage_clean"
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="large_message_count",
                 sort_value=0,
             )
         else:
 
-            agent.message_processor.update_appending_message(
+            agent.message_processor.update_notification_message(
                 None, source="large_message_count", sort_value=0
             )
 

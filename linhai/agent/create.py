@@ -112,7 +112,7 @@ async def create_agent_from_config(
         llm_name=context["llm_name"],
         compress_threshold=context["config"].agent.compress_threshold,
         group_chat=context["group_chat"],
-        init_messages=await _create_init_messages(context),
+        pinned_messages=await _create_pinned_messages(context),
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
     machine_control.register_plugin(agent.lifecycle)
@@ -214,16 +214,16 @@ async def _create_tool_manager(context: "AgentBuildContext"):
     return tool_manager, machine_control
 
 
-async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
-    """创建初始化消息列表。
+async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]:
+    """创建固定消息列表。
 
     Args:
         context: Agent构建上下文
 
     Returns:
-        初始化消息列表
+        固定消息列表
     """
-    init_messages: list[Message] = [SystemMessage(context["group_chat"])]
+    pinned_messages: list[Message] = [SystemMessage(context["group_chat"])]
 
     cli_args = context["cli_args"]
 
@@ -231,16 +231,16 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
         memory_file_path = (
             context["config_basedir"] / context["config"].memory.file_path
         )
-        init_messages.append(GlobalMemory(Path(memory_file_path).absolute()))
+        pinned_messages.append(GlobalMemory(Path(memory_file_path).absolute()))
     else:
-        init_messages.append(
+        pinned_messages.append(
             GlobalMemory(Path("~/.config/linhai/LINHAI.md").expanduser())
         )
 
     if context["checklist_path"]:
         from .base import ChecklistMessage
 
-        init_messages.append(ChecklistMessage(context["checklist_path"]))
+        pinned_messages.append(ChecklistMessage(context["checklist_path"]))
         await context["group_chat"].send_if_exists(
             "ui_log",
             CliRuntimeNotice(
@@ -257,22 +257,22 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
 
     for filepath in project_memory_filepaths:
         if filepath.exists():
-            init_messages.append(PathMemory(filepath))
+            pinned_messages.append(PathMemory(filepath))
 
     from linhai.llm import UserMessage
     from linhai.agent.base import FileContentMessage
 
     if cli_args.message:
         for msg in cli_args.message:
-            init_messages.append(UserMessage(msg))
+            pinned_messages.append(UserMessage(msg))
 
     if not cli_args.file:
-        return init_messages
+        return pinned_messages
 
     for file_path in cli_args.file:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read().strip()
-            init_messages.append(
+            pinned_messages.append(
                 FileContentMessage(
                     filepath=str(file_path),
                     content=content,
@@ -280,4 +280,4 @@ async def _create_init_messages(context: "AgentBuildContext") -> list[Message]:
                 )
             )
 
-    return init_messages
+    return pinned_messages

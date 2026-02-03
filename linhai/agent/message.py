@@ -13,8 +13,8 @@ from linhai.utils import CliRuntimeNotice
 from .base import Message, RuntimeMessage
 
 
-class AppendingMessageEntry(TypedDict):
-    """附加消息条目，包含源标识符、消息内容和排序值。"""
+class NotificationMessageEntry(TypedDict):
+    """通知消息条目，包含源标识符、消息内容和排序值。"""
 
     source: str
     message: Message
@@ -24,17 +24,18 @@ class AppendingMessageEntry(TypedDict):
 class AgentMessage:
     """基础消息管理器，负责管理基础消息队列和相关操作。"""
 
-    def __init__(self, group_chat: GroupChat, init_messages: Sequence[Message]):
+    def __init__(self, group_chat: GroupChat, pinned_messages: Sequence[Message]):
         """初始化基础消息管理器。
 
         Args:
-            init_messages: 初始消息列表
+            pinned_messages: 固化的初始消息列表，不会被历史压缩删除
         """
         self.group_chat = group_chat
         self.group_chat.register_member("agent_message", self)
 
-        self.messages: List[Message] = list(init_messages)
-        self.appending_messages: dict[str, AppendingMessageEntry] = {}
+        self.pinned_messages: List[Message] = list(pinned_messages)
+        self.messages: List[Message] = []
+        self.notification_messages: dict[str, NotificationMessageEntry] = {}
         self.queued_messages: List[Message] = []
 
         self.cache_invalidate_count = 0
@@ -64,7 +65,7 @@ class AgentMessage:
     def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
 
-        新消息插入在普通消息后，appending_messages前。
+        新消息插入在普通消息后，notification_messages前。
 
         Args:
             msg: 要添加的消息
@@ -72,23 +73,22 @@ class AgentMessage:
         self.messages.append(msg)
 
     def get_messages(self) -> List[Message]:
-        """获取当前所有消息（包括appending_messages）。
+        """获取当前所有消息（包括pinned_messages和notification_messages）。
 
         Returns:
-            消息列表
+            消息列表，顺序为：pinned_messages + messages + notification_messages
         """
-        # 按sort_value排序，然后提取message
         sorted_entries = sorted(
-            self.appending_messages.values(), key=lambda x: x["sort_value"]
+            self.notification_messages.values(), key=lambda x: x["sort_value"]
         )
-        appending_messages = [entry["message"] for entry in sorted_entries]
-        return self.messages + appending_messages
+        notification_messages = [entry["message"] for entry in sorted_entries]
+        return self.pinned_messages + self.messages + notification_messages
 
     def get_message_count(self) -> int:
-        """获取当前消息数量。
+        """获取当前普通消息数量（不包括pinned_messages和notification_messages）。
 
         Returns:
-            消息数量
+            普通消息数量
         """
         return len(self.messages)
 
@@ -98,16 +98,17 @@ class AgentMessage:
         Returns:
              如果是用户消息返回True，否则False
         """
-        if not self.messages:
+        all_messages = self.get_messages()
+        if not all_messages:
             return False
-        msg = self.messages[-1]
+        msg = all_messages[-1]
         return isinstance(msg, UserMessage)
 
     async def replace_messages(self, messages: List[Message]) -> None:
-        """替换整个消息列表。
+        """替换整个普通消息列表。
 
         Args:
-            messages: 新的消息列表（不包含appending_messages）
+            messages: 新的普通消息列表（不包含pinned_messages和notification_messages）
         """
         await self.count_invalidate_cache()
         self.messages = messages
@@ -116,7 +117,7 @@ class AgentMessage:
         """在指定位置插入消息。
 
         Args:
-            index: 插入位置
+            index: 插入位置（相对于普通消息列表）
             message: 要插入的消息
         """
         await self.count_invalidate_cache()
@@ -126,8 +127,8 @@ class AgentMessage:
         """删除指定范围的消息。
 
         Args:
-            start: 起始索引
-            end: 结束索引
+            start: 起始索引（相对于普通消息列表）
+            end: 结束索引（相对于普通消息列表）
 
         Returns:
              被删除的消息列表
@@ -138,7 +139,7 @@ class AgentMessage:
         return deleted
 
     async def filter_messages(self, condition) -> None:
-        """根据条件过滤消息。
+        """根据条件过滤普通消息。
 
         Args:
             condition: 过滤条件函数
@@ -147,7 +148,7 @@ class AgentMessage:
         self.messages = [msg for msg in self.messages if condition(msg)]
 
     async def remove_message(self, message: Message) -> None:
-        """从消息列表中移除指定消息。
+        """从普通消息列表中移除指定消息。
 
         Args:
             message: 要移除的消息
@@ -156,22 +157,22 @@ class AgentMessage:
         if message in self.messages:
             self.messages.remove(message)
 
-    def update_appending_message(
+    def update_notification_message(
         self, message: Message | None, source: str, sort_value: int
     ) -> None:
-        """更新或移除appending message。
+        """更新或移除notification message。
 
         Args:
             message: 消息内容，如果为None则移除对应source的消息
                   必须是Message实例
-            source: 消息来源标识符，用于区分不同的appending messages
+            source: 消息来源标识符，用于区分不同的notification messages
             sort_value: 排序权重，必须指定
         """
-        if source in self.appending_messages:
-            del self.appending_messages[source]
+        if source in self.notification_messages:
+            del self.notification_messages[source]
 
         if message is not None:
-            self.appending_messages[source] = {
+            self.notification_messages[source] = {
                 "source": source,
                 "message": message,
                 "sort_value": sort_value,

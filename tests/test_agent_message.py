@@ -25,17 +25,18 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         mock_tool_manager.get_tools_info.return_value = []
         group_chat.register_member("tool_manager", mock_tool_manager)
 
-        self.init_messages = [
+        self.pinned_messages = [
             SystemMessage(
                 group_chat=group_chat,
             ),
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(group_chat, self.init_messages)
+        self.message_processor = AgentMessage(group_chat, self.pinned_messages)
 
     def test_initialization(self):
         """测试AgentMessage初始化。"""
-        self.assertEqual(self.message_processor.messages, self.init_messages)
+        self.assertEqual(self.message_processor.pinned_messages, self.pinned_messages)
+        self.assertEqual(self.message_processor.messages, [])
         self.assertEqual(self.message_processor.queued_messages, [])
 
     def test_handle_user_message(self):
@@ -43,29 +44,41 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         user_msg = UserMessage(message="Hello")
         self.message_processor.handle_user_message(user_msg)
 
-        self.assertEqual(len(self.message_processor.messages), 3)
-        self.assertEqual(self.message_processor.messages[-1], user_msg)
+        # messages列表应包含1条普通消息
+        self.assertEqual(len(self.message_processor.messages), 1)
+        # get_messages()应返回pinned_messages + messages，总数为3
+        self.assertEqual(len(self.message_processor.get_messages()), 3)
+        # 最后一条消息应该是添加的用户消息
+        self.assertEqual(self.message_processor.get_messages()[-1], user_msg)
 
     def test_handle_user_message_with_switch_model(self):
         """测试处理带@切换模型的消息。"""
         user_msg = UserMessage(message="@qwen Hello")
         self.message_processor.handle_user_message(user_msg)
 
-        self.assertEqual(len(self.message_processor.messages), 3)
-        self.assertEqual(self.message_processor.messages[-1], user_msg)
+        # messages列表应包含1条普通消息
+        self.assertEqual(len(self.message_processor.messages), 1)
+        # get_messages()应返回pinned_messages + messages，总数为3
+        self.assertEqual(len(self.message_processor.get_messages()), 3)
+        # 最后一条消息应该是添加的用户消息
+        self.assertEqual(self.message_processor.get_messages()[-1], user_msg)
 
     def test_add_new_message(self):
         """测试添加消息。"""
         runtime_msg = RuntimeMessage("Test runtime message")
         self.message_processor.add_new_message(runtime_msg)
 
-        self.assertEqual(len(self.message_processor.messages), 3)
-        self.assertEqual(self.message_processor.messages[-1], runtime_msg)
+        # messages列表应包含1条普通消息
+        self.assertEqual(len(self.message_processor.messages), 1)
+        # get_messages()应返回pinned_messages + messages，总数为3
+        self.assertEqual(len(self.message_processor.get_messages()), 3)
+        # 最后一条消息应该是添加的runtime消息
+        self.assertEqual(self.message_processor.get_messages()[-1], runtime_msg)
 
     def test_get_messages(self):
         """测试获取消息列表。"""
         messages = self.message_processor.get_messages()
-        self.assertEqual(messages, self.init_messages)
+        self.assertEqual(messages, self.pinned_messages)
 
     def test_is_last_message_user(self):
         """测试检查最后一条消息是否为用户消息。"""
@@ -91,9 +104,10 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.message_processor.process_queued_messages()
 
         self.assertEqual(len(self.message_processor.queued_messages), 0)
-        self.assertEqual(
-            len(self.message_processor.messages), 4
-        )  # 初始2条 + 1条排队消息 + 1条排队通知
+        # messages列表应包含2条消息: 排队通知和排队消息
+        self.assertEqual(len(self.message_processor.messages), 2)
+        # get_messages()总数为4: 2条pinned_messages + 2条messages
+        self.assertEqual(len(self.message_processor.get_messages()), 4)
         self.assertIn("排队消息", str(self.message_processor.messages[-2]))
         self.assertEqual(self.message_processor.messages[-1], queued_msg)
 

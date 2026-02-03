@@ -14,7 +14,7 @@ from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMe
 from linhai.agent.base import RuntimeMessage
 
 from linhai.group_chat import GroupChat
-from linhai.agent.message import AgentMessage, AppendingMessageEntry
+from linhai.agent.message import AgentMessage, NotificationMessageEntry
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
@@ -294,17 +294,17 @@ class ContextTabWidget(Static):
 
         grid.add_row("")
 
-    def _build_appending_messages_section(
-        self, grid: Table, appending_messages: dict[str, AppendingMessageEntry]
+    def _build_notification_messages_section(
+        self, grid: Table, notification_messages: dict[str, NotificationMessageEntry]
     ) -> None:
-        """Build appending messages section."""
-        grid.add_row(Text("追加消息", style="bold yellow"))
+        """Build notification messages section."""
+        grid.add_row(Text("通知消息", style="bold yellow"))
         grid.add_row("")
 
-        if not appending_messages:
-            grid.add_row("无追加消息")
+        if not notification_messages:
+            grid.add_row("无通知消息")
         else:
-            for source, entry in appending_messages.items():
+            for source, entry in notification_messages.items():
                 msg = entry["message"]
                 msg_type = type(msg).__name__
                 preview = reprobj.repr(str(msg))[:80]  # Show more content
@@ -334,7 +334,7 @@ class ContextTabWidget(Static):
         self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)
-        self._build_appending_messages_section(grid, agent_message.appending_messages)
+        self._build_notification_messages_section(grid, agent_message.notification_messages)
 
         self._update_content_widget(grid)
 

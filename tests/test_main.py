@@ -363,12 +363,12 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
     @patch("linhai.agent.create._create_llm_instances")
     @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_init_messages")
+    @patch("linhai.agent.create._create_pinned_messages")
     @patch("linhai.agent.main.Agent")
     def test_agent_command_with_git_diff_reviewer_option(
         self,
         mock_agent_class,
-        mock_create_init_messages,
+        mock_create_pinned_messages,
         mock_create_tool_manager,
         mock_create_llm_instances,
         mock_violation_checker_plugin,
@@ -412,7 +412,7 @@ class TestMainCommandLine(unittest.TestCase):
         )
 
         mock_init_messages = []
-        mock_create_init_messages.return_value = mock_init_messages
+        mock_create_pinned_messages.return_value = mock_init_messages
 
         # 模拟Agent实例
         mock_agent_instance = MagicMock()
@@ -443,12 +443,12 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
     @patch("linhai.agent.create._create_llm_instances")
     @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_init_messages")
+    @patch("linhai.agent.create._create_pinned_messages")
     @patch("linhai.agent.main.Agent")
     def test_agent_command_with_violation_checker_option(
         self,
         mock_agent_class,
-        mock_create_init_messages,
+        mock_create_pinned_messages,
         mock_create_tool_manager,
         mock_create_llm_instances,
         mock_violation_checker_plugin,
@@ -492,7 +492,7 @@ class TestMainCommandLine(unittest.TestCase):
         )
 
         mock_init_messages = []
-        mock_create_init_messages.return_value = mock_init_messages
+        mock_create_pinned_messages.return_value = mock_init_messages
 
         # 模拟Agent实例
         mock_agent_instance = MagicMock()
@@ -523,12 +523,12 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
     @patch("linhai.agent.create._create_llm_instances")
     @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_init_messages")
+    @patch("linhai.agent.create._create_pinned_messages")
     @patch("linhai.agent.main.Agent")
     def test_agent_command_with_both_plugin_options(
         self,
         mock_agent_class,
-        mock_create_init_messages,
+        mock_create_pinned_messages,
         mock_create_tool_manager,
         mock_create_llm_instances,
         mock_violation_checker_plugin,
@@ -572,7 +572,7 @@ class TestMainCommandLine(unittest.TestCase):
         )
 
         mock_init_messages = []
-        mock_create_init_messages.return_value = mock_init_messages
+        mock_create_pinned_messages.return_value = mock_init_messages
 
         # 模拟Agent实例
         mock_agent_instance = MagicMock()

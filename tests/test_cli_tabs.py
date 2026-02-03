@@ -38,7 +38,7 @@ class TestCLITabs(unittest.TestCase):
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_agent_message.messages = []
-        mock_agent_message.appending_messages = {}
+        mock_agent_message.notification_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 
@@ -101,7 +101,7 @@ class TestCLITabs(unittest.TestCase):
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_agent_message.messages = []
-        mock_agent_message.appending_messages = {}
+        mock_agent_message.notification_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 

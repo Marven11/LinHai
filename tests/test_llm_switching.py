@@ -56,7 +56,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
-            init_messages=init_messages,
+            pinned_messages=init_messages,
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
         self.tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
