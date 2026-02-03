@@ -11,7 +11,7 @@ from linhai.plugin import Plugin
 from linhai.llm import Answer, UserMessage
 from linhai.subagent import SubAgentManager
 from linhai.subagent.main import SubAgent
-from linhai.tool.general import TodolistManager, TodolistItem
+
 from linhai.utils import CliRuntimeNotice, generate_id
 from .prompts import GIT_DIFF_REVIEWER_PROMPT
 
@@ -22,10 +22,7 @@ if TYPE_CHECKING:
     from linhai.plugin import Plugin  # pylint: disable=reimported
     from linhai.subagent import SubAgentManager  # pylint: disable=reimported
     from linhai.subagent.main import SubAgent  # pylint: disable=reimported
-    from linhai.tool.general import (
-        TodolistManager,
-        TodolistItem,
-    )  # pylint: disable=reimported
+
     from linhai.utils import CliRuntimeNotice, generate_id  # pylint: disable=reimported
 
 
@@ -258,16 +255,6 @@ class GitDiffReviewPlugin(Plugin):
         if deleted_files_list:
             full_diff_content += f"\n\n# 删除文件\n\n{deleted_files_list}"
 
-        todolist_content = ""
-        todolist_manager = self.group_chat.get_members(
-            "todolist_manager", TodolistManager
-        )
-        todolist_items: list[TodolistItem] = todolist_manager.list_todolists()
-        if todolist_items:
-            todolist_content = "\n\n# 当前Todolist\n\n" + "\n".join(
-                f"{item['id']}: {item['content']}" for item in todolist_items
-            )
-
         args = self.group_chat.get_members("cli_args", argparse.Namespace)
         checklist_content = ""
         if args.checklist and args.checklist.exists():
@@ -285,13 +272,11 @@ diff: ---
 
 {full_diff_content}
 
-todolist: ---
 
-{todolist_content}
 
 请根据系统提示中的要求进行审查，发现问题时使用request_issue工具质问。
 
-**重要：请同时审查todolist的功能是否已经完成。如果代码变更已经完成了某个todolist项的功能，请使用todolist_delete工具删除对应的todolist。**"""
+"""
 
         asyncio.create_task(
             subagent_manager.create_subagent(

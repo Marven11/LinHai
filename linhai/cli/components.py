@@ -20,13 +20,6 @@ from typing import TypedDict
 from linhai.parsed_message import Segment, ParsedAnswer
 
 
-class TodolistItem(TypedDict):
-    """Todolist项的类型定义。"""
-
-    id: str
-    content: str
-
-
 REFRESH_INTERVAL = 0.05
 
 StoppableWidget = Union[
@@ -758,66 +751,3 @@ class FooterWidget(Static):
         )
 
         self.update(display_text)
-
-
-class TodolistWidget(Static):
-    """Todolist显示widget。"""
-
-    DEFAULT_CSS = """
-    TodolistWidget {
-        width: auto;
-        height: auto;
-        background: #3B4252;
-        border-left: heavy #88C0D0;
-        border-title-color: #88C0D0;
-        border-title-background: #3B4252;
-        padding: 1;
-    }
-
-    .todolist-title {
-        width: 100%;
-        text-align: center;
-        color: #88C0D0;
-        text-style: bold;
-    }
-
-    .todolist-item {
-        width: 100%;
-        padding: 0 1;
-        margin: 0;
-        color: #E5E9F0;
-    }
-
-    .todolist-separator {
-        width: 100%;
-        height: 1;
-        background: #4C566A;
-    }
-
-    .todolist-empty {
-        width: 100%;
-        text-align: center;
-        color: #81A1C1;
-        padding: 1;
-    }
-    """
-
-    def __init__(self, todolists: list[TodolistItem]) -> None:
-        super().__init__()
-        self.todolists = todolists
-        self.border_title = "Todolist List"
-
-    def compose(self) -> ComposeResult:
-        if not self.todolists:
-            yield Static("当前没有todolist。", classes="todolist-empty")
-            return
-
-        for i, todolist in enumerate(self.todolists):
-            if i > 0:
-                yield Static(classes="todolist-separator")
-            yield Static(
-                f"{todolist['id']}: {todolist['content']}", classes="todolist-item"
-            )
-
-    def on_mount(self) -> None:
-        self.add_class("todolist-widget")

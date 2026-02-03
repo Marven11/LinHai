@@ -156,11 +156,6 @@ GIT_DIFF_REVIEWER_PROMPT = (
 - 追问时要明确指出回复中的不足之处
 - 只有当所有问题都得到满意解决后才能退出
 
-**Todolist工具权限:**
-- 作为SubAgent，你可以使用所有todolist工具：
-  - `todolist_add`: 添加todolist
-  - `todolist_list`: 列出所有todolist
-  - `todolist_delete`: 删除todolist（在审查git diff时，如果发现todolist功能已完成，必须使用此工具删除对应的todolist）
 """
     + TOOLCALL_PROMPT
 )

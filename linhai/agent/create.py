@@ -11,7 +11,7 @@ from linhai.subagent import SubAgentManager
 from linhai.subagent.issue import IssueManager
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
-from linhai.tool.general import TodolistManager
+
 from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
@@ -66,10 +66,9 @@ def create_agent_build_context(
     else:
         resolved_llm_name = llm_name
 
-
     max_toolcall_token = (
-        config.tools.max_toolcall_token_in_round 
-        if config.tools.max_toolcall_token_in_round is not None 
+        config.tools.max_toolcall_token_in_round
+        if config.tools.max_toolcall_token_in_round is not None
         else 30000
     )
 
@@ -101,13 +100,13 @@ async def create_agent_from_config(
 
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
-    todolist_manager = TodolistManager(context["group_chat"])
 
     from linhai.multimodal import MultimodalToolsetManager
+
     multimodal_manager = MultimodalToolsetManager(context["group_chat"])
 
     register_conversation_folder(context["group_chat"])
-    
+
     agent = Agent(
         llms=llms,
         llm_name=context["llm_name"],

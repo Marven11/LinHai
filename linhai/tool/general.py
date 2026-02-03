@@ -22,9 +22,6 @@ from linhai.tool.base import (
 from linhai.group_chat import GroupChat
 from linhai.utils import generate_id
 
-# 导入其他通用工具，使其装饰器生效
-# calculator和todolist现在定义在本文件中
-
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
     """分析HTTP响应内容，返回是否为二进制和检测到的编码。
@@ -232,95 +229,6 @@ async def sleep_tool(seconds: float) -> ToolResultSuccess:
     return ToolResultSuccess(
         content=f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
-
-
-class TodolistItem(TypedDict):
-    """Todolist项的类型定义。"""
-
-    id: str
-    content: str
-
-
-class TodolistManager:
-
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
-        self.todolists: Dict[str, str] = {}
-        group_chat.register_member("todolist_manager", self)
-        group_chat.add_postinit(self.postinit)
-
-    def postinit(self):
-        """后初始化：创建todolist工具集并添加到tool_manager"""
-        from linhai.tool.main import ToolManager
-
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
-        todolist_toolset = create_agent_todolist_toolset(self)
-        tool_manager.add_toolset(todolist_toolset)
-
-    def add_todolist(self, content: str) -> str:
-        if not content or not content.strip():
-            raise ValueError("todolist内容不能为空")
-
-        todolist_id = generate_id("todolist")
-        self.todolists[todolist_id] = content.strip()
-        return todolist_id
-
-    def list_todolists(self) -> List[TodolistItem]:
-        return [
-            {"id": todolist_id, "content": content}
-            for todolist_id, content in self.todolists.items()
-        ]
-
-    def get_todolist_by_id(self, todolist_id: str) -> Optional[TodolistItem]:
-        if todolist_id not in self.todolists:
-            return None
-        return {"id": todolist_id, "content": self.todolists[todolist_id]}
-
-    def delete_todolist(self, todolist_id: str) -> str:
-        """删除todolist，返回删除结果。"""
-        if todolist_id not in self.todolists:
-            return f"错误：Todolist ID {todolist_id} 不存在"
-        content = self.todolists[todolist_id]
-        del self.todolists[todolist_id]
-        return f"成功删除todolist: {todolist_id} ({content})"
-
-
-def create_agent_todolist_toolset(
-    todolist_manager: TodolistManager,
-) -> ToolSet:
-    """创建todolist管理工具集（只有添加和列出功能，供Agent使用）。"""
-    toolset = ToolSet()
-
-    @toolset.register_tool(
-        name="todolist_add",
-        desc="添加todolist",
-        args={
-            "content": ToolArgInfo(desc="todolist内容", type="str"),
-        },
-        required_args=["content"],
-    )
-    def todolist_add(content: str) -> str:
-        """添加todolist。"""
-        todolist_id = todolist_manager.add_todolist(content)
-        return f"成功添加todolist，ID: {todolist_id}"
-
-    @toolset.register_tool(
-        name="todolist_list",
-        desc="列出所有todolist",
-        args={},
-        required_args=[],
-    )
-    def todolist_list() -> str:
-        """列出所有todolist。"""
-        todolists = todolist_manager.list_todolists()
-        if not todolists:
-            return "当前没有todolist。"
-        return "\n".join(f"{item['id']}: {item['content']}" for item in todolists)
-
-    return toolset
-
-
-# 计算器工具
 
 
 def safe_calculator(expression: str) -> str:

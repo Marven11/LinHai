@@ -112,29 +112,6 @@ class SubAgent:
         )
         self.toolset.add_toolset(issue_toolset)
 
-        from linhai.tool.general import TodolistManager
-
-        todolist_manager = self.group_chat.get_members(
-            "todolist_manager", TodolistManager
-        )
-
-        @self.toolset.register_tool(
-            name="todolist_delete",
-            desc="根据ID删除todolist（仅SubAgent可用）",
-            args={
-                "todolist_id": ToolArgInfo(desc="要删除的todolist ID", type="str"),
-            },
-            required_args=["todolist_id"],
-        )
-        async def subagent_todolist_delete(todolist_id: str) -> str:
-            """根据ID删除todolist（仅SubAgent可用）。"""
-            todolist = todolist_manager.get_todolist_by_id(todolist_id)
-            if todolist is None:
-                raise ValueError(f"Todolist with ID {todolist_id} does not exist")
-
-            todolist_manager.delete_todolist(todolist_id)
-            return f"成功删除todolist: {todolist_id} ({todolist['content']})"
-
     async def _generate_response(self) -> str:
         """生成LLM响应并返回完整内容，支持流式输出。"""
         from linhai.parsed_message import ParsedAnswer

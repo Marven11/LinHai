@@ -111,7 +111,9 @@ class CLIApp(App):
         cli_args = group_chat.get_members("cli_args", argparse.Namespace)
         self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
         if cli_args.file:
-            self.init_messages += [f"[{file_path.name}]({file_path})" for file_path in cli_args.file]
+            self.init_messages += [
+                f"[{file_path.name}]({file_path})" for file_path in cli_args.file
+            ]
 
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
@@ -123,7 +125,7 @@ class CLIApp(App):
 
         self.subagent_current_messages: Dict[str, MessageWidget] = {}
 
-        self.completions = []  
+        self.completions = []
         self.command_completions = self._generate_command_completions()
         self.autocomplete = None
 
@@ -333,9 +335,6 @@ class CLIApp(App):
             "/queue",
             "/help",
             "/status",
-            "/todolist_list",
-            "/todolist_add",
-            "/todolist_delete",
         ]
 
     async def on_mount(self) -> None:
@@ -507,10 +506,6 @@ class CLIApp(App):
         self.is_user_scroll_to_end = True
         container.scroll_end(animate=False)
 
-    async def _process_todolist_command(self, message_text: str) -> bool:
-        assert self.command_handler is not None
-        return await self.command_handler.handle_command(message_text)
-
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
         from textual.widgets import Input
@@ -528,9 +523,5 @@ class CLIApp(App):
         welcome_widgets = container.query("RainbowAsciiArt, AnimatedWelcomeWidget")
         for widget in welcome_widgets:
             widget.remove()
-
-        if await self._process_todolist_command(message_text):
-            input_element.value = ""
-            return
 
         await self._handle_regular_message(message_text)

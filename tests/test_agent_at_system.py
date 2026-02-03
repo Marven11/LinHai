@@ -15,22 +15,19 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = Mock(spec=GroupChat)
-        self.mock_todolist_manager = Mock()
         self.mock_cli_app = Mock()
         self.mock_container = Mock()
         self.mock_cli_app.query_one = Mock(return_value=self.mock_container)
         self.mock_cli_app.should_auto_scroll = Mock(return_value=True)
-        
+
         def get_members_side_effect(name, cls):
-            if name == "todolist_manager":
-                return self.mock_todolist_manager
-            elif name == "cli_app":
+            if name == "cli_app":
                 return self.mock_cli_app
             elif name == "agent":
                 return self.agent
             else:
                 return Mock()
-        
+
         self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
 
         self.mock_llm1 = MagicMock()
