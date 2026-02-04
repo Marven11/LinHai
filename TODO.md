@@ -155,6 +155,10 @@ unittest 失败时，必须分析
     - 在agent在回答中包含“#LINHAI_WAITING_USER”时提醒“当前#LINHAI_WAITING_USER的功能已经失效，因为用户使用了--afk参数。这说明用户禁止你等待用户输入并离开了电脑”
   - 大量参考已有插件
   - 编写相关测试
+- [ ] MissingWithSecretWarningPlugin无法正常工作
+  - 在终端中运行`uv run python -m linhai -m '测试一下不使用with_secret就在参数中带上<$DEEPSEEK_API_KEY$>是否会被警告'`会报告没有收到警告
+  - 为这个插件编写unittest测试这个问题
+  - 在编写unittest之后尝试修复 
 
 # 注意
 
