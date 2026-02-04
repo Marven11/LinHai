@@ -370,7 +370,6 @@ class ToolCallWidget(Static):
                 self.error_message = str(e)
                 return
 
-        # 移除try block，直接遍历parser
         for value in self.parser:
             if value.index_key != self.current_key:
                 self.current_key = value.index_key
@@ -562,7 +561,7 @@ class UserMessageWidget(Static):
         """组件挂载时开始显示"""
         self._content_static = Static("")
         self.mount(self._content_static)
-        # 用户消息不会更新，直接显示内容
+
         self.update_display()
 
     def update_display(self) -> None:
@@ -697,7 +696,6 @@ class MessageWidget(Static):
 
     def finish_streaming(self) -> None:
         """停止所有widget的timer"""
-        # 子widget自己管理定时器，MessageWidget不再负责
 
 
 class FooterWidget(Static):
@@ -751,3 +749,18 @@ class FooterWidget(Static):
         )
 
         self.update(display_text)
+
+
+class MessageGenerationWidget(Static):
+    DEFAULT_CSS = """
+    MessageGenerationWidget {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    """
+
+    def set_message_widget(self, widget: MessageWidget) -> None:
+        self.mount(widget)
+
+    def add_runtime_message(self, widget: RuntimeMessageWidget) -> None:
+        self.mount(widget)

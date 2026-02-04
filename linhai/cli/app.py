@@ -30,6 +30,7 @@ from .components import (
     MessageWidget,
     UserMessageWidget,
     FooterWidget,
+    MessageGenerationWidget,
 )
 from .context_tab import ContextTabWidget
 from ..token_manager import TokenManager
@@ -95,7 +96,7 @@ class CLIApp(App):
     ):
         super().__init__()
         self.theme = cli_config.theme
-        self.messages: List[Union[MessageWidget, UserMessageWidget]] = []
+        self.messages: List[Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]] = []
         self.group_chat = group_chat
 
         self.group_chat.register_queue("parsed_agent_answer")
@@ -127,6 +128,8 @@ class CLIApp(App):
         self.command_handler = CommandHandler(self.group_chat)
         self.auto_scroll_timer_task: Optional[asyncio.Task] = None
 
+        self.current_message_generation_widget: Optional[MessageGenerationWidget] = None
+
         self.group_chat.add_postinit(self.postinit)
 
     def postinit(self):
@@ -157,14 +160,20 @@ class CLIApp(App):
         llm_name, _llm = agent.get_current_llm_info()
 
         container = self.query_one("#chat-container")
-        widget = MessageWidget(
+
+        generation_widget = MessageGenerationWidget()
+        container.mount(generation_widget)
+        self.messages.append(generation_widget)
+
+        self.current_message_generation_widget = generation_widget
+
+        message_widget = MessageWidget(
             role="assistant",
             sender_name=llm_name,
             theme=self.theme,
             parsed_answer=parsed_answer,
         )
-        container.mount(widget)
-        self.messages.append(widget)
+        generation_widget.set_message_widget(message_widget)
 
     async def after_message_generation(self, answer, full_response, tool_calls):
         token_usage = answer.get_token_usage()
@@ -191,11 +200,16 @@ class CLIApp(App):
 
             if isinstance(output, CliRuntimeNotice):
 
-                container = self.query_one("#chat-container")
                 widget = RuntimeMessageWidget(
                     level=output.level, content=output.content
                 )
-                container.mount(widget)
+
+                if self.current_message_generation_widget:
+                    self.current_message_generation_widget.add_runtime_message(widget)
+                else:
+
+                    container = self.query_one("#chat-container")
+                    container.mount(widget)
 
             else:
                 raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
@@ -341,8 +355,7 @@ class CLIApp(App):
 
         self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
 
-        input_element = self.query_one("#input")
-        assert isinstance(input_element, Input)
+        input_element = self.query_one("#input", Input)
 
         self.autocomplete = AutoComplete(
             target=input_element,
@@ -438,7 +451,7 @@ class CLIApp(App):
     async def _handle_regular_message(self, message_text: str) -> None:
         """处理普通消息，发送到agent。"""
         container = self.query_one("#chat-container")
-        input_element = self.query_one("#input")
+        input_element = self.query_one("#input", Input)
 
         from linhai.llm import UserMessage
 
@@ -451,7 +464,7 @@ class CLIApp(App):
             )
         )
         await self.group_chat.send("user_message", user_msg)
-        input_element.value = ""  # type: ignore
+        input_element.value = ""
 
         widget = UserMessageWidget(
             user_msg.message, sender_name="user", theme=self.theme
@@ -465,10 +478,7 @@ class CLIApp(App):
         """处理消息提交"""
         from textual.widgets import Input
 
-        input_element = self.query_one("#input")
-        assert isinstance(
-            input_element, Input
-        ), f"Expected Input widget, got {type(input_element)}"
+        input_element = self.query_one("#input", Input)
         message_text = input_element.value.strip()
 
         if not message_text:
