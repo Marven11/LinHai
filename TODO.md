@@ -90,6 +90,13 @@ unittest 失败时，必须分析
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
   - TODO 需要仔细规划
+- [ ] 准备重构CLI
+  - 问题：当前一个MessageWidget对应的RuntimeMessage直接被放在滚动列表中，没有和MessageWidget成组，不利于未来重构
+  - 重构
+    - 创建一个MessageGenerationWidget包含MessageWidget和对应的RuntimeMessage，而不是直接将这些message放在滚动列表中
+    - MessageGenerationWidget同样竖向排列其中的widget，CSS保持一致
+    - 在加入新的RuntimeMessage时，不直接放在滚动列表中，而是加入到当前（最新）的MessageGenerationWidget中
+    - 初始化时创建MessageGenerationWidget，以保证在没有消息生成时仍然可以正常添加RuntimeMessage
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
   - 当前问题：没有一个良好的机制遍历MessageWidget中的ToolCallWidget中的工具调用是否正确，以及获取工具名
