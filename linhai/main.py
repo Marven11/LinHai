@@ -41,9 +41,10 @@ async def run(args):
         group_chat=group_chat,
         config=config,
         config_basedir=config_path.parent,
+        cli_args=args,
+        planning=args.planning,
         llm_name=args.llm,
         checklist_path=args.checklist,
-        cli_args=args,
     )
     _agent = await create_agent_from_config(context)
 
@@ -85,6 +86,11 @@ def main():
         "--checklist",
         type=Path,
         help="检查清单文件路径，包含一系列代码要求，如./CODE_REQUIREMENTS.md",
+    )
+    parser.add_argument(
+        "--planning",
+        action="store_true",
+        help="启用文档规划模式",
     )
     args = parser.parse_args()
 

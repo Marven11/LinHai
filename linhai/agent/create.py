@@ -32,6 +32,7 @@ class AgentBuildContext(TypedDict):
     llm_name: str
     max_toolcall_token_in_round: int
     checklist_path: Optional[Path]
+    planning: bool
     cli_args: argparse.Namespace
 
 
@@ -40,6 +41,7 @@ def create_agent_build_context(
     config: Config,
     config_basedir: Path,
     cli_args: argparse.Namespace,
+    planning: bool = False,
     llm_name: Optional[str] = None,
     checklist_path: Optional[Path] = None,
 ) -> AgentBuildContext:
@@ -74,6 +76,7 @@ def create_agent_build_context(
         "llm_name": resolved_llm_name,
         "max_toolcall_token_in_round": max_toolcall_token,
         "checklist_path": checklist_path,
+        "planning": planning,
         "cli_args": cli_args,
     }
 
@@ -111,11 +114,7 @@ async def create_agent_from_config(
     machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()
-    if context["config"].agent.enable_task_planning:
-        from .planning import TaskPlanningPromptPlugin, TaskPlanningEnforcementPlugin
 
-        TaskPlanningPromptPlugin(context["group_chat"]).register(agent.lifecycle)
-        TaskPlanningEnforcementPlugin(context["group_chat"]).register(agent.lifecycle)
     if context["config"].agent.enable_directory_change_detection:
         from linhai.plugin import DirectoryChangePlugin
 
@@ -228,6 +227,12 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
 
     from linhai.llm import UserMessage
     from linhai.agent.base import FileContentMessage
+
+    if context.get("planning", False):
+        from .planning import setup_planning_for_agent
+
+        planning_message = setup_planning_for_agent(context)
+        pinned_messages.append(planning_message)
 
     if cli_args.message:
         for msg in cli_args.message:
