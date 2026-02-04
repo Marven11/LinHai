@@ -323,7 +323,8 @@ class Lifecycle:
                 return result
             elif isinstance(result, dict):
                 modified_arguments = result
-            assert result is None
+            else:
+                assert result is None
         return modified_arguments
 
     async def trigger_before_agent_loop(self, agent: "Agent"):
