@@ -376,37 +376,6 @@ class Agent:
         llm_instance = self.llms[current_index]
         return llm_name, llm_instance
 
-    async def handle_subagent_start_command(self):
-        """处理/subagent_start命令，手动启动git diff reviewer。"""
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO",
-                content="手动启动git diff reviewer...",
-            ),
-        )
-
-        from linhai.subagent.main import SubAgentManager
-
-        subagent_manager = self.group_chat.get_members(
-            "subagent_manager", SubAgentManager
-        )
-
-        from linhai.utils import generate_id
-
-        subagent_name = generate_id("git_diff_reviewer")
-
-        result = await subagent_manager.create_subagent(
-            agent_type="git_diff_reviewer",
-            name=subagent_name,
-            task_message="请审查最近的git diff，找出代码中的问题",
-            max_answer_times=None,
-        )
-
-        self.message_processor.add_new_message(
-            RuntimeMessage(f"已启动git diff reviewer: {result}")
-        )
-
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。

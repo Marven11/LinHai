@@ -97,9 +97,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_machine_control.target_machine = "master_host"
         self.group_chat.register_member("machine_control", self.mock_machine_control)
 
-        from linhai.subagent.issue import IssueManager
 
-        self.issue_manager = IssueManager(self.group_chat)
 
         from linhai.config import ToolConfig
 

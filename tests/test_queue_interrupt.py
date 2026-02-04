@@ -85,19 +85,9 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         self.pinned_messages = []
 
-        from linhai.subagent.issue import IssueManager
 
-        try:
-            self.group_chat.get_members("issue_manager", IssueManager)
-        except RuntimeError:
-            try:
-                issue_manager = IssueManager(self.group_chat)
-                self.group_chat.register_member("issue_manager", issue_manager)
-            except RuntimeError as e:
-                if "exists" in str(e):
-                    pass
-                else:
-                    raise
+
+
 
         # 配置mock对象的get_name方法
         self.mock_llm.get_name = MagicMock(return_value="test_llm")

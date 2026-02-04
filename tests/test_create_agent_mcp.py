@@ -26,8 +26,7 @@ class TestCreateAgentMCP(unittest.TestCase):
 
         self.cli_args = argparse.Namespace()
         self.cli_args.checklist = None
-        self.cli_args.git_diff_reviewer = False
-        self.cli_args.violation_checker = False
+
         self.cli_args.message = []
         self.cli_args.file = []
         self.group_chat.register_member("cli_args", self.cli_args)
@@ -80,8 +79,7 @@ server_script_path = "{server_script_path}"
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
-            "git_diff_reviewer": self.cli_args.git_diff_reviewer,
-            "violation_checker": self.cli_args.violation_checker,
+
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))
@@ -116,8 +114,7 @@ compress_threshold = 80000
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
-            "git_diff_reviewer": self.cli_args.git_diff_reviewer,
-            "violation_checker": self.cli_args.violation_checker,
+
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))

@@ -82,8 +82,6 @@ class TestCreateAgent(unittest.TestCase):
             config=mock_config,
             config_basedir=Path("."),
             llm_name="test_llm",
-            git_diff_reviewer=False,
-            violation_checker=False,
             cli_args=cli_args,
             checklist_path=None,
         )
@@ -161,8 +159,6 @@ class TestCreateAgent(unittest.TestCase):
                 config=mock_config,
                 config_basedir=Path("."),
                 llm_name="llm1",
-                git_diff_reviewer=False,
-                violation_checker=False,
                 cli_args=cli_args,
                 checklist_path=None,
             )
@@ -197,8 +193,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "group_chat": mock_group_chat,
             "llm_name": "test-llm",
             "config_basedir": Path("."),
-            "git_diff_reviewer": False,
-            "violation_checker": False,
+
             "checklist_path": None,
         }
         result = asyncio.run(_create_llm_instances(context))
@@ -259,8 +254,7 @@ class TestCreateToolManager(unittest.TestCase):
             "config": config,
             "config_basedir": Path("."),
             "llm_name": "test-llm",
-            "git_diff_reviewer": False,
-            "violation_checker": False,
+
             "checklist_path": None,
             "tools_config": config,
         }
@@ -299,8 +293,7 @@ class TestCreatePinnedMessages(unittest.TestCase):
             "config": Mock(memory=Mock(file_path=memory_file_path)),
             "config_basedir": Path("."),
             "llm_name": "test-llm",
-            "git_diff_reviewer": False,
-            "violation_checker": False,
+
             "checklist_path": None,
             "cli_args": mock_cli_args,
         }

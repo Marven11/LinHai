@@ -25,8 +25,7 @@ class CommandHandler:
                 return await self._handle_context_tool_command(message_text)
             elif parsed_input.command == "queue":
                 return await self._handle_queue_command(message_text)
-            elif parsed_input.command == "subagent_start":
-                return await self._handle_subagent_start_command()
+
             elif parsed_input.command == "quit" or parsed_input.command == "exit":
                 return await self._handle_quit_command()
             elif parsed_input.command == "help":
@@ -76,18 +75,6 @@ class CommandHandler:
         await self._show_success_message("消息已加入排队列表,将在下次回答后处理")
         return True
 
-    async def _handle_subagent_start_command(self) -> bool:
-        """处理/subagent_start命令,手动启动git diff reviewer."""
-        from linhai.agent import Agent
-
-        agent = self.group_chat.get_members("agent", Agent)
-        if agent is None:
-            await self._show_error_message("无法获取agent实例")
-            return True
-
-        await agent.handle_subagent_start_command()
-        return True
-
     async def _handle_quit_command(self) -> bool:
         """处理/quit和/exit命令,发送退出信号."""
         await self.group_chat.send("exit_signal", {"return_code": 0})
@@ -97,7 +84,7 @@ class CommandHandler:
         """处理/help命令,显示帮助信息."""
         help_text = """可用命令:
 /queue <消息> - 将消息加入排队列表,在下次回答后处理
-/subagent_start - 手动启动git diff reviewer
+
 /status - 显示当前状态信息
 /help - 显示此帮助信息
 /quit, /exit - 退出程序

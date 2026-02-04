@@ -184,39 +184,6 @@ class SystemMessage:
         return instance
 
 
-class SubagentSystemMessage:
-    """系统消息类，用于表示系统角色消息。"""
-
-    def __init__(
-        self,
-        msg: str,
-    ):
-        """初始化系统消息。"""
-        self.msg = msg
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        """转换为LLM消息格式。"""
-        return cast(LanguageModelMessage, {"role": "system", "content": self.msg})
-
-    def __repr__(self) -> str:
-        """返回消息的字符串表示。"""
-        return "SubagentSystemMessage()"
-
-    def to_json(self) -> str:
-
-        return json.dumps({"msg": self.msg})
-
-    @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
-    ):  # pylint: disable=unused-argument
-        data = json.loads(json_str)
-
-        return cls(
-            msg=data["msg"],
-        )
-
-
 class UserMessage:
     """用户消息类，用于表示用户角色消息。"""
 
@@ -743,7 +710,7 @@ class OpenAi:
         self.previous_input_tokens: int | None = None
         self._minimax_warning_sent: bool = False
         self._support_image = support_image
-    
+
     def support_image(self):
         return self._support_image
 
@@ -771,17 +738,17 @@ class OpenAi:
         """
         if self.previous_history is None or self.previous_input_tokens is None:
             return 0
-        previous_history_llm = [
-            msg.to_llm_message() for msg in self.previous_history
-        ]
-        current_history_llm = [
-            msg.to_llm_message() for msg in current_history
-        ]
+        previous_history_llm = [msg.to_llm_message() for msg in self.previous_history]
+        current_history_llm = [msg.to_llm_message() for msg in current_history]
         previous_content = "".join(
-            msg["content"] for msg in previous_history_llm if "content" in msg and isinstance(msg["content"], str)
+            msg["content"]
+            for msg in previous_history_llm
+            if "content" in msg and isinstance(msg["content"], str)
         )
         current_content = "".join(
-            msg["content"] for msg in current_history_llm if "content" in msg and isinstance(msg["content"], str)
+            msg["content"]
+            for msg in current_history_llm
+            if "content" in msg and isinstance(msg["content"], str)
         )
 
         same_prefix_chars = 0

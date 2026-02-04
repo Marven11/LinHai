@@ -131,17 +131,6 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, secret={self.secret})"
 
 
-class SubAgentConfig(BaseModel):
-    """SubAgent配置类型定义。"""
-
-    enable: bool = False
-    default_llm: str = ""
-
-    def __str__(self) -> str:
-        """返回SubAgent配置的字符串表示"""
-        return f"SubAgentConfig(enable={self.enable}, default_llm={self.default_llm})"
-
-
 class CLIConfig(BaseModel):
     """CLI配置类型定义。"""
 
@@ -160,19 +149,12 @@ class Config(BaseModel):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     memory: MemoryConfig = Field(default_factory=lambda: MemoryConfig(file_path=""))
     tools: ToolConfig = Field(default_factory=ToolConfig)
-    subagent: SubAgentConfig = Field(default_factory=SubAgentConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
-
-    @property
-    def subagent_enabled(self) -> bool:
-        """检查SubAgent是否启用"""
-        return self.subagent.enable  # type: ignore  # pylint: disable=no-member
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
-        subagent_enabled = self.subagent_enabled
-        return f"Config(llms={llm_names}, agent={self.agent}, memory={self.memory}, tools={self.tools}, subagent_enabled={subagent_enabled})"
+        return f"Config(llms={llm_names}, agent={self.agent}, memory={self.memory}, tools={self.tools})"
 
 
 def load_config(config_path: Union[str, Path]) -> Config:

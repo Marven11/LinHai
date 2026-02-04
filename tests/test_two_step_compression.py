@@ -45,8 +45,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
         )
-        from linhai.subagent.issue import IssueManager
-        self.issue_manager = IssueManager(self.group_chat)
+
         
         llms_with_names = list(zip(config["llms"], config["llm_names"]))
         self.agent = Agent(

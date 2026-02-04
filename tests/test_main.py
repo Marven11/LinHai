@@ -359,254 +359,13 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.subagent.subagent_types.git_diff_reviewer.GitDiffReviewPlugin")
-    @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
-    @patch("linhai.agent.create._create_llm_instances")
-    @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_pinned_messages")
-    @patch("linhai.agent.main.Agent")
-    def test_agent_command_with_git_diff_reviewer_option(
-        self,
-        mock_agent_class,
-        mock_create_pinned_messages,
-        mock_create_tool_manager,
-        mock_create_llm_instances,
-        mock_violation_checker_plugin,
-        mock_git_diff_review_plugin,
-    ):
-        """测试使用--git-diff-reviewer选项时GitDiffReviewPlugin被注册"""
-        import asyncio
-        from linhai.agent.create import create_agent_from_config
 
-        # 模拟group_chat
-        mock_group_chat = MagicMock()
-        # 模拟get_members返回命令行参数
-        mock_args = MagicMock()
-        mock_args.git_diff_reviewer = True
-        mock_args.violation_checker = False
-        mock_group_chat.get_members.return_value = mock_args
-
-        # 模拟配置对象
-        mock_config = MagicMock(spec=Config)
-        mock_config.agent = MagicMock()
-        mock_config.agent.compress_threshold = 0.8
-        mock_config.agent.enable_directory_change_detection = False
-        mock_config.agent.enable_task_planning = False
-        mock_config.tools = MagicMock()
-        mock_config.tools.secret.config_path = None
-        mock_config.memory = MagicMock()
-        mock_config.memory.file_path = ""
-        mock_config.subagent = MagicMock()
-        mock_config.subagent.enable = False
-        mock_config.llm = []
-
-        # 模拟内部函数返回值
-        mock_llm_instances = []
-        mock_create_llm_instances.return_value = mock_llm_instances
-
-        mock_tool_manager = MagicMock()
-        mock_machine_control = MagicMock()
-        mock_create_tool_manager.return_value = (
-            mock_tool_manager,
-            mock_machine_control,
-        )
-
-        mock_init_messages = []
-        mock_create_pinned_messages.return_value = mock_init_messages
-
-        # 模拟Agent实例
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.lifecycle = MagicMock()
-        mock_agent_class.return_value = mock_agent_instance
-
-        # 调用create_agent_from_config
-        context = {
-            "group_chat": mock_group_chat,
-            "config": mock_config,
-            "config_basedir": Path("."),
-            "llm_name": None,
-            "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
-            "git_diff_reviewer": True,
-            "violation_checker": False,
-        }
-        asyncio.run(create_agent_from_config(context))
-
-        # 验证GitDiffReviewPlugin被注册，ViolationCheckerPlugin不被注册
-        mock_git_diff_review_plugin.assert_called_once_with(mock_group_chat)
-        mock_git_diff_review_plugin.return_value.register.assert_called_once_with(
-            mock_agent_instance.lifecycle
-        )
-        mock_violation_checker_plugin.assert_not_called()
-
-    @patch("linhai.subagent.subagent_types.git_diff_reviewer.GitDiffReviewPlugin")
-    @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
-    @patch("linhai.agent.create._create_llm_instances")
-    @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_pinned_messages")
-    @patch("linhai.agent.main.Agent")
-    def test_agent_command_with_violation_checker_option(
-        self,
-        mock_agent_class,
-        mock_create_pinned_messages,
-        mock_create_tool_manager,
-        mock_create_llm_instances,
-        mock_violation_checker_plugin,
-        mock_git_diff_review_plugin,
-    ):
-        """测试使用--violation-checker选项时ViolationCheckerPlugin被注册"""
-        import asyncio
-        from linhai.agent.create import create_agent_from_config
-
-        # 模拟group_chat
-        mock_group_chat = MagicMock()
-        # 模拟get_members返回命令行参数
-        mock_args = MagicMock()
-        mock_args.git_diff_reviewer = False
-        mock_args.violation_checker = True
-        mock_group_chat.get_members.return_value = mock_args
-
-        # 模拟配置对象
-        mock_config = MagicMock(spec=Config)
-        mock_config.agent = MagicMock()
-        mock_config.agent.compress_threshold = 0.8
-        mock_config.agent.enable_directory_change_detection = False
-        mock_config.agent.enable_task_planning = False
-        mock_config.tools = MagicMock()
-        mock_config.tools.secret.config_path = None
-        mock_config.memory = MagicMock()
-        mock_config.memory.file_path = ""
-        mock_config.subagent = MagicMock()
-        mock_config.subagent.enable = False
-        mock_config.llm = []
-
-        # 模拟内部函数返回值
-        mock_llm_instances = []
-        mock_create_llm_instances.return_value = mock_llm_instances
-
-        mock_tool_manager = MagicMock()
-        mock_machine_control = MagicMock()
-        mock_create_tool_manager.return_value = (
-            mock_tool_manager,
-            mock_machine_control,
-        )
-
-        mock_init_messages = []
-        mock_create_pinned_messages.return_value = mock_init_messages
-
-        # 模拟Agent实例
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.lifecycle = MagicMock()
-        mock_agent_class.return_value = mock_agent_instance
-
-        # 调用create_agent_from_config
-        context = {
-            "group_chat": mock_group_chat,
-            "config": mock_config,
-            "config_basedir": Path("."),
-            "llm_name": None,
-            "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
-            "git_diff_reviewer": False,
-            "violation_checker": True,
-        }
-        asyncio.run(create_agent_from_config(context))
-
-        # 验证ViolationCheckerPlugin被注册，GitDiffReviewPlugin不被注册
-        mock_violation_checker_plugin.assert_called_once_with(mock_group_chat)
-        mock_violation_checker_plugin.return_value.register.assert_called_once_with(
-            mock_agent_instance.lifecycle
-        )
-        mock_git_diff_review_plugin.assert_not_called()
-
-    @patch("linhai.subagent.subagent_types.git_diff_reviewer.GitDiffReviewPlugin")
-    @patch("linhai.subagent.subagent_types.violation_checker.ViolationCheckerPlugin")
-    @patch("linhai.agent.create._create_llm_instances")
-    @patch("linhai.agent.create._create_tool_manager")
-    @patch("linhai.agent.create._create_pinned_messages")
-    @patch("linhai.agent.main.Agent")
-    def test_agent_command_with_both_plugin_options(
-        self,
-        mock_agent_class,
-        mock_create_pinned_messages,
-        mock_create_tool_manager,
-        mock_create_llm_instances,
-        mock_violation_checker_plugin,
-        mock_git_diff_review_plugin,
-    ):
-        """测试同时使用--git-diff-reviewer和--violation-checker选项时两个插件都被注册"""
-        import asyncio
-        from linhai.agent.create import create_agent_from_config
-
-        # 模拟group_chat
-        mock_group_chat = MagicMock()
-        # 模拟get_members返回命令行参数
-        mock_args = MagicMock()
-        mock_args.git_diff_reviewer = True
-        mock_args.violation_checker = True
-        mock_group_chat.get_members.return_value = mock_args
-
-        # 模拟配置对象
-        mock_config = MagicMock(spec=Config)
-        mock_config.agent = MagicMock()
-        mock_config.agent.compress_threshold = 0.8
-        mock_config.agent.enable_directory_change_detection = False
-        mock_config.agent.enable_task_planning = False
-        mock_config.tools = MagicMock()
-        mock_config.tools.secret.config_path = None
-        mock_config.memory = MagicMock()
-        mock_config.memory.file_path = ""
-        mock_config.subagent = MagicMock()
-        mock_config.subagent.enable = False
-        mock_config.llm = []
-
-        # 模拟内部函数返回值
-        mock_llm_instances = []
-        mock_create_llm_instances.return_value = mock_llm_instances
-
-        mock_tool_manager = MagicMock()
-        mock_machine_control = MagicMock()
-        mock_create_tool_manager.return_value = (
-            mock_tool_manager,
-            mock_machine_control,
-        )
-
-        mock_init_messages = []
-        mock_create_pinned_messages.return_value = mock_init_messages
-
-        # 模拟Agent实例
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.lifecycle = MagicMock()
-        mock_agent_class.return_value = mock_agent_instance
-
-        # 调用create_agent_from_config
-        context = {
-            "group_chat": mock_group_chat,
-            "config": mock_config,
-            "config_basedir": Path("."),
-            "llm_name": None,
-            "max_toolcall_token_in_round": 30000,
-            "checklist_path": None,
-            "git_diff_reviewer": True,
-            "violation_checker": True,
-        }
-        asyncio.run(create_agent_from_config(context))
-
-        # 验证两个插件都被注册
-        mock_git_diff_review_plugin.assert_called_once_with(mock_group_chat)
-        mock_git_diff_review_plugin.return_value.register.assert_called_once_with(
-            mock_agent_instance.lifecycle
-        )
-        mock_violation_checker_plugin.assert_called_once_with(mock_group_chat)
-        mock_violation_checker_plugin.return_value.register.assert_called_once_with(
-            mock_agent_instance.lifecycle
-        )
-
+    @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
     @patch("linhai.main.GroupChat")
     def test_agent_command_with_checklist_option(
-        self, mock_group_chat, mock_cli_app, mock_create_agent
+        self, mock_group_chat, mock_cli_app, mock_create_agent, mock_create_context
     ):
         """测试使用--checklist选项时checklist路径被正确传递"""
         mock_group_chat_instance = MagicMock()
@@ -619,6 +378,16 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async = AsyncMock(return_value=None)
         mock_app.return_code = 0
         mock_cli_app.return_value = mock_app
+
+        # 模拟create_agent_build_context返回有效的context
+        mock_context = {
+            "group_chat": mock_group_chat_instance,
+            "config": MagicMock(spec=Config),
+            "config_basedir": Path("."),
+            "llm_name": None,
+            "checklist_path": Path("requirements.txt"),
+        }
+        mock_create_context.return_value = mock_context
 
         test_args = ["linhai", "--checklist", "requirements.txt"]
 

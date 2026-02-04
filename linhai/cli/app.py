@@ -18,9 +18,6 @@ from linhai.llm import (
     AnswerTokenUsage,
 )
 from linhai.parsed_message import ParsedAnswer
-from linhai.subagent.message_wrapper import (
-    SubAgentParsedAnswerWrapper,
-)
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
@@ -104,7 +101,6 @@ class CLIApp(App):
         self.group_chat.register_queue("parsed_agent_answer")
         self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
-        self.group_chat.register_queue("subagent_message")
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
@@ -122,8 +118,6 @@ class CLIApp(App):
         self.token_manager = TokenManager(group_chat)
 
         self.is_user_scroll_to_end = True
-
-        self.subagent_current_messages: Dict[str, MessageWidget] = {}
 
         self.completions = []
         self.command_completions = self._generate_command_completions()
@@ -154,10 +148,6 @@ class CLIApp(App):
                     self.token_manager,
                     use_nerd_font=self.cli_config.use_nerd_font,
                 )
-
-            with TabPane("SubAgent", id="subagent-tab"):
-                with VerticalScroll(id="subagent-container"):
-                    yield Static("SubAgent消息将显示在这里", id="subagent-content")
 
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.group_chat)
@@ -224,23 +214,6 @@ class CLIApp(App):
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
                 )
 
-    async def watch_subagent_message_queue(self) -> None:
-        """监听subagent_message队列并处理SubAgent消息"""
-        while True:
-            output = await self.group_chat.receive("subagent_message")
-            if isinstance(output, SubAgentParsedAnswerWrapper):
-                await self._handle_subagent_parsed_answer(output)
-            elif isinstance(output, CliRuntimeNotice):
-                subagent_container = self.query_one("#subagent-container")
-                widget = RuntimeMessageWidget(
-                    level=output.level, content=output.content
-                )
-                subagent_container.mount(widget)
-            else:
-                raise RuntimeError(
-                    f"Unknown Type in subagent_message: {type(output)=} {output=}"
-                )
-
     async def watch_token_usage_queue(self) -> None:
         """监听token_usage队列并处理token使用信息"""
         while True:
@@ -252,29 +225,12 @@ class CLIApp(App):
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
                 )
 
-    async def _handle_subagent_parsed_answer(
-        self, wrapper: SubAgentParsedAnswerWrapper
-    ) -> None:
-        """处理SubAgent的ParsedAnswer"""
-        subagent_name = wrapper.subagent_name
-        parsed_answer = wrapper.parsed_answer
-
-        container = self.query_one("#subagent-container")
-        widget = MessageWidget(
-            role="assistant",
-            sender_name=subagent_name,
-            theme=self.theme,
-            parsed_answer=parsed_answer,
-        )
-        container.mount(widget)
-
     async def watch_output_queue(self) -> None:
         """启动五个独立的任务分别监听不同的队列"""
 
         parsed_answer_task = asyncio.create_task(self.watch_parsed_agent_answer_queue())
         ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
         exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
-        subagent_message_task = asyncio.create_task(self.watch_subagent_message_queue())
         token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
 
         done, pending = await asyncio.wait(
@@ -282,7 +238,6 @@ class CLIApp(App):
                 parsed_answer_task,
                 ui_log_task,
                 exit_signal_task,
-                subagent_message_task,
                 token_usage_task,
             ],
             return_when=asyncio.FIRST_COMPLETED,

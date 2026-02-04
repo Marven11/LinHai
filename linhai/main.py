@@ -41,8 +41,6 @@ async def run(args):
         group_chat=group_chat,
         config=config,
         config_basedir=config_path.parent,
-        git_diff_reviewer=args.git_diff_reviewer,
-        violation_checker=args.violation_checker,
         llm_name=args.llm,
         checklist_path=args.checklist,
         cli_args=args,
@@ -87,16 +85,6 @@ def main():
         "--checklist",
         type=Path,
         help="检查清单文件路径，包含一系列代码要求，如./CODE_REQUIREMENTS.md",
-    )
-    parser.add_argument(
-        "--git-diff-reviewer",
-        action="store_true",
-        help="启用git diff reviewer插件",
-    )
-    parser.add_argument(
-        "--violation-checker",
-        action="store_true",
-        help="启用violation checker插件",
     )
     args = parser.parse_args()
 

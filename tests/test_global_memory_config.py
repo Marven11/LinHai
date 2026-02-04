@@ -70,8 +70,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "config_basedir": memory_file.parent,
                 "llm_name": None,
                 "checklist_path": None,
-                "git_diff_reviewer": False,
-                "violation_checker": False,
+
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
@@ -114,8 +113,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "config_basedir": Path(".").absolute(),
                 "llm_name": None,
                 "checklist_path": None,
-                "git_diff_reviewer": False,
-                "violation_checker": False,
+
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
@@ -159,8 +157,7 @@ class TestGlobalMemoryConfig(unittest.TestCase):
                 "config_basedir": None,
                 "llm_name": None,
                 "checklist_path": None,
-                "git_diff_reviewer": False,
-                "violation_checker": False,
+
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))

@@ -51,9 +51,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
         )
-        from linhai.subagent.issue import IssueManager
 
-        self.issue_manager = IssueManager(self.group_chat)
 
         llms_with_names = list(zip(config["llms"], config["llm_names"]))
         self.agent = Agent(
@@ -475,7 +473,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         end_id = 2
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
         self.assertFalse(passed)
-        self.assertIn("start_id不能小于2", error_msg)
+        self.assertIn("压缩范围至少需要10条消息", error_msg)
 
         mock_messages_extended = [
             SystemMessage(group_chat=mock_group_chat),
@@ -519,7 +517,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         end_id = 2
         passed, error_msg = _validate_compression_range(mock_agent, start_id, end_id)
         self.assertFalse(passed)
-        self.assertIn("start_id不能小于3", error_msg)
+        self.assertIn("压缩范围至少需要10条消息", error_msg)
 
     async def test_context_compress_range_step1_sends_ui_log_message(self):
         """Test that context_compress_range_step1 sends UI log message with current message count."""

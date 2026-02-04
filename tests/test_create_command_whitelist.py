@@ -37,8 +37,8 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             group_chat=group_chat,
             config=config,
             config_basedir=config_basedir,
-            git_diff_reviewer=False,
-            violation_checker=False,
+
+
             cli_args=cli_args,
             llm_name="test",
         )
@@ -46,8 +46,8 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         
         with patch("linhai.agent.create._create_llm_instances") as mock_create_llms, \
              patch("linhai.agent.create._create_tool_manager") as mock_create_tools, \
-             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs, \
-             patch("linhai.agent.create._create_subagent") as mock_create_subagent:
+             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs:
+
             
             
             mock_llm = Mock()
@@ -59,7 +59,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             mock_create_tools.return_value = (mock_tool_manager, mock_machine_control)
             
             mock_create_msgs.return_value = []
-            mock_create_subagent.return_value = None
+
             
             
             mock_agent = Mock()
@@ -78,7 +78,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
                 
                 
                 
-                mock_create_subagent.assert_called_once()
+
     
     async def test_plugin_not_registered_when_no_allowed_commands(self):
         """测试当配置中没有allowed_commands时插件不被注册。"""
@@ -107,8 +107,8 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             group_chat=group_chat,
             config=config,
             config_basedir=config_basedir,
-            git_diff_reviewer=False,
-            violation_checker=False,
+
+
             cli_args=cli_args,
             llm_name="test",
         )
@@ -116,8 +116,8 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         
         with patch("linhai.agent.create._create_llm_instances") as mock_create_llms, \
              patch("linhai.agent.create._create_tool_manager") as mock_create_tools, \
-             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs, \
-             patch("linhai.agent.create._create_subagent") as mock_create_subagent:
+             patch("linhai.agent.create._create_pinned_messages") as mock_create_msgs:
+
             
             
             mock_llm = Mock()
@@ -129,7 +129,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
             mock_create_tools.return_value = (mock_tool_manager, mock_machine_control)
             
             mock_create_msgs.return_value = []
-            mock_create_subagent.return_value = None
+
             
             
             mock_agent = Mock()
@@ -147,6 +147,6 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
                 mock_tool_manager.register_lifecycle.assert_called_once()
                 
                 
-                mock_create_subagent.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,8 +7,7 @@ import argparse
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage, UserMessage
-from linhai.subagent import SubAgentManager
-from linhai.subagent.issue import IssueManager
+
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
 
@@ -33,8 +32,6 @@ class AgentBuildContext(TypedDict):
     llm_name: str
     max_toolcall_token_in_round: int
     checklist_path: Optional[Path]
-    git_diff_reviewer: bool
-    violation_checker: bool
     cli_args: argparse.Namespace
 
 
@@ -42,8 +39,6 @@ def create_agent_build_context(
     group_chat: GroupChat,
     config: Config,
     config_basedir: Path,
-    git_diff_reviewer: bool,
-    violation_checker: bool,
     cli_args: argparse.Namespace,
     llm_name: Optional[str] = None,
     checklist_path: Optional[Path] = None,
@@ -79,8 +74,6 @@ def create_agent_build_context(
         "llm_name": resolved_llm_name,
         "max_toolcall_token_in_round": max_toolcall_token,
         "checklist_path": checklist_path,
-        "git_diff_reviewer": git_diff_reviewer,
-        "violation_checker": violation_checker,
         "cli_args": cli_args,
     }
 
@@ -136,33 +129,7 @@ async def create_agent_from_config(
             agent.lifecycle
         )
 
-    await _create_subagent(context, llms, agent)
     return agent
-
-
-async def _create_subagent(
-    context: AgentBuildContext, llms: list[LanguageModel], agent: Agent
-) -> None:
-    if context["git_diff_reviewer"]:
-        from linhai.subagent.subagent_types.git_diff_reviewer import GitDiffReviewPlugin
-
-        GitDiffReviewPlugin(context["group_chat"]).register(agent.lifecycle)
-
-    if context["violation_checker"]:
-        from linhai.subagent.subagent_types.violation_checker import (
-            ViolationCheckerPlugin,
-        )
-
-        ViolationCheckerPlugin(context["group_chat"]).register(agent.lifecycle)
-
-    if context["config"].subagent and context["config"].subagent.enable:
-        from linhai.subagent import SubAgentManager
-        from linhai.subagent.issue import IssueManager
-
-        subagent_manager = SubAgentManager(
-            context["group_chat"], context["config"].subagent, llms
-        )
-        issue_manager = IssueManager(context["group_chat"])
 
 
 async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageModel]:

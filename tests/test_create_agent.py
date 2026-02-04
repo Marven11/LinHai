@@ -32,8 +32,7 @@ class TestCreateAgent(unittest.TestCase):
         import argparse
 
         cli_args = argparse.Namespace()
-        cli_args.git_diff_reviewer = False
-        cli_args.violation_checker = False
+
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
@@ -46,8 +45,7 @@ class TestCreateAgent(unittest.TestCase):
             config=config,
             config_basedir=Path("."),
             llm_name=None,
-            git_diff_reviewer=cli_args.git_diff_reviewer,
-            violation_checker=cli_args.violation_checker,
+
             cli_args=cli_args,
             checklist_path=None,
         )
@@ -77,8 +75,7 @@ class TestCreateAgent(unittest.TestCase):
         import argparse
 
         cli_args = argparse.Namespace()
-        cli_args.git_diff_reviewer = False
-        cli_args.violation_checker = False
+
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
@@ -91,8 +88,7 @@ class TestCreateAgent(unittest.TestCase):
             config=config,
             config_basedir=Path("."),
             llm_name="test",
-            git_diff_reviewer=cli_args.git_diff_reviewer,
-            violation_checker=cli_args.violation_checker,
+
             cli_args=cli_args,
             checklist_path=None,
         )
@@ -108,8 +104,7 @@ class TestCreateAgent(unittest.TestCase):
         import argparse
 
         cli_args = argparse.Namespace()
-        cli_args.git_diff_reviewer = False
-        cli_args.violation_checker = False
+
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
@@ -125,8 +120,8 @@ class TestCreateAgent(unittest.TestCase):
                 config=config,
                 config_basedir=Path("."),
                 llm_name="invalid_llm",
-                git_diff_reviewer=cli_args.git_diff_reviewer,
-                violation_checker=cli_args.violation_checker,
+
+
                 cli_args=cli_args,
                 checklist_path=None,
             )

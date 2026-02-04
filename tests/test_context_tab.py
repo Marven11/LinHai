@@ -127,11 +127,10 @@ class TestContextTab(unittest.TestCase):
 
                 # 验证各个tab
                 agent_tab = pilot.app.query_one("#agent-tab")
-                subagent_tab = pilot.app.query_one("#subagent-tab")
+
                 context_tab = pilot.app.query_one("#context-tab")
 
                 self.assertIsNotNone(agent_tab)
-                self.assertIsNotNone(subagent_tab)
                 self.assertIsNotNone(context_tab)
 
                 # 验证ContextTabWidget在context-tab中

@@ -62,12 +62,7 @@ class TestCLITabs(unittest.TestCase):
                 self.assertIsNotNone(tabbed_content)
 
                 agent_tab = pilot.app.query_one("#agent-tab")
-                subagent_tab = pilot.app.query_one("#subagent-tab")
                 self.assertIsNotNone(agent_tab)
-                self.assertIsNotNone(subagent_tab)
-
-                subagent_content = pilot.app.query_one("#subagent-content")
-                self.assertIsNotNone(subagent_content)
 
         asyncio.run(_run_test())
 
@@ -123,8 +118,7 @@ class TestCLITabs(unittest.TestCase):
             agent_pane = pilot.app.query_one("#agent-tab")
             self.assertIsNotNone(agent_pane)
 
-            subagent_pane = pilot.app.query_one("#subagent-tab")
-            self.assertIsNotNone(subagent_pane)
+
 
 
 if __name__ == "__main__":
