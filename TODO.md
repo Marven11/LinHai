@@ -116,6 +116,10 @@ unittest 失败时，必须分析
     - 在secret被列出时同时提供disabled_in_toolcall_argument的值
     - 同时使用with_secret指定一个disabled_in_toolcall_argument=True的secret1和一个disabled_in_toolcall_argument=False的secret2
       - 如果函数参数中有secret2则报错“secret被禁止在函数参数中使用”
+- [ ] 添加一个插件解决火山平台deepseek的工具调用格式问题
+  - 背景: `</think>`是思考消息和实际输出的分隔符，前方的消息会被API解析为reasoning_content,后方的内容会被解析为content
+  - 问题: 火山平台的deepseek经常会在实际的content中包含多个`` </think>```json toolcall ``这样的格式，多次在`</think>`后输出工具调用，但是实际上`</think>`只允许出现一次
+  - 添加插件: 检查生成的消息是否含有`` </think>```json toolcall ``，如果有则提醒“你多次在xxx后直接输出了工具调用，这是否是语法错误？”
 - [ ] 为load_image和ImageMessage加上指定图片质量的功能
   - 当前问题：
     - agent不支持预览图片，查看图片时只能完整加载图片
