@@ -72,10 +72,24 @@ unittest 失败时，必须分析
 - [ ] 拆分app.py的实现
   - 问题：当前app.py同时处理消息列表和低栏、顶栏等内容，不利于重构
   - 重构：我们实现一个linhai/cli/messages_list.py拆分app.py中的**所有**处理新消息的逻辑，至少完成以下几点
-    - 移动监听agent新消息的逻辑
-    - 移动创建和管理新消息widget的逻辑
-    - app.py不再直接管理任何消息
-    - 不要在app.py中处理自动滚动
+    - 所有需要移动的逻辑
+      - 监听处理"parsed_agent_answer", "ui_log"
+      - 新消息生成和管理
+        - 创建并管理VerticalScroll(id="chat-container")
+        - 显示self.init_messages
+        - mount新的消息
+      - 管理自动滚动
+    - 所有不需要移动的逻辑
+      - 欢迎界面和ASCIIART
+      - 管理self.agent_task
+      - 管理底栏和用户文本输入框
+    - 考虑移除
+      - self.messages: 只在compose中才被使用，compose仅在初始化时调用，此时self.messages仅含有初始消息。此时直接使用self.init_messages即可
+    - 目标
+      - 移动监听agent新消息的逻辑
+      - 移动创建和管理新消息widget的逻辑
+      - app.py不再直接管理任何消息
+      - 不要在app.py中处理自动滚动
     - 修改对应的unittest以适应新的重构，保证行为完全一致
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
