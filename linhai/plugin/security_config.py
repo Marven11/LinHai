@@ -43,18 +43,19 @@ class WithSecretParameterPositionPlugin(Plugin):
         if status != "failed":
             return None
 
-        if "with_secret" in toolcall_arguments:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING", content="检测到with_secret参数位置错误"
-                ),
-            )
-            return RuntimeMessage(
-                "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
-                '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
-            )
-        return None
+        if "with_secret" not in toolcall_arguments:
+            return None
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING", content="检测到with_secret参数位置错误"
+            ),
+        )
+        return RuntimeMessage(
+            "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
+            '正确格式：{"name": "tool_name", "with_secret": ["KEY"], "arguments": {...}}'
+        )
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到on_tool_result回调。"""
@@ -63,6 +64,8 @@ class WithSecretParameterPositionPlugin(Plugin):
 
 class MissingWithSecretWarningPlugin(Plugin):
     """检查未使用with_secret但包含<$KEY$>的插件"""
+
+    _SECRET_PATTERN = re.compile(r"<\$[A-Z_]+\$>")
 
     async def on_tool_result(
         self,
@@ -74,30 +77,33 @@ class MissingWithSecretWarningPlugin(Plugin):
         with_secret: list[str] | None,
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
-        if status != "skipped":
+        if not toolcall_arguments:
             return None
 
-        if toolcall_arguments:
-            arguments_str = str(toolcall_arguments)
-            has_secret_pattern = re.search(r"<\$[A-Z_]+\$>", arguments_str)
-            if has_secret_pattern and not with_secret:
-                agent = self.group_chat.get_members("agent", Agent)
-                if agent and hasattr(agent, "message_processor"):
-                    agent.message_processor.add_new_message(
-                        RuntimeMessage(
-                            "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
-                            "请确认：\n"
-                            "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
-                            "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
-                        )
-                    )
+        arguments_str = str(toolcall_arguments)
+        has_secret_pattern = self._SECRET_PATTERN.search(arguments_str)
+        if not has_secret_pattern:
+            return None
 
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO", content="检测到可能忘记使用with_secret的工具调用"
-                    ),
-                )
+        if with_secret:
+            return None
+
+        agent = self.group_chat.get_members("agent", Agent)
+        agent.message_processor.add_new_message(
+            RuntimeMessage(
+                "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
+                "请确认：\n"
+                "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
+                "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
+            )
+        )
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO", content="检测到可能忘记使用with_secret的工具调用"
+            ),
+        )
         return None
 
     def register(self, lifecycle: "Lifecycle"):
@@ -138,22 +144,29 @@ class CommandWhitelistPlugin(Plugin):
         toolcall_arguments: dict,
         with_secret: list[str] | None,
     ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
-        if tool_name == "process_create":
-            argv = toolcall_arguments.get("argv")
-            if argv is None:
-                return ToolResultFailed(content="process_create缺少argv参数")
-            if self.allowed_commands and not any(
-                len(allowed) <= len(argv)
-                and all(
-                    cmd_elem == allowed_elem
-                    for cmd_elem, allowed_elem in zip(argv, allowed)
-                )
-                for allowed in self.allowed_commands
-            ):
-                return ToolResultFailed(
-                    content=f"命令 {' '.join(argv)} 不在白名单中。允许的命令: {self.allowed_commands}"
-                )
-        return None
+        if tool_name != "process_create":
+            return None
+
+        argv = toolcall_arguments.get("argv")
+        if argv is None:
+            return ToolResultFailed(content="process_create缺少argv参数")
+
+        if not self.allowed_commands:
+            return None
+
+        if any(
+            len(allowed) <= len(argv)
+            and all(
+                cmd_elem == allowed_elem
+                for cmd_elem, allowed_elem in zip(argv, allowed)
+            )
+            for allowed in self.allowed_commands
+        ):
+            return None
+
+        return ToolResultFailed(
+            content=f"命令 {' '.join(argv)} 不在白名单中。允许的命令: {self.allowed_commands}"
+        )
 
 
 class ProcessArgvCheckerPlugin(Plugin):
@@ -202,6 +215,7 @@ class ProcessArgvCheckerPlugin(Plugin):
             if warnings:
                 from linhai.agent import Agent
                 from linhai.agent.base import RuntimeMessage
+
                 warning_msg = (
                     "警告：process_create的argv参数中包含可能的bash语法操作符:"
                     + repr(warnings)
