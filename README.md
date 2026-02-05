@@ -74,3 +74,4 @@ https://github.com/shareAI-lab/analysis_claude_code
 
 https://mp.weixin.qq.com/s/o4pu8QX1tRIPBRlFJqrX3A
 
+https://liruifengv.com/posts/openclaw-prompts/

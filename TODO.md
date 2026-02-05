@@ -125,6 +125,24 @@ unittest 失败时，必须分析
   - 编写测试
     - is_dirty在正确的时间被设置为false和true
     - 在清理上下文后红绿灯状态变为“失效”
+- [ ] 参考openclaw的设计添加类似openclaw的全局记忆功能
+  - 添加一个--claw参数，帮助为“打开Continuous Living Autonomous Worker模式”
+  - 当前这个参数仅检查~/.local/share/linhai/claw/有没有创建，如果有则创建
+  - 编写相关unittest
+  - 推迟：编写相关prompt
+- [ ] 将LINHAI.md迁移为AGENTS.md
+  - 问题: 当前LINHAI.md包含的实际是对agent的要求prompt，不希望模型修改
+  - 问题：我们在将linhai用作coding agent时不希望linhai修改全局记忆
+  - 重新设计
+    - 读取 https://agents.md/ 网页并下载到./docs/AGENTSMD_WEBSITE.md中
+    - 【注意】不要向后兼容，也不要修改当前的全局记忆文件，这个我之后自己去改
+    - 流程
+      - 搜索“全局记忆”术语改为“全局指导”
+      - 搜索GlobalMemory改成GlobalPrompt
+      - 搜索“路径记忆”术语改为“路径指导”
+      - 搜索PathMemory改成PathPrompt
+      - 修改所有有关的prompt、类名和文件名等
+      - 重新搜索以上关键词，如果仍有则将任务标记为未完成，继续修改
 
 # 注意
 
