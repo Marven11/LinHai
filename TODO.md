@@ -107,8 +107,6 @@ unittest 失败时，必须分析
   - 背景: `</think>`是思考消息和实际输出的分隔符，前方的消息会被API解析为reasoning_content,后方的内容会被解析为content
   - 问题: 火山平台的deepseek经常会在实际的content中包含多个`` </think>```json toolcall ``这样的格式，多次在`</think>`后输出工具调用，但是实际上`</think>`只允许出现一次
   - 添加插件: 检查生成的消息是否含有`` </think>```json toolcall ``，如果有则提醒“你多次在xxx后直接输出了工具调用，这是否是语法错误？”
-- [ ] cumulative_token_usage没有TypedDict类型注释，需要添加
-  - 添加之后看一下pyright爆了什么错误，然后修复
 - [ ] 当前根据“一分钟内是否调用过上下文清理工具”判断是否需要禁止重新调用的逻辑过于脆弱
   - 现状：llm.py在调用api后会拿到当前messages列表对应的token用量，传给TokenManager，上下文管理工具会修改messages列表导致token用量失效
   - 现状：在红灯状态清理了上下文后，token用量失效，上下文仍然为“红灯”状态（虽然已经被清理）
@@ -127,10 +125,6 @@ unittest 失败时，必须分析
   - 编写测试
     - is_dirty在正确的时间被设置为false和true
     - 在清理上下文后红绿灯状态变为“失效”
-- [ ] MissingWithSecretWarningPlugin无法正常工作
-  - 在终端中运行`uv run python -m linhai -m '测试一下不使用with_secret就在参数中带上<$DEEPSEEK_API_KEY$>是否会被警告'`会报告没有收到警告
-  - 为这个插件编写unittest测试这个问题
-  - 在编写unittest之后尝试修复 
 
 # 注意
 
