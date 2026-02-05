@@ -69,6 +69,14 @@ unittest 失败时，必须分析
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
   - TODO 需要仔细规划
+- [ ] 拆分app.py的实现
+  - 问题：当前app.py同时处理消息列表和低栏、顶栏等内容，不利于重构
+  - 重构：我们实现一个linhai/cli/messages_list.py拆分app.py中的**所有**处理新消息的逻辑，至少完成以下几点
+    - 移动监听agent新消息的逻辑
+    - 移动创建和管理新消息widget的逻辑
+    - app.py不再直接管理任何消息
+    - 不要在app.py中处理自动滚动
+    - 修改对应的unittest以适应新的重构，保证行为完全一致
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
   - 当前问题：没有一个良好的机制遍历MessageWidget中的ToolCallWidget中的工具调用是否正确，以及获取工具名
