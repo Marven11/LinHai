@@ -169,12 +169,10 @@ class AgentContextOrchestration:
             cache_ratio_text = ""
             token_manager = self.group_chat.get_members("token_manager", TokenManager)
             if token_manager.cumulative_token_usage is not None:
-                input_tokens = token_manager.cumulative_token_usage.get(
-                    "input_tokens", 0
-                )
-                cached_input_tokens = token_manager.cumulative_token_usage.get(
-                    "cached_input_tokens", 0
-                )
+                input_tokens = token_manager.cumulative_token_usage["input_tokens"]
+                cached_input_tokens = token_manager.cumulative_token_usage[
+                    "cached_input_tokens"
+                ]
                 if input_tokens > 0:
                     cache_ratio = (cached_input_tokens / input_tokens) * 100
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"

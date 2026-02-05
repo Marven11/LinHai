@@ -73,7 +73,9 @@ class UserMultiModalMessage(TypedDict, total=False):
     """User multimodal message type definition, supports text and image content."""
 
     role: Required[Literal["user"]]
-    content: list[ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam]
+    content: list[
+        ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam
+    ]
     name: str
 
 
@@ -89,7 +91,9 @@ class AssistantMessage(TypedDict, total=False):
     reasoning_content: str
 
 
-LanguageModelMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage, UserMultiModalMessage]
+LanguageModelMessage: TypeAlias = Union[
+    SystemMessage, UserMessage, AssistantMessage, UserMultiModalMessage
+]
 
 
 class ThresholdInfo(TypedDict):
@@ -101,6 +105,15 @@ class ThresholdInfo(TypedDict):
     usage_ratio: float
 
 
+class CumulativeTokenUsage(TypedDict):
+    """累计token使用量TypedDict，用于TokenManager中的cumulative_token_usage。"""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    cached_input_tokens: int
+
+
 __all__ = [
     "SystemMessage",
     "UserMessage",
@@ -108,6 +121,7 @@ __all__ = [
     "LanguageModelMessage",
     "AgentState",
     "ThresholdInfo",
+    "CumulativeTokenUsage",
     "ChatCompletionContentPartTextParam",
     "ChatCompletionContentPartImageParam",
     "UserMultiModalMessage",

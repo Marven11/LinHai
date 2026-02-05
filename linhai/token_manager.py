@@ -1,9 +1,10 @@
 """Token management logic for CLI."""
 
 from __future__ import annotations
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from linhai.llm import AnswerTokenUsage
 from linhai.group_chat import GroupChat
+from linhai.type_hints import CumulativeTokenUsage
 
 if TYPE_CHECKING:
     from linhai.agent import Agent
@@ -16,25 +17,23 @@ class TokenManager:
         # 直接注册，如果重复则让代码崩溃（fail fast原则）
         group_chat.register_member("token_manager", self)
         self.current_token_usage: Optional[AnswerTokenUsage] = None
-        self.cumulative_token_usage: Optional[Dict[str, int]] = None
+        self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
 
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""
         if self.cumulative_token_usage is None:
-            self.cumulative_token_usage = token_usage.model_dump()
-            if "cached_input_tokens" not in self.cumulative_token_usage:
-                self.cumulative_token_usage["cached_input_tokens"] = (
-                    token_usage.cached_input_tokens or 0
-                )
+            self.cumulative_token_usage = {
+                "input_tokens": token_usage.input_tokens,
+                "output_tokens": token_usage.output_tokens,
+                "total_tokens": token_usage.total_tokens,
+                "cached_input_tokens": token_usage.cached_input_tokens or 0,
+            }
         else:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens
             self.cumulative_token_usage["output_tokens"] += token_usage.output_tokens
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
-
-            current_cache = token_usage.cached_input_tokens or 0
-            existing_cache = self.cumulative_token_usage["cached_input_tokens"]
-            self.cumulative_token_usage["cached_input_tokens"] = (
-                existing_cache + current_cache
+            self.cumulative_token_usage["cached_input_tokens"] += (
+                token_usage.cached_input_tokens or 0
             )
 
     def _format_token_number(self, number: int) -> str:
