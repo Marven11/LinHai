@@ -382,7 +382,7 @@ class FileReadWriteConflictPlugin(Plugin):
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
-                        content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}",
+                        content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}，已警告",
                     ),
                 )
                 return RuntimeMessage(
