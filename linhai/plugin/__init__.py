@@ -36,6 +36,8 @@ from .security_config import (
     ProcessArgvCheckerPlugin,
 )
 
+from .afk_plugin import AfkPlugin
+
 from .helpers import (
     is_small_file,
     is_already_read,
@@ -68,6 +70,7 @@ __all__ = [
     "MissingWithSecretWarningPlugin",
     "CommandWhitelistPlugin",
     "ProcessArgvCheckerPlugin",
+    "AfkPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",

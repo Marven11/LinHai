@@ -138,6 +138,7 @@ class Lifecycle:
             FileReadWriteConflictPlugin,
             KimiK25ToolCallPlugin,
             MissingWithSecretWarningPlugin,
+            AfkPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -164,6 +165,7 @@ class Lifecycle:
             FileReadWriteConflictPlugin(self.group_chat),
             KimiK25ToolCallPlugin(self.group_chat),
             MissingWithSecretWarningPlugin(self.group_chat),
+            AfkPlugin(self.group_chat),
         ]
 
         for plugin in plugins:

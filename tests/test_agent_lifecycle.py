@@ -88,6 +88,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
                 return self.mock_issue_manager
             elif member_type == "machine_control":
                 return self.mock_machine_control
+            elif member_type == "cli_args":
+                import argparse
+
+                return argparse.Namespace(afk=False)
             else:
                 return None
 

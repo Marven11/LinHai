@@ -94,8 +94,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = False
 
         self.lifecycle_mock = MagicMock()
-        
+
         from linhai.machine_control import MachineControl
+
         self.mock_machine_control = MagicMock(spec=MachineControl)
         self.mock_machine_control.target_machine = "master_host"
 
@@ -112,6 +113,10 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.agent.orchestration
             elif member_type == "machine_control":
                 return self.mock_machine_control
+            elif member_type == "cli_args":
+                import argparse
+
+                return argparse.Namespace(afk=False)
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members.side_effect = get_members_side_effect

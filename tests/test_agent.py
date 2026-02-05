@@ -75,9 +75,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
 
         config = {
-            "llms": [self.mock_llm],  
-            "llm_names": ["test_llm"],  
-            "current_llm_index": 0,  
+            "llms": [self.mock_llm],
+            "llm_names": ["test_llm"],
+            "current_llm_index": 0,
             "compress_threshold": 800,
         }
 
@@ -86,6 +86,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_queue("parsed_agent_answer")
 
         from linhai.cli.app import CLIApp
+
         mock_cli_app = MagicMock(spec=CLIApp)
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
@@ -93,11 +94,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.group_chat.register_member("cli_app", mock_cli_app)
 
         from linhai.machine_control import MachineControl
+
         self.mock_machine_control = MagicMock(spec=MachineControl)
         self.mock_machine_control.target_machine = "master_host"
         self.group_chat.register_member("machine_control", self.mock_machine_control)
 
+        import argparse
 
+        self.group_chat.register_member("cli_args", argparse.Namespace(afk=False))
 
         from linhai.config import ToolConfig
 
@@ -145,7 +149,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         parsed_answer = None
         while not self.agent.group_chat.is_empty("parsed_agent_answer"):
             item = await self.agent.group_chat.receive("parsed_agent_answer")
-            if hasattr(item, "segment_queue"):  
+            if hasattr(item, "segment_queue"):
                 parsed_answer = item
                 break
 
@@ -189,7 +193,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.assertLessEqual(
             len(messages),
-            5,  
+            5,
             f"Messages: {[str(msg) for msg in messages]}",
         )
         self.assertEqual(
@@ -219,10 +223,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.assertLessEqual(
             len(messages),
-            8,  
+            8,
             f"Messages: {[str(msg) for msg in messages]}",
         )
-        
+
         tool_result_found = False
         for msg in messages:
             content = msg.to_llm_message().get("content", "")
@@ -234,7 +238,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 )
                 break
         self.assertTrue(tool_result_found, "未找到工具结果消息")
-        
+
         assistant_reply_found = False
         for msg in messages:
             content = msg.to_llm_message().get("content", "")
@@ -320,44 +324,52 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     async def test_at_system_logic(self):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""
         new_group_chat = GroupChat()
-        
+
         from linhai.cli.app import CLIApp
+
         mock_cli_app = MagicMock(spec=CLIApp)
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
         new_group_chat.register_member("cli_app", mock_cli_app)
-        
+
         from linhai.tool.main import ToolManager
         from linhai.config import ToolConfig
         from pathlib import Path
+
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.group_chat = new_group_chat
         new_group_chat.register_member("tool_manager", mock_tool_manager)
-        
+
         mock_llm1 = MagicMock(spec=OpenAi)
         mock_llm2 = MagicMock(spec=OpenAi)
-        
+
         async def empty_answer_stream(_):
             class EmptyAnswer:
                 def __aiter__(self):
                     return self
+
                 async def __anext__(self):
                     raise StopAsyncIteration
+
                 def get_message(self):
                     return AssistantMessage(message="")
+
                 def get_current_content(self):
                     return ""
+
                 def get_reasoning_message(self):
                     return None
+
             return EmptyAnswer()
-        
+
         mock_llm1.answer_stream = AsyncMock(side_effect=empty_answer_stream)
         mock_llm2.answer_stream = AsyncMock(side_effect=empty_answer_stream)
         mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
         mock_llm2.get_name = MagicMock(return_value="qwen")
-        
+
         from linhai.agent import Agent
+
         agent = Agent(
             llms=[mock_llm1, mock_llm2],
             compress_threshold=800,
@@ -365,45 +377,45 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             pinned_messages=[],
             llm_name="deepseek-reasoning",
         )
-        
+
         await agent.handle_user_message(UserMessage(message="@qwen Hello"))
         self.assertEqual(agent.current_llm_index, 1)
         self.assertEqual(agent.llm_names[1], "qwen")
-        
+
         mock_cli_app.reset_mock()
         mock_container.reset_mock()
-        
+
         agent.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="@invalid command"))
         self.assertEqual(agent.current_llm_index, 0)
-        
+
         mock_cli_app.query_one.assert_called_once_with("#chat-container")
         mock_container.mount.assert_called_once()
         widget = mock_container.mount.call_args[0][0]
         self.assertIsInstance(widget, RuntimeMessageWidget)
         self.assertIn("错误：LLM名称 'invalid' 不存在", widget.content_str)
-        
+
         agent.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="Hello world"))
         self.assertEqual(agent.current_llm_index, 0)
-        
+
         await agent.handle_user_message(UserMessage(message="@qwen first"))
         self.assertEqual(agent.current_llm_index, 1)
-        
+
         await agent.handle_user_message(UserMessage(message="Normal message"))
         self.assertEqual(agent.current_llm_index, 1)
-        
+
         await agent.handle_user_message(
             UserMessage(message="@deepseek-reasoning second")
         )
         self.assertEqual(agent.current_llm_index, 0)
-
 
     async def test_queue_command(self):
         """测试/queue命令，将消息加入排队列表。"""
         await self.agent.handle_user_message(UserMessage(message="/queue 等下需要实现"))
         self.assertEqual(len(self.agent.queued_messages), 1)
         self.assertEqual(self.agent.queued_messages[0].message, "等下需要实现")
+
 
 if __name__ == "__main__":
     unittest.main()

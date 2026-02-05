@@ -92,6 +92,11 @@ def main():
         action="store_true",
         help="启用文档规划模式",
     )
+    parser.add_argument(
+        "--afk",
+        action="store_true",
+        help="关闭 #LINHAI_WAITING_USER 功能",
+    )
     args = parser.parse_args()
 
     return_code = asyncio.run(run(args))
