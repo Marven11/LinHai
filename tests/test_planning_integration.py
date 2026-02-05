@@ -17,8 +17,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.mock_config.llm = [mock_llm_config]
         self.mock_config_basedir = Path("/tmp/test_config")
         self.mock_cli_args = MagicMock()
-        self.mock_cli_args.git_diff_reviewer = False
-        self.mock_cli_args.violation_checker = False
         self.mock_cli_args.planning = False
         self.mock_cli_args.llm = None
         self.mock_cli_args.checklist = None
@@ -30,8 +28,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             group_chat=self.mock_group_chat,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
-            git_diff_reviewer=False,
-            violation_checker=False,
             cli_args=self.mock_cli_args,
             planning=False,
         )
@@ -44,8 +40,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             group_chat=self.mock_group_chat,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
-            git_diff_reviewer=False,
-            violation_checker=False,
             cli_args=self.mock_cli_args,
             planning=True,
         )
