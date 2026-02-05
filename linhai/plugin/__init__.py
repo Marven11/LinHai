@@ -1,7 +1,6 @@
 """Plugin系统模块。"""
 
-# 重新导出所有插件，保持向后兼容
-from .message_checkers import Plugin  # Plugin基类
+from .message_checkers import Plugin
 from .message_checkers import (
     WaitingUserPlugin,
     WrongEndPlugin,
@@ -11,6 +10,7 @@ from .message_checkers import (
     JsonCodeBlockPlugin,
     KimiK25ToolCallPlugin,
     RuntimeImitationPlugin,
+    VolcanoDeepseekFixPlugin,
 )
 
 from .tool_call_managers import (
@@ -71,6 +71,7 @@ __all__ = [
     "CommandWhitelistPlugin",
     "ProcessArgvCheckerPlugin",
     "AfkPlugin",
+    "VolcanoDeepseekFixPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",

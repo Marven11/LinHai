@@ -145,6 +145,54 @@ class EndThinkPlugin(Plugin):
         lifecycle.register_after_token_generation(self.after_token_generation)
 
 
+class VolcanoDeepseekFixPlugin(Plugin):
+    """处理火山平台deepseek异常输出的插件。"""
+    
+    ABNORMAL_MARKER = "</think>```json toolcall"
+    NORMAL_MARKER = "```json toolcall"
+    
+    async def after_message_generation(
+        self,
+        _answer: Answer,
+        full_response: str,
+        tool_calls: list,
+    ) -> None:
+        """在消息生成后检查并清理异常标记。"""
+        agent = self.group_chat.get_members("agent", Agent)
+        
+        if self.ABNORMAL_MARKER not in full_response:
+            return
+        
+        cleaned_response = full_response.replace(
+            self.ABNORMAL_MARKER, 
+            '\n' + self.NORMAL_MARKER
+        )
+        
+        if cleaned_response != full_response:
+            new_tool_calls = extract_tool_calls(cleaned_response)
+            
+            tool_calls.clear()
+            tool_calls.extend(new_tool_calls)
+            
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content=f"火山平台deepseek异常输出已清理: 移除{full_response.count(self.ABNORMAL_MARKER)}个异常标记"
+                )
+            )
+            
+            if not tool_calls and "```json toolcall" in cleaned_response:
+                await agent.interrupt(
+                    "火山平台deepseek输出异常，清理后仍无法解析工具调用。请检查输出格式是否正确。",
+                    "火山平台deepseek异常输出处理失败",
+                )
+    
+    def register(self, lifecycle: "Lifecycle") -> None:
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class OnlyReasoningPlugin(Plugin):
     """针对deepseek v3.2检测是否只思考不输出"""
 

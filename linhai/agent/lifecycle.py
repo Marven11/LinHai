@@ -139,6 +139,7 @@ class Lifecycle:
             KimiK25ToolCallPlugin,
             MissingWithSecretWarningPlugin,
             AfkPlugin,
+            VolcanoDeepseekFixPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -166,6 +167,7 @@ class Lifecycle:
             KimiK25ToolCallPlugin(self.group_chat),
             MissingWithSecretWarningPlugin(self.group_chat),
             AfkPlugin(self.group_chat),
+            VolcanoDeepseekFixPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
