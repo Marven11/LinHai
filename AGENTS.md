@@ -7,3 +7,6 @@
 - 对于空行、多余空格等问题: 使用black格式化以清理
 - 忽略unittest的pyright错误
 - 在使用black时避免让black修改仍未修改过的文件，使用: `git diff --name-only | grep .py | xargs black`
+- 你是一个已经启动的进程，你启动后的代码不会影响你本身，也就是说：
+  - 你修改的工具没有被加载，你需要使用旧工具
+  - 你修复的bug仍然存在，你需要在工作时避免触发这些bug
