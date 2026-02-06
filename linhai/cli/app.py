@@ -35,6 +35,7 @@ from .components import (
 from .context_tab import ContextTabWidget
 from ..token_manager import TokenManager
 from .command_handler import CommandHandler
+from .messages_list import MessagesList
 
 ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
@@ -96,11 +97,7 @@ class CLIApp(App):
     ):
         super().__init__()
         self.theme = cli_config.theme
-        self.messages: List[Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]] = []
         self.group_chat = group_chat
-
-        self.group_chat.register_queue("parsed_agent_answer")
-        self.group_chat.register_queue("ui_log")
         self.group_chat.register_queue("exit_signal")
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
@@ -115,10 +112,10 @@ class CLIApp(App):
         self.current_response_buffer = ""
         self.output_watcher_task: Optional[asyncio.Task] = None
         self.agent_task: Optional[asyncio.Task] = None
+        self.exit_signal_task: Optional[asyncio.Task] = None
+        self.token_usage_task: Optional[asyncio.Task] = None
 
         self.token_manager = TokenManager(group_chat)
-
-        self.is_user_scroll_to_end = True
 
         self.completions = []
         self.command_completions = self._generate_command_completions()
@@ -126,24 +123,28 @@ class CLIApp(App):
 
         self.cli_config = cli_config
         self.command_handler = CommandHandler(self.group_chat)
-        self.auto_scroll_timer_task: Optional[asyncio.Task] = None
-
-        self.current_message_generation_widget: Optional[MessageGenerationWidget] = None
 
         self.group_chat.add_postinit(self.postinit)
 
     def postinit(self):
-        self.group_chat.get_members(
-            "lifecycle", Lifecycle
-        ).register_after_message_generation(self.after_message_generation)
+        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle.register_after_message_generation(self.after_message_generation)
+        self.exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
+        self.token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
             with TabPane("Agent", id="agent-tab"):
-                with VerticalScroll(id="chat-container"):
-                    for msg in self.messages:
-                        yield msg
+                lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+                self.messages_list = MessagesList(
+                    group_chat=self.group_chat,
+                    cli_config=self.cli_config,
+                    theme=self.theme,
+                    lifecycle=lifecycle,
+                    id="chat-container",
+                )
+                yield self.messages_list
 
                 yield Input(placeholder="输入消息...", id="input")
                 yield FooterWidget(
@@ -155,26 +156,6 @@ class CLIApp(App):
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.group_chat)
 
-    async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
-        agent = self.group_chat.get_members("agent", Agent)
-        llm_name, _llm = agent.get_current_llm_info()
-
-        container = self.query_one("#chat-container")
-
-        generation_widget = MessageGenerationWidget()
-        container.mount(generation_widget)
-        self.messages.append(generation_widget)
-
-        self.current_message_generation_widget = generation_widget
-
-        message_widget = MessageWidget(
-            role="assistant",
-            sender_name=llm_name,
-            theme=self.theme,
-            parsed_answer=parsed_answer,
-        )
-        generation_widget.set_message_widget(message_widget)
-
     async def after_message_generation(self, answer, full_response, tool_calls):
         token_usage = answer.get_token_usage()
         if token_usage is not None:
@@ -182,37 +163,7 @@ class CLIApp(App):
             self.token_manager.current_token_usage = None
             self.update_token_display(token_usage.total_tokens)
 
-    async def watch_parsed_agent_answer_queue(self) -> None:
-        """监听parsed_agent_answer队列并处理解析后的Agent回答"""
-        while True:
-            output = await self.group_chat.receive("parsed_agent_answer")
-            if isinstance(output, ParsedAnswer):
-                asyncio.create_task(self._handle_single_parsed_answer(output))
-            else:
-                raise RuntimeError(
-                    f"Unknown Type in parsed_agent_answer: {type(output)=} {output=}"
-                )
 
-    async def watch_ui_log_queue(self) -> None:
-        """监听ui_log队列并处理运行时日志"""
-        while True:
-            output = await self.group_chat.receive("ui_log")
-
-            if isinstance(output, CliRuntimeNotice):
-
-                widget = RuntimeMessageWidget(
-                    level=output.level, content=output.content
-                )
-
-                if self.current_message_generation_widget:
-                    self.current_message_generation_widget.add_runtime_message(widget)
-                else:
-
-                    container = self.query_one("#chat-container")
-                    container.mount(widget)
-
-            else:
-                raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
 
     async def watch_exit_signal_queue(self) -> None:
         """监听exit_signal队列并处理退出信号"""
@@ -239,43 +190,6 @@ class CLIApp(App):
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
                 )
 
-    async def watch_output_queue(self) -> None:
-        """启动五个独立的任务分别监听不同的队列"""
-
-        parsed_answer_task = asyncio.create_task(self.watch_parsed_agent_answer_queue())
-        ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
-        exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
-        token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
-
-        done, pending = await asyncio.wait(
-            [
-                parsed_answer_task,
-                ui_log_task,
-                exit_signal_task,
-                token_usage_task,
-            ],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        for task in pending:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        if exit_signal_task in done:
-            return
-
-        for task in done:
-            if task.exception():
-                exception = task.exception()
-                raise (
-                    exception
-                    if exception
-                    else Exception("Task failed without exception")
-                )
-
     def _generate_dynamic_completions(self) -> list[str]:
         """动态生成@补全列表"""
         try:
@@ -290,14 +204,6 @@ class CLIApp(App):
             pass
         return []
 
-    async def _auto_scroll_timer(self):
-        """定时滚动timer，每0.1秒检查是否需要自动滚动"""
-        while True:
-            await asyncio.sleep(0.1)
-            if self.should_auto_scroll():
-                container = self.query_one("#chat-container")
-                container.scroll_end(animate=False)
-
     def _generate_command_completions(self) -> list[str]:
         """动态生成/命令补全列表"""
         return [
@@ -309,51 +215,23 @@ class CLIApp(App):
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.completions = self._generate_dynamic_completions()
-
-        self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
-
+        await self.messages_list.start_listening()
         if self.init_messages:
-            for init_message in self.init_messages:
-                from linhai.llm import UserMessage
-
-                user_msg = UserMessage(message=init_message)
-                self.messages.append(
-                    UserMessageWidget(
-                        content=init_message,
-                        sender_name="user",
-                        theme=self.theme,
-                    )
-                )
-                await self.group_chat.send("user_message", user_msg)
-
-                agent = self.group_chat.get_members("agent", Agent)
-                widget = UserMessageWidget(
-                    user_msg.message, sender_name="user", theme=self.theme
-                )
-                container = self.query_one("#chat-container")
-                container.mount(widget)
-                widget.update_display()
-
+            await self.messages_list.add_initial_messages(self.init_messages)
         else:
+            rainbow_art = RainbowAsciiArt(ASCII_ART)
+            rainbow_art.add_class("welcome-message")
+            self.messages_list.mount(rainbow_art)
             agent = self.group_chat.get_members("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
-
-            container = self.query_one("#chat-container")
-
-            rainbow_art = RainbowAsciiArt(ASCII_ART)
-            rainbow_art.add_class("welcome-message")
-            container.mount(rainbow_art)
-
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
             animated_welcome.add_class("welcome-message")
-            container.mount(animated_welcome)
+            self.messages_list.mount(animated_welcome)
 
         self.agent_task = asyncio.create_task(
             self.group_chat.get_members("agent", Agent).run()
         )
-
-        self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
 
         input_element = self.query_one("#input", Input)
 
@@ -397,14 +275,14 @@ class CLIApp(App):
         )
 
     async def on_unmount(self) -> None:
-        """应用卸载时取消任务并关闭所有终端"""
-        if self.output_watcher_task:
-            self.output_watcher_task.cancel()
+        if hasattr(self, 'messages_list'):
+            await self.messages_list.cleanup()
         if self.agent_task:
             self.agent_task.cancel()
-        if self.auto_scroll_timer_task:
-            self.auto_scroll_timer_task.cancel()
-
+        if self.exit_signal_task:
+            self.exit_signal_task.cancel()
+        if self.token_usage_task:
+            self.token_usage_task.cancel()
         close_all_terminals()
 
     def update_token_display(self, current_answer_token: int) -> None:
@@ -433,46 +311,10 @@ class CLIApp(App):
             ).disconnect_all_mcp_servers()
             self.app.exit()
 
-    def should_auto_scroll(self) -> bool:
-        container = self.query_one("#chat-container")
-        return (
-            self.is_user_scroll_to_end
-            and container.scroll_y >= container.max_scroll_y - 7
-        )
-
-    def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
-        container = self.query_one("#chat-container")
-
-        self.is_user_scroll_to_end = container.is_vertical_scroll_end
-
-    def on_mouse_scroll_up(self, _event: events.MouseScrollUp) -> None:
-        self.is_user_scroll_to_end = False
-
     async def _handle_regular_message(self, message_text: str) -> None:
-        """处理普通消息，发送到agent。"""
-        container = self.query_one("#chat-container")
         input_element = self.query_one("#input", Input)
-
-        from linhai.llm import UserMessage
-
-        user_msg = UserMessage(message=message_text)
-        self.messages.append(
-            UserMessageWidget(
-                content=message_text,
-                sender_name="user",
-                theme=self.theme,
-            )
-        )
-        await self.group_chat.send("user_message", user_msg)
+        await self.messages_list.add_user_message(message_text)
         input_element.value = ""
-
-        widget = UserMessageWidget(
-            user_msg.message, sender_name="user", theme=self.theme
-        )
-        container.mount(widget)
-        widget.update_display()
-        self.is_user_scroll_to_end = True
-        container.scroll_end(animate=False)
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""

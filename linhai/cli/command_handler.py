@@ -51,9 +51,6 @@ class CommandHandler:
         widget = RuntimeMessageWidget(level=level, content=content)
         container.mount(widget)
 
-        if cli_app.should_auto_scroll():
-            container.scroll_end(animate=False)
-
     async def _handle_queue_command(self, message_text: str) -> bool:
         """处理/queue命令,将消息加入排队列表."""
         from linhai.agent import Agent

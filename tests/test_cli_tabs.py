@@ -46,6 +46,11 @@ class TestCLITabs(unittest.TestCase):
         group_chat.register_member("agent_message", mock_agent_message)
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
 
+        # 注册lifecycle模拟对象
+        from linhai.agent.lifecycle import Lifecycle
+        mock_lifecycle = Mock(spec=Lifecycle)
+        group_chat.register_member("lifecycle", mock_lifecycle)
+
         # 注册cli_args模拟对象
         import argparse
 
@@ -103,6 +108,11 @@ class TestCLITabs(unittest.TestCase):
         group_chat.register_member("agent", mock_agent)
         group_chat.register_member("agent_message", mock_agent_message)
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
+
+        # 注册lifecycle模拟对象
+        from linhai.agent.lifecycle import Lifecycle
+        mock_lifecycle = Mock(spec=Lifecycle)
+        group_chat.register_member("lifecycle", mock_lifecycle)
 
         # 注册cli_args模拟对象
         import argparse

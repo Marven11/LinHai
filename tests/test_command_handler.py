@@ -40,9 +40,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
+        mock_messages_list = Mock()
+        mock_messages_list.add_runtime_message = Mock()
         self.group_chat.get_members.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
+            "messages_list": mock_messages_list,
         }[name]
 
         result = await self.handler.handle_command("/queue Test message")
@@ -103,9 +106,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
+        mock_messages_list = Mock()
+        mock_messages_list.add_runtime_message = Mock()
         self.group_chat.get_members.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
+            "messages_list": mock_messages_list,
         }[name]
 
         result = await self.handler.handle_command("/status")
@@ -136,9 +142,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
+        mock_messages_list = Mock()
+        mock_messages_list.add_runtime_message = Mock()
         self.group_chat.get_members.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
+            "messages_list": mock_messages_list,
         }[name]
 
         result = await self.handler.handle_command("@test-llm")
@@ -158,9 +167,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
+        mock_messages_list = Mock()
+        mock_messages_list.add_runtime_message = Mock()
         self.group_chat.get_members.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
+            "messages_list": mock_messages_list,
         }[name]
 
         result = await self.handler.handle_command("@invalid")
