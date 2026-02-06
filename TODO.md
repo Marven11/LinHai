@@ -56,6 +56,10 @@ unittest 失败时，必须分析
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
+- [ ] 将context_garbage_clean改名为context_forget_large_message并修改描述，强调“忘记当前的所有大消息”
+  - 改完检查：搜索所有包含context_garbage_clean的地方，如果有任何遗漏立即回退任务
+- [ ] 将context_range_compress_*改名为context_forget_range并修改描述，强调“忘记一整段消息”
+  - 改完检查：搜索所有包含context_range_compress的地方，如果有任何遗漏立即回退任务
 - [ ] 添加一个llm manager
   - 当前问题: 
     - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
