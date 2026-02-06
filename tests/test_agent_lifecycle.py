@@ -57,9 +57,49 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         from linhai.group_chat import GroupChat
+        from linhai.agent import Agent
 
         self.group_chat = GroupChat()
+        
+        # 先模拟get_members，然后再创建Lifecycle
+        self.mock_agent = MagicMock()
+        self.mock_agent.state = "waiting_user"
+        self.mock_agent.current_disable_waiting_user_warning = False
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.get_messages.return_value = []
+        self.mock_agent.get_current_model = MagicMock()
+        self.mock_agent.get_threshold_info = MagicMock(
+            return_value=(80000, 40000, 40000, 0.5)
+        )
+        
+        self.mock_issue_manager = MagicMock()
+        self.mock_issue_manager.has_unanswered_issues.return_value = False
+        
+        self.mock_machine_control = MagicMock()
+        self.mock_machine_control.target_machine = "master_host"
+        
+        def get_members_side_effect(member_type, member_class=None):
+            if member_type == "agent":
+                return self.mock_agent
+            elif member_type == "issue_manager":
+                return self.mock_issue_manager
+            elif member_type == "machine_control":
+                return self.mock_machine_control
+            elif member_type == "cli_args":
+                import argparse
+                return argparse.Namespace(afk=False)
+            else:
+                return None
+        
+        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
+        
+        # 现在创建Lifecycle，模拟已设置
         self.lifecycle = Lifecycle(self.group_chat)
+        
+        self.mock_answer = MagicMock()
+        self.mock_answer.get_reasoning_message.return_value = None
+        self.mock_tool_call = MagicMock()
+        self.mock_tool_result = MagicMock()
         self.mock_agent = MagicMock()
         self.mock_agent.state = "waiting_user"
         self.mock_agent.current_disable_waiting_user_warning = False

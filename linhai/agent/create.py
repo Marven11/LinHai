@@ -140,6 +140,11 @@ async def create_agent_from_config(
     from linhai.plugin import MachineControlIntroductionPlugin
     MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
 
+    if context.get("planning", False):
+        from linhai.plugin.planning import PlanningStatusReminderPlugin, UserInputRuntimeMessagePlugin
+        PlanningStatusReminderPlugin(context["group_chat"]).register(agent.lifecycle)
+        UserInputRuntimeMessagePlugin(context["group_chat"]).register(agent.lifecycle)
+
     return agent
 
 
