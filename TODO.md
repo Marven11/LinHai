@@ -119,6 +119,7 @@ unittest 失败时，必须分析
       - 搜索PathMemory改成PathPrompt
       - 修改所有有关的prompt、类名和文件名等
       - 重新搜索以上关键词，如果仍有则将任务标记为未完成，继续修改
+- [ ] 将启动时间加入到pinning messages中，如“启动时间：xx”，遵守ISO规范
 
 # 注意
 
