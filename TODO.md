@@ -56,10 +56,6 @@ unittest 失败时，必须分析
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
-- [ ] 将context_garbage_clean改名为context_forget_large_message并修改描述，强调“忘记当前的所有大消息”
-  - 改完检查：搜索所有包含context_garbage_clean的地方，如果有任何遗漏立即回退任务
-- [ ] 将context_range_compress_*改名为context_forget_range并修改描述，强调“忘记一整段消息”
-  - 改完检查：搜索所有包含context_range_compress的地方，如果有任何遗漏立即回退任务
 - [ ] 添加一个llm manager
   - 当前问题: 
     - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
@@ -81,7 +77,6 @@ unittest 失败时，必须分析
   - 在不开启planning时不注册插件
   - 不使用update_notification_message而是add_new_message
   - 内容：“用户提出的问题？指示？重新规划？重新设计？规划检查？优先规划？记录用户原文？”
-- [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
   - TODO 需要仔细规划
