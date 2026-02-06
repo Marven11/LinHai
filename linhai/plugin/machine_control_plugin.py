@@ -3,8 +3,10 @@ from .message_checkers import Plugin
 class MachineControlIntroductionPlugin(Plugin):
 
     async def before_message_generation(self, agent, history):
-        machine_control = self.group_chat.get_members("machine_control")
-        system_message = self.group_chat.get_members("system_message")
+        from ..machine_control import MachineControl
+        from ..llm import SystemMessage
+        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        system_message = self.group_chat.get_members("system_message", SystemMessage)
         machine_count = len(machine_control.machines)
         title = "MACHINE CONTROL"
         from linhai.prompt import INTRODUCTION_MACHINE_CONTROL
