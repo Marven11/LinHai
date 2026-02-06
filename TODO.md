@@ -122,6 +122,7 @@ unittest 失败时，必须分析
 - [ ] 将启动时间加入到pinning messages中，如“启动时间：xx”，遵守ISO规范
 - [ ] 将exit_app重命名为suicide并明确功能为“杀死自己并退出”
 - [ ] save_context根本没有被使用，导致当前上下文历史根本没有被保存，在AgentMessage使用这个函数并添加对应的测试
+- [ ] 检查是否有测试没有正确提供claw这个cli参数导致`if context["cli_args"].claw`失败，如果有则修复
 - [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
   - openclaw的核心功能：
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户

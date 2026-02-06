@@ -100,7 +100,7 @@ async def create_agent_from_config(
     """
     from .main import Agent
 
-    if getattr(context["cli_args"], "claw", False):
+    if context["cli_args"].claw:
         init_claw()
 
     llms = await _create_llm_instances(context)
