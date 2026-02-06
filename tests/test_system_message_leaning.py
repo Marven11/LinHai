@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from linhai.llm import SystemMessage
 from linhai.machine_control.main import MachineControl
-from linhai.plugin.machine_control_plugin import MachineControlIntroductionPlugin
+from linhai.plugin.system_message_leaning import MachineControlIntroductionPlugin
 
 class TestMachineControlPlugin(unittest.TestCase):
     def setUp(self):

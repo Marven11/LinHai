@@ -37,7 +37,7 @@ from .security_config import (
 )
 
 from .afk_plugin import AfkPlugin
-from .machine_control_plugin import MachineControlIntroductionPlugin
+from .system_message_leaning import MachineControlIntroductionPlugin
 
 from .helpers import (
     is_small_file,
