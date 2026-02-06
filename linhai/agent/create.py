@@ -36,6 +36,12 @@ class AgentBuildContext(TypedDict):
     cli_args: argparse.Namespace
 
 
+def init_claw() -> None:
+    """确保claw目录存在，如果创建失败则抛出异常"""
+    claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
+    claw_dir.mkdir(parents=True, exist_ok=True)
+
+
 def create_agent_build_context(
     group_chat: GroupChat,
     config: Config,
@@ -93,6 +99,9 @@ async def create_agent_from_config(
         Agent实例
     """
     from .main import Agent
+
+    if getattr(context["cli_args"], "claw", False):
+        init_claw()
 
     llms = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)

@@ -97,6 +97,11 @@ def main():
         action="store_true",
         help="关闭 #LINHAI_WAITING_USER 功能",
     )
+    parser.add_argument(
+        "--claw",
+        action="store_true",
+        help="启用 Continuous Living Autonomous Worker 模式",
+    )
     args = parser.parse_args()
 
     return_code = asyncio.run(run(args))
