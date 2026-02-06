@@ -86,12 +86,12 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
             return_value={
                 "threshold_info": threshold_info,
                 "current_state": "绿灯",
-                "recently_called_cleanup": False,
+                "is_dirty": False,
                 "notification_message": notification_msg,
                 "tool_block_details": {
                     "blocked_category": None,
                     "actual_category": "other",
-                    "recently_called_cleanup": False,
+                    "is_dirty": False,
                     "current_state": "绿灯",
                 },
             }

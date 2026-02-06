@@ -31,12 +31,12 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
             return_value={
                 "threshold_info": None,
                 "current_state": "绿灯",
-                "recently_called_cleanup": False,
+                "is_dirty": False,
                 "notification_message": "当前为绿灯状态, 上下文占用量为50.0%, 当前有0条大消息, 一分钟内没有调用过消息清理工具, 建议: 不要担心消息限制，立即工作",
                 "tool_block_details": {
                     "blocked_category": None,
                     "actual_category": "other",
-                    "recently_called_cleanup": False,
+                    "is_dirty": False,
                     "current_state": "绿灯",
                 },
             }

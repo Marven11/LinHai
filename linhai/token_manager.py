@@ -18,9 +18,15 @@ class TokenManager:
         group_chat.register_member("token_manager", self)
         self.current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
+        self.is_dirty: bool = False
+
+    def mark_dirty(self) -> None:
+        """标记token用量为失效状态，由上下文清理工具调用"""
+        self.is_dirty = True
 
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""
+        self.is_dirty = False
         if self.cumulative_token_usage is None:
             self.cumulative_token_usage = {
                 "input_tokens": token_usage.input_tokens,

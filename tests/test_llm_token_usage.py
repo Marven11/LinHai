@@ -15,7 +15,10 @@ from linhai.llm import (
 )
 from linhai.group_chat import GroupChat
 from linhai.agent import Agent
-from linhai.agent.orchestration import NotificationMessagePlugin, AgentContextOrchestration
+from linhai.agent.orchestration import (
+    NotificationMessagePlugin,
+    AgentContextOrchestration,
+)
 from linhai.cli.app import CLIApp
 from linhai.token_manager import TokenManager
 
@@ -47,12 +50,12 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             return_value={
                 "threshold_info": None,
                 "current_state": "绿灯",
-                "recently_called_cleanup": False,
+                "is_dirty": False,
                 "notification_message": "当前Token用量为40000，硬限制为80000，当前使用50.0%（绿灯状态）。",
                 "tool_block_details": {
                     "blocked_category": None,
                     "actual_category": "other",
-                    "recently_called_cleanup": False,
+                    "is_dirty": False,
                     "current_state": "绿灯",
                 },
             }
@@ -141,12 +144,12 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         self.mock_orchestration.compute_orchestration_context.return_value = {
             "threshold_info": threshold_info,
             "current_state": "绿灯",
-            "recently_called_cleanup": False,
+            "is_dirty": False,
             "notification_message": notification_msg,
             "tool_block_details": {
                 "blocked_category": None,
                 "actual_category": "other",
-                "recently_called_cleanup": False,
+                "is_dirty": False,
                 "current_state": "绿灯",
             },
         }
@@ -155,7 +158,9 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
         # 验证调用了update_notification_message
         self.mock_agent.message_processor.update_notification_message.assert_called_once()
-        call_args = self.mock_agent.message_processor.update_notification_message.call_args
+        call_args = (
+            self.mock_agent.message_processor.update_notification_message.call_args
+        )
         runtime_message = call_args[0][0]
         self.assertEqual(runtime_message.message, notification_msg)
         self.assertEqual(call_args[1]["source"], "threshold_notification")

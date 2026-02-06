@@ -205,7 +205,9 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.single_tool_call_count, 0)
 
-        last_call_args = self.agent.message_processor.update_notification_message.call_args
+        last_call_args = (
+            self.agent.message_processor.update_notification_message.call_args
+        )
         self.assertEqual(last_call_args[0][0], None)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
@@ -226,7 +228,9 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.single_tool_call_count, 0)
 
-        last_call_args = self.agent.message_processor.update_notification_message.call_args
+        last_call_args = (
+            self.agent.message_processor.update_notification_message.call_args
+        )
         self.assertEqual(last_call_args[0][0], None)
         self.assertEqual(last_call_args[1]["source"], "single_tool_call_reminder")
 
@@ -340,7 +344,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 return {
                     "blocked_category": None,
                     "actual_category": "other",
-                    "recently_called_cleanup": False,
+                    "is_dirty": False,
                     "current_state": "绿灯",
                 }
 
@@ -353,10 +357,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             elif usage_ratio >= 0.5:
                 current_state = "绿灯"
 
-            recently_called_cleanup = (
-                self.orchestration.last_compress_or_clean_time is not None
-                and (time.time() - self.orchestration.last_compress_or_clean_time) < 60
-            )
+            is_dirty = self.orchestration.last_compress_or_clean_time is not None
 
             actual_category = (
                 "cleanup"
@@ -371,7 +372,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
             # 根据 should_block_tool_call 的逻辑映射到具体的 blocked_category
             should_block = False
-            if recently_called_cleanup:
+            if is_dirty:
                 should_block = actual_category == "cleanup"
             elif current_state == "红灯":
                 should_block = actual_category != "cleanup"
@@ -379,7 +380,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             blocked_category = None
             if should_block:
                 if current_state == "红灯":
-                    if recently_called_cleanup and actual_category == "cleanup":
+                    if is_dirty and actual_category == "cleanup":
                         blocked_category = "cleanup"
                     else:
                         blocked_category = "other"
@@ -389,12 +390,12 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             return {
                 "threshold_info": threshold_info,
                 "current_state": current_state,
-                "recently_called_cleanup": recently_called_cleanup,
+                "is_dirty": is_dirty,
                 "notification_message": None,
                 "tool_block_details": {
                     "blocked_category": blocked_category,
                     "actual_category": actual_category,
-                    "recently_called_cleanup": recently_called_cleanup,
+                    "is_dirty": is_dirty,
                     "current_state": current_state,
                 },
             }
@@ -620,14 +621,14 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
         self.agent.interrupt.assert_called_once_with(
-            "一分钟内已经调用过消息清理工具，禁止调用context_garbage_clean工具",
-            "一分钟内已调用过消息清理工具，禁止调用context_garbage_clean工具",
+            "token用量信息已失效，禁止调用context_garbage_clean工具",
+            "token用量信息已失效，禁止调用清理工具",
         )
 
-        # 检查错误消息是否包含一分钟内禁止
+        # 检查错误消息是否包含token用量失效
         interrupt_call = self.agent.interrupt.call_args
         error_msg = interrupt_call[0][0]
-        self.assertIn("一分钟内已经调用过消息清理工具", error_msg)
+        self.assertIn("token用量信息已失效", error_msg)
         self.assertIn("禁止调用context_garbage_clean工具", error_msg)
 
     def test_red_state_recent_cleanup_allow_other_tool(self):

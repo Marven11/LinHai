@@ -37,7 +37,7 @@ r.maxstring = 100
 class ToolBlockDetailsDict(TypedDict):
     blocked_category: str | None
     actual_category: str
-    recently_called_cleanup: bool
+    is_dirty: bool
     current_state: str
 
 
@@ -56,7 +56,6 @@ class AgentContextOrchestration:
         self.group_chat.register_member("agent_context_orchestration", self)
 
         self.large_messages: set[Message] = set()
-        self.last_compress_or_clean_time: Optional[float] = None
 
         self._register_lifecycle_callbacks()
 
@@ -76,7 +75,6 @@ class AgentContextOrchestration:
         for message in removed_messages:
             await self.agent_message.remove_message(message)
         self.large_messages.clear()
-        self.last_compress_or_clean_time = time.time()
 
         conversation_dir = self.group_chat.get_members("conversation_folder", Path)
         saved_path = save_cleaned_messages(
@@ -98,7 +96,7 @@ class AgentContextOrchestration:
             包含以下键的字典：
                 threshold_info: 传入的阈值信息
                 current_state: 红绿灯状态字符串
-                recently_called_cleanup: 布尔值，一分钟内是否调用过清理工具
+                is_dirty: 布尔值，token用量是否已失效（刚清理过）
                 notification_message: 提示消息字符串，可能为None
                 tool_block_details: ToolBlockDetailsDict
         """
@@ -106,12 +104,12 @@ class AgentContextOrchestration:
             return {
                 "threshold_info": None,
                 "current_state": "绿灯",
-                "recently_called_cleanup": False,
+                "is_dirty": False,
                 "notification_message": None,
                 "tool_block_details": {
                     "blocked_category": None,
                     "actual_category": "other",
-                    "recently_called_cleanup": False,
+                    "is_dirty": False,
                     "current_state": "绿灯",
                 },
             }
@@ -125,10 +123,8 @@ class AgentContextOrchestration:
         else:
             current_state = "红灯"
 
-        recently_called_cleanup = False
-        if self.last_compress_or_clean_time:
-            time_since_last_cleanup = time.time() - self.last_compress_or_clean_time
-            recently_called_cleanup = time_since_last_cleanup < 60
+        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        is_dirty = token_manager.is_dirty
 
         actual_category = (
             "cleanup"
@@ -140,34 +136,26 @@ class AgentContextOrchestration:
             }
             else "other"
         )
-        if tool_name == "context_compress_range_step2":
-            blocked_category = None
-        elif current_state == "红灯":
-            if recently_called_cleanup:
+        if current_state == "红灯":
+            if is_dirty:
                 blocked_category = "cleanup"
             else:
                 blocked_category = "other"
-        elif current_state == "黄灯":
-            if recently_called_cleanup:
-                blocked_category = "cleanup"
-            else:
-                blocked_category = None
         else:
             blocked_category = None
 
         tool_block_details: ToolBlockDetailsDict = {
             "blocked_category": blocked_category,
             "actual_category": actual_category,
-            "recently_called_cleanup": recently_called_cleanup,
+            "is_dirty": is_dirty,
             "current_state": current_state,
         }
 
         notification_message = None
-        if current_state != "绿灯" or recently_called_cleanup:
+        if current_state != "绿灯" or is_dirty:
             large_count = len(self.large_messages)
-            recently_called_text = "有" if recently_called_cleanup else "没有"
-            cache_ratio_text = ""
             token_manager = self.group_chat.get_members("token_manager", TokenManager)
+            cache_ratio_text = ""
             if token_manager.cumulative_token_usage is not None:
                 input_tokens = token_manager.cumulative_token_usage["input_tokens"]
                 cached_input_tokens = token_manager.cumulative_token_usage[
@@ -176,25 +164,28 @@ class AgentContextOrchestration:
                 if input_tokens > 0:
                     cache_ratio = (cached_input_tokens / input_tokens) * 100
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
-            base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, 一分钟内{recently_called_text}调用过消息清理工具{cache_ratio_text}"
-            if recently_called_cleanup:
+
+            if is_dirty:
+                base_info = f"当前为失效状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, token用量信息已失效{cache_ratio_text}"
                 suggestion = "建议: 继续，在上下文实际长度更新之后runtime会另行通知"
-            elif current_state == "红灯":
-                suggestion = "建议: 立即暂停当前任务"
-            elif current_state == "黄灯":
-                suggestion = (
-                    "建议: 应该调用context_garbage_clean工具"
-                    if large_count >= 5
-                    else "建议: 应该避免读取文件，直接开始修改文件"
-                )
             else:
-                suggestion = "建议: 不要担心消息限制，立即工作"
+                base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息{cache_ratio_text}"
+                if current_state == "红灯":
+                    suggestion = "建议: 立即暂停当前任务，开始清理上下文"
+                elif current_state == "黄灯":
+                    suggestion = (
+                        "建议: 应该调用context_garbage_clean工具"
+                        if large_count >= 5
+                        else "建议: 应该避免读取文件，直接开始修改文件"
+                    )
+                else:
+                    suggestion = "建议: 不要担心消息限制，立即工作"
             notification_message = f"{base_info}, {suggestion}"
 
         return {
             "threshold_info": threshold_info,
             "current_state": current_state,
-            "recently_called_cleanup": recently_called_cleanup,
+            "is_dirty": is_dirty,
             "notification_message": notification_message,
             "tool_block_details": tool_block_details,
         }
@@ -239,8 +230,13 @@ class AgentContextOrchestration:
             required_args=[],
         )
         async def context_garbage_clean_tool() -> ToolResultSuccess | ToolResultFailed:
-            self.last_compress_or_clean_time = time.time()
-            return await self.context_garbage_clean()
+            result = await self.context_garbage_clean()
+            if isinstance(result, ToolResultSuccess):
+                token_manager = self.group_chat.get_members(
+                    "token_manager", TokenManager
+                )
+                token_manager.mark_dirty()
+            return result
 
         @toolset.register_tool(
             name="context_compress_range_step1",
@@ -251,9 +247,7 @@ class AgentContextOrchestration:
         async def context_compress_range_step1_tool() -> (
             ToolResultSuccess | ToolResultFailed
         ):
-            result = await context_compress_range_step1(self.group_chat)
-            self.last_compress_or_clean_time = time.time()
-            return result
+            return await context_compress_range_step1(self.group_chat)
 
         @toolset.register_tool(
             name="context_compress_range_step2",
@@ -284,7 +278,11 @@ class AgentContextOrchestration:
             result = await context_compress_range_step2(
                 self.group_chat, range_clean_id, start_id, end_id, description
             )
-            self.last_compress_or_clean_time = time.time()
+            if isinstance(result, ToolResultSuccess):
+                token_manager = self.group_chat.get_members(
+                    "token_manager", TokenManager
+                )
+                token_manager.mark_dirty()
             return result
 
         return toolset
@@ -382,12 +380,12 @@ class RedStateToolBlockPlugin:
         details = context["tool_block_details"]
 
         if details["blocked_category"] == details["actual_category"]:
-            recently_called_cleanup = details["recently_called_cleanup"]
+            is_dirty = details["is_dirty"]
             current_state = details["current_state"]
 
-            if details["blocked_category"] == "cleanup" and recently_called_cleanup:
-                error_msg = f"一分钟内已经调用过消息清理工具，禁止调用{tool_name}工具"
-                ui_msg = f"一分钟内已调用过消息清理工具，禁止调用{tool_name}工具"
+            if details["blocked_category"] == "cleanup" and is_dirty:
+                error_msg = f"token用量信息已失效，禁止调用{tool_name}工具"
+                ui_msg = f"token用量信息已失效，禁止调用清理工具"
             else:
                 error_msg = (
                     f"错误：当前处于{current_state}状态（token使用率{threshold_info['usage_ratio']*100:.1f}%），"
