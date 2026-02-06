@@ -65,6 +65,17 @@ unittest 失败时，必须分析
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
 - [ ] 为planning添加插件，提醒修改STATUS.md和TODOLIST.md
+  - 在不开启planning时不注册插件
+  - 插件检查after_message_generation
+  - 如果修改了则清空counter和notification_message
+  - 如果至少连续3次没有修改STATUS.md则使用update_notification_message警告agent
+    - 你已经连续x次没有修改STATUS.md，你偏离计划了吗？
+  - 如果至少连续8次没有修改TODOLIST.md则使用update_notification_message警告agent
+    - 你已经连续x次没有修改TODOLIST.md，你偏离任务了吗？你应该如何修改TODOLIST.md?当前任务是否需要分解？当前任务是否需要被推迟？
+- [ ] 为planning添加插件，在用户输入消息后添加RuntimeMessage
+  - 在不开启planning时不注册插件
+  - 不使用update_notification_message而是add_new_message
+  - 内容：“用户提出的问题？指示？重新规划？重新设计？规划检查？优先规划？记录用户原文？”
 - [ ] 让INTRODUCTION_MACHINE_CONTROL仅在当前有超过1台机器时添加
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
 - [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
