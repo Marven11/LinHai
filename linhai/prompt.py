@@ -115,6 +115,12 @@ with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包
 如果你没有指定正确的secret值，则工具结果会被全部隐藏
 """
 
+INTRODUCTION_MACHINE_CONTROL_BASIC = """
+## 多机器控制系统 - 基础
+
+你可以控制多台机器，但是当前仅连接了master_host（本电脑），详细介绍在连接新机器后展示
+"""
+
 INTRODUCTION_MACHINE_CONTROL = """
 ## 多机器控制系统
 
@@ -271,7 +277,7 @@ INTRODUCTION_ITEMS = [
     ("GLOBAL MEMORY", INTRODUCTION_GLOBAL_MEMORY),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
-    ("MACHINE CONTROL", INTRODUCTION_MACHINE_CONTROL),
+    ("MACHINE CONTROL BASIC", INTRODUCTION_MACHINE_CONTROL_BASIC),
 ]
 
 # ===============================

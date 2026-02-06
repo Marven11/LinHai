@@ -137,6 +137,9 @@ async def create_agent_from_config(
             agent.lifecycle
         )
 
+    from linhai.plugin import MachineControlIntroductionPlugin
+    MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
+
     return agent
 
 

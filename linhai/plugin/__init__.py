@@ -37,6 +37,7 @@ from .security_config import (
 )
 
 from .afk_plugin import AfkPlugin
+from .machine_control_plugin import MachineControlIntroductionPlugin
 
 from .helpers import (
     is_small_file,
@@ -72,6 +73,7 @@ __all__ = [
     "ProcessArgvCheckerPlugin",
     "AfkPlugin",
     "VolcanoDeepseekFixPlugin",
+    "MachineControlIntroductionPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",
