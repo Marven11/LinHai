@@ -65,6 +65,7 @@ unittest 失败时，必须分析
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
 - [ ] 为planning添加插件，提醒修改STATUS.md和TODOLIST.md
+  - 在linhai/plugins/planning.py中实现
   - 在不开启planning时不注册插件
   - 插件检查after_message_generation
   - 如果修改了则清空counter和notification_message
