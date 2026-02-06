@@ -1,7 +1,11 @@
 from pathlib import Path
-
+from typing import TYPE_CHECKING
 from .base import RuntimeMessage
 from linhai import prompt
+from ..prompt import INTRODUCTION_PLANNING_MODE, EXAMPLES_PLANNING_MODE
+
+if TYPE_CHECKING:
+    from .create import AgentBuildContext
 
 
 class PlanningPromptMessage(RuntimeMessage):
@@ -41,21 +45,40 @@ def create_planning_files(planning_folder: Path) -> None:
     design_file = planning_folder / "DESIGN.md"
 
     if not status_file.exists():
-        status_file.write_text("# 状态\n\n当前任务: 未设置\n当前attempt: 1\n\n描述你的当前状态和下一步计划。\n")
+        status_file.write_text(
+            "# 状态\n\n当前任务: 未设置\n当前attempt: 1\n\n描述你的当前状态和下一步计划。\n"
+        )
     if not todolist_file.exists():
         todolist_file.write_text("# 待办任务列表\n\n- [ ] 开始规划任务\n")
     if not design_file.exists():
         design_file.write_text("# 设计介绍\n\n描述任务的设计思路。\n")
 
 
-def setup_planning_for_agent(context) -> RuntimeMessage:
+def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
     """为agent设置规划模式，返回PlanningPromptMessage实例"""
-    conversation_folder = context["group_chat"].get_members(
-        "conversation_folder", Path
-    )
+    conversation_folder = context["group_chat"].get_members("conversation_folder", Path)
     if not conversation_folder:
         raise ValueError("无法获取对话文件夹路径")
 
     planning_folder = init_planning_folder(conversation_folder)
     create_planning_files(planning_folder)
+
+    def register_system_message():
+        from ..llm import SystemMessage
+
+        system_message = context["group_chat"].get_members(
+            "system_message", SystemMessage
+        )
+        system_message.add_introduction(
+            "PLANNING",
+            INTRODUCTION_PLANNING_MODE.format(
+                status_file=str(planning_folder / "STATUS.md"),
+                todolist_file=str(planning_folder / "TODOLIST.md"),
+                design_file=str(planning_folder / "DESIGN.md"),
+            ),
+        )
+        system_message.add_example("PLANNING", EXAMPLES_PLANNING_MODE)
+
+    context["group_chat"].add_postinit(register_system_message)
+
     return PlanningPromptMessage(planning_folder)
