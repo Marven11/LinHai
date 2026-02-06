@@ -167,8 +167,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(len(path_messages), 1)
 
     @patch('linhai.agent.workflow._prepare_messages_for_compression')
-    async def test_context_compress_range_step1_generates_id(self, mock_prepare):
-        """测试context_compress_range_step1生成range_clean_id。"""
+    async def test_context_forget_range_step1_generates_id(self, mock_prepare):
+        """测试context_forget_range_step1生成range_clean_id。"""
         # 模拟group_chat和agent
         mock_group_chat = MagicMock()
         mock_agent = MagicMock()
@@ -205,11 +205,11 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         # 模拟generate_id返回一个固定ID
         with patch('linhai.agent.workflow.generate_id', return_value="test_range_clean_id"):
-            from linhai.agent.workflow import context_compress_range_step1
-            result = await context_compress_range_step1(mock_group_chat)
+            from linhai.agent.workflow import context_forget_range_step1
+            result = await context_forget_range_step1(mock_group_chat)
             
             # 验证结果
-            self.assertEqual(result.content, "已生成消息列表总结，ID: test_range_clean_id，当前共有0条消息。请查看消息列表总结后调用context_compress_range_step2进行删除。")
+            self.assertEqual(result.content, "已生成消息列表总结，ID: test_range_clean_id，当前共有0条消息。请查看消息列表总结后调用context_forget_range_step2进行删除。")
             
             # 验证create_clean_info被调用
             mock_range_clean_manager.create_clean_info.assert_called_once_with(
@@ -221,8 +221,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
     @patch('linhai.agent.workflow._validate_compression_range')
     @patch('linhai.agent.workflow.save_cleaned_messages')
-    async def test_context_compress_range_step2_validates_and_deletes(self, mock_save, mock_validate):
-        """测试context_compress_range_step2验证range_clean_id并删除消息。"""
+    async def test_context_forget_range_step2_validates_and_deletes(self, mock_save, mock_validate):
+        """测试context_forget_range_step2验证range_clean_id并删除消息。"""
         # 模拟group_chat和agent
         mock_group_chat = MagicMock()
         mock_agent = MagicMock()
@@ -272,10 +272,10 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         # 模拟save_cleaned_messages什么都不做
         mock_save.return_value = None
         
-        from linhai.agent.workflow import context_compress_range_step2
+        from linhai.agent.workflow import context_forget_range_step2
         
         # 调用函数
-        result = await context_compress_range_step2(
+        result = await context_forget_range_step2(
             mock_group_chat,
             range_clean_id="test_id",
             start_id=20,

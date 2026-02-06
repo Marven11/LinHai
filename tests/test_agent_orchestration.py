@@ -151,12 +151,12 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试消息清理工具
         context = self.orchestration.compute_orchestration_context(
-            "context_compress_range_step1", threshold_info
+            "context_forget_range_step1", threshold_info
         )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 
         context = self.orchestration.compute_orchestration_context(
-            "context_garbage_clean", threshold_info
+            "context_forget_large_message", threshold_info
         )
         self.assertEqual(context["tool_block_details"]["actual_category"], "cleanup")
 
@@ -302,9 +302,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         token_manager = self.group_chat.get_members("token_manager", TokenManager)
         token_manager.is_dirty = False
 
-        # 测试清理工具（如context_garbage_clean）应该被允许
+        # 测试清理工具（如context_forget_large_message）应该被允许
         context = self.orchestration.compute_orchestration_context(
-            "context_garbage_clean", threshold_info
+            "context_forget_large_message", threshold_info
         )
         details = context["tool_block_details"]
 
@@ -332,7 +332,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         token_manager.is_dirty = True
 
         context = self.orchestration.compute_orchestration_context(
-            "context_garbage_clean", threshold_info
+            "context_forget_large_message", threshold_info
         )
         details = context["tool_block_details"]
         self.assertEqual(details["blocked_category"], "cleanup")
@@ -358,9 +358,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "usage_ratio": 0.75,
         }
 
-        # 测试清理工具（如context_garbage_clean）应该不被阻塞
+        # 测试清理工具（如context_forget_large_message）应该不被阻塞
         context = self.orchestration.compute_orchestration_context(
-            "context_garbage_clean", threshold_info
+            "context_forget_large_message", threshold_info
         )
         details = context["tool_block_details"]
 

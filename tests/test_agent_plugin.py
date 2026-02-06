@@ -363,9 +363,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
                 "cleanup"
                 if tool_name
                 in [
-                    "context_compress_range_step1",
-                    "context_compress_range_step2",
-                    "context_garbage_clean",
+                    "context_forget_range_step1",
+                    "context_forget_range_step2",
+                    "context_forget_large_message",
                 ]
                 else "other"
             )
@@ -421,9 +421,9 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertEqual(
             self.plugin.CLEANUP_TOOLS,
             {
-                "context_compress_range_step1",
-                "context_compress_range_step2",
-                "context_garbage_clean",
+                "context_forget_range_step1",
+                "context_forget_range_step2",
+                "context_forget_large_message",
             },
         )
 
@@ -492,7 +492,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="context_garbage_clean",  # 替换为现有工具
+            function_name="context_forget_large_message",  # 替换为现有工具
             function_arguments={"ids": ["test_id"]},
             assert_success=True,
             with_secret=None,
@@ -539,8 +539,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
         # 测试所有允许的工具
         allowed_tools = [
-            "context_range_compress",
-            "context_garbage_clean",
+            "context_forget_range",
+            "context_forget_large_message",
         ]
 
         for tool_name in allowed_tools:
@@ -596,7 +596,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         from linhai.llm import ToolCallMessage
 
         tool_call = ToolCallMessage(
-            function_name="context_garbage_clean",
+            function_name="context_forget_large_message",
             function_arguments={},
             assert_success=True,
             with_secret=None,
@@ -621,7 +621,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
         self.agent.interrupt.assert_called_once_with(
-            "token用量信息已失效，禁止调用context_garbage_clean工具",
+            "token用量信息已失效，禁止调用context_forget_large_message工具",
             "token用量信息已失效，禁止调用清理工具",
         )
 
@@ -629,7 +629,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         interrupt_call = self.agent.interrupt.call_args
         error_msg = interrupt_call[0][0]
         self.assertIn("token用量信息已失效", error_msg)
-        self.assertIn("禁止调用context_garbage_clean工具", error_msg)
+        self.assertIn("禁止调用context_forget_large_message工具", error_msg)
 
     def test_red_state_recent_cleanup_allow_other_tool(self):
         """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""

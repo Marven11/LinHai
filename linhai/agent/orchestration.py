@@ -11,8 +11,8 @@ import reprlib
 from typing import Optional, Literal, TypedDict, TYPE_CHECKING, Union
 
 from linhai.agent.workflow import (
-    context_compress_range_step1,
-    context_compress_range_step2,
+    context_forget_range_step1,
+    context_forget_range_step2,
 )
 from .lifecycle import Lifecycle
 from linhai.llm import ToolCallMessage, Answer
@@ -59,7 +59,7 @@ class AgentContextOrchestration:
 
         self._register_lifecycle_callbacks()
 
-    async def context_garbage_clean(self) -> ToolResultSuccess | ToolResultFailed:
+    async def context_forget_large_message(self) -> ToolResultSuccess | ToolResultFailed:
         """清理所有大消息。
 
         Returns:
@@ -130,9 +130,9 @@ class AgentContextOrchestration:
             "cleanup"
             if tool_name
             in {
-                "context_compress_range_step1",
-                "context_compress_range_step2",
-                "context_garbage_clean",
+                "context_forget_range_step1",
+                "context_forget_range_step2",
+                "context_forget_large_message",
             }
             else "other"
         )
@@ -174,7 +174,7 @@ class AgentContextOrchestration:
                     suggestion = "建议: 立即暂停当前任务，开始清理上下文"
                 elif current_state == "黄灯":
                     suggestion = (
-                        "建议: 应该调用context_garbage_clean工具"
+                        "建议: 应该调用context_forget_large_message工具"
                         if large_count >= 5
                         else "建议: 应该避免读取文件，直接开始修改文件"
                     )
@@ -224,13 +224,13 @@ class AgentContextOrchestration:
         toolset = ToolSet()
 
         @toolset.register_tool(
-            name="context_garbage_clean",
+            name="context_forget_large_message",
             desc="清理大消息：如果当前有至少5条大消息，全部删除并返回每条被删除的消息的repr。",
             args={},
             required_args=[],
         )
-        async def context_garbage_clean_tool() -> ToolResultSuccess | ToolResultFailed:
-            result = await self.context_garbage_clean()
+        async def context_forget_large_message_tool() -> ToolResultSuccess | ToolResultFailed:
+            result = await self.context_forget_large_message()
             if isinstance(result, ToolResultSuccess):
                 token_manager = self.group_chat.get_members(
                     "token_manager", TokenManager
@@ -239,18 +239,18 @@ class AgentContextOrchestration:
             return result
 
         @toolset.register_tool(
-            name="context_compress_range_step1",
+            name="context_forget_range_step1",
             desc="压缩范围第一步：生成消息列表总结并返回range_clean_id。",
             args={},
             required_args=[],
         )
-        async def context_compress_range_step1_tool() -> (
+        async def context_forget_range_step1_tool() -> (
             ToolResultSuccess | ToolResultFailed
         ):
-            return await context_compress_range_step1(self.group_chat)
+            return await context_forget_range_step1(self.group_chat)
 
         @toolset.register_tool(
-            name="context_compress_range_step2",
+            name="context_forget_range_step2",
             desc="压缩范围第二步：使用range_clean_id确认删除范围并执行删除。",
             args={
                 "range_clean_id": ToolArgInfo(
@@ -272,10 +272,10 @@ class AgentContextOrchestration:
             },
             required_args=["range_clean_id", "start_id", "end_id", "description"],
         )
-        async def context_compress_range_step2_tool(
+        async def context_forget_range_step2_tool(
             range_clean_id: str, start_id: int, end_id: int, description: str
         ) -> ToolResultSuccess | ToolResultFailed:
-            result = await context_compress_range_step2(
+            result = await context_forget_range_step2(
                 self.group_chat, range_clean_id, start_id, end_id, description
             )
             if isinstance(result, ToolResultSuccess):
@@ -337,9 +337,9 @@ class RedStateToolBlockPlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
         self.CLEANUP_TOOLS = {
-            "context_compress_range_step1",
-            "context_compress_range_step2",
-            "context_garbage_clean",
+            "context_forget_range_step1",
+            "context_forget_range_step2",
+            "context_forget_large_message",
         }
 
     async def on_tool_result(
@@ -482,7 +482,7 @@ class LargeMessageCountPlugin:
     """大消息数量通知插件。
 
     根据大消息数量动态管理notification_message：
-    - 大消息少于5条时：提示不能调用context_garbage_clean
+    - 大消息少于5条时：提示不能调用context_forget_large_message
     - 大消息至少5条时：删除提示（不添加notification_message）
     """
 
@@ -509,7 +509,7 @@ class LargeMessageCountPlugin:
 
         if large_count < 5:
 
-            message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_garbage_clean"
+            message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_forget_large_message"
             agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="large_message_count",

@@ -274,7 +274,7 @@ class ContextTabWidget(Static):
                 grid.add_row(f"  {i}.", repr_msg)
             if len(large_messages) > 3:
                 grid.add_row("提示:", f"... 还有{len(large_messages) - 3}条未显示")
-            grid.add_row("提示:", "调用context_garbage_clean可清理大消息（需≥5条）")
+            grid.add_row("提示:", "调用context_forget_large_message可清理大消息（需≥5条）")
 
         grid.add_row("")
 

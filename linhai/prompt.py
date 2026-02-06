@@ -460,8 +460,8 @@ COMPRESS_RANGE_PROMPT = """
 ## 重要规则
 
 - 压缩历史消息分为两步：
-  1. 首先调用`context_compress_range_step1`工具生成消息列表总结和range_clean_id。
-  2. 然后查看消息列表总结，选择要压缩的范围，调用`context_compress_range_step2`工具，提供range_clean_id、start_id、end_id和description。
+  1. 首先调用`context_forget_range_step1`工具生成消息列表总结和range_clean_id。
+  2. 然后查看消息列表总结，选择要压缩的范围，调用`context_forget_range_step2`工具，提供range_clean_id、start_id、end_id和description。
 
 # 输出示例
 

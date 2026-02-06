@@ -285,9 +285,9 @@ class AgentToolcall:
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
-            "context_compress_range_step1",
-            "context_compress_range_step2",
-            "context_garbage_clean",
+            "context_forget_range_step1",
+            "context_forget_range_step2",
+            "context_forget_large_message",
             "mark_messages_as_garbage",
         ]
         self.agent.compress_tool_called_in_last_response = (

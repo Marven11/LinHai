@@ -7,8 +7,8 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.workflow import (
-    context_compress_range_step1,
-    context_compress_range_step2,
+    context_forget_range_step1,
+    context_forget_range_step2,
 )
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
@@ -63,14 +63,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_workflow_as_regular_tool(self):
-        """Test that context_compress_range_step1 and step2 are now regular tools, not workflows."""
+        """Test that context_forget_range_step1 and step2 are now regular tools, not workflows."""
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
-        self.assertIn("context_compress_range_step1", tool_names)
-        self.assertIn("context_compress_range_step2", tool_names)
+        self.assertIn("context_forget_range_step1", tool_names)
+        self.assertIn("context_forget_range_step2", tool_names)
 
-    async def test_context_compress_range_step1_as_tool(self):
-        """Test calling context_compress_range_step1 as a regular tool."""
+    async def test_context_forget_range_step1_as_tool(self):
+        """Test calling context_forget_range_step1 as a regular tool."""
         pass
 
     async def test_prepare_messages_excludes_last_50(self):
@@ -145,8 +145,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
                     msg_id = int(match.group(1))
                     self.assertLess(msg_id, 150)
 
-    async def test_context_compress_range_step1_functionality(self):
-        """Test the context_compress_range_step1 function with mock data."""
+    async def test_context_forget_range_step1_functionality(self):
+        """Test the context_forget_range_step1 function with mock data."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
@@ -198,7 +198,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
 
         # 验证结果，应为ToolResultSuccess
         self.assertIsInstance(result, ToolResultSuccess)
@@ -207,7 +207,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test that compression is triggered when token threshold is exceeded."""
 
     async def test_workflow_with_invalid_range(self):
-        """Test context_compress_range_step1 with invalid range parameters."""
+        """Test context_forget_range_step1 with invalid range parameters."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
@@ -244,12 +244,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
 
         self.assertIsInstance(result, ToolResultSuccess)
 
     async def test_workflow_with_small_range(self):
-        """Test context_compress_range_step1 with range smaller than minimum."""
+        """Test context_forget_range_step1 with range smaller than minimum."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
@@ -286,7 +286,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
 
         self.assertIsInstance(result, ToolResultSuccess)
 
@@ -297,41 +297,41 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(hasattr(self.tool_manager, "workflows"))
 
     async def test_tools_info_includes_context_compress_range_tools(self):
-        """Test that get_tools_info includes context_compress_range_step1 and step2 as regular tools."""
+        """Test that get_tools_info includes context_forget_range_step1 and step2 as regular tools."""
         tools_info = self.tool_manager.get_tools_info()
         workflow_names = [tool["function"]["name"] for tool in tools_info]
-        self.assertIn("context_compress_range_step1", workflow_names)
-        self.assertIn("context_compress_range_step2", workflow_names)
+        self.assertIn("context_forget_range_step1", workflow_names)
+        self.assertIn("context_forget_range_step2", workflow_names)
         self.assertTrue(any("safe_calculator" in name for name in workflow_names))
 
-    async def test_context_compress_range_step1_tool_structure(self):
-        """Test that context_compress_range_step1 tool has correct structure."""
+    async def test_context_forget_range_step1_tool_structure(self):
+        """Test that context_forget_range_step1 tool has correct structure."""
         tools_info = self.tool_manager.get_tools_info()
         compress_tool = None
         for tool in tools_info:
-            if tool["function"]["name"] == "context_compress_range_step1":
+            if tool["function"]["name"] == "context_forget_range_step1":
                 compress_tool = tool
                 break
         self.assertIsNotNone(compress_tool)
         json_blocks = []
         _ = json_blocks[0] if json_blocks else {}
 
-    async def test_context_compress_range_step1_integration(self):
-        """Test that context_compress_range_step1 integrates properly with agent."""
+    async def test_context_forget_range_step1_integration(self):
+        """Test that context_forget_range_step1 integrates properly with agent."""
         tools_info = self.tool_manager.get_tools_info()
         tool_names = [tool["function"]["name"] for tool in tools_info]
-        self.assertIn("context_compress_range_step1", tool_names)
+        self.assertIn("context_forget_range_step1", tool_names)
         compress_tool = next(
             (
                 tool
                 for tool in tools_info
-                if tool["function"]["name"] == "context_compress_range_step1"
+                if tool["function"]["name"] == "context_forget_range_step1"
             ),
             None,
         )
         self.assertIsNotNone(compress_tool)
 
-    async def test_context_compress_range_step2_user_message_protection(self):
+    async def test_context_forget_range_step2_user_message_protection(self):
         """Test that user messages are protected during history compression in step2."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
@@ -420,7 +420,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step2(
+            result = await context_forget_range_step2(
                 mock_group_chat,
                 range_clean_id="test-range-clean-id",
                 start_id=2,
@@ -519,8 +519,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(passed)
         self.assertIn("压缩范围至少需要10条消息", error_msg)
 
-    async def test_context_compress_range_step1_sends_ui_log_message(self):
-        """Test that context_compress_range_step1 sends UI log message with current message count."""
+    async def test_context_forget_range_step1_sends_ui_log_message(self):
+        """Test that context_forget_range_step1 sends UI log message with current message count."""
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
@@ -561,7 +561,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
 
         mock_group_chat.send_if_exists.assert_called_once()
         call_args = mock_group_chat.send_if_exists.call_args

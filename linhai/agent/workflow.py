@@ -135,7 +135,7 @@ def _validate_compression_range(
     return True, ""
 
 
-async def context_compress_range_step1(
+async def context_forget_range_step1(
     group_chat: "linhai.group_chat.GroupChat",
 ) -> ToolResultSuccess | ToolResultFailed:
     """
@@ -182,12 +182,12 @@ async def context_compress_range_step1(
     return ToolResultSuccess(
         content=(
             f"已生成消息列表总结，ID: {range_clean_id}，当前共有{message_length}条消息。"
-            "请查看消息列表总结后调用context_compress_range_step2进行删除。"
+            "请查看消息列表总结后调用context_forget_range_step2进行删除。"
         )
     )
 
 
-async def context_compress_range_step2(
+async def context_forget_range_step2(
     group_chat: "linhai.group_chat.GroupChat",
     range_clean_id: str,
     start_id: int,

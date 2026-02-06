@@ -8,8 +8,8 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage, MessagesListSummerizeMessage
 from linhai.agent.workflow import (
-    context_compress_range_step1, 
-    context_compress_range_step2,
+    context_forget_range_step1, 
+    context_forget_range_step2,
     RangeCleanManager,
     RangeCleanInfo,
     _prepare_messages_for_compression,
@@ -121,7 +121,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
         
         self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("已生成消息列表总结，ID:", result.content)
@@ -192,7 +192,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step2(
+            result = await context_forget_range_step2(
                 mock_group_chat,
                 range_clean_id="test_range_clean_id",
                 start_id=2,
@@ -224,7 +224,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         mock_group_chat.get_members = MagicMock(side_effect=mock_get_members)
         
-        result = await context_compress_range_step2(
+        result = await context_forget_range_step2(
             mock_group_chat,
             range_clean_id="invalid_id",
             start_id=2,
@@ -269,7 +269,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         mock_group_chat.get_members = MagicMock(side_effect=mock_get_members)
         
         # Try to delete beyond current bounds (end_id=9, but max is 7)
-        result = await context_compress_range_step2(
+        result = await context_forget_range_step2(
             mock_group_chat,
             range_clean_id="test_range_clean_id",
             start_id=2,
@@ -384,7 +384,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_group_chat)
         
         # Should still succeed, even if LLM says there are too few messages
         self.assertIsInstance(result, ToolResultSuccess)
@@ -471,7 +471,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         with patch('linhai.agent.conversation.save_cleaned_messages') as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_compress_range_step2(
+            result = await context_forget_range_step2(
                 mock_group_chat,
                 range_clean_id="test_range_clean_id",
                 start_id=2,

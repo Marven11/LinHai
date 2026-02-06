@@ -21,7 +21,7 @@ class CommandHandler:
             return await self._handle_switch_model(parsed_input.switch_model)
 
         if parsed_input.command:
-            if parsed_input.command == "context_garbage_clean":
+            if parsed_input.command == "context_forget_large_message":
                 return await self._handle_context_tool_command(message_text)
             elif parsed_input.command == "queue":
                 return await self._handle_queue_command(message_text)
@@ -88,7 +88,7 @@ class CommandHandler:
 @<模型名> - 切换底层LLM模型
 
 上下文工具:
-/context_garbage_clean - 清理大消息
+/context_forget_large_message - 清理大消息
 """
 
         await self._show_runtime_message("INFO", help_text)
@@ -142,7 +142,7 @@ class CommandHandler:
             await self._show_error_message("错误：无法解析命令")
             return True
 
-        supported_commands = ["context_garbage_clean"]
+        supported_commands = ["context_forget_large_message"]
         if parsed_input.command not in supported_commands:
             await self._show_error_message(
                 f"错误：不支持的命令 '{parsed_input.command}',支持的命令有: {', '.join(supported_commands)}"

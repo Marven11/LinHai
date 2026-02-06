@@ -120,12 +120,12 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         
         # 模拟不足5条大消息（4条）
         with patch.object(self.orchestration, "large_messages", {"fake1", "fake2", "fake3", "fake4"}):
-            result = await self.orchestration.context_garbage_clean()
+            result = await self.orchestration.context_forget_large_message()
             # 由于大消息数量不足5，应该返回失败
             self.assertIsInstance(result, ToolResultFailed)
             
         # 执行清理（现在有5条大消息）
-        result = await self.orchestration.context_garbage_clean()
+        result = await self.orchestration.context_forget_large_message()
         self.assertIsInstance(result, ToolResultSuccess)
         
         # 验证大消息集合已清空
