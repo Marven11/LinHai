@@ -120,7 +120,13 @@ unittest 失败时，必须分析
       - 修改所有有关的prompt、类名和文件名等
       - 重新搜索以上关键词，如果仍有则将任务标记为未完成，继续修改
 - [ ] 将启动时间加入到pinning messages中，如“启动时间：xx”，遵守ISO规范
-
+- [ ] 将exit_app重命名为suicide并明确功能为“杀死自己并退出”
+- [ ] save_context根本没有被使用，导致当前上下文历史根本没有被保存，在AgentMessage使用这个函数并添加对应的测试
+- [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
+  - openclaw的核心功能：
+    - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
+    - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
+    - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
 # 注意
 
 - 在终端刚刚启动 linhai 时 TUI 焦点锁定在 tab 区域，需要按下 tab 键选择对话区域才能使用 pageup/pagedown 翻页，查看最新回答，
