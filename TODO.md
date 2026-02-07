@@ -120,7 +120,6 @@ unittest 失败时，必须分析
       - 修改所有有关的prompt、类名和文件名等
       - 重新搜索以上关键词，如果仍有则将任务标记为未完成，继续修改
 - [ ] 将启动时间加入到pinning messages中，如“启动时间：xx”，遵守ISO规范
-- [ ] 将exit_app重命名为suicide并明确功能为“杀死自己并退出”
 - [ ] save_context根本没有被使用，导致当前上下文历史根本没有被保存，在AgentMessage使用这个函数并添加对应的测试
 - [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
   - openclaw的核心功能：
