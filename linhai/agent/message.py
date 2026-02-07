@@ -147,15 +147,17 @@ class AgentMessage:
         await self.count_invalidate_cache()
         self.messages = [msg for msg in self.messages if condition(msg)]
 
-    async def remove_message(self, message: Message) -> None:
-        """从普通消息列表中移除指定消息。
+    async def replace_message(self, old_message: Message, new_message: Message) -> None:
+        """将普通消息列表中的指定消息替换为新消息。
 
         Args:
-            message: 要移除的消息
+            old_message: 要替换的旧消息
+            new_message: 替换后的新消息
         """
         await self.count_invalidate_cache()
-        if message in self.messages:
-            self.messages.remove(message)
+        if old_message in self.messages:
+            index = self.messages.index(old_message)
+            self.messages[index] = new_message
 
     def update_notification_message(
         self, message: Message | None, source: str, sort_value: int

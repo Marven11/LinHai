@@ -18,27 +18,29 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.group_chat = GroupChat()
-        
+
         # 注册必要的mock组件
         from linhai.agent.lifecycle import Lifecycle
+
         mock_lifecycle = Mock(spec=Lifecycle)
         self.group_chat.register_member("lifecycle", mock_lifecycle)
-        
+
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         self.group_chat.register_member("tool_manager", mock_tool_manager)
-        
+
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
         self.group_chat.register_member("token_manager", mock_token_manager)
-        
+
         from pathlib import Path
         import tempfile
+
         temp_dir = tempfile.mkdtemp()
         conversation_folder = Path(temp_dir)
         self.group_chat.register_member("conversation_folder", conversation_folder)
-        
+
         self.pinned_messages = [
             SystemMessage(group_chat=self.group_chat),
             UserMessage(message="Initial message"),
@@ -56,10 +58,10 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             # 模拟编码返回一个长列表，假设每个字符对应一个token
             mock_encoder.encode.return_value = list(range(1000))  # 1000个token
             mock_get_encoding.return_value = mock_encoder
-            
+
             # 创建一个长消息（内容长度不重要，因为编码被模拟）
             long_message = RuntimeMessage("A" * 10)  # 内容很短，但编码返回1000个token
-            
+
             # 触发_on_tool_result回调（模拟工具调用成功）
             await self.orchestration._on_tool_result(
                 tool_name="test_tool",
@@ -70,7 +72,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
             )
-            
+
             # 验证消息被标记为大消息
             self.assertIn(long_message, self.orchestration.large_messages)
             self.assertEqual(len(self.orchestration.large_messages), 1)
@@ -81,9 +83,9 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             mock_encoder = Mock()
             mock_encoder.encode.return_value = list(range(500))  # 500个token
             mock_get_encoding.return_value = mock_encoder
-            
+
             short_message = RuntimeMessage("Short message")
-            
+
             await self.orchestration._on_tool_result(
                 tool_name="test_tool",
                 tool_index=0,
@@ -93,7 +95,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
             )
-            
+
             self.assertNotIn(short_message, self.orchestration.large_messages)
             self.assertEqual(len(self.orchestration.large_messages), 0)
 
@@ -103,47 +105,49 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         msg1 = UserMessage(message="Message 1")
         msg2 = UserMessage(message="Message 2")
         msg3 = AssistantMessage(message="Response 1")
-        
+
         self.message_processor.add_new_message(msg1)
         self.message_processor.add_new_message(msg2)
         self.message_processor.add_new_message(msg3)
-        
+
         # 添加5个大消息
         large_msgs = [RuntimeMessage(f"Large {i}") for i in range(5)]
-        
+
         for msg in large_msgs:
             self.orchestration.large_messages.add(msg)
             self.message_processor.add_new_message(msg)
-        
+
         # 初始消息总数：2个初始 + 3个普通 + 5个大 = 10个
         initial_messages = self.message_processor.messages.copy()
-        
+
         # 模拟不足5条大消息（4条）
-        with patch.object(self.orchestration, "large_messages", {"fake1", "fake2", "fake3", "fake4"}):
+        with patch.object(
+            self.orchestration, "large_messages", {"fake1", "fake2", "fake3", "fake4"}
+        ):
             result = await self.orchestration.context_forget_large_message()
             # 由于大消息数量不足5，应该返回失败
             self.assertIsInstance(result, ToolResultFailed)
-            
+
         # 执行清理（现在有5条大消息）
         result = await self.orchestration.context_forget_large_message()
         self.assertIsInstance(result, ToolResultSuccess)
-        
+
         # 验证大消息集合已清空
         self.assertEqual(len(self.orchestration.large_messages), 0)
-        
+
         # 验证消息数组中不再包含大消息
         remaining_messages = self.message_processor.messages
         for msg in large_msgs:
             self.assertNotIn(msg, remaining_messages)
-        
+
         # 验证其他消息保持不变
         self.assertIn(msg1, remaining_messages)
         self.assertIn(msg2, remaining_messages)
         self.assertIn(msg3, remaining_messages)
-        
+
         # 验证消息顺序和数量
-        # 3个普通消息应该保留（msg1, msg2, msg3）
-        self.assertEqual(len(remaining_messages), 3)
+        # 3个普通消息应该保留（msg1, msg2, msg3），5个大消息被替换为占位符
+        self.assertEqual(len(remaining_messages), 8)
 
 
 if __name__ == "__main__":

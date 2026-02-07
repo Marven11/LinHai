@@ -59,7 +59,9 @@ class AgentContextOrchestration:
 
         self._register_lifecycle_callbacks()
 
-    async def context_forget_large_message(self) -> ToolResultSuccess | ToolResultFailed:
+    async def context_forget_large_message(
+        self,
+    ) -> ToolResultSuccess | ToolResultFailed:
         """清理所有大消息。
 
         Returns:
@@ -72,14 +74,18 @@ class AgentContextOrchestration:
             )
 
         removed_messages = list(self.large_messages)
-        for message in removed_messages:
-            await self.agent_message.remove_message(message)
-        self.large_messages.clear()
 
         conversation_dir = self.group_chat.get_members("conversation_folder", Path)
         saved_path = save_cleaned_messages(
             conversation_dir, removed_messages, prefix="garbage_clean"
         )
+
+        for message in removed_messages:
+            placeholder = RuntimeMessage(f"当前消息已经被遗忘，转储到{saved_path}")
+            await self.agent_message.replace_message(message, placeholder)
+
+        self.large_messages.clear()
+
         result = f"清理了{large_count}条大消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 
@@ -229,7 +235,9 @@ class AgentContextOrchestration:
             args={},
             required_args=[],
         )
-        async def context_forget_large_message_tool() -> ToolResultSuccess | ToolResultFailed:
+        async def context_forget_large_message_tool() -> (
+            ToolResultSuccess | ToolResultFailed
+        ):
             result = await self.context_forget_large_message()
             if isinstance(result, ToolResultSuccess):
                 token_manager = self.group_chat.get_members(
