@@ -96,9 +96,9 @@ class TestFetchArticleTool(unittest.TestCase):
 
         mock_driver.side_effect = Exception("WebDriver错误")
 
-        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
-
-        self.assertIn("转换失败: WebDriver错误", result)
+        with self.assertRaises(Exception) as context:
+            self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+        self.assertIn("WebDriver错误", str(context.exception))
 
     @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
@@ -112,9 +112,9 @@ class TestFetchArticleTool(unittest.TestCase):
 
         mock_subprocess.side_effect = Exception("Pandoc错误")
 
-        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
-
-        self.assertIn("转换失败: Pandoc错误", result)
+        with self.assertRaises(Exception) as context:
+            self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+        self.assertIn("Pandoc错误", str(context.exception))
 
     @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")

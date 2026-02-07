@@ -28,7 +28,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
         mock_tool_call = ToolCallMessage(
-            function_name="add_numbers", function_arguments={"a": 3, "b": 5}
+            function_name="add_numbers", function_arguments={"a": 3, "b": 5},
+            assert_success=False, with_secret=[]
         )
 
         with (
@@ -48,7 +49,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
     async def test_failed_tool_call(self):
         """测试失败的工具调用"""
         mock_tool_call = ToolCallMessage(
-            function_name="invalid_tool", function_arguments={}
+            function_name="invalid_tool", function_arguments={},
+            assert_success=False, with_secret=[]
         )
 
         with unittest.mock.patch(
@@ -56,7 +58,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             side_effect=ValueError("Tool not found"),
         ):
             result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
-            self.assertEqual(type(result).__name__, "ToolErrorMessage")
+            self.assertEqual(type(result).__name__, "ToolCallResultMessage")
             # self.assertEqual(getattr(result, "content"), "未找到工具: invalid_tool")
 
     async def test_async_tool_call(self):
@@ -75,6 +77,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             mock_tool_call = ToolCallMessage(
                 function_name="mock_async_tool",
                 function_arguments={"arg1": 2, "arg2": 3},
+                assert_success=False, with_secret=[]
             )
             result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
 
@@ -121,7 +124,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         long_content = "A" * 1001  # 超过配置的1000字符限制
         mock_tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}
+            function_name="test_tool", function_arguments={},
+            assert_success=False, with_secret=[]
         )
 
         with (
@@ -130,7 +134,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 "linhai.tool.base.global_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
-            result = await manager_with_config.process_tool_call(mock_tool_call)
+            result = await manager_with_config.process_tool_call(mock_tool_call, tool_index=1)
 
             # mock_call.assert_called_once_with("test_tool", {})
 
@@ -168,7 +172,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}
+            function_name="test_tool", function_arguments={},
+            assert_success=False, with_secret=[]
         )
 
         with (
@@ -177,7 +182,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 "linhai.tool.base.global_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
-            result = await manager_with_config.process_tool_call(mock_tool_call)
+            result = await manager_with_config.process_tool_call(mock_tool_call, tool_index=1)
 
             # mock_call.assert_called_once_with("test_tool", {})
 
@@ -199,7 +204,8 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(
-            function_name="test_tool", function_arguments={}
+            function_name="test_tool", function_arguments={},
+            assert_success=False, with_secret=[]
         )
 
         with (
@@ -208,7 +214,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 "linhai.tool.base.global_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
-            result = await manager_without_config.process_tool_call(mock_tool_call)
+            result = await manager_without_config.process_tool_call(mock_tool_call, tool_index=1)
 
             # mock_call.assert_called_once_with("test_tool", {})
 

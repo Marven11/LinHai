@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import Literal, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.group_chat import GroupChat
-from linhai.llm import Answer, Message, UserMessage
+from linhai.llm import Answer, UserMessage
 from linhai.utils import CliRuntimeNotice
 from linhai.plugin.file_operations import Plugin
 
@@ -38,87 +38,64 @@ class PlanningStatusReminderPlugin(Plugin):
 
         return None
 
-    async def on_tool_result(
+    async def after_message_generation(
         self,
-        tool_name: str,
-        tool_index: int,
-        status: Literal["skipped", "success", "failed"],
-        message: Message | None,
-        toolcall_arguments: dict,
-        with_secret: list[str] | None,
-        is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
-        if status != "success":
-            return None
-
+        answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
+    ) -> None:
         planning_folder = self._get_planning_folder()
         if planning_folder is None:
-            return None
+            return
 
-        self._update_counters(tool_name, toolcall_arguments, planning_folder)
-        self._clear_notifications_if_needed(tool_name, toolcall_arguments, planning_folder)
-        await self._send_warnings_if_needed()
+        if not tool_calls:
+            return
 
-        return None
-
-    def _update_counters(
-        self,
-        tool_name: str,
-        toolcall_arguments: dict,
-        planning_folder: Path
-    ) -> None:
         write_tools = {"write_file", "replace_file_content", "modify_file_with_sed"}
-        
-        if tool_name not in write_tools:
-            self.status_counter += 1
-            self.todolist_counter += 1
-            return
-
-        filepath = toolcall_arguments.get("filepath")
-        if not filepath:
-            self.status_counter += 1
-            self.todolist_counter += 1
-            return
-        
         status_file = planning_folder / "STATUS.md"
         todolist_file = planning_folder / "TODOLIST.md"
-        
-        if Path(filepath) == status_file:
+
+        status_modified = False
+        todolist_modified = False
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.get("name")
+            tool_arguments = tool_call.get("arguments", {})
+
+            if tool_name not in write_tools:
+                continue
+
+            filepath = tool_arguments.get("filepath")
+            if not filepath:
+                continue
+
+            if Path(filepath) == status_file:
+                status_modified = True
+            elif Path(filepath) == todolist_file:
+                todolist_modified = True
+
+        if status_modified:
             self.status_counter = 0
-        elif Path(filepath) == todolist_file:
-            self.todolist_counter = 0
+            self._clear_notification("planning_status_reminder")
         else:
             self.status_counter += 1
+
+        if todolist_modified:
+            self.todolist_counter = 0
+            self._clear_notification("planning_todolist_reminder")
+        else:
             self.todolist_counter += 1
 
-    def _clear_notifications_if_needed(
-        self,
-        tool_name: str,
-        toolcall_arguments: dict,
-        planning_folder: Path
-    ) -> None:
-        if tool_name not in {"write_file", "replace_file_content", "modify_file_with_sed"}:
-            return
+        await self._send_warnings_if_needed()
 
-        filepath = toolcall_arguments.get("filepath")
-        if not filepath:
-            return
-
+    def _clear_notification(self, source: str) -> None:
         agent = self.group_chat.get_members("agent", Agent)
         if not agent:
             return
 
-        status_file = planning_folder / "STATUS.md"
-        todolist_file = planning_folder / "TODOLIST.md"
-        
-        if Path(filepath) == status_file:
-            agent.message_processor.update_notification_message(
-                None, source="planning_status_reminder", sort_value=0
-            )
-        elif Path(filepath) == todolist_file:
-            agent.message_processor.update_notification_message(
-                None, source="planning_todolist_reminder", sort_value=0
-            )
+        agent.message_processor.update_notification_message(
+            None, source=source, sort_value=0
+        )
 
     async def _send_warnings_if_needed(self) -> None:
         agent = self.group_chat.get_members("agent", Agent)
@@ -158,7 +135,7 @@ class PlanningStatusReminderPlugin(Plugin):
             )
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class UserInputRuntimeMessagePlugin(Plugin):
@@ -169,10 +146,10 @@ class UserInputRuntimeMessagePlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
-        _full_response: str,
-        _tool_calls: list[dict],
-    ):
+        answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
+    ) -> None:
         agent = self.group_chat.get_members("agent", Agent)
         if agent is None:
             return
