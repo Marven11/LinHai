@@ -248,8 +248,8 @@ class CLIApp(App):
         cliapp_tool = ToolSet()
 
         @cliapp_tool.register_tool(
-            name="exit_app",
-            desc="退出agent并关闭APP",
+            name="suicide",
+            desc="杀死自己并退出APP",
             args={
                 "return_code": ToolArgInfo(
                     desc="退出代码，0表示成功，非0表示错误", type="int"
@@ -257,8 +257,8 @@ class CLIApp(App):
             },
             required_args=["return_code"],
         )
-        def _exit_app(return_code: int):
-            """退出Agent程序，指定返回代码
+        def _suicide(return_code: int):
+            """杀死自己并退出程序，指定返回代码
 
             Args:
                 return_code: 退出代码，0表示成功，非0表示错误
