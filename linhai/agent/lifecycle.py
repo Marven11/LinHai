@@ -140,6 +140,7 @@ class Lifecycle:
             MissingWithSecretWarningPlugin,
             AfkPlugin,
             VolcanoDeepseekFixPlugin,
+            ProcessArgvCheckerPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -168,6 +169,7 @@ class Lifecycle:
             MissingWithSecretWarningPlugin(self.group_chat),
             AfkPlugin(self.group_chat),
             VolcanoDeepseekFixPlugin(self.group_chat),
+            ProcessArgvCheckerPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
