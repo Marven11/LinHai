@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Literal, TypedDict, Optional
 import argparse
+from datetime import datetime
 
 from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
 from linhai.group_chat import GroupChat
@@ -207,6 +208,10 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         固定消息列表
     """
     pinned_messages: list[Message] = [SystemMessage(context["group_chat"])]
+
+    from linhai.agent.base import RuntimeMessage
+    startup_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    pinned_messages.append(RuntimeMessage(f"Agent启动时间: {startup_time}"))
 
     cli_args = context["cli_args"]
 

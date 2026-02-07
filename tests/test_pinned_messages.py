@@ -9,7 +9,7 @@ import argparse
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
 from linhai.group_chat import GroupChat
 from linhai.llm import SystemMessage, UserMessage
-from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage, ChecklistMessage
+from linhai.agent.base import GlobalMemory, PathMemory, FileContentMessage, ChecklistMessage, RuntimeMessage
 from linhai.agent.base import MessagesListSummerizeMessage
 
 
@@ -68,12 +68,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         pinned_messages = await _create_pinned_messages(context)
         
-        # 应该至少包含系统消息和全局记忆消息
-        self.assertGreaterEqual(len(pinned_messages), 2)
+        # 应该至少包含系统消息、启动时间消息和全局记忆消息
+        self.assertGreaterEqual(len(pinned_messages), 3)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], GlobalMemory)
+        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+        self.assertIsInstance(pinned_messages[2], GlobalMemory)
         # 检查GlobalMemory的filepath属性
-        self.assertIn("LINHAI.md", str(pinned_messages[1].filepath))
+        self.assertIn("LINHAI.md", str(pinned_messages[2].filepath))
         
     async def test_pinned_messages_with_memory_config(self):
         """测试有memory配置时，使用配置的全局记忆路径。"""
@@ -85,12 +86,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         pinned_messages = await _create_pinned_messages(context)
         
-        self.assertGreaterEqual(len(pinned_messages), 2)
+        self.assertGreaterEqual(len(pinned_messages), 3)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], GlobalMemory)
+        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+        self.assertIsInstance(pinned_messages[2], GlobalMemory)
         # 检查GlobalMemory的filepath属性
         expected_path = self.config_basedir / "custom_memory.md"
-        self.assertEqual(str(pinned_messages[1].filepath), str(expected_path))
+        self.assertEqual(str(pinned_messages[2].filepath), str(expected_path))
         
     async def test_pinned_messages_with_user_messages(self):
         """测试通过-m参数添加用户消息。"""
@@ -99,14 +101,15 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         pinned_messages = await _create_pinned_messages(context)
         
-        # 系统消息 + 全局记忆消息 + 2条用户消息
-        self.assertEqual(len(pinned_messages), 4)
+        # 系统消息 + 启动时间消息 + 全局记忆消息 + 2条用户消息
+        self.assertEqual(len(pinned_messages), 5)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], GlobalMemory)
-        self.assertIsInstance(pinned_messages[2], UserMessage)
+        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+        self.assertIsInstance(pinned_messages[2], GlobalMemory)
         self.assertIsInstance(pinned_messages[3], UserMessage)
-        self.assertEqual(pinned_messages[2].message, "Hello")
-        self.assertEqual(pinned_messages[3].message, "World")
+        self.assertIsInstance(pinned_messages[4], UserMessage)
+        self.assertEqual(pinned_messages[3].message, "Hello")
+        self.assertEqual(pinned_messages[4].message, "World")
         
     async def test_pinned_messages_with_file_messages(self):
         """测试通过-f参数添加文件内容消息。"""
@@ -122,12 +125,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             
             pinned_messages = await _create_pinned_messages(context)
             
-            # 系统消息 + 全局记忆消息 + 文件内容消息
-            self.assertEqual(len(pinned_messages), 3)
+            # 系统消息 + 启动时间消息 + 全局记忆消息 + 文件内容消息
+            self.assertEqual(len(pinned_messages), 4)
             self.assertIsInstance(pinned_messages[0], SystemMessage)
-            self.assertIsInstance(pinned_messages[1], GlobalMemory)
-            self.assertIsInstance(pinned_messages[2], FileContentMessage)
-            self.assertEqual(pinned_messages[2].content, "File content")
+            self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+            self.assertIsInstance(pinned_messages[2], GlobalMemory)
+            self.assertIsInstance(pinned_messages[3], FileContentMessage)
+            self.assertEqual(pinned_messages[3].content, "File content")
         finally:
             temp_file_path.unlink()
             
@@ -143,11 +147,12 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             
             pinned_messages = await _create_pinned_messages(context)
             
-            # 系统消息 + 全局记忆消息 + ChecklistMessage
-            self.assertEqual(len(pinned_messages), 3)
+            # 系统消息 + 启动时间消息 + 全局记忆消息 + ChecklistMessage
+            self.assertEqual(len(pinned_messages), 4)
             self.assertIsInstance(pinned_messages[0], SystemMessage)
-            self.assertIsInstance(pinned_messages[1], GlobalMemory)
-            self.assertIsInstance(pinned_messages[2], ChecklistMessage)
+            self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+            self.assertIsInstance(pinned_messages[2], GlobalMemory)
+            self.assertIsInstance(pinned_messages[3], ChecklistMessage)
         finally:
             checklist_path.unlink()
             
@@ -158,10 +163,11 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         pinned_messages = await _create_pinned_messages(context)
         
-        # 系统消息 + 全局记忆消息 + 可能的PathMemory
-        self.assertGreaterEqual(len(pinned_messages), 3)
+        # 系统消息 + 启动时间消息 + 全局记忆消息 + 可能的PathMemory
+        self.assertGreaterEqual(len(pinned_messages), 4)
         self.assertIsInstance(pinned_messages[0], SystemMessage)
-        self.assertIsInstance(pinned_messages[1], GlobalMemory)
+        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+        self.assertIsInstance(pinned_messages[2], GlobalMemory)
         # 检查是否有PathMemory
         path_messages = [msg for msg in pinned_messages if isinstance(msg, PathMemory)]
         self.assertGreaterEqual(len(path_messages), 1)
@@ -297,6 +303,30 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         
         # 验证insert_message被调用两次（一次插入RuntimeMessage描述删除的用户消息，一次插入描述）
         self.assertEqual(mock_message_processor.insert_message.call_count, 2)
+    
+    async def test_pinned_messages_includes_startup_time(self):
+        """测试pinned messages包含启动时间。"""
+        context = self.create_context()
+        
+        pinned_messages = await _create_pinned_messages(context)
+        
+        # 应该至少包含：SystemMessage + RuntimeMessage(启动时间) + GlobalMemory
+        self.assertGreaterEqual(len(pinned_messages), 3)
+        self.assertIsInstance(pinned_messages[0], SystemMessage)
+        
+        # 检查第二条消息是RuntimeMessage且包含启动时间
+        self.assertIsInstance(pinned_messages[1], RuntimeMessage)
+        runtime_message = pinned_messages[1]
+        self.assertIn("Agent启动时间:", runtime_message.message)
+        
+        # 验证时间格式 YYYY-MM-DD HH:MM:SS
+        import re
+        time_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"
+        match = re.search(time_pattern, runtime_message.message)
+        self.assertIsNotNone(match, f"时间格式不正确: {runtime_message.message}")
+        
+        # 第三条消息应该是GlobalMemory
+        self.assertIsInstance(pinned_messages[2], GlobalMemory)
 
 
 if __name__ == "__main__":
