@@ -20,7 +20,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.update_notification_message = MagicMock()
         self.mock_agent.get_current_model = MagicMock()
 
-        self.group_chat.get_members = MagicMock(return_value=self.mock_agent)
+        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.mock_agent)
 
         self.group_chat.send_if_exists = AsyncMock()
 

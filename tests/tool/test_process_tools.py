@@ -59,7 +59,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟的GroupChat
         mock_group_chat = MagicMock()
-        mock_group_chat.get_members.return_value = mock_machine_control
+        mock_group_chat.get_members = MagicMock(side_effect=lambda name, t: mock_machine_control)
 
         # 创建ToolManager（需要导入，但这里只模拟测试逻辑）
         # 由于是示例测试，我们只验证逻辑

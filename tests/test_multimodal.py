@@ -238,7 +238,7 @@ class TestImageMessageToLlmMessage(TestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.support_image = MagicMock(return_value=True)
         self.mock_agent.get_current_model.return_value = self.mock_llm
-        self.mock_group_chat.get_members.return_value = self.mock_agent
+        self.mock_group_chat.get_members = MagicMock(side_effect=lambda name, t: self.mock_agent)
 
     def test_to_llm_message_with_supported_llm(self):
         """Test conversion when LLM supports images."""

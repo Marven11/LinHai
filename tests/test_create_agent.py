@@ -36,6 +36,7 @@ class TestCreateAgent(unittest.TestCase):
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
+        cli_args.claw = False
         group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
@@ -79,6 +80,7 @@ class TestCreateAgent(unittest.TestCase):
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
+        cli_args.claw = False
         group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
@@ -108,6 +110,7 @@ class TestCreateAgent(unittest.TestCase):
         cli_args.checklist = None
         cli_args.message = []
         cli_args.file = []
+        cli_args.claw = False
         group_chat.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 

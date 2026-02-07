@@ -29,6 +29,7 @@ class TestCreateAgentMCP(unittest.TestCase):
 
         self.cli_args.message = []
         self.cli_args.file = []
+        self.cli_args.claw = False
         self.group_chat.register_member("cli_args", self.cli_args)
 
         project_root = os.path.dirname(os.path.abspath(__file__))

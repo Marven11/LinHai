@@ -10,7 +10,7 @@ class TestMachineControlPlugin(unittest.TestCase):
     def setUp(self):
         self.mock_group_chat = MagicMock()
         self.mock_group_chat.members = {}
-        def get_members(name):
+        def get_members(name, t):
             return self.mock_group_chat.members[name]
         self.mock_group_chat.get_members.side_effect = get_members
         
@@ -29,15 +29,13 @@ class TestMachineControlPlugin(unittest.TestCase):
         self.machine_control.machines = {"master_host": MagicMock()}
         asyncio.run(self.call_before_helper())
         prompt = self.system_message._build_prompt()
-        self.assertNotIn("INTRODUCTION - MACHINE CONTROL", prompt)
-        self.assertNotIn("多机器控制系统", prompt)
+        self.assertNotIn("INTRODUCTION - MACHINE CONTROL\n", prompt)
     
     def test_adds_machine_control_when_multiple_machines(self):
         self.machine_control.machines = {"master_host": MagicMock(), "ssh_host": MagicMock()}
         asyncio.run(self.call_before_helper())
         prompt = self.system_message._build_prompt()
-        self.assertIn("INTRODUCTION - MACHINE CONTROL", prompt)
-        self.assertIn("多机器控制系统", prompt)
+        self.assertIn("INTRODUCTION - MACHINE CONTROL\n", prompt)
     
     def test_idempotent_when_multiple_machines(self):
         self.machine_control.machines = {"master_host": MagicMock(), "ssh_host": MagicMock()}

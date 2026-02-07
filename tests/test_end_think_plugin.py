@@ -17,7 +17,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.answer = Mock(spec=Answer)
         self.agent = Mock()
 
-        self.group_chat.get_members.return_value = self.agent
+        self.group_chat.get_members = Mock(side_effect=lambda name, t: self.agent)
 
         self.agent.group_chat = Mock()
         self.agent.group_chat.send = AsyncMock()

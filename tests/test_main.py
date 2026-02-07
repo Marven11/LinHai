@@ -33,7 +33,8 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_args = MagicMock()
         mock_cli_args.message = ["测试消息"]
         mock_cli_args.file = []
-        mock_group_chat_instance.get_members.return_value = mock_cli_args
+        mock_cli_args.claw = False
+        mock_group_chat_instance.get_members = MagicMock(side_effect=lambda name, t: mock_cli_args)
 
         test_args = ["linhai", "-m", "测试消息"]
 

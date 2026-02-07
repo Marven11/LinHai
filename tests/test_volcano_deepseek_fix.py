@@ -15,7 +15,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         
         self.agent = MagicMock(spec=Agent)
         self.agent.message_processor = MagicMock()
-        self.group_chat.get_members.return_value = self.agent
+        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
         
         self.model = MagicMock(spec=OpenAi)
         self.model.base_url = "https://ark.cn-beijing.volces.com/api/v3"

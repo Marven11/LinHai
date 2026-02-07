@@ -12,7 +12,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = MissingWithSecretWarningPlugin(self.group_chat)
         self.agent = Mock()
         self.agent.message_processor = Mock()
-        self.group_chat.get_members.return_value = self.agent
+        self.group_chat.get_members = Mock(side_effect=lambda name, t: self.agent)
 
     async def test_warning_when_secret_in_argument_without_with_secret_skipped(self):
         tool_name = "write_file"

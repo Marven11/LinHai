@@ -31,6 +31,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config = Config(**config_data)
         config_basedir = Path("/tmp")
         cli_args = argparse.Namespace()
+        cli_args.claw = False
         
         
         context = create_agent_build_context(
@@ -101,6 +102,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config = Config(**config_data)
         config_basedir = Path("/tmp")
         cli_args = argparse.Namespace()
+        cli_args.claw = False
         
         
         context = create_agent_build_context(
