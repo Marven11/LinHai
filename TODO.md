@@ -136,6 +136,7 @@ unittest 失败时，必须分析
       - 搜索PathMemory改成PathPrompt
       - 修改所有有关的prompt、类名和文件名等
       - 重新搜索以上关键词，如果仍有则将任务标记为未完成，继续修改
+  - （重新）搜索所有包含LINHAI.md的地方并考虑修改为AGENTS.md，修改后重新搜索，如果仍有则回退任务并修改剩下的部分
 - [ ] save_context根本没有被使用，导致当前上下文历史根本没有被保存，在AgentMessage使用这个函数并添加对应的测试
 - [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
   - openclaw的核心功能：
