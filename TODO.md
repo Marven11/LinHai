@@ -115,6 +115,30 @@ unittest 失败时，必须分析
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
     - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
+- [ ] 完善claw功能
+  - 当前: 在--claw参数被指定时，我们只新建了对应文件夹
+  - 当前: claw定义了这五个核心的markdown文档: AGENTS.md  BOOTSTRAP.md  IDENTITY.md  SOUL.md  USER.md
+    - 参考https://liruifengv.com/posts/openclaw-prompts/和./docs/openclaw-core-markdown
+    - 但是和参考不同的是，我们将CLAW定义为Continuous Living Autonomous Worker
+  - 在看到文件夹不存在时不仅新建文件夹，还初始化对应的文件
+    - 需要初始化参考中提到的每一个markdown
+    - markdown初始内容放在prompt.py中，每个为一个常量，内容和docs/openclaw-core-markdown完全相同
+  - 添加一个claw的插件
+    - 放在linhai/plugin/claw.py中
+    - 插件在agent启动时将claw模式的介绍放进system prompt中
+      - prompt模板放在prompt.py中
+      - 用一段话介绍“用户用--claw模式启动你，你已经进入...模式，你不再是...而是...，你需要...”
+      - 介绍每个claw核心文档
+        - 并给出claw中的绝对路径，如果文件不存在则提示“文件不存在，无需在意”
+        - 每个markdown仅用一段话介绍
+    - 插件将claw文件夹文件内容加入到pinned message中
+      - 检查每个文件是否都在claw中，如果有则添加
+      - 你需要为AgentMessage添加一个方法add_pinned_message以符合极简的原则
+  - 编写测试
+    - 在文件夹不存在时正确新建文件夹并初始化每个markdown
+    - 在文件夹存在且为空时不初始化每个markdown
+    - 在指定--claw时system prompt添加对应章节
+    - 在指定--claw时每个仍然存在于claw文件夹的markdown文件都被添加，额外的文件不被添加，被删除的文件不被添加
 
 # 注意
 
