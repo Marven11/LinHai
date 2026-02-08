@@ -20,6 +20,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         self.plugin = DirectoryChangePlugin(self.group_chat)
 
         self.temp_dir = tempfile.mkdtemp()
+        self.conversation_temp_dir = tempfile.mkdtemp()  # 专门为conversation_folder创建
         self.original_cwd = os.getcwd()
 
         self.mock_agent = MagicMock()
@@ -38,6 +39,9 @@ class TestDirectoryChangePlugin(unittest.TestCase):
                 return mock_tool_manager
             elif member_type == "agent":
                 return self.mock_agent
+            elif member_type == "conversation_folder":
+                from pathlib import Path
+                return Path(self.conversation_temp_dir)  # 直接返回已创建的路径
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
@@ -55,13 +59,23 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         )
         self.mock_get_members = self.get_members_patch.start()
 
+        # Mock save_context and save_cleaned_messages to avoid actual file writes
+        self.save_context_patch = patch('linhai.agent.message.save_context')
+        self.mock_save_context = self.save_context_patch.start()
+        self.save_cleaned_messages_patch = patch('linhai.agent.conversation.save_cleaned_messages')
+        self.mock_save_cleaned_messages = self.save_cleaned_messages_patch.start()
+
     def tearDown(self):
         """清理测试环境。"""
         os.chdir(self.original_cwd)
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+        if hasattr(self, 'conversation_temp_dir'):
+            shutil.rmtree(self.conversation_temp_dir, ignore_errors=True)
         self.get_members_patch.stop()
+        self.save_context_patch.stop()
+        self.save_cleaned_messages_patch.stop()
 
     def test_plugin_disabled_by_default(self):
         """测试插件默认禁用。"""

@@ -85,6 +85,13 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         self.group_chat.register_queue("parsed_agent_answer")
 
+        from tempfile import TemporaryDirectory
+        self.temp_dir = TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        from pathlib import Path
+        conversation_dir = Path(self.temp_dir.name)
+        self.group_chat.register_member("conversation_folder", conversation_dir)
+
         from linhai.cli.app import CLIApp
         from linhai.cli.messages_list import MessagesList
 
@@ -345,6 +352,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_messages_list.should_auto_scroll.return_value = True
         new_group_chat.register_member("messages_list", mock_messages_list)
 
+        from tempfile import TemporaryDirectory
+        temp_dir = TemporaryDirectory()
+        from pathlib import Path
+        conversation_dir = Path(temp_dir.name)
+        new_group_chat.register_member("conversation_folder", conversation_dir)
+
         from linhai.tool.main import ToolManager
         from linhai.config import ToolConfig
         from pathlib import Path
@@ -352,6 +365,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.group_chat = new_group_chat
         new_group_chat.register_member("tool_manager", mock_tool_manager)
+        
+        # 在测试结束时清理临时目录
+        self.addCleanup(temp_dir.cleanup)
 
         mock_llm1 = MagicMock(spec=OpenAi)
         mock_llm2 = MagicMock(spec=OpenAi)

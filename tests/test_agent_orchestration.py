@@ -35,6 +35,13 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.is_dirty = False
         self.group_chat.register_member("token_manager", mock_token_manager)
+        
+        # 注册conversation_folder，因为AgentMessage._save_context需要它
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        self.temp_dir = TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.group_chat.register_member("conversation_folder", Path(self.temp_dir.name))
 
         self.init_messages = [
             SystemMessage(

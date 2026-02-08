@@ -17,6 +17,8 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         from linhai.group_chat import GroupChat
         from linhai.tool.main import ToolManager
         from unittest.mock import MagicMock
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
 
         group_chat = GroupChat()
 
@@ -25,6 +27,11 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         mock_tool_manager.get_tools_info.return_value = []
         group_chat.register_member("tool_manager", mock_tool_manager)
 
+        # 创建临时目录并注册为conversation_folder，以便save_context可以工作
+        self.temp_dir = TemporaryDirectory()
+        conversation_dir = Path(self.temp_dir.name)
+        group_chat.register_member("conversation_folder", conversation_dir)
+
         self.pinned_messages = [
             SystemMessage(
                 group_chat=group_chat,
@@ -32,6 +39,10 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
             UserMessage(message="Initial message"),
         ]
         self.message_processor = AgentMessage(group_chat, self.pinned_messages)
+
+    def tearDown(self):
+        """清理测试环境。"""
+        self.temp_dir.cleanup()
 
     def test_initialization(self):
         """测试AgentMessage初始化。"""
@@ -110,6 +121,81 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.message_processor.get_messages()), 4)
         self.assertIn("排队消息", str(self.message_processor.messages[-2]))
         self.assertEqual(self.message_processor.messages[-1], queued_msg)
+
+    @patch("linhai.agent.message.save_context")
+    def test_save_context_called_on_add_new_message(self, mock_save_context):
+        from pathlib import Path
+        runtime_msg = RuntimeMessage("Test runtime message")
+        self.message_processor.add_new_message(runtime_msg)
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertIsInstance(call_args[0][0], Path)
+        self.assertIsInstance(call_args[0][1], list)
+        self.assertEqual(len(call_args[0][1]), 3)
+
+    @patch("linhai.agent.message.save_context")
+    async def test_save_context_called_on_replace_messages(self, mock_save_context):
+        new_messages = [RuntimeMessage("New message 1"), RuntimeMessage("New message 2")]
+        await self.message_processor.replace_messages(new_messages)
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 4)
+
+    @patch("linhai.agent.message.save_context")
+    async def test_save_context_called_on_insert_message(self, mock_save_context):
+        runtime_msg = RuntimeMessage("Inserted message")
+        await self.message_processor.insert_message(0, runtime_msg)
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 3)
+
+    @patch("linhai.agent.message.save_context")
+    async def test_save_context_called_on_delete_message_range(self, mock_save_context):
+        self.message_processor.add_new_message(RuntimeMessage("Msg 1"))
+        self.message_processor.add_new_message(RuntimeMessage("Msg 2"))
+        mock_save_context.reset_mock()
+        await self.message_processor.delete_message_range(0, 0)
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 3)
+
+    @patch("linhai.agent.message.save_context")
+    async def test_save_context_called_on_filter_messages(self, mock_save_context):
+        self.message_processor.add_new_message(RuntimeMessage("Msg 1"))
+        self.message_processor.add_new_message(RuntimeMessage("Msg 2"))
+        mock_save_context.reset_mock()
+        await self.message_processor.filter_messages(lambda msg: "1" in str(msg))
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 3)
+
+    @patch("linhai.agent.message.save_context")
+    async def test_save_context_called_on_replace_message(self, mock_save_context):
+        old_msg = RuntimeMessage("Message to replace")
+        new_msg = RuntimeMessage("New message")
+        self.message_processor.add_new_message(old_msg)
+        mock_save_context.reset_mock()
+        await self.message_processor.replace_message(old_msg, new_msg)
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 3)
+
+    @patch("linhai.agent.message.save_context")
+    def test_save_context_called_on_process_queued_messages(self, mock_save_context):
+        queued_msg = RuntimeMessage("Queued message")
+        self.message_processor.add_queued_message(queued_msg)
+        mock_save_context.reset_mock()
+        self.message_processor.process_queued_messages()
+        mock_save_context.assert_called_once()
+        call_args = mock_save_context.call_args
+        self.assertEqual(len(call_args[0]), 2)
+        self.assertEqual(len(call_args[0][1]), 4)
 
 
 if __name__ == "__main__":

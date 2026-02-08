@@ -25,6 +25,12 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
                 return self.mock_cli_app
             elif name == "agent":
                 return self.agent
+            elif name == "conversation_folder":
+                from pathlib import Path
+                from tempfile import TemporaryDirectory
+                self.temp_dir = TemporaryDirectory()
+                self.addCleanup(self.temp_dir.cleanup)
+                return Path(self.temp_dir.name)
             else:
                 return Mock()
 

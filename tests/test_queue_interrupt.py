@@ -99,6 +99,10 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             pinned_messages=self.pinned_messages,
             llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
+        
+        # 注册conversation_folder，因为AgentMessage._save_context需要它
+        from linhai.agent.conversation import register_conversation_folder
+        register_conversation_folder(self.group_chat)
 
     def test_queue_message_handling(self):
         """测试/queue消息的处理逻辑"""

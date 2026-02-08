@@ -9,6 +9,7 @@ from linhai.group_chat import GroupChat
 from linhai.input_parser import parse_user_input
 from linhai.llm import UserMessage
 from linhai.utils import CliRuntimeNotice
+from linhai.agent.conversation import save_context
 
 from .base import Message, RuntimeMessage
 
@@ -71,6 +72,7 @@ class AgentMessage:
             msg: 要添加的消息
         """
         self.messages.append(msg)
+        self._save_context()
 
     def get_messages(self) -> List[Message]:
         """获取当前所有消息（包括pinned_messages和notification_messages）。
@@ -112,6 +114,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages = messages
+        self._save_context()
 
     async def insert_message(self, index: int, message: Message) -> None:
         """在指定位置插入消息。
@@ -122,6 +125,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages.insert(index, message)
+        self._save_context()
 
     async def delete_message_range(self, start: int, end: int) -> List[Message]:
         """删除指定范围的消息。
@@ -136,6 +140,7 @@ class AgentMessage:
         await self.count_invalidate_cache()
         deleted = self.messages[start : end + 1]
         self.messages[start : end + 1] = []
+        self._save_context()
         return deleted
 
     async def filter_messages(self, condition) -> None:
@@ -146,6 +151,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages = [msg for msg in self.messages if condition(msg)]
+        self._save_context()
 
     async def replace_message(self, old_message: Message, new_message: Message) -> None:
         """将普通消息列表中的指定消息替换为新消息。
@@ -158,6 +164,7 @@ class AgentMessage:
         if old_message in self.messages:
             index = self.messages.index(old_message)
             self.messages[index] = new_message
+            self._save_context()
 
     def update_notification_message(
         self, message: Message | None, source: str, sort_value: int
@@ -188,6 +195,11 @@ class AgentMessage:
         """
         self.queued_messages.append(msg)
 
+    def _save_context(self) -> None:
+        """保存当前上下文到文件。"""
+        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        save_context(conversation_dir, self.get_messages())
+
     def process_queued_messages(self) -> None:
         """处理所有排队消息。"""
         if self.queued_messages:
@@ -196,3 +208,4 @@ class AgentMessage:
             )
             self.messages.extend(self.queued_messages)
             self.queued_messages = []
+            self._save_context()

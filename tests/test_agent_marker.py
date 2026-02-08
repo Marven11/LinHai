@@ -113,6 +113,12 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.agent.orchestration
             elif member_type == "machine_control":
                 return self.mock_machine_control
+            elif member_type == "conversation_folder":
+                from pathlib import Path
+                from tempfile import TemporaryDirectory
+                self.temp_dir = TemporaryDirectory()
+                self.addCleanup(self.temp_dir.cleanup)
+                return Path(self.temp_dir.name)
             elif member_type == "cli_args":
                 import argparse
 
