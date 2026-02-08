@@ -158,12 +158,17 @@ class CLIApp(App):
 
     async def after_message_generation(self, answer, full_response, tool_calls):
         token_usage = answer.get_token_usage()
-        if token_usage is not None:
+        if token_usage is not None and all(
+            tool_call.get("name")
+            not in [
+                "context_forget_range_step2",
+                "context_forget_large_message",
+            ]
+            for tool_call in tool_calls
+        ):
             self.token_manager.update_cumulative_usage(token_usage)
             self.token_manager.current_token_usage = None
             self.update_token_display(token_usage.total_tokens)
-
-
 
     async def watch_exit_signal_queue(self) -> None:
         """监听exit_signal队列并处理退出信号"""
@@ -275,7 +280,7 @@ class CLIApp(App):
         )
 
     async def on_unmount(self) -> None:
-        if hasattr(self, 'messages_list'):
+        if hasattr(self, "messages_list"):
             await self.messages_list.cleanup()
         if self.agent_task:
             self.agent_task.cancel()
