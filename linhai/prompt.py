@@ -14,7 +14,7 @@ OVERVIEW = """
 
 1. 系统指令
 2. 上下文相关的运行时警告。忘记管理上下文会直接导致崩溃
-3. 用户指令（包括全局记忆、路径记忆、任务步骤分解等）
+3. 用户指令（包括全局指导、路径指导、任务步骤分解等）
   - 【重要】你需要严格按照用户给出的路径完成任务！用户**指导你如何完成**本身就说明其他路径极大概率无法完成任务！
 4. 运行时错误
 5. 运行时警告
@@ -50,12 +50,10 @@ INTRODUCTION_WAITING_USER = """
 `#LINHAI_WAITING_USER`需要加在你回答中的最后一行
 """
 
-INTRODUCTION_GLOBAL_MEMORY = """
-## 全局记忆
+INTRODUCTION_GLOBAL_PROMPT = """
+## 全局指导
 
-你启动时会收到对应位置的LINHAI.md文件内容，这是用户要求你遵循的内容，应该视为用户的消息遵守
-
-用户明确要求你修改“全局记忆”时可以修改此文件
+你启动时会收到对应位置的AGENTS.md文件内容，这是用户要求你遵循的内容，应该视为用户的消息遵守
 """
 
 INTRODUCTION_CONTEXT_MANAGEMENT = """
@@ -276,7 +274,7 @@ INTRODUCTION_PLANNING_MODE = """
 INTRODUCTION_ITEMS = [
     ("TOOL USE", INTRODUCTION_TOOL_USE),
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
-    ("GLOBAL MEMORY", INTRODUCTION_GLOBAL_MEMORY),
+    ("GLOBAL PROMPT", INTRODUCTION_GLOBAL_PROMPT),
     ("CONTEXT MANAGEMENT", INTRODUCTION_CONTEXT_MANAGEMENT),
     ("SECRET SYSTEM", INTRODUCTION_SECRET_SYSTEM),
     ("MACHINE CONTROL BASIC", INTRODUCTION_MACHINE_CONTROL_BASIC),

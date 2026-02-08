@@ -18,7 +18,7 @@ compress_threshold_soft = 40000
 compress_threshold_hard = 80000
 
 [memory]
-file_path = "./LINHAI.md"
+file_path = "./AGENTS.md"
 
 [tools]
 max_output_length = 100000

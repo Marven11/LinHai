@@ -19,7 +19,7 @@ from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools, ToolResultSuccess, ToolResultFailed
 from linhai.group_chat import GroupChat
-from linhai.agent.base import GlobalMemory
+from linhai.agent.base import GlobalPrompt
 
 
 class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
@@ -83,7 +83,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test.md")),
+            GlobalPrompt(filepath=Path("/tmp/test.md")),
         ] + [RuntimeMessage(f"User message {i}") for i in range(1, 16)]  # 15 user messages + 2 system = 17 total
         
         # Create a mutable list for messages that can be modified by mocks
@@ -180,7 +180,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test.md")),
+            GlobalPrompt(filepath=Path("/tmp/test.md")),
         ] + [RuntimeMessage(f"Message {i}") for i in range(1, 16)]  # 15 user messages + 2 system = 17 total
         mock_messages.append(summerize_message)
         mock_agent.message_processor.messages = mock_messages
@@ -245,7 +245,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 mock_agent = MagicMock()
                 mock_agent.message_processor.messages = [
                     SystemMessage(group_chat=mock_group_chat),
-                    GlobalMemory(filepath=Path("/tmp/test.md")),
+                    GlobalPrompt(filepath=Path("/tmp/test.md")),
                     RuntimeMessage("Message 1"),
                     RuntimeMessage("Message 2"),
                     RuntimeMessage("Message 3"),
@@ -360,7 +360,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         # Only 5 messages total
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test.md")),
+            GlobalPrompt(filepath=Path("/tmp/test.md")),
             RuntimeMessage("Message 1"),
             RuntimeMessage("Message 2"),
             RuntimeMessage("Message 3"),
@@ -427,7 +427,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         # Create 15 total messages: 2 system + 12 user/runtime + 1 summerize = 15
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test.md")),
+            GlobalPrompt(filepath=Path("/tmp/test.md")),
             UserMessage(message="Important task 1"),
             RuntimeMessage("Tool output 1"),
             RuntimeMessage("Tool output 2"),

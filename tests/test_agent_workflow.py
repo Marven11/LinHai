@@ -451,7 +451,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_compress_range_system_message_protection(self):
         """Test that system messages are protected during compression range validation."""
         from linhai.agent.workflow import _validate_compression_range
-        from linhai.agent.base import GlobalMemory
+        from linhai.agent.base import GlobalPrompt
         from linhai.llm import SystemMessage
 
         mock_agent = MagicMock()
@@ -462,7 +462,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         mock_messages = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            GlobalPrompt(filepath=Path("/tmp/test_global_memory.md")),
             RuntimeMessage("User message 1"),
             RuntimeMessage("User message 2"),
             RuntimeMessage("User message 3"),
@@ -477,7 +477,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         mock_messages_extended = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            GlobalPrompt(filepath=Path("/tmp/test_global_memory.md")),
         ] + [RuntimeMessage(f"User message {i}") for i in range(20)]
         mock_agent.message_processor.messages = mock_messages_extended
 
@@ -508,7 +508,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         mock_messages_all_system = [
             SystemMessage(group_chat=mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            GlobalPrompt(filepath=Path("/tmp/test_global_memory.md")),
             SystemMessage(group_chat=mock_group_chat),
         ]
         mock_agent.message_processor.messages = mock_messages_all_system

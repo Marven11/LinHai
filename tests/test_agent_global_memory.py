@@ -6,11 +6,11 @@ from pathlib import Path
 import tempfile
 import os
 
-from linhai.agent.base import GlobalMemory
+from linhai.agent.base import GlobalPrompt
 from linhai.config import Config, LLMConfig, AgentConfig
 
 
-class TestGlobalMemoryPathSelection(unittest.TestCase):
+class TestGlobalPromptPathSelection(unittest.TestCase):
     """Test cases for global memory file path selection logic."""
 
     def setUp(self):
@@ -24,21 +24,21 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    def test_linhai_md_in_current_directory(self):
-        """Test that LINHAI.md in current directory is selected."""
+    def test_agents_md_in_current_directory(self):
+        """Test that AGENTS.md in current directory is selected."""
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.return_value = True
             with patch("pathlib.Path.open") as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = (
-                    "# Test LINHAI.md\nTest content"
+                    "# Test AGENTS.md\nTest content"
                 )
 
-                global_memory = GlobalMemory(Path("LINHAI.md"))
-                self.assertIsInstance(global_memory, GlobalMemory)
-                self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
+                global_memory = GlobalPrompt(Path("AGENTS.md"))
+                self.assertIsInstance(global_memory, GlobalPrompt)
+                self.assertEqual(global_memory.filepath, Path("AGENTS.md"))
 
-    def test_agent_md_in_current_directory(self):
-        """Test that AGENT.md in current directory is selected when LINHAI.md is missing."""
+    def test_agent_md_in_current_directory_when_agents_md_missing(self):
+        """Test that AGENT.md in current directory is selected when AGENTS.md is missing."""
         with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.side_effect = lambda path: path.name == "AGENT.md"
             with patch("pathlib.Path.open") as mock_open:
@@ -46,8 +46,8 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                     "# Test AGENT.md\nTest content"
                 )
 
-                global_memory = GlobalMemory(Path("AGENT.md"))
-                self.assertIsInstance(global_memory, GlobalMemory)
+                global_memory = GlobalPrompt(Path("AGENT.md"))
+                self.assertIsInstance(global_memory, GlobalPrompt)
                 self.assertEqual(global_memory.filepath, Path("AGENT.md"))
 
     def test_no_files_in_current_directory(self):
@@ -66,9 +66,9 @@ class TestGlobalMemoryPathSelection(unittest.TestCase):
                 llm=[mock_llm_config], agent=mock_agent_config
             )  # pylint: disable=unused-variable
 
-            global_memory = GlobalMemory(Path("LINHAI.md"))
-            self.assertIsInstance(global_memory, GlobalMemory)
-            self.assertEqual(global_memory.filepath, Path("LINHAI.md"))
+            global_memory = GlobalPrompt(Path("AGENTS.md"))
+            self.assertIsInstance(global_memory, GlobalPrompt)
+            self.assertEqual(global_memory.filepath, Path("AGENTS.md"))
 
 
 if __name__ == "__main__":

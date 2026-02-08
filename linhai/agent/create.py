@@ -16,7 +16,7 @@ from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
 
-from .base import GlobalMemory, PathMemory
+from .base import GlobalPrompt, PathPrompt
 
 from .main import Agent
 
@@ -219,10 +219,10 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         memory_file_path = (
             context["config_basedir"] / context["config"].memory.file_path
         )
-        pinned_messages.append(GlobalMemory(Path(memory_file_path).absolute()))
+        pinned_messages.append(GlobalPrompt(Path(memory_file_path).absolute()))
     else:
         pinned_messages.append(
-            GlobalMemory(Path("~/.config/linhai/LINHAI.md").expanduser())
+            GlobalPrompt(Path("~/.config/linhai/AGENTS.md").expanduser())
         )
 
     if context["checklist_path"]:
@@ -238,14 +238,14 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         )
 
     project_memory_filepaths = [
-        Path("./LINHAI.md").absolute(),
+        Path("./AGENTS.md").absolute(),
         Path("./AGENT.md").absolute(),
         Path("./CLAUDE.md").absolute(),
     ]
 
     for filepath in project_memory_filepaths:
         if filepath.exists():
-            pinned_messages.append(PathMemory(filepath))
+            pinned_messages.append(PathPrompt(filepath))
 
     from linhai.llm import UserMessage
     from linhai.agent.base import FileContentMessage

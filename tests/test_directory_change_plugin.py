@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
 from linhai.plugin import DirectoryChangePlugin
-from linhai.agent.base import PathMemory, GlobalMemory
+from linhai.agent.base import PathPrompt, GlobalPrompt
 from linhai.group_chat import GroupChat
 
 
@@ -88,10 +88,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
-        # 插件禁用时不应添加PathMemory或GlobalMemory
+        # 插件禁用时不应添加PathPrompt或GlobalPrompt
         messages = self.mock_agent.message_processor.get_messages()
         memory_count = sum(
-            1 for msg in messages if isinstance(msg, (PathMemory, GlobalMemory))
+            1 for msg in messages if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
         self.assertEqual(memory_count, 0)  # 插件禁用时不应添加内存
 
@@ -108,10 +108,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
-        # 插件启用但目录未更改，不应添加PathMemory或GlobalMemory
+        # 插件启用但目录未更改，不应添加PathPrompt或GlobalPrompt
         messages = self.mock_agent.message_processor.get_messages()
         memory_count = sum(
-            1 for msg in messages if isinstance(msg, (PathMemory, GlobalMemory))
+            1 for msg in messages if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
         self.assertEqual(memory_count, 0)
 
@@ -135,7 +135,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         """测试插件检测目标文件。"""
         self.mock_agent.context["enable_directory_change_detection"] = True
 
-        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file = Path(self.temp_dir) / "AGENTS.md"
         test_file.write_text("# Test Memory\n\nTest content")
 
         os.chdir(self.temp_dir)
@@ -145,45 +145,45 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
 
         messages = self.mock_agent.message_processor.get_messages()
-        pathmemory_count = sum(1 for msg in messages if isinstance(msg, PathMemory))
-        self.assertEqual(pathmemory_count, 1)
-        pathmemory_msg = next(msg for msg in messages if isinstance(msg, PathMemory))
-        self.assertEqual(pathmemory_msg.filepath.resolve(), test_file.resolve())
+        pathprompt_count = sum(1 for msg in messages if isinstance(msg, PathPrompt))
+        self.assertEqual(pathprompt_count, 1)
+        pathprompt_msg = next(msg for msg in messages if isinstance(msg, PathPrompt))
+        self.assertEqual(pathprompt_msg.filepath.resolve(), test_file.resolve())
 
     def test_plugin_avoids_duplicates(self):
         """测试插件避免重复添加相同路径的消息。"""
         self.mock_agent.context["enable_directory_change_detection"] = True
 
-        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file = Path(self.temp_dir) / "AGENTS.md"
         test_file.write_text("# Test Memory\n\nTest content")
 
         os.chdir(self.temp_dir)
 
-        existing_memory = PathMemory(test_file)
-        self.mock_agent.message_processor.add_new_message(existing_memory)
+        existing_prompt = PathPrompt(test_file)
+        self.mock_agent.message_processor.add_new_message(existing_prompt)
 
         import asyncio
 
         asyncio.run(self.plugin.before_message_generation(True, False))
 
-        pathmemory_count = sum(
+        pathprompt_count = sum(
             1
             for msg in self.mock_agent.message_processor.get_messages()
-            if isinstance(msg, PathMemory)
+            if isinstance(msg, PathPrompt)
         )
-        self.assertEqual(pathmemory_count, 1)
+        self.assertEqual(pathprompt_count, 1)
 
     def test_plugin_handles_global_memory_duplicates(self):
-        """测试插件避免与GlobalMemory重复。"""
+        """测试插件避免与GlobalPrompt重复。"""
         self.mock_agent.context["enable_directory_change_detection"] = True
 
-        test_file = Path(self.temp_dir) / "LINHAI.md"
+        test_file = Path(self.temp_dir) / "AGENTS.md"
         test_file.write_text("# Test Memory\n\nTest content")
 
         os.chdir(self.temp_dir)
 
-        existing_memory = GlobalMemory(test_file)
-        self.mock_agent.message_processor.add_new_message(existing_memory)
+        existing_prompt = GlobalPrompt(test_file)
+        self.mock_agent.message_processor.add_new_message(existing_prompt)
 
         import asyncio
 
@@ -192,7 +192,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         memory_count = sum(
             1
             for msg in self.mock_agent.message_processor.get_messages()
-            if isinstance(msg, (PathMemory, GlobalMemory))
+            if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
         self.assertEqual(memory_count, 1)
 

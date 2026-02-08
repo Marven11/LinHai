@@ -60,7 +60,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         
     async def test_create_pinned_messages_with_planning(self):
         from linhai.agent.create import _create_pinned_messages
-        from linhai.agent.base import RuntimeMessage, GlobalMemory
+        from linhai.agent.base import RuntimeMessage, GlobalPrompt
         from linhai.llm import SystemMessage
         from linhai.llm import UserMessage, AssistantMessage
         
@@ -75,7 +75,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 模拟消息列表
         mock_messages = [
             SystemMessage(group_chat=self.mock_group_chat),
-            GlobalMemory(filepath=Path("/tmp/test_global_memory.md")),
+            GlobalPrompt(filepath=Path("/tmp/test_global_memory.md")),
             RuntimeMessage("User message 1"),
             AssistantMessage(message="Assistant response 1"),
         ]

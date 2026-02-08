@@ -47,7 +47,7 @@ python -m linhai --config ./config.toml
 
 ### 目录更改检测功能
 
-目录更改检测功能可以自动检测当前工作目录的变化，并在检测到特定文件（LINHAI.md, AGENTS.md, CLAUDE.md）时自动将其内容添加到对话中。
+目录更改检测功能可以自动检测当前工作目录的变化，并在检测到特定文件（AGENTS.md, CLAUDE.md）时自动将其内容添加到对话中。
 
 默认情况下此功能是关闭的。要启用它，请在配置文件中添加：
 
@@ -60,7 +60,7 @@ enable_directory_change_detection = true
 
 ## 警告
 
-agent会自动加载当前目录的LINHAI.md, AGENTS.md和CLAUDE.md！
+agent会自动加载当前目录的AGENTS.md和CLAUDE.md！
 
 请不要在危险的文件夹中使用！
 

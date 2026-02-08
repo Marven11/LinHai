@@ -11,8 +11,8 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import (
     FileContentMessage,
     RuntimeMessage,
-    GlobalMemory,
-    PathMemory,
+    GlobalPrompt,
+    PathPrompt,
 )
 from linhai.tool.base import ToolCallResultMessage
 from linhai.group_chat import GroupChat
@@ -424,17 +424,17 @@ class DirectoryChangePlugin(Plugin):
 
         self.last_directory = current_directory
 
-        target_files = ["LINHAI.md", "AGENTS.md", "CLAUDE.md"]
+        target_files = ["AGENTS.md", "CLAUDE.md"]
         for filename in target_files:
             filepath = current_directory / filename
             if filepath.exists():
                 has_duplicate = any(
                     message.filepath.resolve() == filepath.resolve()
                     for message in agent.message_processor.get_messages()
-                    if isinstance(message, (GlobalMemory, PathMemory))
+                    if isinstance(message, (GlobalPrompt, PathPrompt))
                 )
                 if not has_duplicate:
-                    agent.message_processor.add_new_message(PathMemory(filepath))
+                    agent.message_processor.add_new_message(PathPrompt(filepath))
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到before_message_generation回调。"""

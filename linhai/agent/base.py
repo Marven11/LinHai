@@ -1,4 +1,4 @@
-"""Agent基础模块，包含运行时消息和全局记忆类。"""
+"""Agent基础模块，包含运行时消息和全局指导类。"""
 
 import hashlib
 import json
@@ -105,42 +105,42 @@ class RuntimeMessage(Message):
         return cls(message=data["message"])
 
 
-class GlobalMemory:
-    """全局记忆类，用于读取和呈现全局记忆文件内容。"""
+class GlobalPrompt:
+    """全局指导类，用于读取和呈现全局指导文件内容。"""
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
 
     def to_llm_message(self) -> LanguageModelMessage:
         """
-        将全局记忆转换为LLM消息格式。
+        将全局指导转换为LLM消息格式。
 
         返回:
-            LanguageModelMessage: 包含全局记忆内容的系统消息
+            LanguageModelMessage: 包含全局指导内容的系统消息
         """
         try:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<content>>{content}<<content>><<global_memory>>",
+                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<content>>{content}<<content>><<global_prompt>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>文件不存在或已被移动/删除<<error>><<global_memory>>",
+                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>文件不存在或已被移动/删除<<error>><<global_prompt>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "content": "<<global_memory>><<message>>这是全局记忆文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>读取时发生错误: {str(e)}<<error>><<global_memory>>",
+                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>读取时发生错误: {str(e)}<<error>><<global_prompt>>",
             }
 
     def to_json(self) -> str:
         """
-        将全局记忆对象序列化为JSON字符串。
+        将全局指导对象序列化为JSON字符串。
 
         返回:
             str: 包含文件路径的JSON字符串
@@ -153,14 +153,14 @@ class GlobalMemory:
         cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
     ):  # pylint: disable=unused-argument
         """
-        从JSON字符串反序列化全局记忆对象。
+        从JSON字符串反序列化全局指导对象。
 
         参数:
             json_str: JSON格式的字符串
             group_chat: GroupChat实例（未使用，但为接口兼容性保留）
 
         返回:
-            GlobalMemory: 反序列化的全局记忆对象
+            GlobalPrompt: 反序列化的全局指导对象
         """
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))
@@ -225,39 +225,39 @@ class ChecklistMessage:
         return cls(filepath=Path(data["filepath"]))
 
 
-class PathMemory:
-    """路径记忆类，用于检测和呈现特定路径的文件内容。"""
+class PathPrompt:
+    """路径指导类，用于检测和呈现特定路径的文件内容。"""
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
 
     def to_llm_message(self) -> LanguageModelMessage:
         """
-        将路径记忆转换为LLM消息格式。
+        将路径指导转换为LLM消息格式。
 
         返回:
-            LanguageModelMessage: 包含路径记忆内容的系统消息
+            LanguageModelMessage: 包含路径指导内容的系统消息
         """
         try:
             content = self.filepath.read_text()
             return {
                 "role": "user",
-                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_memory>>",
+                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_prompt>>",
             }
         except FileNotFoundError:
             return {
                 "role": "user",
-                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_memory>>",
+                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_prompt>>",
             }
         except (IOError, OSError) as e:
             return {
                 "role": "user",
-                "content": f"<<path_memory>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_memory>>",
+                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_prompt>>",
             }
 
     def to_json(self) -> str:
         """
-        将路径记忆对象序列化为JSON字符串。
+        将路径指导对象序列化为JSON字符串。
 
         返回:
             str: 包含文件路径的JSON字符串
@@ -270,14 +270,14 @@ class PathMemory:
         cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
     ):  # pylint: disable=unused-argument
         """
-        从JSON字符串反序列化路径记忆对象。
+        从JSON字符串反序列化路径指导对象。
 
         参数:
             json_str: JSON格式的字符串
             group_chat: GroupChat实例（未使用，但为接口兼容性保留）
 
         返回:
-            PathMemory: 反序列化的路径记忆对象
+            PathPrompt: 反序列化的路径指导对象
         """
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))

@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Dict, List, Union
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import (
-    GlobalMemory,
-    PathMemory,
+    GlobalPrompt,
+    PathPrompt,
     FileContentMessage,
     RuntimeMessage,
     WAITING_USER_MARKER,

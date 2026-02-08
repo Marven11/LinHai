@@ -39,7 +39,7 @@ class TestPlanningPromptMessage(unittest.TestCase):
         self.assertIn(str(self.test_folder / "STATUS.md"), content)
         self.assertIn(str(self.test_folder / "TODOLIST.md"), content)
         self.assertIn(str(self.test_folder / "DESIGN.md"), content)
-        # 应该包含全局记忆文件夹占位符
+        # 应该包含全局指导文件夹占位符
         # 占位符应该在PLANNING_MODE_PROMPT中被替换
         # 所以不应该在content中找到原始占位符
         # 但应该包含实际的文件夹路径

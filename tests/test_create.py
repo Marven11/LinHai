@@ -267,7 +267,7 @@ class TestCreateToolManager(unittest.TestCase):
 class TestCreatePinnedMessages(unittest.TestCase):
     """测试初始化消息创建功能"""
 
-    @patch("linhai.agent.create.GlobalMemory")
+    @patch("linhai.agent.create.GlobalPrompt")
     @patch("linhai.agent.create.SystemMessage")
     @patch("linhai.agent.create.Path")
     def test_create_pinned_messages(

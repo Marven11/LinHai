@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from linhai.type_hints import LanguageModelMessage
 from reprlib import Repr
 import linhai
-from .base import RuntimeMessage, MessagesListSummerizeMessage, GlobalMemory
+from .base import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
 from linhai.llm import (
     AssistantMessage,
@@ -163,7 +163,7 @@ async def context_forget_range_step1(
 
     max_system_index = -1
     for i, msg in enumerate(agent.message_processor.messages):
-        if isinstance(msg, (SystemMessage, GlobalMemory)):
+        if isinstance(msg, (SystemMessage, GlobalPrompt)):
             max_system_index = i
     min_safe_id = 0 if max_system_index == -1 else max_system_index + 1
 
