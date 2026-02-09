@@ -65,7 +65,6 @@ unittest 失败时，必须分析
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
 - [ ] 添加初始化配置的功能
 - [ ] 重构ssh_host.py，抽离通过ssh创建trojan.py进程的功能和通过trojan.py操控目标机器的功能，以帮助未来添加docker容器控制等功能
-- [ ] 重构ssh_host.py的_read_responses，在发现读取失败时立即退出并标记当前连接为失效，当前的以及之后调用这个对象都只返回连接失效
   - TODO 需要仔细规划
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
