@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Optional
 import random
 
 
@@ -56,6 +56,24 @@ class TokenParser:
         self.state: Literal["normal", "toolcall", "reasoning"] = "normal"
         self.gatherer = GatherLine()
 
+    def handle_piece(self, piece: str, eof: bool) -> Optional[ParsedToken]:
+        if self.state == "reasoning":
+            return ParsedToken(token_type="reasoning", content=piece)
+        elif self.state == "normal":
+            if piece == "```json toolcall\n":
+                self.state = "toolcall"
+                return None
+            else:
+                return ParsedToken(token_type="normal", content=piece)
+        elif self.state == "toolcall":
+            if piece == "```\n" or (eof and piece == "```"):
+                self.state = "normal"
+                return None
+            else:
+                return ParsedToken(token_type="toolcall", content=piece)
+        else:
+            assert False
+
     def receive_token(self, token: str, is_reasoning: bool):
         parsed: list[ParsedToken] = []
 
@@ -68,26 +86,16 @@ class TokenParser:
             self.state = "normal" if self.state == "reasoning" else "reasoning"
 
         for piece in self.gatherer.parse_token(token):
-            if self.state == "reasoning":
-                parsed.append(ParsedToken(token_type="reasoning", content=piece))
-            elif self.state == "normal":
-                if piece == "```json toolcall\n":
-                    self.state = "toolcall"
-                else:
-                    parsed.append(ParsedToken(token_type="normal", content=piece))
-            elif self.state == "toolcall":
-                if piece == "```\n":
-                    self.state = "normal"
-                else:
-                    parsed.append(ParsedToken(token_type="toolcall", content=piece))
-
+            if parsed_token := self.handle_piece(piece, False):
+                parsed.append(parsed_token)
+    
         return parsed
 
     def clear(self):
         parsed: list[ParsedToken] = []
-        remains = self.gatherer.clear()
-        if remains:
-            parsed.append(ParsedToken(token_type=self.state, content=remains))
+        if remains := self.gatherer.clear():
+            if token := self.handle_piece(remains, True):
+                parsed.append(token)
         return parsed
 
 

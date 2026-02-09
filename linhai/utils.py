@@ -1,5 +1,8 @@
 from typing import Literal
 import secrets
+import json
+import re
+import os
 from pydantic import BaseModel
 
 
@@ -21,3 +24,54 @@ def generate_id(prefix: str) -> str:
     """
     bytes_part = secrets.token_hex(6)
     return f"{prefix}_{bytes_part}"
+
+
+def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
+    if isinstance(value, str):
+        if re.match(r"^[/~]|^[a-zA-Z]:\\|^(\./|\.\./)", value) and len(value) >= 20:
+            filename = os.path.basename(value)
+            return json.dumps(".../" + filename)
+        if len(value) > 40:
+            return json.dumps(value[:37] + "...")
+        return json.dumps(value)
+    if isinstance(value, (int, float, bool)) or value is None:
+        return json.dumps(value)
+    if isinstance(value, dict):
+        items = []
+        for k, v in value.items():
+            simplified_v = simplify_value(v)
+            items.append(f'{json.dumps(k)}: {simplified_v}')
+        if not items:
+            return "{}"
+        result = "{" + ", ".join(items) + "}"
+        if len(result) > 80:
+            return "{" + items[0] + ", ...}"
+        return result
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        items = [simplify_value(v) for v in value]
+        result = "[" + ", ".join(items) + "]"
+        if len(result) > 80:
+            return "[" + items[0] + ", ...]"
+        return result
+    return json.dumps(value)
+
+
+def simplify_toolcall_json(toolcall_json: dict) -> str:
+    name = toolcall_json.get("name", "")
+
+    arguments = toolcall_json.get("arguments", {})
+    simplified_args = []
+    for k, v in arguments.items():
+        simplified_args.append(f"{k}={simplify_value(v)}")
+
+    return f"{name}({', '.join(simplified_args)})"
+
+
+def parse_and_simplify_toolcall(json_str: str) -> str:
+    try:
+        toolcall_json = json.loads(json_str.strip())
+        return simplify_toolcall_json(toolcall_json)
+    except json.JSONDecodeError:
+        return "<parse json error>"

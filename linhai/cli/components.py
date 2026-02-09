@@ -18,6 +18,7 @@ from textual.widgets import Static
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from typing import TypedDict
 from linhai.parsed_message import Segment, ParsedAnswer
+from linhai.utils import parse_and_simplify_toolcall
 
 
 REFRESH_INTERVAL = 0.05
@@ -316,6 +317,11 @@ class ToolCallWidget(Static):
         border-title-color: red;
         border-left: heavy red;
     }
+    
+    ToolCallWidget.collapsed {
+        text-overflow: ellipsis;
+        text-wrap: nowrap;
+    }
     """
 
     def __init__(self, theme: str, segment: Segment):
@@ -334,6 +340,8 @@ class ToolCallWidget(Static):
         self.current_value = ""
         self.has_error = False
         self.error_message = ""
+        self.is_collapsed = False
+        self.collapse_timer: Timer | None = None
 
         self.border_title = "tool call"
 
@@ -358,6 +366,7 @@ class ToolCallWidget(Static):
 
         if self._segment["is_finished"] and self.timer:
             self.timer.stop()
+            self._start_collapse_timer()
 
         segment_content = self._segment["content"]
         if segment_content != self.json_str:
@@ -445,6 +454,59 @@ class ToolCallWidget(Static):
             return "http"
 
         return ""
+
+    def _collapse(self) -> None:
+        """折叠widget，显示简化内容"""
+        if self.is_collapsed:
+            return
+
+        self.is_collapsed = True
+        self.add_class("collapsed")
+        self.border_title = "tool call [点击展开]"
+        simplified = "<bad toolcall>"
+        if not self.has_error:
+            simplified = parse_and_simplify_toolcall(self.json_str)
+        self.update(
+            Syntax(
+                simplified,
+                lexer="python",
+                theme=self.theme,
+                background_color="#2E3440",
+                word_wrap=True,
+            )
+        )
+
+    def _expand(self) -> None:
+        """展开widget，显示完整内容"""
+        if not self.is_collapsed:
+            return
+
+        self.is_collapsed = False
+        self.remove_class("collapsed")
+        self.border_title = "tool call [点击隐藏]"
+
+        self.update(
+            Syntax(
+                self.current_content.strip(),
+                lexer="markdown",
+                theme=self.theme,
+                background_color="#2E3440",
+                word_wrap=True,
+            )
+        )
+
+    def _start_collapse_timer(self) -> None:
+        if self.collapse_timer:
+            self.collapse_timer.stop()
+
+        self.collapse_timer = self.set_timer(0.2, self._collapse)
+
+    def on_click(self) -> None:
+        """点击事件，切换折叠状态"""
+        if self.is_collapsed:
+            self._expand()
+        else:
+            self._collapse()
 
 
 class ReasoningContentWidget(Static):
