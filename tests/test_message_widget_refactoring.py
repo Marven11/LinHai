@@ -2,7 +2,7 @@
 
 import unittest
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 from textual.app import App
 from linhai.cli.app import CLIApp
 from linhai.group_chat import GroupChat
@@ -39,7 +39,23 @@ class MockAnswer(Answer):
             raise StopAsyncIteration
 
     def get_message(self):
-        return None
+        # 返回一个真实的AssistantMessage对象，可以被JSON序列化
+        from linhai.llm import AssistantMessage
+        # 使用MockAnswer中累积的内容创建消息
+        # MockAnswer的tokens在__init__中设置，但测试中可能没有累积内容
+        # 为了简单，返回一个包含测试内容的AssistantMessage
+        content = ""
+        for token in self.tokens:
+            if token.content:
+                content += token.content
+        reasoning_content = ""
+        for token in self.tokens:
+            if token.reasoning_content:
+                reasoning_content += token.reasoning_content
+        return AssistantMessage(
+            message=content if content else "模拟的助手消息",
+            reasoning_message=reasoning_content if reasoning_content else None
+        )
 
     def get_reasoning_message(self) -> str | None:
         return None
@@ -81,18 +97,21 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("."),
         )
 
-        MCPConnector(self.group_chat)
+
+
+        mock_llm = AsyncMock()
+        mock_llm.get_name = MagicMock(return_value="test_llm")
+        # 设置 answer_stream 为异步 mock，返回一个简单的 Answer mock 以避免 await 错误
+        mock_answer = MockAnswer([])
+        mock_llm.answer_stream = AsyncMock(return_value=mock_answer)
 
         context = {
-            "llms": [MagicMock()],
+            "llms": [mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
             "system_message": "test",
             "compress_threshold": 0.8,
         }
-
-        mock_llm = context["llms"][0]
-        mock_llm.get_name = MagicMock(return_value="test_llm")
 
         self.agent = Agent(
             llms=context["llms"],
@@ -107,7 +126,14 @@ class TestMessageWidgetIntegration(unittest.IsolatedAsyncioTestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
         mock_cli_args.file = None
+        mock_cli_args.afk = False
         self.group_chat.register_member("cli_args", mock_cli_args)
+
+        # 注册conversation_folder以避免运行时错误
+        import tempfile
+        from pathlib import Path
+        conversation_folder = Path(tempfile.mkdtemp())
+        self.group_chat.register_member("conversation_folder", conversation_folder)
 
         self.app = CLIApp(self.group_chat, self.cli_config)
 
