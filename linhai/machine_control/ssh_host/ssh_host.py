@@ -48,6 +48,7 @@ class SshMachineControl:
         self.stderr = None
         self.results: Dict[str, Optional[JsonRpcResponse]] = {}
         self.reader_task: Optional[asyncio.Task] = None
+        self._connection_valid = True
 
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
         """检查远程机器上的Python版本。"""
@@ -266,6 +267,9 @@ class SshMachineControl:
     async def _send_request(
         self, method: str, params: Dict[str, object]
     ) -> JsonRpcResponse:
+        if not self._connection_valid:
+            raise ConnectionError("连接已失效")
+        
         request_id = uuid.uuid4().hex
         request = {
             "jsonrpc": "2.0",
@@ -284,6 +288,8 @@ class SshMachineControl:
 
         async def wait_for_response() -> JsonRpcResponse:
             while self.results[request_id] is None:
+                if not self._connection_valid:
+                    raise ConnectionError("连接已失效")
                 await asyncio.sleep(0.01)
             result = self.results.pop(request_id)
             if result is None:
@@ -304,7 +310,11 @@ class SshMachineControl:
         Returns:
             工具执行结果
         """
-        response = await self._send_request(name, args)
+        try:
+            response = await self._send_request(name, args)
+        except ConnectionError as e:
+            self._connection_valid = False
+            return ToolResultFailed(content=f"连接已失效: {e}")
         if "error" in response:
             error_content = response["error"]
             if isinstance(error_content, dict) and "message" in error_content:
@@ -322,12 +332,15 @@ class SshMachineControl:
 
     async def _read_responses(self) -> None:
         while True:
+            if not self._connection_valid:
+                break
             if self.stdout is None:
                 await asyncio.sleep(0.1)
                 continue
             try:
                 line = await self.stdout.readline()
                 if not line:
+                    self._connection_valid = False
                     break
                 response = cast(JsonRpcResponse, json.loads(line.decode()))
                 response_id = response.get("id")
@@ -343,7 +356,8 @@ class SshMachineControl:
                         content=f"读取响应时出错: {e}",
                     ),
                 )
-                continue
+                self._connection_valid = False
+                break
 
     async def close(self):
         if self.reader_task:
