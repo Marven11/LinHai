@@ -102,28 +102,6 @@ unittest 失败时，必须分析
   - 问题：插件根本不应该手动修复模型的输出，仅应该在模型输出错误时提醒
   - 修复：仅在发现ABNORMAL_MARKER时提醒，同时修改对应unittest
   - 唯一完成条件：全部unittest通过
-- [ ] 让PlanningStatusReminderPlugin在上下文红灯时不增加计数，并暂时移除notification
-  - 问题：在上下文红灯时agent应该使用清理工具而非继续更新任务状态
-  - 问题：PlanningStatusReminderPlugin包含大量5行以内的辅助函数，基本无用
-  - 重构并清理代码，分成三步
-    1. 检查：当前消息是否修改对应.md文件，当前是否属于红灯状态
-    2. 计数：根据上一步得到的状态更新计数器
-    3. 更新：根据计数器状态和检查结果更新消息。
-  - 添加测试
-    - 当处于红灯但是连续x次没有更新.md达到限制，计数器不增加，暂时移除notification
-    - 当脱离红灯但是没有更新.md，计数器增加，重新添加notification
-    - 当未处于红灯且连续x次没有更新.md达到限制，计数器增加，添加notification
-  - 最终完成条件
-    - PlanningStatusReminderPlugin完全按照以上重构修改
-    - 添加以上新测试
-    - 所有测试通过
-- [ ] 让compoments.py移除空的NormalContentWidget和其后的SpaceWidget
-  - 问题：模型会在工具输出之间留下空行，导致segment在finished之后仍然为空或者只有空白字符
-  - 解决
-    - 让MessageWidget在添加一个新widget时检查上一个widget是否为空，如果是则移除
-    - 问题：移除后原widget仍然会更新自己，导致崩溃，需要先停止其的timer再移除
-    - 移除后最末尾已经是SpaceWidget，跳过重新添加
-  - 最终完成条件：所有测试通过
 
 # 注意
 
