@@ -117,6 +117,10 @@ unittest 失败时，必须分析
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
 - [ ] 当前linhai/cli的app.py等手动创建协程Task，这不合适，需要改成`@work(exclusive=False)`
   - （重新）在linhai/cli中搜索asyncio.create_task，然后修改，规划修改完成后重新检查
+- [ ] VolcanoDeepseekFixPlugin尝试手动清理标记，这不合适
+  - 问题：插件根本不应该手动修复模型的输出，仅应该在模型输出错误时提醒
+  - 修复：仅在发现ABNORMAL_MARKER时提醒，同时修改对应unittest
+  - 唯一完成条件：全部unittest通过
 
 # 注意
 

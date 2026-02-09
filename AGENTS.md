@@ -1,5 +1,6 @@
 - 你的源码文件就在这个文件夹的`./linhai`文件夹中
 - 不要使用pytest，使用Python的unittest模块来运行测试
+- 在做最后检查时，**至少**运行所有unittest，必须看到有至少五六百个unittest成功运行后才可以暂停报告
 - 在测试代码实现时，可以在终端中使用命令：`uv run python -m linhai --config ./config.toml -m '<message>'`
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框
