@@ -194,13 +194,6 @@ class ToolManager:
                         content=f"工具执行失败: {tool_call.function_name}",
                     ),
                 )
-            else:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO", content=f"工具执行成功: {tool_call.function_name}"
-                    ),
-                )
 
             if isinstance(result, Awaitable):
                 result = await result
