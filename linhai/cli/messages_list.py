@@ -5,7 +5,7 @@ from typing import List, Optional, Union
 
 from textual.containers import VerticalScroll
 from textual.widgets import Static
-from textual import events
+from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
 from linhai.group_chat import GroupChat
@@ -40,11 +40,11 @@ class MessagesList(VerticalScroll):
         self.group_chat = group_chat
         self.cli_config = cli_config
         self.theme = theme
-        self.messages: List[Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]] = []
+        self.messages: List[
+            Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]
+        ] = []
         self.current_message_generation_widget: Optional[MessageGenerationWidget] = None
         self.is_user_scroll_to_end = True
-        self.auto_scroll_timer_task: Optional[asyncio.Task] = None
-        self.output_watcher_task: Optional[asyncio.Task] = None
 
         self.group_chat.register_queue("parsed_agent_answer")
         self.group_chat.register_queue("ui_log")
@@ -53,8 +53,9 @@ class MessagesList(VerticalScroll):
 
     async def start_listening(self):
         """启动监听队列的任务."""
-        self.output_watcher_task = asyncio.create_task(self.watch_output_queue())
-        self.auto_scroll_timer_task = asyncio.create_task(self._auto_scroll_timer())
+        self.watch_parsed_agent_answer_queue()
+        self.watch_ui_log_queue()
+        self._auto_scroll_timer()
 
     async def add_initial_messages(self, init_messages: List[str]):
         """添加初始消息."""
@@ -95,6 +96,7 @@ class MessagesList(VerticalScroll):
         self.is_user_scroll_to_end = True
         self.scroll_end(animate=False)
 
+    @work(exclusive=False)
     async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
         agent = self.group_chat.get_members("agent", Agent)
         llm_name, _llm = agent.get_current_llm_info()
@@ -118,16 +120,18 @@ class MessagesList(VerticalScroll):
         if self.should_auto_scroll():
             self.scroll_end(animate=False)
 
+    @work(exclusive=False)
     async def watch_parsed_agent_answer_queue(self) -> None:
         while True:
             output = await self.group_chat.receive("parsed_agent_answer")
             if isinstance(output, ParsedAnswer):
-                asyncio.create_task(self._handle_single_parsed_answer(output))
+                self._handle_single_parsed_answer(output)
             else:
                 raise RuntimeError(
                     f"Unknown Type in parsed_agent_answer: {type(output)=} {output=}"
                 )
 
+    @work(exclusive=False)
     async def watch_ui_log_queue(self) -> None:
         while True:
             output = await self.group_chat.receive("ui_log")
@@ -145,35 +149,7 @@ class MessagesList(VerticalScroll):
             else:
                 raise RuntimeError(f"Unknown Type in ui_log: {type(output)=} {output=}")
 
-
-    async def watch_output_queue(self) -> None:
-        parsed_answer_task = asyncio.create_task(self.watch_parsed_agent_answer_queue())
-        ui_log_task = asyncio.create_task(self.watch_ui_log_queue())
-
-        done, pending = await asyncio.wait(
-            [
-                parsed_answer_task,
-                ui_log_task,
-            ],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        for task in pending:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        for task in done:
-            if task.exception():
-                exception = task.exception()
-                raise (
-                    exception
-                    if exception
-                    else Exception("Task failed without exception")
-                )
-
+    @work(exclusive=False)
     async def _auto_scroll_timer(self):
         while True:
             await asyncio.sleep(0.1)
@@ -181,10 +157,7 @@ class MessagesList(VerticalScroll):
                 self.scroll_end(animate=False)
 
     def should_auto_scroll(self) -> bool:
-        return (
-            self.is_user_scroll_to_end
-            and self.scroll_y >= self.max_scroll_y - 7
-        )
+        return self.is_user_scroll_to_end and self.scroll_y >= self.max_scroll_y - 7
 
     def on_mouse_scroll_down(self, _event: events.MouseScrollDown) -> None:
         self.is_user_scroll_to_end = self.is_vertical_scroll_end
@@ -205,7 +178,4 @@ class MessagesList(VerticalScroll):
 
     async def cleanup(self):
         """清理任务."""
-        if self.output_watcher_task:
-            self.output_watcher_task.cancel()
-        if self.auto_scroll_timer_task:
-            self.auto_scroll_timer_task.cancel()
+        pass

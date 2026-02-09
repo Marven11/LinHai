@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Union
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static, TabbedContent, TabPane, Input
-from textual import events
+from textual import events, work
 from textual_autocomplete import AutoComplete, DropdownItem
 
 from linhai.agent import Agent, Lifecycle
@@ -110,10 +110,6 @@ class CLIApp(App):
             ]
 
         self.current_response_buffer = ""
-        self.output_watcher_task: Optional[asyncio.Task] = None
-        self.agent_task: Optional[asyncio.Task] = None
-        self.exit_signal_task: Optional[asyncio.Task] = None
-        self.token_usage_task: Optional[asyncio.Task] = None
 
         self.token_manager = TokenManager(group_chat)
 
@@ -129,8 +125,8 @@ class CLIApp(App):
     def postinit(self):
         lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
-        self.exit_signal_task = asyncio.create_task(self.watch_exit_signal_queue())
-        self.token_usage_task = asyncio.create_task(self.watch_token_usage_queue())
+        self.watch_exit_signal_queue()
+        self.watch_token_usage_queue()
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -170,6 +166,7 @@ class CLIApp(App):
             self.token_manager.current_token_usage = None
             self.update_token_display(token_usage.total_tokens)
 
+    @work(exclusive=False)
     async def watch_exit_signal_queue(self) -> None:
         """监听exit_signal队列并处理退出信号"""
         while True:
@@ -184,6 +181,7 @@ class CLIApp(App):
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
                 )
 
+    @work(exclusive=False)
     async def watch_token_usage_queue(self) -> None:
         """监听token_usage队列并处理token使用信息"""
         while True:
@@ -194,6 +192,11 @@ class CLIApp(App):
                 raise RuntimeError(
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
                 )
+
+    @work(exclusive=False)
+    async def _run_agent(self) -> None:
+        agent = self.group_chat.get_members("agent", Agent)
+        await agent.run()
 
     def _generate_dynamic_completions(self) -> list[str]:
         """动态生成@补全列表"""
@@ -234,9 +237,7 @@ class CLIApp(App):
             animated_welcome.add_class("welcome-message")
             self.messages_list.mount(animated_welcome)
 
-        self.agent_task = asyncio.create_task(
-            self.group_chat.get_members("agent", Agent).run()
-        )
+        self._run_agent()
 
         input_element = self.query_one("#input", Input)
 
@@ -282,12 +283,7 @@ class CLIApp(App):
     async def on_unmount(self) -> None:
         if hasattr(self, "messages_list"):
             await self.messages_list.cleanup()
-        if self.agent_task:
-            self.agent_task.cancel()
-        if self.exit_signal_task:
-            self.exit_signal_task.cancel()
-        if self.token_usage_task:
-            self.token_usage_task.cancel()
+
         close_all_terminals()
 
     def update_token_display(self, current_answer_token: int) -> None:
@@ -297,12 +293,6 @@ class CLIApp(App):
 
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
-        if self.output_watcher_task and self.output_watcher_task.done():
-            await self.output_watcher_task
-            raise RuntimeError("Output watcher task is dead!")
-        if self.agent_task and self.agent_task.done():
-            await self.agent_task
-            raise RuntimeError("Agent task is dead!")
 
         if event.key == "ctrl+enter" or event.key == "enter":
             await self._handle_message_submission()
