@@ -1,7 +1,8 @@
 """Secret management module for LinHai agent."""
 
 import re
-from typing import Any, TypedDict, Literal, Union
+from typing import TypedDict, Literal, Union, TypeVar, cast, TYPE_CHECKING
+
 import tomllib
 from pathlib import Path
 
@@ -11,12 +12,15 @@ from .agent.conversation import save_secret_intercepted
 from .llm import Message
 from .agent.lifecycle import Lifecycle
 from .tool.base import ToolResultSuccess, ToolResultFailed
-import time
+
+if TYPE_CHECKING:
+    from .group_chat import GroupChat
 
 
 class SecretInfo(TypedDict):
     value: str
     description: str
+    disabled_in_toolcall_argument: bool
 
 
 def load_secrets_from_config(
@@ -58,9 +62,15 @@ def load_secrets_from_config(
                 "and must not start with a digit"
             )
 
+        disabled = value.get("disabled_in_toolcall_argument", False)
+        if not isinstance(disabled, bool):
+            raise ConfigValidationError(
+                f"Secret '{key}' field 'disabled_in_toolcall_argument' must be boolean"
+            )
         result[key] = SecretInfo(
             value=str(value["value"]),
             description=str(value["description"]),
+            disabled_in_toolcall_argument=disabled,
         )
 
     return result
@@ -73,39 +83,47 @@ def filter_secrets_by_keys(
     replace_map: dict[str, str] = {}
     for key in secret_keys:
         if key in secrets_dict:
-            secret_value = secrets_dict[key]["value"]
+            secret_info = secrets_dict[key]
+            if secret_info["disabled_in_toolcall_argument"]:
+                continue
+            secret_value = secret_info["value"]
             replace_map[f"<${key}$>"] = secret_value
     return replace_map
 
 
-def recursive_string_replace(obj: object, replace_map: dict[str, str]) -> object:
+T = TypeVar("T")
+
+
+def recursive_string_replace(obj: T, replace_map: dict[str, str]) -> T:
     """递归替换字符串、字典或列表中的模式，用于secret值的替换和掩码。"""
     if isinstance(obj, str):
         result = obj
         for pattern, replacement in replace_map.items():
             result = result.replace(pattern, replacement)
-        return result
+        return cast(T, result)
 
     elif isinstance(obj, dict):
-        return {k: recursive_string_replace(v, replace_map) for k, v in obj.items()}
+        return cast(
+            T, {k: recursive_string_replace(v, replace_map) for k, v in obj.items()}
+        )
 
     elif isinstance(obj, list):
-        return [recursive_string_replace(item, replace_map) for item in obj]
+        return cast(T, [recursive_string_replace(item, replace_map) for item in obj])
 
     else:
         return obj
 
 
 def replace_secrets_in_object(
-    obj: Any, secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
-) -> Any:
+    obj: T, secrets_dict: dict[str, SecretInfo], secret_keys: list[str]
+) -> T:
     replace_map = filter_secrets_by_keys(secrets_dict, secret_keys)
     return recursive_string_replace(obj, replace_map)
 
 
 def mask_secrets_in_object(
-    obj: Any, secrets_dict: dict[str, SecretInfo], with_secret: list[str]
-) -> Any:
+    obj: T, secrets_dict: dict[str, SecretInfo], with_secret: list[str]
+) -> T:
     replace_map: dict[str, str] = {}
     for key in with_secret:
         if key in secrets_dict:
@@ -126,12 +144,15 @@ def get_available_secrets_message(secrets_dict: dict[str, SecretInfo]) -> str:
     items = []
     for key, secret_info in secrets_dict.items():
         description = secret_info["description"]
-        items.append(f"<${key}$> - {description}")
+        disabled = secret_info["disabled_in_toolcall_argument"]
+        items.append(
+            f"<${key}$> - {description} (disabled_in_toolcall_argument={disabled})"
+        )
 
     return "当前可用secret键: " + "; ".join(items)
 
 
-def contains_any_secret(obj: Any, secrets_dict: dict[str, SecretInfo]) -> bool:
+def contains_any_secret(obj: object, secrets_dict: dict[str, SecretInfo]) -> bool:
     secret_values = {secret_info["value"] for secret_info in secrets_dict.values()}
 
     if isinstance(obj, str):
@@ -157,7 +178,7 @@ def contains_any_secret(obj: Any, secrets_dict: dict[str, SecretInfo]) -> bool:
 
 
 class SecretInterceptorPlugin:
-    def __init__(self, group_chat, secrets_dict: dict[str, SecretInfo]):
+    def __init__(self, group_chat: "GroupChat", secrets_dict: dict[str, SecretInfo]):
         self.group_chat = group_chat
         self.secrets_dict = secrets_dict
 
@@ -214,6 +235,7 @@ class SecretInterceptorPlugin:
         toolcall_arguments: dict,
         with_secret: list[str] | None,
     ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+        _ = tool_name  # unused parameter
         if with_secret is None:
             return None
 
@@ -227,6 +249,9 @@ class SecretInterceptorPlugin:
             cleaned_keys.append(cleaned_key)
             if cleaned_key not in self.secrets_dict:
                 raise KeyError(f"Secret键 '{key}' 未找到")
+            secret_info = self.secrets_dict[cleaned_key]
+            if secret_info["disabled_in_toolcall_argument"]:
+                raise KeyError(f"Secret键 '{key}' 被禁止在工具调用参数中使用")
 
         return replace_secrets_in_object(
             toolcall_arguments, self.secrets_dict, cleaned_keys
@@ -238,8 +263,8 @@ class SecretInterceptorPlugin:
 
 
 def initialize_secret_system(
-    group_chat, secret_config_path: str, config_basedir: str | Path
-):
+    group_chat: "GroupChat", secret_config_path: str, config_basedir: str | Path
+) -> SecretInterceptorPlugin:
     from linhai.llm import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
 
@@ -271,8 +296,6 @@ def initialize_secret_system(
         group_chat.add_postinit(add_secret_rule)
 
     def register_plugin_to_lifecycle():
-        from linhai.agent.lifecycle import Lifecycle
-
         lifecycle = group_chat.get_members("lifecycle", Lifecycle)
         secret_plugin.register(lifecycle)
 

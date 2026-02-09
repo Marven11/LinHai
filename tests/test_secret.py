@@ -50,6 +50,49 @@ SSH_PASSWORD = { value = "testpassword", description = "SSH私钥密码" }
             secrets_dict["OPENAI_API_TOKEN"]["description"],
             "OpenAI API token for testing",
         )
+        # 测试disabled_in_toolcall_argument字段，默认为False
+        self.assertEqual(
+            secrets_dict["OPENAI_API_TOKEN"]["disabled_in_toolcall_argument"], False
+        )
+        self.assertEqual(
+            secrets_dict["DEEPSEEK_API_KEY"]["disabled_in_toolcall_argument"], False
+        )
+        self.assertEqual(
+            secrets_dict["SSH_PASSWORD"]["disabled_in_toolcall_argument"], False
+        )
+
+    def test_load_secrets_with_disabled_in_toolcall_argument(self):
+        """测试加载包含disabled_in_toolcall_argument字段的secret配置"""
+        # 创建新的TOML文件包含disabled_in_toolcall_argument字段
+        secret_content = """[secrets]
+SECRET1 = { value = "val1", description = "desc1", disabled_in_toolcall_argument = false }
+SECRET2 = { value = "val2", description = "desc2", disabled_in_toolcall_argument = true }
+"""
+        secret_file2 = Path(self.temp_dir) / "test_secret2.toml"
+        secret_file2.write_text(secret_content)
+
+        secrets_dict = load_secrets_from_config(
+            str(secret_file2), base_dir=Path(self.temp_dir)
+        )
+
+        self.assertIn("SECRET1", secrets_dict)
+        self.assertIn("SECRET2", secrets_dict)
+        self.assertEqual(
+            secrets_dict["SECRET1"]["disabled_in_toolcall_argument"], False
+        )
+        self.assertEqual(secrets_dict["SECRET2"]["disabled_in_toolcall_argument"], True)
+        # 测试缺失字段时默认为False
+        secret_content3 = """[secrets]
+SECRET3 = { value = "val3", description = "desc3" }
+"""
+        secret_file3 = Path(self.temp_dir) / "test_secret3.toml"
+        secret_file3.write_text(secret_content3)
+        secrets_dict3 = load_secrets_from_config(
+            str(secret_file3), base_dir=Path(self.temp_dir)
+        )
+        self.assertEqual(
+            secrets_dict3["SECRET3"]["disabled_in_toolcall_argument"], False
+        )
 
     def test_load_secrets_from_config_with_base_dir(self):
         """测试基于base_dir加载secret配置"""
@@ -105,8 +148,16 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_replace_secrets_in_string(self):
         """测试替换字符串中的secret键"""
         secrets_dict: dict[str, SecretInfo] = {
-            "OPENAI_API_TOKEN": {"value": "sk-real-key", "description": ""},
-            "DEEPSEEK_API_KEY": {"value": "sk-deepseek", "description": ""},
+            "OPENAI_API_TOKEN": {
+                "value": "sk-real-key",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+            "DEEPSEEK_API_KEY": {
+                "value": "sk-deepseek",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
 
         # 测试基本替换
@@ -137,7 +188,11 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_replace_secrets_in_dict(self):
         """测试替换字典中的secret键"""
         secrets_dict: dict[str, SecretInfo] = {
-            "API_KEY": {"value": "sk-123", "description": ""},
+            "API_KEY": {
+                "value": "sk-123",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
 
         input_dict = {
@@ -158,7 +213,11 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_replace_secrets_in_list(self):
         """测试替换列表中的secret键"""
         secrets_dict: dict[str, SecretInfo] = {
-            "KEY": {"value": "secret-value", "description": ""},
+            "KEY": {
+                "value": "secret-value",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
 
         input_list = [
@@ -178,8 +237,16 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_mask_secrets_in_string(self):
         """测试掩码字符串中的secret值"""
         secrets_dict: dict[str, SecretInfo] = {
-            "API_KEY": {"value": "sk-123", "description": ""},
-            "PASSWORD": {"value": "pass123", "description": ""},
+            "API_KEY": {
+                "value": "sk-123",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+            "PASSWORD": {
+                "value": "pass123",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
 
         # 测试基本掩码
@@ -202,7 +269,11 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_mask_secrets_in_nested_structures(self):
         """测试掩码嵌套结构中的secret值"""
         secrets_dict: dict[str, SecretInfo] = {
-            "SECRET": {"value": "secret123", "description": ""},
+            "SECRET": {
+                "value": "secret123",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
 
         input_dict = {
@@ -223,14 +294,41 @@ TEST_KEY = { value = "test-value", description = "Test key" }
     def test_get_available_secrets_message(self):
         """测试生成可用secret消息"""
         secrets_dict: dict[str, SecretInfo] = {
-            "OPENAI_API_TOKEN": {"value": "sk-123", "description": "OpenAI API token"},
-            "SSH_PASSWORD": {"value": "pass123", "description": "SSH私钥密码"},
+            "OPENAI_API_TOKEN": {
+                "value": "sk-123",
+                "description": "OpenAI API token",
+                "disabled_in_toolcall_argument": False,
+            },
+            "SSH_PASSWORD": {
+                "value": "pass123",
+                "description": "SSH私钥密码",
+                "disabled_in_toolcall_argument": False,
+            },
         }
-
         message = get_available_secrets_message(secrets_dict)
-        expected = "当前可用secret键: <$OPENAI_API_TOKEN$> - OpenAI API token; <$SSH_PASSWORD$> - SSH私钥密码"
+        expected = "当前可用secret键: <$OPENAI_API_TOKEN$> - OpenAI API token (disabled_in_toolcall_argument=False); <$SSH_PASSWORD$> - SSH私钥密码 (disabled_in_toolcall_argument=False)"
         self.assertEqual(message, expected)
 
+    def test_get_available_secrets_message_with_disabled(self):
+        """测试生成可用secret消息时显示disabled_in_toolcall_argument标记"""
+        secrets_dict: dict[str, SecretInfo] = {
+            "SECRET1": {
+                "value": "val1",
+                "description": "desc1",
+                "disabled_in_toolcall_argument": False,
+            },
+            "SECRET2": {
+                "value": "val2",
+                "description": "desc2",
+                "disabled_in_toolcall_argument": True,
+            },
+        }
+        message = get_available_secrets_message(secrets_dict)
+        expected = "当前可用secret键: <$SECRET1$> - desc1 (disabled_in_toolcall_argument=False); <$SECRET2$> - desc2 (disabled_in_toolcall_argument=True)"
+        self.assertEqual(message, expected)
+
+    def test_get_available_secrets_message_empty(self):
+        """测试生成可用secret消息时字典为空"""
         # 测试空字典
         self.assertEqual(get_available_secrets_message({}), "无可用secret键")
 
@@ -255,8 +353,16 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
     def setUp(self):
         self.secrets_dict: dict[str, SecretInfo] = {
-            "SECRET1": {"value": "secret-value-1", "description": ""},
-            "SECRET2": {"value": "secret-value-2", "description": ""},
+            "SECRET1": {
+                "value": "secret-value-1",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+            "SECRET2": {
+                "value": "secret-value-2",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
         }
         self.mock_group_chat = MockGroupChat()
         from linhai.secret import SecretInterceptorPlugin
@@ -268,14 +374,16 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         import asyncio
         from pathlib import Path
         from linhai.agent.conversation import register_conversation_folder
-        
+
         # 使用真实GroupChat并注册conversation_folder
         from linhai.group_chat import GroupChat
+
         real_group_chat = GroupChat()
         register_conversation_folder(real_group_chat)
-        
+
         # 重新创建plugin使用真实group_chat
         from linhai.secret import SecretInterceptorPlugin
+
         real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
 
         result_content = "This contains secret-value-1 and some other text"
@@ -359,11 +467,11 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         from linhai.agent.conversation import register_conversation_folder
         from linhai.group_chat import GroupChat
         from linhai.secret import SecretInterceptorPlugin
-        
+
         # 使用真实GroupChat并注册conversation_folder
         real_group_chat = GroupChat()
         register_conversation_folder(real_group_chat)
-        
+
         # 重新创建plugin使用真实group_chat
         real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
 

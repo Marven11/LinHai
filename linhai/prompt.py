@@ -111,6 +111,14 @@ with_secret字段: 值为一个list[str]，包含所有secret键，不含`<$`包
 2. 调用工具查看结果，结果中的secret值会被占位符替代，保证你看不到secret
 
 如果你没有指定正确的secret值，则工具结果会被全部隐藏
+
+### disabled_in_toolcall_argument
+
+某些secret可能被标记为disabled_in_toolcall_argument=True。这意味着这些secret禁止在工具调用参数中使用，以防止泄漏。
+
+- 如果secret的disabled_in_toolcall_argument=True，你无法在工具参数中使用该secret（即无法用<$KEY$>占位符）。
+- 你仍然可以在with_secret中指定这些secret来查看被掩码的工具结果。
+- 在secret列表显示时，disabled_in_toolcall_argument=True的secret会带有标记“(disabled_in_toolcall_argument=True)”。
 """
 
 INTRODUCTION_MACHINE_CONTROL_BASIC = """
