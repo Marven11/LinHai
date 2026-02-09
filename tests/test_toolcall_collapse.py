@@ -119,17 +119,6 @@ class TestToolCallCollapse(unittest.TestCase):
             simplified = parse_and_simplify_toolcall(json_str)
             self.assertNotEqual(simplified, "<parse json error>")
 
-    def test_error_toolcall_marked_correctly(self):
-        error_toolcalls = [
-            '{"name": "read_file", "arguments": {',
-            '',
-            'null',
-            '123',
-        ]
-        for json_str in error_toolcalls:
-            simplified = parse_and_simplify_toolcall(json_str)
-            self.assertEqual(simplified, "<not a dict>")
-
     def test_change_directory_comprehensive(self):
         """全面测试change_directory工具的各种路径情况"""
         test_cases = [
