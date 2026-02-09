@@ -2,6 +2,7 @@
 
 from typing import Optional
 import tempfile
+import re
 
 import chardet
 import httpx
@@ -25,6 +26,9 @@ def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[s
         or content_type.startswith("application/vnd.")
     ):
         return True, None
+
+    if result := re.search(r"charset=(.+)", content_type):
+        return False, result.group(1)
 
     detected = chardet.detect(content)
     encoding = detected["encoding"]
@@ -65,7 +69,7 @@ async def http_request(
                 timeout=timeout,
             )
 
-            content_type = response.headers.get("content-type", "").lower()
+            content_type = response.headers.get("Content-Type", "").lower()
 
             is_binary, encoding = analyze_content(content_type, response.content)
 
