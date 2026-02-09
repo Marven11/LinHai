@@ -56,13 +56,20 @@ unittest 失败时，必须分析
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
+- [ ] 当前`/`命令的补全不全，参考linhai/cli/command_handler.py补全
+  - 将_generate_command_completions移动到linhai/cli/command_handler.py中以便于维护
+- [ ] 为CLI添加一个`@default`表示切回默认llm（第一个）
 - [ ] 添加一个llm manager
-  - 当前问题: 
+  - 当前问题:
+    - 在api返回429或者连接错误时无法自动切换llm，因为重试的while loop写在LLM类中
     - 配置使用什么llm完全由agent控制，agent不应该关心llm api返回什么错误
-    - 但是llm api有时会返回429或者报告文本长度过长，我们希望在这个时候临时轮换llm，但是agent不应该实现这个逻辑
     - 而且当前Agent类需要管理当前使用什么llm，这不太合理
     - 而且各个subagent或者未来的parallel agent可能需要同时使用当前配置的llm
   - 设计一个LlmManager管理所有llm，而不是让agent获得一个llms列表
+    - 对外支持切换llm或者切回默认llm
+    - 在当前选择的llm为默认llm时支持
+      - 切换备用llm: 在当前llm返回429时切换到后一个llm，如果还是429则再次切换
+      - 连接错误时执行带上限的指数回避
 - [ ] 添加初始化配置的功能
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
