@@ -4,7 +4,7 @@ import colorsys
 import json
 import re
 import time
-from typing import Union
+from typing import Union, Optional
 
 from rich.markup import escape
 from rich.style import Style
@@ -841,8 +841,24 @@ class MessageGenerationWidget(Static):
     }
     """
 
+    def __init__(self):
+        super().__init__()
+        self.tomount: Optional[list] = []
+
     def set_message_widget(self, widget: MessageWidget) -> None:
-        self.mount(widget)
+        if self.tomount is not None:
+            self.tomount.append(widget)
+        else:
+            self.mount(widget)
 
     def add_runtime_message(self, widget: RuntimeMessageWidget) -> None:
-        self.mount(widget)
+        if self.tomount is not None:
+            self.tomount.append(widget)
+        else:
+            self.mount(widget)
+
+    def on_mount(self):
+        if self.tomount is not None:
+            for widget in self.tomount:
+                self.mount(widget)
+        self.tomount = None

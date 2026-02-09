@@ -27,20 +27,21 @@ def generate_id(prefix: str) -> str:
 
 
 def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
+    json_repr = lambda x: json.dumps(x, ensure_ascii=False)
     if isinstance(value, str):
         if re.match(r"^[/~]|^[a-zA-Z]:\\|^(\./|\.\./)", value) and len(value) >= 20:
             filename = os.path.basename(value)
-            return json.dumps(".../" + filename)
+            return json_repr(".../" + filename)
         if len(value) > 40:
-            return json.dumps(value[:37] + "...")
-        return json.dumps(value)
+            return json_repr(value[:37] + "...")
+        return json_repr(value)
     if isinstance(value, (int, float, bool)) or value is None:
-        return json.dumps(value)
+        return repr(value)
     if isinstance(value, dict):
         items = []
         for k, v in value.items():
             simplified_v = simplify_value(v)
-            items.append(f'{json.dumps(k)}: {simplified_v}')
+            items.append(f'{json_repr(k)}: {simplified_v}')
         if not items:
             return "{}"
         result = "{" + ", ".join(items) + "}"
@@ -55,7 +56,7 @@ def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
         if len(result) > 80:
             return "[" + items[0] + ", ...]"
         return result
-    return json.dumps(value)
+    return json_repr(value)
 
 
 def simplify_toolcall_json(toolcall_json: dict) -> str:
@@ -72,6 +73,8 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
 def parse_and_simplify_toolcall(json_str: str) -> str:
     try:
         toolcall_json = json.loads(json_str.strip())
+        if not isinstance(toolcall_json, dict):
+            return "<not a dict>"
         return simplify_toolcall_json(toolcall_json)
     except json.JSONDecodeError:
         return "<parse json error>"

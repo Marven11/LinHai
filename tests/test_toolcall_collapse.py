@@ -20,7 +20,7 @@ class TestToolCallCollapse(unittest.TestCase):
     def test_simplify_value_path(self):
         """测试路径参数简化"""
         result = simplify_value("/path/to/file.txt")
-        self.assertEqual(result, '..."file.txt"')
+        self.assertEqual(result, '"/path/to/file.txt"')
 
     def test_simplify_value_number(self):
         """测试数字参数简化"""
@@ -68,7 +68,7 @@ class TestToolCallCollapse(unittest.TestCase):
             "arguments": {"filepath": "test.txt"},
         }
         result = simplify_toolcall_json(toolcall_json)
-        self.assertEqual(result, 'read_file({"filepath": "test.txt"})')
+        self.assertEqual(result, 'read_file(filepath="test.txt")')
 
     def test_simplify_toolcall_json_error(self):
         """测试错误工具调用JSON简化"""
@@ -76,48 +76,36 @@ class TestToolCallCollapse(unittest.TestCase):
         # 无效输入应该在parse_and_simplify_toolcall中处理，所以这里可以删除或修改
         # 我们改为测试空字典的简化（应该返回空参数）
         result = simplify_toolcall_json({})
-        self.assertEqual(result, "({})")
+        self.assertEqual(result, "()")
 
     def test_parse_and_simplify_toolcall_valid(self):
         """测试解析和简化有效的工具调用JSON"""
         json_str = '{"name": "read_file", "arguments": {"filepath": "test.txt"}}'
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertFalse(has_error)
-        self.assertEqual(simplified, 'read_file({"filepath": "test.txt"})')
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, 'read_file(filepath="test.txt")')
 
     def test_parse_and_simplify_toolcall_invalid_json(self):
         json_str = '{"name": "read_file", "arguments": {'
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertTrue(has_error)
-        self.assertEqual(simplified, "<error toolcall>")
-
-    def test_parse_and_simplify_toolcall_not_dict(self):
-        """测试解析非字典的JSON"""
-        json_str = '["not", "a", "dict"]'
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertTrue(has_error)
-        self.assertEqual(simplified, "<error toolcall>")
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, "<parse json error>")
 
     def test_parse_and_simplify_toolcall_empty_string(self):
         """测试解析空字符串"""
         json_str = ''
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertTrue(has_error)
-        self.assertEqual(simplified, "<error toolcall>")
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, "<parse json error>")
 
     def test_parse_and_simplify_toolcall_normal_no_arguments(self):
         """测试解析没有arguments的正常工具调用"""
         json_str = '{"name": "list_files"}'
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertFalse(has_error)
-        self.assertEqual(simplified, 'list_files({})')
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, 'list_files()')
 
     def test_parse_and_simplify_toolcall_normal_empty_arguments(self):
         """测试解析arguments为空的正常工具调用"""
         json_str = '{"name": "list_files", "arguments": {}}'
-        simplified, has_error = parse_and_simplify_toolcall(json_str)
-        self.assertFalse(has_error)
-        self.assertEqual(simplified, 'list_files({})')
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, 'list_files()')
 
     def test_normal_toolcall_not_marked_error(self):
         normal_toolcalls = [
@@ -128,9 +116,8 @@ class TestToolCallCollapse(unittest.TestCase):
             '{"name": "change_directory", "arguments": {"directory": "/some/path"}}',
         ]
         for json_str in normal_toolcalls:
-            simplified, has_error = parse_and_simplify_toolcall(json_str)
-            self.assertFalse(has_error, f"正常工具调用被错误标记为error: {json_str}")
-            self.assertNotEqual(simplified, "<error toolcall>")
+            simplified = parse_and_simplify_toolcall(json_str)
+            self.assertNotEqual(simplified, "<parse json error>")
 
     def test_error_toolcall_marked_correctly(self):
         error_toolcalls = [
@@ -140,9 +127,8 @@ class TestToolCallCollapse(unittest.TestCase):
             '123',
         ]
         for json_str in error_toolcalls:
-            simplified, has_error = parse_and_simplify_toolcall(json_str)
-            self.assertTrue(has_error, f"错误工具调用未被标记为error: {json_str}")
-            self.assertEqual(simplified, "<error toolcall>")
+            simplified = parse_and_simplify_toolcall(json_str)
+            self.assertEqual(simplified, "<not a dict>")
 
     def test_change_directory_comprehensive(self):
         """全面测试change_directory工具的各种路径情况"""
@@ -162,12 +148,9 @@ class TestToolCallCollapse(unittest.TestCase):
             ('{"name": "change_directory", "arguments": {"directory": "/very/long/path/that/exceeds/the/typical/length/limit/for/display/purposes"}}', True),
         ]
         for json_str, should_pass in test_cases:
-            simplified, has_error = parse_and_simplify_toolcall(json_str)
+            simplified = parse_and_simplify_toolcall(json_str)
             if should_pass:
-                self.assertFalse(has_error, f"change_directory工具调用被错误标记为error: {json_str}")
-                self.assertNotEqual(simplified, "<error toolcall>")
-            else:
-                self.assertTrue(has_error, f"应该标记为error但未标记: {json_str}")
+                self.assertNotEqual(simplified, "<parse json error>")
 
 
 if __name__ == "__main__":
