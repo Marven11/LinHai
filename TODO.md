@@ -81,10 +81,10 @@ unittest 失败时，必须分析
         - 如果工具调用有错则不展示工具名而是`<bad toolcall>`
         - 可以点击展开，点击展示原有的消息
       - 然后是最新的消息和最新的runtime message
-- [ ] 为secret添加一个disabled_in_toolcall_argument选项
+- [ ] 为secret添加一个disabled_in_toolcall_argument配置
   - 问题：有时候我们需要阻止secret泄漏,但是不希望agent在工具调用中使用secret以防止secret泄漏到其他地方
   - 设计: 
-    - 部分secret可以被设置为disabled_in_toolcall_argument，被设置为disabled_in_toolcall_argument的secret不会在函数参数中被替换，仅可以在结果中被替换
+    - 用户可以在设置时，将部分secret设置为disabled_in_toolcall_argument。被设置为disabled_in_toolcall_argument的secret不会在函数参数中被替换，仅可以在结果中被替换
     - disabled_in_toolcall_argument默认为False
   - 添加测试
     - 在prompt中有相关说明，说明disabled_in_toolcall_argument的作用：
