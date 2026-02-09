@@ -39,6 +39,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
         self.mock_cli_args = argparse.Namespace()
         self.mock_cli_args.message = None
         self.mock_cli_args.file = None
+        self.mock_cli_args.claw = False
         self.group_chat.register_member("cli_args", self.mock_cli_args)
 
     def tearDown(self):

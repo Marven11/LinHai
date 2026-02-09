@@ -1,11 +1,11 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
 from pathlib import Path
-from typing import Literal, TypedDict, Optional
+from typing import TypedDict, Optional
 import argparse
 from datetime import datetime
 
-from linhai.config import AgentConfig, Config, MCPConfig, ToolConfig
+from linhai.config import Config
 from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage, UserMessage
 
@@ -38,9 +38,24 @@ class AgentBuildContext(TypedDict):
 
 
 def init_claw() -> None:
-    """确保claw目录存在，如果创建失败则抛出异常"""
+    """确保claw目录存在，并初始化五个核心markdown文档。"""
+    from linhai.prompt import AGENTS_MD, BOOTSTRAP_MD, IDENTITY_MD, SOUL_MD, USER_MD
+
     claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
     claw_dir.mkdir(parents=True, exist_ok=True)
+
+    core_docs = [
+        ("AGENTS.md", AGENTS_MD),
+        ("BOOTSTRAP.md", BOOTSTRAP_MD),
+        ("IDENTITY.md", IDENTITY_MD),
+        ("SOUL.md", SOUL_MD),
+        ("USER.md", USER_MD),
+    ]
+
+    for filename, content in core_docs:
+        file_path = claw_dir / filename
+        if not file_path.exists():
+            file_path.write_text(content, encoding="utf-8")
 
 
 def create_agent_build_context(
@@ -99,7 +114,6 @@ async def create_agent_from_config(
     Returns:
         Agent实例
     """
-    from .main import Agent
 
     if context["cli_args"].claw:
         init_claw()
@@ -130,7 +144,7 @@ async def create_agent_from_config(
 
         DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
 
-    # 注册CommandWhitelistPlugin如果配置了allowed_commands
+
     if context["config"].agent.allowed_commands:
         from linhai.plugin import CommandWhitelistPlugin
 
@@ -139,23 +153,26 @@ async def create_agent_from_config(
         )
 
     from linhai.plugin import MachineControlIntroductionPlugin
+
     MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
 
     if context.get("planning", False):
-        from linhai.plugin.planning import PlanningStatusReminderPlugin, UserInputRuntimeMessagePlugin
+        from linhai.plugin.planning import (
+            PlanningStatusReminderPlugin,
+            UserInputRuntimeMessagePlugin,
+        )
+
         PlanningStatusReminderPlugin(context["group_chat"]).register(agent.lifecycle)
         UserInputRuntimeMessagePlugin(context["group_chat"]).register(agent.lifecycle)
+
+    if context["cli_args"].claw:
+        from linhai.plugin.claw import ClawPlugin
+        ClawPlugin(context["group_chat"], context["cli_args"]).register(agent.lifecycle)
 
     return agent
 
 
 async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageModel]:
-
-    async def notification_callback(
-        level: Literal["INFO", "WARNING", "ERROR"], content: str
-    ) -> None:
-        notice = CliRuntimeNotice(level=level, content=content)
-        await context["group_chat"].send_if_exists("ui_log", notice)
 
     llms = []
     for llm_config in context["config"].llm:
@@ -207,10 +224,10 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     Returns:
         固定消息列表
     """
-    pinned_messages: list[Message] = [SystemMessage(context["group_chat"])]
-
     from linhai.agent.base import RuntimeMessage
-    startup_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    pinned_messages: list[Message] = [SystemMessage(context["group_chat"])]
+    startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pinned_messages.append(RuntimeMessage(f"Agent启动时间: {startup_time}"))
 
     cli_args = context["cli_args"]
@@ -247,7 +264,6 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         if filepath.exists():
             pinned_messages.append(PathPrompt(filepath))
 
-    from linhai.llm import UserMessage
     from linhai.agent.base import FileContentMessage
 
     if context.get("planning", False):

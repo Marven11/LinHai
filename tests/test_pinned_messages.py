@@ -35,6 +35,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         self.cli_args = argparse.Namespace()
         self.cli_args.message = []
         self.cli_args.file = []
+        self.cli_args.claw = False
         
         # 基础目录
         self.config_basedir = Path("/tmp/test")
