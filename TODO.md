@@ -115,8 +115,6 @@ unittest 失败时，必须分析
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
     - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
-- [ ] 当前linhai/cli的app.py等手动创建协程Task，这不合适，需要改成`@work(exclusive=False)`
-  - （重新）在linhai/cli中搜索asyncio.create_task，然后修改，规划修改完成后重新检查
 - [ ] VolcanoDeepseekFixPlugin尝试手动清理标记，这不合适
   - 问题：插件根本不应该手动修复模型的输出，仅应该在模型输出错误时提醒
   - 修复：仅在发现ABNORMAL_MARKER时提醒，同时修改对应unittest
