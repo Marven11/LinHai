@@ -136,6 +136,13 @@ unittest 失败时，必须分析
     - PlanningStatusReminderPlugin完全按照以上重构修改
     - 添加以上新测试
     - 所有测试通过
+- [ ] 让compoments.py移除空的NormalContentWidget和其后的SpaceWidget
+  - 问题：模型会在工具输出之间留下空行，导致segment在finished之后仍然为空或者只有空白字符
+  - 解决
+    - 让MessageWidget在添加一个新widget时检查上一个widget是否为空，如果是则移除
+    - 问题：移除后原widget仍然会更新自己，导致崩溃，需要先停止其的timer再移除
+    - 移除后最末尾已经是SpaceWidget，跳过重新添加
+  - 最终完成条件：所有测试通过
 
 # 注意
 
