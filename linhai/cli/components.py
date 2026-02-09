@@ -704,6 +704,15 @@ class NormalContentWidget(Static):
             )
         )
 
+    def is_empty(self) -> bool:
+        """检查内容是否为空或只包含空白字符"""
+        return not self.content_str.strip()
+
+    def stop_timer(self) -> None:
+        """停止timer，防止删除后继续更新"""
+        if self.timer:
+            self.timer.stop()
+
 
 class MessageWidget(Static):
     """消息显示组件，支持ParsedAnswer和segment流式显示"""
@@ -729,10 +738,20 @@ class MessageWidget(Static):
     @work(exclusive=False)
     async def _start_processing_segments(self):
         is_first_segment = True
+        last_content_widget = None
         while True:
             segment = await self.parsed_answer.segment_queue.get()
+
             if not is_first_segment:
-                self.mount(SpaceWidget())
+                if (
+                    isinstance(last_content_widget, NormalContentWidget)
+                    and last_content_widget.is_empty()
+                ):
+                    last_content_widget.stop_timer()
+                    last_content_widget.remove()
+                else:
+                    self.mount(SpaceWidget())
+
             segment_type = segment["segment_type"]
             if segment_type == "toolcall":
                 widget = ToolCallWidget(theme=self.theme, segment=segment)
@@ -754,6 +773,7 @@ class MessageWidget(Static):
                 continue
 
             self.mount(widget)
+            last_content_widget = widget
             is_first_segment = False
 
     def finish_streaming(self) -> None:
