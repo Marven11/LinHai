@@ -98,10 +98,6 @@ unittest 失败时，必须分析
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
     - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
-- [ ] VolcanoDeepseekFixPlugin尝试手动清理标记，这不合适
-  - 问题：插件根本不应该手动修复模型的输出，仅应该在模型输出错误时提醒
-  - 修复：仅在发现ABNORMAL_MARKER时提醒，同时修改对应unittest
-  - 唯一完成条件：全部unittest通过
 
 # 注意
 
