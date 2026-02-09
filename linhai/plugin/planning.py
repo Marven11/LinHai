@@ -18,6 +18,7 @@ class PlanningStatusReminderPlugin(Plugin):
     """提醒修改STATUS.md和TODOLIST.md的插件。"""
 
     def __init__(self, group_chat: GroupChat):
+        super().__init__(group_chat)
         self.group_chat = group_chat
         self.status_counter = 0
         self.todolist_counter = 0
@@ -38,19 +39,27 @@ class PlanningStatusReminderPlugin(Plugin):
 
         return None
 
-    async def after_message_generation(
-        self,
-        answer: Answer,
-        full_response: str,
-        tool_calls: list[dict],
-    ) -> None:
-        planning_folder = self._get_planning_folder()
-        if planning_folder is None:
-            return
+    def _get_current_state(self) -> str:
+        from linhai.agent.orchestration import AgentContextOrchestration
 
-        if not tool_calls:
-            return
+        agent = self.group_chat.get_members("agent", Agent)
+        orchestration = self.group_chat.get_members(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
 
+        if agent is None or orchestration is None:
+            return "绿灯"
+
+        threshold_info = agent.get_threshold_info()
+        if threshold_info is None:
+            return "绿灯"
+
+        context = orchestration.compute_orchestration_context("", threshold_info)
+        return context["current_state"]
+
+    def _check_modifications(
+        self, tool_calls: list[dict], planning_folder: Path
+    ) -> tuple[bool, bool]:
         write_tools = {"write_file", "replace_file_content", "modify_file_with_sed"}
         status_file = planning_folder / "STATUS.md"
         todolist_file = planning_folder / "TODOLIST.md"
@@ -74,30 +83,28 @@ class PlanningStatusReminderPlugin(Plugin):
             elif Path(filepath) == todolist_file:
                 todolist_modified = True
 
-        if status_modified:
-            self.status_counter = 0
-            self._clear_notification("planning_status_reminder")
-        else:
-            self.status_counter += 1
+        return status_modified, todolist_modified
 
-        if todolist_modified:
-            self.todolist_counter = 0
-            self._clear_notification("planning_todolist_reminder")
-        else:
-            self.todolist_counter += 1
+    def _update_counters(
+        self, status_modified: bool, todolist_modified: bool, current_state: str
+    ) -> None:
+        if current_state == "红灯":
+            return
+        self.status_counter = 0 if status_modified else (self.status_counter + 1)
+        self.todolist_counter = 0 if todolist_modified else (self.todolist_counter + 1)
 
-        await self._send_warnings_if_needed()
-
-    def _clear_notification(self, source: str) -> None:
-        agent = self.group_chat.get_members("agent", Agent)
-        if not agent:
+    async def _update_notifications(self, current_state: str) -> None:
+        if current_state == "红灯":
+            agent = self.group_chat.get_members("agent", Agent)
+            if agent:
+                agent.message_processor.update_notification_message(
+                    None, source="planning_status_reminder", sort_value=0
+                )
+                agent.message_processor.update_notification_message(
+                    None, source="planning_todolist_reminder", sort_value=0
+                )
             return
 
-        agent.message_processor.update_notification_message(
-            None, source=source, sort_value=0
-        )
-
-    async def _send_warnings_if_needed(self) -> None:
         agent = self.group_chat.get_members("agent", Agent)
         if agent is None:
             return
@@ -117,6 +124,10 @@ class PlanningStatusReminderPlugin(Plugin):
                     content=f"警告agent：连续{self.status_counter}次未修改STATUS.md",
                 ),
             )
+        else:
+            agent.message_processor.update_notification_message(
+                None, source="planning_status_reminder", sort_value=0
+            )
 
         if self.todolist_counter >= 8:
             agent.message_processor.update_notification_message(
@@ -133,6 +144,32 @@ class PlanningStatusReminderPlugin(Plugin):
                     content=f"警告agent：连续{self.todolist_counter}次未修改TODOLIST.md",
                 ),
             )
+        else:
+            agent.message_processor.update_notification_message(
+                None, source="planning_todolist_reminder", sort_value=0
+            )
+
+    async def after_message_generation(
+        self,
+        answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
+    ) -> None:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return
+
+        if not tool_calls:
+            return
+
+        current_state = self._get_current_state()
+        status_modified, todolist_modified = self._check_modifications(
+            tool_calls, planning_folder
+        )
+
+        self._update_counters(status_modified, todolist_modified, current_state)
+
+        await self._update_notifications(current_state)
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.register_after_message_generation(self.after_message_generation)
@@ -142,6 +179,7 @@ class UserInputRuntimeMessagePlugin(Plugin):
     """在用户输入消息后添加RuntimeMessage的插件。"""
 
     def __init__(self, group_chat: GroupChat):
+        super().__init__(group_chat)
         self.group_chat = group_chat
 
     async def after_message_generation(

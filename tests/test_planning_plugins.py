@@ -191,8 +191,8 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
 
         async def run_test():
             with patch.object(
-                self.plugin, "_send_warnings_if_needed", return_value=None
-            ) as mock_send_warnings:
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications:
                 result = await self.plugin.after_message_generation(
                     answer=MagicMock(spec=Answer),
                     full_response="Test response",
@@ -202,7 +202,7 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
                 )
 
                 self.assertIsNone(result)
-                mock_send_warnings.assert_awaited_once()
+                mock_update_notifications.assert_awaited_once()
 
         asyncio.run(run_test())
 
@@ -212,8 +212,8 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
 
         async def run_test():
             with patch.object(
-                self.plugin, "_send_warnings_if_needed", return_value=None
-            ) as mock_send_warnings:
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications:
                 result = await self.plugin.after_message_generation(
                     answer=MagicMock(spec=Answer),
                     full_response="Test response",
@@ -223,7 +223,7 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
                 )
 
                 self.assertIsNone(result)
-                mock_send_warnings.assert_awaited_once()
+                mock_update_notifications.assert_awaited_once()
 
         asyncio.run(run_test())
 
