@@ -717,12 +717,6 @@ class NormalContentWidget(Static):
 class MessageWidget(Static):
     """消息显示组件，支持ParsedAnswer和segment流式显示"""
 
-    DEFAULT_CSS = """
-    MessageWidget {
-        margin: 1 0;
-    }
-    """
-
     def __init__(
         self, role: str, sender_name: str, theme: str, parsed_answer: ParsedAnswer
     ):
@@ -837,7 +831,7 @@ class MessageGenerationWidget(Static):
     DEFAULT_CSS = """
     MessageGenerationWidget {
         width: 100%;
-        margin-bottom: 1;
+        margin: 1 0;
     }
     """
 
