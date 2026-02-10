@@ -820,7 +820,7 @@ class FooterWidget(Static):
         """
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         if agent is None:
             self.update("Agent未初始化")

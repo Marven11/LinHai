@@ -205,7 +205,7 @@ class SingleToolCallReminderPlugin(Plugin):
         self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
@@ -245,7 +245,7 @@ class ToolCallInReasoningPlugin(Plugin):
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         reasoning_content = answer.get_reasoning_message()
         if not reasoning_content:

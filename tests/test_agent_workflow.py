@@ -52,7 +52,6 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
-
         llms_with_names = list(zip(config["llms"], config["llm_names"]))
         self.agent = Agent(
             llms=config["llms"],
@@ -153,7 +152,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent.group_chat = mock_group_chat
 
         # 设置get_members根据参数返回不同的对象
-        def get_members_side_effect(name, cls=None):
+        def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
             elif name == "range_clean_manager":
@@ -163,7 +162,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_members.side_effect = get_members_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -212,7 +211,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
 
-        def get_members_side_effect(name, cls=None):
+        def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
             elif name == "range_clean_manager":
@@ -222,7 +221,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_members.side_effect = get_members_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -254,7 +253,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
 
-        def get_members_side_effect(name, cls=None):
+        def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
             elif name == "range_clean_manager":
@@ -264,7 +263,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_members.side_effect = get_members_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -336,7 +335,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-        mock_group_chat.get_members.return_value = Path("/tmp/test_conversation")
+        mock_group_chat.get_member_typechecked.return_value = Path(
+            "/tmp/test_conversation"
+        )
 
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name
@@ -405,8 +406,8 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_info.min_safe_id = 1
         mock_range_clean_manager.get_clean_info.return_value = mock_info
 
-        # 设置group_chat.get_members返回相应的mock对象
-        def get_members_side_effect(name, cls=None):
+        # 设置group_chat.get_member_typechecked返回相应的mock对象
+        def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
             elif name == "range_clean_manager":
@@ -416,7 +417,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_members.side_effect = get_members_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
@@ -525,7 +526,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_group_chat = MagicMock()
         mock_range_clean_manager = MagicMock()
 
-        def get_members_side_effect(name, cls=None):
+        def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
             elif name == "range_clean_manager":
@@ -535,7 +536,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_members.side_effect = get_members_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         async def mock_send_if_exists(queue_name, message):
             pass

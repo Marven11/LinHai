@@ -47,12 +47,14 @@ class TestToolConflictRefactor(unittest.TestCase):
             mcp_basedir=mcp_basedir,
         )
 
-        def get_members_side_effect(member_type, _member_class=None):
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
             if member_type == "tool_manager":
                 return tool_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.agent_mock.group_chat.get_members.side_effect = get_members_side_effect
+        self.agent_mock.group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
         self.toolcall.tool_manager = tool_manager
 
     def _reset_called_tools(self) -> None:
@@ -133,13 +135,19 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.toolcall.agent.message_processor.add_new_message = Mock()
 
     def _verify_error_message_content(self) -> None:
-        add_new_message_calls = self.toolcall.agent.message_processor.add_new_message.call_args_list
+        add_new_message_calls = (
+            self.toolcall.agent.message_processor.add_new_message.call_args_list
+        )
         self.assertGreater(len(add_new_message_calls), 0)
 
         conflict_messages = []
         for call in add_new_message_calls:
             args = call[0]
-            if len(args) > 0 and isinstance(args[0], RuntimeMessage) and "工具调用冲突" in args[0].message:
+            if (
+                len(args) > 0
+                and isinstance(args[0], RuntimeMessage)
+                and "工具调用冲突" in args[0].message
+            ):
                 conflict_messages.append(args[0].message)
 
         self.assertGreater(len(conflict_messages), 0)

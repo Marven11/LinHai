@@ -29,24 +29,28 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
         self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)
-        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(return_value=None)
-        
+        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
+            return_value=None
+        )
+
         self.mock_agent.config = Mock()
         self.mock_agent.config.tools = Mock()
-        
+
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.group_chat.get_members.return_value = self.mock_tool_manager
+        self.mock_agent.group_chat.get_member_typechecked.return_value = (
+            self.mock_tool_manager
+        )
 
         self.toolcall_processor = AgentToolcall(self.mock_agent)
         self.toolcall_processor.max_token_limit = 3000
         self.toolcall_processor.current_round_token_count = 0
-        
+
         self.temp_dir = tempfile.mkdtemp()
-        
+
         self.mock_conversation = Mock()
         self.mock_conversation.conversation_dir = Path(self.temp_dir)
-        
+
     def tearDown(self):
         """清理测试环境。"""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -60,22 +64,27 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=short_content),
             toolcall_arguments=None,
         )
-        
+
         tool_call = ToolCallMessage(
             function_name="test_tool",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
+
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
-        result, skip_handle = await self.toolcall_processor._tool_result_token_management(
-            tool_call, 1, tool_result
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
         )
-        
+
+        result, skip_handle = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call, 1, tool_result
+            )
+        )
+
         self.assertFalse(skip_handle)
         self.assertEqual(result, tool_result)
         self.assertGreater(self.toolcall_processor.current_round_token_count, 0)
@@ -89,26 +98,31 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=long_content),
             toolcall_arguments=None,
         )
-        
+
         tool_call = ToolCallMessage(
             function_name="test_tool",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
+
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
-        result, skip_handle = await self.toolcall_processor._tool_result_token_management(
-            tool_call, 1, tool_result
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
         )
-        
+
+        result, skip_handle = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call, 1, tool_result
+            )
+        )
+
         self.assertTrue(skip_handle)
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("工具输出过长", str(result))
-        
+
         long_toolcall_dir = Path(self.temp_dir) / "long_toolcall"
         self.assertTrue(long_toolcall_dir.exists())
         files = list(long_toolcall_dir.glob("*.txt"))
@@ -136,8 +150,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result1, skip_handle1 = await self.toolcall_processor._tool_result_token_management(
-            tool_call1, 1, tool_result1
+        result1, skip_handle1 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call1, 1, tool_result1
+            )
         )
 
         self.assertFalse(skip_handle1)
@@ -158,8 +174,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result2, skip_handle2 = await self.toolcall_processor._tool_result_token_management(
-            tool_call2, 2, tool_result2
+        result2, skip_handle2 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call2, 2, tool_result2
+            )
         )
 
         self.assertFalse(skip_handle2)
@@ -170,42 +188,50 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
     async def test_five_tools_each_short_output(self):
         """测试5个工具，每个输出都小于限制长度的1/5时正常返回。"""
         total_tokens = 0
-        
+
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
+        )
+
         for i in range(5):
             content = "x" * 100
             tool_result = ToolCallResultMessage(
                 tool_name=f"test_tool{i}",
-                tool_index=i+1,
+                tool_index=i + 1,
                 result=ToolResultSuccess(content=content),
                 toolcall_arguments=None,
             )
-            
+
             tool_call = ToolCallMessage(
                 function_name=f"test_tool{i}",
                 function_arguments={},
                 assert_success=False,
                 with_secret=None,
             )
-            
-            result, skip_handle = await self.toolcall_processor._tool_result_token_management(
-                tool_call, i+1, tool_result
+
+            result, skip_handle = (
+                await self.toolcall_processor._tool_result_token_management(
+                    tool_call, i + 1, tool_result
+                )
             )
-            
+
             self.assertFalse(skip_handle)
             total_tokens = self.toolcall_processor.current_round_token_count
-        
+
         self.assertLess(total_tokens, self.toolcall_processor.max_token_limit)
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
+        )
+
         content1 = "x" * 100
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
@@ -213,53 +239,63 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=content1),
             toolcall_arguments=None,
         )
-        
+
         tool_call1 = ToolCallMessage(
             function_name="test_tool1",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
-        result1, skip_handle1 = await self.toolcall_processor._tool_result_token_management(
-            tool_call1, 1, tool_result1
+
+        result1, skip_handle1 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call1, 1, tool_result1
+            )
         )
-        
+
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
+        )
+
         for i in range(5):
             content = "x" * 100
             tool_result = ToolCallResultMessage(
                 tool_name=f"test_tool{i}",
-                tool_index=i+1,
+                tool_index=i + 1,
                 result=ToolResultSuccess(content=content),
                 toolcall_arguments=None,
             )
-            
+
             tool_call = ToolCallMessage(
                 function_name=f"test_tool{i}",
                 function_arguments={},
                 assert_success=False,
                 with_secret=None,
             )
-            
-            result, skip_handle = await self.toolcall_processor._tool_result_token_management(
-                tool_call, i+1, tool_result
+
+            result, skip_handle = (
+                await self.toolcall_processor._tool_result_token_management(
+                    tool_call, i + 1, tool_result
+                )
             )
-            
+
             self.assertFalse(skip_handle)
             total_tokens = self.toolcall_processor.current_round_token_count
-        
+
         self.assertLess(total_tokens, self.toolcall_processor.max_token_limit)
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
+        )
+
         content1 = "x" * 100
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
@@ -267,20 +303,22 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=content1),
             toolcall_arguments=None,
         )
-        
+
         tool_call1 = ToolCallMessage(
             function_name="test_tool1",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
-        result1, skip_handle1 = await self.toolcall_processor._tool_result_token_management(
-            tool_call1, 1, tool_result1
+
+        result1, skip_handle1 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call1, 1, tool_result1
+            )
         )
-        
+
         self.assertFalse(skip_handle1)
-        
+
         content2 = "x" * 12000
         tool_result2 = ToolCallResultMessage(
             tool_name="test_tool2",
@@ -288,21 +326,23 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=content2),
             toolcall_arguments=None,
         )
-        
+
         tool_call2 = ToolCallMessage(
             function_name="test_tool2",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
-        result2, skip_handle2 = await self.toolcall_processor._tool_result_token_management(
-            tool_call2, 2, tool_result2
+
+        result2, skip_handle2 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call2, 2, tool_result2
+            )
         )
-        
+
         self.assertTrue(skip_handle2)
         self.assertIsInstance(result2, RuntimeMessage)
-        
+
         content3 = "x" * 100
         tool_result3 = ToolCallResultMessage(
             tool_name="test_tool3",
@@ -310,29 +350,36 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             result=ToolResultSuccess(content=content3),
             toolcall_arguments=None,
         )
-        
+
         tool_call3 = ToolCallMessage(
             function_name="test_tool3",
             function_arguments={},
             assert_success=False,
             with_secret=None,
         )
-        
-        result3, skip_handle3 = await self.toolcall_processor._tool_result_token_management(
-            tool_call3, 3, tool_result3
+
+        result3, skip_handle3 = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call3, 3, tool_result3
+            )
         )
-        
+
         self.assertFalse(skip_handle3)
 
     async def test_on_tool_result_replacement(self):
         """测试当on_tool_result回调返回RuntimeMessage时使用替换内容。"""
         replacement_message = RuntimeMessage("替换消息")
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=replacement_message)
-        
+        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
+            return_value=replacement_message
+        )
+
         # 修改mock group_chat以返回conversation_folder
         from pathlib import Path
-        self.mock_agent.group_chat.get_members = Mock(return_value=Path(self.temp_dir))
-        
+
+        self.mock_agent.group_chat.get_member_typechecked = Mock(
+            return_value=Path(self.temp_dir)
+        )
+
         content = "x" * 100
         tool_result = ToolCallResultMessage(
             tool_name="test_tool",
@@ -346,11 +393,12 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             assert_success=False,
             with_secret=None,
         )
-        
-        result, skip_handle = await self.toolcall_processor._tool_result_token_management(
-            tool_call, 1, tool_result
+
+        result, skip_handle = (
+            await self.toolcall_processor._tool_result_token_management(
+                tool_call, 1, tool_result
+            )
         )
-        
+
         self.assertFalse(skip_handle)
         self.assertEqual(result, replacement_message)
-

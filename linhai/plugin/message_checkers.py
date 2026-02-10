@@ -46,7 +46,7 @@ class WaitingUserPlugin(Plugin):
         self, _answer: Answer, full_response, tool_calls
     ):
         """检查等待用户标记的位置和工具调用冲突。"""
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
         if not agent.current_disable_waiting_user_warning:
@@ -111,7 +111,7 @@ class WrongEndPlugin(Plugin):
         full_response: str,
         _tool_calls,
     ):
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         regex_result = re.search(r"<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
             agent.message_processor.add_new_message(
@@ -147,10 +147,10 @@ class EndThinkPlugin(Plugin):
 
 class VolcanoDeepseekFixPlugin(Plugin):
     """处理火山平台deepseek异常输出的插件。"""
-    
+
     ABNORMAL_MARKER = "</think>```json toolcall"
     NORMAL_MARKER = "```json toolcall"
-    
+
     async def after_message_generation(
         self,
         _answer: Answer,
@@ -158,13 +158,13 @@ class VolcanoDeepseekFixPlugin(Plugin):
         _tool_calls: list,
     ) -> None:
         """在消息生成后检查并提醒异常标记。"""
-        agent = self.group_chat.get_members("agent", Agent)
-        
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+
         if self.ABNORMAL_MARKER not in full_response:
             return
-        
+
         count = full_response.count(self.ABNORMAL_MARKER)
-        
+
         agent.message_processor.add_new_message(
             RuntimeMessage(
                 f"警告：检测到火山平台deepseek的异常输出标记'</think>```json toolcall'（共{count}处）。"
@@ -172,15 +172,15 @@ class VolcanoDeepseekFixPlugin(Plugin):
                 f"请修正输出格式。"
             )
         )
-        
+
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="WARNING",
-                content=f"检测到火山平台deepseek异常输出标记: 共{count}处，已提醒agent"
-            )
+                content=f"检测到火山平台deepseek异常输出标记: 共{count}处，已提醒agent",
+            ),
         )
-    
+
     def register(self, lifecycle: "Lifecycle") -> None:
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
@@ -195,7 +195,7 @@ class OnlyReasoningPlugin(Plugin):
         full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
@@ -236,7 +236,7 @@ class PreviousReasoningPlugin(Plugin):
         _full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         msgs = [
             msg.reasoning_message
@@ -265,7 +265,7 @@ class JsonCodeBlockPlugin(Plugin):
         self, _answer: Answer, full_response: str, _tool_calls
     ):
         """检查是否有json代码块包含有效的工具调用。"""
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         json_tool_calls, json_errors = extract_tool_calls_with_errors(
             full_response, language="json"
@@ -308,7 +308,7 @@ class KimiK25ToolCallPlugin(Plugin):
         has_correct_format = "```json toolcall" in full_response
 
         if has_kimi_marker and not has_correct_format:
-            agent = self.group_chat.get_members("agent", Agent)
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
             if agent:
                 agent.message_processor.add_new_message(
                     RuntimeMessage(

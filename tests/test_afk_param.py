@@ -27,7 +27,7 @@ class TestAfkParam(unittest.TestCase):
         
         plugin = WaitingUserPlugin(self.group_chat)
         
-        def get_members_side_effect(name, t):
+        def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
                 return cli_args
             elif name == "agent":
@@ -35,7 +35,7 @@ class TestAfkParam(unittest.TestCase):
             else:
                 raise RuntimeError(f"Unexpected name: {name}")
         
-        with patch.object(self.group_chat, 'get_members', side_effect=get_members_side_effect):
+        with patch.object(self.group_chat, 'get_member_typechecked', side_effect=get_member_typechecked_side_effect):
             result = asyncio.run(plugin.after_message_generation(
                 Mock(), "test response without marker", []
             ))
@@ -55,7 +55,7 @@ class TestAfkParam(unittest.TestCase):
         
         plugin = WaitingUserPlugin(self.group_chat)
         
-        def get_members_side_effect(name, t):
+        def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
                 return cli_args
             elif name == "agent":
@@ -63,7 +63,7 @@ class TestAfkParam(unittest.TestCase):
             else:
                 raise RuntimeError(f"Unexpected name: {name}")
         
-        with patch.object(self.group_chat, 'get_members', side_effect=get_members_side_effect):
+        with patch.object(self.group_chat, 'get_member_typechecked', side_effect=get_member_typechecked_side_effect):
             result = asyncio.run(plugin.after_message_generation(
                 Mock(), "test response without marker", []
             ))

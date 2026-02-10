@@ -143,7 +143,7 @@ async def context_forget_range_step1(
     """
     from .main import Agent
 
-    agent = group_chat.get_members("agent", Agent)
+    agent = group_chat.get_member_typechecked("agent", Agent)
 
     current_message_count = len(agent.message_processor.messages)
     await group_chat.send_if_exists(
@@ -168,7 +168,7 @@ async def context_forget_range_step1(
     min_safe_id = 0 if max_system_index == -1 else max_system_index + 1
 
     range_clean_id = generate_id("rangeclean")
-    range_clean_manager = group_chat.get_members(
+    range_clean_manager = group_chat.get_member_typechecked(
         "range_clean_manager", RangeCleanManager
     )
     range_clean_manager.create_clean_info(range_clean_id, message_length, min_safe_id)
@@ -199,9 +199,9 @@ async def context_forget_range_step2(
     """
     from .main import Agent
 
-    agent = group_chat.get_members("agent", Agent)
+    agent = group_chat.get_member_typechecked("agent", Agent)
 
-    range_clean_manager = group_chat.get_members(
+    range_clean_manager = group_chat.get_member_typechecked(
         "range_clean_manager", RangeCleanManager
     )
     info = range_clean_manager.get_clean_info(range_clean_id)
@@ -239,7 +239,7 @@ async def context_forget_range_step2(
     )
     range_clean_manager.remove_clean_info(range_clean_id)
 
-    conversation_dir = group_chat.get_members("conversation_folder", Path)
+    conversation_dir = group_chat.get_member_typechecked("conversation_folder", Path)
     save_cleaned_messages(conversation_dir, deleted_messages, prefix="range_compress")
 
     deleted_user_messages = [

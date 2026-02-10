@@ -20,7 +20,9 @@ class TestToolConflict(unittest.TestCase):
         self.mock_tool_manager.toolsets = []
 
         self.mock_group_chat = Mock()
-        self.mock_group_chat.get_members.return_value = self.mock_tool_manager
+        self.mock_group_chat.get_member_typechecked.return_value = (
+            self.mock_tool_manager
+        )
 
         self.mock_context = {"llms": [], "llm_names": [], "current_llm_index": 0}
 

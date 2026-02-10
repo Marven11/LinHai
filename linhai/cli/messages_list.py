@@ -98,7 +98,7 @@ class MessagesList(VerticalScroll):
 
     @work(exclusive=False)
     async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         llm_name, _llm = agent.get_current_llm_info()
 
         generation_widget = MessageGenerationWidget()

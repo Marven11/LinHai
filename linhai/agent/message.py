@@ -197,7 +197,9 @@ class AgentMessage:
 
     def _save_context(self) -> None:
         """保存当前上下文到文件。"""
-        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        conversation_dir = self.group_chat.get_member_typechecked(
+            "conversation_folder", Path
+        )
         save_context(conversation_dir, self.get_messages())
 
     def process_queued_messages(self) -> None:

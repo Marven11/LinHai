@@ -8,6 +8,7 @@ from linhai.group_chat import GroupChat
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolResultSuccess
 
+
 class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
     """测试文件读写冲突插件"""
 
@@ -32,8 +33,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_read_then_write_same_file_should_warn(self):
         """测试读取文件后写入同一文件应触发警告"""
-        # 模拟group_chat.get_members返回machine_control
-        self.group_chat.get_members.return_value = self.mock_machine_control
+        # 模拟group_chat.get_member_typechecked返回machine_control
+        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表（模拟新消息开始）
         await self.plugin.before_message_generation(True, False)
@@ -57,7 +58,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             read_result.content,
             read_tool_call.function_arguments,
             read_tool_call.with_secret,
-            False
+            False,
         )
         self.assertIsNone(result)
         # 读取文件不应该返回警告
@@ -86,7 +87,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             write_result.content,
             write_tool_call.function_arguments,
             write_tool_call.with_secret,
-            False
+            False,
         )
         # 应该返回警告消息
         self.assertIsNotNone(result)
@@ -97,8 +98,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_read_then_write_different_file_should_not_warn(self):
         """测试读取文件后写入不同文件不应触发警告"""
-        # 模拟group_chat.get_members返回machine_control
-        self.group_chat.get_members.return_value = self.mock_machine_control
+        # 模拟group_chat.get_member_typechecked返回machine_control
+        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
         await self.plugin.before_message_generation(True, False)
@@ -113,7 +114,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "文件内容",
             {"filepath": str(self.test_file)},
             [],
-            False
+            False,
         )
         self.assertIsNone(result)
         # 模拟写入第二个文件
@@ -124,7 +125,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "写入成功",
             {"filepath": str(other_file), "content": "新内容", "override": True},
             [],
-            False
+            False,
         )
         # 不应该返回警告消息
         self.assertIsNone(result)
@@ -133,7 +134,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         """测试非master_host机器不应检查冲突"""
         # 模拟machine_control返回非master_host
         self.mock_machine_control.target_machine = "other_host"
-        self.group_chat.get_members.return_value = self.mock_machine_control
+        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
         await self.plugin.before_message_generation(True, False)
@@ -153,10 +154,22 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "read_file",
             0,
             "success",
-            read_result.content if hasattr(read_result, 'content') else str(read_result),
-            read_tool_call.function_arguments if hasattr(read_tool_call, 'function_arguments') else {},
-            read_tool_call.with_secret if hasattr(read_tool_call, 'with_secret') else [],
-            False
+            (
+                read_result.content
+                if hasattr(read_result, "content")
+                else str(read_result)
+            ),
+            (
+                read_tool_call.function_arguments
+                if hasattr(read_tool_call, "function_arguments")
+                else {}
+            ),
+            (
+                read_tool_call.with_secret
+                if hasattr(read_tool_call, "with_secret")
+                else []
+            ),
+            False,
         )
         self.assertIsNone(result)
         # 模拟写入同一文件
@@ -179,17 +192,29 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "write_file",
             0,
             "success",
-            read_result.content if hasattr(read_result, 'content') else str(read_result),
-            read_tool_call.function_arguments if hasattr(read_tool_call, 'function_arguments') else {},
-            read_tool_call.with_secret if hasattr(read_tool_call, 'with_secret') else [],
-            False
+            (
+                read_result.content
+                if hasattr(read_result, "content")
+                else str(read_result)
+            ),
+            (
+                read_tool_call.function_arguments
+                if hasattr(read_tool_call, "function_arguments")
+                else {}
+            ),
+            (
+                read_tool_call.with_secret
+                if hasattr(read_tool_call, "with_secret")
+                else []
+            ),
+            False,
         )
         # 不应该返回警告消息（因为不在master_host）
         self.assertIsNone(result)
 
     async def test_various_read_write_tools(self):
         """测试各种读取和写入工具"""
-        self.group_chat.get_members.return_value = self.mock_machine_control
+        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
         await self.plugin.before_message_generation(True, False)
         # 测试read_file_with_sed
         read_tool_call = ToolCallMessage(
@@ -210,10 +235,22 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "read_file",
             0,
             "success",
-            read_result.content if hasattr(read_result, 'content') else str(read_result),
-            read_tool_call.function_arguments if hasattr(read_tool_call, 'function_arguments') else {},
-            read_tool_call.with_secret if hasattr(read_tool_call, 'with_secret') else [],
-            False
+            (
+                read_result.content
+                if hasattr(read_result, "content")
+                else str(read_result)
+            ),
+            (
+                read_tool_call.function_arguments
+                if hasattr(read_tool_call, "function_arguments")
+                else {}
+            ),
+            (
+                read_tool_call.with_secret
+                if hasattr(read_tool_call, "with_secret")
+                else []
+            ),
+            False,
         )
         self.assertIsNone(result)
         # 测试replace_file_content
@@ -236,17 +273,29 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
             "write_file",
             0,
             "success",
-            read_result.content if hasattr(read_result, 'content') else str(read_result),
-            read_tool_call.function_arguments if hasattr(read_tool_call, 'function_arguments') else {},
-            read_tool_call.with_secret if hasattr(read_tool_call, 'with_secret') else [],
-            False
+            (
+                read_result.content
+                if hasattr(read_result, "content")
+                else str(read_result)
+            ),
+            (
+                read_tool_call.function_arguments
+                if hasattr(read_tool_call, "function_arguments")
+                else {}
+            ),
+            (
+                read_tool_call.with_secret
+                if hasattr(read_tool_call, "with_secret")
+                else []
+            ),
+            False,
         )
         # 应该返回警告消息
         self.assertIsNotNone(result)
 
     async def test_failed_tool_call_should_be_ignored(self):
         """测试失败的工具调用应被忽略"""
-        self.group_chat.get_members.return_value = self.mock_machine_control
+        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
         await self.plugin.before_message_generation(True, False)
         # 模拟失败的读取文件工具调用
         read_tool_call = ToolCallMessage(
@@ -257,13 +306,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         )
         # 调用on_tool_result，status="failed"
         result = await self.plugin.on_tool_result(
-            "read_file",
-            0,
-            "failed",
-            None,
-            {"filepath": str(self.test_file)},
-            [],
-            False
+            "read_file", 0, "failed", None, {"filepath": str(self.test_file)}, [], False
         )
         self.assertIsNone(result)
         # 失败的工具调用应该被忽略
@@ -281,6 +324,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         asyncio.run(self.plugin.before_message_generation(True, False))
         # 列表应该被清空
         self.assertEqual(len(self.plugin.read_files), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

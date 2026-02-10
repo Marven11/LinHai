@@ -20,7 +20,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.update_notification_message = MagicMock()
         self.mock_agent.get_current_model = MagicMock()
 
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.mock_agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.mock_agent
+        )
 
         self.group_chat.send_if_exists = AsyncMock()
 
@@ -46,7 +48,9 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.update_notification_message.assert_called_once()
         self.group_chat.send_if_exists.assert_called_once()
 
-        call_args = self.mock_agent.message_processor.update_notification_message.call_args
+        call_args = (
+            self.mock_agent.message_processor.update_notification_message.call_args
+        )
         warning_message = call_args[0][0]
         self.assertIsInstance(warning_message, RuntimeMessage)
         self.assertIn("检测到在思考后没有输出任何内容", warning_message.message)

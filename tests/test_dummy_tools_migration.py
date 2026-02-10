@@ -22,6 +22,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         # 注册conversation_folder
         from linhai.agent.conversation import register_conversation_folder
+
         register_conversation_folder(self.group_chat)
 
         from linhai.tool.base import global_tools
@@ -57,7 +58,9 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
 
         result = await tool_manager.process_tool_call(
             ToolCallMessage(

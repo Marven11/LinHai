@@ -4,7 +4,7 @@
 - 在测试代码实现时，可以在终端中使用命令：`uv run python -m linhai --config ./config.toml -m '<message>'`
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 启动linhai之后要按下tab选择文本框之后才能输入文字到文本框
-- GroupChat.get_members使用时必须先确认group_chat.py的内容，必须先了解其的所有注意事项
+- GroupChat.get_member_typechecked使用时必须先确认group_chat.py的内容，必须先了解其的所有注意事项
 - 对于空行、多余空格等问题: 使用black格式化以清理
 - 忽略unittest的pyright错误
 - 在使用black时避免让black修改仍未修改过的文件，使用: `git diff --name-only | grep .py | xargs black`

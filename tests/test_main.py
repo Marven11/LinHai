@@ -34,7 +34,9 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_args.message = ["测试消息"]
         mock_cli_args.file = []
         mock_cli_args.claw = False
-        mock_group_chat_instance.get_members = MagicMock(side_effect=lambda name, t: mock_cli_args)
+        mock_group_chat_instance.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: mock_cli_args
+        )
 
         test_args = ["linhai", "-m", "测试消息"]
 
@@ -360,7 +362,6 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
@@ -404,39 +405,42 @@ class TestMainCommandLine(unittest.TestCase):
             context.get("checklist_path"), Path("requirements.txt")
         )  # checklist_path在context字典中
 
+
 class TestClawDirectory(unittest.TestCase):
     """测试claw目录相关功能"""
-    
+
     def test_init_claw_creates_new(self):
         """测试init_claw创建新目录"""
         import tempfile
         from pathlib import Path
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('pathlib.Path.home') as mock_home:
+            with patch("pathlib.Path.home") as mock_home:
                 mock_home.return_value = Path(temp_dir)
-                
+
                 from linhai.agent.create import init_claw
+
                 init_claw()
-                
+
                 claw_dir = Path(temp_dir) / ".local" / "share" / "linhai" / "claw"
                 self.assertTrue(claw_dir.exists())
                 self.assertTrue(claw_dir.is_dir())
-    
+
     def test_init_claw_existing_ok(self):
         """测试init_claw处理已存在目录"""
         import tempfile
         from pathlib import Path
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('pathlib.Path.home') as mock_home:
+            with patch("pathlib.Path.home") as mock_home:
                 mock_home.return_value = Path(temp_dir)
-                
+
                 # 预先创建目录
                 claw_dir = Path(temp_dir) / ".local" / "share" / "linhai" / "claw"
                 claw_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 from linhai.agent.create import init_claw
+
                 init_claw()  # 不应出错
-                
+
                 self.assertTrue(claw_dir.exists())

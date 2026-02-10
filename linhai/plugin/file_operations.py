@@ -64,7 +64,9 @@ class DuplicateFileReadPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用结果回调，检查是否重复读取文件。"""
-        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        machine_control = self.group_chat.get_member_typechecked(
+            "machine_control", MachineControl
+        )
         if machine_control.target_machine != "master_host":
             return None
 
@@ -74,12 +76,11 @@ class DuplicateFileReadPlugin(Plugin):
         if tool_name != "read_file":
             return None
 
-
         filepath = toolcall_arguments.get("filepath")
         if not filepath:
             return None
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             return None
 
@@ -167,7 +168,9 @@ class UnnecessarySedReadPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的小块读取。"""
-        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        machine_control = self.group_chat.get_member_typechecked(
+            "machine_control", MachineControl
+        )
         if machine_control.target_machine != "master_host":
             return None
 
@@ -181,13 +184,11 @@ class UnnecessarySedReadPlugin(Plugin):
         if tool_name != "read_file_with_sed":
             return None
 
-
-
         filepath = toolcall_arguments.get("filepath")
         if not filepath:
             return None
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         is_small = await is_small_file(filepath)
         is_already = await is_already_read(agent, filepath)
@@ -247,7 +248,9 @@ class UnnecessaryRunCommandPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
-        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        machine_control = self.group_chat.get_member_typechecked(
+            "machine_control", MachineControl
+        )
         if machine_control.target_machine != "master_host":
             return None
 
@@ -256,8 +259,6 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
         if tool_name != "process_create":
             return None
-
-
 
         command_list = toolcall_arguments.get("command", [])
 
@@ -268,7 +269,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if cmd not in READ_FILE_COMMANDS:
             return None
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         file_args = []
         for arg in command_list[1:]:
@@ -336,7 +337,7 @@ class FileReadWriteConflictPlugin(Plugin):
     ) -> Union[None, bool, RuntimeMessage]:
         """工具结果回调，检查读写文件冲突。"""
         try:
-            machine_control = self.group_chat.get_members(
+            machine_control = self.group_chat.get_member_typechecked(
                 "machine_control", MachineControl
             )
             if machine_control.target_machine != "master_host":
@@ -411,7 +412,7 @@ class DirectoryChangePlugin(Plugin):
         self, _enable_compress: bool, _disable_waiting_user_warning: bool
     ):
         """在消息生成前检查目录是否更改。"""
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         context = getattr(agent, "context", {})
         if not context.get("enable_directory_change_detection", False):

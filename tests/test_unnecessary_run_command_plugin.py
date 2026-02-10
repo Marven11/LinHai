@@ -22,14 +22,16 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_machine_control = MagicMock()
         self.mock_machine_control.target_machine = "master_host"
 
-        def get_members_side_effect(member_type, _member_class=None):
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
             if member_type == "machine_control":
                 return self.mock_machine_control
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_members = MagicMock(side_effect=get_members_side_effect)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=get_member_typechecked_side_effect
+        )
         self.group_chat.send_if_exists = AsyncMock()
         self.plugin = UnnecessaryRunCommandPlugin(self.group_chat)
 
@@ -114,13 +116,18 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
                     message="result",
-                    toolcall_arguments={"command": ["grep", "pattern", "/path/to/read.txt"]},
+                    toolcall_arguments={
+                        "command": ["grep", "pattern", "/path/to/read.txt"]
+                    },
                     with_secret=None,
                     is_tool_failed_duplicated_error=False,
                 )
@@ -140,7 +147,10 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
@@ -166,13 +176,18 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
                     message="result",
-                    toolcall_arguments={"command": ["tail", "-10", "/path/to/read.txt"]},
+                    toolcall_arguments={
+                        "command": ["tail", "-10", "/path/to/read.txt"]
+                    },
                     with_secret=None,
                     is_tool_failed_duplicated_error=False,
                 )
@@ -192,13 +207,18 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
                     message="result",
-                    toolcall_arguments={"command": ["head", "-10", "/path/to/read.txt"]},
+                    toolcall_arguments={
+                        "command": ["head", "-10", "/path/to/read.txt"]
+                    },
                     with_secret=None,
                     is_tool_failed_duplicated_error=False,
                 )
@@ -218,13 +238,18 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
                     message="result",
-                    toolcall_arguments={"command": ["awk", "{print $1}", "/path/to/read.txt"]},
+                    toolcall_arguments={
+                        "command": ["awk", "{print $1}", "/path/to/read.txt"]
+                    },
                     with_secret=None,
                     is_tool_failed_duplicated_error=False,
                 )
@@ -244,13 +269,18 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages.return_value = [mock_file_msg]
 
         with patch("linhai.plugin.file_operations.is_existing_file", return_value=True):
-            with patch("linhai.plugin.file_operations.is_already_read", AsyncMock(return_value=True)):
+            with patch(
+                "linhai.plugin.file_operations.is_already_read",
+                AsyncMock(return_value=True),
+            ):
                 result = await self.plugin.on_tool_result(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
                     message="result",
-                    toolcall_arguments={"command": ["rg", "pattern", "/path/to/read.txt"]},
+                    toolcall_arguments={
+                        "command": ["rg", "pattern", "/path/to/read.txt"]
+                    },
                     with_secret=None,
                     is_tool_failed_duplicated_error=False,
                 )

@@ -32,7 +32,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.mock_cli_args.planning = False
         self.mock_cli_args.llm = None
         self.mock_cli_args.checklist = None
-        
+
     async def test_planning_parameter_default_false(self):
         # 注意：create_agent_build_context需要llm_name参数，我们通过cli_args.llm传递
         self.mock_cli_args.llm = None
@@ -43,9 +43,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             cli_args=self.mock_cli_args,
             planning=False,
         )
-        
+
         self.assertFalse(context["planning"])
-        
+
     async def test_planning_parameter_true(self):
         self.mock_cli_args.llm = None
         context = create_agent_build_context(
@@ -55,23 +55,23 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             cli_args=self.mock_cli_args,
             planning=True,
         )
-        
+
         self.assertTrue(context["planning"])
-        
+
     async def test_create_pinned_messages_with_planning(self):
         from linhai.agent.create import _create_pinned_messages
         from linhai.agent.base import RuntimeMessage, GlobalPrompt
         from linhai.llm import SystemMessage
         from linhai.llm import UserMessage, AssistantMessage
-        
+
         # 模拟对话文件夹
         mock_conversation_folder = Path("/tmp/test_conversation")
-        self.mock_group_chat.get_members = MagicMock(
+        self.mock_group_chat.get_member_typechecked = MagicMock(
             side_effect=lambda name, cls=None: {
                 "conversation_folder": mock_conversation_folder
             }.get(name)
         )
-        
+
         # 模拟消息列表
         mock_messages = [
             SystemMessage(group_chat=self.mock_group_chat),
@@ -79,7 +79,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage("User message 1"),
             AssistantMessage(message="Assistant response 1"),
         ]
-        
+
         context = {
             "planning": True,
             "group_chat": self.mock_group_chat,
@@ -88,43 +88,42 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "config_basedir": self.mock_config_basedir,
             "checklist_path": None,
         }
-        
+
         # 模拟agent.message_processor.messages
         mock_agent = MagicMock()
         mock_agent.message_processor.messages = mock_messages
-        
-        with patch('linhai.agent.create.Agent', return_value=mock_agent):
+
+        with patch("linhai.agent.create.Agent", return_value=mock_agent):
             pinned_messages = await _create_pinned_messages(context)
-        
+
         # 检查是否包含PlanningPromptMessage
         planning_messages = [
-            msg for msg in pinned_messages 
-            if isinstance(msg, PlanningPromptMessage)
+            msg for msg in pinned_messages if isinstance(msg, PlanningPromptMessage)
         ]
-        
+
         self.assertEqual(len(planning_messages), 1)
         planning_msg = planning_messages[0]
-        
+
         # 检查文件夹是否正确
         expected_folder = mock_conversation_folder / "planning"
         self.assertEqual(planning_msg.planning_folder, expected_folder)
-        
+
         # 检查文件路径
         file_paths = planning_msg.get_file_paths()
         self.assertEqual(file_paths["status"], expected_folder / "STATUS.md")
         self.assertEqual(file_paths["todolist"], expected_folder / "TODOLIST.md")
         self.assertEqual(file_paths["design"], expected_folder / "DESIGN.md")
-        
+
         # 检查内容是否包含路径
         content = planning_msg.message
         self.assertIn(str(expected_folder), content)
         self.assertIn("STATUS.md", content)
         self.assertIn("TODOLIST.md", content)
         self.assertIn("DESIGN.md", content)
-        
+
     async def test_create_pinned_messages_without_planning(self):
         from linhai.agent.create import _create_pinned_messages
-        
+
         context = {
             "planning": False,
             "group_chat": self.mock_group_chat,
@@ -133,21 +132,20 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "config_basedir": self.mock_config_basedir,
             "checklist_path": None,
         }
-        
+
         pinned_messages = await _create_pinned_messages(context)
-        
+
         # 检查是否不包含PlanningPromptMessage
         planning_messages = [
-            msg for msg in pinned_messages 
-            if isinstance(msg, PlanningPromptMessage)
+            msg for msg in pinned_messages if isinstance(msg, PlanningPromptMessage)
         ]
-        
+
         self.assertEqual(len(planning_messages), 0)
 
     async def test_plugin_registration_with_planning_true(self):
         # 测试planning为True时插件注册逻辑
         from linhai.agent.create import create_agent_from_config
-        
+
         # 创建上下文配置，planning为True
         context = {
             "planning": True,
@@ -159,48 +157,61 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
         }
-        
+
         # 模拟LLM实例，确保get_name方法返回正确的名称
         mock_llm = MagicMock()
         mock_llm.get_name.return_value = "test_llm"
-        
+
         # 模拟agent和lifecycle
         mock_agent = MagicMock()
         mock_lifecycle = MagicMock()
         mock_agent.lifecycle = mock_lifecycle
-        
+
         # 使用patch模拟所有必要依赖，注意Agent是从linhai.agent.main导入到create模块的
         # 我们使用side_effect来确保调用Agent()时返回我们准备好的mock_agent
         def mock_agent_side_effect(*args, **kwargs):
             return mock_agent
-        
-        with patch('linhai.agent.create.Agent', side_effect=mock_agent_side_effect), \
-             patch('linhai.agent.create._create_llm_instances', return_value=[mock_llm]), \
-             patch('linhai.agent.create._create_tool_manager', return_value=(MagicMock(), MagicMock())), \
-             patch('linhai.agent.create._create_pinned_messages', return_value=[]), \
-             patch('linhai.agent.create.initialize_secret_system'), \
-             patch('linhai.agent.lifecycle.Lifecycle', return_value=mock_lifecycle), \
-             patch('linhai.plugin.planning.PlanningStatusReminderPlugin') as mock_planning_plugin_cls, \
-             patch('linhai.plugin.planning.UserInputRuntimeMessagePlugin') as mock_user_input_plugin_cls:
-            
+
+        with (
+            patch("linhai.agent.create.Agent", side_effect=mock_agent_side_effect),
+            patch("linhai.agent.create._create_llm_instances", return_value=[mock_llm]),
+            patch(
+                "linhai.agent.create._create_tool_manager",
+                return_value=(MagicMock(), MagicMock()),
+            ),
+            patch("linhai.agent.create._create_pinned_messages", return_value=[]),
+            patch("linhai.agent.create.initialize_secret_system"),
+            patch("linhai.agent.lifecycle.Lifecycle", return_value=mock_lifecycle),
+            patch(
+                "linhai.plugin.planning.PlanningStatusReminderPlugin"
+            ) as mock_planning_plugin_cls,
+            patch(
+                "linhai.plugin.planning.UserInputRuntimeMessagePlugin"
+            ) as mock_user_input_plugin_cls,
+        ):
+
             # 设置插件实例
             mock_planning_status_plugin_instance = MagicMock()
             mock_user_input_plugin_instance = MagicMock()
             mock_planning_plugin_cls.return_value = mock_planning_status_plugin_instance
             mock_user_input_plugin_cls.return_value = mock_user_input_plugin_instance
-            
+
             # 执行函数
             await create_agent_from_config(context=context)
-            
+
             # 验证planning插件被实例化和注册
-            from linhai.plugin.planning import PlanningStatusReminderPlugin, UserInputRuntimeMessagePlugin
+            from linhai.plugin.planning import (
+                PlanningStatusReminderPlugin,
+                UserInputRuntimeMessagePlugin,
+            )
+
             mock_planning_plugin_cls.assert_called_once_with(self.mock_group_chat)
             mock_user_input_plugin_cls.assert_called_once_with(self.mock_group_chat)
-            
+
             # 验证register被调用，且参数不为空
             mock_planning_status_plugin_instance.register.assert_called_once()
             mock_user_input_plugin_instance.register.assert_called_once()
-            
+
             # 检查register调用参数是否非空
             planning_call_args = mock_planning_status_plugin_instance.register.call_args
             user_input_call_args = mock_user_input_plugin_instance.register.call_args
@@ -210,7 +221,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_plugin_registration_with_planning_false(self):
         # 测试planning为False时插件不被注册
         from linhai.agent.create import create_agent_from_config
-        
+
         # 创建上下文配置，planning为False
         context = {
             "planning": False,
@@ -222,41 +233,56 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
         }
-        
+
         # 创建模拟的Lifecycle对象
         mock_lifecycle = MagicMock()
-        
+
         # 模拟agent
         mock_agent = MagicMock()
         mock_agent.lifecycle = mock_lifecycle
-        
+
         # 模拟LLM实例，确保get_name方法返回正确的名称
         mock_llm = MagicMock()
         mock_llm.get_name.return_value = "test_llm"
-        
+
         # 模拟planning插件
         mock_planning_status_plugin_instance = MagicMock()
         mock_user_input_plugin_instance = MagicMock()
-        
+
         # 使用patch模拟所有必要依赖，注意Agent是从linhai.agent.main导入到create模块的
-        with patch('linhai.agent.create.Agent', return_value=mock_agent), \
-             patch('linhai.agent.create._create_llm_instances', return_value=[mock_llm]), \
-             patch('linhai.agent.create._create_tool_manager', return_value=(MagicMock(), MagicMock())), \
-             patch('linhai.agent.create._create_pinned_messages', return_value=[]), \
-             patch('linhai.agent.create.initialize_secret_system'), \
-             patch('linhai.plugin.planning.PlanningStatusReminderPlugin', return_value=mock_planning_status_plugin_instance), \
-             patch('linhai.plugin.planning.UserInputRuntimeMessagePlugin', return_value=mock_user_input_plugin_instance):
-            
+        with (
+            patch("linhai.agent.create.Agent", return_value=mock_agent),
+            patch("linhai.agent.create._create_llm_instances", return_value=[mock_llm]),
+            patch(
+                "linhai.agent.create._create_tool_manager",
+                return_value=(MagicMock(), MagicMock()),
+            ),
+            patch("linhai.agent.create._create_pinned_messages", return_value=[]),
+            patch("linhai.agent.create.initialize_secret_system"),
+            patch(
+                "linhai.plugin.planning.PlanningStatusReminderPlugin",
+                return_value=mock_planning_status_plugin_instance,
+            ),
+            patch(
+                "linhai.plugin.planning.UserInputRuntimeMessagePlugin",
+                return_value=mock_user_input_plugin_instance,
+            ),
+        ):
+
             # 执行函数
             await create_agent_from_config(context=context)
-            
+
             # 验证planning插件没有被实例化或注册
-            from linhai.plugin.planning import PlanningStatusReminderPlugin, UserInputRuntimeMessagePlugin
+            from linhai.plugin.planning import (
+                PlanningStatusReminderPlugin,
+                UserInputRuntimeMessagePlugin,
+            )
+
             PlanningStatusReminderPlugin.assert_not_called()
             UserInputRuntimeMessagePlugin.assert_not_called()
             mock_planning_status_plugin_instance.register.assert_not_called()
             mock_user_input_plugin_instance.register.assert_not_called()
-        
+
 
 if __name__ == "__main__":
     unittest.main()

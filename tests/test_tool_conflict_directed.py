@@ -26,7 +26,9 @@ class TestDirectedToolConflict(unittest.TestCase):
         self.tool_manager.toolsets = []
         self.tool_manager.process_tool_call = AsyncMock()
 
-        self.agent.group_chat.get_members = MagicMock(return_value=self.tool_manager)
+        self.agent.group_chat.get_member_typechecked = MagicMock(
+            return_value=self.tool_manager
+        )
 
         self.toolcall = AgentToolcall(self.agent)
 

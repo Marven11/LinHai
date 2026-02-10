@@ -20,7 +20,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.get_current_model = MagicMock()
 
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
 
         self.plugin = RuntimeImitationPlugin(self.group_chat)

@@ -32,7 +32,9 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         )  # 添加interrupt mock并模拟添加消息
         self.agent.get_current_model = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         self.plugin = WeirdTokenPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
@@ -80,7 +82,9 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = MagicMock()
         self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         self.plugin = DirectoryChangePlugin(self.group_chat)
 
     def test_register(self):
@@ -146,7 +150,9 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         from linhai.plugin import SingleToolCallReminderPlugin
 
         self.plugin = SingleToolCallReminderPlugin(self.group_chat)
@@ -247,7 +253,9 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.interrupt = AsyncMock()
         self.agent.get_current_model = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         self.group_chat.send_if_exists = AsyncMock()
         self.plugin = PromptFastAgentPlugin(self.group_chat)
         self.answer = MagicMock()
@@ -404,8 +412,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             side_effect=mock_compute_orchestration_context
         )
 
-        # 设置group_chat.get_members返回值
-        def get_members_side_effect(name, cls):
+        # 设置group_chat.get_member_typechecked返回值
+        def get_member_typechecked_side_effect(name, cls):
             if name == "agent":
                 return self.agent
             elif name == "agent_context_orchestration":
@@ -413,7 +421,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             else:
                 return None
 
-        self.group_chat.get_members.side_effect = get_members_side_effect
+        self.group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
     def test_init(self):
         """测试初始化。"""
@@ -527,7 +535,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration.should_block_tool_call.return_value = False
 
         # 更新get_members模拟以返回正确的orchestration
-        def get_members_side_effect(name, cls):
+        def get_member_typechecked_side_effect(name, cls):
             if name == "agent":
                 return self.agent
             elif name == "agent_context_orchestration":
@@ -535,7 +543,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             else:
                 return None
 
-        self.group_chat.get_members.side_effect = get_members_side_effect
+        self.group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         # 测试所有允许的工具
         allowed_tools = [
@@ -690,7 +698,9 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.update_notification_message = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         self.plugin = PreviousReasoningPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
@@ -797,7 +807,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = MagicMock()
         self.group_chat = MagicMock()
-        self.group_chat.get_members = MagicMock(return_value=self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
         from linhai.plugin import KimiK25ToolCallPlugin
 

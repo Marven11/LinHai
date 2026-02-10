@@ -24,9 +24,6 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
 
 
-
-
-
 class ToolManager:
     """工具管理器，负责处理工具调用请求"""
 
@@ -65,7 +62,9 @@ class ToolManager:
         from linhai.machine_control.main import register_machine_control_tools
         from linhai.machine_control import MachineControl
 
-        machine_control = self.group_chat.get_members("machine_control", MachineControl)
+        machine_control = self.group_chat.get_member_typechecked(
+            "machine_control", MachineControl
+        )
         self.add_toolset(register_machine_control_tools(machine_control))
 
     async def ensure_mcp_connector(self):
@@ -87,8 +86,6 @@ class ToolManager:
         if self.mcp_connector:
             toolsets += self.mcp_connector.get_toolsets()
         return toolsets
-
-
 
     def add_toolset(self, toolset: ToolSet):
         existing_names = set(
@@ -134,7 +131,7 @@ class ToolManager:
 
             # machine_control应该总是存在，因为ToolManager.postinit会注册它
             # 如果不存在，说明系统初始化有问题，应该抛出异常
-            machine_control = self.group_chat.get_members(
+            machine_control = self.group_chat.get_member_typechecked(
                 "machine_control", MachineControl
             )
             if tool_call.on_machine not in machine_control.machines:
@@ -197,15 +194,18 @@ class ToolManager:
 
             if isinstance(result, Awaitable):
                 result = await result
-            
+
             from ..multimodal import ImageMessage
+
             if isinstance(result, ImageMessage):
                 return result
-            
+
             if isinstance(result, Message):
                 llm_msg = result.to_llm_message()
                 content = llm_msg.get("content", "")
-                assert isinstance(content, str), "Possible unfiltered complex content: " + repr(content)
+                assert isinstance(
+                    content, str
+                ), "Possible unfiltered complex content: " + repr(content)
                 processed_content = content
                 result_type = (
                     ToolResultFailed
@@ -216,7 +216,9 @@ class ToolManager:
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     result=result_type(content=processed_content),
-                    toolcall_arguments=kwargs if isinstance(result, ToolResultFailed) else {},
+                    toolcall_arguments=(
+                        kwargs if isinstance(result, ToolResultFailed) else {}
+                    ),
                 )
 
             if isinstance(result, ToolResultSuccess) or isinstance(
@@ -263,7 +265,7 @@ class ToolManager:
 
         from linhai.agent.lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_before_message_generation(self.update_tools_definition)
 
     async def update_tools_definition(
@@ -272,7 +274,9 @@ class ToolManager:
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""
         from linhai.llm import SystemMessage
 
-        system_message = self.group_chat.get_members("system_message", SystemMessage)
+        system_message = self.group_chat.get_member_typechecked(
+            "system_message", SystemMessage
+        )
 
         system_message.remove_introduction("TOOLS")
 

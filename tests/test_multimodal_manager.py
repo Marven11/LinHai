@@ -37,14 +37,14 @@ class TestMultimodalToolsetManager(TestCase):
         self.mock_config.llm = [kimi_config, deepseek_config]
         self.mock_agent.config = self.mock_config
 
-        def mock_get_members(name, cls=None):
+        def mock_get_member_typechecked(name, cls=None):
             if name == "tool_manager":
                 return self.mock_tool_manager
             elif name == "agent":
                 return self.mock_agent
             return MagicMock()
 
-        self.mock_group_chat.get_members = mock_get_members
+        self.mock_group_chat.get_member_typechecked = mock_get_member_typechecked
         self.mock_group_chat.register_member = MagicMock()
 
     def test_init_creates_toolset(self):

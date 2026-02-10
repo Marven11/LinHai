@@ -46,7 +46,6 @@ class TestCreateAgent(unittest.TestCase):
             config=config,
             config_basedir=Path("."),
             llm_name=None,
-
             cli_args=cli_args,
             checklist_path=None,
         )
@@ -54,13 +53,15 @@ class TestCreateAgent(unittest.TestCase):
         self.assertIsInstance(result, Agent)
 
         try:
-            agent = group_chat.get_members("agent", Agent)
+            agent = group_chat.get_member_typechecked("agent", Agent)
             self.assertIsNotNone(agent)
         except RuntimeError:
             self.fail("agent成员未在group_chat中注册")
 
         try:
-            tool_manager = group_chat.get_members("tool_manager", ToolManager)
+            tool_manager = group_chat.get_member_typechecked(
+                "tool_manager", ToolManager
+            )
             self.assertIsNotNone(tool_manager)
         except RuntimeError:
             self.fail("tool_manager成员未在group_chat中注册")
@@ -90,14 +91,13 @@ class TestCreateAgent(unittest.TestCase):
             config=config,
             config_basedir=Path("."),
             llm_name="test",
-
             cli_args=cli_args,
             checklist_path=None,
         )
         result = asyncio.run(create_agent_from_config(context))
         self.assertIsInstance(result, Agent)
 
-        agent = group_chat.get_members("agent", Agent)
+        agent = group_chat.get_member_typechecked("agent", Agent)
         self.assertEqual(agent.current_llm_index, 0)  # test是第一个LLM
 
     def test_create_agent_with_invalid_llm_name(self):
@@ -123,8 +123,6 @@ class TestCreateAgent(unittest.TestCase):
                 config=config,
                 config_basedir=Path("."),
                 llm_name="invalid_llm",
-
-
                 cli_args=cli_args,
                 checklist_path=None,
             )

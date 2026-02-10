@@ -20,7 +20,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.mock_cli_app.query_one = Mock(return_value=self.mock_container)
         self.mock_cli_app.should_auto_scroll = Mock(return_value=True)
 
-        def get_members_side_effect(name, cls):
+        def get_member_typechecked_side_effect(name, cls):
             if name == "cli_app":
                 return self.mock_cli_app
             elif name == "agent":
@@ -28,13 +28,16 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             elif name == "conversation_folder":
                 from pathlib import Path
                 from tempfile import TemporaryDirectory
+
                 self.temp_dir = TemporaryDirectory()
                 self.addCleanup(self.temp_dir.cleanup)
                 return Path(self.temp_dir.name)
             else:
                 return Mock()
 
-        self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
+        self.group_chat.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
 
         self.mock_llm1 = MagicMock()
         self.mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")

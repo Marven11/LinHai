@@ -26,12 +26,14 @@ class TestSystemMessage(unittest.TestCase):
             return_value=[{"name": "test_tool", "description": "测试工具"}]
         )
 
-        def get_members_side_effect(name, cls):
+        def get_member_typechecked_side_effect(name, cls):
             if name == "tool_manager":
                 return self.mock_tool_manager
             return Mock()
 
-        self.group_chat.get_members = Mock(side_effect=get_members_side_effect)
+        self.group_chat.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
 
     def test_system_message_initialization(self):
         """测试SystemMessage初始化。"""
@@ -85,7 +87,7 @@ class TestSystemMessage(unittest.TestCase):
         # 模拟get_members返回一个tool_manager，但get_tools_info返回空列表
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info = Mock(return_value=[])
-        self.group_chat.get_members = Mock(return_value=mock_tool_manager)
+        self.group_chat.get_member_typechecked = Mock(return_value=mock_tool_manager)
 
         # 应该能正常初始化，但工具列表为空
         system_msg = SystemMessage(group_chat=self.group_chat)

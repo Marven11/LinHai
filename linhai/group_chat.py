@@ -47,7 +47,7 @@ class GroupChat:
             raise RuntimeError(f"{name!r} exists")
         self.members[name] = obj
 
-    def get_members(self, name: LiteralString, t: Type[T]) -> T:
+    def get_member_typechecked(self, name: LiteralString, t: Type[T]) -> T:
         """注意：t用来动态检测类型，保证拿到的数据类型正确
 
         这个函数用来解决循环引用的问题和交叉持有带来的无法初始化的问题

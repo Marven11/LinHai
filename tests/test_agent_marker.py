@@ -83,7 +83,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.group_chat.send = AsyncMock()
         self.group_chat.send_if_exists = AsyncMock()
         self.group_chat.is_empty = MagicMock(return_value=True)
-        self.group_chat.get_members = MagicMock()
+        self.group_chat.get_member_typechecked = MagicMock()
 
         self.tool_manager = MagicMock()
         self.tool_manager.get_tools_info.return_value = []
@@ -100,7 +100,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_machine_control = MagicMock(spec=MachineControl)
         self.mock_machine_control.target_machine = "master_host"
 
-        def get_members_side_effect(member_type, _member_class=None):
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
             if member_type == "agent":
                 return self.agent
             elif member_type == "issue_manager":
@@ -116,6 +116,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             elif member_type == "conversation_folder":
                 from pathlib import Path
                 from tempfile import TemporaryDirectory
+
                 self.temp_dir = TemporaryDirectory()
                 self.addCleanup(self.temp_dir.cleanup)
                 return Path(self.temp_dir.name)
@@ -125,7 +126,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return argparse.Namespace(afk=False)
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_members.side_effect = get_members_side_effect
+        self.group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
 
         pinned_messages = [
             SystemMessage(

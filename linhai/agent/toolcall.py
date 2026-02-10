@@ -70,7 +70,9 @@ class AgentToolcall:
         """
 
         tool_def = None
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
         for toolset in tool_manager.toolsets:
             if toolset.has_tool(tool_name):
                 tool_def = toolset.get_tools()[tool_name]
@@ -133,7 +135,9 @@ class AgentToolcall:
             )
             return f"当前使用的LLM: {current_name}"
 
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
         tool_manager.add_toolset(llm_toolset)
 
     def _register_dummy_toolset(self):
@@ -152,7 +156,9 @@ class AgentToolcall:
             else:
                 return "暂无token用量信息"
 
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
 
         tool_manager.add_toolset(dummy_toolset)
 
@@ -167,7 +173,9 @@ class AgentToolcall:
         single_tool_limit: int,
     ) -> str:
         """分割并保存过大的工具输出到文件。"""
-        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        conversation_dir = self.group_chat.get_member_typechecked(
+            "conversation_folder", Path
+        )
         long_toolcall_dir = conversation_dir / "long_toolcall"
         long_toolcall_dir.mkdir(exist_ok=True)
 
@@ -206,7 +214,9 @@ class AgentToolcall:
         current_round_token_count: int,
     ) -> str:
         """保存当前轮次超限的工具输出到文件。"""
-        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        conversation_dir = self.group_chat.get_member_typechecked(
+            "conversation_folder", Path
+        )
         long_toolcall_dir = conversation_dir / "long_toolcall"
         long_toolcall_dir.mkdir(exist_ok=True)
 
@@ -219,7 +229,9 @@ class AgentToolcall:
 
     async def ensure_mcp_connector(self):
         """确保MCP连接器已准备就绪。"""
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
         await tool_manager.ensure_mcp_connector()
 
     def start_new_tool_call_round(self):
@@ -426,7 +438,9 @@ class AgentToolcall:
         elif isinstance(before_result, dict):
             tool_call.function_arguments = before_result
 
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
         try:
             tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
 

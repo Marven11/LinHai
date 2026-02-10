@@ -35,10 +35,11 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.is_dirty = False
         self.group_chat.register_member("token_manager", mock_token_manager)
-        
+
         # 注册conversation_folder，因为AgentMessage._save_context需要它
         from pathlib import Path
         from tempfile import TemporaryDirectory
+
         self.temp_dir = TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self.group_chat.register_member("conversation_folder", Path(self.temp_dir.name))
@@ -94,7 +95,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.message_processor.add_new_message(large_msg)
 
         # 设置token用量失效
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = True
 
         # 调用compute_orchestration_context，获取通知消息
@@ -226,7 +229,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.message_processor.add_new_message(large_msg)
 
         # 获取token管理器并设置dirty状态
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = True
 
         context = self.orchestration.compute_orchestration_context("", threshold_info)
@@ -247,7 +252,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 设置token用量失效
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = True
 
         # 测试正常工具（如read_file）不应该被阻塞
@@ -277,7 +284,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 确保token用量未失效（默认状态）
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = False
 
         # 测试正常工具（如read_file）应该被阻塞
@@ -306,7 +315,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 确保token用量未失效（默认状态）
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = False
 
         # 测试清理工具（如context_forget_large_message）应该被允许
@@ -335,7 +346,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 测试token用量失效时，清理工具被阻塞（因为刚清理过）
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         token_manager.is_dirty = True
 
         context = self.orchestration.compute_orchestration_context(

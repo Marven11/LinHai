@@ -28,7 +28,7 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.planning_folder is not None:
             return self.planning_folder
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             return None
 
@@ -42,8 +42,8 @@ class PlanningStatusReminderPlugin(Plugin):
     def _get_current_state(self) -> str:
         from linhai.agent.orchestration import AgentContextOrchestration
 
-        agent = self.group_chat.get_members("agent", Agent)
-        orchestration = self.group_chat.get_members(
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -95,7 +95,7 @@ class PlanningStatusReminderPlugin(Plugin):
 
     async def _update_notifications(self, current_state: str) -> None:
         if current_state == "红灯":
-            agent = self.group_chat.get_members("agent", Agent)
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
             if agent:
                 agent.message_processor.update_notification_message(
                     None, source="planning_status_reminder", sort_value=0
@@ -105,7 +105,7 @@ class PlanningStatusReminderPlugin(Plugin):
                 )
             return
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             return
 
@@ -188,7 +188,7 @@ class UserInputRuntimeMessagePlugin(Plugin):
         full_response: str,
         tool_calls: list[dict],
     ) -> None:
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             return
 

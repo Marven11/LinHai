@@ -59,7 +59,9 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             pinned_messages=init_messages,
             llm_name=config["llm_names"][config["current_llm_index"]],
         )
-        self.tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+        self.tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
 
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""

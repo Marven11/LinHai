@@ -80,7 +80,6 @@ server_script_path = "{server_script_path}"
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
-
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))
@@ -115,14 +114,13 @@ compress_threshold = 80000
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
-
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))
 
         self.assertIsInstance(result, Agent)
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         self.assertIsNotNone(agent)
 
 

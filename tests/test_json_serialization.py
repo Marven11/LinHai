@@ -25,12 +25,14 @@ class TestJsonSerialization(unittest.TestCase):
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
 
-        def get_members_side_effect(member_type, _member_class=None):
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
             if member_type == "tool_manager":
                 return mock_tool_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.mock_group_chat.get_members = Mock(side_effect=get_members_side_effect)
+        self.mock_group_chat.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
 
     def test_system_message_serialization(self):
         """测试SystemMessage的序列化"""

@@ -44,7 +44,7 @@ class CommandHandler:
     async def _show_runtime_message(self, level: str, content: str) -> None:
         from linhai.cli.app import CLIApp
 
-        cli_app = self.group_chat.get_members("cli_app", CLIApp)
+        cli_app = self.group_chat.get_member_typechecked("cli_app", CLIApp)
         assert cli_app is not None
 
         container = cli_app.query_one("#chat-container")
@@ -56,7 +56,7 @@ class CommandHandler:
         from linhai.agent import Agent
         from linhai.llm import UserMessage
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True
@@ -98,7 +98,7 @@ class CommandHandler:
         """处理/status命令,显示状态信息."""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True
@@ -121,7 +121,7 @@ class CommandHandler:
         """处理@切换模型命令."""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True
@@ -166,7 +166,7 @@ class CommandHandler:
         from linhai.agent import Agent
         from linhai.llm import ToolCallMessage
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True

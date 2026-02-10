@@ -102,7 +102,7 @@ class CLIApp(App):
         self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
-        cli_args = group_chat.get_members("cli_args", argparse.Namespace)
+        cli_args = group_chat.get_member_typechecked("cli_args", argparse.Namespace)
         self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
         if cli_args.file:
             self.init_messages += [
@@ -122,7 +122,7 @@ class CLIApp(App):
         self.group_chat.add_postinit(self.postinit)
 
     def postinit(self):
-        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
         self.watch_exit_signal_queue()
         self.watch_token_usage_queue()
@@ -131,7 +131,9 @@ class CLIApp(App):
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
             with TabPane("Agent", id="agent-tab"):
-                lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+                lifecycle = self.group_chat.get_member_typechecked(
+                    "lifecycle", Lifecycle
+                )
                 self.messages_list = MessagesList(
                     group_chat=self.group_chat,
                     cli_config=self.cli_config,
@@ -194,14 +196,14 @@ class CLIApp(App):
 
     @work(exclusive=False)
     async def _run_agent(self) -> None:
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         await agent.run()
 
     def _generate_dynamic_completions(self) -> list[str]:
         """动态生成@补全列表"""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             return []
 
@@ -220,7 +222,7 @@ class CLIApp(App):
             rainbow_art = RainbowAsciiArt(ASCII_ART)
             rainbow_art.add_class("welcome-message")
             self.messages_list.mount(rainbow_art)
-            agent = self.group_chat.get_members("agent", Agent)
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
             animated_welcome = AnimatedWelcomeWidget(version, llm_name)
@@ -267,7 +269,7 @@ class CLIApp(App):
 
         from linhai.tool.main import ToolManager
 
-        self.group_chat.get_members("tool_manager", ToolManager).add_toolset(
+        self.group_chat.get_member_typechecked("tool_manager", ToolManager).add_toolset(
             cliapp_tool
         )
 
@@ -292,7 +294,7 @@ class CLIApp(App):
 
         if event.key == "ctrl+c":
             close_all_terminals()
-            await self.group_chat.get_members(
+            await self.group_chat.get_member_typechecked(
                 "mcp_connector", MCPConnector
             ).disconnect_all_mcp_servers()
             self.app.exit()

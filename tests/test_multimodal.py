@@ -147,12 +147,12 @@ class TestLoadImage(TestCase):
         """Test loading an existing image file."""
         from PIL import Image
         from io import BytesIO
-        
-        img = Image.new('RGB', (100, 100), color='red')
+
+        img = Image.new("RGB", (100, 100), color="red")
         buffer = BytesIO()
-        img.save(buffer, format='PNG')
+        img.save(buffer, format="PNG")
         png_data = buffer.getvalue()
-        
+
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             f.write(png_data)
             temp_path = f.name
@@ -167,12 +167,14 @@ class TestLoadImage(TestCase):
 
     def test_load_image_not_found(self):
         with self.assertRaises(FileNotFoundError):
-            load_image("/nonexistent/path/image.png", self.mock_group_chat, quality="raw")
+            load_image(
+                "/nonexistent/path/image.png", self.mock_group_chat, quality="raw"
+            )
 
     def test_load_image_different_mime_types(self):
         from PIL import Image
         from io import BytesIO
-        
+
         test_cases = [
             (".jpg", "image/jpeg"),
             (".jpeg", "image/jpeg"),
@@ -183,7 +185,7 @@ class TestLoadImage(TestCase):
 
         for ext, expected_mime in test_cases:
             with self.subTest(ext=ext):
-                img = Image.new('RGB', (100, 100), color='red')
+                img = Image.new("RGB", (100, 100), color="red")
                 buffer = BytesIO()
                 format_map = {
                     ".jpg": "JPEG",
@@ -194,7 +196,7 @@ class TestLoadImage(TestCase):
                 }
                 img.save(buffer, format=format_map[ext])
                 image_data = buffer.getvalue()
-                
+
                 with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
                     f.write(image_data)
                     temp_path = f.name
@@ -208,12 +210,12 @@ class TestLoadImage(TestCase):
     def test_load_image_quality_parameter(self):
         from PIL import Image
         from io import BytesIO
-        
-        img = Image.new('RGB', (100, 100), color='red')
+
+        img = Image.new("RGB", (100, 100), color="red")
         buffer = BytesIO()
-        img.save(buffer, format='PNG')
+        img.save(buffer, format="PNG")
         png_data = buffer.getvalue()
-        
+
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             f.write(png_data)
             temp_path = f.name
@@ -221,7 +223,7 @@ class TestLoadImage(TestCase):
         try:
             result = load_image(temp_path, self.mock_group_chat, quality="raw")
             self.assertEqual(result.quality, "raw")
-            
+
             result2 = load_image(temp_path, self.mock_group_chat, quality="compressed")
             self.assertEqual(result2.quality, "compressed")
         finally:
@@ -238,7 +240,9 @@ class TestImageMessageToLlmMessage(TestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.support_image = MagicMock(return_value=True)
         self.mock_agent.get_current_model.return_value = self.mock_llm
-        self.mock_group_chat.get_members = MagicMock(side_effect=lambda name, t: self.mock_agent)
+        self.mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.mock_agent
+        )
 
     def test_to_llm_message_with_supported_llm(self):
         """Test conversion when LLM supports images."""

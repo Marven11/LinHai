@@ -23,16 +23,16 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
-            return_value=None
-        )
+        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)
         self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
             return_value=None
         )
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.group_chat.get_members.return_value = self.mock_tool_manager
+        self.mock_agent.group_chat.get_member_typechecked.return_value = (
+            self.mock_tool_manager
+        )
 
         self.toolcall_processor = AgentToolcall(self.mock_agent)
 
@@ -73,13 +73,15 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和success
-        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        self.assertGreaterEqual(
+            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+        )
         # 获取最后一次调用
         last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
         # 检查最后一次调用是success状态
-        self.assertEqual(last_call[1]['status'], 'success')
-        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
-        self.assertEqual(last_call[1]['tool_index'], 1)
+        self.assertEqual(last_call[1]["status"], "success")
+        self.assertEqual(last_call[1]["tool_name"], "test_tool")
+        self.assertEqual(last_call[1]["tool_index"], 1)
 
     async def test_call_tool_without_confirmation_failure_with_assert_success_false(
         self,
@@ -108,13 +110,15 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和failed
-        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        self.assertGreaterEqual(
+            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+        )
         # 获取最后一次调用
         last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
         # 检查最后一次调用是failed状态，因为工具调用失败
-        self.assertEqual(last_call[1]['status'], 'failed')
-        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
-        self.assertEqual(last_call[1]['tool_index'], 1)
+        self.assertEqual(last_call[1]["status"], "failed")
+        self.assertEqual(last_call[1]["tool_name"], "test_tool")
+        self.assertEqual(last_call[1]["tool_index"], 1)
 
     async def test_call_tool_without_confirmation_failure(self):
         """测试无需确认的工具调用失败。"""
@@ -141,13 +145,15 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result)
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和failed
-        self.assertGreaterEqual(self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1)
+        self.assertGreaterEqual(
+            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+        )
         # 获取最后一次调用
         last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
         # 检查最后一次调用是failed状态
-        self.assertEqual(last_call[1]['status'], 'failed')
-        self.assertEqual(last_call[1]['tool_name'], 'test_tool')
-        self.assertEqual(last_call[1]['tool_index'], 1)
+        self.assertEqual(last_call[1]["status"], "failed")
+        self.assertEqual(last_call[1]["tool_name"], "test_tool")
+        self.assertEqual(last_call[1]["tool_index"], 1)
 
     async def test_call_tool_state_change(self):
         """测试工具调用时状态改变。"""
@@ -166,7 +172,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertEqual(self.mock_agent.state, "working")
-
 
     async def test_multiple_tool_calls_with_mixed_results(self):
         """测试多个工具调用混合成功和失败的情况。"""
@@ -248,7 +253,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
         self.assertFalse(result)
-
 
     async def test_tool_conflict_detection(self):
         """测试工具冲突检测。"""

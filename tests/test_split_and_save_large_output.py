@@ -18,7 +18,9 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         self.conversation_dir = Path(self.temp_dir)
 
         self.mock_group_chat = Mock()
-        self.mock_group_chat.get_members = Mock(return_value=self.conversation_dir)
+        self.mock_group_chat.get_member_typechecked = Mock(
+            return_value=self.conversation_dir
+        )
 
     def tearDown(self):
         """清理测试环境。"""
@@ -35,7 +37,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         mock_agent.orchestration = Mock()
         mock_agent.orchestration.get_orchestration_toolset = Mock(return_value=Mock())
 
-        with patch.object(AgentToolcall, '_register_default_toolsets'):
+        with patch.object(AgentToolcall, "_register_default_toolsets"):
             toolcall = AgentToolcall(mock_agent)
             toolcall.group_chat = self.mock_group_chat
             return toolcall
@@ -50,7 +52,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
             result_content=text,
             token_count=3000,
             tool_name="test_tool",
-            single_tool_limit=10000
+            single_tool_limit=10000,
         )
 
         long_toolcall_dir = self.conversation_dir / "long_toolcall"
@@ -71,7 +73,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
             result_content=text,
             token_count=token_count,
             tool_name="test_tool",
-            single_tool_limit=5000
+            single_tool_limit=5000,
         )
 
         long_toolcall_dir = self.conversation_dir / "long_toolcall"
@@ -93,7 +95,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
             result_content=text,
             token_count=10,
             tool_name="test_tool",
-            single_tool_limit=100000
+            single_tool_limit=100000,
         )
 
         long_toolcall_dir = self.conversation_dir / "long_toolcall"

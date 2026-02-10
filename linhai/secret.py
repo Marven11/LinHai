@@ -208,7 +208,7 @@ class SecretInterceptorPlugin:
                 )
 
             if contains_any_secret(result_content, self.secrets_dict):
-                conversation_dir = self.group_chat.get_members(
+                conversation_dir = self.group_chat.get_member_typechecked(
                     "conversation_folder", Path
                 )
                 filepath = save_secret_intercepted(
@@ -287,7 +287,9 @@ def initialize_secret_system(
     if secrets_message:
 
         def add_secret_rule():
-            system_message = group_chat.get_members("system_message", SystemMessage)
+            system_message = group_chat.get_member_typechecked(
+                "system_message", SystemMessage
+            )
             rule_content = INTRODUCTION_SECRET_SYSTEM.format(
                 secrets_list=secrets_message
             )
@@ -296,7 +298,7 @@ def initialize_secret_system(
         group_chat.add_postinit(add_secret_rule)
 
     def register_plugin_to_lifecycle():
-        lifecycle = group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle = group_chat.get_member_typechecked("lifecycle", Lifecycle)
         secret_plugin.register(lifecycle)
 
     group_chat.add_postinit(register_plugin_to_lifecycle)

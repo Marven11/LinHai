@@ -342,7 +342,7 @@ class MockGroupChat:
     def register_member(self, name, obj):
         self.members[name] = obj
 
-    def get_members(self, name, _type=None):
+    def get_member_typechecked(self, name, _type=None):
         if name in self.members:
             return self.members[name]
         raise RuntimeError(f"Member {name} not found")

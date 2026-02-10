@@ -19,7 +19,9 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = MagicMock()
 
-        self.group_chat.get_members = MagicMock(side_effect=lambda name, t: self.agent)
+        self.group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: self.agent
+        )
         self.group_chat.send_if_exists = AsyncMock()
 
     def test_plugin_initialization(self):
@@ -102,7 +104,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer.get_reasoning_message.return_value = None
 
         with patch.object(
-            self.plugin.group_chat, "get_members", return_value=self.agent
+            self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
                 answer, "当前实际输出内容", []
@@ -120,7 +122,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         answer.get_reasoning_message.return_value = reasoning_content
 
         with patch.object(
-            self.plugin.group_chat, "get_members", return_value=self.agent
+            self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
                 answer, "当前实际输出内容", []

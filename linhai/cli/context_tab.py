@@ -153,7 +153,9 @@ class ContextTabWidget(Static):
 
         from linhai.token_manager import TokenManager
 
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
 
         # Fail fast: token_usage must be AnswerTokenUsage or None
         token_usage = token_manager.current_token_usage
@@ -274,7 +276,9 @@ class ContextTabWidget(Static):
                 grid.add_row(f"  {i}.", repr_msg)
             if len(large_messages) > 3:
                 grid.add_row("提示:", f"... 还有{len(large_messages) - 3}条未显示")
-            grid.add_row("提示:", "调用context_forget_large_message可清理大消息（需≥5条）")
+            grid.add_row(
+                "提示:", "调用context_forget_large_message可清理大消息（需≥5条）"
+            )
 
         grid.add_row("")
 
@@ -313,15 +317,17 @@ class ContextTabWidget(Static):
 
     def update_display(self) -> None:
         """Update the display with current context information."""
-        agent_message: AgentMessage = self.group_chat.get_members(
+        agent_message: AgentMessage = self.group_chat.get_member_typechecked(
             "agent_message", AgentMessage
         )
         from linhai.agent.orchestration import AgentContextOrchestration
 
-        orchestration: AgentContextOrchestration = self.group_chat.get_members(
-            "agent_context_orchestration", AgentContextOrchestration
+        orchestration: AgentContextOrchestration = (
+            self.group_chat.get_member_typechecked(
+                "agent_context_orchestration", AgentContextOrchestration
+            )
         )
-        agent: Agent = self.group_chat.get_members("agent", Agent)
+        agent: Agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         grid = Table.grid(padding=(0, 1))
         grid.add_column(style="bold cyan")
@@ -334,7 +340,9 @@ class ContextTabWidget(Static):
         self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)
-        self._build_notification_messages_section(grid, agent_message.notification_messages)
+        self._build_notification_messages_section(
+            grid, agent_message.notification_messages
+        )
 
         self._update_content_widget(grid)
 

@@ -48,9 +48,7 @@ class WithSecretParameterPositionPlugin(Plugin):
 
         await self.group_chat.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
-                level="WARNING", content="检测到with_secret参数位置错误"
-            ),
+            CliRuntimeNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
         return RuntimeMessage(
             "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
@@ -88,7 +86,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         if with_secret:
             return None
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         agent.message_processor.add_new_message(
             RuntimeMessage(
                 "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
@@ -129,7 +127,7 @@ class CommandWhitelistPlugin(Plugin):
         from linhai.agent import Agent
         from linhai.agent.base import RuntimeMessage
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent and self.allowed_commands:
             allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
             agent.message_processor.update_notification_message(
@@ -221,7 +219,7 @@ class ProcessArgvCheckerPlugin(Plugin):
                     + repr(warnings)
                     + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
                 )
-                agent = self.group_chat.get_members("agent", Agent)
+                agent = self.group_chat.get_member_typechecked("agent", Agent)
                 agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
 
         return None

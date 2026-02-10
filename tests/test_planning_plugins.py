@@ -43,7 +43,7 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
             self.mock_planning_message
         ]
 
-        self.group_chat.get_members.return_value = self.mock_agent
+        self.group_chat.get_member_typechecked.return_value = self.mock_agent
 
     def tearDown(self):
         """清理测试环境。"""
@@ -296,7 +296,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
         self.mock_agent.planning = True
         self.mock_agent.message_processor = MagicMock()
 
-        self.group_chat.get_members.return_value = self.mock_agent
+        self.group_chat.get_member_typechecked.return_value = self.mock_agent
 
     def test_plugin_inherits_from_base_class(self):
         """测试插件继承自Plugin基类。"""
@@ -356,7 +356,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
 
     def test_no_action_when_agent_not_found(self):
         """测试找不到agent时不执行任何操作。"""
-        self.group_chat.get_members.return_value = None
+        self.group_chat.get_member_typechecked.return_value = None
 
         async def run_test():
             await self.plugin.after_message_generation(

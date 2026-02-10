@@ -75,7 +75,9 @@ class AgentContextOrchestration:
 
         removed_messages = list(self.large_messages)
 
-        conversation_dir = self.group_chat.get_members("conversation_folder", Path)
+        conversation_dir = self.group_chat.get_member_typechecked(
+            "conversation_folder", Path
+        )
         saved_path = save_cleaned_messages(
             conversation_dir, removed_messages, prefix="garbage_clean"
         )
@@ -129,7 +131,9 @@ class AgentContextOrchestration:
         else:
             current_state = "红灯"
 
-        token_manager = self.group_chat.get_members("token_manager", TokenManager)
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
         is_dirty = token_manager.is_dirty
 
         actual_category = (
@@ -160,7 +164,9 @@ class AgentContextOrchestration:
         notification_message = None
         if current_state != "绿灯" or is_dirty:
             large_count = len(self.large_messages)
-            token_manager = self.group_chat.get_members("token_manager", TokenManager)
+            token_manager = self.group_chat.get_member_typechecked(
+                "token_manager", TokenManager
+            )
             cache_ratio_text = ""
             if token_manager.cumulative_token_usage is not None:
                 input_tokens = token_manager.cumulative_token_usage["input_tokens"]
@@ -240,7 +246,7 @@ class AgentContextOrchestration:
         ):
             result = await self.context_forget_large_message()
             if isinstance(result, ToolResultSuccess):
-                token_manager = self.group_chat.get_members(
+                token_manager = self.group_chat.get_member_typechecked(
                     "token_manager", TokenManager
                 )
                 token_manager.mark_dirty()
@@ -287,7 +293,7 @@ class AgentContextOrchestration:
                 self.group_chat, range_clean_id, start_id, end_id, description
             )
             if isinstance(result, ToolResultSuccess):
-                token_manager = self.group_chat.get_members(
+                token_manager = self.group_chat.get_member_typechecked(
                     "token_manager", TokenManager
                 )
                 token_manager.mark_dirty()
@@ -299,7 +305,7 @@ class AgentContextOrchestration:
         """注册生命周期回调。"""
         from .lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_members("lifecycle", Lifecycle)
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_on_tool_result(self._on_tool_result)
         lifecycle.register_before_message_generation(self._before_message_generation)
 
@@ -372,8 +378,8 @@ class RedStateToolBlockPlugin:
 
         from .main import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
-        orchestration = self.group_chat.get_members(
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -429,8 +435,8 @@ class NotificationMessagePlugin:
         """在消息生成前添加notification message。"""
         from .main import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
-        orchestration = self.group_chat.get_members(
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -459,8 +465,8 @@ class NotificationMessagePlugin:
         """在消息生成后添加notification message。"""
         from .main import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
-        orchestration = self.group_chat.get_members(
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -505,8 +511,8 @@ class LargeMessageCountPlugin:
         """在消息生成前根据大消息数量管理notification_message。"""
         from .main import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
-        orchestration = self.group_chat.get_members(
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 

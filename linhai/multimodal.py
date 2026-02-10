@@ -77,7 +77,8 @@ class ImageMessage(Message):
             LanguageModelMessage: 转换后的消息
         """
         from linhai.agent.main import Agent
-        agent = self.group_chat.get_members("agent", Agent)
+
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         if llm.support_image():
             return {
@@ -101,6 +102,7 @@ class ImageMessage(Message):
 
     def estimated_tokens(self) -> int:
         import math
+
         tokens_h = math.ceil(self.height / 28)
         tokens_w = math.ceil(self.width / 28)
         return tokens_h * tokens_w
@@ -118,9 +120,7 @@ class ImageMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: GroupChat
-    ) -> "ImageMessage":
+    def from_json(cls, json_str: str, group_chat: GroupChat) -> "ImageMessage":
         """从JSON字符串创建ImageMessage实例。"""
         data = json.loads(json_str)
         image_bytes = base64.b64decode(data["image_bytes"])
@@ -135,7 +135,9 @@ class ImageMessage(Message):
         )
 
 
-def load_image(image_path: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]) -> ImageMessage:
+def load_image(
+    image_path: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]
+) -> ImageMessage:
     """加载图片文件并返回ImageMessage。
 
     Args:
@@ -161,12 +163,12 @@ def load_image(image_path: str, group_chat: GroupChat, quality: Literal["compres
         ".webp": "image/webp",
         ".bmp": "image/bmp",
     }.get(path.suffix.lower(), "image/png")
-    
+
     with Image.open(path) as img:
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         width, height = img.size
-        
+
         if quality == "compressed":
             target_area = 512 * 512
             current_area = width * height
@@ -184,7 +186,7 @@ def load_image(image_path: str, group_chat: GroupChat, quality: Literal["compres
             buffer = BytesIO()
             img.save(buffer, format=img.format if img.format else "PNG")
             image_bytes = buffer.getvalue()
-    
+
     return ImageMessage(
         image_bytes=image_bytes,
         mime_type=mime_type,
@@ -215,7 +217,10 @@ class MultimodalToolsetManager:
 
         self._toolset = ToolSet()
         from linhai.tool.main import ToolManager
-        tool_manager = self.group_chat.get_members("tool_manager", ToolManager)
+
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
         tool_manager.add_toolset(self._toolset)
 
     def register_lifecycle(self, lifecycle: Lifecycle) -> None:
@@ -230,28 +235,31 @@ class MultimodalToolsetManager:
         has_tool = self._toolset.has_tool("load_image")
 
         if should_have and not has_tool:
-            
+
             @self._toolset.register_tool(
                 name="load_image",
                 desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
                 args={
-                    "image_path": ToolArgInfo(
-                        desc="图片文件的路径", type="str"
-                    ),
+                    "image_path": ToolArgInfo(desc="图片文件的路径", type="str"),
                     "quality": ToolArgInfo(
-                        desc="图片质量，compressed表示压缩图像，raw表示原始图像", type="str"
+                        desc="图片质量，compressed表示压缩图像，raw表示原始图像",
+                        type="str",
                     ),
                 },
                 required_args=["image_path"],
             )
-            def _load_image(image_path, quality: Literal["compressed", "raw"] = "raw") -> ImageMessage:
+            def _load_image(
+                image_path, quality: Literal["compressed", "raw"] = "raw"
+            ) -> ImageMessage:
                 return load_image(image_path, self.group_chat, quality)
+
         elif not should_have and has_tool:
             del self._toolset.tools["load_image"]
 
     def _current_llm_supports_image(self) -> bool:
         """检查当前LLM是否支持图像。"""
         from linhai.agent.main import Agent
-        agent = self.group_chat.get_members("agent", Agent)
+
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         return llm.support_image()

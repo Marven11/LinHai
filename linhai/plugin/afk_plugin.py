@@ -12,13 +12,15 @@ if TYPE_CHECKING:
 
 class AfkPlugin(Plugin):
     async def after_message_generation(self, _answer, full_response, tool_calls):
-        cli_args = self.group_chat.get_members("cli_args", argparse.Namespace)
+        cli_args = self.group_chat.get_member_typechecked(
+            "cli_args", argparse.Namespace
+        )
         if not cli_args.afk:
             return
 
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_members("agent", Agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         if WAITING_USER_MARKER in full_response:
             agent.state = "working"

@@ -24,8 +24,7 @@ class TestConversationFunctions(TestCase):
         """测试前准备。"""
         self.temp_dir = tempfile.mkdtemp()
         self.home_patcher = mock.patch(
-            "linhai.agent.conversation.Path.home",
-            return_value=Path(self.temp_dir)
+            "linhai.agent.conversation.Path.home", return_value=Path(self.temp_dir)
         )
         self.home_patcher.start()
 
@@ -49,7 +48,10 @@ class TestConversationFunctions(TestCase):
 
         # 检查是否注册到group_chat
         from pathlib import Path
-        retrieved_dir = self.group_chat.get_members("conversation_folder", Path)
+
+        retrieved_dir = self.group_chat.get_member_typechecked(
+            "conversation_folder", Path
+        )
         self.assertEqual(retrieved_dir, self.conversation_dir)
 
     def test_save_cleaned_messages(self):
@@ -62,7 +64,9 @@ class TestConversationFunctions(TestCase):
         messages = [mock_msg]
 
         # 保存被清理的消息
-        saved_path = save_cleaned_messages(self.conversation_dir, messages, prefix="test")
+        saved_path = save_cleaned_messages(
+            self.conversation_dir, messages, prefix="test"
+        )
 
         # 验证文件是否存在
         self.assertTrue(Path(saved_path).exists())
@@ -72,14 +76,18 @@ class TestConversationFunctions(TestCase):
             data = json.load(f)
             self.assertEqual(len(data), 1)
             self.assertEqual(data[0]["type"], "UserMessage")
-            self.assertEqual(data[0]["data"], '{"role": "user", "content": "Test message"}')
+            self.assertEqual(
+                data[0]["data"], '{"role": "user", "content": "Test message"}'
+            )
 
     def test_save_large_message_chunk(self):
         """测试保存大消息分块。"""
         content = "This is a large message chunk."
         chunk_index = 0
 
-        saved_path = save_large_message_chunk(self.conversation_dir, content, chunk_index)
+        saved_path = save_large_message_chunk(
+            self.conversation_dir, content, chunk_index
+        )
 
         # 验证文件是否存在
         self.assertTrue(Path(saved_path).exists())
@@ -94,13 +102,17 @@ class TestConversationFunctions(TestCase):
         tool_name = "test_tool"
 
         # 测试不分块
-        saved_path = save_long_toolcall_output(self.conversation_dir, content, tool_name)
+        saved_path = save_long_toolcall_output(
+            self.conversation_dir, content, tool_name
+        )
         self.assertTrue(Path(saved_path).exists())
         with open(saved_path, "r", encoding="utf-8") as f:
             self.assertEqual(f.read(), content)
 
         # 测试分块
-        saved_path_part = save_long_toolcall_output(self.conversation_dir, content, tool_name, part_index=1)
+        saved_path_part = save_long_toolcall_output(
+            self.conversation_dir, content, tool_name, part_index=1
+        )
         self.assertTrue(Path(saved_path_part).exists())
         self.assertIn("part1", str(saved_path_part))
 
@@ -126,8 +138,7 @@ class TestConversationDirectoryStructure(TestCase):
         """测试前准备。"""
         self.temp_dir = tempfile.mkdtemp()
         self.home_patcher = mock.patch(
-            "linhai.agent.conversation.Path.home",
-            return_value=Path(self.temp_dir)
+            "linhai.agent.conversation.Path.home", return_value=Path(self.temp_dir)
         )
         self.home_patcher.start()
 
@@ -142,5 +153,7 @@ class TestConversationDirectoryStructure(TestCase):
         conversation_dir = register_conversation_folder(group_chat)
 
         # 验证路径包含 ~/.local/share/linhai/conversation/
-        expected_base = Path(self.temp_dir) / ".local" / "share" / "linhai" / "conversation"
+        expected_base = (
+            Path(self.temp_dir) / ".local" / "share" / "linhai" / "conversation"
+        )
         self.assertTrue(str(conversation_dir).startswith(str(expected_base)))

@@ -59,7 +59,9 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟的GroupChat
         mock_group_chat = MagicMock()
-        mock_group_chat.get_members = MagicMock(side_effect=lambda name, t: mock_machine_control)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=lambda name, t: mock_machine_control
+        )
 
         # 创建ToolManager（需要导入，但这里只模拟测试逻辑）
         # 由于是示例测试，我们只验证逻辑
@@ -219,12 +221,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_machine_control.target_machine = "master_host"
 
         # 模拟GroupChat返回MachineControl
-        def get_members(name, cls):
+        def get_member_typechecked(name, cls):
             if name == "machine_control" and cls == MachineControl:
                 return mock_machine_control
             raise KeyError(f"No member: {name}")
 
-        mock_group_chat.get_members.side_effect = get_members
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked
         mock_group_chat.send_if_exists = AsyncMock()
 
         # 创建模拟的toolset实例
@@ -278,12 +280,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_machine_control.machines = {"master_host": "mock1"}  # 只有master_host
         mock_machine_control.target_machine = "master_host"
 
-        def get_members(name, cls):
+        def get_member_typechecked(name, cls):
             if name == "machine_control" and cls == MachineControl:
                 return mock_machine_control
             raise KeyError(f"No member: {name}")
 
-        mock_group_chat.get_members.side_effect = get_members
+        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked
         mock_group_chat.send_if_exists = AsyncMock()
 
         # 创建模拟的toolset实例
