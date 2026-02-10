@@ -114,7 +114,6 @@ class CLIApp(App):
         self.token_manager = TokenManager(group_chat)
 
         self.completions = []
-        self.command_completions = self._generate_command_completions()
         self.autocomplete = None
 
         self.cli_config = cli_config
@@ -200,25 +199,16 @@ class CLIApp(App):
 
     def _generate_dynamic_completions(self) -> list[str]:
         """动态生成@补全列表"""
-        try:
-            from linhai.agent import Agent
+        from linhai.agent import Agent
 
-            agent = self.group_chat.get_members("agent", Agent)
-            if agent:
+        agent = self.group_chat.get_members("agent", Agent)
+        if agent is None:
+            return []
 
-                llm_names = agent.llm_names
-                return [f"@{name}" for name in llm_names]
-        except OSError:
-            pass
-        return []
-
-    def _generate_command_completions(self) -> list[str]:
-        """动态生成/命令补全列表"""
-        return [
-            "/queue",
-            "/help",
-            "/status",
-        ]
+        llm_names = agent.llm_names
+        completions = [f"@{name}" for name in llm_names]
+        completions.insert(0, "@default")
+        return completions
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
@@ -245,7 +235,8 @@ class CLIApp(App):
             target=input_element,
             candidates=lambda _state: [
                 DropdownItem(item)
-                for item in self.completions + self._generate_command_completions()
+                for item in self.completions
+                + self.command_handler.get_command_completions()
             ],
         )
         self.mount(self.autocomplete)

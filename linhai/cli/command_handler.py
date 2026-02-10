@@ -126,15 +126,29 @@ class CommandHandler:
             await self._show_error_message("无法获取agent实例")
             return True
 
-        if model_name in agent.llm_names:
+        if model_name == "default":
+            agent.current_llm_index = 0
+            await self._show_success_message("已将底层LLM切换为默认（第一个）LLM")
+        elif model_name in agent.llm_names:
             agent.current_llm_index = agent.llm_names.index(model_name)
             await self._show_success_message(f"已将底层LLM切换为 {model_name!r}")
         else:
             await self._show_error_message(
-                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: {', '.join(agent.llm_names)}"
+                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: default, {', '.join(agent.llm_names)}"
             )
 
         return True
+
+    def get_command_completions(self) -> list[str]:
+        """返回所有支持的命令补全列表"""
+        return [
+            "/queue",
+            "/help",
+            "/status",
+            "/quit",
+            "/exit",
+            "/context_forget_large_message",
+        ]
 
     async def _handle_context_tool_command(self, message_text: str) -> bool:
         parsed_input = parse_user_input(message_text)
