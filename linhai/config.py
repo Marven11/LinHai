@@ -100,14 +100,14 @@ class AgentConfig(BaseModel):
         return f"AgentConfig(compress_threshold={self.compress_threshold}, mcp={mcp_names})"
 
 
-class MemoryConfig(BaseModel):
+class UserPromptConfig(BaseModel):
     """内存配置类型定义。"""
 
     file_path: str
 
     def __str__(self) -> str:
         """返回内存配置的字符串表示"""
-        return f"MemoryConfig(file_path={self.file_path})"
+        return f"UserPromptConfig(file_path={self.file_path})"
 
 
 class SecretSubConfig(BaseModel):
@@ -147,14 +147,16 @@ class Config(BaseModel):
 
     llm: list[LLMConfig]
     agent: AgentConfig = Field(default_factory=AgentConfig)
-    memory: MemoryConfig = Field(default_factory=lambda: MemoryConfig(file_path=""))
+    user_prompt: UserPromptConfig = Field(
+        default_factory=lambda: UserPromptConfig(file_path="")
+    )
     tools: ToolConfig = Field(default_factory=ToolConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
-        return f"Config(llms={llm_names}, agent={self.agent}, memory={self.memory}, tools={self.tools})"
+        return f"Config(llms={llm_names}, agent={self.agent}, user_prompt={self.user_prompt}, tools={self.tools})"
 
 
 def load_config(config_path: Union[str, Path]) -> Config:

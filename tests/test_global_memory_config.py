@@ -47,10 +47,10 @@ class TestGlobalPromptConfig(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.temp_dir)
 
-    def test_memory_file_path_absolute(self):
+    def test_prompt_file_path_absolute(self):
         """测试绝对路径的全局指导文件"""
-        memory_file = Path(self.temp_dir) / "custom_memory.md"
-        memory_file.write_text("# 自定义全局指导\n- 测试内容")
+        prompt_file = Path(self.temp_dir) / "custom_prompt.md"
+        prompt_file.write_text("# 自定义全局指导\n- 测试内容")
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -59,43 +59,40 @@ class TestGlobalPromptConfig(unittest.TestCase):
             from unittest.mock import Mock
 
             mock_config = Mock()
-            mock_memory = Mock()
-            mock_memory.file_path = str(
-                memory_file.relative_to(memory_file.parent)
-            )
-            mock_config.memory = mock_memory
+            mock_prompt = Mock()
+            mock_prompt.file_path = str(prompt_file.relative_to(prompt_file.parent))
+            mock_config.user_prompt = mock_prompt
 
             context = {
                 "group_chat": self.group_chat,
                 "config": mock_config,
-                "config_basedir": memory_file.parent,
+                "config_basedir": prompt_file.parent,
                 "llm_name": None,
                 "checklist_path": None,
-
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
-            memory_messages = [
+            prompt_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalPrompt)
             ]
-            self.assertGreater(len(memory_messages), 0)
+            self.assertGreater(len(prompt_messages), 0)
 
-            custom_memory_found = False
-            for msg in memory_messages:
-                if isinstance(msg, GlobalPrompt) and msg.filepath == memory_file:
-                    custom_memory_found = True
+            custom_prompt_found = False
+            for msg in prompt_messages:
+                if isinstance(msg, GlobalPrompt) and msg.filepath == prompt_file:
+                    custom_prompt_found = True
                     break
 
-            self.assertTrue(custom_memory_found, "未找到自定义全局指导文件")
+            self.assertTrue(custom_prompt_found, "未找到自定义全局指导文件")
 
         finally:
             loop.close()
 
-    def test_memory_file_path_relative(self):
+    def test_prompt_file_path_relative(self):
         """测试相对路径的全局指导文件"""
-        memory_file = Path("./") / "test_relative_memory.md"
-        memory_file.write_text("# 相对路径全局指导\n- 测试内容")
+        prompt_file = Path("./") / "test_relative_prompt.md"
+        prompt_file.write_text("# 相对路径全局指导\n- 测试内容")
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -104,9 +101,9 @@ class TestGlobalPromptConfig(unittest.TestCase):
             from unittest.mock import Mock
 
             mock_config = Mock()
-            mock_memory = Mock()
-            mock_memory.file_path = "test_relative_memory.md"
-            mock_config.memory = mock_memory
+            mock_prompt = Mock()
+            mock_prompt.file_path = "test_relative_prompt.md"
+            mock_config.user_prompt = mock_prompt
 
             context = {
                 "group_chat": self.group_chat,
@@ -114,34 +111,33 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "config_basedir": Path(".").absolute(),
                 "llm_name": None,
                 "checklist_path": None,
-
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
-            memory_messages = [
+            prompt_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalPrompt)
             ]
-            self.assertGreater(len(memory_messages), 0)
+            self.assertGreater(len(prompt_messages), 0)
 
-            relative_memory_found = False
-            for msg in memory_messages:
+            relative_prompt_found = False
+            for msg in prompt_messages:
                 if (
                     isinstance(msg, GlobalPrompt)
-                    and msg.filepath.name == "test_relative_memory.md"
+                    and msg.filepath.name == "test_relative_prompt.md"
                 ):
-                    relative_memory_found = True
+                    relative_prompt_found = True
                     self.assertTrue(msg.filepath.exists(), "相对路径文件不存在")
                     break
 
-            self.assertTrue(relative_memory_found, "未找到相对路径全局指导文件")
+            self.assertTrue(relative_prompt_found, "未找到相对路径全局指导文件")
 
         finally:
             loop.close()
-            if memory_file.exists():
-                memory_file.unlink()
+            if prompt_file.exists():
+                prompt_file.unlink()
 
-    def test_memory_file_path_none(self):
+    def test_prompt_file_path_none(self):
         """测试未提供prompt_file_path时使用默认路径"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -150,7 +146,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
             from unittest.mock import Mock
 
             mock_config = Mock()
-            mock_config.memory = None
+            mock_config.user_prompt = None
 
             context = {
                 "group_chat": self.group_chat,
@@ -158,29 +154,28 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "config_basedir": None,
                 "llm_name": None,
                 "checklist_path": None,
-
                 "cli_args": self.mock_cli_args,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
-            memory_messages = [
+            prompt_messages = [
                 msg for msg in init_messages if isinstance(msg, GlobalPrompt)
             ]
-            self.assertGreater(len(memory_messages), 0)
+            self.assertGreater(len(prompt_messages), 0)
 
-            default_memory_found = False
+            default_prompt_found = False
             default_path = Path("~/.config/linhai/AGENTS.md").expanduser()
-            for msg in memory_messages:
+            for msg in prompt_messages:
                 if isinstance(msg, GlobalPrompt) and msg.filepath == default_path:
-                    default_memory_found = True
+                    default_prompt_found = True
                     break
 
-            self.assertTrue(default_memory_found, "未找到默认全局指导文件")
+            self.assertTrue(default_prompt_found, "未找到默认全局指导文件")
 
         finally:
             loop.close()
 
-    def test_project_memory_files(self):
+    def test_project_prompt_files(self):
         """测试项目记忆文件自动加载"""
         project_files = ["AGENTS.md", "AGENT.md", "CLAUDE.md"]
         created_files = []
@@ -198,7 +193,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 from unittest.mock import Mock
 
                 mock_config = Mock()
-                mock_config.memory = None
+                mock_config.user_prompt = None
 
                 context = {
                     "group_chat": self.group_chat,
@@ -210,15 +205,17 @@ class TestGlobalPromptConfig(unittest.TestCase):
                     "violation_checker": False,
                     "cli_args": self.mock_cli_args,
                 }
-                init_messages = loop.run_until_complete(_create_pinned_messages(context))
+                init_messages = loop.run_until_complete(
+                    _create_pinned_messages(context)
+                )
 
-                memory_messages = [
+                prompt_messages = [
                     msg for msg in init_messages if isinstance(msg, GlobalPrompt)
                 ]
 
                 for filename in project_files:
                     file_found = False
-                    for msg in memory_messages:
+                    for msg in prompt_messages:
                         if (
                             isinstance(msg, GlobalPrompt)
                             and msg.filepath.name == filename

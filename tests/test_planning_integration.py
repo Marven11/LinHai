@@ -75,7 +75,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 模拟消息列表
         mock_messages = [
             SystemMessage(group_chat=self.mock_group_chat),
-            GlobalPrompt(filepath=Path("/tmp/test_global_memory.md")),
+            GlobalPrompt(filepath=Path("/tmp/test_global_prompt.md")),
             RuntimeMessage("User message 1"),
             AssistantMessage(message="Assistant response 1"),
         ]

@@ -126,7 +126,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.plugin.last_directory, current_dir)
 
-    async def test_before_message_generation_no_duplicate_pathmemory(self):
+    async def test_before_message_generation_no_duplicate_pathprompt(self):
         """测试避免重复添加相同路径的PathPrompt。"""
         self.agent.context["enable_directory_change_detection"] = True
 

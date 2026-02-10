@@ -1,4 +1,4 @@
-"""Unit tests for global memory file path selection."""
+"""Unit tests for global prompt file path selection."""
 
 import unittest
 from unittest.mock import patch
@@ -11,7 +11,7 @@ from linhai.config import Config, LLMConfig, AgentConfig
 
 
 class TestGlobalPromptPathSelection(unittest.TestCase):
-    """Test cases for global memory file path selection logic."""
+    """Test cases for global prompt file path selection logic."""
 
     def setUp(self):
         """Set up test environment."""
@@ -33,9 +33,9 @@ class TestGlobalPromptPathSelection(unittest.TestCase):
                     "# Test AGENTS.md\nTest content"
                 )
 
-                global_memory = GlobalPrompt(Path("AGENTS.md"))
-                self.assertIsInstance(global_memory, GlobalPrompt)
-                self.assertEqual(global_memory.filepath, Path("AGENTS.md"))
+                global_prompt = GlobalPrompt(Path("AGENTS.md"))
+                self.assertIsInstance(global_prompt, GlobalPrompt)
+                self.assertEqual(global_prompt.filepath, Path("AGENTS.md"))
 
     def test_agent_md_in_current_directory_when_agents_md_missing(self):
         """Test that AGENT.md in current directory is selected when AGENTS.md is missing."""
@@ -46,12 +46,12 @@ class TestGlobalPromptPathSelection(unittest.TestCase):
                     "# Test AGENT.md\nTest content"
                 )
 
-                global_memory = GlobalPrompt(Path("AGENT.md"))
-                self.assertIsInstance(global_memory, GlobalPrompt)
-                self.assertEqual(global_memory.filepath, Path("AGENT.md"))
+                global_prompt = GlobalPrompt(Path("AGENT.md"))
+                self.assertIsInstance(global_prompt, GlobalPrompt)
+                self.assertEqual(global_prompt.filepath, Path("AGENT.md"))
 
     def test_no_files_in_current_directory(self):
-        """Test behavior when no memory files exist in current directory."""
+        """Test behavior when no prompt files exist in current directory."""
         with patch("pathlib.Path.exists", return_value=False):
             mock_llm_config = LLMConfig(
                 name="test_llm",
@@ -66,9 +66,9 @@ class TestGlobalPromptPathSelection(unittest.TestCase):
                 llm=[mock_llm_config], agent=mock_agent_config
             )  # pylint: disable=unused-variable
 
-            global_memory = GlobalPrompt(Path("AGENTS.md"))
-            self.assertIsInstance(global_memory, GlobalPrompt)
-            self.assertEqual(global_memory.filepath, Path("AGENTS.md"))
+            global_prompt = GlobalPrompt(Path("AGENTS.md"))
+            self.assertIsInstance(global_prompt, GlobalPrompt)
+            self.assertEqual(global_prompt.filepath, Path("AGENTS.md"))
 
 
 if __name__ == "__main__":

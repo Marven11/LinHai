@@ -144,7 +144,6 @@ async def create_agent_from_config(
 
         DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
 
-
     if context["config"].agent.allowed_commands:
         from linhai.plugin import CommandWhitelistPlugin
 
@@ -167,6 +166,7 @@ async def create_agent_from_config(
 
     if context["cli_args"].claw:
         from linhai.plugin.claw import ClawPlugin
+
         ClawPlugin(context["group_chat"], context["cli_args"]).register(agent.lifecycle)
 
     return agent
@@ -232,11 +232,11 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
 
     cli_args = context["cli_args"]
 
-    if context["config"].memory and context["config_basedir"]:
-        memory_file_path = (
-            context["config_basedir"] / context["config"].memory.file_path
+    if context["config"].user_prompt and context["config_basedir"]:
+        prompt_file_path = (
+            context["config_basedir"] / context["config"].user_prompt.file_path
         )
-        pinned_messages.append(GlobalPrompt(Path(memory_file_path).absolute()))
+        pinned_messages.append(GlobalPrompt(Path(prompt_file_path).absolute()))
     else:
         pinned_messages.append(
             GlobalPrompt(Path("~/.config/linhai/AGENTS.md").expanduser())
@@ -254,13 +254,13 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
             ),
         )
 
-    project_memory_filepaths = [
+    project_prompt_filepaths = [
         Path("./AGENTS.md").absolute(),
         Path("./AGENT.md").absolute(),
         Path("./CLAUDE.md").absolute(),
     ]
 
-    for filepath in project_memory_filepaths:
+    for filepath in project_prompt_filepaths:
         if filepath.exists():
             pinned_messages.append(PathPrompt(filepath))
 

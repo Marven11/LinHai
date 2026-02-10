@@ -58,8 +58,8 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.agent = Mock()
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
-        mock_config.memory = Mock()
-        mock_config.memory.file_path = "memory.md"
+        mock_config.user_prompt = Mock()()()
+        mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
         mock_config.cli = Mock()
 
@@ -103,7 +103,7 @@ class TestCreateAgent(unittest.TestCase):
         # self.assertEqual(result, mock_agent_instance)  # 移除
         self.assertIsNotNone(result, "应返回Agent实例")
         # 检查返回对象具有Agent的基本属性
-        self.assertTrue(hasattr(result, 'llm_names'), "Agent实例应有llm_names属性")
+        self.assertTrue(hasattr(result, "llm_names"), "Agent实例应有llm_names属性")
         self.assertIsInstance(result.llm_names, list, "llm_names应为列表")
 
     def test_create_agent_with_llm_name(self):
@@ -138,15 +138,17 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.agent = Mock()
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
-        mock_config.memory = Mock()
-        mock_config.memory.file_path = "memory.md"
+        mock_config.user_prompt = Mock()()()
+        mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
         mock_config.cli = Mock()
 
         with (
             patch("linhai.agent.create._create_llm_instances") as mock_llm_instances,
             patch("linhai.agent.create._create_tool_manager") as mock_tool_manager,
-            patch("linhai.agent.create._create_pinned_messages") as mock_pinned_messages,
+            patch(
+                "linhai.agent.create._create_pinned_messages"
+            ) as mock_pinned_messages,
             patch("linhai.agent.main.Agent") as mock_agent,
         ):
 
@@ -209,7 +211,6 @@ class TestCreateLLMInstances(unittest.TestCase):
             "group_chat": mock_group_chat,
             "llm_name": "test-llm",
             "config_basedir": Path("."),
-
             "checklist_path": None,
         }
         result = asyncio.run(_create_llm_instances(context))
@@ -270,7 +271,6 @@ class TestCreateToolManager(unittest.TestCase):
             "config": config,
             "config_basedir": Path("."),
             "llm_name": "test-llm",
-
             "checklist_path": None,
             "tools_config": config,
         }
@@ -287,15 +287,15 @@ class TestCreatePinnedMessages(unittest.TestCase):
     @patch("linhai.agent.create.SystemMessage")
     @patch("linhai.agent.create.Path")
     def test_create_pinned_messages(
-        self, mock_path, mock_system_message, mock_global_memory
+        self, mock_path, mock_system_message, mock_global_prompt
     ):
         """测试创建初始化消息"""
         group_chat = Mock()
-        memory_file_path = Path("memory.md")
+        prompt_file_path = Path("prompt.md")
 
         mock_path.return_value.exists.return_value = True
         mock_system_message.return_value = Mock()
-        mock_global_memory.return_value = Mock()
+        mock_global_prompt.return_value = Mock()
 
         import asyncio
         import argparse
@@ -306,10 +306,9 @@ class TestCreatePinnedMessages(unittest.TestCase):
 
         context = {
             "group_chat": group_chat,
-            "config": Mock(memory=Mock(file_path=memory_file_path)),
+            "config": Mock(user_prompt=Mock(file_path=str(prompt_file_path))),
             "config_basedir": Path("."),
             "llm_name": "test-llm",
-
             "checklist_path": None,
             "cli_args": mock_cli_args,
         }
@@ -317,7 +316,7 @@ class TestCreatePinnedMessages(unittest.TestCase):
 
         self.assertGreater(len(result), 0)
         mock_system_message.assert_called_once()
-        mock_global_memory.assert_called()
+        mock_global_prompt.assert_called()
 
 
 if __name__ == "__main__":

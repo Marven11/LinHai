@@ -55,7 +55,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         """清理测试环境。"""
         self.exists_patcher.stop()
 
-    def create_context(self, memory_config=None, checklist_path=None):
+    def create_context(self, prompt_config=None, checklist_path=None):
         """创建AgentBuildContext。"""
         context = {
             "group_chat": self.group_chat,
@@ -64,13 +64,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "cli_args": self.cli_args,
             "checklist_path": checklist_path,
         }
-        if memory_config:
-            self.config.memory = memory_config
+        if prompt_config:
+            self.config.user_prompt = prompt_config
         else:
-            self.config.memory = None
+            self.config.user_prompt = None
         return context
 
-    async def test_pinned_messages_without_memory_config(self):
+    async def test_pinned_messages_without_prompt_config(self):
         """测试没有prompt配置时，使用默认全局指导路径。"""
         context = self.create_context()
 
@@ -84,13 +84,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         # 检查GlobalPrompt的filepath属性
         self.assertIn("AGENTS.md", str(pinned_messages[2].filepath))
 
-    async def test_pinned_messages_with_memory_config(self):
+    async def test_pinned_messages_with_prompt_config(self):
         """测试有prompt配置时，使用配置的全局指导路径。"""
-        memory_config = MagicMock()
-        memory_config.file_path = "custom_memory.md"
-        self.config.memory = memory_config
+        prompt_config = Mock()()
+        prompt_config.file_path = "custom_prompt.md"
+        self.config.user_prompt = prompt_config
 
-        context = self.create_context(memory_config=memory_config)
+        context = self.create_context(prompt_config=prompt_config)
 
         pinned_messages = await _create_pinned_messages(context)
 
@@ -99,7 +99,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(pinned_messages[1], RuntimeMessage)
         self.assertIsInstance(pinned_messages[2], GlobalPrompt)
         # 检查GlobalPrompt的filepath属性
-        expected_path = self.config_basedir / "custom_memory.md"
+        expected_path = self.config_basedir / "custom_prompt.md"
         self.assertEqual(str(pinned_messages[2].filepath), str(expected_path))
 
     async def test_pinned_messages_with_user_messages(self):
@@ -167,7 +167,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             checklist_path.unlink()
 
     @patch("pathlib.Path.exists", side_effect=lambda: True)
-    async def test_pinned_messages_with_project_memory_files(self, mock_exists):
+    async def test_pinned_messages_with_project_prompt_files(self, mock_exists):
         """测试项目记忆文件（如果存在）。"""
         context = self.create_context()
 
@@ -207,7 +207,9 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             else:
                 return MagicMock()
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         # 模拟filter_messages和add_new_message
         mock_message_processor.filter_messages = AsyncMock()
@@ -279,7 +281,9 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             else:
                 return MagicMock()
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         # 模拟删除消息函数：第一次调用返回空列表（删除MessagesListSummerizeMessage），
         # 第二次调用返回包含一个UserMessage的列表

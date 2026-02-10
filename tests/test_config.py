@@ -97,8 +97,8 @@ model = "test_model"
 [agent]
 compress_threshold = 60000
 
-[memory]
-file_path = "./test_memory.md"
+[user_prompt]
+file_path = "./test_prompt.md"
 
 [tools]
 max_toolcall_token_in_round = 2000
@@ -111,9 +111,9 @@ max_toolcall_token_in_round = 2000
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
             self.assertEqual(config.agent.compress_threshold, 60000)
-            self.assertIsNotNone(config.memory)
-            assert config.memory is not None
-            self.assertEqual(config.memory.file_path, "./test_memory.md")
+            self.assertIsNotNone(config.user_prompt)
+            assert config.user_prompt is not None
+            self.assertEqual(config.user_prompt.file_path, "./test_prompt.md")
             self.assertIsNotNone(config.tools)
             assert config.tools is not None
             self.assertEqual(config.tools.max_toolcall_token_in_round, 2000)
@@ -180,9 +180,9 @@ model = "test_model"
             self.assertEqual(config.agent.mcp, [])
             self.assertFalse(config.agent.enable_directory_change_detection)
             self.assertFalse(config.agent.enable_task_planning)
-            # memory现在有默认值，检查默认值
-            self.assertIsNotNone(config.memory)
-            self.assertEqual(config.memory.file_path, "")
+            # user_prompt现在有默认值，检查默认值
+            self.assertIsNotNone(config.user_prompt)
+            self.assertEqual(config.user_prompt.file_path, "")
             # tools现在有默认值，不再是None
             self.assertIsNotNone(config.tools)
             self.assertEqual(config.tools.max_toolcall_token_in_round, 30000)
@@ -238,8 +238,8 @@ model = "test_model_2"
 [agent]
 compress_threshold = 0.8
 
-[memory]
-file_path = "./test_memory.md"
+[user_prompt]
+file_path = "./test_prompt.md"
 
 [tools]
 max_toolcall_token_in_round = 2000
@@ -256,9 +256,9 @@ max_toolcall_token_in_round = 2000
             self.assertIsNotNone(config.agent)
             assert config.agent is not None
             self.assertEqual(config.agent.compress_threshold, 0.8)
-            self.assertIsNotNone(config.memory)
-            assert config.memory is not None
-            self.assertEqual(config.memory.file_path, "./test_memory.md")
+            self.assertIsNotNone(config.user_prompt)
+            assert config.user_prompt is not None
+            self.assertEqual(config.user_prompt.file_path, "./test_prompt.md")
             self.assertIsNotNone(config.tools)
             assert config.tools is not None
             self.assertEqual(config.tools.max_toolcall_token_in_round, 2000)
@@ -370,8 +370,6 @@ model = "test_model"
             self.assertEqual(config.llm[0].compatibility, "")
         finally:
             os.unlink(temp_file)
-
-
 
 
 if __name__ == "__main__":

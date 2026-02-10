@@ -95,10 +95,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         final_message_count = len(self.mock_agent.message_processor.get_messages())
         # 插件禁用时不应添加PathPrompt或GlobalPrompt
         messages = self.mock_agent.message_processor.get_messages()
-        memory_count = sum(
+        prompt_count = sum(
             1 for msg in messages if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
-        self.assertEqual(memory_count, 0)  # 插件禁用时不应添加内存
+        self.assertEqual(prompt_count, 0)  # 插件禁用时不应添加内存
 
     def test_plugin_enabled_no_directory_change(self):
         """测试插件启用但目录未更改。"""
@@ -115,10 +115,10 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         final_message_count = len(self.mock_agent.message_processor.get_messages())
         # 插件启用但目录未更改，不应添加PathPrompt或GlobalPrompt
         messages = self.mock_agent.message_processor.get_messages()
-        memory_count = sum(
+        prompt_count = sum(
             1 for msg in messages if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
-        self.assertEqual(memory_count, 0)
+        self.assertEqual(prompt_count, 0)
 
     def test_plugin_enabled_with_directory_change(self):
         """测试插件启用且目录更改。"""
@@ -141,7 +141,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         self.mock_agent.context["enable_directory_change_detection"] = True
 
         test_file = Path(self.temp_dir) / "AGENTS.md"
-        test_file.write_text("# Test Memory\n\nTest content")
+        test_file.write_text("# Test Prompt\n\nTest content")
 
         os.chdir(self.temp_dir)
 
@@ -160,7 +160,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         self.mock_agent.context["enable_directory_change_detection"] = True
 
         test_file = Path(self.temp_dir) / "AGENTS.md"
-        test_file.write_text("# Test Memory\n\nTest content")
+        test_file.write_text("# Test Prompt\n\nTest content")
 
         os.chdir(self.temp_dir)
 
@@ -178,12 +178,12 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         )
         self.assertEqual(pathprompt_count, 1)
 
-    def test_plugin_handles_global_memory_duplicates(self):
+    def test_plugin_handles_global_prompt_duplicates(self):
         """测试插件避免与GlobalPrompt重复。"""
         self.mock_agent.context["enable_directory_change_detection"] = True
 
         test_file = Path(self.temp_dir) / "AGENTS.md"
-        test_file.write_text("# Test Memory\n\nTest content")
+        test_file.write_text("# Test Prompt\n\nTest content")
 
         os.chdir(self.temp_dir)
 
@@ -194,12 +194,12 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         asyncio.run(self.plugin.before_message_generation(True, False))
 
-        memory_count = sum(
+        prompt_count = sum(
             1
             for msg in self.mock_agent.message_processor.get_messages()
             if isinstance(msg, (PathPrompt, GlobalPrompt))
         )
-        self.assertEqual(memory_count, 1)
+        self.assertEqual(prompt_count, 1)
 
     def test_plugin_registers_correctly(self):
         """测试插件正确注册到生命周期。"""
