@@ -92,6 +92,9 @@ unittest 失败时，必须分析
   - 测试
     - 在切换为支持多模态的模型后添加消息
     - 再次切换为不支持多模态的模型后添加另一条消息
+- [ ] 将MemoryConfig改成UserPromptConfig
+  - 问题: 当前的AGENTS.md根本不是“记忆系统”而是用户prompt
+  - 需要搜索不区分大小写的memory并考虑修改
 
 # 注意
 
