@@ -117,6 +117,72 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
 
         asyncio.run(run_test())
 
+    def test_notifications_updated_when_no_tool_calls_red_state(self):
+        """测试没有工具调用且处于红灯状态时应该更新通知。"""
+
+        async def run_test():
+            with patch.object(
+                self.plugin, "_get_current_state", return_value="红灯"
+            ), patch.object(
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications:
+                result = await self.plugin.after_message_generation(
+                    answer=MagicMock(spec=Answer),
+                    full_response="Test response",
+                    tool_calls=[],
+                )
+
+                self.assertIsNone(result)
+                mock_update_notifications.assert_awaited_once_with("红灯")
+                self.assertEqual(self.plugin.status_counter, 0)
+                self.assertEqual(self.plugin.todolist_counter, 0)
+
+        asyncio.run(run_test())
+
+    def test_notifications_based_on_counter_when_no_tool_calls_non_red_state(self):
+        """测试没有工具调用且非红灯状态时，根据计数器状态判断提示。"""
+
+        async def run_test_below_threshold():
+            """测试计数器低于阈值时不显示提示。"""
+            self.plugin.status_counter = 2  # 低于阈值3
+            self.plugin.todolist_counter = 7  # 低于阈值8
+
+            with patch.object(
+                self.plugin, "_get_current_state", return_value="绿灯"
+            ), patch.object(
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications:
+                result = await self.plugin.after_message_generation(
+                    answer=MagicMock(spec=Answer),
+                    full_response="Test response",
+                    tool_calls=[],
+                )
+
+                self.assertIsNone(result)
+                mock_update_notifications.assert_awaited_once_with("绿灯")
+
+        async def run_test_at_threshold():
+            """测试计数器达到阈值时显示提示。"""
+            self.plugin.status_counter = 3  # 达到阈值
+            self.plugin.todolist_counter = 8  # 达到阈值
+
+            with patch.object(
+                self.plugin, "_get_current_state", return_value="黄灯"
+            ), patch.object(
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications:
+                result = await self.plugin.after_message_generation(
+                    answer=MagicMock(spec=Answer),
+                    full_response="Test response",
+                    tool_calls=[],
+                )
+
+                self.assertIsNone(result)
+                mock_update_notifications.assert_awaited_once_with("黄灯")
+
+        asyncio.run(run_test_below_threshold())
+        asyncio.run(run_test_at_threshold())
+
     def test_status_counter_reset_on_status_file_write(self):
         """测试写入STATUS.md文件时状态计数器重置。"""
         self.plugin.status_counter = 2

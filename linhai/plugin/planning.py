@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
@@ -22,9 +22,9 @@ class PlanningStatusReminderPlugin(Plugin):
         self.group_chat = group_chat
         self.status_counter = 0
         self.todolist_counter = 0
-        self.planning_folder: Path | None = None
+        self.planning_folder: Optional[Path] = None
 
-    def _get_planning_folder(self) -> Path | None:
+    def _get_planning_folder(self) -> Optional[Path]:
         if self.planning_folder is not None:
             return self.planning_folder
 
@@ -159,15 +159,13 @@ class PlanningStatusReminderPlugin(Plugin):
         if planning_folder is None:
             return
 
-        if not tool_calls:
-            return
-
         current_state = self._get_current_state()
-        status_modified, todolist_modified = self._check_modifications(
-            tool_calls, planning_folder
-        )
 
-        self._update_counters(status_modified, todolist_modified, current_state)
+        if tool_calls:
+            status_modified, todolist_modified = self._check_modifications(
+                tool_calls, planning_folder
+            )
+            self._update_counters(status_modified, todolist_modified, current_state)
 
         await self._update_notifications(current_state)
 
