@@ -135,6 +135,24 @@ class AgentToolcall:
             )
             return f"当前使用的LLM: {current_name}"
 
+        @llm_toolset.register_tool(
+            name="list_llm",
+            desc="列出所有可用的LLM及其描述信息",
+            args={},
+            required_args=[],
+        )
+        def list_llm() -> str:
+            """列出所有可用的LLM及其描述信息。"""
+            llms = self.agent.llms
+            if not llms:
+                return "没有可用的LLM"
+
+            descriptions = [
+                f"{i}. {llm.get_description()}" for i, llm in enumerate(llms, 1)
+            ]
+
+            return "可用LLM列表:\n" + "\n".join(descriptions)
+
         tool_manager = self.group_chat.get_member_typechecked(
             "tool_manager", ToolManager
         )

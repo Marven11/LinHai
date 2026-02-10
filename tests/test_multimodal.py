@@ -165,6 +165,26 @@ class TestLoadImage(TestCase):
         finally:
             Path(temp_path).unlink()
 
+    def test_load_image_parameter_name(self):
+        """Test that load_image uses correct parameter name (image_filepath)."""
+        import inspect
+        import linhai.multimodal as multimodal_module
+
+        # Check function signature
+        sig = inspect.signature(multimodal_module.load_image)
+        params = list(sig.parameters.keys())
+
+        # Should have image_filepath, not image_path
+        self.assertIn("image_filepath", params)
+        self.assertNotIn("image_path", params)
+
+        # Check the parameter is first
+        self.assertEqual(params[0], "image_filepath")
+
+        # Check function docstring mentions image_filepath
+        func_doc = multimodal_module.load_image.__doc__ or ""
+        self.assertIn("image_filepath", func_doc)
+
     def test_load_image_not_found(self):
         with self.assertRaises(FileNotFoundError):
             load_image(

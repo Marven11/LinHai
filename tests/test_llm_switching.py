@@ -128,6 +128,40 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 
+    async def test_list_llm_tool(self):
+        """Test list_llm tool functionality."""
+        # Configure mock LLMs with get_description method
+        self.mock_llm1.get_description = MagicMock(
+            return_value="名称: primary, 模型: gpt-4, token限制: 8000"
+        )
+        self.mock_llm2.get_description = MagicMock(
+            return_value="名称: secondary, 模型: gpt-3.5, token限制: 4000"
+        )
+
+        tool_call = ToolCallMessage(
+            function_name="list_llm",
+            function_arguments={},
+            assert_success=True,
+            with_secret=None,
+        )
+
+        result = await self.tool_manager.process_tool_call(tool_call, tool_index=1)
+
+        if isinstance(result, ToolResultFailed):
+            self.fail(f"list_llm tool failed: {result.content}")
+
+        self.assertIsInstance(result, ToolCallResultMessage)
+        result_str = str(result)
+
+        # Check that the result contains expected information
+        self.assertIn("可用LLM列表", result_str)
+        self.assertIn("1.", result_str)
+        self.assertIn("2.", result_str)
+        self.assertIn("primary", result_str)
+        self.assertIn("secondary", result_str)
+        self.assertIn("gpt-4", result_str)
+        self.assertIn("gpt-3.5", result_str)
+
 
 if __name__ == "__main__":
     unittest.main()

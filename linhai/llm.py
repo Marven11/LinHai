@@ -398,6 +398,14 @@ class LanguageModel(Protocol):
     def support_image(self) -> bool:
         raise NotImplementedError()
 
+    def get_description(self) -> str:
+        """获取LLM的描述信息。
+
+        返回:
+            str: LLM的描述，包含名称、模型和token限制等
+        """
+        raise NotImplementedError()
+
 
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
@@ -729,6 +737,17 @@ class OpenAi:
             str: LLM的名称
         """
         return self.name
+
+    def get_description(self) -> str:
+        """获取LLM的描述信息。
+
+        返回:
+            str: LLM的描述，包含名称、模型和token限制等
+        """
+        token_limit = (
+            f"{self.token_limit}" if self.token_limit is not None else "未设置"
+        )
+        return f"名称: {self.name}, 模型: {self.model}, token限制: {token_limit}"
 
     def _estimate_cached_input_tokens(self, current_history: Sequence[Message]) -> int:
         """估算缓存的输入token数量。

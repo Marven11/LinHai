@@ -136,12 +136,12 @@ class ImageMessage(Message):
 
 
 def load_image(
-    image_path: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]
+    image_filepath: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]
 ) -> ImageMessage:
     """加载图片文件并返回ImageMessage。
 
     Args:
-        image_path: 图片文件路径
+        image_filepath: 图片文件路径
         group_chat: GroupChat实例（用于动态获取LLM支持状态）
         quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
 
@@ -151,9 +151,9 @@ def load_image(
     Raises:
         FileNotFoundError: 图片文件不存在
     """
-    path = Path(image_path)
+    path = Path(image_filepath)
     if not path.exists():
-        raise FileNotFoundError(f"图片文件不存在: {image_path}")
+        raise FileNotFoundError(f"图片文件不存在: {image_filepath}")
 
     mime_type = {
         ".png": "image/png",
@@ -240,7 +240,9 @@ class MultimodalToolsetManager:
                 name="load_image",
                 desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
                 args={
-                    "image_path": ToolArgInfo(desc="图片文件的路径", type="str"),
+                    "image_filepath": ToolArgInfo(
+                        desc="图片文件在master_host的路径", type="str"
+                    ),
                     "quality": ToolArgInfo(
                         desc="图片质量，compressed表示压缩图像，raw表示原始图像",
                         type="str",
@@ -249,9 +251,9 @@ class MultimodalToolsetManager:
                 required_args=["image_path"],
             )
             def _load_image(
-                image_path, quality: Literal["compressed", "raw"] = "raw"
+                image_filepath, quality: Literal["compressed", "raw"] = "raw"
             ) -> ImageMessage:
-                return load_image(image_path, self.group_chat, quality)
+                return load_image(image_filepath, self.group_chat, quality)
 
         elif not should_have and has_tool:
             del self._toolset.tools["load_image"]

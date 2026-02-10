@@ -287,3 +287,47 @@ class ToolCallInReasoningPlugin(Plugin):
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
         lifecycle.register_after_message_generation(self.after_message_generation)
+
+
+class LoadImageUrlWarningPlugin(Plugin):
+    """检查load_image工具的参数是否为URL的插件。"""
+
+    async def after_message_generation(
+        self,
+        _answer: Answer,
+        _full_response: str,
+        tool_calls: List[Dict[str, JsonValue]],
+    ):
+        """检查工具调用中load_image的参数是否为URL。"""
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        load_image_toolcalls = [
+            tool_call
+            for tool_call in tool_calls
+            if tool_call.get("name") == "load_image" and "arguments" in tool_call
+        ]
+        file_paths = [
+            str(tool_call["arguments"].get("image_filepath"))
+            for tool_call in load_image_toolcalls
+            if isinstance(tool_call["arguments"], dict)
+        ]
+        if any(
+            file_path.startswith(protocol)
+            for protocol in ("http://", "https://", "ftp://")
+            for file_path in file_paths
+        ):
+            agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：load_image工具的参数image_filepath看起来是一个URL，但load_image只支持本地文件路径！请先下载图片到master_host"
+                )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="load_image工具的参数为URL，已警告agent",
+                ),
+            )
+
+    def register(self, lifecycle: "Lifecycle"):
+        """注册到after_message_generation回调。"""
+        lifecycle.register_after_message_generation(self.after_message_generation)
