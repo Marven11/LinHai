@@ -87,14 +87,6 @@ unittest 失败时，必须分析
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
     - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
-- [ ] 让MultimodalToolsetManager在增减load_image工具的同时添加一条RuntimeMessage提示
-  - 问题：用户/agent切换llm时agent不知道当前是否支持多模态，在切换后可能仍然以为自己不支持多模态的load_image工具
-  - 测试
-    - 在切换为支持多模态的模型后添加消息
-    - 再次切换为不支持多模态的模型后添加另一条消息
-- [ ] 将MemoryConfig改成UserPromptConfig
-  - 问题: 当前的AGENTS.md根本不是“记忆系统”而是用户prompt
-  - 需要搜索不区分大小写的memory并考虑修改
 
 # 注意
 
