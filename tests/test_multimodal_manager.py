@@ -1,10 +1,11 @@
 """Tests for MultimodalToolsetManager."""
 
 from unittest import TestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 from linhai.multimodal import MultimodalToolsetManager, load_image
 from linhai.tool.base import ToolSet
+from linhai.agent.base import RuntimeMessage
 
 
 class TestMultimodalToolsetManager(TestCase):
@@ -23,6 +24,7 @@ class TestMultimodalToolsetManager(TestCase):
         self.mock_agent.llm = self.mock_llm
         # Make get_current_model return the mock_llm directly (sync)
         self.mock_agent.get_current_model = MagicMock(return_value=self.mock_llm)
+        self.mock_agent.message_processor = MagicMock()
 
         self.mock_config = MagicMock()
         # 创建LLM配置mock，使用spec来避免MagicMock的name参数问题
@@ -90,9 +92,11 @@ class TestMultimodalToolsetManager(TestCase):
             name="load_image",
             desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
             args={
-                "image_path": MagicMock(desc="图片文件的绝对路径", type="str"),
+                "image_filepath": MagicMock(
+                    desc="图片文件在master_host的路径", type="str"
+                ),
             },
-            required_args=["image_path"],
+            required_args=["image_filepath"],
         )(load_image)
 
         self.assertTrue(manager._toolset.has_tool("load_image"))
@@ -104,6 +108,64 @@ class TestMultimodalToolsetManager(TestCase):
 
         # Now should not have the tool
         self.assertFalse(manager._toolset.has_tool("load_image"))
+
+    def test_adds_runtime_message_when_switching_to_image_supporting_llm(self):
+        """Test that RuntimeMessage is added when switching to image-supporting LLM."""
+        manager = MultimodalToolsetManager(self.mock_group_chat)
+
+        # First call: LLM does not support image
+        self.mock_llm.support_image.return_value = False
+        import asyncio
+
+        asyncio.run(manager._update_tool_availability(False, False))
+
+        # Should not add message because no tool is added or removed
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+        # Second call: LLM supports image (switch)
+        self.mock_llm.support_image.return_value = True
+        asyncio.run(manager._update_tool_availability(False, False))
+
+        # Should add message about adding tool
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args
+        self.assertIsInstance(call_args[0][0], RuntimeMessage)
+        self.assertEqual(
+            call_args[0][0].message, "当前LLM支持多模态，已添加load_image工具"
+        )
+
+    def test_adds_runtime_message_when_switching_to_non_image_supporting_llm(self):
+        """Test that RuntimeMessage is added when switching to non-image-supporting LLM."""
+        manager = MultimodalToolsetManager(self.mock_group_chat)
+
+        # First call: LLM supports image
+        self.mock_llm.support_image.return_value = True
+        import asyncio
+
+        asyncio.run(manager._update_tool_availability(False, False))
+
+        # Should add message because tool is added
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args
+        self.assertIsInstance(call_args[0][0], RuntimeMessage)
+        self.assertEqual(
+            call_args[0][0].message, "当前LLM支持多模态，已添加load_image工具"
+        )
+
+        # Reset mock for second call
+        self.mock_agent.message_processor.add_new_message.reset_mock()
+
+        # Second call: LLM does not support image (switch)
+        self.mock_llm.support_image.return_value = False
+        asyncio.run(manager._update_tool_availability(False, False))
+
+        # Should add message about removing tool
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args
+        self.assertIsInstance(call_args[0][0], RuntimeMessage)
+        self.assertEqual(
+            call_args[0][0].message, "当前LLM不支持多模态，已移除load_image工具"
+        )
 
 
 if __name__ == "__main__":

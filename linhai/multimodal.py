@@ -235,6 +235,8 @@ class MultimodalToolsetManager:
         has_tool = self._toolset.has_tool("load_image")
 
         if should_have and not has_tool:
+            from linhai.agent.main import Agent
+            from linhai.agent.base import RuntimeMessage
 
             @self._toolset.register_tool(
                 name="load_image",
@@ -248,15 +250,28 @@ class MultimodalToolsetManager:
                         type="str",
                     ),
                 },
-                required_args=["image_path"],
+                required_args=["image_filepath"],
             )
             def _load_image(
                 image_filepath, quality: Literal["compressed", "raw"] = "raw"
             ) -> ImageMessage:
                 return load_image(image_filepath, self.group_chat, quality)
 
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent.message_processor.add_new_message(
+                RuntimeMessage("当前LLM支持多模态，已添加load_image工具")
+            )
+
         elif not should_have and has_tool:
+            from linhai.agent.main import Agent
+            from linhai.agent.base import RuntimeMessage
+
             del self._toolset.tools["load_image"]
+
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent.message_processor.add_new_message(
+                RuntimeMessage("当前LLM不支持多模态，已移除load_image工具")
+            )
 
     def _current_llm_supports_image(self) -> bool:
         """检查当前LLM是否支持图像。"""
