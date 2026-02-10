@@ -56,9 +56,6 @@ unittest 失败时，必须分析
   - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
-- [ ] 当前`/`命令的补全不全，参考linhai/cli/command_handler.py补全
-  - 将_generate_command_completions移动到linhai/cli/command_handler.py中以便于维护
-- [ ] 为CLI添加一个`@default`表示切回默认llm（第一个）
 - [ ] 添加一个llm manager
   - 当前问题:
     - 在api返回429或者连接错误时无法自动切换llm，因为重试的while loop写在LLM类中
