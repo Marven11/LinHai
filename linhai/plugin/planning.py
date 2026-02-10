@@ -78,9 +78,9 @@ class PlanningStatusReminderPlugin(Plugin):
             if not filepath:
                 continue
 
-            if Path(filepath) == status_file:
+            if Path(filepath).absolute() == status_file:
                 status_modified = True
-            elif Path(filepath) == todolist_file:
+            elif Path(filepath).absolute() == todolist_file:
                 todolist_modified = True
 
         return status_modified, todolist_modified
