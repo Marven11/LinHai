@@ -90,6 +90,7 @@ unittest 失败时，必须分析
 - [ ] 当前HostControl定义的process_create不支持wait_seconds为None，这不合理
   - 需要改为支持None以完成EtherGhost集成
 - [ ] EtherGhost集成
+  - 这是一个非常复杂的集成，需要仔细规划，**完全测试**
   - 参考当前的SSH机器控制，实现通过EtherGhost控制远程机器的功能
   - EtherGhost是一个python库，源码在../EtherGhost，需要先通过uv add ether_ghost添加依赖
   - 实现EtherGhostMachineControl
@@ -124,6 +125,13 @@ unittest 失败时，必须分析
     - ether_ghost_connect_webshell至少需要传入传入type和connection_args
     - ether_ghost_get_connection_args_definition返回结构化的定义，包含每个webshell类型的连接配置定义
       - 使用json: `{"type": "xxx", "connection_args_definition": {xxx}}`
+  - 测试
+    - 编写unittest
+      - 测试EtherGhostMachineControl的所有功能
+    - 在/tmp编写脚本
+      - 使用EtherGhostMachineControl连接.secret-webshell中的测试webshell
+      - 完成测试所有EtherGhostMachineControl的功能
+  - 必须完成：包括新增unittest在内的所有unittest通过，/tmp的那个脚本成功连接并测试所有功能
 - [ ] 支持配置是使用本地EtherGhost还是EtherGhost API
 
 # 注意
