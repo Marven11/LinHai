@@ -92,7 +92,7 @@ unittest 失败时，必须分析
 - [ ] EtherGhost集成
   - 这是一个非常复杂的集成，需要仔细规划，**完全测试**
   - 参考当前的SSH机器控制，实现通过EtherGhost控制远程机器的功能
-  - EtherGhost是一个python库，源码在../EtherGhost，需要先通过uv add ether_ghost添加依赖
+  - EtherGhost是一个python库，源码在../EtherGhost，需要先通过uv add添加依赖，为了使用新的send_http_request函数需要从dev branch而非pypi安装
   - 实现EtherGhostMachineControl
     - http_request: 在传入send_http_request不支持的参数时报错：“EtherGhost不支持xxx”
     - change_directory: 获取当前pwd直接返回错误
@@ -123,7 +123,7 @@ unittest 失败时，必须分析
   - 实现ether_ghost_connect_webshell和ether_ghost_get_connection_args_definition
     - 支持PHP一句话、两个PHP冰蝎(behinder)、Linux Shell一句话
     - ether_ghost_connect_webshell至少需要传入传入type和connection_args
-    - ether_ghost_get_connection_args_definition返回结构化的定义，包含每个webshell类型的连接配置定义
+    - ether_ghost_get_connection_args_definition返回json schema结构化的定义，包含每个webshell类型的连接配置定义
       - 使用json: `{"type": "xxx", "connection_args_definition": {xxx}}`
   - 测试
     - 编写unittest
