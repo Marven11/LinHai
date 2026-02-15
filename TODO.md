@@ -61,6 +61,19 @@ unittest 失败时，必须分析
   - 在对应widget宽度过窄，放不下ASCII_ART时使用ASCII_ART_SMALL
   - 需要修改RainbowAsciiArt的init函数使其接收另一个small ascii art
   - 考虑添加新的unittest
+- [ ] 准备重构docker
+  - 问题：我们需要为未来实现docker沙箱做准备，目标是让agent在docker而非当前机器上运行命令
+  - 当前
+    - linhai/machine_control/ssh_host/包含
+      - RemoteControlInterface: 根本不需要，既然所谓的“remote control”只是操控trojan.py，为什么要提供一个接口？难道还有不同的trojan.py?
+      - SshTransport: 需要重命名为TrojanTransport
+  - 需要删除
+    - linhai/machine_control/ssh_host/remote_interface.py
+    - linhai/machine_control/ssh_host/ssh_transport.py
+  - 将linhai/machine_control/ssh_host/中操控trojan.py的逻辑移动到linhai/machine_control/trojan/中
+    - 包含TrojanTransport: 和SshTransport完全一致
+    - 包含trojan.py
+  - linhai/machine_control/ssh_host仅使用linhai/machine_control/trojan/获得操控trojan.py的能力
 - [ ] 添加初始化配置的功能
 - [ ] 重构cli提升速度
   - 当前问题: 长期运行之后界面上有大量的message和CliRuntimeNotice消息没有被折叠
