@@ -704,7 +704,7 @@ class NormalContentWidget(Static):
             )
         )
 
-    def is_empty(self) -> bool:
+    def content_is_empty(self) -> bool:
         """检查内容是否为空或只包含空白字符"""
         return not self.content_str.strip()
 
@@ -739,7 +739,7 @@ class MessageWidget(Static):
             if not is_first_segment:
                 if (
                     isinstance(last_content_widget, NormalContentWidget)
-                    and last_content_widget.is_empty()
+                    and last_content_widget.content_is_empty()
                 ):
                     last_content_widget.stop_timer()
                     last_content_widget.remove()

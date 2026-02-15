@@ -47,13 +47,18 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
-        llms_with_names = list(zip(config["llms"], config["llm_names"]))
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=config["llms"],
+            default_llm_name=config["llm_names"][config["current_llm_index"]],
+        )
+        self.agent = Agent(
+            llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=[],
-            llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
         # Clear any existing clean info - not needed as tests use mock instances
@@ -77,7 +82,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
 
         mock_group_chat.send_if_exists = AsyncMock()
 
@@ -175,7 +182,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
 
         mock_group_chat.send_if_exists = AsyncMock()
 
@@ -232,7 +241,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
 
         result = await context_forget_range_step2(
             mock_group_chat,
@@ -278,7 +289,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
 
         # Try to delete beyond current bounds (end_id=9, but max is 7)
         result = await context_forget_range_step2(
@@ -368,7 +381,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
         mock_group_chat.send_if_exists = AsyncMock()
 
         # Only 5 messages total
@@ -430,7 +445,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(side_effect=mock_get_member_typechecked)
+        mock_group_chat.get_member_typechecked = MagicMock(
+            side_effect=mock_get_member_typechecked
+        )
         mock_group_chat.send_if_exists = AsyncMock()
 
         # Create messages with user messages that should be protected

@@ -132,8 +132,17 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
     async def test_handle_switch_model_command(self):
         """Test @model_name command."""
         mock_agent = Mock()
-        mock_agent.llm_names = ["test-llm", "another-llm"]
-        mock_agent.current_llm_index = 0
+        mock_llm_manager = Mock()
+        # 创建模拟LLM对象
+        mock_llm1 = Mock()
+        mock_llm1.get_name = Mock(return_value="test-llm")
+        mock_llm2 = Mock()
+        mock_llm2.get_name = Mock(return_value="another-llm")
+        mock_llm_manager.llms = [mock_llm1, mock_llm2]
+        mock_llm_manager.llm_names = ["test-llm", "another-llm"]
+        mock_llm_manager.current_llm_index = 0
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm1)
+        mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = Mock()
         self.group_chat.get_member_typechecked.return_value = mock_agent
@@ -152,13 +161,20 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await self.handler.handle_command("@test-llm")
         self.assertTrue(result)
-        self.assertEqual(mock_agent.current_llm_index, 0)
+        self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
 
     async def test_handle_switch_model_invalid(self):
         """Test @invalid_model_name command."""
         mock_agent = Mock()
-        mock_agent.llm_names = ["test-llm"]
-        mock_agent.current_llm_index = 0
+        mock_llm_manager = Mock()
+        # 创建模拟LLM对象
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test-llm")
+        mock_llm_manager.llms = [mock_llm]
+        mock_llm_manager.llm_names = ["test-llm"]
+        mock_llm_manager.current_llm_index = 0
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = Mock()
         self.group_chat.get_member_typechecked.return_value = mock_agent
@@ -177,7 +193,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await self.handler.handle_command("@invalid")
         self.assertTrue(result)
-        self.assertEqual(mock_agent.current_llm_index, 0)
+        self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
 
 
 if __name__ == "__main__":

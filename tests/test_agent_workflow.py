@@ -52,13 +52,18 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
-        llms_with_names = list(zip(config["llms"], config["llm_names"]))
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=config["llms"],
+            default_llm_name=config["llm_names"][config["current_llm_index"]],
+        )
+        self.agent = Agent(
+            llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=[],
-            llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
     async def test_workflow_as_regular_tool(self):
@@ -162,7 +167,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -221,7 +228,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -263,7 +272,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         async def mock_send_if_exists(queue_name, message):
             pass
@@ -417,7 +428,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
@@ -536,7 +549,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        mock_group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         async def mock_send_if_exists(queue_name, message):
             pass

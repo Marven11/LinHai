@@ -52,12 +52,18 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.mock_llm1.get_name = MagicMock(return_value="primary")
         self.mock_llm2.get_name = MagicMock(return_value="secondary")
 
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=config["llms"],
+            default_llm_name=config["llm_names"][config["current_llm_index"]],
+        )
+        self.agent = Agent(
+            llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=init_messages,
-            llm_name=config["llm_names"][config["current_llm_index"]],
         )
         self.tool_manager = self.group_chat.get_member_typechecked(
             "tool_manager", ToolManager
@@ -97,7 +103,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, ToolCallResultMessage)
         self.assertIn("已切换到LLM: secondary", str(result))
 
-        self.assertEqual(self.agent.current_llm_index, 1)
+        self.assertEqual(self.agent.llm_manager.current_llm_index, 1)
 
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
@@ -117,14 +123,14 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result))
         self.assertIn("可用的LLM包括: primary, secondary", str(result))
 
-        self.assertEqual(self.agent.current_llm_index, 0)
+        self.assertEqual(self.agent.llm_manager.current_llm_index, 0)
 
     def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""
         selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm1)
 
-        self.agent.current_llm_index = 1
+        self.agent.llm_manager.current_llm_index = 1
         selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 

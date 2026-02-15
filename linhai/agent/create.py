@@ -8,6 +8,7 @@ from datetime import datetime
 from linhai.config import Config
 from linhai.group_chat import GroupChat
 from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage, UserMessage
+from linhai.llm_manager import LlmManager
 
 from linhai.tool.base import global_tools
 from linhai.tool.main import ToolManager
@@ -118,7 +119,7 @@ async def create_agent_from_config(
     if context["cli_args"].claw:
         init_claw()
 
-    llms = await _create_llm_instances(context)
+    llm_manager = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
 
     from linhai.multimodal import MultimodalToolsetManager
@@ -128,8 +129,7 @@ async def create_agent_from_config(
     register_conversation_folder(context["group_chat"])
 
     agent = Agent(
-        llms=llms,
-        llm_name=context["llm_name"],
+        llm_manager=llm_manager,
         compress_threshold=context["config"].agent.compress_threshold,
         group_chat=context["group_chat"],
         pinned_messages=await _create_pinned_messages(context),
@@ -172,7 +172,7 @@ async def create_agent_from_config(
     return agent
 
 
-async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageModel]:
+async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
     llms = []
     for llm_config in context["config"].llm:
@@ -189,7 +189,14 @@ async def _create_llm_instances(context: "AgentBuildContext") -> list[LanguageMo
             support_image=llm_config.support_image,
         )
         llms.append(llm)
-    return llms
+
+    llm_manager = LlmManager(
+        group_chat=context["group_chat"],
+        llms=llms,
+        default_llm_name=context["llm_name"],
+        max_retries_per_llm=3,
+    )
+    return llm_manager
 
 
 async def _create_tool_manager(context: "AgentBuildContext"):

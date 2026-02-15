@@ -215,7 +215,8 @@ class CLIApp(App):
         if agent is None:
             return []
 
-        llm_names = agent.llm_names
+        llm_manager = agent.llm_manager
+        llm_names = [llm.get_name() for llm in llm_manager.llms]
         completions = [f"@{name}" for name in llm_names]
         completions.insert(0, "@default")
         return completions

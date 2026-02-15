@@ -98,9 +98,8 @@ class AgentToolcall:
     def _register_llm_toolset(self):
         """注册LLM切换工具集。"""
         llm_toolset = ToolSet()
-        llm_names = self.agent.llm_names
-        if not isinstance(llm_names, list):
-            llm_names = []
+        llm_manager = self.agent.llm_manager
+        llm_names = [llm.get_name() for llm in llm_manager.llms]
 
         desc = "切换到指定的LLM。"
         if llm_names:
@@ -114,13 +113,8 @@ class AgentToolcall:
             },
             required_args=["llm_name"],
         )
-        def switch_llm(llm_name: str):
-            if llm_name not in llm_names:
-                available_llms = ", ".join(llm_names) if llm_names else "无可用LLM"
-                return f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {available_llms}"
-
-            index = llm_names.index(llm_name)
-            self.agent.current_llm_index = index
+        async def switch_llm(llm_name: str):
+            await llm_manager.switch_to_llm(llm_name)
             return f"已切换到LLM: {llm_name}"
 
         @llm_toolset.register_tool(
@@ -130,9 +124,8 @@ class AgentToolcall:
             required_args=[],
         )
         def current_llm():
-            current_name = (
-                llm_names[self.agent.current_llm_index] if llm_names else "未知"
-            )
+            current_llm_instance = llm_manager.get_current_llm()
+            current_name = current_llm_instance.get_name()
             return f"当前使用的LLM: {current_name}"
 
         @llm_toolset.register_tool(
@@ -271,7 +264,6 @@ class AgentToolcall:
         """
         if self.agent.state == "waiting_user":
             self.agent.state = "working"
-
         if self.early_return:
             msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
             self.agent.message_processor.add_new_message(RuntimeMessage(msg))
@@ -311,7 +303,6 @@ class AgentToolcall:
             self.agent.message_processor.add_new_message(RuntimeMessage(conflict_msg))
             self.early_return = True
             return True
-
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [

@@ -16,6 +16,15 @@ class TestToolConflict(unittest.TestCase):
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.compress_tool_called_in_last_response = False
 
+        # 模拟llm_manager
+        self.mock_llm_manager = Mock()
+        # 创建模拟的LLM对象
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        self.mock_llm_manager.llms = [mock_llm]
+        self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        self.mock_agent.llm_manager = self.mock_llm_manager
+
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
 

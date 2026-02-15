@@ -82,12 +82,19 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 1000,
         }
 
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        self.llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=self.config["llms"],
+            default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
+        )
+
+        self.agent = Agent(
+            llm_manager=self.llm_manager,
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=[],
-            llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
 
     async def testget_current_model_with_at_system_valid(self):

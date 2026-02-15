@@ -1,5 +1,6 @@
 """SSH机器控制类，用于通过SSH连接远程机器并执行工具。"""
 
+import asyncio
 from typing import Dict, Optional, Any
 
 from linhai.group_chat import GroupChat
@@ -20,6 +21,12 @@ class SshMachineControl:
     ):
         self.transport = SshTransport(host, group_chat, port, username)
         self.group_chat = group_chat
+        self._username = username
+
+    @property
+    def username(self) -> str | None:
+        """返回SSH用户名"""
+        return self._username
 
     async def connect(self) -> bool:
         """连接到SSH服务器并启动trojan。
@@ -59,7 +66,7 @@ class SshMachineControl:
             return ToolResultFailed(content=f"连接已失效: {e}")
         except Exception as e:
             return ToolResultFailed(content=f"请求失败: {e}")
-        
+
         if "error" in response:
             error_content = response["error"]
             if isinstance(error_content, dict) and "message" in error_content:
@@ -67,11 +74,11 @@ class SshMachineControl:
             else:
                 error_message = str(error_content)
             return ToolResultFailed(content=f"工具执行失败: {error_message}")
-        
+
         result = response.get("result")
         if result is None:
             return ToolResultFailed(content="响应中缺少result字段")
-        
+
         if isinstance(result, dict) and "message" in result:
             return ToolResultSuccess(content=str(result["message"]))
         else:

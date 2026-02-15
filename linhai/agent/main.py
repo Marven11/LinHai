@@ -24,6 +24,7 @@ from linhai.llm import (
     OpenAiAnswer,
     ToolCallMessage,
 )
+from linhai.llm_manager import LlmManager
 from linhai.group_chat import GroupChat
 from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
@@ -36,29 +37,13 @@ class Agent:
 
     def __init__(
         self,
-        llms: list[LanguageModel],
+        llm_manager: LlmManager,
         compress_threshold: int | float,
         group_chat: GroupChat,
         pinned_messages: list[Message],
-        llm_name: str | None = None,
         max_toolcall_token_in_round: int = 30000,
     ):
-        self.llms = llms
-        self.llm_names = []
-        for llm in llms:
-            name = llm.get_name()
-            if not isinstance(name, str):
-                name = str(name) if name is not None else "unknown-llm"
-            self.llm_names.append(name)
-
-        if llm_name is None:
-            self.current_llm_index = 0
-        elif llm_name in self.llm_names:
-            self.current_llm_index = self.llm_names.index(llm_name)
-        else:
-            raise ValueError(
-                f"LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
-            )
+        self.llm_manager = llm_manager
 
         self.compress_threshold = compress_threshold
         self.group_chat = group_chat
@@ -107,7 +92,7 @@ class Agent:
         if not self.last_token_usage:
             return None
 
-        current_llm = self.llms[self.current_llm_index]
+        current_llm = self.llm_manager.get_current_llm()
         token_limit = current_llm.get_token_limit()
 
         if token_limit is None:
@@ -254,7 +239,7 @@ class Agent:
         返回:
             LanguageModel: 选择的语言模型实例
         """
-        return self.llms[self.current_llm_index]
+        return self.llm_manager.get_current_llm()
 
     async def generate_response(
         self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
@@ -286,9 +271,7 @@ class Agent:
             enable_compress, disable_waiting_user_warning
         )
 
-        model = self.get_current_model()
-
-        answer: Answer = await model.answer_stream(
+        answer: Answer = await self.llm_manager.answer_stream(
             self.message_processor.get_messages()
         )
 
@@ -371,9 +354,9 @@ class Agent:
         返回:
             tuple[str, LanguageModel]: (LLM名称, LLM实例)
         """
-        current_index = self.current_llm_index
-        llm_name = self.llm_names[current_index]
-        llm_instance = self.llms[current_index]
+        llm_instance = self.llm_manager.get_current_llm()
+        current_llm = self.llm_manager.get_current_llm()
+        llm_name = current_llm.get_name()
         return llm_name, llm_instance
 
     async def run(self):

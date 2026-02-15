@@ -126,7 +126,9 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return argparse.Namespace(afk=False)
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_member_typechecked.side_effect = get_member_typechecked_side_effect
+        self.group_chat.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
         pinned_messages = [
             SystemMessage(
@@ -134,12 +136,19 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             )
         ]
 
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=config["llms"],
+            default_llm_name=config["llm_names"][config["current_llm_index"]],
+        )
+
+        self.agent = Agent(
+            llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=pinned_messages,
-            llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
         plugin = WaitingUserPlugin(self.group_chat)

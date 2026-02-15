@@ -70,25 +70,16 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     """Test cases for the Agent class."""
 
     def setUp(self):
-        self.mock_llm = MagicMock()
-        self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
-        self.mock_llm.get_name = MagicMock(return_value="test_llm")
-
-        config = {
-            "llms": [self.mock_llm],
-            "llm_names": ["test_llm"],
-            "current_llm_index": 0,
-            "compress_threshold": 800,
-        }
-
         self.group_chat = GroupChat()
 
         self.group_chat.register_queue("parsed_agent_answer")
 
         from tempfile import TemporaryDirectory
+
         self.temp_dir = TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         from pathlib import Path
+
         conversation_dir = Path(self.temp_dir.name)
         self.group_chat.register_member("conversation_folder", conversation_dir)
 
@@ -126,6 +117,24 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
+        self.mock_llm = MagicMock()
+        self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
+        self.mock_llm.get_name = MagicMock(return_value="test_llm")
+
+        # 创建LlmManager实例而不是直接传递llms列表
+        from linhai.llm_manager import LlmManager
+
+        self.llm_manager = LlmManager(
+            group_chat=self.group_chat,
+            llms=[self.mock_llm],
+            default_llm_name="test_llm",
+        )
+
+        config = {
+            "llm_manager": self.llm_manager,
+            "compress_threshold": 800,
+        }
+
         pinned_messages = [
             SystemMessage(
                 group_chat=self.group_chat,
@@ -133,11 +142,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         ]
 
         self.agent = Agent(
-            llms=config["llms"],
+            llm_manager=config["llm_manager"],
             compress_threshold=config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=pinned_messages,
-            llm_name=config["llm_names"][config["current_llm_index"]],
         )
 
     async def test_initial_state(self):
@@ -269,7 +277,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             await self.agent.handle_user_message(test_msg)
             await self.agent.generate_response()
 
-        self.assertEqual(str(cm.exception), "Test error")
+        self.assertEqual(
+            str(cm.exception), "LLM处理失败，重试3次后仍无法完成: Test error"
+        )
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_run_loop(self):
@@ -353,8 +363,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         new_group_chat.register_member("messages_list", mock_messages_list)
 
         from tempfile import TemporaryDirectory
+
         temp_dir = TemporaryDirectory()
         from pathlib import Path
+
         conversation_dir = Path(temp_dir.name)
         new_group_chat.register_member("conversation_folder", conversation_dir)
 
@@ -365,7 +377,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.group_chat = new_group_chat
         new_group_chat.register_member("tool_manager", mock_tool_manager)
-        
+
         # 在测试结束时清理临时目录
         self.addCleanup(temp_dir.cleanup)
 
@@ -397,44 +409,51 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_llm2.get_name = MagicMock(return_value="qwen")
 
         from linhai.agent import Agent
+        from linhai.llm_manager import LlmManager
+
+        # 创建LlmManager实例
+        llm_manager = LlmManager(
+            group_chat=new_group_chat,
+            llms=[mock_llm1, mock_llm2],
+            default_llm_name="deepseek-reasoning",
+        )
 
         agent = Agent(
-            llms=[mock_llm1, mock_llm2],
+            llm_manager=llm_manager,
             compress_threshold=800,
             group_chat=new_group_chat,
             pinned_messages=[],
-            llm_name="deepseek-reasoning",
         )
 
         await agent.handle_user_message(UserMessage(message="@qwen Hello"))
-        self.assertEqual(agent.current_llm_index, 1)
-        self.assertEqual(agent.llm_names[1], "qwen")
+        self.assertEqual(agent.llm_manager.current_llm_index, 1)
+        self.assertEqual(agent.llm_manager.llm_names[1], "qwen")
 
         mock_cli_app.reset_mock()
         mock_container.reset_mock()
 
-        agent.current_llm_index = 0
+        agent.llm_manager.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="@invalid command"))
-        self.assertEqual(agent.current_llm_index, 0)
+        self.assertEqual(agent.llm_manager.current_llm_index, 0)
 
         # 现在MessagesList管理消息列表，CLIApp不再需要query_one和mount
         # 所以我们不再断言这些调用，而是验证agent行为
         pass
 
-        agent.current_llm_index = 0
+        agent.llm_manager.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="Hello world"))
-        self.assertEqual(agent.current_llm_index, 0)
+        self.assertEqual(agent.llm_manager.current_llm_index, 0)
 
         await agent.handle_user_message(UserMessage(message="@qwen first"))
-        self.assertEqual(agent.current_llm_index, 1)
+        self.assertEqual(agent.llm_manager.current_llm_index, 1)
 
         await agent.handle_user_message(UserMessage(message="Normal message"))
-        self.assertEqual(agent.current_llm_index, 1)
+        self.assertEqual(agent.llm_manager.current_llm_index, 1)
 
         await agent.handle_user_message(
             UserMessage(message="@deepseek-reasoning second")
         )
-        self.assertEqual(agent.current_llm_index, 0)
+        self.assertEqual(agent.llm_manager.current_llm_index, 0)
 
     async def test_queue_command(self):
         """测试/queue命令，将消息加入排队列表。"""

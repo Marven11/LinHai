@@ -47,15 +47,18 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
         }
         mock_config["llms"][0].get_name = MagicMock(return_value="test_llm")
 
-        # 将llms和llm_names合并为llms_with_names
-        llms_with_names = list(zip(mock_config["llms"], mock_config["llm_names"]))
+        from linhai.llm_manager import LlmManager
 
-        Agent(
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=mock_config["llms"],
+            default_llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
+        )
+        Agent(
+            llm_manager=llm_manager,
             compress_threshold=mock_config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=[],
-            llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
         )
 
         tool_manager = self.group_chat.get_member_typechecked(

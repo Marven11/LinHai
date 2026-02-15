@@ -30,6 +30,17 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
+        # 模拟llm_manager
+        self.mock_llm_manager = Mock()
+        # 创建模拟的LLM对象
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        self.mock_llm_manager.llms = [mock_llm]
+        self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        self.mock_agent.llm_manager = self.mock_llm_manager
+
+        self.mock_tool_manager = Mock()
+        self.mock_tool_manager.toolsets = []
         self.mock_agent.group_chat.get_member_typechecked.return_value = (
             self.mock_tool_manager
         )

@@ -25,8 +25,16 @@ class TestToolConflictRefactor(unittest.TestCase):
     def _setup_agent_mock(self) -> None:
         self.agent_mock = Mock()
         self.agent_mock.group_chat = Mock()
+        # 模拟llm_manager
+        self.mock_llm_manager = Mock()
+        # 创建模拟的LLM对象
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        self.mock_llm_manager.llms = [mock_llm]
+        self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        self.agent_mock.llm_manager = self.mock_llm_manager
         self.agent_mock.context = {
-            "llms": [Mock()],
+            "llms": [mock_llm],
             "llm_names": ["test_llm"],
             "current_llm_index": 0,
         }

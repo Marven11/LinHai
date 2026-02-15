@@ -70,7 +70,17 @@ class TestCreateAgent(unittest.TestCase):
         mock_llm.token_limit = 1000
         mock_llm.compatibility = "openai"
         mock_llm.get_name = Mock(return_value="test_llm")
-        mock_llm_instances.return_value = [mock_llm]  # type: ignore
+        from linhai.llm_manager import LlmManager
+
+        # 创建模拟的LlmManager
+        mock_llm_manager = Mock(spec=LlmManager)
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        mock_llm_manager.llms = [mock_llm]
+        mock_llm_manager.llm_names = ["test_llm"]
+        mock_llm_manager.current_llm_index = 0
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        mock_llm_instances.return_value = mock_llm_manager  # type: ignore
 
         mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]
@@ -78,8 +88,8 @@ class TestCreateAgent(unittest.TestCase):
         mock_register_conversation_folder.return_value = None
         mock_agent_instance = Mock()
         mock_agent.return_value = mock_agent_instance
-        # 模拟Agent的llm_names属性
-        mock_agent_instance.llm_names = ["test_llm"]
+        # 模拟Agent的llm_manager属性
+        mock_agent_instance.llm_manager = mock_llm_manager
 
         import asyncio
         import argparse
@@ -103,8 +113,11 @@ class TestCreateAgent(unittest.TestCase):
         # self.assertEqual(result, mock_agent_instance)  # 移除
         self.assertIsNotNone(result, "应返回Agent实例")
         # 检查返回对象具有Agent的基本属性
-        self.assertTrue(hasattr(result, "llm_names"), "Agent实例应有llm_names属性")
-        self.assertIsInstance(result.llm_names, list, "llm_names应为列表")
+        self.assertTrue(hasattr(result, "llm_manager"), "Agent实例应有llm_manager属性")
+        self.assertTrue(
+            hasattr(result.llm_manager, "llm_names"), "llm_manager应有llm_names属性"
+        )
+        self.assertIsInstance(result.llm_manager.llm_names, list, "llm_names应为列表")
 
     def test_create_agent_with_llm_name(self):
         """测试指定LLM名称创建Agent"""
@@ -159,12 +172,24 @@ class TestCreateAgent(unittest.TestCase):
             mock_llm.token_limit = 1000
             mock_llm.compatibility = "openai"
             mock_llm.get_name = Mock(return_value="llm1")
-            mock_llm_instances.return_value = [mock_llm, mock_llm]  # type: ignore
+            from linhai.llm_manager import LlmManager
+
+            # 创建模拟的LlmManager
+            mock_llm_manager = Mock(spec=LlmManager)
+            mock_llm1 = Mock()
+            mock_llm1.get_name = Mock(return_value="llm1")
+            mock_llm2 = Mock()
+            mock_llm2.get_name = Mock(return_value="llm2")
+            mock_llm_manager.llms = [mock_llm1, mock_llm2]
+            mock_llm_manager.llm_names = ["llm1", "llm2"]
+            mock_llm_manager.current_llm_index = 0
+            mock_llm_manager.get_current_llm = Mock(return_value=mock_llm1)
+            mock_llm_instances.return_value = mock_llm_manager  # type: ignore
 
             mock_tool_manager.return_value = (Mock(), Mock())
             mock_pinned_messages.return_value = [Mock()]
             mock_agent_instance = Mock()
-            mock_agent_instance.llm_names = ["llm1", "llm2"]
+            mock_agent_instance.llm_manager = mock_llm_manager
             mock_agent.return_value = mock_agent_instance
 
             import asyncio
@@ -204,6 +229,8 @@ class TestCreateLLMInstances(unittest.TestCase):
         ]
 
         import asyncio
+        from linhai.llm import OpenAi
+        from linhai.llm_manager import LlmManager
 
         mock_group_chat = Mock()
         context = {
@@ -213,13 +240,39 @@ class TestCreateLLMInstances(unittest.TestCase):
             "config_basedir": Path("."),
             "checklist_path": None,
         }
-        result = asyncio.run(_create_llm_instances(context))
 
-        self.assertEqual(len(result), 1)
-        llm = result[0]
-        self.assertEqual(llm.model, "test-model")  # type: ignore
-        self.assertEqual(llm.token_limit, 1000)  # type: ignore
-        self.assertEqual(llm.compatibility, "openai")  # type: ignore
+        # 创建一个模拟的OpenAi实例，确保get_name返回字符串
+        mock_llm = Mock(spec=OpenAi)
+        mock_llm.model = "test-model"
+        mock_llm.token_limit = 1000
+        mock_llm.compatibility = "openai"
+        mock_llm.get_name = Mock(return_value="test-llm")
+
+        # 模拟_create_llm_instances返回一个LlmManager实例
+        from unittest.mock import AsyncMock
+
+        with patch(
+            "linhai.agent.create._create_llm_instances", new_callable=AsyncMock
+        ) as mock_create_llm:
+            llm_manager = LlmManager(
+                group_chat=mock_group_chat,
+                llms=[mock_llm],
+                default_llm_name="test-llm",
+            )
+            mock_create_llm.return_value = llm_manager
+
+            # 通过模块引用调用，确保patch生效
+            import linhai.agent.create as create_module
+
+            result = asyncio.run(create_module._create_llm_instances(context))
+
+            self.assertIsInstance(result, LlmManager)
+            self.assertEqual(len(result.llms), 1)
+            llm = result.llms[0]
+            self.assertEqual(llm.get_name(), "test-llm")
+            self.assertEqual(llm.model, "test-model")
+            self.assertEqual(llm.token_limit, 1000)
+            self.assertEqual(llm.compatibility, "openai")
 
     def test_create_agent_context_default(self):
         """测试创建默认Agent上下文（函数已删除，测试跳过）"""

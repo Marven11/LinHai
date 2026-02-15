@@ -49,12 +49,21 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         )
         llm_name_val = llm_names_list[current_llm_index] if llm_names_list else None
 
+        from linhai.llm_manager import LlmManager
+
+        # 创建模拟的LLM用于LlmManager
+        mock_llm = MagicMock()
+        mock_llm.get_name = MagicMock(return_value="test-llm")
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
+            llms=[mock_llm],
+            default_llm_name="test-llm",
+        )
         self.agent = Agent(
-            llms=llms_list,
+            llm_manager=llm_manager,
             compress_threshold=compress_threshold_val,
             group_chat=self.group_chat,
             pinned_messages=self.init_messages,
-            llm_name=llm_name_val,
         )
 
     async def test_state_waiting_user_transitions_to_working(self):

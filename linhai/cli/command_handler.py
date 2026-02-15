@@ -18,7 +18,7 @@ class CommandHandler:
         parsed_input = parse_user_input(message_text)
 
         if parsed_input.switch_model:
-            return await self._handle_switch_model(parsed_input.switch_model)
+            return await self._register_llm_toolset(parsed_input.switch_model)
 
         if parsed_input.command:
             if parsed_input.command == "context_forget_large_message":
@@ -117,7 +117,7 @@ class CommandHandler:
         await self._show_runtime_message("INFO", "\n".join(status_lines))
         return True
 
-    async def _handle_switch_model(self, model_name: str) -> bool:
+    async def _register_llm_toolset(self, model_name: str) -> bool:
         """处理@切换模型命令."""
         from linhai.agent import Agent
 
@@ -126,15 +126,18 @@ class CommandHandler:
             await self._show_error_message("无法获取agent实例")
             return True
 
+        llm_manager = agent.llm_manager
+        llm_names = [llm.get_name() for llm in llm_manager.llms]
+
         if model_name == "default":
-            agent.current_llm_index = 0
+            llm_manager.current_llm_index = 0
             await self._show_success_message("已将底层LLM切换为默认（第一个）LLM")
-        elif model_name in agent.llm_names:
-            agent.current_llm_index = agent.llm_names.index(model_name)
+        elif model_name in llm_names:
+            llm_manager.current_llm_index = llm_names.index(model_name)
             await self._show_success_message(f"已将底层LLM切换为 {model_name!r}")
         else:
             await self._show_error_message(
-                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: default, {', '.join(agent.llm_names)}"
+                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: default, {', '.join(llm_names)}"
             )
 
         return True

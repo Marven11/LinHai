@@ -85,23 +85,26 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         self.pinned_messages = []
 
-
-
-
-
         # 配置mock对象的get_name方法
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
 
-        self.agent = Agent(
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = LlmManager(
+            group_chat=self.group_chat,
             llms=self.config["llms"],
+            default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
+        )
+        self.agent = Agent(
+            llm_manager=llm_manager,
             compress_threshold=self.config["compress_threshold"],
             group_chat=self.group_chat,
             pinned_messages=self.pinned_messages,
-            llm_name=self.config["llm_names"][self.config["current_llm_index"]],
         )
-        
+
         # 注册conversation_folder，因为AgentMessage._save_context需要它
         from linhai.agent.conversation import register_conversation_folder
+
         register_conversation_folder(self.group_chat)
 
     def test_queue_message_handling(self):
