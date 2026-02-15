@@ -1,36 +1,26 @@
 """Command-line interface for LinHai agent."""
 
 import argparse
-import asyncio
-from typing import Dict, List, Optional, Union
 
 from textual.app import App, ComposeResult
-from textual.containers import VerticalScroll
-from textual.widgets import Static, TabbedContent, TabPane, Input
+from textual.widgets import TabbedContent, TabPane, Input
 from textual import events, work
 from textual_autocomplete import AutoComplete, DropdownItem
 
 from linhai.agent import Agent, Lifecycle
-from linhai.agent.base import Message
 from linhai.config import CLIConfig
 from linhai.group_chat import GroupChat
 from linhai.llm import (
     AnswerTokenUsage,
 )
-from linhai.parsed_message import ParsedAnswer
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.utils import CliRuntimeNotice
 
 from .components import (
     RainbowAsciiArt,
     AnimatedWelcomeWidget,
-    RuntimeMessageWidget,
-    MessageWidget,
-    UserMessageWidget,
     FooterWidget,
-    MessageGenerationWidget,
 )
 from .context_tab import ContextTabWidget
 from ..token_manager import TokenManager
@@ -212,8 +202,6 @@ class CLIApp(App):
         from linhai.agent import Agent
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
-        if agent is None:
-            return []
 
         llm_manager = agent.llm_manager
         llm_names = [llm.get_name() for llm in llm_manager.llms]
