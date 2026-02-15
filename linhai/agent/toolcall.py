@@ -128,6 +128,11 @@ class AgentToolcall:
             current_name = current_llm_instance.get_name()
             return f"当前使用的LLM: {current_name}"
 
+        tool_manager = self.group_chat.get_member_typechecked(
+            "tool_manager", ToolManager
+        )
+        tool_manager.add_toolset(llm_toolset)
+
     def _register_dummy_toolset(self):
         """注册虚拟工具集（token使用情况、历史消息管理等）。"""
         dummy_toolset = ToolSet()
