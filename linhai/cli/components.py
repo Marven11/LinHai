@@ -90,9 +90,10 @@ class RainbowAsciiArt(Static):
     }
     """
 
-    def __init__(self, ascii_art: str):
+    def __init__(self, ascii_art: str, small_ascii_art: str):
         super().__init__()
         self.ascii_art = ascii_art
+        self.small_ascii_art = small_ascii_art
         self.time_index = 0
         self.last_call_time = time.perf_counter()
         self.slow_counter = 0
@@ -134,10 +135,25 @@ class RainbowAsciiArt(Static):
 
         self.update(self._render_ascii_art())
 
+    def _get_appropriate_art(self) -> str:
+        if self.size.width == 0:
+            return self.ascii_art
+
+        lines = self.ascii_art.splitlines()
+        if not lines:
+            return self.ascii_art
+
+        max_line_length = max(len(line) for line in lines)
+
+        if self.size.width < max_line_length and self.small_ascii_art != self.ascii_art:
+            return self.small_ascii_art
+
+        return self.ascii_art
+
     def _render_ascii_art(self) -> Text:
         """渲染带斜向彩虹渐变色的ASCII艺术"""
         text = Text()
-        lines = self.ascii_art.splitlines()
+        lines = self._get_appropriate_art().splitlines()
         for row, line in enumerate(lines):
             for col, char in enumerate(line):
                 color_index = (

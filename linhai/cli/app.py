@@ -27,7 +27,7 @@ from ..token_manager import TokenManager
 from .command_handler import CommandHandler
 from .messages_list import MessagesList
 
-ASCII_ART = r"""\
+ASCII_ART = r"""
   █████       █████ ██████   █████ █████   █████   █████████   █████
  ░░███       ░░███ ░░██████ ░░███ ░░███   ░░███   ███░░░░░███ ░░███
   ░███        ░███  ░███░███ ░███  ░███    ░███  ░███    ░███  ░███
@@ -37,14 +37,13 @@ ASCII_ART = r"""\
   ███████████ █████ █████  ░░█████ █████   █████ █████   █████ █████
  ░░░░░░░░░░░ ░░░░░ ░░░░░    ░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░"""
 
-ASCII_ART_SMALL = r"""\
+ASCII_ART_SMALL = r"""
  ██   ████ ██  ██ ██  ██  ████  ████
 ░██  ░░██ ░███░██░██ ░██ ██ ░██░░██ 
 ░██   ░██ ░██░███░██████░██████ ░██ 
 ░██   ░██ ░██ ░██░██ ░██░██ ░██ ░██ 
 ░████ ████░██ ░██░██ ░██░██ ░██ ████
 ░░░░ ░░░░ ░░   ░░░░  ░░ ░░  ░░ ░░░░"""
-
 
 
 class CLIApp(App):
@@ -216,7 +215,7 @@ class CLIApp(App):
         if self.init_messages:
             await self.messages_list.add_initial_messages(self.init_messages)
         else:
-            rainbow_art = RainbowAsciiArt(ASCII_ART)
+            rainbow_art = RainbowAsciiArt(ASCII_ART, ASCII_ART_SMALL)
             rainbow_art.add_class("welcome-message")
             self.messages_list.mount(rainbow_art)
             agent = self.group_chat.get_member_typechecked("agent", Agent)
