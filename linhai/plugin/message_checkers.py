@@ -73,7 +73,8 @@ class WaitingUserPlugin(Plugin):
                 agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
-                        f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：必须使用{WAITING_USER_MARKER!r}等待用户回答"
+                        "消息内容已经发送给用户。"
+                        f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：使用{WAITING_USER_MARKER!r}等待用户回答"
                         "如果需要调用工具：必须输出工具调用"
                     )
                 )
