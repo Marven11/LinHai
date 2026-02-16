@@ -240,7 +240,9 @@ async def context_forget_range_step2(
     range_clean_manager.remove_clean_info(range_clean_id)
 
     conversation_dir = group_chat.get_member_typechecked("conversation_folder", Path)
-    save_cleaned_messages(conversation_dir, deleted_messages, prefix="range_compress")
+    filepath = save_cleaned_messages(
+        conversation_dir, deleted_messages, prefix="range_compress"
+    )
 
     deleted_user_messages = [
         msg.message
@@ -255,6 +257,11 @@ async def context_forget_range_step2(
             RuntimeMessage(f"历史压缩已删除以下用户消息：\n{user_messages_summary}"),
         )
 
-    await agent.message_processor.insert_message(start_id, RuntimeMessage(description))
+    await agent.message_processor.insert_message(
+        start_id,
+        RuntimeMessage(
+            f"这里有一段消息被删除并转储到{filepath}中，以下为总结，请根据总结继续工作: {description}"
+        ),
+    )
 
-    return ToolResultSuccess(content="历史压缩成功完成，现在请继续工作！")
+    return ToolResultSuccess(content=f"你使用历史压缩删除（遗忘）了一段消息，被转储到了{filepath}中，请根据**历史压缩总结**明确当前任务继续工作")
