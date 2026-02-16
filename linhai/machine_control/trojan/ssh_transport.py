@@ -1,20 +1,16 @@
 import asyncio
-import json
 import tempfile
-import uuid
+import base64
+from asyncio.subprocess import Process
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, cast
+from typing import Dict, Any, Optional
 
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
-from .remote_interface import RemoteControlInterface
+from .transport import TrojanTransport
 
 
-class JsonRpcResponse(Dict[str, Any]):
-    pass
-
-
-class SshTransport(RemoteControlInterface):
+class SshTrojanTransport:
     def __init__(
         self,
         host: str,
@@ -24,6 +20,7 @@ class SshTransport(RemoteControlInterface):
     ):
         if username is None:
             import getpass
+
             username = getpass.getuser()
 
         self.host = host
@@ -32,20 +29,14 @@ class SshTransport(RemoteControlInterface):
         self.group_chat = group_chat
         self.trojan_path: Optional[Path] = None
         self.remote_trojan_path: Optional[str] = None
-        self.process: Optional[asyncio.subprocess.Process] = None
-        self.stdin: Optional[asyncio.StreamWriter] = None
-        self.stdout: Optional[asyncio.StreamReader] = None
-        self.stderr: Optional[asyncio.StreamReader] = None
-        self.results: Dict[str, Optional[JsonRpcResponse]] = {}
-        self.reader_task: Optional[asyncio.Task] = None
-        self._connection_valid = True
+        self._trojan_transport: Optional[TrojanTransport] = None
 
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
         check_cmd = ssh_cmd + ["/usr/bin/env python3 -V"]
         process = await asyncio.create_subprocess_exec(
             *check_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()
+        _, stderr = await process.communicate()
         if process.returncode != 0:
             error_msg = stderr.decode()
             await self.group_chat.send_if_exists(
@@ -82,13 +73,12 @@ class SshTransport(RemoteControlInterface):
 
         remote_path = stdout.decode().strip()
 
-        import base64
         encoded_content = base64.b64encode(trojan_content.encode()).decode()
         echo_cmd = ssh_cmd + [f"echo {encoded_content} | base64 -d > {remote_path}"]
         process = await asyncio.create_subprocess_exec(
             *echo_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()
+        _, stderr = await process.communicate()
         if process.returncode != 0:
             error_msg = stderr.decode()
             await self.group_chat.send_if_exists(
@@ -110,21 +100,17 @@ class SshTransport(RemoteControlInterface):
 
     async def _start_trojan_process(
         self, ssh_cmd: list[str], remote_trojan_path: str
-    ) -> bool:
+    ) -> Optional[Process]:
         ssh_trojan_cmd = ssh_cmd + [f"/usr/bin/env python3 {remote_trojan_path}"]
-        self.process = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *ssh_trojan_cmd,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
 
-        self.stdin = self.process.stdin
-        self.stdout = self.process.stdout
-        self.stderr = self.process.stderr
-
         await asyncio.sleep(1)
-        return True
+        return process
 
     async def connect(self) -> bool:
         ssh_cmd = [
@@ -205,7 +191,13 @@ class SshTransport(RemoteControlInterface):
             ),
         )
 
-        if not await self._start_trojan_process(ssh_cmd, remote_trojan_path):
+        process = await self._start_trojan_process(ssh_cmd, remote_trojan_path)
+        if (
+            process is None
+            or process.stdin is None
+            or process.stdout is None
+            or process.stderr is None
+        ):
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -225,102 +217,35 @@ class SshTransport(RemoteControlInterface):
             ),
         )
 
-        self.reader_task = asyncio.create_task(self._read_responses())
-        self._connection_valid = True
+        self._trojan_transport = TrojanTransport(
+            group_chat=self.group_chat,
+            stdin=process.stdin,
+            stdout=process.stdout,
+            stderr=process.stderr,
+            process=process,
+        )
+        self._trojan_transport.start_reading()
         return True
 
-    async def _send_request(self, method: str, params: Dict[str, Any]) -> JsonRpcResponse:
-        if not self._connection_valid:
-            raise ConnectionError("连接已失效")
-        
-        request_id = uuid.uuid4().hex
-        request = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": method,
-            "params": params,
-        }
-
-        request_json = json.dumps(request) + "\n"
-        if self.stdin is None:
-            raise ConnectionError("连接未建立，stdin为None")
-        self.stdin.write(request_json.encode())
-        await self.stdin.drain()
-
-        self.results[request_id] = None
-
-        async def wait_for_response() -> JsonRpcResponse:
-            while self.results[request_id] is None:
-                if not self._connection_valid:
-                    raise ConnectionError("连接已失效")
-                await asyncio.sleep(0.01)
-            result = self.results.pop(request_id)
-            if result is None:
-                raise ConnectionError("未收到响应")
-            return result
-
-        return await asyncio.wait_for(wait_for_response(), timeout=60.0)
-
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            response = await self._send_request(method, params)
-            return cast(Dict[str, Any], response)
-        except ConnectionError as e:
-            self._connection_valid = False
-            raise
-
-    async def _read_responses(self) -> None:
-        while True:
-            if not self._connection_valid:
-                break
-            if self.stdout is None:
-                await asyncio.sleep(0.1)
-                continue
-            try:
-                line = await self.stdout.readline()
-                if not line:
-                    self._connection_valid = False
-                    break
-                response = cast(JsonRpcResponse, json.loads(line.decode()))
-                response_id = response.get("id")
-                if response_id is not None:
-                    self.results[response_id] = response
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="ERROR",
-                        content=f"读取响应时出错: {e}",
-                    ),
-                )
-                self._connection_valid = False
-                break
+        if self._trojan_transport is None:
+            raise ConnectionError("未建立连接")
+        return await self._trojan_transport.send_request(method, params)
 
     async def disconnect(self):
-        if self.reader_task:
-            self.reader_task.cancel()
-            try:
-                await self.reader_task
-            except asyncio.CancelledError:
-                pass
-
-        if self.process:
-            self.process.terminate()
-            await asyncio.wait_for(self.process.wait(), timeout=60.0)
+        if self._trojan_transport:
+            await self._trojan_transport.disconnect()
 
         if self.trojan_path and self.trojan_path.exists():
             self.trojan_path.unlink(missing_ok=True)
 
-        self._connection_valid = False
+        self._trojan_transport = None
 
     def is_connected(self) -> bool:
-        return self._connection_valid
+        return (
+            self._trojan_transport is not None and self._trojan_transport.is_connected()
+        )
 
     async def wait_for_disconnect(self):
-        if self.reader_task:
-            try:
-                await self.reader_task
-            except asyncio.CancelledError:
-                pass
+        if self._trojan_transport:
+            await self._trojan_transport.wait_for_disconnect()

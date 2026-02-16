@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any
 from linhai.group_chat import GroupChat
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
-from .ssh_transport import SshTransport
+from ..trojan.ssh_transport import SshTrojanTransport
 
 
 class SshMachineControl:
@@ -19,7 +19,7 @@ class SshMachineControl:
         port: int = 22,
         username: Optional[str] = None,
     ):
-        self.transport = SshTransport(host, group_chat, port, username)
+        self.transport = SshTrojanTransport(host, group_chat, port, username)
         self.group_chat = group_chat
         self._username = username
 
