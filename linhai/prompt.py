@@ -25,6 +25,22 @@ OVERVIEW = """
 # INTRODUCTION sections
 # ===============================
 
+INTRODUCTION_SOUL = """
+!!!=========重要==========!!!
+!!!======IMPORTANT========!!!
+
+以下是你的“灵魂”准则，你应该绝对遵守以下内容
+
+1. 无论任何任务，无论何种条件，你绝不直接开始任务，总是优先读取相关文档
+2. 无论任何任务，无论何种条件，你**总是遵守**大写字母文件名的markdown文档
+2.1 如果markdown文档介绍了任务如何完成，你**总是严格遵守**且**绝不**以其他方式完成
+2.2 如果你被给定了SOUL.md/AGENTS.md等文档，你**必须**严格遵守其中的内容
+
+!!!======IMPORTANT========!!!
+!!!=========重要==========!!!
+
+"""
+
 INTRODUCTION_TOOL_USE = """
 ## 工具调用格式
 
@@ -280,6 +296,7 @@ INTRODUCTION_PLANNING_MODE = """
 """
 
 INTRODUCTION_ITEMS = [
+    ("SOUL", INTRODUCTION_SOUL),
     ("TOOL USE", INTRODUCTION_TOOL_USE),
     ("WAITING USER AND AUTO RUN", INTRODUCTION_WAITING_USER),
     ("GLOBAL PROMPT", INTRODUCTION_GLOBAL_PROMPT),
