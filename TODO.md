@@ -57,6 +57,8 @@ unittest 失败时，必须分析
     - 检测方法为检查```json toolcall 前是否有对应的标题行
       - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
 - [ ] 添加初始化配置的功能
+- [ ] 让http_request在master_host上的实现也返回header和status code,同时如果body大于5000个字符则将body转储到conversation文件夹并返回路径而不是直接返回
+  - 问题：如果响应是长json则模型无法直接读取，也无法直接用jq处理（因为长消息会被分割到多个文件）
 - [ ] 改进linhai/cli/messages_list.py性能
   - 当前状态：自动滚动到底部的消息列表
   - 当前问题：在agent长时间运行后存在大量消息widget卡死界面
