@@ -55,7 +55,7 @@ INTRODUCTION_TOOL_USE = """
 - `assert_success: true`（默认）：工具调用失败时会中断后续流程
 - `assert_success: false`：工具调用失败时不影响后续工具调用
 
-你可以同时调用多个工具，只需要顺序输出多个代码块即可。
+你可以同时调用多个工具，要输出多个工具只需要像输出markdown语法一样使用多个json toolcall代码块
 """
 
 INTRODUCTION_WAITING_USER = """

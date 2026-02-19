@@ -215,7 +215,17 @@ class SingleToolCallReminderPlugin(Plugin):
                     RuntimeMessage(
                         f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
                         "除开特殊原因不要每次只调用一个工具！"
-                        + "！！！！！" * (self.single_tool_call_count - 2)
+                        """
+多个工具调用的语法为markdown语法，在一个回答中输出多个json toolcall代码块，如:
+
+```json toolcall
+{"name": "read_file", ...}
+```
+
+```json toolcall
+{"name": "read_file", ...}
+```
+"""
                     ),
                     source="single_tool_call_reminder",
                     sort_value=0,
