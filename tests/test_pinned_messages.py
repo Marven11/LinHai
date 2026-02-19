@@ -316,7 +316,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         )
 
         # 验证结果
-        self.assertEqual(result.content, "历史压缩成功完成，现在请继续工作！")
+        self.assertEqual(result.content, "你使用历史压缩删除（遗忘）了一段消息，被转储到了None中，请根据**历史压缩总结**明确当前任务继续工作")
 
         # 验证get_clean_info被调用
         mock_range_clean_manager.get_clean_info.assert_called_once_with("test_id")
