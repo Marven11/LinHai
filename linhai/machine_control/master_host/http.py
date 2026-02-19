@@ -3,6 +3,10 @@
 from typing import Optional
 import tempfile
 import re
+import json
+import os
+import hashlib
+import time
 
 import chardet
 import httpx
@@ -69,33 +73,67 @@ async def http_request(
                 timeout=timeout,
             )
 
-            content_type = response.headers.get("Content-Type", "").lower()
+            content_type = response.headers.get("content-type", "").lower()
+            status_code = response.status_code
+            response_headers = dict(response.headers)
 
             is_binary, encoding = analyze_content(content_type, response.content)
 
             if is_binary:
-                with tempfile.NamedTemporaryFile(
-                    delete=False, suffix=".bin"
-                ) as tmp_file:
-                    tmp_file.write(response.content)
-                    return ToolResultSuccess(
-                        content=f"二进制内容已保存到临时文件: {tmp_file.name}"
-                    )
+                content_hash = hashlib.md5(response.content).hexdigest()[:8]
+                filename = f"{int(time.time())}_{content_hash}.bin"
+                filepath = os.path.join(
+                    "/home/cube/.local/share/linhai/conversation/1a28cf90-1879-47ae-8fba-70f68fad80f0/http_responses",
+                    filename
+                )
+                with open(filepath, "wb") as f:
+                    f.write(response.content)
+                result_parts = [
+                    f"<<status_code>>{status_code}<<status_code>>",
+                    f"<<headers>>{json.dumps(response_headers)}<<headers>>",
+                    "<<is_binary>>true<<is_binary>>",
+                    f"<<size>>{len(response.content)}<<size>>",
+                    f"<<body_file>>{filepath}<<body_file>>",
+                ]
+                content_str = "\n".join(result_parts)
+                return ToolResultSuccess(content=content_str)
             else:
+                # 文本内容
                 if encoding:
                     try:
-                        content = response.content.decode(encoding)
-                        return ToolResultSuccess(content=content)
+                        text_content = response.content.decode(encoding)
                     except UnicodeDecodeError:
                         return ToolResultFailed(
                             content=f"无法使用编码 {encoding} 解码响应内容"
                         )
                 else:
-                    try:
-                        return ToolResultSuccess(content=response.text)
-                    except UnicodeDecodeError:
-                        return ToolResultFailed(
-                            content="无法解码响应内容，可能是二进制数据"
-                        )
+                    text_content = response.text
+                result_parts = [
+                    f"<<status_code>>{status_code}<<status_code>>",
+                    f"<<headers>>{json.dumps(response_headers)}<<headers>>",
+                ]
+                if len(text_content) > 5000:
+                    content_hash = hashlib.md5(text_content.encode()).hexdigest()[:8]
+                    filename = f"{int(time.time())}_{content_hash}.txt"
+                    filepath = os.path.join(
+                        "/home/cube/.local/share/linhai/conversation/1a28cf90-1879-47ae-8fba-70f68fad80f0/http_responses",
+                        filename
+                    )
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        f.write(text_content)
+                    result_parts.extend([
+                        "<<is_binary>>false<<is_binary>>",
+                        f"<<size>>{len(text_content)}<<size>>",
+                        f"<<body_file>>{filepath}<<body_file>>",
+                    ])
+                else:
+                    result_parts.extend([
+                        "<<is_binary>>false<<is_binary>>",
+                        f"<<size>>{len(text_content)}<<size>>",
+                        f"<<body>>{text_content}<<body>>",
+                    ])
+                
+                content_str = "\n".join(result_parts)
+                return ToolResultSuccess(content=content_str)
     except httpx.RequestError as e:
         return ToolResultFailed(content=f"请求失败: {str(e)}")

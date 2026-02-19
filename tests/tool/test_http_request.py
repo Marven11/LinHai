@@ -2,7 +2,6 @@
 
 import unittest
 import unittest.mock
-import tempfile
 import os
 import asyncio
 
@@ -41,7 +40,8 @@ class TestHttpRequestTool(unittest.TestCase):
     def test_http_request_text_content(self, mock_request):
         """测试文本内容返回"""
         mock_response = unittest.mock.Mock()
-        mock_response.headers = {"content-type": "text/html; charset=utf-8"}
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/html; charset=utf-8", "x-custom": "value"}
         text_content = "<html><body>Test Content</body></html>"
         mock_response.content = text_content.encode("utf-8")
         mock_response.text = text_content
@@ -52,16 +52,23 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-        # result是ToolResultMessage对象，需要检查其content
-        self.assertIn("Test Content", result.content)
-        self.assertIsInstance(result.content, str)
+        # 直接检查返回的字符串中是否包含预期的标记和值
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>false<<is_binary>>", result.content)
+        self.assertIn(f"<<size>>{len(text_content)}<<size>>", result.content)
+        # 检查headers
+        self.assertIn("<<headers>>", result.content)
+        # 检查body
+        self.assertIn(f"<<body>>{text_content}<<body>>", result.content)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_binary_content(self, mock_request):
-        """测试二进制内容保存到临时文件"""
+        """测试二进制内容保存到文件"""
         mock_response = unittest.mock.Mock()
-        mock_response.headers = {"content-type": "image/png"}
-        mock_response.content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "image/png", "x-custom": "bin"}
+        binary_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+        mock_response.content = binary_content
         mock_request.return_value = mock_response
 
         result = asyncio.run(
@@ -69,29 +76,28 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/image.png"}
             )
         )
-
-        # 从ToolResultMessage中提取文件路径
-        self.assertIn("二进制内容已保存到临时文件: ", result.content)
-        # 提取路径：查找"二进制内容已保存到临时文件: "之后的内容
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
-            "二进制内容已保存到临时文件: "
-        )
-        # 路径可能在<<data>>标记中，我们需要提取到下一个标记前
-        temp_path = result.content[path_start:].split("<<")[0].strip()
-
-        self.assertTrue(os.path.exists(temp_path))
-        self.assertTrue(temp_path.endswith(".bin"))
-
-        with open(temp_path, "rb") as f:
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
+        self.assertIn(f"<<size>>{len(binary_content)}<<size>>", result.content)
+        self.assertIn("<<body_file>>", result.content)
+        # 检查文件是否被创建，并清理
+        # 从内容中提取文件路径
+        import re
+        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        self.assertIsNotNone(match)
+        filepath = match.group(1)
+        self.assertTrue(os.path.exists(filepath))
+        self.assertTrue(filepath.endswith(".bin"))
+        with open(filepath, "rb") as f:
             content = f.read()
-            self.assertEqual(content, mock_response.content)
-
-        os.unlink(temp_path)
+            self.assertEqual(content, binary_content)
+        os.unlink(filepath)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_default_user_agent(self, mock_request):
         """测试默认User-Agent设置"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
         mock_response.content = b"test"
         mock_response.text = "test"
@@ -115,6 +121,7 @@ class TestHttpRequestTool(unittest.TestCase):
     def test_http_request_custom_headers(self, mock_request):
         """测试自定义headers保留并添加User-Agent"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/json"}
         json_text = '{"key": "value"}'
         mock_response.content = json_text.encode("utf-8")
@@ -144,6 +151,7 @@ class TestHttpRequestTool(unittest.TestCase):
     def test_http_request_encoding_detection(self, mock_request):
         """测试编码检测"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/html"}
         gbk_text = "Test Encoding"
         gbk_content = gbk_text.encode("gbk")
@@ -155,8 +163,9 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-        # result是ToolResultMessage对象，需要检查其content
-        self.assertIn("Test Encoding", result.content)
+        # 检查返回的内容中是否包含解码后的文本
+        self.assertIn(gbk_text, result.content)
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_request_error(self, mock_request):
@@ -172,7 +181,6 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com"}
             )
         )
-        # result是ToolErrorMessage对象，需要检查其content
         self.assertIn("请求失败", result.content)
         self.assertIn("Connection timeout", result.content)
 
@@ -180,6 +188,7 @@ class TestHttpRequestTool(unittest.TestCase):
     def test_http_request_pdf_content(self, mock_request):
         """测试PDF二进制内容"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/pdf"}
         mock_response.content = b"%PDF-1.4\n1 0 obj\n<<"
         mock_request.return_value = mock_response
@@ -189,22 +198,22 @@ class TestHttpRequestTool(unittest.TestCase):
                 "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
             )
         )
-
-        # 从ToolResultMessage中提取文件路径
-        self.assertIn("二进制内容已保存到临时文件: ", result.content)
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
-            "二进制内容已保存到临时文件: "
-        )
-        temp_path = result.content[path_start:].split("<<")[0].strip()
-
-        self.assertTrue(os.path.exists(temp_path))
-        self.assertTrue(temp_path.endswith(".bin"))
-        os.unlink(temp_path)
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
+        self.assertIn("<<body_file>>", result.content)
+        # 清理文件
+        import re
+        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        if match:
+            filepath = match.group(1)
+            if os.path.exists(filepath):
+                os.unlink(filepath)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_zip_content(self, mock_request):
         """测试ZIP二进制内容"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/zip"}
         mock_response.content = b"PK\x03\x04\x14\x00\x00\x00\x08\x00"
         mock_request.return_value = mock_response
@@ -215,22 +224,22 @@ class TestHttpRequestTool(unittest.TestCase):
                 {"method": "GET", "url": "http://example.com/archive.zip"},
             )
         )
-
-        # 从ToolResultMessage中提取文件路径
-        self.assertIn("二进制内容已保存到临时文件: ", result.content)
-        path_start = result.content.find("二进制内容已保存到临时文件: ") + len(
-            "二进制内容已保存到临时文件: "
-        )
-        temp_path = result.content[path_start:].split("<<")[0].strip()
-
-        self.assertTrue(os.path.exists(temp_path))
-        self.assertTrue(temp_path.endswith(".bin"))
-        os.unlink(temp_path)
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
+        self.assertIn("<<body_file>>", result.content)
+        # 清理文件
+        import re
+        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        if match:
+            filepath = match.group(1)
+            if os.path.exists(filepath):
+                os.unlink(filepath)
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_timeout_parameter(self, mock_request):
         """测试timeout参数传递"""
         mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
         mock_response.content = b"test"
         mock_response.text = "test"
@@ -259,6 +268,64 @@ class TestHttpRequestTool(unittest.TestCase):
         )
         call_args = mock_request.call_args
         self.assertEqual(call_args.kwargs["timeout"], 30)
+
+    @unittest.mock.patch("httpx.AsyncClient.request")
+    def test_http_request_large_text_body_saved_to_file(self, mock_request):
+        """测试大文本响应体（>5000字符）保存到文件"""
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/plain"}
+        # 创建超过5000字符的文本
+        large_text = "x" * 6000
+        mock_response.content = large_text.encode("utf-8")
+        mock_response.text = large_text
+        mock_request.return_value = mock_response
+
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com/large"}
+            )
+        )
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>false<<is_binary>>", result.content)
+        self.assertIn(f"<<size>>{len(large_text)}<<size>>", result.content)
+        # 大响应体应该保存到文件，而不是直接返回body
+        self.assertIn("<<body_file>>", result.content)
+        self.assertNotIn("<<body>>", result.content)
+        # 清理文件
+        import re
+        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        self.assertIsNotNone(match)
+        filepath = match.group(1)
+        self.assertTrue(os.path.exists(filepath))
+        self.assertTrue(filepath.endswith(".txt"))
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+            self.assertEqual(content, large_text)
+        os.unlink(filepath)
+
+    @unittest.mock.patch("httpx.AsyncClient.request")
+    def test_http_request_small_text_body_returned_directly(self, mock_request):
+        """测试小文本响应体（<=5000字符）直接返回"""
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/plain"}
+        small_text = "x" * 1000
+        mock_response.content = small_text.encode("utf-8")
+        mock_response.text = small_text
+        mock_request.return_value = mock_response
+
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com/small"}
+            )
+        )
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>false<<is_binary>>", result.content)
+        self.assertIn(f"<<size>>{len(small_text)}<<size>>", result.content)
+        # 小响应体应该直接返回body，而不是保存到文件
+        self.assertIn(f"<<body>>{small_text}<<body>>", result.content)
+        self.assertNotIn("<<body_file>>", result.content)
 
 
 if __name__ == "__main__":
