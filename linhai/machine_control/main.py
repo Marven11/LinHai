@@ -237,7 +237,8 @@ class MachineControlToolSet(ToolSet):
 
         @self.register_tool(
             name="terminal_create",
-            desc="在当前机器上新建虚拟终端，返回终端对应的ID，这个工具不能和其他工具一起调用！",
+            desc="在当前机器上新建虚拟终端，返回终端对应的ID。"
+            "终端高度固定且不能滚动，会截断命令输出结果，因此没有必要则优先使用process_create",
             args={
                 "columns": ToolArgInfo(desc="终端列数，默认80", type="int"),
                 "lines": ToolArgInfo(desc="终端行数，默认24", type="int"),
