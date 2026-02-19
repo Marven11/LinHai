@@ -26,7 +26,6 @@ dependencies = [
     "bashlex",
     "tiktoken",
     "pillow",
-    "pyright>=1.1.407",
 ]
 requires-python = ">=3.10"
 
