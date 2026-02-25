@@ -150,6 +150,9 @@ unittest 失败时，必须分析
   - 必须完成：包括新增unittest在内的所有unittest通过，/tmp的那个脚本成功连接并测试所有功能
 - [ ] change_directory在当前目录不存在时会失败
   - 如果当前目录不存在则提示“原目录不存在，切换到了...”
+- [ ] master_host的http_request硬编码了conversation路径
+  - 原因：http_request无法获取conversation路径但在先前commit中仍然强行设计为保存到conversation目录，且没有注意到http响应不需要保存到conversation目录
+  - 修复：改回保存到临时文件，和那个commit修改前一致
 - [ ] 支持配置是使用本地EtherGhost还是EtherGhost API
 
 # 注意
