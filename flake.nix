@@ -7,6 +7,10 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    etherGhost = {
+      url = "github:Marven11/EtherGhost/dev";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -15,6 +19,7 @@
       nixpkgs,
       utils,
       nur,
+      etherGhost,
       ...
     }:
     utils.lib.eachDefaultSystem (
@@ -43,7 +48,7 @@
 
             dependencies = [
               pkgs.nur.repos.marven11.fenjing
-              pkgs.nur.repos.marven11.ether-ghost
+              etherGhost.packages.${system}.default
               openai
               httpx
               beautifulsoup4
