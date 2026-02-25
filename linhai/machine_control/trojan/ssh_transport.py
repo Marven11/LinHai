@@ -34,7 +34,7 @@ class SshTrojanTransport:
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
         check_cmd = ssh_cmd + ["/usr/bin/env python3 -V"]
         process = await asyncio.create_subprocess_exec(
-            *check_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            *check_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit = 256 * 1024
         )
         _, stderr = await process.communicate()
         if process.returncode != 0:
