@@ -43,6 +43,7 @@
 
             dependencies = [
               pkgs.nur.repos.marven11.fenjing
+              pkgs.nur.repos.marven11.ether-ghost
               openai
               httpx
               beautifulsoup4

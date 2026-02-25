@@ -2,6 +2,9 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project]
 name = "linhai"
 version = "0.1.0"
@@ -26,6 +29,7 @@ dependencies = [
     "bashlex",
     "tiktoken",
     "pillow",
+    "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
 ]
 requires-python = ">=3.10"
 

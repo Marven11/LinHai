@@ -4,11 +4,10 @@ from typing import Dict, Optional, Protocol, Union, Any, Literal
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
-from linhai.llm import Message, ToolCallMessage
+from linhai.llm import Message
 from linhai.group_chat import GroupChat
 from linhai.tool.base import (
     ToolArgInfo,
-    ToolCallResultMessage,
     ToolResultSuccess,
     ToolResultFailed,
     ToolSet,
@@ -81,6 +80,58 @@ class MachineControlToolSet(ToolSet):
             return await self.machine_control.add_ssh_machine(
                 machine_id, host, port, username
             )
+
+        @self.register_tool(
+            name="connect_ether_ghost_machine",
+            desc="连接到EtherGhost webshell机器并添加到可用机器列表",
+            args={
+                "machine_id": ToolArgInfo(desc="机器ID", type="str"),
+                "session_type": ToolArgInfo(
+                    desc="webshell类型，例如'php_oneliner'", type="str"
+                ),
+                "connection_args": ToolArgInfo(
+                    desc="连接参数字典，根据session类型而定",
+                    type="Dict[str, Any]",
+                ),
+            },
+            required_args=["machine_id", "session_type", "connection_args"],
+            conflict_with=None,
+        )
+        async def connect_ether_ghost_machine_tool(
+            machine_id: str,
+            session_type: str,
+            connection_args: Dict[str, Any],
+        ) -> ToolResultSuccess | ToolResultFailed:
+            return await self.machine_control.add_ether_ghost_machine(
+                machine_id, session_type, connection_args
+            )
+
+        @self.register_tool(
+            name="ether_ghost_get_connection_args_definition",
+            desc="获取EtherGhost各session类型所需的连接参数定义",
+            args={},
+            required_args=[],
+        )
+        async def ether_ghost_get_connection_args_definition_tool() -> ToolResultSuccess | ToolResultFailed:
+            from ether_ghost.core.base import session_type_info
+            import json
+            definition = {}
+            for session_type, info in session_type_info.items():
+                connection_args = info.get("connection_args", [])
+                args_def = {}
+                for arg in connection_args:
+                    args_def[arg["name"]] = {
+                        "type": arg.get("type", "str"),
+                        "description": arg.get("description", ""),
+                        "required": arg.get("required", False),
+                        "default": arg.get("default", None),
+                    }
+                definition[session_type] = args_def
+            result = {
+                "type": "ether_ghost",
+                "connection_args_definition": definition
+            }
+            return ToolResultSuccess(content=json.dumps(result, ensure_ascii=False))
 
         @self.register_tool(
             name="http_request",
@@ -647,23 +698,57 @@ class MachineControl:
             connected = await ssh_control.connect()
             if not connected:
                 return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             return ToolResultFailed(content=f"连接SSH机器时出错: {e}")
 
         self.machines[machine_id] = ssh_control
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
 
-        actual_username = username if username is not None else ssh_control.username
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
-                content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {actual_username}",
+                content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {username}",
             ),
         )
 
         return ToolResultSuccess(
             content=f"已成功添加SSH机器: {machine_id} ({host}:{port})"
+        )
+
+    async def add_ether_ghost_machine(
+        self,
+        machine_id: str,
+        session_type: str,
+        connection_args: Dict[str, Any],
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if machine_id in self.machines:
+            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
+
+        from .ether_ghost_host.ether_ghost_host import EtherGhostMachineControl
+
+        ether_control = EtherGhostMachineControl(
+            session_type=session_type,
+            connection_args=connection_args,
+            machine_id=machine_id,
+        )
+        await ether_control.initialize()
+
+        self.machines[machine_id] = ether_control
+        self.machine_descriptions[machine_id] = (
+            f"EtherGhost webshell主机 (类型: {session_type})"
+        )
+
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"EtherGhost连接成功: 已连接到远程机器 {machine_id} (session类型: {session_type})",
+            ),
+        )
+
+        return ToolResultSuccess(
+            content=f"已成功添加EtherGhost机器: {machine_id} (session类型: {session_type})"
         )
 
     async def list_all_terminals(self) -> ToolResultSuccess | ToolResultFailed:
@@ -828,7 +913,6 @@ class MachineControlPlugin:
                         )
             return None
 
-        # 对于success状态，执行原after_tool_call的逻辑
         elif status == "success":
 
             if "on_machine" in toolcall_arguments:
@@ -836,11 +920,11 @@ class MachineControlPlugin:
                 current_machine = self.machine_control.target_machine
 
                 if on_machine is None or on_machine != current_machine:
-                    # 没有使用on_machine或指定了不同的机器，重置计数器
+
                     self.consecutive_same_on_machine_count = 0
                     self.last_on_machine = None
                 else:
-                    # 使用on_machine且与当前机器相同
+
                     if self.last_on_machine == on_machine:
                         self.consecutive_same_on_machine_count += 1
                     else:
@@ -857,7 +941,6 @@ class MachineControlPlugin:
                         )
             return None
 
-        # 对于failed状态，不需要特殊处理
         else:
             return None
 
