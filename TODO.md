@@ -69,7 +69,7 @@ unittest 失败时，必须分析
   - 实现connect_privileged_trojanpy
     - 需要支持自定义机器名字和机器描述
   - 全面编写对应unittest
-- [ ] 让http_request在master_host上的实现也返回header和status code,同时如果body大于5000个字符则将body转储到conversation文件夹并返回路径而不是直接返回
+- [ ] 让http_request在master_host上的实现也返回header和status code,同时如果body大于5000个字符则将body转储到临时文件并返回路径而不是直接返回
   - 问题：如果响应是长json则模型无法直接读取，也无法直接用jq处理（因为长消息会被分割到多个文件）
 - [ ] 当前on_tool_result的命名不合适，改为after_toolcall
   - 需要同时处理类型名、函数名、变量名等
