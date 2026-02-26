@@ -64,6 +64,7 @@ EXTENSION_TO_TYPE = {
     ".conf": "ini",
     ".csv": "csv",
     ".tsv": "tsv",
+    ".nix": "nix",
     ".dockerfile": "dockerfile",
     ".gitignore": "gitignore",
     ".gitattributes": "gitattributes",
