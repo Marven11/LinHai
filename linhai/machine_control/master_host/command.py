@@ -10,17 +10,20 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 def change_directory(directory: str) -> ToolResultSuccess | ToolResultFailed:
-    """改变当前工作目录
-
-    Args:
-        directory: 目标目录的路径
-
-    Returns:
-         成功消息或错误信息
-    """
+    """改变当前工作目录"""
     try:
         old_dir = os.getcwd()
+    except FileNotFoundError:
+        old_dir = None
+    except OSError as e:
+        return ToolResultFailed(content=f"Error getting current directory: {str(e)}")
+
+    try:
         os.chdir(directory)
-        return ToolResultSuccess(content=f"从目录{old_dir}切换到了{directory}")
     except OSError as e:
         return ToolResultFailed(content=f"Error changing directory: {str(e)}")
+
+    if old_dir is None:
+        return ToolResultSuccess(content=f"原目录不存在，切换到了{directory}")
+    else:
+        return ToolResultSuccess(content=f"从目录{old_dir}切换到了{directory}")
