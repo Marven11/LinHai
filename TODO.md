@@ -52,6 +52,8 @@ unittest 失败时，必须分析
 
 - [ ] terminal tab
 - [ ] 添加初始化配置的功能
+- [ ] 让agent在被VolcanoDeepseekFixPlugin提醒时知道是哪个工具格式出问题
+  - 方案：让VolcanoDeepseekFixPlugin不提示次数（因为没有用）而是提示标记附近的内容（100字符）
 - [ ] process_stdio_write的with_enter貌似有兼容性问题
   - 编写unittest后再修复
 - [ ] 当前的process_stdio_write和process_stdio_read不返回json而是返回格式化后的字符串，这样无法完成下一个任务
