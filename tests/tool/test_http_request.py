@@ -1,11 +1,14 @@
 """Unit tests for http_request tool."""
 
+import asyncio
+import os
+import re
+import tempfile
 import unittest
 import unittest.mock
-import os
-import asyncio
 
-from linhai.tool.base import ToolSet, ToolArgInfo
+import httpx
+from linhai.tool.base import ToolArgInfo, ToolSet
 from linhai.machine_control.master_host.http import http_request
 
 
@@ -63,7 +66,6 @@ class TestHttpRequestTool(unittest.TestCase):
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_binary_content(self, mock_request):
-        """测试二进制内容保存到文件"""
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "image/png", "x-custom": "bin"}
@@ -80,11 +82,9 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn(f"<<size>>{len(binary_content)}<<size>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        # 检查文件是否被创建，并清理
-        # 从内容中提取文件路径
-        import re
         match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
         self.assertIsNotNone(match)
+        assert match is not None
         filepath = match.group(1)
         self.assertTrue(os.path.exists(filepath))
         self.assertTrue(filepath.endswith(".bin"))
@@ -186,7 +186,6 @@ class TestHttpRequestTool(unittest.TestCase):
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_pdf_content(self, mock_request):
-        """测试PDF二进制内容"""
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/pdf"}
@@ -201,8 +200,6 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        # 清理文件
-        import re
         match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
         if match:
             filepath = match.group(1)
@@ -211,7 +208,6 @@ class TestHttpRequestTool(unittest.TestCase):
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_zip_content(self, mock_request):
-        """测试ZIP二进制内容"""
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/zip"}
@@ -227,8 +223,6 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        # 清理文件
-        import re
         match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
         if match:
             filepath = match.group(1)
@@ -271,11 +265,9 @@ class TestHttpRequestTool(unittest.TestCase):
 
     @unittest.mock.patch("httpx.AsyncClient.request")
     def test_http_request_large_text_body_saved_to_file(self, mock_request):
-        """测试大文本响应体（>5000字符）保存到文件"""
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}
-        # 创建超过5000字符的文本
         large_text = "x" * 6000
         mock_response.content = large_text.encode("utf-8")
         mock_response.text = large_text
@@ -289,13 +281,11 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>false<<is_binary>>", result.content)
         self.assertIn(f"<<size>>{len(large_text)}<<size>>", result.content)
-        # 大响应体应该保存到文件，而不是直接返回body
         self.assertIn("<<body_file>>", result.content)
         self.assertNotIn("<<body>>", result.content)
-        # 清理文件
-        import re
         match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
         self.assertIsNotNone(match)
+        assert match is not None
         filepath = match.group(1)
         self.assertTrue(os.path.exists(filepath))
         self.assertTrue(filepath.endswith(".txt"))
@@ -326,6 +316,44 @@ class TestHttpRequestTool(unittest.TestCase):
         # 小响应体应该直接返回body，而不是保存到文件
         self.assertIn(f"<<body>>{small_text}<<body>>", result.content)
         self.assertNotIn("<<body_file>>", result.content)
+
+    @unittest.mock.patch("httpx.AsyncClient.request")
+    def test_http_request_file_path_is_temporary(self, mock_request):
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/pdf"}
+        binary_content = b"%PDF-1.4\n1 0 obj\n<<"
+        mock_response.content = binary_content
+        mock_request.return_value = mock_response
+
+        result = asyncio.run(
+            self.toolset.call_tool(
+                "http_request", {"method": "GET", "url": "http://example.com/doc.pdf"}
+            )
+        )
+        self.assertIn("<<status_code>>200<<status_code>>", result.content)
+        self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
+        self.assertIn("<<body_file>>", result.content)
+        
+        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        self.assertIsNotNone(match)
+        assert match is not None
+        filepath = match.group(1)
+        
+        temp_dir = tempfile.gettempdir()
+        self.assertTrue(
+            filepath.startswith(temp_dir),
+            f"文件路径应该在临时目录中，但得到: {filepath}"
+        )
+        
+        hardcoded_path = "/home/cube/.local/share/linhai/conversation/1a28cf90-1879-47ae-8fba-70f68fad80f0/http_responses"
+        self.assertNotIn(
+            hardcoded_path, filepath,
+            f"文件路径不应该包含硬编码路径，但得到: {filepath}"
+        )
+        
+        if os.path.exists(filepath):
+            os.unlink(filepath)
 
 
 if __name__ == "__main__":
