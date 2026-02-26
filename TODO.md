@@ -52,6 +52,13 @@ unittest 失败时，必须分析
 
 - [ ] terminal tab
 - [ ] 添加初始化配置的功能
+- [ ] 当前展示缓存是否失效的功能有问题
+  - 问题: 在历史压缩或者忘记大消息时会调用多次count_invalidate_cache，导致出现多条大消息
+  - 问题：在系统消息被修改（如增减工具）等时候消息缓存实质上失效
+  - 设计：添加一个动态的检查消息缓存是否失效的机制，在当前回答的缓存token数量少于所有输入token的五分之一时报告消息缓存失效
+  - 解决
+    - 完全删除count_invalidate_cache函数不再使用
+    - 让update_cumulative_usage在接收到的AnswerTokenUsage中缓存token过少时发送Notice
 - [ ] 让agent在被VolcanoDeepseekFixPlugin提醒时知道是哪个工具格式出问题
   - 方案：让VolcanoDeepseekFixPlugin不提示次数（因为没有用）而是提示标记附近的内容（100字符）
 - [ ] process_stdio_write的with_enter貌似有兼容性问题
