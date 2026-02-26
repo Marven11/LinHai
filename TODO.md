@@ -51,12 +51,24 @@ unittest 失败时，必须分析
 # 暂时搁置
 
 - [ ] terminal tab
-- [ ] 添加假设颠覆法
-  - 添加 prompt 到 system message
-  - 添加插件在输出对应标题前禁止调用工具，参考已有插件实现
-    - 检测方法为检查```json toolcall 前是否有对应的标题行
-      - 如果没有任何一个对应的标题行但是有```json toolcall 则打断
 - [ ] 添加初始化配置的功能
+- [ ] process_stdio_write的with_enter貌似有兼容性问题
+  - 编写unittest后再修复
+- [ ] 当前的process_stdio_write和process_stdio_read不返回json而是返回格式化后的字符串，这样无法完成下一个任务
+  - 为每个HostControl添加process_stdio_write_structured和process_stdio_read_structured函数
+  - 让process_stdio_write和process_stdio_read均使用process_stdio_write_structured和process_stdio_read_structured函数以遵守DRY
+- [ ] 添加控制机器时的权限提升功能
+  - 问题: agent在管理本地机器/ssh机器时，即使有sudo也无法修改root的文件 - machine_control提供的write_file等工具只能以当前用户的权限进行
+  - 解决: 让agent可以连接sudo运行的trojan.py为一个新的机器
+    - agent应该可以完成以下流程
+      - 使用switch_machine切换到目标上并上传trojan.py到/tmp
+      - 使用process_create运行`sudo xxx trojan.py`
+      - 使用connect_privileged_trojanpy工具连接trojan.py，产生一个新的机器
+  - 参考linhai/machine_control/ssh_host实现linhai/machine_control/privileged_trojanpy
+    - 初始化时传入对应的HostControl以及pid
+  - 实现connect_privileged_trojanpy
+    - 需要支持自定义机器名字和机器描述
+  - 全面编写对应unittest
 - [ ] 让http_request在master_host上的实现也返回header和status code,同时如果body大于5000个字符则将body转储到conversation文件夹并返回路径而不是直接返回
   - 问题：如果响应是长json则模型无法直接读取，也无法直接用jq处理（因为长消息会被分割到多个文件）
 - [ ] 当前on_tool_result的命名不合适，改为after_toolcall
