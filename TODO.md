@@ -72,14 +72,13 @@ unittest 失败时，必须分析
 - [ ] 改进linhai/cli/messages_list.py性能
   - 当前状态：自动滚动到底部的消息列表
   - 当前问题：在agent长时间运行后存在大量消息widget卡死界面
-  - 主要改进：在没有向上滚动时隐藏上方看不见的消息，在用户向上滚动时重新显示回来
+  - 主要改进：在没有向上滚动时隐藏上方看不见的消息，在有消息被隐藏时在消息列表最顶部显示一个“展示被隐藏的消息”按钮
   - 设计
     - 添加一个timer每0.05秒检查一次
     - 在自动滚动开启时：
-      - 如果消息多于20条且消息列表widget高度高于“当前message list高度*2+200”则隐藏最上方的一个widget,按照原有顺序保存到列表中
-    - 在自动滚动关闭时：
-      - 自动滚动关闭说明用户有可能向上滚动
-      - 如果当前滚动位置距离顶部少于“当前message list高度*2”则按照顺序恢复最靠近的消息（也就是所有被隐藏的消息中最底部的消息），显示
+      - 如果消息多于50条且消息列表widget高度高于“当前message list高度*10+200”则隐藏最上方的一个widget,按照原有顺序保存到列表中
+    - 点击按钮后
+      - 显示所有被隐藏的消息
     - 无论有没有隐藏/显示消息都sleep 0.05秒等待界面刷新
   - 以上设计难以验证，需要严格按照官网文档编写测试
     - 在有大量消息且开启自动滚动时上方有多条消息被隐藏
@@ -105,11 +104,6 @@ unittest 失败时，必须分析
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
 - [ ] 当前HostControl定义的process_create不支持wait_seconds为None，这不合理
   - 需要改为支持None以完成EtherGhost集成
-- [ ] change_directory在当前目录不存在时会失败
-  - 如果当前目录不存在则提示“原目录不存在，切换到了...”
-- [ ] master_host的http_request硬编码了conversation路径
-  - 原因：http_request无法获取conversation路径但在先前commit中仍然强行设计为保存到conversation目录，且没有注意到http响应不需要保存到conversation目录
-  - 修复：改回保存到临时文件，和那个commit修改前一致
 - [ ] 支持配置是使用本地EtherGhost还是EtherGhost API
 
 # 注意
