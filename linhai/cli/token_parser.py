@@ -62,7 +62,7 @@ class TokenParser:
         elif self.state == "normal":
             if piece == "```json toolcall\n":
                 self.state = "toolcall"
-                return None
+                return ParsedToken(token_type="normal", content="")
             else:
                 return ParsedToken(token_type="normal", content=piece)
         elif self.state == "toolcall":
