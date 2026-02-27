@@ -4,36 +4,33 @@ from typing import Optional
 import json
 import re
 import tempfile
-
 import chardet
 import httpx
 from linhai.tool.base import ToolResultFailed, ToolResultSuccess
 
 
-def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
+def _is_binary(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
+    """返回 (is_binary, encoding)。"""
+    binary_prefixes = {
+        "image/",
+        "application/octet-stream",
+        "application/pdf",
+        "application/zip",
+        "audio/",
+        "video/",
+        "font/",
+        "application/vnd.",
+    }
     if (
-        content_type.startswith("image/")
-        or content_type.startswith("application/octet-stream")
-        or content_type.startswith("application/pdf")
-        or content_type.startswith("application/zip")
-        or content_type.startswith("audio/")
-        or content_type.startswith("video/")
+        any(content_type.startswith(prefix) for prefix in binary_prefixes)
         or "binary" in content_type
-        or content_type.startswith("font/")
-        or content_type.startswith("application/vnd.")
     ):
         return True, None
-
     if result := re.search(r"charset=(.+)", content_type):
         return False, result.group(1)
-
     detected = chardet.detect(content)
     encoding = detected["encoding"]
-
-    if encoding is None:
-        return True, None
-
-    return False, encoding
+    return (True, None) if encoding is None else (False, encoding)
 
 
 async def http_request(
@@ -45,15 +42,11 @@ async def http_request(
     follow_redirects: bool = True,
     timeout: int = 60,
 ) -> ToolResultSuccess | ToolResultFailed:
-    """
-    发送HTTP请求并返回响应内容或文件路径
-    """
-    if headers is None:
-        headers = {}
+    """发送HTTP请求并返回响应内容或文件路径。"""
+    headers = headers or {}
     headers.setdefault(
         "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
     )
-
     try:
         async with httpx.AsyncClient() as client:
             response = await client.request(
@@ -65,65 +58,47 @@ async def http_request(
                 data=data,  # type: ignore[arg-type]
                 timeout=timeout,
             )
-
             content_type = response.headers.get("content-type", "").lower()
             status_code = response.status_code
             response_headers = dict(response.headers)
+            content = response.content
 
-            is_binary, encoding = analyze_content(content_type, response.content)
+            is_binary, encoding = _is_binary(content_type, content)
+            result_parts = [
+                f"<<status_code>>{status_code}<<status_code>>",
+                f"<<headers>>{json.dumps(response_headers)}<<headers>>",
+                f"<<is_binary>>{'true' if is_binary else 'false'}<<is_binary>>",
+            ]
 
             if is_binary:
-                with tempfile.NamedTemporaryFile(
-                    delete=False, suffix=".bin"
-                ) as tmp_file:
-                    tmp_file.write(response.content)
-                    filepath = tmp_file.name
-                result_parts = [
-                    f"<<status_code>>{status_code}<<status_code>>",
-                    f"<<headers>>{json.dumps(response_headers)}<<headers>>",
-                    "<<is_binary>>true<<is_binary>>",
-                    f"<<size>>{len(response.content)}<<size>>",
-                    f"<<body_file>>{filepath}<<body_file>>",
-                ]
-                content_str = "\n".join(result_parts)
-                return ToolResultSuccess(content=content_str)
-            else:
-                if encoding:
-                    try:
-                        text_content = response.content.decode(encoding)
-                    except UnicodeDecodeError:
-                        return ToolResultFailed(
-                            content=f"无法使用编码 {encoding} 解码响应内容"
-                        )
-                else:
-                    text_content = response.text
-                result_parts = [
-                    f"<<status_code>>{status_code}<<status_code>>",
-                    f"<<headers>>{json.dumps(response_headers)}<<headers>>",
-                ]
-                if len(text_content) > 5000:
-                    with tempfile.NamedTemporaryFile(
-                        delete=False, suffix=".txt", mode="w", encoding="utf-8"
-                    ) as tmp_file:
-                        tmp_file.write(text_content)
-                        filepath = tmp_file.name
-                    result_parts.extend(
-                        [
-                            "<<is_binary>>false<<is_binary>>",
-                            f"<<size>>{len(text_content)}<<size>>",
-                            f"<<body_file>>{filepath}<<body_file>>",
-                        ]
-                    )
-                else:
-                    result_parts.extend(
-                        [
-                            "<<is_binary>>false<<is_binary>>",
-                            f"<<size>>{len(text_content)}<<size>>",
-                            f"<<body>>{text_content}<<body>>",
-                        ]
-                    )
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
+                    f.write(content)
+                    filepath = f.name
+                result_parts.extend(
+                    [
+                        f"<<size>>{len(content)}<<size>>",
+                        f"<<body_file>>{filepath}<<body_file>>",
+                    ]
+                )
+                return ToolResultSuccess(content="\n".join(result_parts))
 
-                content_str = "\n".join(result_parts)
-                return ToolResultSuccess(content=content_str)
+            assert encoding is not None, "文本内容，encoding一定不为None"
+            try:
+                text_content = content.decode(encoding)
+            except UnicodeDecodeError:
+                return ToolResultFailed(content=f"无法使用编码 {encoding} 解码响应内容")
+
+            size = len(text_content)
+            result_parts.append(f"<<size>>{size}<<size>>")
+            if size > 5000:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".txt", mode="w", encoding="utf-8"
+                ) as f:
+                    f.write(text_content)
+                    filepath = f.name
+                result_parts.append(f"<<body_file>>{filepath}<<body_file>>")
+            else:
+                result_parts.append(f"<<body>>{text_content}<<body>>")
+            return ToolResultSuccess(content="\n".join(result_parts))
     except httpx.RequestError as e:
         return ToolResultFailed(content=f"请求失败: {str(e)}")
