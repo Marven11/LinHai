@@ -148,10 +148,12 @@ class Trojan:
 
         return stdout_str, stderr_str, timeout_msg, exit_note
 
-    async def process_stdio_write(self, pid, content):
+    async def process_stdio_write(self, pid, content, with_enter=False):
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         assert process.stdin is not None, "进程没有stdin管道"
+        if with_enter:
+            content = content + "\n"
         process.stdin.write(content.encode())
         await process.stdin.drain()
         return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
