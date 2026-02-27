@@ -61,8 +61,6 @@ unittest 失败时，必须分析
     - 让update_cumulative_usage在接收到的AnswerTokenUsage中缓存token过少时发送Notice
 - [ ] 让agent在被VolcanoDeepseekFixPlugin提醒时知道是哪个工具格式出问题
   - 方案：让VolcanoDeepseekFixPlugin不提示次数（因为没有用）而是提示标记附近的内容（100字符）
-- [ ] process_stdio_write的with_enter貌似有兼容性问题
-  - 编写unittest后再修复
 - [ ] 当前的process_stdio_write和process_stdio_read不返回json而是返回格式化后的字符串，这样无法完成下一个任务
   - 为每个HostControl添加process_stdio_write_structured和process_stdio_read_structured函数
   - 让process_stdio_write和process_stdio_read均使用process_stdio_write_structured和process_stdio_read_structured函数以遵守DRY
