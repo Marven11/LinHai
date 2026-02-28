@@ -23,6 +23,9 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
+        mock_lifecycle.trigger_before_add_new_message = AsyncMock(
+            side_effect=lambda msg: msg
+        )
         self.group_chat.register_member("lifecycle", mock_lifecycle)
 
         mock_tool_manager = Mock(spec=ToolManager)
@@ -46,36 +49,39 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             UserMessage(message="Initial message"),
         ]
         self.message_processor = AgentMessage(self.group_chat, self.pinned_messages)
+        # 在初始化orchestration前模拟tiktoken.get_encoding
+        import tiktoken
+        from unittest.mock import patch
+
+        self.mock_get_encoding_patcher = patch("tiktoken.get_encoding")
+        self.mock_get_encoding = self.mock_get_encoding_patcher.start()
+        mock_encoder = Mock()
+        mock_encoder.encode.return_value = []  # 默认返回空列表
+        self.mock_get_encoding.return_value = mock_encoder
+
         self.orchestration = AgentContextOrchestration(
             self.group_chat, self.message_processor
         )
 
+    def tearDown(self):
+        """清理测试环境。"""
+        self.mock_get_encoding_patcher.stop()
+
     async def test_mark_long_message(self):
         """测试长消息（token长度>800）被标记。"""
         # 模拟tiktoken编码，让消息的token长度超过800
-        with patch("tiktoken.get_encoding") as mock_get_encoding:
-            mock_encoder = Mock()
-            # 模拟编码返回一个长列表，假设每个字符对应一个token
-            mock_encoder.encode.return_value = list(range(1000))  # 1000个token
-            mock_get_encoding.return_value = mock_encoder
+        mock_encoder = self.mock_get_encoding.return_value
+        mock_encoder.encode.return_value = list(range(1000))  # 1000个token
 
-            # 创建一个长消息（内容长度不重要，因为编码被模拟）
-            long_message = RuntimeMessage("A" * 10)  # 内容很短，但编码返回1000个token
+        # 创建一个长消息（内容长度不重要，因为编码被模拟）
+        long_message = RuntimeMessage("A" * 10)  # 内容很短，但编码返回1000个token
 
-            # 触发_on_tool_result回调（模拟工具调用成功）
-            await self.orchestration._on_tool_result(
-                tool_name="test_tool",
-                tool_index=0,
-                status="success",
-                message=long_message,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
-            )
+        # 触发_before_add_new_message回调
+        await self.orchestration._before_add_new_message(long_message)
 
-            # 验证消息被标记为大消息
-            self.assertIn(long_message, self.orchestration.large_messages)
-            self.assertEqual(len(self.orchestration.large_messages), 1)
+        # 验证消息被标记为大消息
+        self.assertIn(long_message, self.orchestration.large_messages)
+        self.assertEqual(len(self.orchestration.large_messages), 1)
 
     async def test_do_not_mark_short_message(self):
         """测试短消息（token长度<=800）不被标记。"""
@@ -86,15 +92,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
             short_message = RuntimeMessage("Short message")
 
-            await self.orchestration._on_tool_result(
-                tool_name="test_tool",
-                tool_index=0,
-                status="success",
-                message=short_message,
-                toolcall_arguments={},
-                with_secret=None,
-                is_tool_failed_duplicated_error=False,
-            )
+            await self.orchestration._before_add_new_message(short_message)
 
             self.assertNotIn(short_message, self.orchestration.large_messages)
             self.assertEqual(len(self.orchestration.large_messages), 0)
@@ -102,20 +100,29 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
     async def test_delete_large_messages(self):
         """测试删除大消息时，消息从数组中移除且其余消息不变。"""
         # 添加一些普通消息
-        msg1 = UserMessage(message="Message 1")
-        msg2 = UserMessage(message="Message 2")
-        msg3 = AssistantMessage(message="Response 1")
+        msg1 = Mock()
+        msg1.to_json = lambda: '{"role": "user", "message": "Message 1"}'
+        msg1.__class__.__name__ = "UserMessage"
+        msg2 = Mock()
+        msg2.to_json = lambda: '{"role": "user", "message": "Message 2"}'
+        msg2.__class__.__name__ = "UserMessage"
+        msg3 = Mock()
+        msg3.to_json = lambda: '{"role": "assistant", "message": "Response 1"}'
+        msg3.__class__.__name__ = "AssistantMessage"
 
-        self.message_processor.add_new_message(msg1)
-        self.message_processor.add_new_message(msg2)
-        self.message_processor.add_new_message(msg3)
+        await self.message_processor.add_new_message(msg1)
+        await self.message_processor.add_new_message(msg2)
+        await self.message_processor.add_new_message(msg3)
 
         # 添加5个大消息
-        large_msgs = [RuntimeMessage(f"Large {i}") for i in range(5)]
-
-        for msg in large_msgs:
+        large_msgs = []
+        for i in range(5):
+            msg = Mock()
+            msg.to_json = lambda i=i: f'{{"content": "Large {i}"}}'
+            msg.__class__.__name__ = "RuntimeMessage"
+            large_msgs.append(msg)
             self.orchestration.large_messages.add(msg)
-            self.message_processor.add_new_message(msg)
+            await self.message_processor.add_new_message(msg)
 
         # 初始消息总数：2个初始 + 3个普通 + 5个大 = 10个
         initial_messages = self.message_processor.messages.copy()

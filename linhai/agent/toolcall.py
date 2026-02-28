@@ -248,7 +248,7 @@ class AgentToolcall:
             self.agent.state = "working"
         if self.early_return:
             msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
-            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -282,7 +282,9 @@ class AgentToolcall:
                 is_tool_failed_duplicated_error=True,
             )
 
-            self.agent.message_processor.add_new_message(RuntimeMessage(conflict_msg))
+            await self.agent.message_processor.add_new_message(
+                RuntimeMessage(conflict_msg)
+            )
             self.early_return = True
             return True
         self.called_tools_in_round.append(tool_call.function_name)
@@ -424,7 +426,7 @@ class AgentToolcall:
                 is_tool_failed_duplicated_error=False,
             )
             msg = f"工具调用失败: {before_result.content}"
-            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             return True
         elif isinstance(before_result, dict):
             tool_call.function_arguments = before_result
@@ -453,7 +455,7 @@ class AgentToolcall:
                 )
                 msg = f"工具调用失败: {tool_result.result.content}"
 
-                self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+                await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
                 if tool_call.assert_success:
                     return True
                 else:
@@ -482,7 +484,7 @@ class AgentToolcall:
             )
             msg = f"工具调用失败: {str(e)} {repr(e)}"
 
-            self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             return False
 
     async def _handle_tool_result(
@@ -490,6 +492,6 @@ class AgentToolcall:
     ):
         """处理工具调用结果。"""
 
-        self.agent.message_processor.add_new_message(tool_result)
+        await self.agent.message_processor.add_new_message(tool_result)
         if self.agent.state == "waiting_user":
             self.agent.state = "working"

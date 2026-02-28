@@ -2,7 +2,7 @@ import unittest
 import tempfile
 import asyncio
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 from linhai.plugin.planning import (
     PlanningStatusReminderPlugin,
@@ -15,7 +15,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, Answer
 
 
-class TestPlanningStatusReminderPlugin(unittest.TestCase):
+class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
     """测试PlanningStatusReminderPlugin插件。"""
 
     def setUp(self):
@@ -30,9 +30,12 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
         self.status_file.write_text("# Test Status\n")
         self.todolist_file.write_text("# Test TodoList\n")
 
-        self.mock_agent = MagicMock()
+        self.mock_agent = AsyncMock()
         self.mock_agent.planning = True
         self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.get_threshold_info = MagicMock(
+            return_value={"threshold": 1000, "current": 500}
+        )
 
         from linhai.agent.planning import PlanningPromptMessage
 
@@ -43,7 +46,20 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
             self.mock_planning_message
         ]
 
-        self.group_chat.get_member_typechecked.return_value = self.mock_agent
+        self.orchestration = MagicMock()
+        self.orchestration.compute_orchestration_context = MagicMock(
+            return_value={"current_state": "绿灯"}
+        )
+
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            elif name == "agent_context_orchestration":
+                return self.orchestration
+            else:
+                return None
+
+        self.group_chat.get_member_typechecked.side_effect = side_effect
 
     def tearDown(self):
         """清理测试环境。"""
@@ -51,11 +67,11 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_plugin_inherits_from_base_class(self):
+    async def test_plugin_inherits_from_base_class(self):
         """测试插件继承自Plugin基类。"""
         self.assertIsInstance(self.plugin, Plugin)
 
-    def test_register_method_adds_callback(self):
+    async def test_register_method_adds_callback(self):
         """测试register方法正确注册回调。"""
         mock_lifecycle = MagicMock(spec=Lifecycle)
 
@@ -65,14 +81,14 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
             self.plugin.after_message_generation
         )
 
-    def test_planning_folder_detection(self):
+    async def test_planning_folder_detection(self):
         """测试planning文件夹检测逻辑。"""
         planning_folder = self.plugin._get_planning_folder()
 
         self.assertIsNotNone(planning_folder)
         self.assertEqual(planning_folder, self.temp_dir)
 
-    def test_planning_folder_not_found_when_no_planning_message(self):
+    async def test_planning_folder_not_found_when_no_planning_message(self):
         """测试没有PlanningPromptMessage时返回None。"""
         self.mock_agent.message_processor.get_messages.return_value = []
 
@@ -80,31 +96,43 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
 
         self.assertIsNone(planning_folder)
 
-    def test_counters_increment_on_non_write_tools(self):
+    async def test_counters_increment_on_non_write_tools(self):
         """测试非写文件工具调用时计数器递增。"""
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "read_file",
+                    "arguments": {"filepath": str(self.status_file)},
+                },
+            ],
+        )
 
-        async def run_test():
-            result = await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[
-                    {
-                        "name": "read_file",
-                        "arguments": {"filepath": str(self.status_file)},
-                    },
-                ],
-            )
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.status_counter, 1)
+        self.assertEqual(self.plugin.todolist_counter, 1)
 
-            self.assertIsNone(result)
-            self.assertEqual(self.plugin.status_counter, 1)
-            self.assertEqual(self.plugin.todolist_counter, 1)
-
-        asyncio.run(run_test())
-
-    def test_no_increment_when_no_tool_calls(self):
+    async def test_no_increment_when_no_tool_calls(self):
         """测试消息没有工具调用时计数器不递增。"""
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[],
+        )
 
-        async def run_test():
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.status_counter, 0)
+        self.assertEqual(self.plugin.todolist_counter, 0)
+
+    async def test_notifications_updated_when_no_tool_calls_red_state(self):
+        """测试没有工具调用且处于红灯状态时应该更新通知。"""
+        with (
+            patch.object(self.plugin, "_get_current_state", return_value="红灯"),
+            patch.object(
+                self.plugin, "_update_notifications", return_value=None
+            ) as mock_update_notifications,
+        ):
             result = await self.plugin.after_message_generation(
                 answer=MagicMock(spec=Answer),
                 full_response="Test response",
@@ -112,133 +140,118 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
             )
 
             self.assertIsNone(result)
+            mock_update_notifications.assert_awaited_once_with("红灯")
             self.assertEqual(self.plugin.status_counter, 0)
             self.assertEqual(self.plugin.todolist_counter, 0)
 
-        asyncio.run(run_test())
-
-    def test_notifications_updated_when_no_tool_calls_red_state(self):
-        """测试没有工具调用且处于红灯状态时应该更新通知。"""
-
-        async def run_test():
-            with patch.object(
-                self.plugin, "_get_current_state", return_value="红灯"
-            ), patch.object(
-                self.plugin, "_update_notifications", return_value=None
-            ) as mock_update_notifications:
-                result = await self.plugin.after_message_generation(
-                    answer=MagicMock(spec=Answer),
-                    full_response="Test response",
-                    tool_calls=[],
-                )
-
-                self.assertIsNone(result)
-                mock_update_notifications.assert_awaited_once_with("红灯")
-                self.assertEqual(self.plugin.status_counter, 0)
-                self.assertEqual(self.plugin.todolist_counter, 0)
-
-        asyncio.run(run_test())
-
-    def test_notifications_based_on_counter_when_no_tool_calls_non_red_state(self):
+    async def test_notifications_based_on_counter_when_no_tool_calls_non_red_state(
+        self,
+    ):
         """测试没有工具调用且非红灯状态时，根据计数器状态判断提示。"""
+        # 测试计数器低于阈值时不显示提示。
+        self.plugin.status_counter = 2  # 低于阈值3
+        self.plugin.todolist_counter = 7  # 低于阈值8
 
-        async def run_test_below_threshold():
-            """测试计数器低于阈值时不显示提示。"""
-            self.plugin.status_counter = 2  # 低于阈值3
-            self.plugin.todolist_counter = 7  # 低于阈值8
-
-            with patch.object(
-                self.plugin, "_get_current_state", return_value="绿灯"
-            ), patch.object(
+        with (
+            patch.object(self.plugin, "_get_current_state", return_value="绿灯"),
+            patch.object(
                 self.plugin, "_update_notifications", return_value=None
-            ) as mock_update_notifications:
-                result = await self.plugin.after_message_generation(
-                    answer=MagicMock(spec=Answer),
-                    full_response="Test response",
-                    tool_calls=[],
-                )
+            ) as mock_update_notifications,
+        ):
+            result = await self.plugin.after_message_generation(
+                answer=MagicMock(spec=Answer),
+                full_response="Test response",
+                tool_calls=[],
+            )
 
-                self.assertIsNone(result)
-                mock_update_notifications.assert_awaited_once_with("绿灯")
+            self.assertIsNone(result)
+            mock_update_notifications.assert_awaited_once_with("绿灯")
 
-        async def run_test_at_threshold():
-            """测试计数器达到阈值时显示提示。"""
-            self.plugin.status_counter = 3  # 达到阈值
-            self.plugin.todolist_counter = 8  # 达到阈值
+        # 测试计数器达到阈值时显示提示。
+        self.plugin.status_counter = 3  # 达到阈值
+        self.plugin.todolist_counter = 8  # 达到阈值
 
-            with patch.object(
-                self.plugin, "_get_current_state", return_value="黄灯"
-            ), patch.object(
+        with (
+            patch.object(self.plugin, "_get_current_state", return_value="黄灯"),
+            patch.object(
                 self.plugin, "_update_notifications", return_value=None
-            ) as mock_update_notifications:
-                result = await self.plugin.after_message_generation(
-                    answer=MagicMock(spec=Answer),
-                    full_response="Test response",
-                    tool_calls=[],
-                )
+            ) as mock_update_notifications,
+        ):
+            result = await self.plugin.after_message_generation(
+                answer=MagicMock(spec=Answer),
+                full_response="Test response",
+                tool_calls=[],
+            )
 
-                self.assertIsNone(result)
-                mock_update_notifications.assert_awaited_once_with("黄灯")
+            self.assertIsNone(result)
+            mock_update_notifications.assert_awaited_once_with("黄灯")
 
-        asyncio.run(run_test_below_threshold())
-        asyncio.run(run_test_at_threshold())
-
-    def test_status_counter_reset_on_status_file_write(self):
+    async def test_status_counter_reset_on_status_file_write(self):
         """测试写入STATUS.md文件时状态计数器重置。"""
         self.plugin.status_counter = 2
         self.plugin.todolist_counter = 2
 
-        async def run_test():
-            result = await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[
-                    {
-                        "name": "write_file",
-                        "arguments": {"filepath": str(self.status_file)},
-                    },
-                ],
-            )
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {"filepath": str(self.status_file)},
+                },
+            ],
+        )
 
-            self.assertIsNone(result)
-            self.assertEqual(self.plugin.status_counter, 0)
-            self.assertEqual(
-                self.plugin.todolist_counter, 3
-            )  # todolist_counter should increment when writing STATUS.md
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.status_counter, 0)
+        self.assertEqual(
+            self.plugin.todolist_counter, 3
+        )  # todolist_counter should increment when writing STATUS.md
 
-        asyncio.run(run_test())
-
-    def test_todolist_counter_reset_on_todolist_file_write(self):
+    async def test_todolist_counter_reset_on_todolist_file_write(self):
         """测试写入TODOLIST.md文件时待办列表计数器重置。"""
         self.plugin.status_counter = 2
         self.plugin.todolist_counter = 2
 
-        async def run_test():
-            result = await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[
-                    {
-                        "name": "write_file",
-                        "arguments": {"filepath": str(self.todolist_file)},
-                    },
-                ],
-            )
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {"filepath": str(self.todolist_file)},
+                },
+            ],
+        )
 
-            self.assertIsNone(result)
-            self.assertEqual(
-                self.plugin.status_counter, 3
-            )  # status_counter should increment when writing TODOLIST.md
-            self.assertEqual(self.plugin.todolist_counter, 0)
+        self.assertIsNone(result)
+        self.assertEqual(
+            self.plugin.status_counter, 3
+        )  # status_counter should increment when writing TODOLIST.md
+        self.assertEqual(self.plugin.todolist_counter, 0)
 
-        asyncio.run(run_test())
-
-    def test_no_warning_below_threshold(self):
+    async def test_no_warning_below_threshold(self):
         """测试计数器低于阈值时不触发警告。"""
         self.plugin.status_counter = 2
         self.plugin.todolist_counter = 7
 
-        async def run_test():
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {"name": "read_file", "arguments": {"filepath": "test.txt"}},
+            ],
+        )
+
+        self.assertIsNone(result)
+
+    async def test_status_warning_at_threshold(self):
+        """测试状态计数器达到阈值时触发警告。"""
+        self.plugin.status_counter = 3
+
+        with patch.object(
+            self.plugin, "_update_notifications", return_value=None
+        ) as mock_update_notifications:
             result = await self.plugin.after_message_generation(
                 answer=MagicMock(spec=Answer),
                 full_response="Test response",
@@ -248,109 +261,78 @@ class TestPlanningStatusReminderPlugin(unittest.TestCase):
             )
 
             self.assertIsNone(result)
+            mock_update_notifications.assert_awaited_once()
 
-        asyncio.run(run_test())
-
-    def test_status_warning_at_threshold(self):
-        """测试状态计数器达到阈值时触发警告。"""
-        self.plugin.status_counter = 3
-
-        async def run_test():
-            with patch.object(
-                self.plugin, "_update_notifications", return_value=None
-            ) as mock_update_notifications:
-                result = await self.plugin.after_message_generation(
-                    answer=MagicMock(spec=Answer),
-                    full_response="Test response",
-                    tool_calls=[
-                        {"name": "read_file", "arguments": {"filepath": "test.txt"}},
-                    ],
-                )
-
-                self.assertIsNone(result)
-                mock_update_notifications.assert_awaited_once()
-
-        asyncio.run(run_test())
-
-    def test_todolist_warning_at_threshold(self):
+    async def test_todolist_warning_at_threshold(self):
         """测试待办列表计数器达到阈值时触发警告。"""
         self.plugin.todolist_counter = 8
 
-        async def run_test():
-            with patch.object(
-                self.plugin, "_update_notifications", return_value=None
-            ) as mock_update_notifications:
-                result = await self.plugin.after_message_generation(
-                    answer=MagicMock(spec=Answer),
-                    full_response="Test response",
-                    tool_calls=[
-                        {"name": "read_file", "arguments": {"filepath": "test.txt"}},
-                    ],
-                )
+        with patch.object(
+            self.plugin, "_update_notifications", return_value=None
+        ) as mock_update_notifications:
+            result = await self.plugin.after_message_generation(
+                answer=MagicMock(spec=Answer),
+                full_response="Test response",
+                tool_calls=[
+                    {"name": "read_file", "arguments": {"filepath": "test.txt"}},
+                ],
+            )
 
-                self.assertIsNone(result)
-                mock_update_notifications.assert_awaited_once()
+            self.assertIsNone(result)
+            mock_update_notifications.assert_awaited_once()
 
-        asyncio.run(run_test())
-
-    def test_mixed_tools_message_with_file_modification(self):
+    async def test_mixed_tools_message_with_file_modification(self):
         """测试混合工具调用，其中包含文件修改时计数器清零。"""
         self.plugin.status_counter = 2
         self.plugin.todolist_counter = 2
 
-        async def run_test():
-            result = await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[
-                    {"name": "read_file", "arguments": {"filepath": "test.txt"}},
-                    {
-                        "name": "write_file",
-                        "arguments": {"filepath": str(self.status_file)},
-                    },
-                    {"name": "safe_calculator", "arguments": {"expression": "1+1"}},
-                ],
-            )
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {"name": "read_file", "arguments": {"filepath": "test.txt"}},
+                {
+                    "name": "write_file",
+                    "arguments": {"filepath": str(self.status_file)},
+                },
+                {"name": "safe_calculator", "arguments": {"expression": "1+1"}},
+            ],
+        )
 
-            self.assertIsNone(result)
-            self.assertEqual(self.plugin.status_counter, 0)
-            self.assertEqual(
-                self.plugin.todolist_counter, 3
-            )  # todolist_counter should increment when STATUS.md is modified
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.status_counter, 0)
+        self.assertEqual(
+            self.plugin.todolist_counter, 3
+        )  # todolist_counter should increment when STATUS.md is modified
 
-        asyncio.run(run_test())
-
-    def test_replace_file_content_tool_resets_counter(self):
+    async def test_replace_file_content_tool_resets_counter(self):
         """测试replace_file_content工具也能重置计数器。"""
         self.plugin.status_counter = 2
         self.plugin.todolist_counter = 2
 
-        async def run_test():
-            result = await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[
-                    {
-                        "name": "replace_file_content",
-                        "arguments": {
-                            "filepath": str(self.status_file),
-                            "old": "Test",
-                            "new": "Updated",
-                        },
+        result = await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "replace_file_content",
+                    "arguments": {
+                        "filepath": str(self.status_file),
+                        "old": "Test",
+                        "new": "Updated",
                     },
-                ],
-            )
+                },
+            ],
+        )
 
-            self.assertIsNone(result)
-            self.assertEqual(self.plugin.status_counter, 0)
-            self.assertEqual(
-                self.plugin.todolist_counter, 3
-            )  # todolist_counter should increment when STATUS.md is modified
-
-        asyncio.run(run_test())
+        self.assertIsNone(result)
+        self.assertEqual(self.plugin.status_counter, 0)
+        self.assertEqual(
+            self.plugin.todolist_counter, 3
+        )  # todolist_counter should increment when STATUS.md is modified
 
 
-class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
+class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
     """测试UserInputRuntimeMessagePlugin插件。"""
 
     def setUp(self):
@@ -358,17 +340,19 @@ class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
         self.group_chat = MagicMock(spec=GroupChat)
         self.plugin = UserInputRuntimeMessagePlugin(self.group_chat)
 
-        self.mock_agent = MagicMock()
+        self.mock_agent = AsyncMock()
         self.mock_agent.planning = True
         self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
+        self.mock_agent.message_processor.get_messages = MagicMock(return_value=[])
 
         self.group_chat.get_member_typechecked.return_value = self.mock_agent
 
-    def test_plugin_inherits_from_base_class(self):
+    async def test_plugin_inherits_from_base_class(self):
         """测试插件继承自Plugin基类。"""
         self.assertIsInstance(self.plugin, Plugin)
 
-    def test_register_method_adds_callback(self):
+    async def test_register_method_adds_callback(self):
         """测试register方法正确注册回调。"""
         mock_lifecycle = MagicMock(spec=Lifecycle)
 
@@ -378,29 +362,24 @@ class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
             self.plugin.after_message_generation
         )
 
-    def test_runtime_message_added_after_user_message(self):
+    async def test_runtime_message_added_after_user_message(self):
         """测试用户消息后添加RuntimeMessage。"""
         mock_user_message = MagicMock(spec=UserMessage)
         self.mock_agent.message_processor.get_messages.return_value = [
             mock_user_message
         ]
 
-        async def run_test():
-            await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[],
-            )
+        await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[],
+        )
 
-            self.mock_agent.message_processor.add_new_message.assert_called_once()
-            call_args = self.mock_agent.message_processor.add_new_message.call_args[0][
-                0
-            ]
-            self.assertIsInstance(call_args, RuntimeMessage)
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
 
-        asyncio.run(run_test())
-
-    def test_no_runtime_message_when_last_message_not_user(self):
+    async def test_no_runtime_message_when_last_message_not_user(self):
         """测试最后一条消息不是用户消息时不添加RuntimeMessage。"""
         from linhai.llm import AssistantMessage
 
@@ -409,31 +388,25 @@ class TestUserInputRuntimeMessagePlugin(unittest.TestCase):
             mock_assistant_message
         ]
 
-        async def run_test():
-            await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[],
-            )
+        await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[],
+        )
 
-            self.mock_agent.message_processor.add_new_message.assert_not_called()
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
 
-        asyncio.run(run_test())
-
-    def test_no_action_when_agent_not_found(self):
+    async def test_no_action_when_agent_not_found(self):
         """测试找不到agent时不执行任何操作。"""
         self.group_chat.get_member_typechecked.return_value = None
 
-        async def run_test():
-            await self.plugin.after_message_generation(
-                answer=MagicMock(spec=Answer),
-                full_response="Test response",
-                tool_calls=[],
-            )
+        await self.plugin.after_message_generation(
+            answer=MagicMock(spec=Answer),
+            full_response="Test response",
+            tool_calls=[],
+        )
 
-            self.mock_agent.message_processor.add_new_message.assert_not_called()
-
-        asyncio.run(run_test())
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,8 @@ import json
 import tempfile
 import shutil
 from pathlib import Path
-from unittest import TestCase, mock
+import unittest
+from unittest import mock
 
 from linhai.group_chat import GroupChat
 from linhai.agent.conversation import (
@@ -17,7 +18,7 @@ from linhai.agent.conversation import (
 )
 
 
-class TestConversationFunctions(TestCase):
+class TestConversationFunctions(unittest.IsolatedAsyncioTestCase):
     """测试conversation模块的函数。"""
 
     def setUp(self):
@@ -131,7 +132,7 @@ class TestConversationFunctions(TestCase):
             self.assertEqual(f.read(), content)
 
 
-class TestConversationDirectoryStructure(TestCase):
+class TestConversationDirectoryStructure(unittest.TestCase):
     """测试对话目录结构。"""
 
     def setUp(self):

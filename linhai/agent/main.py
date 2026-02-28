@@ -137,7 +137,7 @@ class Agent:
         if self.current_answer:
             self.current_answer.interrupt()
 
-            self.message_processor.add_new_message(RuntimeMessage(agent_message))
+            await self.message_processor.add_new_message(RuntimeMessage(agent_message))
 
             if ui_notice is not None:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
@@ -145,7 +145,7 @@ class Agent:
                 interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
 
             if "```json toolcall" in self.current_answer.get_current_content():
-                self.message_processor.add_new_message(
+                await self.message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
                 )
 
@@ -230,7 +230,7 @@ class Agent:
         handled = await handler.handle_command(content)
 
         if not handled:
-            self.message_processor.add_new_message(msg)
+            await self.message_processor.add_new_message(msg)
 
     def get_current_model(self) -> LanguageModel:
         """
@@ -262,7 +262,7 @@ class Agent:
                 llm_msg = last_msg.to_llm_message()
                 if llm_msg.get("role") == "assistant":
                     empty_user_msg = RuntimeMessage("继续")
-                    self.message_processor.add_new_message(empty_user_msg)
+                    await self.message_processor.add_new_message(empty_user_msg)
 
         self.current_enable_compress = enable_compress
         self.current_disable_waiting_user_warning = disable_waiting_user_warning
@@ -294,17 +294,17 @@ class Agent:
 
         chat_message = cast(AssistantMessage, answer.get_message())
         full_response = chat_message.message
-        self.message_processor.add_new_message(chat_message)
+        await self.message_processor.add_new_message(chat_message)
 
         if self.queued_messages:
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
             )
-            self.message_processor.add_new_message(
+            await self.message_processor.add_new_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
             )
             for msg in self.queued_messages:
-                self.message_processor.add_new_message(msg)
+                await self.message_processor.add_new_message(msg)
             self.queued_messages = []
 
         try:
@@ -315,11 +315,13 @@ class Agent:
             )
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-            self.message_processor.add_new_message(RuntimeMessage("工具调用格式出错"))
+            await self.message_processor.add_new_message(
+                RuntimeMessage("工具调用格式出错")
+            )
             return answer
 
         for error in errors:
-            self.message_processor.add_new_message(RuntimeMessage(error))
+            await self.message_processor.add_new_message(RuntimeMessage(error))
 
         self.toolcall_processor.start_new_tool_call_round()
 

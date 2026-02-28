@@ -258,7 +258,7 @@ class MultimodalToolsetManager:
                 return load_image(image_filepath, self.group_chat, quality)
 
             agent = self.group_chat.get_member_typechecked("agent", Agent)
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage("当前LLM支持多模态，已添加load_image工具")
             )
 
@@ -269,7 +269,7 @@ class MultimodalToolsetManager:
             del self._toolset.tools["load_image"]
 
             agent = self.group_chat.get_member_typechecked("agent", Agent)
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage("当前LLM不支持多模态，已移除load_image工具")
             )
 

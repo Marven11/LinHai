@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 from linhai.plugin import DirectoryChangePlugin
 from linhai.agent.base import PathPrompt, GlobalPrompt
@@ -56,6 +56,19 @@ class TestDirectoryChangePlugin(unittest.TestCase):
             UserMessage(message="Initial message"),
         ]
         self.mock_agent.message_processor = AgentMessage(self.group_chat, init_messages)
+        # 创建消息列表并模拟异步方法
+        self.messages = init_messages
+
+        async def add_new_message(message):
+            self.messages.append(message)
+            return None
+
+        self.mock_agent.message_processor.add_new_message = AsyncMock(
+            side_effect=add_new_message
+        )
+        self.mock_agent.message_processor.get_messages = Mock(
+            return_value=self.messages
+        )
 
         self.get_member_typechecked_patch = patch.object(
             self.group_chat, "get_member_typechecked", return_value=self.mock_agent
@@ -165,7 +178,9 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         existing_prompt = PathPrompt(test_file)
-        self.mock_agent.message_processor.add_new_message(existing_prompt)
+        import asyncio
+
+        asyncio.run(self.mock_agent.message_processor.add_new_message(existing_prompt))
 
         import asyncio
 
@@ -188,7 +203,9 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         os.chdir(self.temp_dir)
 
         existing_prompt = GlobalPrompt(test_file)
-        self.mock_agent.message_processor.add_new_message(existing_prompt)
+        import asyncio
+
+        asyncio.run(self.mock_agent.message_processor.add_new_message(existing_prompt))
 
         import asyncio
 

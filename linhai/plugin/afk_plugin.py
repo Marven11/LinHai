@@ -25,7 +25,7 @@ class AfkPlugin(Plugin):
         if WAITING_USER_MARKER in full_response:
             agent.state = "working"
 
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"当前{WAITING_USER_MARKER!r}的功能已经失效，因为用户使用了--afk参数。"
                     f"这说明用户禁止你等待用户输入并离开了电脑"

@@ -213,7 +213,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         # 模拟filter_messages和add_new_message
         mock_message_processor.filter_messages = AsyncMock()
-        mock_message_processor.add_new_message = MagicMock()
+        mock_message_processor.add_new_message = AsyncMock()
 
         # 模拟send_if_exists为异步函数
         mock_group_chat.send_if_exists = AsyncMock()
@@ -316,7 +316,10 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         )
 
         # 验证结果
-        self.assertEqual(result.content, "你使用历史压缩删除（遗忘）了一段消息，被转储到了None中，请根据**历史压缩总结**明确当前任务继续工作")
+        self.assertEqual(
+            result.content,
+            "你使用历史压缩删除（遗忘）了一段消息，被转储到了None中，请根据**历史压缩总结**明确当前任务继续工作",
+        )
 
         # 验证get_clean_info被调用
         mock_range_clean_manager.get_clean_info.assert_called_once_with("test_id")

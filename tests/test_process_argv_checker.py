@@ -56,7 +56,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         toolcall_arguments = {"argv": ["echo", "test", "123"]}
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
 
         # 模拟group_chat.get_member_typechecked返回mock_agent
         from linhai.agent import Agent
@@ -88,7 +88,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                 toolcall_arguments = {"argv": argv}
                 mock_agent = Mock()
                 mock_agent.message_processor = Mock()
-                mock_agent.message_processor.add_new_message = Mock()
+                mock_agent.message_processor.add_new_message = AsyncMock()
 
                 # 模拟group_chat.get_member_typechecked返回mock_agent
                 from linhai.agent import Agent
@@ -119,7 +119,7 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         toolcall_arguments = {"argv": ["echo", "test", "&&", "ls", ">", "out.txt"]}
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
 
         # 模拟group_chat.get_member_typechecked返回mock_agent
         from linhai.agent import Agent

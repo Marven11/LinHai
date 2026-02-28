@@ -41,7 +41,7 @@ class AgentMessage:
 
         self.cache_invalidate_count = 0
 
-    def handle_user_message(self, msg: UserMessage) -> None:
+    async def handle_user_message(self, msg: UserMessage) -> None:
         """处理用户消息。
 
         Args:
@@ -53,17 +53,17 @@ class AgentMessage:
         parsed_input = parse_user_input(content)
 
         if parsed_input.switch_model:
-            self.add_new_message(msg)
+            await self.add_new_message(msg)
             return
 
-        self.add_new_message(msg)
+        await self.add_new_message(msg)
 
     async def count_invalidate_cache(self):
         interrupt_msg = CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
         self.cache_invalidate_count += 1
         await self.group_chat.send_if_exists("ui_log", interrupt_msg)
 
-    def add_new_message(self, msg: Message) -> None:
+    async def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
 
         新消息插入在普通消息后，notification_messages前。
@@ -71,7 +71,13 @@ class AgentMessage:
         Args:
             msg: 要添加的消息
         """
-        self.messages.append(msg)
+        from .lifecycle import Lifecycle
+
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        processed_message = await lifecycle.trigger_before_add_new_message(msg)
+        if processed_message is None:
+            processed_message = msg
+        self.messages.append(processed_message)
         self._save_context()
 
     def get_messages(self) -> List[Message]:
@@ -163,7 +169,13 @@ class AgentMessage:
         await self.count_invalidate_cache()
         if old_message in self.messages:
             index = self.messages.index(old_message)
-            self.messages[index] = new_message
+            from .lifecycle import Lifecycle
+
+            lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+            processed_message = await lifecycle.trigger_before_add_new_message(
+                new_message
+            )
+            self.messages[index] = processed_message
             self._save_context()
 
     def update_notification_message(
@@ -202,7 +214,7 @@ class AgentMessage:
         )
         save_context(conversation_dir, self.get_messages())
 
-    def process_queued_messages(self) -> None:
+    async def process_queued_messages(self) -> None:
         """处理所有排队消息。"""
         if self.queued_messages:
             self.messages.append(

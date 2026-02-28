@@ -191,7 +191,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
-        mock_agent.message_processor.add_new_message = MagicMock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
@@ -241,7 +241,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage(f"Message {i}") for i in range(20)
         ]
         mock_agent.message_processor.filter_messages = AsyncMock()
-        mock_agent.message_processor.add_new_message = MagicMock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
@@ -285,7 +285,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             RuntimeMessage(f"Message {i}") for i in range(15)
         ]
         mock_agent.message_processor.filter_messages = AsyncMock()
-        mock_agent.message_processor.add_new_message = MagicMock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,
@@ -566,7 +566,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
-        mock_agent.message_processor.add_new_message = MagicMock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,

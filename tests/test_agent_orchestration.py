@@ -2,7 +2,7 @@
 
 import unittest
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.agent.orchestration import AgentContextOrchestration, ThresholdInfo
 from linhai.agent.message import AgentMessage
@@ -21,7 +21,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         """设置测试环境。"""
         self.group_chat = GroupChat()
         # 注册一个mock的lifecycle以避免RuntimeError
-        mock_lifecycle = Mock(spec=Lifecycle)
+        mock_lifecycle = AsyncMock(spec=Lifecycle)
+        mock_lifecycle.trigger_before_add_new_message.return_value = None
         self.group_chat.register_member("lifecycle", mock_lifecycle)
 
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它
@@ -55,7 +56,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             self.group_chat, self.message_processor
         )
 
-    def test_add_soft_threshold_notification(self):
+    async def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
@@ -66,7 +67,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加一个大消息，以便在黄灯状态下可以显示大消息信息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
-        self.message_processor.add_new_message(large_msg)
+        await self.message_processor.add_new_message(large_msg)
 
         # 调用compute_orchestration_context，获取通知消息
         context = self.orchestration.compute_orchestration_context("", threshold_info)
@@ -81,7 +82,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息），因为通知没有被添加，只是返回
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
-    def test_add_soft_threshold_notification_with_dirty_state(self):
+    async def test_add_soft_threshold_notification_with_dirty_state(self):
         """测试token用量失效状态下添加通知。"""
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
@@ -92,7 +93,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
-        self.message_processor.add_new_message(large_msg)
+        await self.message_processor.add_new_message(large_msg)
 
         # 设置token用量失效
         token_manager = self.group_chat.get_member_typechecked(
@@ -112,14 +113,14 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息）
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
-    def test_get_status_display_piece(self):
+    async def test_get_status_display_piece(self):
         """测试获取状态显示片段。"""
-        self.message_processor.add_new_message(RuntimeMessage("test"))
+        await self.message_processor.add_new_message(RuntimeMessage("test"))
 
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
-        self.message_processor.add_new_message(large_msg)
+        await self.message_processor.add_new_message(large_msg)
 
         # 不再需要标记垃圾，因为功能已删除
 
@@ -215,7 +216,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "红灯")
 
-    def test_token_manager_is_dirty_state(self):
+    async def test_token_manager_is_dirty_state(self):
         """测试token管理器的is_dirty状态。"""
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
@@ -226,7 +227,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加一个大消息
         large_msg = RuntimeMessage("Large content" * 1000)
         self.orchestration.large_messages.add(large_msg)
-        self.message_processor.add_new_message(large_msg)
+        await self.message_processor.add_new_message(large_msg)
 
         # 获取token管理器并设置dirty状态
         token_manager = self.group_chat.get_member_typechecked(

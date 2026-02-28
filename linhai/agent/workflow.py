@@ -173,7 +173,7 @@ async def context_forget_range_step1(
     )
     range_clean_manager.create_clean_info(range_clean_id, message_length, min_safe_id)
 
-    agent.message_processor.add_new_message(
+    await agent.message_processor.add_new_message(
         MessagesListSummerizeMessage(
             messages_summerization, message_length, range_clean_id
         )
@@ -264,4 +264,6 @@ async def context_forget_range_step2(
         ),
     )
 
-    return ToolResultSuccess(content=f"你使用历史压缩删除（遗忘）了一段消息，被转储到了{filepath}中，请根据**历史压缩总结**明确当前任务继续工作")
+    return ToolResultSuccess(
+        content=f"你使用历史压缩删除（遗忘）了一段消息，被转储到了{filepath}中，请根据**历史压缩总结**明确当前任务继续工作"
+    )

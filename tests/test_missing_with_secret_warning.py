@@ -11,7 +11,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.send_if_exists = AsyncMock(return_value=None)
         self.plugin = MissingWithSecretWarningPlugin(self.group_chat)
         self.agent = Mock()
-        self.agent.message_processor = Mock()
+        self.agent.message_processor = AsyncMock()
         self.group_chat.get_member_typechecked = Mock(
             side_effect=lambda name, t: self.agent
         )

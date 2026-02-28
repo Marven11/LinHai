@@ -49,7 +49,7 @@ class PromptFastAgentPlugin(Plugin):
         ]:
             return
 
-        agent.message_processor.add_new_message(
+        await agent.message_processor.add_new_message(
             RuntimeMessage(
                 f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
             )
@@ -63,7 +63,7 @@ class PromptFastAgentPlugin(Plugin):
         )
 
         if model.compatibility == "glm":
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
             )
 
@@ -93,7 +93,7 @@ class PromptFastAgentPlugin(Plugin):
                     "从刚刚开始就一直在调用大量工具，你疯了？？？？"
                     + "？！？！" * self.speeding_counter
                 )
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
                     + extra_message
@@ -170,7 +170,7 @@ class WeirdTokenPlugin(Plugin):
 
         for line in current_content.split("\n"):
             if re.search(pattern, line):
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     RuntimeMessage(
                         "检测到错误结束标记：在一行中有`<｜end▁of▁[a-z]+｜>`且前面都是文字，已截断输出"
                     )
@@ -288,7 +288,9 @@ class ToolCallInReasoningPlugin(Plugin):
                 f"推理内容中检测到工具调用: {', '.join(missing_tool_names)}"
             )
 
-        agent.message_processor.add_new_message(RuntimeMessage(agent_warning_message))
+        await agent.message_processor.add_new_message(
+            RuntimeMessage(agent_warning_message)
+        )
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="WARNING", content=ui_warning_message),
@@ -325,7 +327,7 @@ class LoadImageUrlWarningPlugin(Plugin):
             for protocol in ("http://", "https://", "ftp://")
             for file_path in file_paths
         ):
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：load_image工具的参数image_filepath看起来是一个URL，但load_image只支持本地文件路径！请先下载图片到master_host"
                 )

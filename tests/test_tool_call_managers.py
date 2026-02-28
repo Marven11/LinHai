@@ -15,6 +15,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_group_chat = MagicMock(spec=GroupChat)
         self.mock_agent = MagicMock(spec=Agent)
         self.mock_message_processor = MagicMock()
+        self.mock_message_processor.add_new_message = AsyncMock()
         self.mock_lifecycle = MagicMock(spec=Lifecycle)
 
         self.mock_agent.message_processor = self.mock_message_processor

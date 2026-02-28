@@ -95,6 +95,13 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.lifecycle_mock = MagicMock()
 
+        async def trigger_before_add_new_message_coroutine(msg):
+            return None
+
+        self.lifecycle_mock.trigger_before_add_new_message = (
+            trigger_before_add_new_message_coroutine
+        )
+
         from linhai.machine_control import MachineControl
 
         self.mock_machine_control = MagicMock(spec=MachineControl)

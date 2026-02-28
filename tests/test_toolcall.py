@@ -21,6 +21,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         }
         self.mock_agent.large_messages = {}
         self.mock_agent.message_processor = Mock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
         self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)

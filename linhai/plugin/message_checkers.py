@@ -51,7 +51,7 @@ class WaitingUserPlugin(Plugin):
 
         if not agent.current_disable_waiting_user_warning:
             if tool_calls and has_waiting_marker:
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
                         f"工具调用和等待用户是互斥的，请只选择其中一种方式"
@@ -70,7 +70,7 @@ class WaitingUserPlugin(Plugin):
                 and not has_waiting_marker
                 and full_response.strip()
             ):
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
                         "消息内容已经发送给用户。"
@@ -90,7 +90,7 @@ class WaitingUserPlugin(Plugin):
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]
             if WAITING_USER_MARKER not in last_line:
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     RuntimeMessage(
                         f"{WAITING_USER_MARKER!r}不在最后一行，暂停自动运行失败"
                     )
@@ -115,7 +115,7 @@ class WrongEndPlugin(Plugin):
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         regex_result = re.search(r"<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
-            agent.message_processor.add_new_message(
+            await agent.message_processor.add_new_message(
                 RuntimeMessage(f"警告: 输出了错误的token: {regex_result!r}")
             )
 
@@ -166,7 +166,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
 
         count = full_response.count(self.ABNORMAL_MARKER)
 
-        agent.message_processor.add_new_message(
+        await agent.message_processor.add_new_message(
             RuntimeMessage(
                 f"警告：检测到火山平台deepseek的异常输出标记'</think>```json toolcall'（共{count}处）。"
                 f"正确的工具调用格式应该是'```json toolcall'而不是'</think>```json toolcall'。"
@@ -283,7 +283,7 @@ class JsonCodeBlockPlugin(Plugin):
                 warning_msg = f"警告：你使用了`json`代码块而非`json toolcall`代码块调用了工具{unique_tool_names}，请使用`json toolcall`代码块！"
                 ui_msg = f"检测到json代码块中的工具调用: {', '.join(unique_tool_names)}"
 
-            agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
+            await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
             )
@@ -311,7 +311,7 @@ class KimiK25ToolCallPlugin(Plugin):
         if has_kimi_marker and not has_correct_format:
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             if agent:
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     RuntimeMessage(
                         "警告：检测到kimi k2.5的特殊工具调用格式`<|tool_call_begin|>`，"
                         "但没有正确的`json toolcall`代码块格式。\n"

@@ -93,6 +93,11 @@ BeforeToolCallCallback: TypeAlias = Callable[
     Awaitable[Union[ToolResultSuccess, ToolResultFailed, dict, None]],
 ]
 
+BeforeAddNewMessageCallback: TypeAlias = Callable[
+    ["Message"],
+    Awaitable[Union[None, "Message"]],
+]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -116,6 +121,7 @@ class Lifecycle:
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
+        self._before_add_new_message_callbacks: list[BeforeAddNewMessageCallback] = []
 
         self._plugins = self._register_default_plugins()
 
@@ -224,6 +230,10 @@ class Lifecycle:
     def register_before_tool_call(self, callback: BeforeToolCallCallback):
         """注册工具调用前的回调。"""
         self._before_tool_call_callbacks.append(callback)
+
+    def register_before_add_new_message(self, callback: BeforeAddNewMessageCallback):
+        """注册添加新消息前的回调。"""
+        self._before_add_new_message_callbacks.append(callback)
 
     async def trigger_after_token_generation(
         self, agent: "Agent", answer: Answer, current_content: str
@@ -339,3 +349,12 @@ class Lifecycle:
         """触发Agent循环开始前事件。"""
         for callback in self._before_agent_loop_callbacks:
             await callback(agent)
+
+    async def trigger_before_add_new_message(self, message: "Message") -> "Message":
+        """触发添加新消息前的事件，返回可能被替换的消息。"""
+        current_message = message
+        for callback in self._before_add_new_message_callbacks:
+            result = await callback(current_message)
+            if result is not None:
+                current_message = result
+        return current_message

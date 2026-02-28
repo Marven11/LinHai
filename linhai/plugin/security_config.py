@@ -87,7 +87,7 @@ class MissingWithSecretWarningPlugin(Plugin):
             return None
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
-        agent.message_processor.add_new_message(
+        await agent.message_processor.add_new_message(
             RuntimeMessage(
                 "警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段。\n"
                 "请确认：\n"
@@ -220,6 +220,8 @@ class ProcessArgvCheckerPlugin(Plugin):
                     + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
                 )
                 agent = self.group_chat.get_member_typechecked("agent", Agent)
-                agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
+                await agent.message_processor.add_new_message(
+                    RuntimeMessage(warning_msg)
+                )
 
         return None

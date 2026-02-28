@@ -113,7 +113,7 @@ class DuplicateFileReadPlugin(Plugin):
                     )
                     reprobj = reprlib.Repr(maxstring=100)
                     preview = reprobj.repr(actual_content)
-                    agent.message_processor.add_new_message(
+                    await agent.message_processor.add_new_message(
                         RuntimeMessage(
                             f"警告：你已经读取过文件{filepath}，内容和上一次完全相同，这是第一次警告！\n"
                             f"文件内容预览：{preview}\n"
@@ -435,7 +435,7 @@ class DirectoryChangePlugin(Plugin):
                     if isinstance(message, (GlobalPrompt, PathPrompt))
                 )
                 if not has_duplicate:
-                    agent.message_processor.add_new_message(PathPrompt(filepath))
+                    await agent.message_processor.add_new_message(PathPrompt(filepath))
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到before_message_generation回调。"""

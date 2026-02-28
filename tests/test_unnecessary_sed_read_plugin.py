@@ -23,6 +23,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
+        self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
 
         # 模拟machine_control

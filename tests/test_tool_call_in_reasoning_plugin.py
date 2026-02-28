@@ -17,7 +17,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
-        self.agent.message_processor.add_new_message = MagicMock()
+        self.agent.message_processor.add_new_message = AsyncMock()
 
         self.group_chat.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent

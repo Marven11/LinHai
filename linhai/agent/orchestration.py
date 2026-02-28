@@ -56,6 +56,7 @@ class AgentContextOrchestration:
         self.group_chat.register_member("agent_context_orchestration", self)
 
         self.large_messages: set[Message] = set()
+        self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
         self._register_lifecycle_callbacks()
 
@@ -306,31 +307,20 @@ class AgentContextOrchestration:
         from .lifecycle import Lifecycle
 
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_on_tool_result(self._on_tool_result)
+        lifecycle.register_before_add_new_message(self._before_add_new_message)
         lifecycle.register_before_message_generation(self._before_message_generation)
 
-        large_message_plugin = LargeMessageCountPlugin(self.group_chat)
-        large_message_plugin.register(lifecycle)
+    async def _before_add_new_message(self, message: "Message") -> None:
+        """在添加新消息前检查是否为大消息。"""
+        from linhai.multimodal import ImageMessage
 
-    async def _on_tool_result(
-        self,
-        tool_name: str,
-        tool_index: int,
-        status: Literal["skipped", "success", "failed"],
-        message: Message | None,
-        toolcall_arguments: dict,
-        with_secret: list[str] | None,
-        is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, RuntimeMessage]:
         if isinstance(message, ImageMessage):
             self.large_messages.add(message)
-        elif status == "success" and message is not None:
-            tokenizer = tiktoken.get_encoding("cl100k_base")
+        else:
             content = str(message.to_llm_message().get("content", ""))
-            token_count = len(tokenizer.encode(content))
+            token_count = len(self.tokenizer.encode(content))
             if token_count > 800:
                 self.large_messages.add(message)
-        return None
 
     async def _before_message_generation(
         self, enable_compress: bool, disable_waiting_user_warning: bool

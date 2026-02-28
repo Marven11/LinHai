@@ -1,14 +1,14 @@
 """Tests for MultimodalToolsetManager."""
 
-from unittest import TestCase
-from unittest.mock import MagicMock, patch, call
+import unittest
+from unittest.mock import AsyncMock, MagicMock, patch, call
 
 from linhai.multimodal import MultimodalToolsetManager, load_image
 from linhai.tool.base import ToolSet
 from linhai.agent.base import RuntimeMessage
 
 
-class TestMultimodalToolsetManager(TestCase):
+class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
     """Test MultimodalToolsetManager class."""
 
     def setUp(self):
@@ -17,14 +17,14 @@ class TestMultimodalToolsetManager(TestCase):
         self.mock_tool_manager = MagicMock()
         self.mock_tool_manager._toolsets = []
 
-        self.mock_agent = MagicMock()
+        self.mock_agent = AsyncMock()
         self.mock_llm = MagicMock()
         self.mock_llm.get_name.return_value = "kimi"
         self.mock_llm.support_image.return_value = True
         self.mock_agent.llm = self.mock_llm
         # Make get_current_model return the mock_llm directly (sync)
         self.mock_agent.get_current_model = MagicMock(return_value=self.mock_llm)
-        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor = AsyncMock()
 
         self.mock_config = MagicMock()
         # 创建LLM配置mock，使用spec来避免MagicMock的name参数问题
@@ -64,7 +64,7 @@ class TestMultimodalToolsetManager(TestCase):
 
         self.mock_tool_manager.add_toolset.assert_called_once_with(manager._toolset)
 
-    def test_adds_load_image_when_llm_supports_image(self):
+    async def test_adds_load_image_when_llm_supports_image(self):
         """Test that load_image is added when LLM supports image."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
@@ -72,14 +72,12 @@ class TestMultimodalToolsetManager(TestCase):
         self.assertFalse(manager._toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
-        import asyncio
-
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Now should have the tool
         self.assertTrue(manager._toolset.has_tool("load_image"))
 
-    def test_removes_load_image_when_llm_does_not_support_image(self):
+    async def test_removes_load_image_when_llm_does_not_support_image(self):
         """Test that load_image is removed when LLM does not support image."""
         # Set up with non-image-supporting LLM
         self.mock_llm.get_name.return_value = "deepseek"
@@ -102,29 +100,25 @@ class TestMultimodalToolsetManager(TestCase):
         self.assertTrue(manager._toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
-        import asyncio
-
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Now should not have the tool
         self.assertFalse(manager._toolset.has_tool("load_image"))
 
-    def test_adds_runtime_message_when_switching_to_image_supporting_llm(self):
+    async def test_adds_runtime_message_when_switching_to_image_supporting_llm(self):
         """Test that RuntimeMessage is added when switching to image-supporting LLM."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
         # First call: LLM does not support image
         self.mock_llm.support_image.return_value = False
-        import asyncio
-
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Should not add message because no tool is added or removed
         self.mock_agent.message_processor.add_new_message.assert_not_called()
 
         # Second call: LLM supports image (switch)
         self.mock_llm.support_image.return_value = True
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Should add message about adding tool
         self.mock_agent.message_processor.add_new_message.assert_called_once()
@@ -134,15 +128,15 @@ class TestMultimodalToolsetManager(TestCase):
             call_args[0][0].message, "当前LLM支持多模态，已添加load_image工具"
         )
 
-    def test_adds_runtime_message_when_switching_to_non_image_supporting_llm(self):
+    async def test_adds_runtime_message_when_switching_to_non_image_supporting_llm(
+        self,
+    ):
         """Test that RuntimeMessage is added when switching to non-image-supporting LLM."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
         # First call: LLM supports image
         self.mock_llm.support_image.return_value = True
-        import asyncio
-
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Should add message because tool is added
         self.mock_agent.message_processor.add_new_message.assert_called_once()
@@ -157,7 +151,7 @@ class TestMultimodalToolsetManager(TestCase):
 
         # Second call: LLM does not support image (switch)
         self.mock_llm.support_image.return_value = False
-        asyncio.run(manager._update_tool_availability(False, False))
+        await manager._update_tool_availability(False, False)
 
         # Should add message about removing tool
         self.mock_agent.message_processor.add_new_message.assert_called_once()

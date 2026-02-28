@@ -109,10 +109,12 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         )
 
         # Mock add_new_message to add messages to the list
-        def mock_add_new_message(msg):
+        async def mock_add_new_message(msg):
             messages_list.append(msg)
 
-        mock_agent.message_processor.add_new_message = mock_add_new_message
+        mock_agent.message_processor.add_new_message = AsyncMock(
+            side_effect=mock_add_new_message
+        )
 
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
@@ -396,6 +398,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         ]
         mock_agent.message_processor.messages = mock_messages
         mock_agent.message_processor.filter_messages = AsyncMock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 800,
             "used_tokens": 600,

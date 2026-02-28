@@ -140,7 +140,7 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.toolcall.agent.lifecycle = Mock()
         self.toolcall.agent.lifecycle.trigger_on_tool_result = AsyncMock()
         self.toolcall.agent.message_processor = Mock()
-        self.toolcall.agent.message_processor.add_new_message = Mock()
+        self.toolcall.agent.message_processor.add_new_message = AsyncMock()
 
     def _verify_error_message_content(self) -> None:
         add_new_message_calls = (

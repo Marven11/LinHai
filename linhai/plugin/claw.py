@@ -38,8 +38,8 @@ class ClawPlugin(Plugin):
 这些文档位于: {self.claw_dir}
 
 每次会话开始时，你应该阅读这些文档以维持连续性。"""
-        
-        agent.message_processor.add_new_message(RuntimeMessage(claw_intro))
+
+        await agent.message_processor.add_new_message(RuntimeMessage(claw_intro))
 
         core_files = [
             "AGENTS.md",
@@ -53,7 +53,7 @@ class ClawPlugin(Plugin):
             file_path = self.claw_dir / filename
             if file_path.exists():
                 content = file_path.read_text(encoding="utf-8").strip()
-                agent.message_processor.add_new_message(
+                await agent.message_processor.add_new_message(
                     FileContentMessage(
                         filepath=str(file_path),
                         content=content,

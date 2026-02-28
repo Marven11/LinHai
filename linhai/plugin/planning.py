@@ -198,7 +198,7 @@ class UserInputRuntimeMessagePlugin(Plugin):
         if not isinstance(last_msg, UserMessage):
             return
 
-        agent.message_processor.add_new_message(
+        await agent.message_processor.add_new_message(
             RuntimeMessage(
                 "用户提出的问题？指示？重新规划？重新设计？规划检查？优先规划？记录用户原文？"
             )
