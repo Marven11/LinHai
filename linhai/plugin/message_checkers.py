@@ -3,24 +3,19 @@
 import re
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import (
-    GlobalPrompt,
-    PathPrompt,
-    FileContentMessage,
     RuntimeMessage,
     WAITING_USER_MARKER,
-    PreviousReasoningMessage,
     SpoofedReasoningMessage,
 )
 from linhai.group_chat import GroupChat
-from linhai.markdown_parser import extract_tool_calls, extract_tool_calls_with_errors
-from linhai.llm import Answer, AssistantMessage, OpenAi, ToolCallMessage, UserMessage
+from linhai.markdown_parser import extract_tool_calls_with_errors
+from linhai.llm import Answer, AssistantMessage, OpenAi
 from linhai.utils import CliRuntimeNotice
-from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 from .helpers import JsonValue
 
@@ -150,6 +145,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
     """处理火山平台deepseek异常输出的插件。"""
 
     ABNORMAL_MARKER = "</think>```json toolcall"
+    CONTEXT_CHARS = 50
     NORMAL_MARKER = "```json toolcall"
 
     async def after_message_generation(
@@ -161,24 +157,49 @@ class VolcanoDeepseekFixPlugin(Plugin):
         """在消息生成后检查并提醒异常标记。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
 
-        if self.ABNORMAL_MARKER not in full_response:
+        positions = []
+        start = 0
+        while True:
+            pos = full_response.find(self.ABNORMAL_MARKER, start)
+            if pos == -1:
+                break
+            positions.append(pos)
+            start = pos + 1
+
+        if not positions:
             return
 
-        count = full_response.count(self.ABNORMAL_MARKER)
-
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
-                f"警告：检测到火山平台deepseek的异常输出标记'</think>```json toolcall'（共{count}处）。"
-                f"正确的工具调用格式应该是'```json toolcall'而不是'</think>```json toolcall'。"
-                f"请修正输出格式。"
+        contexts = []
+        for pos in positions:
+            context_start = max(0, pos - self.CONTEXT_CHARS)
+            context_end = min(
+                len(full_response), pos + len(self.ABNORMAL_MARKER) + self.CONTEXT_CHARS
             )
+            context = full_response[context_start:context_end]
+            if context_start > 0:
+                context = "..." + context
+            if context_end < len(full_response):
+                context = context + "..."
+            contexts.append(context)
+
+        warning_msg = (
+            f"警告：检测到火山平台 deepseek 的异常输出标记{self.ABNORMAL_MARKER}'。\n"
+            f"正确的工具调用格式应该是'```json toolcall'而不是{self.ABNORMAL_MARKER}'。\n"
+            f"请修正输出格式。\n\n"
+            f"异常位置附近的内容:\n"
+            + "\n".join(
+                f"[位置{i}]\n{context}" for i, context in enumerate(contexts, 1)
+            )
+            + "\n"
         )
+
+        await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
 
         await self.group_chat.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="WARNING",
-                content=f"检测到火山平台deepseek异常输出标记: 共{count}处，已提醒agent",
+                content=f"检测到火山平台 deepseek 异常输出标记：共{len(positions)}处，已提醒 agent 并显示上下文",
             ),
         )
 
