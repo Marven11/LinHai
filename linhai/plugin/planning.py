@@ -117,13 +117,6 @@ class PlanningStatusReminderPlugin(Plugin):
                 source="planning_status_reminder",
                 sort_value=0,
             )
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING",
-                    content=f"警告agent：连续{self.status_counter}次未修改STATUS.md",
-                ),
-            )
         else:
             agent.message_processor.update_notification_message(
                 None, source="planning_status_reminder", sort_value=0
@@ -136,13 +129,6 @@ class PlanningStatusReminderPlugin(Plugin):
                 ),
                 source="planning_todolist_reminder",
                 sort_value=0,
-            )
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="WARNING",
-                    content=f"警告agent：连续{self.todolist_counter}次未修改TODOLIST.md",
-                ),
             )
         else:
             agent.message_processor.update_notification_message(
