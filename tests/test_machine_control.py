@@ -190,8 +190,12 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         
         result = await host_control.process_stdio_read("12347")
         self.assertIn("12347", result.content)
-        self.assertIn("注意：当前程序12347已经退出", result.content)
-        self.assertIn("final output", result.content)
+        # 现在返回JSON格式，检查JSON中的exit_note字段
+        import json
+        data = json.loads(result.content)
+        self.assertIn("exit_note", data)
+        self.assertIn("注意：当前程序12347已经退出", data["exit_note"])
+        self.assertIn("final output", data["stdout"])
 
     async def test_process_stdio_read_with_running_process(self):
         """测试process_stdio_read - 进程仍在运行"""

@@ -1,6 +1,7 @@
 """SSH机器控制类，用于通过SSH连接远程机器并执行工具。"""
 
 import asyncio
+import json
 from typing import Dict, Optional, Any
 
 from linhai.group_chat import GroupChat
@@ -109,6 +110,25 @@ class SshMachineControl:
             "process_create", {"argv": argv, "wait_second": wait_second}
         )
 
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict:
+        """向进程的标准输入写入内容，返回结构化数据"""
+        result = await self.call_tool(
+            "process_stdio_write",
+            {"pid": pid, "content": content, "with_enter": with_enter},
+        )
+        if isinstance(result, ToolResultSuccess):
+            data = json.loads(result.content)
+            return data
+        else:
+            return {
+                "pid": pid,
+                "success": False,
+                "error": result.content,
+                "timestamp": 0.0,
+            }
+
     async def process_stdio_write(
         self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
@@ -118,28 +138,33 @@ class SshMachineControl:
             {"pid": pid, "content": content, "with_enter": with_enter},
         )
 
-    async def process_stdio_read(
+    async def process_stdio_read_structured(
         self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """读取进程的标准输出和标准错误内容"""
+    ) -> dict:
+        """读取进程的标准输出和标准错误内容，返回结构化数据"""
         result = await self.call_tool(
             "process_stdio_read",
             {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
         )
+        if isinstance(result, ToolResultSuccess):
+            data = json.loads(result.content)
+            return data
+        else:
+            return {
+                "pid": pid,
+                "success": False,
+                "error": result.content,
+                "timestamp": 0.0,
+            }
 
-        if isinstance(result, ToolResultFailed):
-            return result
-
-        import json
-
-        data = json.loads(result.content)
-        pid = data.get("pid", "")
-        stdout = data.get("stdout", "")
-        stderr = data.get("stderr", "")
-        exit_note = data.get("exit_note", "")
-
-        formatted_content = f"<<pid>>{pid}<<pid>><<stdout>>{exit_note}{stdout}<<stdout>><<stderr>>{stderr}<<stderr>>"
-        return ToolResultSuccess(content=formatted_content)
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """读取进程的标准输出和标准错误内容"""
+        return await self.call_tool(
+            "process_stdio_read",
+            {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
+        )
 
     async def process_wait(
         self, pid: str, timeout: float

@@ -120,12 +120,32 @@ class EtherGhostMachineControl(HostControl):
                 content="EtherGhost不支持长时间运行命令，因此在控制EtherGhost机器时不能传入wait_seconds"
             )
 
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict:
+        return {
+            "pid": pid,
+            "success": False,
+            "error": "EtherGhost不支持process_stdio_write_structured，仅支持通过process_create执行不需要长时间运行的命令",
+            "timestamp": 0.0,
+        }
+
     async def process_stdio_write(
         self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
         return ToolResultFailed(
             content="EtherGhost不支持process_stdio_write，仅支持通过process_create执行不需要长时间运行的命令"
         )
+
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict:
+        return {
+            "pid": pid,
+            "success": False,
+            "error": "EtherGhost不支持process_stdio_read_structured，仅支持通过process_create执行不需要长时间运行的命令",
+            "timestamp": 0.0,
+        }
 
     async def process_stdio_read(
         self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0

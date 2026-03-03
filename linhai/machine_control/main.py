@@ -577,9 +577,17 @@ class HostControl(Protocol):
         self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict: ...
+
     async def process_stdio_read(
         self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict: ...
 
     async def process_wait(
         self, pid: str, timeout: float

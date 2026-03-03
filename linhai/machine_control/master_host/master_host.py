@@ -1,6 +1,8 @@
 """Master host control module for tools that interact with the local machine."""
 
 import asyncio
+import json
+import re
 import time
 from typing import Optional, Union
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
@@ -145,54 +147,88 @@ class MasterHostControl:
 
         return stdout_str, stderr_str, timeout_msg, exit_note
 
-    async def process_stdio_write(
+    async def process_stdio_write_structured(
         self, pid: str, content: str, with_enter: bool
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """向进程的标准输入写入内容"""
+    ) -> dict:
+        """向进程的标准输入写入内容，返回结构化数据"""
         try:
             process = self._processes.get(pid)
             if process is None:
-                return ToolResultFailed(content=f"找不到进程 {pid}")
+                raise ValueError(f"找不到进程 {pid}")
             if process.stdin is None:
-                return ToolResultFailed(content=f"进程 {pid} 没有标准输入")
+                raise ValueError(f"进程 {pid} 没有标准输入")
             if with_enter:
                 content = content + "\n"
             process.stdin.write(content.encode("utf-8"))
             await process.stdin.drain()
-            return ToolResultSuccess(
-                content=f"<<pid>>{pid}<<pid>><<message>>写入成功<<message>>"
-            )
+            return {
+                "pid": pid,
+                "success": True,
+                "message": "写入成功",
+                "timestamp": time.time(),
+            }
         except Exception as e:
-            return ToolResultFailed(content=str(e))
+            return {
+                "pid": pid,
+                "success": False,
+                "error": str(e),
+                "timestamp": time.time(),
+            }
 
-    async def process_stdio_read(
-        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    async def process_stdio_write(
+        self, pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
-        """读取进程的标准输出和标准错误内容"""
+        """向进程的标准输入写入内容"""
+        structured = await self.process_stdio_write_structured(pid, content, with_enter)
+        if structured["success"]:
+            return ToolResultSuccess(content=json.dumps(structured))
+        else:
+            return ToolResultFailed(content=structured["error"])
+
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict:
+        """读取进程的标准输出和标准错误内容，返回结构化数据"""
         try:
             process = self._processes.get(pid)
             if process is None:
-                return ToolResultFailed(content=f"找不到进程 {pid}")
+                raise ValueError(f"找不到进程 {pid}")
             stdout_str, stderr_str, timeout_msg, exit_note = (
                 await self._read_process_stdio(
                     process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
                 )
             )
             if unescape_ansi:
-                import re
-
                 ansi_escape = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
                 stdout_str = ansi_escape.sub("", stdout_str)
                 stderr_str = ansi_escape.sub("", stderr_str)
             if timeout_msg:
-                return ToolResultFailed(
-                    content=f"读取进程 {pid} 的输出超时（{timeout}秒）"
-                )
-            return ToolResultSuccess(
-                content=f"<<pid>>{pid}<<pid>><<stdout>>{exit_note or ''}{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
-            )
+                raise TimeoutError(f"读取进程 {pid} 的输出超时（{timeout}秒）")
+            return {
+                "pid": pid,
+                "success": True,
+                "stdout": stdout_str,
+                "stderr": stderr_str,
+                "exit_note": exit_note,
+                "timestamp": time.time(),
+            }
         except Exception as e:
-            return ToolResultFailed(content=str(e))
+            return {
+                "pid": pid,
+                "success": False,
+                "error": str(e),
+                "timestamp": time.time(),
+            }
+
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """读取进程的标准输出和标准错误内容"""
+        structured = await self.process_stdio_read_structured(pid, unescape_ansi, timeout)
+        if structured["success"]:
+            return ToolResultSuccess(content=json.dumps(structured))
+        else:
+            return ToolResultFailed(content=structured["error"])
 
     async def process_wait(
         self, pid: str, timeout: float
