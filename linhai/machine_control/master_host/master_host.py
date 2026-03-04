@@ -55,7 +55,7 @@ class MasterHostControl:
         )
 
     async def process_create(
-        self, argv: list[str], wait_second: float = 1.0
+        self, argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed:
         """创建一个进程，等待一段时间后检查状态"""
         try:
@@ -67,6 +67,9 @@ class MasterHostControl:
             )
             pid = str(process.pid)
             self._processes[pid] = process
+
+            if wait_second is None:
+                wait_second = 1.0
 
             start = time.perf_counter()
             while time.perf_counter() - start < wait_second:

@@ -104,12 +104,12 @@ class EtherGhostMachineControl(HostControl):
         )
 
     async def process_create(
-        self, argv: list[str], wait_second: float = 30.0
+        self, argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed:
         if self.session is None:
             return ToolResultFailed(content="Session未初始化")
 
-        if wait_second is None or wait_second < 10:
+        if wait_second is None:
             cmd = " ".join(argv)
             result = await self.session.execute_cmd(cmd)
             return ToolResultSuccess(
@@ -117,7 +117,7 @@ class EtherGhostMachineControl(HostControl):
             )
         else:
             return ToolResultFailed(
-                content="EtherGhost不支持长时间运行命令，因此在控制EtherGhost机器时不能传入wait_seconds"
+                content="EtherGhost不支持wait_second参数，请使用wait_second=None"
             )
 
     async def process_stdio_write_structured(

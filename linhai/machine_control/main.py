@@ -194,14 +194,14 @@ class MachineControlToolSet(ToolSet):
                     desc='进程参数列表，如["ls", "-l", "-a"]', type="list[str]"
                 ),
                 "wait_second": ToolArgInfo(
-                    desc="创建进程后等待的秒数，最多等待时间", type="float"
+                    desc="创建进程后等待的秒数，最多等待时间，为None时使用平台默认值(1秒)", type="Optional[float]"
                 ),
             },
             required_args=["argv"],
             conflict_with=None,
         )
         async def process_create_tool(
-            argv: list[str], wait_second: float = 30.0
+            argv: list[str], wait_second: Optional[float] = None
         ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
@@ -570,7 +570,7 @@ class HostControl(Protocol):
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_create(
-        self, argv: list[str], wait_second: float = 30.0
+        self, argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def process_stdio_write(

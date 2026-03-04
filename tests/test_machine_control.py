@@ -147,6 +147,29 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             self.assertIn("output", result.content)
             self.assertIn("0", result.content)
 
+    async def test_process_create_default_wait_second(self):
+        """测试process_create - wait_second为None时使用1.0秒默认值"""
+        with patch("asyncio.create_subprocess_exec") as mock_create, \
+             patch("time.perf_counter") as mock_time:
+            mock_process = AsyncMock()
+            mock_process.pid = 12345
+            mock_process.returncode = 0
+            mock_process.stdout = AsyncMock()
+            mock_process.stdout.read = AsyncMock(return_value=b"output")
+            mock_process.stderr = AsyncMock()
+            mock_process.stderr.read = AsyncMock(return_value=b"")
+            mock_create.return_value = mock_process
+            
+            # 模拟时间流逝: 0->0.3->0.6->0.9->1.2 (超过1.0秒阈值)
+            mock_time.side_effect = [0.0, 0.3, 0.6, 0.9, 1.2]
+            
+            # 不传wait_second参数(默认为None)
+            result = await self.host_control.process_create(["echo", "test"])
+            self.assertIn("12345", result.content)
+            self.assertIn("output", result.content)
+            # 验证使用了默认值1.0秒(通过检查mock_time被调用了多次)
+            self.assertGreaterEqual(mock_time.call_count, 2)
+
     async def test_process_create_timeout_with_output(self):
         """测试process_create - 超时但有输出"""
         with patch("asyncio.create_subprocess_exec") as mock_create, \

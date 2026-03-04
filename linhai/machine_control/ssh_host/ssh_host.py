@@ -103,9 +103,11 @@ class SshMachineControl:
         return ToolResultFailed(content="SSH机器不支持http_request工具")
 
     async def process_create(
-        self, argv: list[str], wait_second: float = 1.0
+        self, argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed:
         """创建一个进程，等待一段时间后检查状态"""
+        if wait_second is None:
+            wait_second = 1.0
         return await self.call_tool(
             "process_create", {"argv": argv, "wait_second": wait_second}
         )
