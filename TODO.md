@@ -40,7 +40,6 @@ unittest 失败时，必须分析
 # 暂时搁置
 
 - [ ] 添加初始化配置的功能
-- [ ] 让CLI底部的状态栏显示当前的LLM，实时显示或者每1秒刷新一次
 - [ ] 当前on_tool_result的命名不合适，改为after_toolcall
   - 需要同时处理类型名、函数名、变量名等
   - 需要搜索on_tool和ontool不区分大小写以查看是否还有遗漏，完成任务前必须确认没有遗漏
@@ -50,8 +49,6 @@ unittest 失败时，必须分析
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
     - agent可以暂停等待输入，但是暂停后每隔一段时间就会收到一条心跳消息而被打断暂停
     - 其余功能和常见的coding agent(linhai/claude code/ ...)相同
-- [ ] 当前HostControl定义的process_create不支持wait_seconds为None，这不合理
-  - 需要改为支持None以完成EtherGhost集成
 
 # 注意
 
