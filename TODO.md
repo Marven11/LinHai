@@ -40,6 +40,8 @@ unittest 失败时，必须分析
 # 暂时搁置
 
 - [ ] 添加初始化配置的功能
+  - 用户运行python -m linhai init可以打开初始化TUI页面，可以设置第一个llm的openai的base_url, api_key等
+  - 参考https://github.com/Textualize/textual/blob/main/examples/calculator.py
 - [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
   - openclaw的核心功能：
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
