@@ -40,10 +40,6 @@ unittest 失败时，必须分析
 # 暂时搁置
 
 - [ ] 添加初始化配置的功能
-- [ ] 当前on_tool_result的命名不合适，改为after_toolcall
-  - 需要同时处理类型名、函数名、变量名等
-  - 需要搜索on_tool和ontool不区分大小写以查看是否还有遗漏，完成任务前必须确认没有遗漏
-  - 需要保证unittest不失败，pyright linhai/没有错误
 - [ ] 我们需要用更加简洁的设计复刻openclaw的核心功能
   - openclaw的核心功能：
     - 从各个IM接收用户消息并转发给agent, agent可以通过id等回应用户
