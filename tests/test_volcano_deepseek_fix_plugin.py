@@ -20,7 +20,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         def capture_message(msg):
             self.added_messages.append(msg)
         
-        self.agent.message_processor.add_new_message = MagicMock(side_effect=capture_message)
+        self.agent.message_processor.add_new_message = AsyncMock(side_effect=capture_message)
         self.group_chat = MagicMock()
         self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
