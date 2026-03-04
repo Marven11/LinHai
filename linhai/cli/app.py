@@ -75,8 +75,7 @@ class CLIApp(App):
         scrollbar-size-vertical: 1;
     }
     #input {
-        height: 3;
-        background: $background-lighten-1;
+        height: auto;
         border: blank;
     }
     AutoComplete {
