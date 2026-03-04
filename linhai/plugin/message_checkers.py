@@ -315,7 +315,7 @@ class JsonCodeBlockPlugin(Plugin):
 
 
 class KimiK25ToolCallPlugin(Plugin):
-    """处理kimi k2.5特殊工具调用格式的插件。"""
+    """处理火山平台kimi k2.5特殊工具调用格式的插件。"""
 
     async def after_message_generation(
         self,
@@ -331,24 +331,44 @@ class KimiK25ToolCallPlugin(Plugin):
 
         if has_kimi_marker and not has_correct_format:
             agent = self.group_chat.get_member_typechecked("agent", Agent)
-            if agent:
-                await agent.message_processor.add_new_message(
-                    RuntimeMessage(
-                        "警告：检测到不支持的kimi k2.5特殊工具调用格式`<|tool_call_begin|>`，"
-                        "但没有正确的`json toolcall`代码块格式。\n"
-                        "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
-                        "```json toolcall\n"
-                        '{"name": "tool_name", "arguments": {...}}\n'
-                        "```"
-                    )
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：检测到不支持的kimi k2.5特殊工具调用格式`<|tool_call_begin|>`，"
+                    "但没有正确的`json toolcall`代码块格式。\n"
+                    "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
+                    "```json toolcall\n"
+                    '{"name": "tool_name", "arguments": {...}}\n'
+                    "```"
                 )
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
-                    ),
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
+                ),
+            )
+
+        if "```<|tool_call_end|>" in full_response or "}<|tool_call_end|>" in full_response:
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：检测到混用json toolcall和kimi k2.5的特殊工具调用格式`<|tool_call_end|>`。"
+                    "这可能会导致markdown解析错误。"
+                    "正确的工具调用格式是**只**使用`json toolcall`代码块，例如：\n"
+                    "```json toolcall\n"
+                    '{"name": "tool_name", "arguments": {...}}\n'
+                    "```"
                 )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
+                ),
+            )
+
 
     def register(self, lifecycle: "Lifecycle"):
         lifecycle.register_after_message_generation(self.after_message_generation)

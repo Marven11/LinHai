@@ -838,7 +838,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message.assert_called_once()
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
-        self.assertIn("检测到kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.assertIn("检测到不支持的kimi k2.5特殊工具调用格式", call_args[0].message)
         self.group_chat.send_if_exists.assert_called_once()
 
     async def test_after_message_generation_with_kimi_format_with_json_toolcall(self):
@@ -873,3 +873,68 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.agent.message_processor.add_new_message.assert_not_called()
         self.group_chat.send_if_exists.assert_not_called()
+
+    async def test_mixed_kimi_format_with_code_block(self):
+        """测试检测到混用格式 - ```<|tool_call_end|> 代码块。"""
+        full_response = (
+            '正常内容\n'
+            '```json toolcall\n'
+            '{"name": "tool1", "arguments": {}}\n'
+            '```\n'
+            '```<|tool_call_end|>\n'
+            '{"name": "tool2", "arguments": {}}\n'
+            '```'
+        )
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.assertIn("```<|tool_call_end|>", full_response)
+        self.group_chat.send_if_exists.assert_called_once()
+
+    async def test_mixed_kimi_format_with_inline(self):
+        """测试检测到混用格式 - }<|tool_call_end|> 行内格式。"""
+        full_response = (
+            '正常内容\n'
+            '```json toolcall\n'
+            '{"name": "tool1", "arguments": {}}\n'
+            '```\n'
+            '<|tool_calls_section_begin|><|tool_call_begin|>{"name": "tool2", "arguments": {}}<|tool_call_end|>'
+        )
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.group_chat.send_if_exists.assert_called_once()
+
+    async def test_both_kimi_warnings(self):
+        """测试同时触发两种kimi格式警告。"""
+        full_response = (
+            '<|tool_calls_section_begin|><|tool_call_begin|>\n'
+            '{\"name\": "tool1", "arguments": {}}<|tool_call_end|>'
+        )
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
+        call_args_list = self.agent.message_processor.add_new_message.call_args_list
+
+        first_msg = call_args_list[0][0][0]
+        self.assertIn("检测到不支持的kimi k2.5特殊工具调用格式", first_msg.message)
+
+        second_msg = call_args_list[1][0][0]
+        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", second_msg.message)
+
+        self.assertEqual(self.group_chat.send_if_exists.call_count, 2)
