@@ -334,7 +334,7 @@ class KimiK25ToolCallPlugin(Plugin):
             if agent:
                 await agent.message_processor.add_new_message(
                     RuntimeMessage(
-                        "警告：检测到kimi k2.5的特殊工具调用格式`<|tool_call_begin|>`，"
+                        "警告：检测到不支持的kimi k2.5特殊工具调用格式`<|tool_call_begin|>`，"
                         "但没有正确的`json toolcall`代码块格式。\n"
                         "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
                         "```json toolcall\n"
