@@ -817,6 +817,14 @@ class FooterWidget(Static):
         """更新当前answer的token用量"""
         self.current_answer_token = current_answer_token
 
+    def _get_current_llm_name(self) -> str:
+        """获取当前LLM名称"""
+        from linhai.agent import Agent
+
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        llm_name, _ = agent.get_current_llm_info()
+        return llm_name
+
     def update_display(self):
         """
         更新底栏显示内容。
@@ -828,13 +836,17 @@ class FooterWidget(Static):
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
 
-        if agent is None:
-            self.update("Agent未初始化")
-            return
-
-        display_text = self.token_manager.get_token_display_text(
+        token_pieces = self.token_manager.get_token_display_pieces(
             agent, self.current_answer_token, self.use_nerd_font
         )
+
+        llm_name = self._get_current_llm_name()
+        if self.use_nerd_font:
+            llm_piece = b"\xf3\xb0\xab\xa2".decode() + f" {llm_name}"
+        else:
+            llm_piece = llm_name
+        all_pieces = token_pieces + [llm_piece]
+        display_text = " | ".join(all_pieces)
 
         self.update(display_text)
 

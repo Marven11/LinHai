@@ -62,12 +62,16 @@ class TokenManager:
                 return formatted[:-3] + "b"
             return formatted
 
-    def get_token_display_text(
+    def get_token_display_pieces(
         self, agent: Agent, current_answer_token: int, use_nerd_font: bool = False
-    ) -> str:
-        """获取token使用量显示文本"""
+    ) -> list[str]:
+        """获取token使用量显示片段列表
+
+        返回一个字符串列表，调用者可以自行用" | "或其他分隔符拼接。
+        这样可以更灵活地处理空字符串和添加额外信息。
+        """
         if self.cumulative_token_usage is None:
-            return ""
+            return []
 
         input_tokens = self.cumulative_token_usage["input_tokens"]
         output_tokens = self.cumulative_token_usage["output_tokens"]
@@ -83,7 +87,6 @@ class TokenManager:
         token_limit = llm_instance.get_token_limit()
 
         msg_pieces = agent.orchestration.get_status_display_pieces(use_nerd_font)
-        msg_piece = " | ".join(msg_pieces) if msg_pieces else ""
 
         if use_nerd_font:
             cache_symbol = " \uf49b "
@@ -94,10 +97,9 @@ class TokenManager:
             in_symbol = " in "
             out_symbol = " out "
 
-        display_text_pieces = [
-            (msg_piece),
-        ]
+        display_text_pieces: list[str] = []
 
+        display_text_pieces.extend(msg_pieces)
         if input_tokens > 0 and cached_input_tokens > 0:
             cache_percentage = int((cached_input_tokens / input_tokens) * 100)
             display_text_pieces.append(
@@ -120,4 +122,4 @@ class TokenManager:
             progress_bar = "█" * filled_bars + "▒" * empty_bars
             display_text_pieces.append(f"{progress_bar} {percentage:.0f}%")
 
-        return " | ".join(display_text_pieces)
+        return display_text_pieces
