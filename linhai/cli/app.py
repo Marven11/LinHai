@@ -3,7 +3,7 @@
 import argparse
 
 from textual.app import App, ComposeResult
-from textual.widgets import TabbedContent, TabPane, Input
+from textual.widgets import TabbedContent, TabPane, TextArea
 from textual import events, work
 from textual_autocomplete import AutoComplete, DropdownItem
 
@@ -75,10 +75,9 @@ class CLIApp(App):
         scrollbar-size-vertical: 1;
     }
     #input {
-        min-height: 1;
-        height: auto;
-        background: #2E3440;
-        border: solid $primary;
+        height: 3;
+        background: $background-lighten-1;
+        border: blank;
     }
     AutoComplete {
         & AutoCompleteList {
@@ -140,7 +139,7 @@ class CLIApp(App):
                 )
                 yield self.messages_list
 
-                yield Input(placeholder="输入消息...", id="input")
+                yield TextArea(placeholder="Ctrl+Enter发送", id="input", show_line_numbers=False)
                 yield FooterWidget(
                     self.group_chat,
                     self.token_manager,
@@ -227,17 +226,7 @@ class CLIApp(App):
 
         self._run_agent()
 
-        input_element = self.query_one("#input", Input)
-
-        self.autocomplete = AutoComplete(
-            target=input_element,
-            candidates=lambda _state: [
-                DropdownItem(item)
-                for item in self.completions
-                + self.command_handler.get_command_completions()
-            ],
-        )
-        self.mount(self.autocomplete)
+        input_element = self.query_one("#input", TextArea)
         self.set_focus(input_element)
 
         cliapp_tool = ToolSet()
@@ -283,7 +272,7 @@ class CLIApp(App):
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
 
-        if event.key == "ctrl+enter" or event.key == "enter":
+        if event.key == "ctrl+enter":
             await self._handle_message_submission()
             event.stop()
             return
@@ -296,16 +285,14 @@ class CLIApp(App):
             self.app.exit()
 
     async def _handle_regular_message(self, message_text: str) -> None:
-        input_element = self.query_one("#input", Input)
+        input_element = self.query_one("#input", TextArea)
         await self.messages_list.add_user_message(message_text)
-        input_element.value = ""
+        input_element.text = ""
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
-        from textual.widgets import Input
-
-        input_element = self.query_one("#input", Input)
-        message_text = input_element.value.strip()
+        input_element = self.query_one("#input", TextArea)
+        message_text = input_element.text.strip()
 
         if not message_text:
             return
