@@ -4,8 +4,10 @@
 
 - [ ] 我们需要支持显式缓存功能，更新llm message的类型定义以支持qwen的显式缓存标记
   - 参考./docs/*.md
-- [ ] 我们需要支持显式缓存功能，参考../BudgetYourToken/human_result/中的算法编写显式缓存Manager，为传入的列表标记上正确的缓存标记
+- [ ] 我们需要支持显式缓存功能，参考../BudgetYourToken/season2/human_result/solve.py中的算法编写显式缓存Manager，为传入的列表标记上正确的缓存标记
+  - 注意：使用已有的配置项，不要为init函数添加可选参数
   - 参考./docs/*.md
+- [ ] 编写并测试所有unittest
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
