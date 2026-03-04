@@ -39,6 +39,10 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
+- [ ] 修改CLI文本框的样式
+  - 当前问题：文本框有很细的蓝色边框，不太好看；文本框不支持换行
+  - 修改为支持换行的widget并将发送改为Ctrl+Enter而不是当前的回车发送
+  - placeholder写“Ctrl+Enter发送”
 - [ ] 添加初始化配置的功能
   - 用户运行python -m linhai init可以打开初始化TUI页面，可以设置第一个llm的openai的base_url, api_key等
   - 参考https://github.com/Textualize/textual/blob/main/examples/calculator.py
