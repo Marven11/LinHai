@@ -39,13 +39,13 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_on_tool_result.assert_called_once_with(
-            self.plugin.on_tool_result
+        lifecycle.register_after_toolcall.assert_called_once_with(
+            self.plugin.after_toolcall
         )
 
-    async def test_on_tool_result_not_process_create(self):
+    async def test_after_toolcall_not_process_create(self):
         """测试非process_create工具调用。"""
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name="read_file",
             tool_index=0,
             status="success",
@@ -56,9 +56,9 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_on_tool_result_process_create_failed(self):
+    async def test_after_toolcall_process_create_failed(self):
         """测试process_create调用失败。"""
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name="process_create",
             tool_index=0,
             status="failed",
@@ -69,9 +69,9 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_on_tool_result_no_command(self):
+    async def test_after_toolcall_no_command(self):
         """测试process_create没有命令参数。"""
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name="process_create",
             tool_index=0,
             status="success",
@@ -82,9 +82,9 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_on_tool_result_with_pipeline_allowed(self):
+    async def test_after_toolcall_with_pipeline_allowed(self):
         """测试包含管道符号的命令允许。"""
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name="process_create",
             tool_index=0,
             status="success",
@@ -95,9 +95,9 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_on_tool_result_with_redirect_allowed(self):
+    async def test_after_toolcall_with_redirect_allowed(self):
         """测试有重定向的cat命令允许。"""
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name="process_create",
             tool_index=0,
             status="success",
@@ -108,7 +108,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(result)
 
-    async def test_on_tool_result_read_file_tracking(self):
+    async def test_after_toolcall_read_file_tracking(self):
         """测试已读取文件跟踪。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
@@ -120,7 +120,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
@@ -139,7 +139,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_on_tool_result_read_file_relative_path(self):
+    async def test_after_toolcall_read_file_relative_path(self):
         """测试相对路径的已读取文件跟踪。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "test.txt"
@@ -151,7 +151,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
@@ -168,7 +168,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_on_tool_result_tail_command(self):
+    async def test_after_toolcall_tail_command(self):
         """测试tail命令拦截。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
@@ -180,7 +180,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
@@ -199,7 +199,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_on_tool_result_head_command(self):
+    async def test_after_toolcall_head_command(self):
         """测试head命令拦截。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
@@ -211,7 +211,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
@@ -230,7 +230,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_on_tool_result_awk_command(self):
+    async def test_after_toolcall_awk_command(self):
         """测试awk命令拦截。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
@@ -242,7 +242,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",
@@ -261,7 +261,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.plugin.warning_count, 1)
 
-    async def test_on_tool_result_rg_command(self):
+    async def test_after_toolcall_rg_command(self):
         """测试rg命令拦截。"""
         mock_file_msg = MagicMock(spec=FileContentMessage)
         mock_file_msg.filepath = "/path/to/read.txt"
@@ -273,7 +273,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 "linhai.plugin.file_operations.is_already_read",
                 AsyncMock(return_value=True),
             ):
-                result = await self.plugin.on_tool_result(
+                result = await self.plugin.after_toolcall(
                     tool_name="process_create",
                     tool_index=0,
                     status="success",

@@ -892,7 +892,7 @@ class MachineControlPlugin:
             sort_value=0,
         )
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -955,4 +955,4 @@ class MachineControlPlugin:
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)

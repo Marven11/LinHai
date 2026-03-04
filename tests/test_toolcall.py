@@ -24,7 +24,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.add_new_message = AsyncMock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)
+        self.mock_agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
         self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
             return_value=None
         )
@@ -86,10 +86,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和success
         self.assertGreaterEqual(
-            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+            self.mock_agent.lifecycle.trigger_after_toolcall.call_count, 1
         )
         # 获取最后一次调用
-        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        last_call = self.mock_agent.lifecycle.trigger_after_toolcall.call_args
         # 检查最后一次调用是success状态
         self.assertEqual(last_call[1]["status"], "success")
         self.assertEqual(last_call[1]["tool_name"], "test_tool")
@@ -123,10 +123,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和failed
         self.assertGreaterEqual(
-            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+            self.mock_agent.lifecycle.trigger_after_toolcall.call_count, 1
         )
         # 获取最后一次调用
-        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        last_call = self.mock_agent.lifecycle.trigger_after_toolcall.call_args
         # 检查最后一次调用是failed状态，因为工具调用失败
         self.assertEqual(last_call[1]["status"], "failed")
         self.assertEqual(last_call[1]["tool_name"], "test_tool")
@@ -158,10 +158,10 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_tool_manager.process_tool_call.assert_called_once_with(tool_call, 1)
         # 新的on_tool_result回调会被调用两次：skipped和failed
         self.assertGreaterEqual(
-            self.mock_agent.lifecycle.trigger_on_tool_result.call_count, 1
+            self.mock_agent.lifecycle.trigger_after_toolcall.call_count, 1
         )
         # 获取最后一次调用
-        last_call = self.mock_agent.lifecycle.trigger_on_tool_result.call_args
+        last_call = self.mock_agent.lifecycle.trigger_after_toolcall.call_args
         # 检查最后一次调用是failed状态
         self.assertEqual(last_call[1]["status"], "failed")
         self.assertEqual(last_call[1]["tool_name"], "test_tool")

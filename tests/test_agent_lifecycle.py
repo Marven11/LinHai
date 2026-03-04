@@ -170,16 +170,16 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1.assert_called_once_with(self.mock_answer, "test response", [])
         callback2.assert_called_once_with(self.mock_answer, "test response", [])
 
-    async def test_register_and_trigger_on_tool_result(self):
+    async def test_register_and_trigger_after_toolcall(self):
         """Test registering and triggering on tool result callbacks."""
         callback1 = AsyncMock(return_value=None)
         callback2 = AsyncMock(return_value=None)
 
-        self.lifecycle.register_on_tool_result(callback1)
-        self.lifecycle.register_on_tool_result(callback2)
+        self.lifecycle.register_after_toolcall(callback1)
+        self.lifecycle.register_after_toolcall(callback2)
 
         # 测试status="skipped"情况
-        await self.lifecycle.trigger_on_tool_result(
+        await self.lifecycle.trigger_after_toolcall(
             tool_name="test_tool",
             tool_index=0,
             status="skipped",
@@ -193,16 +193,16 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1.assert_called_once()
         callback2.assert_called_once()
 
-    async def test_register_and_trigger_on_tool_result_success(self):
+    async def test_register_and_trigger_after_toolcall_success(self):
         """Test registering and triggering on tool result callbacks with success status."""
         callback1 = AsyncMock(return_value=None)
         callback2 = AsyncMock(return_value=None)
 
-        self.lifecycle.register_on_tool_result(callback1)
-        self.lifecycle.register_on_tool_result(callback2)
+        self.lifecycle.register_after_toolcall(callback1)
+        self.lifecycle.register_after_toolcall(callback2)
 
         # 测试status="success"情况
-        await self.lifecycle.trigger_on_tool_result(
+        await self.lifecycle.trigger_after_toolcall(
             tool_name="test_tool",
             tool_index=0,
             status="success",
@@ -255,7 +255,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             await self.lifecycle.trigger_after_message_generation(
                 self.mock_answer, "test response", []
             )
-            await self.lifecycle.trigger_on_tool_result(
+            await self.lifecycle.trigger_after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="skipped",

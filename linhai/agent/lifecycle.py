@@ -39,7 +39,7 @@ AfterMessageGenerationCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
-OnToolResultCallback: TypeAlias = Callable[
+AfterToolcallCallback: TypeAlias = Callable[
     [
         str,
         int,
@@ -112,7 +112,7 @@ class Lifecycle:
         self._after_message_generation_callbacks: list[
             AfterMessageGenerationCallback
         ] = []
-        self._on_tool_result_callbacks: list[OnToolResultCallback] = []
+        self._after_toolcall_callbacks: list[AfterToolcallCallback] = []
         self._after_token_generation_callbacks: list[AfterTokenGenerationCallback] = []
         self._before_parsing_callbacks: list[BeforeParsingCallback] = []
         self._after_segment_callbacks: list[AfterSegmentCallback] = []
@@ -195,9 +195,9 @@ class Lifecycle:
         """注册消息生成后的回调。"""
         self._after_message_generation_callbacks.append(callback)
 
-    def register_on_tool_result(self, callback: OnToolResultCallback):
+    def register_after_toolcall(self, callback: AfterToolcallCallback):
         """注册工具结果回调。"""
-        self._on_tool_result_callbacks.append(callback)
+        self._after_toolcall_callbacks.append(callback)
 
     def register_after_token_generation(self, callback: AfterTokenGenerationCallback):
         """注册token生成后的回调。"""
@@ -267,7 +267,7 @@ class Lifecycle:
         for callback in self._after_message_generation_callbacks:
             await callback(answer, full_response, tool_calls)
 
-    async def trigger_on_tool_result(
+    async def trigger_after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -284,7 +284,7 @@ class Lifecycle:
             bool: 仅当status为"skipped"时有效，True表示跳过工具调用
             RuntimeMessage: 替换工具结果
         """
-        for callback in self._on_tool_result_callbacks:
+        for callback in self._after_toolcall_callbacks:
             result = await callback(
                 tool_name,
                 tool_index,

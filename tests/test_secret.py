@@ -391,7 +391,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            real_plugin.on_tool_result(
+            real_plugin.after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
@@ -417,7 +417,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
@@ -440,7 +440,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
@@ -480,7 +480,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            real_plugin.on_tool_result(
+            real_plugin.after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",
@@ -506,7 +506,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name="test_tool",
                 tool_index=0,
                 status="success",

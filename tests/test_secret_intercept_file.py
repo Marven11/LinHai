@@ -31,7 +31,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-    def test_on_tool_result_saves_content_to_file_when_secret_detected_without_with_secret(self):
+    def test_after_toolcall_saves_content_to_file_when_secret_detected_without_with_secret(self):
         """测试当结果包含secret值但没有with_secret时，内容被保存到文件"""
         # 使用真实GroupChat并注册conversation_folder
         from linhai.group_chat import GroupChat
@@ -48,7 +48,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         
         # 运行异步测试
         async def run_test():
-            return await plugin.on_tool_result(
+            return await plugin.after_toolcall(
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
@@ -66,7 +66,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         self.assertIn("已拦截", result_str)
         # 注意：新实现不再在消息中包含具体的secret键名
 
-    def test_on_tool_result_with_secret_specified_masks_content(self):
+    def test_after_toolcall_with_secret_specified_masks_content(self):
         """测试当指定了with_secret时，进行掩码但不保存文件"""
         # 使用真实GroupChat并注册conversation_folder
         from linhai.group_chat import GroupChat
@@ -82,7 +82,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         
         # 运行异步测试
         async def run_test():
-            return await plugin.on_tool_result(
+            return await plugin.after_toolcall(
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
@@ -100,7 +100,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         self.assertIn("已替换", result_str)
         self.assertIn("<$DEEPSEEK_API_KEY$>", result_str)
 
-    def test_on_tool_result_without_secret_returns_none(self):
+    def test_after_toolcall_without_secret_returns_none(self):
         """测试当结果不包含secret值时返回None"""
         # 使用真实GroupChat并注册conversation_folder
         from linhai.group_chat import GroupChat
@@ -117,7 +117,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         
         # 运行异步测试
         async def run_test():
-            return await plugin.on_tool_result(
+            return await plugin.after_toolcall(
                 tool_name="read_file",
                 tool_index=0,
                 status="success",
@@ -132,7 +132,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         # 验证返回None
         self.assertIsNone(result)
 
-    def test_on_tool_result_saves_file_with_correct_name_format(self):
+    def test_after_toolcall_saves_file_with_correct_name_format(self):
         """测试保存的文件名格式正确"""
         # 使用真实GroupChat并注册conversation_folder
         from linhai.group_chat import GroupChat
@@ -148,7 +148,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         result_content = "API key is sk-real-123456"
         
         async def run_test():
-            return await plugin.on_tool_result(
+            return await plugin.after_toolcall(
                 tool_name="write_file",
                 tool_index=1,
                 status="success",

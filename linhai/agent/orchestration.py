@@ -346,7 +346,7 @@ class RedStateToolBlockPlugin:
             "context_forget_large_message",
         }
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -405,7 +405,7 @@ class RedStateToolBlockPlugin:
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
 
 class NotificationMessagePlugin:

@@ -270,7 +270,7 @@ class AgentToolcall:
                 ),
             )
 
-            await self.agent.lifecycle.trigger_on_tool_result(
+            await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="failed",
@@ -299,7 +299,7 @@ class AgentToolcall:
             tool_call.function_name in compress_tools
         )
 
-        skip_result = await self.agent.lifecycle.trigger_on_tool_result(
+        skip_result = await self.agent.lifecycle.trigger_after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="skipped",
@@ -352,7 +352,7 @@ class AgentToolcall:
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
-            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+            replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -375,7 +375,7 @@ class AgentToolcall:
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
-            replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+            replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -391,7 +391,7 @@ class AgentToolcall:
 
         self.current_round_token_count += token_count
 
-        replacement_result = await self.agent.lifecycle.trigger_on_tool_result(
+        replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="success",
@@ -416,7 +416,7 @@ class AgentToolcall:
             with_secret=tool_call.with_secret,
         )
         if isinstance(before_result, ToolResultFailed):
-            await self.agent.lifecycle.trigger_on_tool_result(
+            await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -444,7 +444,7 @@ class AgentToolcall:
                 llm_msg = tool_result.to_llm_message()
                 assert "content" in llm_msg
                 formatted_content = _extract_text_content(llm_msg["content"])
-                await self.agent.lifecycle.trigger_on_tool_result(
+                await self.agent.lifecycle.trigger_after_toolcall(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
@@ -473,7 +473,7 @@ class AgentToolcall:
             return False
         except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
 
-            await self.agent.lifecycle.trigger_on_tool_result(
+            await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",

@@ -16,7 +16,7 @@ class TestDirectedToolConflict(unittest.TestCase):
         self.agent.group_chat = MagicMock()
         self.agent.context = MagicMock()
         self.agent.lifecycle = MagicMock()
-        self.agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)
+        self.agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.compress_tool_called_in_last_response = False

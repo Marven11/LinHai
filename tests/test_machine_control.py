@@ -319,7 +319,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=0,
             status="skipped",
@@ -353,7 +353,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=0,
             status="skipped",
@@ -381,7 +381,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=0,
             status="success",  # 工具调用成功后处理
@@ -412,7 +412,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_send = AsyncMock()
         self.group_chat.send_if_exists = mock_send
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=0,
             status="success",  # 工具调用成功后处理
@@ -442,8 +442,8 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_lifecycle.register_before_message_generation.assert_called_once_with(
             self.plugin.before_message_generation
         )
-        mock_lifecycle.register_on_tool_result.assert_called_once_with(
-            self.plugin.on_tool_result
+        mock_lifecycle.register_after_toolcall.assert_called_once_with(
+            self.plugin.after_toolcall
         )
 
 

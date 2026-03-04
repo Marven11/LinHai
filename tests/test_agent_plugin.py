@@ -441,8 +441,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_on_tool_result.assert_called_once_with(
-            self.plugin.on_tool_result
+        lifecycle.register_after_toolcall.assert_called_once_with(
+            self.plugin.after_toolcall
         )
 
     def test_green_state_not_block(self):
@@ -471,7 +471,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="skipped",
@@ -512,7 +512,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="skipped",
@@ -574,7 +574,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             import asyncio
 
             result = asyncio.run(
-                self.plugin.on_tool_result(
+                self.plugin.after_toolcall(
                     tool_name=tool_call.function_name,
                     tool_index=0,
                     status="skipped",
@@ -618,7 +618,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="skipped",
@@ -671,7 +671,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="skipped",

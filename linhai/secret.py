@@ -182,7 +182,7 @@ class SecretInterceptorPlugin:
         self.group_chat = group_chat
         self.secrets_dict = secrets_dict
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -258,7 +258,7 @@ class SecretInterceptorPlugin:
         )
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
         lifecycle.register_before_tool_call(self.before_tool_call)
 
 

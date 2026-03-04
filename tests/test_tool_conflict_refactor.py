@@ -138,7 +138,7 @@ class TestToolConflictRefactor(unittest.TestCase):
     def _setup_async_mocks(self) -> None:
         self.toolcall.agent.group_chat.send_if_exists = AsyncMock()
         self.toolcall.agent.lifecycle = Mock()
-        self.toolcall.agent.lifecycle.trigger_on_tool_result = AsyncMock()
+        self.toolcall.agent.lifecycle.trigger_after_toolcall = AsyncMock()
         self.toolcall.agent.message_processor = Mock()
         self.toolcall.agent.message_processor.add_new_message = AsyncMock()
 
@@ -184,7 +184,7 @@ class TestToolConflictRefactor(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(self.toolcall.early_return)
-        self.toolcall.agent.lifecycle.trigger_on_tool_result.assert_called_once()
+        self.toolcall.agent.lifecycle.trigger_after_toolcall.assert_called_once()
         self._verify_error_message_content()
 
 

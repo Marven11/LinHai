@@ -51,9 +51,9 @@ class DuplicateFileReadPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -155,9 +155,9 @@ class UnnecessarySedReadPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -235,9 +235,9 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -325,7 +325,7 @@ class FileReadWriteConflictPlugin(Plugin):
         """在消息生成前清空已读取文件列表。"""
         self.read_files.clear()
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -398,7 +398,7 @@ class FileReadWriteConflictPlugin(Plugin):
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
 
 class DirectoryChangePlugin(Plugin):

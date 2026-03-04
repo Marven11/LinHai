@@ -28,7 +28,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         with_secret = None
         is_tool_failed_duplicated_error = False
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name,
             tool_index,
             status,
@@ -57,7 +57,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         with_secret = ["DEEPSEEK_API_KEY"]
         is_tool_failed_duplicated_error = False
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name,
             tool_index,
             status,
@@ -79,7 +79,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         with_secret = None
         is_tool_failed_duplicated_error = False
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name,
             tool_index,
             status,
@@ -105,7 +105,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         with_secret = None
         is_tool_failed_duplicated_error = False
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name,
             tool_index,
             status,
@@ -135,7 +135,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
         with_secret = None
         is_tool_failed_duplicated_error = False
 
-        result = await self.plugin.on_tool_result(
+        result = await self.plugin.after_toolcall(
             tool_name,
             tool_index,
             status,
@@ -155,8 +155,8 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         lifecycle = Mock()
         self.plugin.register(lifecycle)
-        lifecycle.register_on_tool_result.assert_called_once_with(
-            self.plugin.on_tool_result
+        lifecycle.register_after_toolcall.assert_called_once_with(
+            self.plugin.after_toolcall
         )
 
 

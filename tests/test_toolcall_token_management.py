@@ -28,7 +28,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(return_value=None)
+        self.mock_agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
         self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
             return_value=None
         )
@@ -378,7 +378,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
     async def test_on_tool_result_replacement(self):
         """测试当on_tool_result回调返回RuntimeMessage时使用替换内容。"""
         replacement_message = RuntimeMessage("替换消息")
-        self.mock_agent.lifecycle.trigger_on_tool_result = AsyncMock(
+        self.mock_agent.lifecycle.trigger_after_toolcall = AsyncMock(
             return_value=replacement_message
         )
 

@@ -54,8 +54,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_on_tool_result.assert_called_once_with(
-            self.plugin.on_tool_result
+        lifecycle.register_after_toolcall.assert_called_once_with(
+            self.plugin.after_toolcall
         )
 
     @patch("pathlib.Path")
@@ -79,7 +79,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_message.to_llm_message.return_value = {"content": "test result"}
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -106,7 +106,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "failed",
@@ -140,7 +140,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -178,7 +178,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         large_result = "x" * 10000  # 刚好10000字符
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -220,7 +220,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -262,7 +262,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -299,7 +299,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -339,7 +339,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            self.plugin.on_tool_result(
+            self.plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -396,7 +396,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -449,7 +449,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -468,7 +468,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -521,7 +521,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -574,7 +574,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -630,7 +630,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -693,7 +693,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -712,7 +712,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -778,7 +778,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
 
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -825,7 +825,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/some/file.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -912,7 +912,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第一次调用：应该返回None（只警告）
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -932,7 +932,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file",
                 0,
                 "success",
@@ -968,7 +968,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "failed",
@@ -1000,7 +1000,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -1032,7 +1032,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -1064,7 +1064,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",
@@ -1101,7 +1101,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         absolute_path = "/tmp/test.txt"  # 定义变量
         result = asyncio.run(
-            plugin.on_tool_result(
+            plugin.after_toolcall(
                 "read_file_with_sed",
                 0,
                 "success",

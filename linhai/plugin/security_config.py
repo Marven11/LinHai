@@ -30,7 +30,7 @@ class Plugin(ABC):
 class WithSecretParameterPositionPlugin(Plugin):
     """检查工具调用中with_secret参数位置错误的插件"""
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -56,8 +56,8 @@ class WithSecretParameterPositionPlugin(Plugin):
         )
 
     def register(self, lifecycle: "Lifecycle"):
-        """注册到on_tool_result回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        """注册到after_toolcall回调。"""
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
 
 class MissingWithSecretWarningPlugin(Plugin):
@@ -65,7 +65,7 @@ class MissingWithSecretWarningPlugin(Plugin):
 
     _SECRET_PATTERN = re.compile(r"<\$[A-Z_]+\$>")
 
-    async def on_tool_result(
+    async def after_toolcall(
         self,
         tool_name: str,
         tool_index: int,
@@ -105,8 +105,8 @@ class MissingWithSecretWarningPlugin(Plugin):
         return None
 
     def register(self, lifecycle: "Lifecycle"):
-        """注册到on_tool_result回调。"""
-        lifecycle.register_on_tool_result(self.on_tool_result)
+        """注册到after_toolcall回调。"""
+        lifecycle.register_after_toolcall(self.after_toolcall)
 
 
 class CommandWhitelistPlugin(Plugin):
