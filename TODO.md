@@ -45,10 +45,11 @@ unittest 失败时，必须分析
   - 问题：绝大多数message都只返回静态的`{"role": "user", "content": <str>}`
   - 问题：大量滥用to_llm_message只为了提取上面的content字符串
   - 解决：
-    - 找到所有这么做的类，通过搜索并阅读to_llm_message实现，并记录需要修改的到DESIGN.md
-    - 为这些类写一个父类RoleContentMessage，这些类只需要设置对应的role和content即可，不需要重复实现to_llm_message等函数
-    - RoleContentMessage提供一个get_content函数提供内部的content，这样就不需要通过to_llm_message提取内容了
-    - 将滥用to_llm_message提取content的地方全部改为使用RoleContentMessage
+    - 为Message protocol新增一个get_content函数，让每个Message类都实现这个函数
+      - get_content返回str或者None，如果content不是简单的字符串则返回None（如ImageMessage）
+      - 在docstring中说明上面这一点
+      - 同时修改几乎所有Message，让它们的to_llm_message全部使用get_content而不是手动计算
+    - 将滥用to_llm_message提取content的地方全部改为使用get_content
       - _estimate_cached_input_tokens - 忽略非RoleContentMessage的消息
       - SecretInterceptorPlugin - 忽略非RoleContentMessage的消息
       - AgentMessage - 忽略非RoleContentMessage的消息
