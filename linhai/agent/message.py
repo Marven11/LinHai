@@ -76,7 +76,7 @@ class AgentMessage:
         self.messages: List[Message] = []
         self.notification_messages: dict[str, NotificationMessageEntry] = {}
         self.queued_messages: List[Message] = []
-        self.explicit_cache_anchor = None
+        self.explicit_cache_anchors: list[int] = []
         self.group_chat.add_postinit(self.postinit)
 
     def postinit(self):
@@ -119,7 +119,10 @@ class AgentMessage:
             > spending_with_new_cache * estimated_cache_refresh_factor
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
         ):
-            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+            anchor = self.calculate_explicit_cache_anchor()
+            if anchor is not None:
+                self.explicit_cache_anchors.append(anchor)
+                self.explicit_cache_anchors = self.explicit_cache_anchors[-4:]
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
             )
@@ -145,11 +148,11 @@ class AgentMessage:
         """标记当前缓存失效
 
         在使用隐式缓存时什么都不做，在使用显式缓存时清除缓存点并提醒用户"""
-        if self.explicit_cache_anchor is not None:
+        if self.explicit_cache_anchors:
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content="上下文缓存失效！")
             )
-            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+            self.explicit_cache_anchors = []
 
     async def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
@@ -161,8 +164,10 @@ class AgentMessage:
         """
         from .lifecycle import Lifecycle
 
-        if self.explicit_cache_anchor is None:
-            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+        if not self.explicit_cache_anchors:
+            anchor = self.calculate_explicit_cache_anchor()
+            if anchor is not None:
+                self.explicit_cache_anchors.append(anchor)
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
             )
@@ -194,12 +199,13 @@ class AgentMessage:
         return None
 
     def mark_explicit_cache_savepoint(self, msgs: list[Message]) -> list[Message]:
-        if self.explicit_cache_anchor is None:
+        if not self.explicit_cache_anchors:
             return msgs
         msgs = msgs.copy()
-        content = msgs[self.explicit_cache_anchor].to_llm_message().get("content")
-        assert isinstance(content, str)
-        msgs[self.explicit_cache_anchor] = ExplicitCacheMessage(content)
+        for anchor in self.explicit_cache_anchors:
+            content = msgs[anchor].to_llm_message().get("content")
+            assert isinstance(content, str)
+            msgs[anchor] = ExplicitCacheMessage(content)
         return msgs
 
     def get_messages(self) -> List[Message]:
