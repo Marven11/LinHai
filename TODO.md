@@ -42,8 +42,7 @@ unittest 失败时，必须分析
 
 - [ ] 修改显式缓存价格的配置
   - 我们发现每个LLM的显式缓存价格都不同
-    - GLM5: 未缓存输入token: 4元/MTokens; 缓存命中输入token:  1元/MTokens; 缓存写入输入token: 免费
-      - 为了避免DDoS GLM，我们将缓存写入输入token也视为1元/MTokens
+    - Claude Opus 4.6: 未缓存输入token: `$5`/MTokens; 缓存命中输入token:  `$0.5`/MTokens; 缓存写入输入token: `$6.25`/MTokens
     - qwen3.5 plus: 未缓存输入token: 0.8元/MTokens; 缓存命中输入token:  0.08元/MTokens; 缓存写入输入token: 元/MTokens
   - 修改配置
     - 去除use_explicit_cache，为llm添加可选的explicit_cache配置项
