@@ -2,12 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 我们需要支持显式缓存功能，更新llm message的类型定义以支持qwen的显式缓存标记
-  - 参考./docs/*.md
-- [ ] 我们需要支持显式缓存功能，参考../BudgetYourToken/season2/human_result/solve.py中的算法编写显式缓存Manager，为传入的列表标记上正确的缓存标记
-  - 注意：使用已有的配置项，不要为init函数添加可选参数
-  - 参考./docs/*.md
-- [ ] 编写并测试所有unittest
+- [ ] 当前的token用量的传递问题很大
+  - app.py注册对应队列，在watch_token_usage_queue接收token usage并传给token manger - 改成让token manager自己注册并接收，清理对应代码
+  - 大量代码使用agent.last_token_usage读取token用量
+    - 完全清理last_token_usage的使用，清理完后搜索last_token_usage检查
+    - 全部改为使用token manager
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
