@@ -19,13 +19,6 @@ from .base import (
 )
 
 
-# qwen3.5的每百万Token价格，用来估算什么时候更新缓存点
-INPUT_TOKEN_PRICE_RMB = 0.8
-OUTPUT_TOKEN_PRICE_RMB = 4.8
-CACHED_INPUT_PRICE_RMB = 0.8 * 0.1
-CACHED_WRITE_PRICE_RMB = 0.8 * 1.25
-
-
 class NotificationMessageEntry(TypedDict):
     """通知消息条目，包含源标识符、消息内容和排序值。"""
 
@@ -90,6 +83,13 @@ class AgentMessage:
         if token_usage is None:
             return
 
+        from ..llm_manager import LlmManager
+
+        llm_manager = self.group_chat.get_member_typechecked("llm_manager", LlmManager)
+        cache_info = llm_manager.get_current_llm().get_explicit_cache_info()
+        if cache_info is None:
+            return
+
         from ..token_manager import TokenManager
 
         token_manager = self.group_chat.get_member_typechecked(
@@ -107,19 +107,20 @@ class AgentMessage:
             )
         else:
             estimated_cache_refresh_factor = 5
-        # 可是这里的cached_input_tokens是根据隐式缓存估算的，这样估算合适吗？
         cached_input_tokens = (
             token_usage.cached_input_tokens if token_usage.cached_input_tokens else 0
         )
         spending_with_old_cache = (
-            cached_input_tokens * CACHED_INPUT_PRICE_RMB
-            + (token_usage.input_tokens - cached_input_tokens) * INPUT_TOKEN_PRICE_RMB
+            cached_input_tokens * cache_info.cache_hit_price_ratio
+            + (token_usage.input_tokens - cached_input_tokens) * 1.0
         )
-        spending_with_new_cache = token_usage.input_tokens * CACHED_INPUT_PRICE_RMB
+        spending_with_new_cache = (
+            token_usage.input_tokens * cache_info.cache_hit_price_ratio
+        )
         if (
             spending_with_old_cache * estimated_cache_refresh_factor
             > spending_with_new_cache * estimated_cache_refresh_factor
-            + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
+            + token_usage.input_tokens * cache_info.cache_write_price_ratio
         ) and not token_usage.cache_creation_input_tokens:
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None and anchor not in self.explicit_cache_anchors:
@@ -190,7 +191,7 @@ class AgentMessage:
         from ..llm_manager import LlmManager
 
         llm_manager = self.group_chat.get_member_typechecked("llm_manager", LlmManager)
-        return llm_manager.get_current_llm().use_explicit_cache()
+        return llm_manager.get_current_llm().get_explicit_cache_info() is not None
 
     def calculate_explicit_cache_anchor(self) -> Optional[int]:
         msgs = self.pinned_messages + self.messages

@@ -4,21 +4,18 @@ import unittest
 import tempfile
 import os
 
-from linhai.config import load_config, Config
+from linhai.config import load_config, Config, ExplicitCacheConfig
 
 
 def create_temp_config(config_content: str) -> str:
-    """创建临时配置文件并返回路径"""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
         f.write(config_content)
         return f.name
 
 
 class TestExplicitCacheConfig(unittest.TestCase):
-    """Test cases for the explicit cache configuration feature."""
 
-    def test_default_use_explicit_cache_false(self):
-        """Test that use_explicit_cache defaults to False."""
+    def test_default_no_explicit_cache(self):
         config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
@@ -30,97 +27,159 @@ model = "test_model"
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 1)
-            self.assertEqual(config.llm[0].use_explicit_cache, False)
+            self.assertIsNone(config.llm[0].explicit_cache)
         finally:
             os.unlink(temp_file)
 
-    def test_use_explicit_cache_true(self):
-        """Test that use_explicit_cache can be set to True."""
+    def test_explicit_cache_enabled(self):
         config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-use_explicit_cache = true
+
+[llm.explicit_cache]
+enable = true
+cache_write_price_ratio = 1.25
+cache_hit_price_ratio = 0.1
 """
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
-            self.assertEqual(len(config.llm), 1)
-            self.assertEqual(config.llm[0].use_explicit_cache, True)
+            self.assertIsNotNone(config.llm[0].explicit_cache)
+            self.assertTrue(config.llm[0].explicit_cache.enable)
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_write_price_ratio, 1.25
+            )
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_hit_price_ratio, 0.1
+            )
         finally:
             os.unlink(temp_file)
 
-    def test_use_explicit_cache_false(self):
-        """Test that use_explicit_cache can be explicitly set to False."""
+    def test_explicit_cache_disabled(self):
         config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-use_explicit_cache = false
+
+[llm.explicit_cache]
+enable = false
 """
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
-            self.assertIsInstance(config, Config)
-            self.assertEqual(len(config.llm), 1)
-            self.assertEqual(config.llm[0].use_explicit_cache, False)
+            self.assertIsNotNone(config.llm[0].explicit_cache)
+            self.assertFalse(config.llm[0].explicit_cache.enable)
+        finally:
+            os.unlink(temp_file)
+
+    def test_explicit_cache_default_ratios(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[llm.explicit_cache]
+enable = true
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNotNone(config.llm[0].explicit_cache)
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_write_price_ratio, 1.25
+            )
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_hit_price_ratio, 0.1
+            )
+        finally:
+            os.unlink(temp_file)
+
+    def test_explicit_cache_custom_ratios(self):
+        config_content = """[[llm]]
+name = "claude"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "claude-opus"
+
+[llm.explicit_cache]
+enable = true
+cache_write_price_ratio = 1.5
+cache_hit_price_ratio = 0.2
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_write_price_ratio, 1.5
+            )
+            self.assertAlmostEqual(
+                config.llm[0].explicit_cache.cache_hit_price_ratio, 0.2
+            )
         finally:
             os.unlink(temp_file)
 
     def test_multiple_llms_with_mixed_explicit_cache_settings(self):
-        """Test multiple LLMs with different use_explicit_cache settings."""
         config_content = """[[llm]]
 name = "llm_with_cache"
 base_url = "https://api.example.com"
 api_key = "test_key_1"
 model = "test_model_1"
-use_explicit_cache = true
+
+[llm.explicit_cache]
+enable = true
+cache_write_price_ratio = 1.25
+cache_hit_price_ratio = 0.1
 
 [[llm]]
 name = "llm_without_cache"
 base_url = "https://api.example.org"
 api_key = "test_key_2"
 model = "test_model_2"
-use_explicit_cache = false
 
 [[llm]]
-name = "llm_default_cache"
+name = "llm_disabled_cache"
 base_url = "https://api.example.net"
 api_key = "test_key_3"
 model = "test_model_3"
+
+[llm.explicit_cache]
+enable = false
 """
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
-            self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 3)
 
-            self.assertEqual(config.llm[0].name, "llm_with_cache")
-            self.assertEqual(config.llm[0].use_explicit_cache, True)
+            self.assertIsNotNone(config.llm[0].explicit_cache)
+            self.assertTrue(config.llm[0].explicit_cache.enable)
 
-            self.assertEqual(config.llm[1].name, "llm_without_cache")
-            self.assertEqual(config.llm[1].use_explicit_cache, False)
+            self.assertIsNone(config.llm[1].explicit_cache)
 
-            self.assertEqual(config.llm[2].name, "llm_default_cache")
-            self.assertEqual(config.llm[2].use_explicit_cache, False)
+            self.assertIsNotNone(config.llm[2].explicit_cache)
+            self.assertFalse(config.llm[2].explicit_cache.enable)
         finally:
             os.unlink(temp_file)
 
-    def test_use_explicit_cache_with_all_other_fields(self):
-        """Test use_explicit_cache works with all other LLM config fields."""
+    def test_explicit_cache_with_all_other_fields(self):
         config_content = """[[llm]]
 name = "complete_llm"
 type = "openai"
 compatibility = "kimi"
 support_image = true
-use_explicit_cache = true
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 token_limit = 8192
+
+[llm.explicit_cache]
+enable = true
+cache_write_price_ratio = 1.25
+cache_hit_price_ratio = 0.1
 
 [llm.client_options]
 timeout = 30
@@ -131,7 +190,6 @@ stream_options = { include_usage = true }
         temp_file = create_temp_config(config_content)
         try:
             config = load_config(temp_file)
-            self.assertIsInstance(config, Config)
             self.assertEqual(len(config.llm), 1)
 
             llm = config.llm[0]
@@ -139,7 +197,10 @@ stream_options = { include_usage = true }
             self.assertEqual(llm.type, "openai")
             self.assertEqual(llm.compatibility, "kimi")
             self.assertEqual(llm.support_image, True)
-            self.assertEqual(llm.use_explicit_cache, True)
+            self.assertIsNotNone(llm.explicit_cache)
+            self.assertTrue(llm.explicit_cache.enable)
+            self.assertAlmostEqual(llm.explicit_cache.cache_write_price_ratio, 1.25)
+            self.assertAlmostEqual(llm.explicit_cache.cache_hit_price_ratio, 0.1)
             self.assertEqual(llm.base_url, "https://api.example.com")
             self.assertEqual(llm.api_key, "test_key")
             self.assertEqual(llm.model, "test_model")

@@ -154,7 +154,7 @@ class TokenManager:
             empty_bars = 10 - filled_bars
             progress_bar = "█" * filled_bars + "▒" * empty_bars
             piece = f"{progress_bar} {percentage:.0f}%"
-            if llm_instance.use_explicit_cache():
+            if llm_instance.get_explicit_cache_info() is not None:
                 piece += f" ({self.explicit_cache_tokens / token_limit * 100:.0f}% {cache_symbol})"
             display_text_pieces.append(piece)
 

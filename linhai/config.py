@@ -2,13 +2,21 @@
 
 import os
 import re
-from typing import Union
+from typing import Optional, Union
 import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator
 
 from .exceptions import ConfigValidationError
+
+
+class ExplicitCacheConfig(BaseModel):
+    """显式缓存配置类型定义。"""
+
+    enable: bool
+    cache_write_price_ratio: float = Field(default=1.25)
+    cache_hit_price_ratio: float = Field(default=0.1)
 
 
 class LLMConfig(BaseModel):
@@ -18,7 +26,7 @@ class LLMConfig(BaseModel):
     type: str = Field(default="openai")
     compatibility: str = Field(default="")
     support_image: bool = Field(default=False)
-    use_explicit_cache: bool = Field(default=False)
+    explicit_cache: Optional[ExplicitCacheConfig] = None
     base_url: str
     api_key: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)

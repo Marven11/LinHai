@@ -21,6 +21,11 @@ from linhai.utils import CliRuntimeNotice
 import linhai
 
 
+class ExplicitCacheInfo(BaseModel):
+    cache_write_price_ratio: float
+    cache_hit_price_ratio: float
+
+
 @runtime_checkable
 class Message(Protocol):
     """消息协议，定义消息类的接口。"""
@@ -396,7 +401,7 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
-    def use_explicit_cache(self) -> bool:
+    def get_explicit_cache_info(self) -> ExplicitCacheInfo | None:
         raise NotImplementedError()
 
     def support_image(self) -> bool:
@@ -707,7 +712,7 @@ class OpenAi:
         openai_config: dict,
         chat_completion_kwargs: dict,
         support_image: bool,
-        use_explicit_cache: bool,
+        explicit_cache_info: ExplicitCacheInfo | None,
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
@@ -741,13 +746,13 @@ class OpenAi:
         self.previous_input_tokens: int | None = None
         self._minimax_warning_sent: bool = False
         self._support_image = support_image
-        self._use_explicit_cache = use_explicit_cache
+        self._explicit_cache_info = explicit_cache_info
 
     def support_image(self):
         return self._support_image
 
-    def use_explicit_cache(self):
-        return self._use_explicit_cache
+    def get_explicit_cache_info(self) -> ExplicitCacheInfo | None:
+        return self._explicit_cache_info
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。

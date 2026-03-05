@@ -46,9 +46,10 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
         # 注册llm_manager（mock），用于is_explicit_cache_enabled
         from linhai.llm_manager import LlmManager
+
         mock_llm_manager = create_autospec(LlmManager, instance=True)
         mock_llm = MagicMock()
-        mock_llm.use_explicit_cache = MagicMock(return_value=False)
+        mock_llm.get_explicit_cache_info = MagicMock(return_value=None)
         mock_llm_manager.get_current_llm = MagicMock(return_value=mock_llm)
         group_chat.register_member("llm_manager", mock_llm_manager)
 

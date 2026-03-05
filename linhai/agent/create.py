@@ -172,6 +172,17 @@ async def create_agent_from_config(
     return agent
 
 
+def _build_explicit_cache_info(llm_config):
+    from linhai.llm import ExplicitCacheInfo
+
+    if llm_config.explicit_cache is None or not llm_config.explicit_cache.enable:
+        return None
+    return ExplicitCacheInfo(
+        cache_write_price_ratio=llm_config.explicit_cache.cache_write_price_ratio,
+        cache_hit_price_ratio=llm_config.explicit_cache.cache_hit_price_ratio,
+    )
+
+
 async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
     llms = []
@@ -187,7 +198,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
             compatibility=llm_config.compatibility,
             name=llm_config.name,
             support_image=llm_config.support_image,
-            use_explicit_cache=llm_config.use_explicit_cache
+            explicit_cache_info=_build_explicit_cache_info(llm_config),
         )
         llms.append(llm)
 

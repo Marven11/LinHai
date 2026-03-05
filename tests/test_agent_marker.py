@@ -68,7 +68,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock()
         self.mock_llm.get_name = MagicMock(return_value="test-llm")
-        self.mock_llm.use_explicit_cache = MagicMock(return_value=False)
+        self.mock_llm.get_explicit_cache_info = MagicMock(return_value=None)
 
         config = {
             "llms": [self.mock_llm],
@@ -157,6 +157,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         )
 
         from linhai.token_manager import TokenManager
+
         self.token_manager = MagicMock()
         self.token_manager.current_token_usage = None
 
