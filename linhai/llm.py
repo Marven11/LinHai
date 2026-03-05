@@ -395,6 +395,9 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
+    def use_explicit_cache(self) -> bool:
+        raise NotImplementedError()
+
     def support_image(self) -> bool:
         raise NotImplementedError()
 
@@ -458,6 +461,11 @@ class OpenAiAnswer:
                 self.input_tokens = (
                     usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
                 )
+                cached_input_tokens = getattr(
+                    getattr(usage, "prompt_tokens_details", None), "cached_tokens", None
+                )
+                if cached_input_tokens:
+                    self.cached_input_tokens = cached_input_tokens
 
                 self.output_tokens = (
                     usage.completion_tokens
@@ -685,6 +693,7 @@ class OpenAi:
         openai_config: dict,
         chat_completion_kwargs: dict,
         support_image: bool,
+        use_explicit_cache: bool,
         tools: list[dict] | None = None,
         token_limit: int | None = None,
         compatibility: str | None = None,
@@ -718,9 +727,13 @@ class OpenAi:
         self.previous_input_tokens: int | None = None
         self._minimax_warning_sent: bool = False
         self._support_image = support_image
+        self._use_explicit_cache = use_explicit_cache
 
     def support_image(self):
         return self._support_image
+
+    def use_explicit_cache(self):
+        return self._use_explicit_cache
 
     def get_token_limit(self) -> int | None:
         """获取当前LLM的token限制。

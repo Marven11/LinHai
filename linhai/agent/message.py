@@ -1,17 +1,29 @@
 """基础消息管理模块，负责管理Agent的基础消息队列和处理逻辑。"""
 
-import datetime
 import json
 from pathlib import Path
 from typing import List, Optional, Sequence, TypedDict
 
 from linhai.group_chat import GroupChat
 from linhai.input_parser import parse_user_input
-from linhai.llm import UserMessage
+from linhai.llm import UserMessage, Answer
 from linhai.utils import CliRuntimeNotice
 from linhai.agent.conversation import save_context
+from linhai.type_hints import ChatCompletionContentPartTextParam
 
-from .base import Message, RuntimeMessage
+
+from .base import (
+    Message,
+    RuntimeMessage,
+    LanguageModelMessage,
+)
+
+
+# qwen3.5的每百万Token价格，用来估算什么时候更新缓存点
+INPUT_TOKEN_PRICE_RMB = 0.8
+OUTPUT_TOKEN_PRICE_RMB = 4.8
+CACHED_INPUT_PRICE_RMB = 0.8 * 0.1
+CACHED_WRITE_PRICE_RMB = 0.8 * 1.25
 
 
 class NotificationMessageEntry(TypedDict):
@@ -22,10 +34,36 @@ class NotificationMessageEntry(TypedDict):
     sort_value: int
 
 
+class ExplicitCacheMessage(Message):
+    def __init__(self, text: str):
+        self.text = text
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        text_block: ChatCompletionContentPartTextParam = {
+            "type": "text",
+            "text": self.text,
+            "cache_control": {"type": "ephemeral"},
+        }
+        return {"role": "user", "content": [text_block]}
+
+    def to_json(self) -> str:
+        return json.dumps({"text": self.text})
+
+    @classmethod
+    def from_json(cls, json_str: str, group_chat: GroupChat):
+        _ = group_chat
+        data = json.loads(json_str)
+        return cls(text=data["text"])
+
+
 class AgentMessage:
     """基础消息管理器，负责管理基础消息队列和相关操作。"""
 
-    def __init__(self, group_chat: GroupChat, pinned_messages: Sequence[Message]):
+    def __init__(
+        self,
+        group_chat: GroupChat,
+        pinned_messages: Sequence[Message],
+    ):
         """初始化基础消息管理器。
 
         Args:
@@ -38,8 +76,34 @@ class AgentMessage:
         self.messages: List[Message] = []
         self.notification_messages: dict[str, NotificationMessageEntry] = {}
         self.queued_messages: List[Message] = []
+        self.explicit_cache_anchor = None
+        self.group_chat.add_postinit(self.postinit)
 
-        self.cache_invalidate_count = 0
+    def postinit(self):
+        from .lifecycle import Lifecycle
+
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+    async def after_message_generation(self, answer: Answer, full_response, tool_calls):
+        token_usage = answer.get_token_usage()
+        if token_usage is None:
+            return
+        # 可是这里的cached_input_tokens是根据隐式缓存估算的，这样估算合适吗？
+        cached_input_tokens = (
+            token_usage.cached_input_tokens if token_usage.cached_input_tokens else 0
+        )
+        spending_with_old_cache = (
+            cached_input_tokens * CACHED_INPUT_PRICE_RMB
+            + (token_usage.input_tokens - cached_input_tokens) * INPUT_TOKEN_PRICE_RMB
+        )
+        spending_with_new_cache = token_usage.input_tokens * CACHED_INPUT_PRICE_RMB
+        if (
+            spending_with_old_cache * 10
+            > spending_with_new_cache * 10
+            + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
+        ):
+            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
 
     async def handle_user_message(self, msg: UserMessage) -> None:
         """处理用户消息。
@@ -59,9 +123,14 @@ class AgentMessage:
         await self.add_new_message(msg)
 
     async def count_invalidate_cache(self):
-        interrupt_msg = CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
-        self.cache_invalidate_count += 1
-        await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+        """标记当前缓存失效
+
+        在使用隐式缓存时什么都不做，在使用显式缓存时清除缓存点并提醒用户"""
+        if self.explicit_cache_anchor is not None:
+            self.explicit_cache_anchor = None
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
+            )
 
     async def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
@@ -80,6 +149,36 @@ class AgentMessage:
         self.messages.append(processed_message)
         self._save_context()
 
+    def is_explicit_cache_enabled(self) -> bool:
+        from ..llm_manager import LlmManager
+
+        llm_manager = self.group_chat.get_member_typechecked("llm_manager", LlmManager)
+        return llm_manager.get_current_llm().use_explicit_cache()
+
+    def calculate_explicit_cache_anchor(self) -> Optional[int]:
+        msgs = self.pinned_messages + self.messages
+        for explicit_cache_anchor in range(len(msgs) - 1, -1, -1):
+            msg = msgs[explicit_cache_anchor]
+            llm_msg = msg.to_llm_message()
+            if (
+                llm_msg["role"] == "user"
+                and isinstance(llm_msg["content"], str)
+                and set(llm_msg.keys()) == {"role", "content"}
+            ):
+                return explicit_cache_anchor
+        return None
+
+    def mark_explicit_cache_savepoint(self, msgs: list[Message]) -> list[Message]:
+        if self.explicit_cache_anchor is None:
+            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+        if self.explicit_cache_anchor is None:
+            return msgs
+        msgs = msgs.copy()
+        content = msgs[self.explicit_cache_anchor].to_llm_message().get("content")
+        assert isinstance(content, str)
+        msgs[self.explicit_cache_anchor] = ExplicitCacheMessage(content)
+        return msgs
+
     def get_messages(self) -> List[Message]:
         """获取当前所有消息（包括pinned_messages和notification_messages）。
 
@@ -90,7 +189,10 @@ class AgentMessage:
             self.notification_messages.values(), key=lambda x: x["sort_value"]
         )
         notification_messages = [entry["message"] for entry in sorted_entries]
-        return self.pinned_messages + self.messages + notification_messages
+        messages = self.pinned_messages + self.messages + notification_messages
+        if self.is_explicit_cache_enabled():
+            messages = self.mark_explicit_cache_savepoint(messages)
+        return messages
 
     def get_message_count(self) -> int:
         """获取当前普通消息数量（不包括pinned_messages和notification_messages）。

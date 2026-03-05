@@ -62,7 +62,7 @@ class Agent:
         )
         self.toolcall_processor = AgentToolcall(self, max_toolcall_token_in_round)
 
-        range_clean_manager = RangeCleanManager(group_chat)
+        self.range_clean_manager = RangeCleanManager(group_chat)
 
         self.last_token_usage = None
         self.current_enable_compress = True

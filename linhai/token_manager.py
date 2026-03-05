@@ -18,6 +18,7 @@ class TokenManager:
         group_chat.register_member("token_manager", self)
         self.current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
+        self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
 
     def mark_dirty(self) -> None:
@@ -41,6 +42,8 @@ class TokenManager:
             self.cumulative_token_usage["cached_input_tokens"] += (
                 token_usage.cached_input_tokens or 0
             )
+            if token_usage.cached_input_tokens is not None:
+                self.explicit_cache_tokens = token_usage.cached_input_tokens
 
     def _format_token_number(self, number: int) -> str:
         """Format a large number with k, m, etc. suffixes."""
@@ -76,6 +79,7 @@ class TokenManager:
         input_tokens = self.cumulative_token_usage["input_tokens"]
         output_tokens = self.cumulative_token_usage["output_tokens"]
         cached_input_tokens = self.cumulative_token_usage["cached_input_tokens"]
+        _llm_name, llm_instance = agent.get_current_llm_info()
 
         if self.current_token_usage is not None:
             input_tokens += self.current_token_usage.input_tokens
@@ -83,17 +87,16 @@ class TokenManager:
             current_cache = self.current_token_usage.cached_input_tokens or 0
             cached_input_tokens += current_cache
 
-        _llm_name, llm_instance = agent.get_current_llm_info()
         token_limit = llm_instance.get_token_limit()
 
         msg_pieces = agent.orchestration.get_status_display_pieces(use_nerd_font)
 
         if use_nerd_font:
-            cache_symbol = " \uf49b "
+            cache_symbol = "\uf49b "
             in_symbol = "\uf063 "
             out_symbol = "\uf062 "
         else:
-            cache_symbol = " cached"
+            cache_symbol = "cached"
             in_symbol = " in "
             out_symbol = " out "
 
@@ -103,7 +106,7 @@ class TokenManager:
         if input_tokens > 0 and cached_input_tokens > 0:
             cache_percentage = int((cached_input_tokens / input_tokens) * 100)
             display_text_pieces.append(
-                f"{in_symbol}{self._format_token_number(input_tokens)}(~{cache_percentage}%{cache_symbol})"
+                f"{in_symbol}{self._format_token_number(input_tokens)}(~{cache_percentage}% {cache_symbol})"
             )
         else:
             display_text_pieces.append(
@@ -120,6 +123,9 @@ class TokenManager:
             filled_bars = int(percentage / 10)
             empty_bars = 10 - filled_bars
             progress_bar = "█" * filled_bars + "▒" * empty_bars
-            display_text_pieces.append(f"{progress_bar} {percentage:.0f}%")
+            piece = f"{progress_bar} {percentage:.0f}%"
+            if llm_instance.use_explicit_cache():
+                piece += f" ({self.explicit_cache_tokens / token_limit * 100:.0f}% {cache_symbol})"
+            display_text_pieces.append(piece)
 
         return display_text_pieces

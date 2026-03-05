@@ -187,6 +187,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
             compatibility=llm_config.compatibility,
             name=llm_config.name,
             support_image=llm_config.support_image,
+            use_explicit_cache=llm_config.use_explicit_cache
         )
         llms.append(llm)
 

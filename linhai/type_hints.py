@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 from typing import Union, Optional, Iterable, TypedDict, Literal
-from typing_extensions import Required, TypeAlias
+from typing_extensions import Required, TypeAlias, NotRequired
 
 AgentState = Literal["waiting_user", "working"]
 
@@ -16,13 +16,7 @@ class ChatCompletionContentPartTextParam(TypedDict):
 
     text: Required[str]
     type: Required[Literal["text"]]
-
-
-class ChatCompletionContentPartParam(TypedDict):
-    """Parameters for content part in chat completion."""
-
-    text: Required[str]
-    type: Required[Literal["text"]]
+    cache_control: NotRequired[dict]
 
 
 class ChatCompletionMessageToolCallParam(TypedDict):
@@ -33,33 +27,33 @@ class ChatCompletionMessageToolCallParam(TypedDict):
     type: Required[Literal["function"]]
 
 
-class Audio(TypedDict, total=False):
+class Audio(TypedDict):
     """Audio data type definition."""
 
     id: Required[str]
 
 
-class FunctionCall(TypedDict, total=False):
+class FunctionCall(TypedDict):
     """Function call type definition."""
 
     arguments: Required[str]
     name: Required[str]
 
 
-class SystemMessage(TypedDict, total=False):
+class SystemMessage(TypedDict):
     """System message type definition."""
 
     role: Required[Literal["system"]]
     content: str
-    name: str
+    name: NotRequired[str]
 
 
-class UserMessage(TypedDict, total=False):
+class UserMessage(TypedDict):
     """User message type definition."""
 
     role: Required[Literal["user"]]
     content: str
-    name: str
+    name: NotRequired[str]
 
 
 class ChatCompletionContentPartImageParam(TypedDict):
@@ -69,22 +63,30 @@ class ChatCompletionContentPartImageParam(TypedDict):
     image_url: Required[dict]
 
 
-class UserMultiModalMessage(TypedDict, total=False):
+class UserMultiModalMessage(TypedDict):
     """User multimodal message type definition, supports text and image content."""
 
     role: Required[Literal["user"]]
     content: list[
         ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam
     ]
-    name: str
+    name: NotRequired[str]
 
+class UserExplicitCacheMessage(TypedDict):
+    """User multimodal message type definition, supports text and image content."""
 
-class AssistantMessage(TypedDict, total=False):
+    role: Required[Literal["user"]]
+    content: list[
+        ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam
+    ]
+    name: NotRequired[str]
+
+class AssistantMessage(TypedDict):
     """Assistant message type definition."""
 
     role: Required[Literal["assistant"]]
     content: str
-    name: str
+    name: NotRequired[str]
     tool_calls: Iterable[ChatCompletionMessageToolCallParam]
     function_call: Optional[FunctionCall]
     audio: Optional[Audio]
