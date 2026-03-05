@@ -120,6 +120,9 @@ class AgentMessage:
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
         ):
             self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
+            )
 
     async def handle_user_message(self, msg: UserMessage) -> None:
         """处理用户消息。
@@ -143,10 +146,10 @@ class AgentMessage:
 
         在使用隐式缓存时什么都不做，在使用显式缓存时清除缓存点并提醒用户"""
         if self.explicit_cache_anchor is not None:
-            self.explicit_cache_anchor = None
             await self.group_chat.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="WARNING", content="消息缓存失效！")
+                "ui_log", CliRuntimeNotice(level="WARNING", content="上下文缓存失效！")
             )
+            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
 
     async def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
@@ -157,6 +160,12 @@ class AgentMessage:
             msg: 要添加的消息
         """
         from .lifecycle import Lifecycle
+
+        if self.explicit_cache_anchor is None:
+            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
+            )
 
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         processed_message = await lifecycle.trigger_before_add_new_message(msg)
@@ -185,8 +194,6 @@ class AgentMessage:
         return None
 
     def mark_explicit_cache_savepoint(self, msgs: list[Message]) -> list[Message]:
-        if self.explicit_cache_anchor is None:
-            self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
         if self.explicit_cache_anchor is None:
             return msgs
         msgs = msgs.copy()
