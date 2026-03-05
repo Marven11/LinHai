@@ -40,6 +40,17 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
+- [ ] 修改显式缓存价格的配置
+  - 我们发现每个LLM的显式缓存价格都不同
+    - GLM5: 未缓存输入token: 4元/MTokens; 缓存命中输入token:  1元/MTokens; 缓存写入输入token: 免费
+      - 为了避免DDoS GLM，我们将缓存写入输入token也视为1元/MTokens
+    - qwen3.5 plus: 未缓存输入token: 0.8元/MTokens; 缓存命中输入token:  0.08元/MTokens; 缓存写入输入token: 元/MTokens
+  - 修改配置
+    - 去除use_explicit_cache，为llm添加可选的explicit_cache配置项
+      - 包含三个配置项：enable（如果有这个配置项则必填）、缓存写入的价格相对于未缓存为多少、缓存命中相对于未缓存为多少
+    - 去除LanguageModel的use_explicit_cache函数，加上get_explicit_cache_info函数，在未开启explicit_cache时返回None，开启时返回配置的价格信息
+    - 让message.py使用get_explicit_cache_info而不是预先配置的价格
+    - 编写对应测试，清理对应代码
 - [ ] 添加初始化配置的功能
   - 用户运行python -m linhai init可以打开初始化TUI页面，可以设置第一个llm的openai的base_url, api_key等
   - 参考https://github.com/Textualize/textual/blob/main/examples/calculator.py
