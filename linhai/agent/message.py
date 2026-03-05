@@ -71,6 +71,7 @@ class AgentMessage:
         self.queued_messages: List[Message] = []
         self.explicit_cache_anchors: list[int] = []
         self.group_chat.add_postinit(self.postinit)
+        self.is_anchor_updated = False
 
     def postinit(self):
         from .lifecycle import Lifecycle
@@ -79,6 +80,8 @@ class AgentMessage:
         lifecycle.register_after_message_generation(self.after_message_generation)
 
     async def after_message_generation(self, answer: Answer, full_response, tool_calls):
+        is_anchor_updated = self.is_anchor_updated
+        self.is_anchor_updated = False
         token_usage = answer.get_token_usage()
         if token_usage is None:
             return
@@ -121,7 +124,8 @@ class AgentMessage:
             spending_with_old_cache * estimated_cache_refresh_factor
             > spending_with_new_cache * estimated_cache_refresh_factor
             + token_usage.input_tokens * cache_info.cache_write_price_ratio
-        ) and not token_usage.cache_creation_input_tokens:
+        ) and not is_anchor_updated:
+            self.is_anchor_updated = True
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None and anchor not in self.explicit_cache_anchors:
                 self.explicit_cache_anchors.append(anchor)
