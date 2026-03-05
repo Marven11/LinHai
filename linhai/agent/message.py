@@ -99,8 +99,8 @@ class AgentMessage:
         )
         spending_with_new_cache = token_usage.input_tokens * CACHED_INPUT_PRICE_RMB
         if (
-            spending_with_old_cache * 10
-            > spending_with_new_cache * 10
+            spending_with_old_cache * 5
+            > spending_with_new_cache * 5
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
         ):
             self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
