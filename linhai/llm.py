@@ -470,6 +470,13 @@ class OpenAiAnswer:
                     "cache_creation_input_tokens",
                     None,
                 )
+                if cache_creation_input_tokens is None:
+                    # for openrouter
+                    cache_creation_input_tokens = getattr(
+                        getattr(usage, "prompt_tokens_details", None),
+                        "cache_write_tokens",
+                        None,
+                    )
                 if cached_input_tokens:
                     self.cached_input_tokens = cached_input_tokens
 
