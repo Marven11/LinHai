@@ -445,15 +445,11 @@ class AgentToolcall:
             if isinstance(tool_result, ToolCallResultMessage) and isinstance(
                 tool_result.result, ToolResultFailed
             ):
-
-                llm_msg = tool_result.to_llm_message()
-                assert "content" in llm_msg
-                formatted_content = _extract_text_content(llm_msg["content"])
                 await self.agent.lifecycle.trigger_after_toolcall(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
-                    message=RuntimeMessage(formatted_content),
+                    message=tool_result,
                     toolcall_arguments=tool_call.function_arguments,
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,

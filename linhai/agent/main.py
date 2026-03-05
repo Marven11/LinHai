@@ -264,10 +264,8 @@ class Agent:
             from linhai.llm import AssistantMessage
 
             if isinstance(last_msg, AssistantMessage):
-                llm_msg = last_msg.to_llm_message()
-                if llm_msg.get("role") == "assistant":
-                    empty_user_msg = RuntimeMessage("继续")
-                    await self.message_processor.add_new_message(empty_user_msg)
+                empty_user_msg = RuntimeMessage("继续")
+                await self.message_processor.add_new_message(empty_user_msg)
 
         self.current_enable_compress = enable_compress
         self.current_disable_waiting_user_warning = disable_waiting_user_warning
