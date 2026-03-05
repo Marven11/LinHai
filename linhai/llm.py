@@ -307,6 +307,7 @@ class AnswerTokenUsage(BaseModel):
     output_tokens: int
     total_tokens: int
     cached_input_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
 
 
 @runtime_checkable
@@ -464,6 +465,11 @@ class OpenAiAnswer:
                 cached_input_tokens = getattr(
                     getattr(usage, "prompt_tokens_details", None), "cached_tokens", None
                 )
+                cache_creation_input_tokens = getattr(
+                    getattr(usage, "prompt_tokens_details", None),
+                    "cache_creation_input_tokens",
+                    None,
+                )
                 if cached_input_tokens:
                     self.cached_input_tokens = cached_input_tokens
 
@@ -485,6 +491,7 @@ class OpenAiAnswer:
                         output_tokens=self.output_tokens,
                         total_tokens=self.total_tokens,
                         cached_input_tokens=self.cached_input_tokens,
+                        cache_creation_input_tokens=cache_creation_input_tokens,
                     ),
                 )
             if len(chunk.choices) == 0:

@@ -34,6 +34,11 @@ class TokenManager:
                 "output_tokens": token_usage.output_tokens,
                 "total_tokens": token_usage.total_tokens,
                 "cached_input_tokens": token_usage.cached_input_tokens or 0,
+                "cache_creation_input_tokens": (
+                    token_usage.cache_creation_input_tokens
+                    if token_usage.cache_creation_input_tokens
+                    else 0
+                ),
             }
         else:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens
@@ -41,6 +46,9 @@ class TokenManager:
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
             self.cumulative_token_usage["cached_input_tokens"] += (
                 token_usage.cached_input_tokens or 0
+            )
+            self.cumulative_token_usage["cache_creation_input_tokens"] += (
+                token_usage.cache_creation_input_tokens or 0
             )
             if token_usage.cached_input_tokens is not None:
                 self.explicit_cache_tokens = token_usage.cached_input_tokens

@@ -89,6 +89,22 @@ class AgentMessage:
         token_usage = answer.get_token_usage()
         if token_usage is None:
             return
+
+        from ..token_manager import TokenManager
+
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        if (
+            token_manager.cumulative_token_usage
+            and token_manager.cumulative_token_usage["cache_creation_input_tokens"]
+        ):
+            estimated_cache_refresh_factor = (
+                token_manager.cumulative_token_usage["cached_input_tokens"]
+                / token_manager.cumulative_token_usage["cache_creation_input_tokens"]
+            )
+        else:
+            estimated_cache_refresh_factor = 5
         # 可是这里的cached_input_tokens是根据隐式缓存估算的，这样估算合适吗？
         cached_input_tokens = (
             token_usage.cached_input_tokens if token_usage.cached_input_tokens else 0
@@ -99,8 +115,8 @@ class AgentMessage:
         )
         spending_with_new_cache = token_usage.input_tokens * CACHED_INPUT_PRICE_RMB
         if (
-            spending_with_old_cache * 5
-            > spending_with_new_cache * 5
+            spending_with_old_cache * estimated_cache_refresh_factor
+            > spending_with_new_cache * estimated_cache_refresh_factor
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
         ):
             self.explicit_cache_anchor = self.calculate_explicit_cache_anchor()
