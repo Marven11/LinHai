@@ -72,6 +72,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             compatibility=None,
             estimated_cached_input_tokens=100,
+            llm_instance=None,
         )
 
         # 模拟stream返回带有usage的chunk
@@ -81,11 +82,15 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             content="test content",
             reasoning_content="",  # 设置为空字符串以避免AssertionError
         )
-        mock_chunk.usage = MagicMock(
+        mock_usage = MagicMock(
             prompt_tokens=50,
             completion_tokens=20,
             total_tokens=70,
         )
+        # 设置prompt_tokens_details.cached_tokens为None，避免覆盖estimated_cached_input_tokens
+        mock_usage.prompt_tokens_details = MagicMock()
+        mock_usage.prompt_tokens_details.cached_tokens = None
+        mock_chunk.usage = mock_usage
 
         # 设置stream的返回值
         self.mock_stream.__anext__.return_value = mock_chunk

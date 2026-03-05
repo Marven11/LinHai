@@ -87,6 +87,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         # 配置mock对象的get_name方法
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
+        self.mock_llm.use_explicit_cache = MagicMock(return_value=False)
 
         from linhai.llm_manager import LlmManager
 

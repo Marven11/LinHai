@@ -68,6 +68,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock()
         self.mock_llm.get_name = MagicMock(return_value="test-llm")
+        self.mock_llm.use_explicit_cache = MagicMock(return_value=False)
 
         config = {
             "llms": [self.mock_llm],
@@ -131,6 +132,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 import argparse
 
                 return argparse.Namespace(afk=False)
+            elif member_type == "llm_manager":
+                return llm_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_member_typechecked.side_effect = (

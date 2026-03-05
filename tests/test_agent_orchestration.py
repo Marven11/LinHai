@@ -37,6 +37,14 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.is_dirty = False
         self.group_chat.register_member("token_manager", mock_token_manager)
 
+        # 注册一个mock的llm_manager，因为is_explicit_cache_enabled需要它
+        from linhai.llm_manager import LlmManager
+        mock_llm_manager = Mock(spec=LlmManager)
+        mock_llm = Mock()
+        mock_llm.use_explicit_cache = Mock(return_value=False)
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        self.group_chat.register_member("llm_manager", mock_llm_manager)
+
         # 注册conversation_folder，因为AgentMessage._save_context需要它
         from pathlib import Path
         from tempfile import TemporaryDirectory

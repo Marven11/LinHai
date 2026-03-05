@@ -120,6 +120,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
         self.mock_llm.get_name = MagicMock(return_value="test_llm")
+        self.mock_llm.use_explicit_cache = MagicMock(return_value=False)
 
         # 创建LlmManager实例而不是直接传递llms列表
         from linhai.llm_manager import LlmManager

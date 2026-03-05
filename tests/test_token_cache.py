@@ -21,6 +21,7 @@ class TestTokenCache(unittest.TestCase):
             chat_completion_kwargs={},
             name="test-llm",
             support_image=False,
+            use_explicit_cache=False,
         )
 
     def test_calculate_cache_estimation(self):

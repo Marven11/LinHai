@@ -44,6 +44,14 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.count_invalidate_cache = AsyncMock(return_value=None)
         group_chat.register_member("token_manager", mock_token_manager)
 
+        # 注册llm_manager（mock），用于is_explicit_cache_enabled
+        from linhai.llm_manager import LlmManager
+        mock_llm_manager = create_autospec(LlmManager, instance=True)
+        mock_llm = MagicMock()
+        mock_llm.use_explicit_cache = MagicMock(return_value=False)
+        mock_llm_manager.get_current_llm = MagicMock(return_value=mock_llm)
+        group_chat.register_member("llm_manager", mock_llm_manager)
+
         # 创建SystemMessage，它应该使用我们已注册的mock对象
         system_message = SystemMessage(
             group_chat=group_chat,

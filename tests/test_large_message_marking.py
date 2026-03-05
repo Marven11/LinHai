@@ -37,6 +37,14 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         mock_token_manager.cumulative_token_usage = None
         self.group_chat.register_member("token_manager", mock_token_manager)
 
+        # 注册llm_manager（mock），用于is_explicit_cache_enabled
+        from linhai.llm_manager import LlmManager
+        mock_llm_manager = Mock(spec=LlmManager)
+        mock_llm = Mock()
+        mock_llm.use_explicit_cache = Mock(return_value=False)
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
+        self.group_chat.register_member("llm_manager", mock_llm_manager)
+
         from pathlib import Path
         import tempfile
 
