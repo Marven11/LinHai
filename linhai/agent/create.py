@@ -169,6 +169,11 @@ async def create_agent_from_config(
 
         ClawPlugin(context["group_chat"], context["cli_args"]).register(agent.lifecycle)
 
+    if not context["cli_args"].disable_waiting_marker:
+        from linhai.plugin.message_checkers import WaitingUserPlugin
+        WaitingUserPlugin(context["group_chat"]).register(agent.lifecycle)
+
+
     return agent
 
 

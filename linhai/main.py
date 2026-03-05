@@ -95,7 +95,12 @@ def main():
     parser.add_argument(
         "--afk",
         action="store_true",
-        help="关闭 #LINHAI_WAITING_USER 功能",
+        help="禁止Agent使用....暂停",
+    )
+    parser.add_argument(
+        "--disable-waiting-marker",
+        action="store_true",
+        help="临时关闭出现 #LINHAI_WAITING_USER 才暂停的功能",
     )
     parser.add_argument(
         "--claw",

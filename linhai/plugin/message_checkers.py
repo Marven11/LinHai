@@ -1,6 +1,7 @@
 """消息生成检查插件。"""
 
 import re
+import argparse
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List

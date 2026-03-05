@@ -131,7 +131,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             elif member_type == "cli_args":
                 import argparse
 
-                return argparse.Namespace(afk=False)
+                return argparse.Namespace(afk=False, disable_waiting_marker=False)
             elif member_type == "llm_manager":
                 return llm_manager
             elif member_type == "token_manager":
@@ -183,7 +183,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            5,  # System + user + assistant + error msg + possible RuntimeMessage
+            4,  # System + user + assistant + error msg
             format_messages_for_assert(messages),
         )
         error_msgs = [
@@ -225,7 +225,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            6,  # System + user + assistant + tool msg + assistant + error msg
+            5,  # System + user + assistant + tool msg + error msg
             format_messages_for_assert(messages),
         )
         error_msgs = [
@@ -257,7 +257,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         messages = self.agent.message_processor.get_messages()
         self.assertEqual(
             len(messages),
-            5,  # System + user + assistant + warning msg + possible RuntimeMessage
+            4,  # System + user + assistant + warning msg
             format_messages_for_assert(messages),
         )
         warning_msgs = [

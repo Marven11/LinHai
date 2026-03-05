@@ -128,7 +128,6 @@ class Lifecycle:
     def _register_default_plugins(self):
         """注册默认的Plugin。"""
         from linhai.plugin import (
-            WaitingUserPlugin,
             WrongEndPlugin,
             PromptFastAgentPlugin,
             SlowStartPlugin,
@@ -151,7 +150,6 @@ class Lifecycle:
         from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
         plugins = [
-            WaitingUserPlugin(self.group_chat),
             WrongEndPlugin(self.group_chat),
             PromptFastAgentPlugin(self.group_chat),
             SlowStartPlugin(self.group_chat),
