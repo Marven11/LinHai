@@ -71,7 +71,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             stream=self.mock_stream,
             group_chat=self.group_chat,
             compatibility=None,
-            cached_input_tokens=100,
+            estimated_cached_input_tokens=100,
         )
 
         # 模拟stream返回带有usage的chunk

@@ -418,7 +418,7 @@ class OpenAiAnswer:
         stream,
         group_chat: linhai.group_chat.GroupChat,
         compatibility: str | None = None,
-        cached_input_tokens: int = 0,
+        estimated_cached_input_tokens: int = 0,
         llm_instance=None,
     ):
         """初始化OpenAI回答。"""
@@ -433,7 +433,7 @@ class OpenAiAnswer:
         self.input_tokens = 0
         self.output_tokens = 0
         self.group_chat = group_chat
-        self.cached_input_tokens = cached_input_tokens
+        self.cached_input_tokens = estimated_cached_input_tokens
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken] = []
 
@@ -826,9 +826,9 @@ class OpenAi:
             cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
         ]
 
-        cached_input_tokens = 0
+        estimated_cached_input_tokens = 0
         if self.previous_input_tokens is not None:
-            cached_input_tokens = self._estimate_cached_input_tokens(history)
+            estimated_cached_input_tokens = self._estimate_cached_input_tokens(history)
 
         params = {
             "model": self.model,
@@ -888,13 +888,13 @@ class OpenAi:
                                     if hasattr(usage, "total_tokens")
                                     else 0
                                 ),
-                                cached_input_tokens=cached_input_tokens,
+                                cached_input_tokens=estimated_cached_input_tokens,
                             ),
                         )
                     answer = MinimaxAnswer(
                         response,
                         group_chat=self.group_chat,
-                        cached_input_tokens=cached_input_tokens,
+                        cached_input_tokens=estimated_cached_input_tokens,
                         llm_instance=self,
                     )
                 else:
@@ -903,7 +903,7 @@ class OpenAi:
                         stream,
                         group_chat=self.group_chat,
                         compatibility=self.compatibility,
-                        cached_input_tokens=cached_input_tokens,
+                        estimated_cached_input_tokens=estimated_cached_input_tokens,
                         llm_instance=self,
                     )
                 break
