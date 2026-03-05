@@ -273,18 +273,7 @@ class RuntimeMessageWidget(Static):
     
     RuntimeMessageWidget .runtime-content {
         width: 1fr;
-    }
-    
-    RuntimeMessageWidget .runtime-content-info {
         color: $text-muted;
-    }
-    
-    RuntimeMessageWidget .runtime-content-warning {
-        color: $text;
-    }
-    
-    RuntimeMessageWidget .runtime-content-error {
-        color: $text;
     }
     """
 
