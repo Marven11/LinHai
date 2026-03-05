@@ -64,7 +64,6 @@ class Agent:
 
         self.range_clean_manager = RangeCleanManager(group_chat)
 
-        self.last_token_usage = None
         self.current_enable_compress = True
         self.soft_compress_triggered = False
 
@@ -89,7 +88,12 @@ class Agent:
                 remaining_tokens: 剩余token数
                 usage_ratio: 使用比例
         """
-        if not self.last_token_usage:
+        from ..token_manager import TokenManager
+
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        if token_manager.current_token_usage is None:
             return None
 
         current_llm = self.llm_manager.get_current_llm()
@@ -105,14 +109,15 @@ class Agent:
             else threshold_config
         )
 
+        used_tokens = token_manager.current_token_usage.total_tokens
         usage_ratio = (
-            min(self.last_token_usage / hard_limit, 1.0) if hard_limit > 0 else 0.0
+            min(used_tokens / hard_limit, 1.0) if hard_limit > 0 else 0.0
         )
-        remaining_tokens = max(hard_limit - self.last_token_usage, 0)
+        remaining_tokens = max(hard_limit - used_tokens, 0)
 
         return {
             "hard_limit": hard_limit,
-            "used_tokens": self.last_token_usage,
+            "used_tokens": used_tokens,
             "remaining_tokens": remaining_tokens,
             "usage_ratio": usage_ratio,
         }
@@ -337,8 +342,6 @@ class Agent:
                 )
                 await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
-        if isinstance(answer, OpenAiAnswer):
-            self.last_token_usage = answer.total_tokens
 
         await self.lifecycle.trigger_after_message_generation(
             answer, full_response, tool_calls

@@ -94,7 +94,6 @@ class CLIApp(App):
         self.theme = cli_config.theme
         self.group_chat = group_chat
         self.group_chat.register_queue("exit_signal")
-        self.group_chat.register_queue("token_usage")
         group_chat.register_member("cli_app", self)
 
         cli_args = group_chat.get_member_typechecked("cli_args", argparse.Namespace)
@@ -120,7 +119,7 @@ class CLIApp(App):
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
         self.watch_exit_signal_queue()
-        self.watch_token_usage_queue()
+        self.token_manager.start_watching()
 
     def compose(self) -> ComposeResult:
         """组合UI组件"""
@@ -159,7 +158,6 @@ class CLIApp(App):
             for tool_call in tool_calls
         ):
             self.token_manager.update_cumulative_usage(token_usage)
-            self.token_manager.current_token_usage = None
             self.update_token_display(token_usage.total_tokens)
 
     @work(exclusive=False)
@@ -177,17 +175,7 @@ class CLIApp(App):
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
                 )
 
-    @work(exclusive=False)
-    async def watch_token_usage_queue(self) -> None:
-        """监听token_usage队列并处理token使用信息"""
-        while True:
-            output = await self.group_chat.receive("token_usage")
-            if isinstance(output, AnswerTokenUsage):
-                self.token_manager.current_token_usage = output
-            else:
-                raise RuntimeError(
-                    f"Unknown Type in token_usage: {type(output)=} {output=}"
-                )
+
 
     @work(exclusive=False)
     async def _run_agent(self) -> None:

@@ -1,6 +1,7 @@
 """Token management logic for CLI."""
 
 from __future__ import annotations
+import asyncio
 from typing import Optional, TYPE_CHECKING
 from linhai.llm import AnswerTokenUsage
 from linhai.group_chat import GroupChat
@@ -14,16 +15,37 @@ class TokenManager:
     """Manager for token usage tracking and display."""
 
     def __init__(self, group_chat: GroupChat):
-        # 直接注册，如果重复则让代码崩溃（fail fast原则）
         group_chat.register_member("token_manager", self)
-        self.current_token_usage: Optional[AnswerTokenUsage] = None
+        group_chat.register_queue("token_usage")
+        self.group_chat = group_chat
+        self._current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
+        self._watch_task = None
+
+    @property
+    def current_token_usage(self) -> Optional[AnswerTokenUsage]:
+        return self._current_token_usage
 
     def mark_dirty(self) -> None:
         """标记token用量为失效状态，由上下文清理工具调用"""
         self.is_dirty = True
+
+    async def watch_token_usage_queue(self) -> None:
+        """监听token_usage队列并处理token使用信息"""
+        while True:
+            output = await self.group_chat.receive("token_usage")
+            if isinstance(output, AnswerTokenUsage):
+                self._current_token_usage = output
+            else:
+                raise RuntimeError(
+                    f"Unknown Type in token_usage: {type(output)=} {output=}"
+                )
+
+    def start_watching(self) -> None:
+        """启动token_usage队列监听"""
+        self._watch_task = asyncio.create_task(self.watch_token_usage_queue())
 
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""
@@ -89,10 +111,10 @@ class TokenManager:
         cached_input_tokens = self.cumulative_token_usage["cached_input_tokens"]
         _llm_name, llm_instance = agent.get_current_llm_info()
 
-        if self.current_token_usage is not None:
-            input_tokens += self.current_token_usage.input_tokens
-            output_tokens += self.current_token_usage.output_tokens
-            current_cache = self.current_token_usage.cached_input_tokens or 0
+        if self._current_token_usage is not None:
+            input_tokens += self._current_token_usage.input_tokens
+            output_tokens += self._current_token_usage.output_tokens
+            current_cache = self._current_token_usage.cached_input_tokens or 0
             cached_input_tokens += current_cache
 
         token_limit = llm_instance.get_token_limit()

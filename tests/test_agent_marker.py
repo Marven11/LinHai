@@ -134,6 +134,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return argparse.Namespace(afk=False)
             elif member_type == "llm_manager":
                 return llm_manager
+            elif member_type == "token_manager":
+                return self.token_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.group_chat.get_member_typechecked.side_effect = (
@@ -153,6 +155,10 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
         )
+
+        from linhai.token_manager import TokenManager
+        self.token_manager = MagicMock()
+        self.token_manager.current_token_usage = None
 
         self.agent = Agent(
             llm_manager=llm_manager,

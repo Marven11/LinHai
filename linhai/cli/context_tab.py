@@ -18,6 +18,7 @@ from linhai.agent.message import AgentMessage, NotificationMessageEntry
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
+from linhai.token_manager import TokenManager
 
 
 reprobj = reprlib.Repr(maxstring=60)
@@ -236,16 +237,15 @@ class ContextTabWidget(Static):
         grid.add_row("硬限制:", f"{hard}")
         grid.add_row("使用率:", progress_bar_text)
 
-        # Input and output tokens from last answer
-        if agent.last_token_usage and isinstance(
-            agent.last_token_usage, AnswerTokenUsage
-        ):
-            token_usage = agent.last_token_usage
+        token_manager = self.group_chat.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        if token_manager.current_token_usage is not None:
+            token_usage = token_manager.current_token_usage
             grid.add_row("输入token:", f"{token_usage.input_tokens}")
             grid.add_row("输出token:", f"{token_usage.output_tokens}")
             grid.add_row("总token:", f"{token_usage.total_tokens}")
 
-        # Cache tokens
         cached, cache_percentage = self._get_token_cache_info(int(used))
         if cached > 0:
             grid.add_row("缓存token:", f"{cached} (~{cache_percentage:.1f}%)")

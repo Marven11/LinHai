@@ -117,6 +117,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             mcp_basedir=Path("/tmp"),
         )
 
+        from linhai.token_manager import TokenManager
+
+        self.token_manager = TokenManager(self.group_chat)
+
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
         self.mock_llm.get_name = MagicMock(return_value="test_llm")

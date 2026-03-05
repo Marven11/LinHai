@@ -2,7 +2,7 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 当前的token用量的传递问题很大
+- [x] 当前的token用量的传递问题很大
   - app.py注册对应队列，在watch_token_usage_queue接收token usage并传给token manger - 改成让token manager自己注册并接收，清理对应代码
   - 大量代码使用agent.last_token_usage读取token用量
     - 完全清理last_token_usage的使用，清理完后搜索last_token_usage检查

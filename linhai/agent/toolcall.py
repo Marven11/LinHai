@@ -144,8 +144,13 @@ class AgentToolcall:
             required_args=[],
         )
         def get_token_usage() -> str:
-            if self.agent.last_token_usage is not None:
-                return f"当前token总用量为: {self.agent.last_token_usage} ({self.agent.last_token_usage/1000:.2f} k)"
+            from ..token_manager import TokenManager
+            token_manager = self.group_chat.get_member_typechecked(
+                "token_manager", TokenManager
+            )
+            if token_manager.cumulative_token_usage is not None:
+                total = token_manager.cumulative_token_usage["total_tokens"]
+                return f"当前token总用量为: {total} ({total/1000:.2f} k)"
             else:
                 return "暂无token用量信息"
 

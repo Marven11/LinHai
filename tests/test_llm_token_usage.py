@@ -29,7 +29,6 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.group_chat = GroupChat()
-        self.group_chat.register_queue("token_usage")
         self.group_chat.register_queue("ui_log")
 
         # Mock stream for OpenAiAnswer
@@ -66,6 +65,8 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
     async def test_openai_answer_sends_token_usage(self):
         """测试OpenAiAnswer将token usage发送到group_chat。"""
+        self.group_chat.register_queue("token_usage")
+
         # 创建OpenAiAnswer实例
         answer = OpenAiAnswer(
             stream=self.mock_stream,

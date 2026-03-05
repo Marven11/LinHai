@@ -87,10 +87,10 @@ class AssistantMessage(TypedDict):
     role: Required[Literal["assistant"]]
     content: str
     name: NotRequired[str]
-    tool_calls: Iterable[ChatCompletionMessageToolCallParam]
-    function_call: Optional[FunctionCall]
-    audio: Optional[Audio]
-    reasoning_content: str
+    tool_calls: NotRequired[Iterable[ChatCompletionMessageToolCallParam]]
+    function_call: NotRequired[Optional[FunctionCall]]
+    audio: NotRequired[Optional[Audio]]
+    reasoning_content: NotRequired[str]
 
 
 LanguageModelMessage: TypeAlias = Union[

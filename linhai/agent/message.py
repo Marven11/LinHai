@@ -118,13 +118,14 @@ class AgentMessage:
             spending_with_old_cache * estimated_cache_refresh_factor
             > spending_with_new_cache * estimated_cache_refresh_factor
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
-        ) and token_usage.cache_creation_input_tokens == 0:
+        ) and not token_usage.cache_creation_input_tokens:
             anchor = self.calculate_explicit_cache_anchor()
-            if anchor is not None:
+            if anchor is not None and anchor not in self.explicit_cache_anchors:
                 self.explicit_cache_anchors.append(anchor)
+                self.explicit_cache_anchors.sort(reverse=True)
                 self.explicit_cache_anchors = self.explicit_cache_anchors[-4:]
             await self.group_chat.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
+                "ui_log", CliRuntimeNotice(level="INFO", content="新增显式缓存")
             )
 
     async def handle_user_message(self, msg: UserMessage) -> None:

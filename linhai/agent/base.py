@@ -415,11 +415,15 @@ class SpoofedReasoningMessage(Message):
         """
 
         reasoning_content = "\n".join(self.reasoning_contents)
-        return {
-            "role": "assistant",
-            "content": "",
-            "reasoning_content": reasoning_content,
-        }
+
+        return cast(
+            LanguageModelMessage,
+            {
+                "role": "assistant",
+                "content": "",
+                "reasoning_content": reasoning_content,
+            },
+        )
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
