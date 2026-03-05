@@ -40,6 +40,24 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
+- [ ] 当前Message系统很乱
+  - 参考./MESSAGE_DESIGN.md
+  - 问题：绝大多数message都只返回静态的`{"role": "user", "content": <str>}`
+  - 问题：大量滥用to_llm_message只为了提取上面的content字符串
+  - 解决：
+    - 找到所有这么做的类，通过搜索并阅读to_llm_message实现，并记录需要修改的到DESIGN.md
+    - 为这些类写一个父类RoleContentMessage，这些类只需要设置对应的role和content即可，不需要重复实现to_llm_message等函数
+    - RoleContentMessage提供一个get_content函数提供内部的content，这样就不需要通过to_llm_message提取内容了
+    - 将滥用to_llm_message提取content的地方全部改为使用RoleContentMessage
+      - _estimate_cached_input_tokens - 忽略非RoleContentMessage的消息
+      - SecretInterceptorPlugin - 忽略非RoleContentMessage的消息
+      - AgentMessage - 忽略非RoleContentMessage的消息
+      - AgentContextOrchestration - 忽略非RoleContentMessage也非图像的消息
+      - AgentToolcall - 忽略非RoleContentMessage的消息
+      - _prepare_messages_for_compression - 忽略非RoleContentMessage的消息
+      - DuplicateFileReadPlugin - 在检查函数名后改为直接assert消息是FileContentMessage
+      - ToolManager - assert isinstance(消息, RoleContentMessage)
+      - 
 - [ ] 添加初始化配置的功能
   - 用户运行python -m linhai init可以打开初始化TUI页面，可以设置第一个llm的openai的base_url, api_key等
   - 参考https://github.com/Textualize/textual/blob/main/examples/calculator.py
