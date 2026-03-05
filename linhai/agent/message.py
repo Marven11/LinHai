@@ -118,7 +118,7 @@ class AgentMessage:
             spending_with_old_cache * estimated_cache_refresh_factor
             > spending_with_new_cache * estimated_cache_refresh_factor
             + token_usage.input_tokens * CACHED_WRITE_PRICE_RMB
-        ):
+        ) and token_usage.cache_creation_input_tokens == 0:
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None:
                 self.explicit_cache_anchors.append(anchor)
