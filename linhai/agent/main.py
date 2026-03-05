@@ -340,12 +340,12 @@ class Agent:
         if isinstance(answer, OpenAiAnswer):
             self.last_token_usage = answer.total_tokens
 
-        if self.toolcall_processor.early_return:
-            return await self.generate_response()
-
         await self.lifecycle.trigger_after_message_generation(
             answer, full_response, tool_calls
         )
+
+        if self.toolcall_processor.early_return:
+            return await self.generate_response()
 
         self.current_answer = None
         return answer
