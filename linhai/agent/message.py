@@ -100,8 +100,10 @@ class AgentMessage:
             and token_manager.cumulative_token_usage["cache_creation_input_tokens"]
         ):
             estimated_cache_refresh_factor = (
-                token_manager.cumulative_token_usage["cached_input_tokens"]
-                / token_manager.cumulative_token_usage["cache_creation_input_tokens"]
+                token_manager.cumulative_token_usage["cached_input_tokens"] + 50_0000
+            ) / (
+                token_manager.cumulative_token_usage["cache_creation_input_tokens"]
+                + 10_0000
             )
         else:
             estimated_cache_refresh_factor = 5
@@ -125,7 +127,11 @@ class AgentMessage:
                 self.explicit_cache_anchors.sort(reverse=True)
                 self.explicit_cache_anchors = self.explicit_cache_anchors[-4:]
             await self.group_chat.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="新增显式缓存")
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content="新增显式缓存",
+                ),
             )
 
     async def handle_user_message(self, msg: UserMessage) -> None:
