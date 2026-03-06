@@ -40,6 +40,20 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
+- [ ] 改进context_forget_large_message
+  - 当前问题:
+    - agent会进入“上下文满 - 清理大消息 - 重新阅读文件 - 上下文满”的循环
+    - 根本原因是context_forget_large_message会清理最近阅读的消息
+  - 改进
+    - 给AgentMessage加上一个find_message函数，返回message的index或者None
+    - 给linhai/agent/orchestration.py加上一个get_cleanable_large_messages函数
+      - 函数忽略最近添加的大消息，如果大消息在messages列表最后20条则忽略
+    - 在context_forget_large_message中
+      - 使用get_cleanable_large_messages获得所有大消息
+      - 清理完毕后不直接清空大消息而是只移除已经被清理的大消息
+  - 测试
+    - 如果有100条消息，其中有4个大消息分别在第25, 50, 75, 100个的位置，则最后一个不被清理
+    - 如果有100条消息，其中有4个大消息分别在第25, 50, 90, 100个的位置，则最后两个不被清理
 - [ ] 当前Message系统很乱
   - 参考./MESSAGE_DESIGN.md
   - 问题：绝大多数message都只返回静态的`{"role": "user", "content": <str>}`
