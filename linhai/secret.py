@@ -245,15 +245,17 @@ class SecretInterceptorPlugin:
         for key in with_secret:
             cleaned_key = key
             if key.startswith("<$") and key.endswith("$>"):
-                raise KeyError(
-                    f"Secret键 '{key}' 未找到，请使用 'KEY' 而不是 '<$KEY$>' 格式"
+                return ToolResultFailed(
+                    content=f"Secret键 '{key}' 未找到，请使用 'KEY' 而不是 '<$KEY$>' 格式"
                 )
             cleaned_keys.append(cleaned_key)
             if cleaned_key not in self.secrets_dict:
-                raise KeyError(f"Secret键 '{key}' 未找到")
+                return ToolResultFailed(content=f"Secret键 '{key}' 未找到")
             secret_info = self.secrets_dict[cleaned_key]
             if secret_info["disabled_in_toolcall_argument"]:
-                raise KeyError(f"Secret键 '{key}' 被禁止在工具调用参数中使用")
+                return ToolResultFailed(
+                    content=f"Secret键 '{key}' 被禁止在工具调用参数中使用"
+                )
 
         return replace_secrets_in_object(
             toolcall_arguments, self.secrets_dict, cleaned_keys

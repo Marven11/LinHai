@@ -592,46 +592,46 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_before_tool_call_secret_not_found(self):
-        """测试：如果指定了with_secret但是其中的secret没有找到，报错找不到secret"""
+        """测试：如果指定了with_secret但是其中的secret没有找到，返回ToolResultFailed"""
         import asyncio
+        from linhai.tool.base import ToolResultFailed
 
         toolcall_arguments = {"key": "API key is <$NONEXISTENT$>"}
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        with self.assertRaises(KeyError) as cm:
-            loop.run_until_complete(
-                self.plugin.before_tool_call(
-                    tool_name="test_tool",
-                    toolcall_arguments=toolcall_arguments,
-                    with_secret=["NONEXISTENT"],
-                )
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["NONEXISTENT"],
             )
+        )
         loop.close()
 
-        # 错误消息应该包含相关信息
-        self.assertIn("NONEXISTENT", str(cm.exception))
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("NONEXISTENT", result.content)
 
     def test_before_tool_call_with_placeholder_in_with_secret(self):
-        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，报错找不到secret"""
+        """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是with_secret中包含的是`<$KEY$>`而不是`KEY`字符串，返回ToolResultFailed"""
         import asyncio
+        from linhai.tool.base import ToolResultFailed
 
         toolcall_arguments = {"key": "API key is <$SECRET1$>"}
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        with self.assertRaises(KeyError) as cm:
-            loop.run_until_complete(
-                self.plugin.before_tool_call(
-                    tool_name="test_tool",
-                    toolcall_arguments=toolcall_arguments,
-                    with_secret=["<$SECRET1$>"],  # 包含占位符而不是KEY
-                )
+        result = loop.run_until_complete(
+            self.plugin.before_tool_call(
+                tool_name="test_tool",
+                toolcall_arguments=toolcall_arguments,
+                with_secret=["<$SECRET1$>"],  # 包含占位符而不是KEY
             )
+        )
         loop.close()
 
-        # 错误消息应该包含相关信息
-        self.assertIn("<$SECRET1$>", str(cm.exception))
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("<$SECRET1$>", result.content)
 
     def test_before_tool_call_placeholder_not_in_with_secret(self):
         """测试：如果指定了with_secret，参数中包含`<$KEY$>`占位符，但是`<$KEY$>`占位符没有在with_secret中指定，不替换这个占位符"""
