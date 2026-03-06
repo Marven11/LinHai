@@ -4,7 +4,11 @@ import unittest
 import time
 from unittest.mock import Mock, AsyncMock, patch
 
-from linhai.agent.orchestration import AgentContextOrchestration, ThresholdInfo
+from linhai.agent.orchestration import (
+    AgentContextOrchestration,
+    ThresholdInfo,
+    get_cleanable_large_messages,
+)
 from linhai.agent.message import AgentMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
@@ -402,3 +406,65 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(details["blocked_category"], None)
         # 验证：因为blocked_category是None，所以不应该被拦截
         self.assertNotEqual(details["blocked_category"], details["actual_category"])
+
+    def test_get_cleanable_large_messages(self):
+        """测试get_cleanable_large_messages函数。"""
+        from linhai.agent.base import Message
+
+        # 添加100条普通消息
+        for i in range(100):
+            msg = RuntimeMessage(f"message {i}")
+            self.message_processor.messages.append(msg)
+
+        # 在第25, 50, 75, 100位置添加4个大消息（索引为24, 49, 74, 99）
+        large_msgs = []
+        for pos in [24, 49, 74, 99]:
+            large_msg = RuntimeMessage(f"Large content at position {pos}" + "x" * 1000)
+            large_msgs.append(large_msg)
+            self.message_processor.messages[pos] = large_msg
+            self.orchestration.large_messages.add(large_msg)
+
+        # 测试：最近20条内的大消息应该被保留
+        cleanable = get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20
+        )
+
+        # 100个消息，最近20条是80-99，所以索引99的大消息应该被保留
+        # 索引24, 49, 74的大消息应该可以被清理
+        self.assertEqual(len(cleanable), 3)
+        self.assertIn(large_msgs[0], cleanable)  # 索引24
+        self.assertIn(large_msgs[1], cleanable)  # 索引49
+        self.assertIn(large_msgs[2], cleanable)  # 索引74
+        self.assertNotIn(large_msgs[3], cleanable)  # 索引99，应该被保留
+
+    def test_get_cleanable_large_messages_two_recent(self):
+        """测试当有2个大消息在recent_count内时的行为。"""
+        # 添加100条普通消息
+        for i in range(100):
+            msg = RuntimeMessage(f"message {i}")
+            self.message_processor.messages.append(msg)
+
+        # 在第25, 50, 90, 100位置添加4个大消息
+        large_msgs = []
+        for pos in [24, 49, 89, 99]:  # 90和100在recent_count=20内
+            large_msg = RuntimeMessage(f"Large content at position {pos}" + "x" * 1000)
+            large_msgs.append(large_msg)
+            self.message_processor.messages[pos] = large_msg
+            self.orchestration.large_messages.add(large_msg)
+
+        # 测试：90和100位置的大消息应该被保留
+        cleanable = get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20
+        )
+
+        # 只有索引24, 49的大消息可以被清理
+        # 索引89, 99的大消息应该被保留
+        self.assertEqual(len(cleanable), 2)
+        self.assertIn(large_msgs[0], cleanable)  # 索引24
+        self.assertIn(large_msgs[1], cleanable)  # 索引49
+        self.assertNotIn(large_msgs[2], cleanable)  # 索引89，应该被保留
+        self.assertNotIn(large_msgs[3], cleanable)  # 索引99，应该被保留

@@ -108,6 +108,12 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_large_messages(self):
         """测试删除大消息时，消息从数组中移除且其余消息不变。"""
+        # 先添加50条普通消息，确保后面的大消息在recent_count=20之外
+        # 需要在5个大消息之前至少有20条消息，才能让大消息被清理
+        for i in range(50):
+            msg = RuntimeMessage(f"Regular message {i}")
+            await self.message_processor.add_new_message(msg)
+
         # 添加一些普通消息
         msg1 = Mock()
         msg1.to_json = lambda: '{"role": "user", "message": "Message 1"}'
@@ -133,10 +139,15 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             self.orchestration.large_messages.add(msg)
             await self.message_processor.add_new_message(msg)
 
-        # 初始消息总数：2个初始 + 3个普通 + 5个大 = 10个
+        # 再添加25条普通消息，把大消息推出recent_count=20的范围
+        for i in range(25):
+            msg = RuntimeMessage(f"After large message {i}")
+            await self.message_processor.add_new_message(msg)
+
+        # 初始消息总数：50 + 3个普通 + 5个大 + 25个后续 = 83个，加上2个初始pinned
         initial_messages = self.message_processor.messages.copy()
 
-        # 模拟不足5条大消息（4条）
+        # 模拟不足5条可清理的大消息（4条）
         with patch.object(
             self.orchestration, "large_messages", {"fake1", "fake2", "fake3", "fake4"}
         ):
@@ -144,11 +155,11 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             # 由于大消息数量不足5，应该返回失败
             self.assertIsInstance(result, ToolResultFailed)
 
-        # 执行清理（现在有5条大消息）
+        # 执行清理（现在有5条大消息且都在可清理范围内）
         result = await self.orchestration.context_forget_large_message()
         self.assertIsInstance(result, ToolResultSuccess)
 
-        # 验证大消息集合已清空
+        # 验证大消息集合已清空（5条都被清理了）
         self.assertEqual(len(self.orchestration.large_messages), 0)
 
         # 验证消息数组中不再包含大消息
@@ -162,8 +173,10 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         self.assertIn(msg3, remaining_messages)
 
         # 验证消息顺序和数量
-        # 3个普通消息应该保留（msg1, msg2, msg3），5个大消息被替换为占位符
-        self.assertEqual(len(remaining_messages), 8)
+        # 50 + 3个普通 + 25个后续消息应该保留，5个大消息被替换为占位符
+        # 2个初始消息也在pinned_messages中
+        # 总共: 50 + 3 + 25 + 2 = 80，加上5个占位符 = 85，但大消息被替换所以是80
+        self.assertEqual(len(remaining_messages), 83)
 
 
 if __name__ == "__main__":

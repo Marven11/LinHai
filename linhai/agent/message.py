@@ -364,3 +364,16 @@ class AgentMessage:
             self.messages.extend(self.queued_messages)
             self.queued_messages = []
             self._save_context()
+
+    def find_message(self, message: Message) -> int | None:
+        """查找消息在messages列表中的索引。
+
+        Args:
+            message: 要查找的消息
+
+        Returns:
+            消息的索引，如果不存在则返回None
+        """
+        if message in self.messages:
+            return self.messages.index(message)
+        return None

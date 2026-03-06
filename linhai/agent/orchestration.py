@@ -41,6 +41,29 @@ class ToolBlockDetailsDict(TypedDict):
     current_state: str
 
 
+def get_cleanable_large_messages(
+    large_messages: set[Message], agent_message: AgentMessage, recent_count: int = 20
+) -> list[Message]:
+    """获取可以清理的大消息列表，忽略最近添加的大消息。
+
+    Args:
+        large_messages: 大消息集合
+        agent_message: AgentMessage实例，用于查找消息索引
+        recent_count: 忽略最近多少条消息，默认20条
+
+    Returns:
+        可以清理的大消息列表
+    """
+    cleanable: list[Message] = []
+    for msg in large_messages:
+        index = agent_message.find_message(msg)
+        if index is None:
+            continue
+        if index < len(agent_message.messages) - recent_count:
+            cleanable.append(msg)
+    return cleanable
+
+
 class AgentContextOrchestration:
     """消息编排器，负责管理大消息、垃圾消息、阈值通知等高级消息管理功能。"""
 
@@ -63,10 +86,10 @@ class AgentContextOrchestration:
     async def context_forget_large_message(
         self,
     ) -> ToolResultSuccess | ToolResultFailed:
-        """清理所有大消息。
+        """清理大消息，但保留最近添加的大消息。
 
         Returns:
-            清理结果消息。如果当前大消息少于5条则返回失败消息。
+            清理结果消息。如果当前可清理的大消息少于5条则返回失败消息。
         """
         large_count = len(self.large_messages)
         if large_count < 5:
@@ -74,7 +97,14 @@ class AgentContextOrchestration:
                 content=f"需要至少5条大消息，当前只有{large_count}条"
             )
 
-        removed_messages = list(self.large_messages)
+        removed_messages = get_cleanable_large_messages(
+            self.large_messages, self.agent_message, recent_count=20
+        )
+
+        if len(removed_messages) < 5:
+            return ToolResultFailed(
+                content=f"可清理的大消息不足5条（总共{large_count}条，最近20条内的大消息被保留），无法执行清理"
+            )
 
         conversation_dir = self.group_chat.get_member_typechecked(
             "conversation_folder", Path
@@ -87,9 +117,10 @@ class AgentContextOrchestration:
             placeholder = RuntimeMessage(f"当前消息已经被遗忘，转储到{saved_path}")
             await self.agent_message.replace_message(message, placeholder)
 
-        self.large_messages.clear()
+        for msg in removed_messages:
+            self.large_messages.discard(msg)
 
-        result = f"清理了{large_count}条大消息，保存到: {saved_path}"
+        result = f"清理了{len(removed_messages)}条大消息，保存到: {saved_path}"
         return ToolResultSuccess(content=result)
 
     def compute_orchestration_context(
