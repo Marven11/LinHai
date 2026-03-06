@@ -182,6 +182,8 @@ INTRODUCTION_PLANNING_MODE = """
 
 这说明当前任务的复杂程度大大超出了你的记忆能力，你需要**在文件中记录**当前的状态、任务和目标设计
 
+【重要】当前任务**可能有坑**，你应该在感到**混乱**、**挫败**、**难以完成任务**的时候先冷静下来，修改STATUS.md, DESIGN.md和TODOLIST.md以规划慢慢解决问题
+
 你需要严格且实时地在master_host的以下文件路径中维护以下文件：
 
 - STATUS.md: {status_file}
@@ -257,6 +259,8 @@ INTRODUCTION_PLANNING_MODE = """
 收集信息时部分写入DESIGN.md, 在其中用一小段话描述为了完成设计需要收集什么信息
 
 在收集信息完毕后详细编写DESIGN.md，按照下方内容的要求详细描述完成任务需要的设计
+
+【重要】如果你感到**混乱**、**挫败**、**难以完成任务**，立即新增DESIGN.md写入当前问题以及需要收集、设计的内容并修改TODOLIST.md优先研究这些问题
 
 修改时：必须使用write file + override
 
