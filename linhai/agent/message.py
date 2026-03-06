@@ -39,6 +39,9 @@ class ExplicitCacheMessage(Message):
         }
         return {"role": "user", "content": [text_block]}
 
+    def get_content(self) -> str:
+        return self.text
+
     def to_json(self) -> str:
         return json.dumps({"text": self.text})
 
@@ -201,12 +204,7 @@ class AgentMessage:
         msgs = self.pinned_messages + self.messages
         for explicit_cache_anchor in range(len(msgs) - 1, -1, -1):
             msg = msgs[explicit_cache_anchor]
-            llm_msg = msg.to_llm_message()
-            if (
-                llm_msg["role"] == "user"
-                and isinstance(llm_msg["content"], str)
-                and set(llm_msg.keys()) == {"role", "content"}
-            ):
+            if msg.get_content() is not None:
                 return explicit_cache_anchor
         return None
 
@@ -215,8 +213,8 @@ class AgentMessage:
             return msgs
         msgs = msgs.copy()
         for anchor in self.explicit_cache_anchors:
-            content = msgs[anchor].to_llm_message().get("content")
-            assert isinstance(content, str)
+            content = msgs[anchor].get_content()
+            assert content is not None
             msgs[anchor] = ExplicitCacheMessage(content)
         return msgs
 

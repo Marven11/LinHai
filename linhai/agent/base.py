@@ -39,22 +39,24 @@ class MessagesListSummerizeMessage(Message):
         return self._valid
 
     def to_llm_message(self) -> LanguageModelMessage:
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
+
+    def get_content(self) -> str:
         if not self._valid:
-            return {
-                "role": "user",
-                "content": f"[消息列表已无效，ID: {self.range_clean_id}]",
-            }
+            return f"[消息列表已无效，ID: {self.range_clean_id}]"
         prompt = COMPRESS_RANGE_PROMPT.replace(
             "{|SUGGESTED_MESSAGE_COUNT|}", str(int(self.message_length * 0.5))
         ).replace("{|SUMMERIZATION|}", self.messages_summerization)
-        return {
-            "role": "user",
-            "content": f"<<range_clean_summary>>\n"
+        return (
+            f"<<range_clean_summary>>\n"
             f"<<range_clean_id>>{self.range_clean_id}<<range_clean_id>>\n"
             f"<<message_count>>{self.message_length}<<message_count>>\n"
             f"<<content>>{prompt}<<content>>\n"
-            f"<<range_clean_summary>>",
-        }
+            f"<<range_clean_summary>>"
+        )
 
     def to_json(self) -> str:
         data = {
@@ -88,8 +90,11 @@ class RuntimeMessage(Message):
     def to_llm_message(self) -> LanguageModelMessage:
         return {
             "role": "user",
-            "content": f"<<runtime>>{self.message}<<runtime>>",
+            "content": self.get_content(),
         }
+
+    def get_content(self) -> str:
+        return f"<<runtime>>{self.message}<<runtime>>"
 
     def to_json(self) -> str:
 
@@ -105,7 +110,7 @@ class RuntimeMessage(Message):
         return cls(message=data["message"])
 
 
-class GlobalPrompt:
+class GlobalPrompt(Message):
     """全局指导类，用于读取和呈现全局指导文件内容。"""
 
     def __init__(self, filepath: Path):
@@ -118,25 +123,29 @@ class GlobalPrompt:
         返回:
             LanguageModelMessage: 包含全局指导内容的系统消息
         """
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
+
+    def get_content(self) -> str:
         try:
             content = self.filepath.read_text()
-            return {
-                "role": "user",
-                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<content>>{content}<<content>><<global_prompt>>",
-            }
+            return (
+                f"<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>\n"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<content>>{content}<<content>>\n"
+                f"<<global_prompt>>"
+            )
         except FileNotFoundError:
-            return {
-                "role": "user",
-                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>文件不存在或已被移动/删除<<error>><<global_prompt>>",
-            }
+            return (
+                f"<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>\n"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>文件不存在或已被移动/删除<<error>><<global_prompt>>"
+            )
         except (IOError, OSError) as e:
-            return {
-                "role": "user",
-                "content": "<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>"
-                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>读取时发生错误: {str(e)}<<error>><<global_prompt>>",
-            }
+            return (
+                f"<<global_prompt>><<message>>这是全局指导文档的路径和内容<<message>>\n"
+                f"<<filepath>>{self.filepath.as_posix()!r}<<filepath>><<error>>读取时发生错误: {str(e)}<<error>><<global_prompt>>"
+            )
 
     def to_json(self) -> str:
         """
@@ -166,7 +175,7 @@ class GlobalPrompt:
         return cls(filepath=Path(data["filepath"]))
 
 
-class ChecklistMessage:
+class ChecklistMessage(Message):
     """检查清单消息类，用于读取和呈现检查清单文件内容。"""
 
     def __init__(self, filepath: Path):
@@ -179,22 +188,19 @@ class ChecklistMessage:
         返回:
             LanguageModelMessage: 包含检查清单内容的系统消息
         """
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
+
+    def get_content(self) -> str:
         try:
             content = self.filepath.read_text()
-            return {
-                "role": "user",
-                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<checklist>>",
-            }
+            return f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<checklist>>"
         except FileNotFoundError:
-            return {
-                "role": "user",
-                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>检查清单文件不存在或已被移动/删除<<error>>\n<<checklist>>",
-            }
+            return f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>检查清单文件不存在或已被移动/删除<<error>>\n<<checklist>>"
         except (IOError, OSError) as e:
-            return {
-                "role": "user",
-                "content": f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<checklist>>",
-            }
+            return f"<<checklist>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<checklist>>"
 
     def to_json(self) -> str:
         """
@@ -225,7 +231,7 @@ class ChecklistMessage:
         return cls(filepath=Path(data["filepath"]))
 
 
-class PathPrompt:
+class PathPrompt(Message):
     """路径指导类，用于检测和呈现特定路径的文件内容。"""
 
     def __init__(self, filepath: Path):
@@ -238,22 +244,19 @@ class PathPrompt:
         返回:
             LanguageModelMessage: 包含路径指导内容的系统消息
         """
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
+
+    def get_content(self) -> str:
         try:
             content = self.filepath.read_text()
-            return {
-                "role": "user",
-                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_prompt>>",
-            }
+            return f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<content>>{content}<<content>>\n<<path_prompt>>"
         except FileNotFoundError:
-            return {
-                "role": "user",
-                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_prompt>>",
-            }
+            return f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<path_prompt>>"
         except (IOError, OSError) as e:
-            return {
-                "role": "user",
-                "content": f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_prompt>>",
-            }
+            return f"<<path_prompt>>\n<<filepath>>{self.filepath.as_posix()!r}<<filepath>>\n<<error>>读取时发生错误: {str(e)}<<error>>\n<<path_prompt>>"
 
     def to_json(self) -> str:
         """
@@ -295,19 +298,23 @@ class FileContentMessage(Message):
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        if self.show_line_numbers:
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
 
+    def get_content(self) -> str:
+        if self.show_line_numbers:
             lines = self.content.splitlines()
             numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
             formatted_content = "\n".join(numbered_lines)
         else:
             formatted_content = self.content
-
-        return {
-            "role": "user",
-            "content": "<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>>"
-            f"<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{formatted_content}<<content>>\n<<file_content>>",
-        }
+        return (
+            "<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>>"
+            f"<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{formatted_content}<<content>>\n"
+            "<<file_content>>"
+        )
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
@@ -360,24 +367,19 @@ class PreviousReasoningMessage(Message):
         self.reasoning_contents = reasoning_contents
 
     def to_llm_message(self) -> LanguageModelMessage:
-        """转换为LLM消息格式。
+        return {"role": "user", "content": self.get_content()}
 
-        格式：
-        <<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>><<content>>xxx<<content>><<content>>xxx<<content>><<content>>xxx<<content>><<previous_reasoning>>
-        """
+    def get_content(self) -> str:
         if not self.reasoning_contents:
-            return {"role": "user", "content": ""}
-
+            return ""
         content_parts = []
         for reasoning_content in self.reasoning_contents:
             content_parts.append(f"<<content>>{reasoning_content}<<content>>")
-
-        content = (
-            f"<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>>"
+        return (
+            "<<previous_reasoning>><<message>>这是你之前的思考内容，仅做参考<<message>>"
             + "".join(content_parts)
             + "<<previous_reasoning>>"
         )
-        return {"role": "user", "content": content}
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""
@@ -424,6 +426,9 @@ class SpoofedReasoningMessage(Message):
                 "reasoning_content": reasoning_content,
             },
         )
+
+    def get_content(self) -> str:
+        return ""
 
     def to_json(self) -> str:
         """转换为JSON字符串。"""

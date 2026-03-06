@@ -34,6 +34,14 @@ class Message(Protocol):
         """转换为LLM消息格式。"""
         raise NotImplementedError()
 
+    def get_content(self) -> str | None:
+        """获取消息的文本内容。
+
+        返回str或None：如果消息的content是简单的字符串则返回该字符串；
+        如果content不是简单字符串（如ImageMessage的图片内容）则返回None。
+        """
+        raise NotImplementedError()
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.to_llm_message()})"
 
@@ -76,8 +84,8 @@ class SystemMessage:
         self.rules_items = RULES_ITEMS.copy()
         self.examples_items = EXAMPLES_ITEMS.copy()
 
-    def _build_prompt(self) -> str:
-        """根据结构化常量构建完整的系统提示语。"""
+    def get_content(self) -> str:
+        """获取消息的文本内容。"""
         sections = []
 
         sections.append("# OVERVIEW")
@@ -161,7 +169,7 @@ class SystemMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        prompt = self._build_prompt()
+        prompt = self.get_content()
         return cast(LanguageModelMessage, {"role": "system", "content": prompt})
 
     def __repr__(self) -> str:
@@ -199,9 +207,12 @@ class UserMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        content = f"<<user>>{self.message}<<user>>"
-        msg = {"role": "user", "content": content}
+        msg = {"role": "user", "content": self.get_content()}
         return cast(LanguageModelMessage, msg)
+
+    def get_content(self) -> str:
+        """获取消息的文本内容。"""
+        return f"<<user>>{self.message}<<user>>"
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
@@ -241,10 +252,14 @@ class AssistantMessage:
         """转换为LLM消息格式。"""
         msg = {
             "role": "assistant",
-            "content": self.message,
+            "content": self.get_content(),
             "reasoning_content": self.reasoning_message,
         }
         return cast(LanguageModelMessage, msg)
+
+    def get_content(self) -> str:
+        """获取消息的文本内容。"""
+        return self.message
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
@@ -789,17 +804,11 @@ class OpenAi:
         """
         if self.previous_history is None or self.previous_input_tokens is None:
             return 0
-        previous_history_llm = [msg.to_llm_message() for msg in self.previous_history]
-        current_history_llm = [msg.to_llm_message() for msg in current_history]
         previous_content = "".join(
-            msg["content"]
-            for msg in previous_history_llm
-            if "content" in msg and isinstance(msg["content"], str)
+            c for msg in self.previous_history if (c := msg.get_content()) is not None
         )
         current_content = "".join(
-            msg["content"]
-            for msg in current_history_llm
-            if "content" in msg and isinstance(msg["content"], str)
+            c2 for msg in current_history if (c2 := msg.get_content()) is not None
         )
 
         same_prefix_chars = 0

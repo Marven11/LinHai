@@ -201,11 +201,10 @@ class ToolManager:
                 return result
 
             if isinstance(result, Message):
-                llm_msg = result.to_llm_message()
-                content = llm_msg.get("content", "")
-                assert isinstance(
-                    content, str
-                ), "Possible unfiltered complex content: " + repr(content)
+                content = result.get_content()
+                assert (
+                    content is not None
+                ), "Possible unfiltered complex content: " + repr(result)
                 processed_content = content
                 result_type = (
                     ToolResultFailed

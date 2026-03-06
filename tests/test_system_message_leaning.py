@@ -31,7 +31,7 @@ class TestMachineControlPlugin(unittest.TestCase):
     def test_removes_machine_control_when_only_master_host(self):
         self.machine_control.machines = {"master_host": MagicMock()}
         asyncio.run(self.call_before_helper())
-        prompt = self.system_message._build_prompt()
+        prompt = self.system_message.get_content()
         self.assertNotIn("INTRODUCTION - MACHINE CONTROL\n", prompt)
 
     def test_adds_machine_control_when_multiple_machines(self):
@@ -40,7 +40,7 @@ class TestMachineControlPlugin(unittest.TestCase):
             "ssh_host": MagicMock(),
         }
         asyncio.run(self.call_before_helper())
-        prompt = self.system_message._build_prompt()
+        prompt = self.system_message.get_content()
         self.assertIn("INTRODUCTION - MACHINE CONTROL\n", prompt)
 
     def test_idempotent_when_multiple_machines(self):
@@ -49,9 +49,9 @@ class TestMachineControlPlugin(unittest.TestCase):
             "ssh_host": MagicMock(),
         }
         asyncio.run(self.call_before_helper())
-        first_prompt = self.system_message._build_prompt()
+        first_prompt = self.system_message.get_content()
         asyncio.run(self.call_before_helper())
-        second_prompt = self.system_message._build_prompt()
+        second_prompt = self.system_message.get_content()
         self.assertEqual(first_prompt, second_prompt)
 
 

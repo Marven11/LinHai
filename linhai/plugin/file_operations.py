@@ -99,7 +99,8 @@ class DuplicateFileReadPlugin(Plugin):
 
             if message is None:
                 return None
-            actual_content = str(message.to_llm_message().get("content", ""))
+            assert isinstance(message, FileContentMessage)
+            actual_content = message.get_content()
 
             if message == latest_message:
                 self.counter += 1

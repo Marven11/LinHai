@@ -97,6 +97,9 @@ class ImageMessage(Message):
             content = f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片（{quality_desc}，估算token用量: {estimated_tokens}）<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
             return cast(LanguageModelMessage, {"role": "user", "content": content})
 
+    def get_content(self) -> None:
+        return None
+
     def __repr__(self) -> str:
         return f"ImageMessage(size={len(self.image_bytes)} bytes, mime_type={self.mime_type}, quality={self.quality}, width={self.width}, height={self.height})"
 

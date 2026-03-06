@@ -200,7 +200,9 @@ class SecretInterceptorPlugin:
             if message is None:
                 return None
 
-            result_content = str(message.to_llm_message().get("content", ""))
+            result_content = message.get_content()
+            if result_content is None:
+                return None
 
             if with_secret:
                 result_content = mask_secrets_in_object(

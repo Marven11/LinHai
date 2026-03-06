@@ -145,6 +145,7 @@ class AgentToolcall:
         )
         def get_token_usage() -> str:
             from ..token_manager import TokenManager
+
             token_manager = self.group_chat.get_member_typechecked(
                 "token_manager", TokenManager
             )
@@ -336,9 +337,7 @@ class AgentToolcall:
 
         result_content = ""
         if isinstance(tool_result, ToolCallResultMessage):
-            llm_msg = tool_result.to_llm_message()
-            assert "content" in llm_msg
-            result_content = llm_msg["content"]
+            result_content = tool_result.get_content()
         elif isinstance(tool_result, RuntimeMessage):
             result_content = tool_result.message
         else:

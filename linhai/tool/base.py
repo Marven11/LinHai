@@ -170,6 +170,12 @@ class ToolCallResultMessage(Message):
         self.toolcall_arguments = toolcall_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
+        return cast(
+            LanguageModelMessage,
+            {"role": "user", "content": self.get_content()},
+        )
+
+    def get_content(self) -> str:
         if isinstance(self.result, ToolResultSuccess):
             status = "工具执行成功"
             data_or_error = f"<<data>>{self.result.content}<<data>>"
@@ -180,13 +186,11 @@ class ToolCallResultMessage(Message):
             )
             data_or_error = f"<<error>>{self.result.content}<<error>>"
 
-        # 构建消息内容
         content_parts = [
             f"<<tool>>",
             f"<<name>>{self.tool_name}<<name>>",
             f"<<index>>{self.tool_index}<<index>>",
         ]
-        # 只有在失败时才包含toolcall_arguments的repr
         if isinstance(self.result, ToolResultFailed) and self.toolcall_arguments:
             r = reprlib.Repr()
             r.maxstring = 100
@@ -198,14 +202,10 @@ class ToolCallResultMessage(Message):
             [
                 f"<<message>>{status}<<message>>",
                 data_or_error,
-                f"<<tool>>",
+                "<<tool>>",
             ]
         )
-        content = "\n".join(content_parts)
-        return cast(
-            LanguageModelMessage,
-            {"role": "user", "content": content},
-        )
+        return "\n".join(content_parts)
 
     def to_json(self) -> str:
         data = {

@@ -317,10 +317,11 @@ class AgentContextOrchestration:
         if isinstance(message, ImageMessage):
             self.large_messages.add(message)
         else:
-            content = str(message.to_llm_message().get("content", ""))
-            token_count = len(self.tokenizer.encode(content))
-            if token_count > 800:
-                self.large_messages.add(message)
+            content = message.get_content()
+            if content is not None:
+                token_count = len(self.tokenizer.encode(content))
+                if token_count > 800:
+                    self.large_messages.add(message)
 
     async def _before_message_generation(
         self, enable_compress: bool, disable_waiting_user_warning: bool

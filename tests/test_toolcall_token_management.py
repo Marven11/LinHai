@@ -140,7 +140,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         for file in sorted(files, key=lambda x: x.name):
             with open(file, "r", encoding="utf-8") as f:
                 combined_content += f.read()
-        self.assertEqual(combined_content, tool_result.to_llm_message()["content"])
+        self.assertEqual(combined_content, tool_result.get_content())
 
     async def test_two_tools_each_short_output(self):
         """测试2个工具，每个输出都远小于限制长度的1/3时正常返回。"""
