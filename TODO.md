@@ -2,10 +2,11 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 在文本框的右边加上一个发送按钮
-  - 问题: 根据[textual的回复](https://github.com/Textualize/textual/discussions/5775)有些终端不支持Ctrl+Enter
-  - 按钮样式: 大小3x3，中间有一个→箭头，颜色为primary
-  - 参考https://textual.textualize.io/guide/testing/以编写示例测试按钮的功能
+- [ ] 加上一个after new parsed answer回调和after segment finished回调
+  - 参考linhai/agent/main.py和linhai/lifecycle.py等
+  - 测试
+    - after segment finished回调在segment完成之后被调用
+    - 模拟从字符串解析出parsed answer的流程，验证这三个回调被调用
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
