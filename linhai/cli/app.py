@@ -3,7 +3,8 @@
 import argparse
 
 from textual.app import App, ComposeResult
-from textual.widgets import TabbedContent, TabPane, TextArea
+from textual.containers import Horizontal
+from textual.widgets import TabbedContent, TabPane, TextArea, Button
 from textual import events, work
 from textual_autocomplete import AutoComplete, DropdownItem
 
@@ -78,6 +79,15 @@ class CLIApp(App):
         height: auto;
         border: blank;
     }
+    #input-container {
+        height: auto;
+        layout: horizontal;
+        align-vertical: bottom;
+    }
+    #send-button {
+        width: 3;
+        height: 3;
+    }
     AutoComplete {
         & AutoCompleteList {
             max-height: 2;
@@ -137,7 +147,13 @@ class CLIApp(App):
                 )
                 yield self.messages_list
 
-                yield TextArea(placeholder="Ctrl+Enter发送", id="input", show_line_numbers=False)
+                with Horizontal(id="input-container"):
+                    yield TextArea(
+                        placeholder="Ctrl+Enter发送",
+                        id="input",
+                        show_line_numbers=False,
+                    )
+                    yield Button("→", id="send-button", variant="primary")
                 yield FooterWidget(
                     self.group_chat,
                     self.token_manager,
@@ -174,8 +190,6 @@ class CLIApp(App):
                 raise RuntimeError(
                     f"Unknown Type in exit_signal: {type(output)=} {output=}"
                 )
-
-
 
     @work(exclusive=False)
     async def _run_agent(self) -> None:
@@ -270,6 +284,11 @@ class CLIApp(App):
                 "mcp_connector", MCPConnector
             ).disconnect_all_mcp_servers()
             self.app.exit()
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        """处理按钮点击事件"""
+        if event.button.id == "send-button":
+            await self._handle_message_submission()
 
     async def _handle_regular_message(self, message_text: str) -> None:
         input_element = self.query_one("#input", TextArea)
