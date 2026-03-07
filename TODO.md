@@ -2,11 +2,10 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [x] 当前的token用量的传递问题很大
-  - app.py注册对应队列，在watch_token_usage_queue接收token usage并传给token manger - 改成让token manager自己注册并接收，清理对应代码
-  - 大量代码使用agent.last_token_usage读取token用量
-    - 完全清理last_token_usage的使用，清理完后搜索last_token_usage检查
-    - 全部改为使用token manager
+- [ ] 在文本框的右边加上一个发送按钮
+  - 问题: 根据[textual的回复](https://github.com/Textualize/textual/discussions/5775)有些终端不支持Ctrl+Enter
+  - 按钮样式: 大小3x3，中间有一个→箭头，颜色为primary
+  - 参考https://textual.textualize.io/guide/testing/以编写示例测试按钮的功能
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
