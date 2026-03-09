@@ -31,47 +31,50 @@ class Plugin(ABC):
 
 
 class PromptFastAgentPlugin(Plugin):
-    """禁止minimax m2/glm 4.6疯狂调用工具的插件"""
+    """限制特定LLM调用工具数量的插件"""
 
-    MAX_TOOLCALL_COUNT = 5
-
-    def __init__(self, group_chat):
+    def __init__(self, group_chat: GroupChat, max_toolcall_for_llm: dict[str, int]):
         super().__init__(group_chat)
+        self.max_toolcall_for_llm = max_toolcall_for_llm
         self.speeding_counter = 0
 
-    async def before_agent_loop(self, agent: "Agent"):
-        """在Agent循环开始前添加特定模型提示。"""
+    def _get_max_toolcall_for_current_model(self, agent: "Agent") -> int | None:
+        """获取当前模型的最大工具调用数量，如果没有配置则返回None。"""
         model = agent.get_current_model()
+        model_name = model.get_name()
+        if model_name in self.max_toolcall_for_llm:
+            return self.max_toolcall_for_llm[model_name]
+        return None
 
-        if not isinstance(model, OpenAi) or model.compatibility not in [
-            "minimax",
-            "glm",
-        ]:
+    async def before_message_generation(self, is_first: bool, is_continue: bool):
+        """在消息生成前更新通知，显示当前模型的工具限制。"""
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        max_toolcall = self._get_max_toolcall_for_current_model(agent)
+
+        if max_toolcall is None:
+            # 当前模型没有工具限制，清理notification消息
+            agent.message_processor.update_notification_message(
+                None, source="prompt_fast_agent", sort_value=100
+            )
             return
 
-        await agent.message_processor.add_new_message(
-            RuntimeMessage(
-                f"你现在是{model.compatibility}，必须在调用工具前仔细思考，禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具！"
-            )
+        model = agent.get_current_model()
+        model_name = model.get_name()
+        # 更新notification消息，显示当前模型的工具限制
+        agent.message_processor.update_notification_message(
+            RuntimeMessage(f"你现在是{model_name}，禁止调用超过{max_toolcall}个工具！"),
+            source="prompt_fast_agent",
+            sort_value=100,
         )
-        await self.group_chat.send_if_exists(
-            "ui_log",
-            CliRuntimeNotice(
-                level="INFO",
-                content=f"针对性优化: {model.compatibility}禁止调用超过{self.MAX_TOOLCALL_COUNT}个工具",
-            ),
-        )
-
-        if model.compatibility == "glm":
-            await agent.message_processor.add_new_message(
-                RuntimeMessage("你现在是GLM，必须打开思考模式，仔细思考！")
+        # 只在第一次生成消息时发送UI日志
+        if is_first:
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="INFO",
+                    content=f"针对性优化: {model_name}禁止调用超过{max_toolcall}个工具",
+                ),
             )
-
-    async def before_message_generation(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ):
-        """在消息生成前检查目录是否更改。"""
-        return
 
     async def after_token_generation(
         self,
@@ -79,14 +82,13 @@ class PromptFastAgentPlugin(Plugin):
         answer: Answer,
         current_content: str,
     ):
-        model = agent.get_current_model()
-        if not isinstance(model, OpenAi) or model.compatibility not in [
-            "minimax",
-            "glm",
-        ]:
+        max_toolcall = self._get_max_toolcall_for_current_model(agent)
+        if max_toolcall is None:
             return False
 
-        if current_content.count("\n```json toolcall") > self.MAX_TOOLCALL_COUNT:
+        if current_content.count("\n```json toolcall") > max_toolcall:
+            model = agent.get_current_model()
+            model_name = model.get_name()
             extra_message = ""
             if self.speeding_counter:
                 extra_message = (
@@ -95,7 +97,7 @@ class PromptFastAgentPlugin(Plugin):
                 )
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
-                    f"禁止超速：你现在是{model.compatibility}，禁止使用超过{self.MAX_TOOLCALL_COUNT}个工具！"
+                    f"禁止超速：你现在是{model_name}，禁止使用超过{max_toolcall}个工具！"
                     + extra_message
                 )
             )
@@ -103,7 +105,7 @@ class PromptFastAgentPlugin(Plugin):
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
-                    content=f"针对性优化: 阻止{model.compatibility}调用巨量工具",
+                    content=f"针对性优化: 阻止{model_name}调用巨量工具",
                 ),
             )
             answer.truncate()
@@ -113,8 +115,8 @@ class PromptFastAgentPlugin(Plugin):
         return False
 
     def register(self, lifecycle: "Lifecycle"):
-        """注册before_agent_loop和after_token_generation回调。"""
-        lifecycle.register_before_agent_loop(self.before_agent_loop)
+        """注册before_message_generation和after_token_generation回调。"""
+        lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_after_token_generation(self.after_token_generation)
 
 

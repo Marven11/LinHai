@@ -141,7 +141,6 @@ class Lifecycle:
         """注册默认的Plugin。"""
         from linhai.plugin import (
             WrongEndPlugin,
-            PromptFastAgentPlugin,
             SlowStartPlugin,
             WeirdTokenPlugin,
             EndThinkPlugin,
@@ -163,7 +162,6 @@ class Lifecycle:
 
         plugins = [
             WrongEndPlugin(self.group_chat),
-            PromptFastAgentPlugin(self.group_chat),
             SlowStartPlugin(self.group_chat),
             WeirdTokenPlugin(self.group_chat),
             EndThinkPlugin(self.group_chat),
@@ -343,7 +341,9 @@ class Lifecycle:
         for callback in self._after_new_parsed_answer_callbacks:
             await callback(parsed_answer)
 
-    async def trigger_after_segment_finished(self, parsed_answer: "ParsedAnswer", segment: "Segment"):
+    async def trigger_after_segment_finished(
+        self, parsed_answer: "ParsedAnswer", segment: "Segment"
+    ):
         """触发segment完成后的事件。"""
         for callback in self._after_segment_finished_callbacks:
             await callback(parsed_answer, segment)

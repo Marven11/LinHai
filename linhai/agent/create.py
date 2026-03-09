@@ -7,7 +7,7 @@ from datetime import datetime
 
 from linhai.config import Config
 from linhai.group_chat import GroupChat
-from linhai.llm import LanguageModel, Message, OpenAi, SystemMessage, UserMessage
+from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
 
 from linhai.tool.base import global_tools
@@ -171,8 +171,16 @@ async def create_agent_from_config(
 
     if not context["cli_args"].disable_waiting_marker:
         from linhai.plugin.message_checkers import WaitingUserPlugin
+
         WaitingUserPlugin(context["group_chat"]).register(agent.lifecycle)
 
+    if context["config"].agent.max_toolcall_for_llm:
+        from linhai.plugin import PromptFastAgentPlugin
+
+        plugin = PromptFastAgentPlugin(
+            context["group_chat"], context["config"].agent.max_toolcall_for_llm
+        )
+        plugin.register(agent.lifecycle)
 
     return agent
 

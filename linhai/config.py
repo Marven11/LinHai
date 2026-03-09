@@ -97,6 +97,7 @@ class AgentConfig(BaseModel):
     enable_directory_change_detection: bool = Field(default=False)
     enable_task_planning: bool = Field(default=False)
     allowed_commands: list[list[str]] = Field(default_factory=list)
+    max_toolcall_for_llm: dict[str, int] = Field(default_factory=dict)
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument

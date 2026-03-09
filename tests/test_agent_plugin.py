@@ -257,7 +257,8 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
             side_effect=lambda name, t: self.agent
         )
         self.group_chat.send_if_exists = AsyncMock()
-        self.plugin = PromptFastAgentPlugin(self.group_chat)
+        # 模拟配置：minimax模型最多5个工具调用
+        self.plugin = PromptFastAgentPlugin(self.group_chat, {"minimax": 5})
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
         self.tool_calls = []
@@ -273,7 +274,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_token_generation_with_too_many_tool_calls(self):
         """测试工具调用超过限制时使用truncate。"""
         mock_model = MagicMock(spec=OpenAi)
-        mock_model.compatibility = "minimax"
+        mock_model.get_name.return_value = "minimax"  # 使用get_name()而不是name属性
         self.agent.get_current_model = MagicMock(return_value=mock_model)
 
         self.agent.message_processor.get_messages.return_value = [
@@ -877,13 +878,13 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_mixed_kimi_format_with_code_block(self):
         """测试检测到混用格式 - ```<|tool_call_end|> 代码块。"""
         full_response = (
-            '正常内容\n'
-            '```json toolcall\n'
+            "正常内容\n"
+            "```json toolcall\n"
             '{"name": "tool1", "arguments": {}}\n'
-            '```\n'
-            '```<|tool_call_end|>\n'
+            "```\n"
+            "```<|tool_call_end|>\n"
             '{"name": "tool2", "arguments": {}}\n'
-            '```'
+            "```"
         )
 
         await self.plugin.after_message_generation(
@@ -893,17 +894,19 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
-        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.assertIn(
+            "混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message
+        )
         self.assertIn("```<|tool_call_end|>", full_response)
         self.group_chat.send_if_exists.assert_called_once()
 
     async def test_mixed_kimi_format_with_inline(self):
         """测试检测到混用格式 - }<|tool_call_end|> 行内格式。"""
         full_response = (
-            '正常内容\n'
-            '```json toolcall\n'
+            "正常内容\n"
+            "```json toolcall\n"
             '{"name": "tool1", "arguments": {}}\n'
-            '```\n'
+            "```\n"
             '<|tool_calls_section_begin|><|tool_call_begin|>{"name": "tool2", "arguments": {}}<|tool_call_end|>'
         )
 
@@ -914,14 +917,16 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
-        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message)
+        self.assertIn(
+            "混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message
+        )
         self.group_chat.send_if_exists.assert_called_once()
 
     async def test_both_kimi_warnings(self):
         """测试同时触发两种kimi格式警告。"""
         full_response = (
-            '<|tool_calls_section_begin|><|tool_call_begin|>\n'
-            '{\"name\": "tool1", "arguments": {}}<|tool_call_end|>'
+            "<|tool_calls_section_begin|><|tool_call_begin|>\n"
+            '{"name": "tool1", "arguments": {}}<|tool_call_end|>'
         )
 
         await self.plugin.after_message_generation(
@@ -935,6 +940,8 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("检测到不支持的kimi k2.5特殊工具调用格式", first_msg.message)
 
         second_msg = call_args_list[1][0][0]
-        self.assertIn("混用json toolcall和kimi k2.5的特殊工具调用格式", second_msg.message)
+        self.assertIn(
+            "混用json toolcall和kimi k2.5的特殊工具调用格式", second_msg.message
+        )
 
         self.assertEqual(self.group_chat.send_if_exists.call_count, 2)
