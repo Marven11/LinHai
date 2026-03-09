@@ -149,6 +149,17 @@ class CommandWhitelistPlugin(Plugin):
         if argv is None:
             return ToolResultFailed(content="process_create缺少argv参数")
 
+        if not isinstance(argv, list):
+            return ToolResultFailed(
+                content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
+            )
+
+        for i, arg in enumerate(argv):
+            if not isinstance(arg, str):
+                return ToolResultFailed(
+                    content=f"argv参数的第{i}个元素必须是字符串类型，但收到{type(arg).__name__}"
+                )
+
         if not self.allowed_commands:
             return None
 
@@ -203,6 +214,19 @@ class ProcessArgvCheckerPlugin(Plugin):
             argv = toolcall_arguments.get("argv")
             if argv is None:
                 return None
+
+            # 检查argv类型
+            if not isinstance(argv, list):
+                return ToolResultFailed(
+                    content=f"argv参数必须是列表类型，但收到{type(argv).__name__}"
+                )
+
+            # 检查argv元素类型
+            for i, arg in enumerate(argv):
+                if not isinstance(arg, str):
+                    return ToolResultFailed(
+                        content=f"argv参数的第{i}个元素必须是字符串类型，但收到{type(arg).__name__}"
+                    )
 
             warnings = [
                 f"参数[{i}]: '{arg}' 包含可能的bash操作符"

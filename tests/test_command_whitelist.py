@@ -25,7 +25,7 @@ class TestCommandWhitelistConfig(unittest.TestCase):
                     ["ls"],
                     ["git", "status"],
                 ]
-            }
+            },
         }
         config = Config(**config_data)
         self.assertEqual(len(config.agent.allowed_commands), 2)
@@ -54,10 +54,10 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config.agent.allowed_commands = [["ls"]]
         group_chat = Mock()
         plugin = CommandWhitelistPlugin(group_chat, config)
-        
+
         agent = Mock()
         context = {}
-        
+
         result = await plugin.before_tool_call(
             "process_create",
             {"argv": ["ls", "-lah"]},
@@ -71,10 +71,10 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config.agent.allowed_commands = [["ls"]]
         group_chat = Mock()
         plugin = CommandWhitelistPlugin(group_chat, config)
-        
+
         agent = Mock()
         context = {}
-        
+
         result = await plugin.before_tool_call(
             "process_create",
             {"argv": ["git", "commit"]},
@@ -89,16 +89,87 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config.agent.allowed_commands = [["ls"]]
         group_chat = Mock()
         plugin = CommandWhitelistPlugin(group_chat, config)
-        
+
         agent = Mock()
         context = {}
-        
+
         result = await plugin.before_tool_call(
             "read_file",
             {"filepath": "test.txt"},
             None,
         )
         self.assertIsNone(result)
+
+    async def test_plugin_rejects_non_list_argv(self):
+        """测试argv不是列表类型时返回错误"""
+        config = Mock()
+        config.agent = Mock()
+        config.agent.allowed_commands = [["ls"]]
+        group_chat = Mock()
+        plugin = CommandWhitelistPlugin(group_chat, config)
+
+        # argv是字符串
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": "ls -lah"},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是列表类型", result.content)
+
+        # argv是数字
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": 123},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是列表类型", result.content)
+
+        # argv是字典
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": {"command": "ls"}},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是列表类型", result.content)
+
+    async def test_plugin_rejects_non_string_elements(self):
+        """测试argv包含非字符串元素时返回错误"""
+        config = Mock()
+        config.agent = Mock()
+        config.agent.allowed_commands = [["ls"]]
+        group_chat = Mock()
+        plugin = CommandWhitelistPlugin(group_chat, config)
+
+        # argv包含数字
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls", 123, "-lah"]},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是字符串类型", result.content)
+        self.assertIn("第1个元素", result.content)  # 索引从0开始，123是第1个元素
+
+        # argv包含列表
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls", ["-l", "-a"], "-h"]},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是字符串类型", result.content)
+
+        # argv包含字典
+        result = await plugin.before_tool_call(
+            "process_create",
+            {"argv": ["ls", {"option": "-l"}, "-a"]},
+            None,
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("必须是字符串类型", result.content)
 
 
 if __name__ == "__main__":
