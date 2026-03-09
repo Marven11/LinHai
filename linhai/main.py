@@ -11,6 +11,8 @@ import unittest
 import sys
 
 
+from linhai.init import InitApp
+from linhai.config import get_default_config_path
 from linhai.cli import CLIApp
 from linhai.agent.base import Message
 from linhai.group_chat import GroupChat
@@ -25,6 +27,22 @@ def run_tests():
     return result.wasSuccessful()
 
 
+async def run_init(config_path: Path | None = None):
+    """运行初始化配置TUI。"""
+
+    if config_path is None:
+        config_path = get_default_config_path()
+
+    if config_path.exists():
+        print(f"错误: 配置文件已存在: {config_path}")
+        print("请先删除或备份现有配置文件后再运行初始化命令。")
+        return 1
+
+    app = InitApp(config_path=config_path)
+    await app.run_async()
+    return 0
+
+
 async def run(args):
     """运行LinHai应用"""
     from linhai.config import load_config
@@ -34,7 +52,8 @@ async def run(args):
     group_chat = GroupChat()
     group_chat.register_member("cli_args", args)
 
-    config_path = Path(args.config).expanduser()
+    from linhai.config import get_default_config_path
+    config_path = Path(args.config).expanduser() if args.config else get_default_config_path()
     config = load_config(config_path)
 
     context = create_agent_build_context(
@@ -66,8 +85,8 @@ def main():
     parser.add_argument(
         "--config",
         type=Path,
-        default="~/.config/linhai/config.toml",
-        help="配置文件路径",
+        default=None,
+        help="配置文件路径（默认：~/.config/linhai/config.toml）",
     )
     parser.add_argument(
         "-m", "--message", type=str, action="append", default=[], help="初始用户消息"
@@ -107,9 +126,27 @@ def main():
         action="store_true",
         help="启用 Continuous Living Autonomous Worker 模式",
     )
+
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+
+    init_parser = subparsers.add_parser("init", help="初始化LinHai配置文件")
+    init_parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="配置文件路径（默认：~/.config/linhai/config.toml）",
+    )
+
     args = parser.parse_args()
 
-    return_code = asyncio.run(run(args))
+    if args.config is None and args.command != "init":
+        args.config = get_default_config_path()
+
+    if args.command == "init":
+        return_code = asyncio.run(run_init(config_path=args.config))
+    else:
+        return_code = asyncio.run(run(args))
+
     sys.exit(return_code)
 
 

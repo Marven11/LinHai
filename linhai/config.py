@@ -1,14 +1,22 @@
 """Configuration module for LinHai agent."""
 
+import io
 import os
 import re
-from typing import Optional, Union
-import tomllib
 from pathlib import Path
+from typing import Optional, Union
 from urllib.parse import urlparse
+
+import tomllib
+import tomli_w
 from pydantic import BaseModel, Field, field_validator
 
 from .exceptions import ConfigValidationError
+
+
+def get_default_config_path() -> Path:
+    """获取默认配置文件路径。"""
+    return Path.home() / ".config" / "linhai" / "config.toml"
 
 
 class ExplicitCacheConfig(BaseModel):
@@ -166,7 +174,6 @@ class Config(BaseModel):
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
         return f"Config(llms={llm_names}, agent={self.agent}, user_prompt={self.user_prompt}, tools={self.tools})"
-
 
 def load_config(config_path: Union[str, Path]) -> Config:
     """从指定路径加载配置并验证

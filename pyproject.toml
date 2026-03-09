@@ -26,6 +26,7 @@ dependencies = [
     "bashlex",
     "tiktoken",
     "pillow",
+    "tomli-w",
     "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
 ]
 requires-python = ">=3.10"
