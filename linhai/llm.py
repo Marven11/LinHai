@@ -750,7 +750,11 @@ class OpenAi:
         self.group_chat = group_chat
         self.model = model
         self.openai = AsyncOpenAI(
-            api_key=api_key, base_url=base_url, timeout=10, **openai_config
+            api_key=api_key,
+            base_url=base_url,
+            timeout=10,
+            max_retries=0,
+            **openai_config,
         )
         self.tools = tools
         self.chat_completion_kwargs = chat_completion_kwargs
