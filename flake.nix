@@ -61,6 +61,7 @@
               bashlex
               tiktoken
               pillow
+              tomli-w
             ];
 
             src = ./.;
