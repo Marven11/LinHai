@@ -4,19 +4,18 @@ import colorsys
 import json
 import re
 import time
-from typing import Union, Optional
+from typing import Union, Optional, Callable, Awaitable
 
 from rich.markup import escape
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
-from textual import work
+from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
-from textual.widgets import Static
+from textual.widgets import Static, TextArea
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
-from typing import TypedDict
 from linhai.parsed_message import Segment, ParsedAnswer
 from linhai.utils import parse_and_simplify_toolcall
 
@@ -869,3 +868,19 @@ class MessageGenerationWidget(Static):
             for widget in self.tomount:
                 self.mount(widget)
         self.tomount = None
+
+
+class ExtendedTextArea(TextArea):
+    """A subclass of TextArea with parenthesis-closing functionality."""
+
+    def __init__(self, on_enter_key: Callable[[], Awaitable], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.on_enter_key = on_enter_key
+
+    async def _on_key(self, event: events.Key) -> None:
+        if event.key == "enter":
+            await self.on_enter_key()
+            event.stop()
+        if event.key == "ctrl+enter":
+            self.insert("\n")
+            event.stop()

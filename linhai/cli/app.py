@@ -4,7 +4,7 @@ import argparse
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
-from textual.widgets import TabbedContent, TabPane, TextArea, Button
+from textual.widgets import TabbedContent, TabPane
 from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
@@ -18,6 +18,7 @@ from .components import (
     RainbowAsciiArt,
     AnimatedWelcomeWidget,
     FooterWidget,
+    ExtendedTextArea,
 )
 from .context_tab import ContextTabWidget
 from ..token_manager import TokenManager
@@ -37,7 +38,7 @@ ASCII_ART = r"""
 ASCII_ART_SMALL = r"""
  ██   ████ ██  ██ ██  ██  ████  ████
 ░██  ░░██ ░███░██░██ ░██ ██ ░██░░██ 
-░██   ░██ ░██░███░██████░██████ ░██ 
+░██   ░██ ░██ ███░██████░██████ ░██ 
 ░██   ░██ ░██░░██░██░░██░██░░██ ░██ 
 ░████ ████░██ ░██░██ ░██░██ ░██ ████
 ░░░░ ░░░░ ░░   ░░░░  ░░ ░░  ░░ ░░░░"""
@@ -79,10 +80,6 @@ class CLIApp(App):
         height: auto;
         layout: horizontal;
         align-vertical: bottom;
-    }
-    #send-button {
-        width: 3;
-        height: 3;
     }
     AutoComplete {
         & AutoCompleteList {
@@ -144,12 +141,12 @@ class CLIApp(App):
                 yield self.messages_list
 
                 with Horizontal(id="input-container"):
-                    yield TextArea(
-                        placeholder="Ctrl+Enter发送",
+                    yield ExtendedTextArea(
+                        on_enter_key=self._handle_message_submission,
+                        placeholder="Enter发送，Ctrl+Enter换行（如果终端支持）",
                         id="input",
                         show_line_numbers=False,
                     )
-                    yield Button("→", id="send-button", variant="primary")
                 yield FooterWidget(
                     self.group_chat,
                     self.token_manager,
@@ -223,7 +220,7 @@ class CLIApp(App):
 
         self._run_agent()
 
-        input_element = self.query_one("#input", TextArea)
+        input_element = self.query_one("#input", ExtendedTextArea)
         self.set_focus(input_element)
 
         cliapp_tool = ToolSet()
@@ -269,10 +266,14 @@ class CLIApp(App):
     async def on_key(self, event: events.Key) -> None:
         """处理键盘事件"""
 
-        if event.key == "ctrl+enter":
+        if event.key == "enter":
             await self._handle_message_submission()
             event.stop()
             return
+        
+        if event.key == "ctrl+enter":
+            input_element = self.query_one("#input", ExtendedTextArea)
+            input_element.insert("\n")
 
         if event.key == "ctrl+c":
             close_all_terminals()
@@ -281,19 +282,14 @@ class CLIApp(App):
             ).disconnect_all_mcp_servers()
             self.app.exit()
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        """处理按钮点击事件"""
-        if event.button.id == "send-button":
-            await self._handle_message_submission()
-
     async def _handle_regular_message(self, message_text: str) -> None:
-        input_element = self.query_one("#input", TextArea)
+        input_element = self.query_one("#input", ExtendedTextArea)
         await self.messages_list.add_user_message(message_text)
         input_element.text = ""
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
-        input_element = self.query_one("#input", TextArea)
+        input_element = self.query_one("#input", ExtendedTextArea)
         message_text = input_element.text.strip()
 
         if not message_text:
