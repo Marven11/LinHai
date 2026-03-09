@@ -47,19 +47,16 @@
             ];
 
             dependencies = [
-              pkgs.nur.repos.marven11.fenjing
               etherGhost.packages.${system}.default
               openai
               httpx
               beautifulsoup4
               mistune
-              requests
               textual
               selenium
               mcp
               pyte
               pydantic
-              textual-autocomplete
               chardet
               bashlex
               tiktoken

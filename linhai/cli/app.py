@@ -6,14 +6,10 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import TabbedContent, TabPane, TextArea, Button
 from textual import events, work
-from textual_autocomplete import AutoComplete, DropdownItem
 
 from linhai.agent import Agent, Lifecycle
 from linhai.config import CLIConfig
 from linhai.group_chat import GroupChat
-from linhai.llm import (
-    AnswerTokenUsage,
-)
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
