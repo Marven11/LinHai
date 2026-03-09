@@ -2,11 +2,19 @@
 
 完成以下所有任务，逐个完成后钩上前面的标记`[ ]`并暂停，不要 git add 或 commit
 
-- [ ] 加上一个after new parsed answer回调和after segment finished回调
-  - 参考linhai/agent/main.py和linhai/lifecycle.py等
-  - 测试
-    - after segment finished回调在segment完成之后被调用
-    - 模拟从字符串解析出parsed answer的流程，验证这三个回调被调用
+- [ ] 改进PromptFastAgentPlugin
+  - 当前问题: PromptFastAgentPlugin仅被用于特定类型的llm，且不能在配置中自定义每个回答可以有多少个工具调用
+  - 设计：让PromptFastAgentPlugin变成一个根据配置项开启的插件
+  - 解决
+    - 修改配置项支持配置每个llm的最大工具调用数量
+      - 在agent.max_toolcall_for_llm中设置，键为llm的名字，值为数量
+    - 不再默认注册PromptFastAgentPlugin，在配置了max_toolcall_for_llm时才注册
+    - 修改PromptFastAgentPlugin使其接收max_toolcall_for_llm并在max_toolcall_for_llm中有当前llm时才据此打断llm
+  - 添加配置
+    - 在添加了对应配置项后agent会被打断
+    - 在切换llm前会被打断，切换到没有工具限制的llm后不会被打断
+    - 在切换llm前不会被打断，切换到有工具限制的llm后会被打断
+    - 在切换llm前会被打断，切换到最大工具调用数量更多的llm后不会被打断
 - [ ] trigger_after_segment和trigger_after_segment_finished没有被良好测试
   - 每一个trigger调用都需要有对应的测试
 
