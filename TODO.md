@@ -15,6 +15,8 @@
     - 在切换llm前会被打断，切换到没有工具限制的llm后不会被打断
     - 在切换llm前不会被打断，切换到有工具限制的llm后会被打断
     - 在切换llm前会被打断，切换到最大工具调用数量更多的llm后不会被打断
+- [ ] linhai/plugin/security_config.py没有检查argv是否都是字符串，也没有检查argv是不是列表
+  - 添加相关测试并修复，测试如果argv中包含数字会发生什么
 - [ ] trigger_after_segment和trigger_after_segment_finished没有被良好测试
   - 每一个trigger调用都需要有对应的测试
 
