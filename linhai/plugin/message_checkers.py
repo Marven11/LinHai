@@ -1,7 +1,7 @@
 """消息生成检查插件。"""
 
 import re
-import argparse
+import time
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List
@@ -318,6 +318,36 @@ class JsonCodeBlockPlugin(Plugin):
 class KimiK25ToolCallPlugin(Plugin):
     """处理火山平台kimi k2.5特殊工具调用格式的插件。"""
 
+    TIME_WINDOW_SECONDS = 60
+
+    def __init__(self, group_chat: GroupChat):
+        super().__init__(group_chat)
+        self._last_error_format_time: float | None = None
+
+    async def after_token_generation(
+        self,
+        agent: "Agent",
+        _answer: Answer,
+        current_content: str,
+    ) -> bool:
+        """在token生成后检查是否需要打断agent。"""
+        if self._last_error_format_time is None:
+            return False
+
+        if time.time() - self._last_error_format_time > self.TIME_WINDOW_SECONDS:
+            return False
+
+        first_line, _, _ = current_content.partition("\n")
+        first_line = first_line.strip()
+        if "<|tool_call_begin|>" in first_line or "<|tool_call_end|>" in first_line:
+            await agent.interrupt(
+                "错误：检测到kimi k2.5特殊工具调用格式。请使用正确的`json toolcall`代码块格式。",
+                "Agent使用了错误的工具调用格式，已打断",
+            )
+            return True
+
+        return False
+
     async def after_message_generation(
         self,
         _answer: Answer,
@@ -331,6 +361,7 @@ class KimiK25ToolCallPlugin(Plugin):
         has_correct_format = "```json toolcall" in full_response
 
         if has_kimi_marker and not has_correct_format:
+            self._last_error_format_time = time.time()
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
@@ -351,6 +382,7 @@ class KimiK25ToolCallPlugin(Plugin):
             )
 
         if "```<|tool_call_end|>" in full_response or "}<|tool_call_end|>" in full_response:
+            self._last_error_format_time = time.time()
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
@@ -370,8 +402,8 @@ class KimiK25ToolCallPlugin(Plugin):
                 ),
             )
 
-
     def register(self, lifecycle: "Lifecycle"):
+        lifecycle.register_after_token_generation(self.after_token_generation)
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
