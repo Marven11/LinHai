@@ -72,6 +72,16 @@ AfterParsingCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+AfterNewParsedAnswerCallback: TypeAlias = Callable[
+    ["ParsedAnswer"],
+    Awaitable[None],
+]
+
+AfterSegmentFinishedCallback: TypeAlias = Callable[
+    ["ParsedAnswer", "Segment"],
+    Awaitable[None],
+]
+
 ParsingErrorCallback: TypeAlias = Callable[
     ["ParsedAnswer", Exception],
     Awaitable[None],
@@ -117,6 +127,8 @@ class Lifecycle:
         self._before_parsing_callbacks: list[BeforeParsingCallback] = []
         self._after_segment_callbacks: list[AfterSegmentCallback] = []
         self._after_parsing_callbacks: list[AfterParsingCallback] = []
+        self._after_new_parsed_answer_callbacks: list[AfterNewParsedAnswerCallback] = []
+        self._after_segment_finished_callbacks: list[AfterSegmentFinishedCallback] = []
         self._parsing_error_callbacks: list[ParsingErrorCallback] = []
         self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
@@ -216,6 +228,14 @@ class Lifecycle:
     def register_after_parsing(self, callback: AfterParsingCallback):
         """注册解析完成后的回调。"""
         self._after_parsing_callbacks.append(callback)
+
+    def register_after_new_parsed_answer(self, callback: AfterNewParsedAnswerCallback):
+        """注册ParsedAnswer创建后的回调。"""
+        self._after_new_parsed_answer_callbacks.append(callback)
+
+    def register_after_segment_finished(self, callback: AfterSegmentFinishedCallback):
+        """注册segment完成后的回调。"""
+        self._after_segment_finished_callbacks.append(callback)
 
     def register_parsing_error(self, callback: ParsingErrorCallback):
         """注册解析错误的回调。"""
@@ -317,6 +337,16 @@ class Lifecycle:
         """触发解析完成后的事件。"""
         for callback in self._after_parsing_callbacks:
             await callback(parsed_answer)
+
+    async def trigger_after_new_parsed_answer(self, parsed_answer: "ParsedAnswer"):
+        """触发ParsedAnswer创建后的事件。"""
+        for callback in self._after_new_parsed_answer_callbacks:
+            await callback(parsed_answer)
+
+    async def trigger_after_segment_finished(self, parsed_answer: "ParsedAnswer", segment: "Segment"):
+        """触发segment完成后的事件。"""
+        for callback in self._after_segment_finished_callbacks:
+            await callback(parsed_answer, segment)
 
     async def trigger_parsing_error(
         self, parsed_answer: "ParsedAnswer", error: Exception

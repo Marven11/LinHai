@@ -42,16 +42,18 @@ class ParsedAnswer:
         else:
             # 类型变化：直接创建新segment并放入队列（丢掉前一个）
             self.current_segment["is_finished"] = True
-            await self.lifecycle.trigger_after_segment(self, self.current_segment)
+            await self.lifecycle.trigger_after_segment_finished(self, self.current_segment)
             self.current_segment = Segment(
                 segment_type=token_type, content=content, is_finished=False
             )
+            await self.lifecycle.trigger_after_segment(self, self.current_segment)
             await self.segment_queue.put(self.current_segment)
 
     async def _finish_current_segment(self):
         if self.current_segment is not None:
             # 标记当前segment完成（队列中已有该对象，只需更新状态）
             self.current_segment["is_finished"] = True
+            await self.lifecycle.trigger_after_segment_finished(self, self.current_segment)
 
     async def _parse_answer(self):
         await self.lifecycle.trigger_before_parsing(self)

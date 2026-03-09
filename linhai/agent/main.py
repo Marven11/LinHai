@@ -282,7 +282,7 @@ class Agent:
 
         parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
         await parsed_answer.start_parsing()
-
+        await self.lifecycle.trigger_after_new_parsed_answer(parsed_answer)
         await self.group_chat.send("parsed_agent_answer", parsed_answer)
 
         completed_normally = await parsed_answer.wait_parsing()
