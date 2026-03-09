@@ -7,6 +7,8 @@
   - 测试
     - after segment finished回调在segment完成之后被调用
     - 模拟从字符串解析出parsed answer的流程，验证这三个回调被调用
+- [ ] trigger_after_segment和trigger_after_segment_finished没有被良好测试
+  - 每一个trigger调用都需要有对应的测试
 
 注意：不仅仅要完成这些任务的代码实现，还要完成unittest、代码质量检查等！
 
@@ -40,10 +42,6 @@ unittest 失败时，必须分析
 
 # 暂时搁置
 
-- [ ] 改进KimiK25ToolCallPlugin
-  - 当前问题: 火山大平台的kimi即使被提示不要使用错误的工具格式仍然会输出对应的token
-  - 改进: 如果最近一分钟内有使用错误的工具格式，则在消息第一行包含`<|tool_call_begin|>`或者`<|tool_call_end|>`时打断agent
-  - 添加相应unittest
 - [ ] 添加初始化配置的功能
   - 用户运行python -m linhai init可以打开初始化TUI页面，可以设置第一个llm的openai的base_url, api_key等
   - 参考https://github.com/Textualize/textual/blob/main/examples/calculator.py
