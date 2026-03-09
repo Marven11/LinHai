@@ -255,6 +255,8 @@ class AssistantMessage:
             "content": self.get_content(),
             "reasoning_content": self.reasoning_message,
         }
+        if not msg["reasoning_content"]:
+            del msg["reasoning_content"]
         return cast(LanguageModelMessage, msg)
 
     def get_content(self) -> str:
