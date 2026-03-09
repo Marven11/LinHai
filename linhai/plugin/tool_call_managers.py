@@ -66,15 +66,6 @@ class PromptFastAgentPlugin(Plugin):
             source="prompt_fast_agent",
             sort_value=100,
         )
-        # 只在第一次生成消息时发送UI日志
-        if is_first:
-            await self.group_chat.send_if_exists(
-                "ui_log",
-                CliRuntimeNotice(
-                    level="INFO",
-                    content=f"针对性优化: {model_name}禁止调用超过{max_toolcall}个工具",
-                ),
-            )
 
     async def after_token_generation(
         self,
