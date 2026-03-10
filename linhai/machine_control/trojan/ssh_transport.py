@@ -34,7 +34,11 @@ class SshTrojanTransport:
     async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
         check_cmd = ssh_cmd + ["/usr/bin/env python3 -V"]
         process = await asyncio.create_subprocess_exec(
-            *check_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit = 256 * 1024
+            *check_cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            limit=256 * 1024,
         )
         _, stderr = await process.communicate()
         if process.returncode != 0:
@@ -57,6 +61,7 @@ class SshTrojanTransport:
         remote_temp_path_cmd = ssh_cmd + ["mktemp --suffix=.py"]
         process = await asyncio.create_subprocess_exec(
             *remote_temp_path_cmd,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -76,7 +81,10 @@ class SshTrojanTransport:
         encoded_content = base64.b64encode(trojan_content.encode()).decode()
         echo_cmd = ssh_cmd + [f"echo {encoded_content} | base64 -d > {remote_path}"]
         process = await asyncio.create_subprocess_exec(
-            *echo_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            *echo_cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         _, stderr = await process.communicate()
         if process.returncode != 0:
@@ -90,6 +98,7 @@ class SshTrojanTransport:
             cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
             cleanup_process = await asyncio.create_subprocess_exec(
                 *cleanup_cmd,
+                stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )

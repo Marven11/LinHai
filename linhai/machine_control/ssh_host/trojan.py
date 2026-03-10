@@ -287,6 +287,7 @@ class Trojan:
             "-n",
             expression,
             filepath,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -303,6 +304,7 @@ class Trojan:
             cmd = ["sed", "-i", expression, filepath]
         process = await asyncio.create_subprocess_exec(
             *cmd,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
