@@ -153,20 +153,20 @@ def load_image(
 
     Raises:
         FileNotFoundError: 图片文件不存在
+        ValueError: 图像文件损坏或格式不支持
     """
     path = Path(image_filepath)
     if not path.exists():
         raise FileNotFoundError(f"图片文件不存在: {image_filepath}")
 
-    mime_type = {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
-        ".bmp": "image/bmp",
-    }.get(path.suffix.lower(), "image/png")
+    # 首先验证图像完整性
+    try:
+        with Image.open(path) as img_for_verify:
+            img_for_verify.verify()  # 验证基本结构，这会关闭文件
+    except Exception as e:
+        raise ValueError(f"图像文件损坏或格式不支持: {e}")
 
+    # 重新打开图像进行处理
     with Image.open(path) as img:
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
@@ -187,7 +187,23 @@ def load_image(
             mime_type = "image/jpeg"
         else:
             buffer = BytesIO()
-            img.save(buffer, format=img.format if img.format else "PNG")
+            # 如果原始格式是webp，则转换为png，因为llama.cpp不支持webp
+            if img.format and img.format.upper() == 'WEBP':
+                img.save(buffer, format='PNG')
+                mime_type = 'image/png'
+            else:
+                # 保持原始格式，但如果没有格式信息则使用PNG
+                save_format = img.format if img.format else 'PNG'
+                img.save(buffer, format=save_format)
+                # 根据保存的格式设置MIME类型
+                if save_format.upper() == 'JPEG':
+                    mime_type = 'image/jpeg'
+                elif save_format.upper() == 'GIF':
+                    mime_type = 'image/gif'
+                elif save_format.upper() == 'BMP':
+                    mime_type = 'image/bmp'
+                else:
+                    mime_type = 'image/png'  # 默认PNG
             image_bytes = buffer.getvalue()
 
     return ImageMessage(
