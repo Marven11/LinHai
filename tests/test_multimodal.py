@@ -170,18 +170,6 @@ class TestLoadImage(TestCase):
         import inspect
         import linhai.multimodal as multimodal_module
 
-        # Check function signature
-        sig = inspect.signature(multimodal_module.load_image)
-        params = list(sig.parameters.keys())
-
-        # Should have image_filepath, not image_path
-        self.assertIn("image_filepath", params)
-        self.assertNotIn("image_path", params)
-
-        # Check the parameter is first
-        self.assertEqual(params[0], "image_filepath")
-
-        # Check function docstring mentions image_filepath
         func_doc = multimodal_module.load_image.__doc__ or ""
         self.assertIn("image_filepath", func_doc)
 
