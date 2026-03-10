@@ -39,6 +39,7 @@ class SshTrojanTransport:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             limit=256 * 1024,
+            start_new_session=True,
         )
         _, stderr = await process.communicate()
         if process.returncode != 0:
@@ -64,6 +65,7 @@ class SshTrojanTransport:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
@@ -85,6 +87,7 @@ class SshTrojanTransport:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
         _, stderr = await process.communicate()
         if process.returncode != 0:
@@ -101,6 +104,7 @@ class SshTrojanTransport:
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
+                start_new_session=True,
             )
             await asyncio.wait_for(cleanup_process.wait(), timeout=60.0)
             raise RuntimeError(f"写入远程文件失败: {error_msg}")
@@ -116,6 +120,7 @@ class SshTrojanTransport:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
 
         await asyncio.sleep(1)

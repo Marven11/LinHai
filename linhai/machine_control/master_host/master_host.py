@@ -64,6 +64,7 @@ class MasterHostControl:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
             pid = str(process.pid)
             self._processes[pid] = process

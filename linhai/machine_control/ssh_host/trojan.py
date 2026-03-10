@@ -54,6 +54,7 @@ class Trojan:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.current_dir,
+            start_new_session=True,
         )
         pid = str(process.pid)
         self._processes[pid] = process
