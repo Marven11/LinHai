@@ -283,16 +283,16 @@ class CLIApp(App):
             self.app.exit()
 
     async def _handle_regular_message(self, message_text: str) -> None:
-        input_element = self.query_one("#input", ExtendedTextArea)
         await self.messages_list.add_user_message(message_text)
-        input_element.text = ""
 
     async def _handle_message_submission(self) -> None:
         """处理消息提交"""
         input_element = self.query_one("#input", ExtendedTextArea)
-        message_text = input_element.text.strip()
-
-        if not message_text:
+        message_text = input_element.text
+        input_element.text = ""
+        
+        stripped_text = message_text.strip()
+        if not stripped_text:
             return
 
         container = self.query_one("#chat-container")
@@ -300,4 +300,4 @@ class CLIApp(App):
         for widget in welcome_widgets:
             widget.remove()
 
-        await self._handle_regular_message(message_text)
+        await self._handle_regular_message(stripped_text)

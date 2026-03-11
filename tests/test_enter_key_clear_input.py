@@ -1,0 +1,147 @@
+"""测试回车发送后输入框是否被正确清空。"""
+
+import unittest
+from unittest.mock import Mock, AsyncMock, patch
+import asyncio
+
+from linhai.cli.app import CLIApp
+from linhai.group_chat import GroupChat
+from linhai.config import CLIConfig
+from linhai.cli.messages_list import MessagesList
+
+
+class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
+    """测试回车键发送消息后输入框是否被清空。"""
+
+    async def asyncSetUp(self):
+        """设置测试环境。"""
+        self.group_chat = GroupChat()
+        self.group_chat.register_queue("user_message")
+        
+        # 创建模拟agent
+        from linhai.agent.main import Agent
+        from linhai.agent.message import AgentMessage
+        from linhai.agent.orchestration import AgentContextOrchestration
+        from linhai.agent.lifecycle import Lifecycle
+        
+        self.mock_agent = Mock(spec=Agent)
+        self.mock_agent_message = Mock(spec=AgentMessage)
+        self.mock_agent_message.messages = []
+        self.mock_agent_message.notification_messages = {}
+        self.mock_orchestration = Mock(spec=AgentContextOrchestration)
+        self.mock_orchestration.large_messages = {}
+        self.mock_lifecycle = Mock(spec=Lifecycle)
+        
+        self.group_chat.register_member("agent", self.mock_agent)
+        self.group_chat.register_member("agent_message", self.mock_agent_message)
+        self.group_chat.register_member("agent_context_orchestration", self.mock_orchestration)
+        self.group_chat.register_member("lifecycle", self.mock_lifecycle)
+        
+        # 模拟cli_args
+        import argparse
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.message = None
+        mock_cli_args.file = None
+        self.group_chat.register_member("cli_args", mock_cli_args)
+        
+        # 模拟token_manager
+        from linhai.token_manager import TokenManager
+        self.mock_token_manager = Mock(spec=TokenManager)
+        self.mock_token_manager.get_token_display_pieces.return_value = []
+        self.mock_token_manager.update_cumulative_usage = Mock()
+        self.mock_token_manager.start_watching = Mock()
+        
+        # 模拟其他组件
+        from linhai.llm import AnswerTokenUsage
+        self.mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 6000,
+            "usage_ratio": 0.75,
+        }
+        self.mock_agent.last_token_usage = AnswerTokenUsage(
+            input_tokens=1000,
+            output_tokens=200,
+            total_tokens=1200,
+            cached_input_tokens=500,
+        )
+        self.mock_agent.get_current_llm_info.return_value = ("test-llm", Mock())
+        
+        # 模拟llm_manager
+        self.mock_llm_manager = Mock()
+        self.mock_llm_manager.llms = []
+        self.mock_agent.llm_manager = self.mock_llm_manager
+        
+        # 创建app
+        self.app = CLIApp(group_chat=self.group_chat, cli_config=CLIConfig())
+        
+        # 模拟messages_list（不验证调用，只确保测试运行）
+        self.mock_messages_list = AsyncMock(spec=MessagesList)
+        self.mock_messages_list.add_user_message = AsyncMock()
+        self.mock_messages_list.add_initial_messages = AsyncMock()
+        self.mock_messages_list.start_listening = AsyncMock()
+        self.mock_messages_list.cleanup = AsyncMock()
+        self.mock_messages_list.mount = Mock()
+        self.app.messages_list = self.mock_messages_list
+        
+        # 模拟FooterWidget
+        self.mock_footer = Mock()
+        self.mock_footer.update_token_info = Mock()
+
+    @patch("linhai.cli.app.CLIApp.on_mount")
+    async def test_enter_key_clears_input_text(self, mock_on_mount):
+        """测试按下回车键后输入框文本被清空。"""
+        mock_on_mount.return_value = None
+        
+        async with self.app.run_test() as pilot:
+            # 获取输入框
+            input_element = pilot.app.query_one("#input")
+            
+            # 设置一些文本
+            input_element.text = "Hello world"
+            
+            # 模拟按下回车键
+            await pilot.press("enter")
+            await pilot.pause(0.1)  # 等待事件处理
+            
+            # 验证输入框是否被清空
+            self.assertEqual(input_element.text, "", "输入框应在回车发送后被清空")
+
+    @patch("linhai.cli.app.CLIApp.on_mount")
+    async def test_empty_input_not_sent(self, mock_on_mount):
+        """测试空输入不会被发送。"""
+        mock_on_mount.return_value = None
+        
+        async with self.app.run_test() as pilot:
+            input_element = pilot.app.query_one("#input")
+            
+            # 设置空文本
+            input_element.text = ""
+            
+            # 模拟按下回车键
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+            
+            # 输入框应保持为空
+            self.assertEqual(input_element.text, "")
+
+    @patch("linhai.cli.app.CLIApp.on_mount")
+    async def test_input_with_whitespace_not_sent(self, mock_on_mount):
+        """测试仅包含空白字符的输入不会被发送。"""
+        mock_on_mount.return_value = None
+        
+        async with self.app.run_test() as pilot:
+            input_element = pilot.app.query_one("#input")
+            
+            # 设置仅包含空白字符的文本
+            input_element.text = "   \t\n  "
+            
+            # 模拟按下回车键
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+            
+            # 输入框应被清空
+            self.assertEqual(input_element.text, "", "仅包含空白字符的输入应被清空")
+
+
+if __name__ == "__main__":
+    unittest.main()
