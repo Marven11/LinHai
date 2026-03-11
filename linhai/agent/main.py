@@ -159,6 +159,13 @@ class Agent:
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
             self.state = "working"
 
+            # 批量处理所有排队的用户消息
+            from linhai.llm import UserMessage
+            while not self.group_chat.is_empty("user_message"):
+                msg = await self.group_chat.receive("user_message")
+                assert isinstance(msg, UserMessage)
+                await self.handle_user_message(msg)
+
     async def receive_one_user_message(self):
         msg = await self.group_chat.receive("user_message")
         from linhai.llm import UserMessage
