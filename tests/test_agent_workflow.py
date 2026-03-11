@@ -2,6 +2,7 @@
 
 import reprlib
 import unittest
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 from linhai.agent import Agent
@@ -163,7 +164,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             elif name == "range_clean_manager":
                 return mock_range_clean_manager
             elif name == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 return None
 
@@ -224,7 +225,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             elif name == "range_clean_manager":
                 return mock_range_clean_manager
             elif name == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 return None
 
@@ -268,7 +269,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             elif name == "range_clean_manager":
                 return mock_range_clean_manager
             elif name == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 return None
 
@@ -346,9 +347,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_group_chat = MagicMock()
         mock_agent.group_chat = mock_group_chat
-        mock_group_chat.get_member_typechecked.return_value = Path(
-            "/tmp/test_conversation"
-        )
+        mock_group_chat.get_member_typechecked.return_value = Path(tempfile.mkdtemp())
 
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name
@@ -424,7 +423,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             elif name == "range_clean_manager":
                 return mock_range_clean_manager
             elif name == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 return None
 
@@ -545,7 +544,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             elif name == "range_clean_manager":
                 return mock_range_clean_manager
             elif name == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 return None
 

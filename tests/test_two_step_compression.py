@@ -2,6 +2,7 @@
 
 import unittest
 import time
+import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 
@@ -78,7 +79,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 mock_manager.create_clean_info = MagicMock()
                 return mock_manager
             elif member_type == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
@@ -134,8 +135,8 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
-            mock_save.return_value = Path("/tmp/test.json")
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
+            mock_save.return_value = Path(tempfile.mktemp(suffix=".json"))
             result = await context_forget_range_step1(mock_group_chat)
 
         self.assertIsInstance(result, ToolResultSuccess)
@@ -180,7 +181,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 mock_manager.remove_clean_info = MagicMock()
                 return mock_manager
             elif member_type == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
@@ -211,7 +212,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.message_processor.insert_message = AsyncMock()
 
-        with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step2(
                 mock_group_chat,
@@ -379,7 +380,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 mock_manager.create_clean_info = MagicMock()
                 return mock_manager
             elif member_type == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
@@ -414,8 +415,8 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         )
         mock_agent.generate_response = AsyncMock(return_value=mock_response)
 
-        with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
-            mock_save.return_value = Path("/tmp/test.json")
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
+            mock_save.return_value = Path(tempfile.mktemp(suffix=".json"))
             result = await context_forget_range_step1(mock_group_chat)
 
         # Should still succeed, even if LLM says there are too few messages
@@ -444,7 +445,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
                 mock_manager.remove_clean_info = MagicMock()
                 return mock_manager
             elif member_type == "conversation_folder":
-                return Path("/tmp/test_conversation")
+                return Path(tempfile.mkdtemp())
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
@@ -507,7 +508,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             side_effect=mock_insert_message
         )
 
-        with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
+        with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step2(
                 mock_group_chat,
