@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - ci-workflow-only
+      - clean-ci-only
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: debian-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        run: |
+          apt-get update
+          apt-get install -y python3 python3-pip python3-venv curl
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          uv --version
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --extra dev
+
+      - name: Create config file for tests
+        run: |
+          # 创建测试所需的配置文件，匹配测试期望的路径
+          mkdir -p /root/.config/linhai/
+          cp config-example.toml /root/.config/linhai/config.toml
+          ls -la /root/.config/linhai/config.toml
+          
+      - name: Run unittests
+        env:
+          PYTHONPATH: $PWD
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Running unittest discover -s . -p 'test_*.py' -v"
+          uv run python -m unittest discover -s . -p 'test_*.py' -v
+
+      - name: Run pyright
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pyright linhai/
+
+      - name: Run black
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          git diff --name-only | grep .py | xargs black --check
+
+      - name: Run pylint
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pylint linhai/ tests/
