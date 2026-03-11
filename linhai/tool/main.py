@@ -123,14 +123,12 @@ class ToolManager:
 
         kwargs = tool_call.function_arguments
 
-        # 处理on_machine参数
         original_machine = None
         machine_control = None
         if tool_call.on_machine is not None:
             from linhai.machine_control.main import MachineControl
 
-            # machine_control应该总是存在，因为ToolManager.postinit会注册它
-            # 如果不存在，说明系统初始化有问题，应该抛出异常
+
             machine_control = self.group_chat.get_member_typechecked(
                 "machine_control", MachineControl
             )
@@ -241,14 +239,35 @@ class ToolManager:
             )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
+            error_msg = str(e)
+            
+            failed_result = ToolResultFailed(content=error_msg)
+            
+            from linhai.agent.lifecycle import Lifecycle
+            lifecycle = self.group_chat.get_member_typechecked(
+                "lifecycle", Lifecycle
+            )
+            processed_result = await lifecycle.trigger_after_toolcall(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                status="failed",
+                message=failed_result,
+                toolcall_arguments=kwargs,
+                with_secret=tool_call.with_secret,
+                is_tool_failed_duplicated_error=False,
+            )
+            
+            from linhai.agent.base import RuntimeMessage
+            if isinstance(processed_result, RuntimeMessage):
+                failed_result = ToolResultFailed(content=processed_result.content)
+            
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
-                    content=f"工具执行失败: {tool_call.function_name} - {str(e)}",
+                    content=f"工具执行失败: {tool_call.function_name} - {error_msg}",
                 ),
             )
-            failed_result = ToolResultFailed(content=str(e))
             return ToolCallResultMessage(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
@@ -256,7 +275,6 @@ class ToolManager:
                 toolcall_arguments=kwargs,
             )
         finally:
-            # 恢复原始机器
             if machine_control is not None and original_machine is not None:
                 machine_control.target_machine = original_machine
 
