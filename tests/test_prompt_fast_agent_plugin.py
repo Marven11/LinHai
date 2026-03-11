@@ -63,7 +63,8 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         
         # 应该设置notification消息
         agent.message_processor.update_notification_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once()
+        # 注意：插件没有发送UI日志，所以send_if_exists不应该被调用
+        self.group_chat.send_if_exists.assert_not_called()
         
         # 重置mock，测试非第一次生成消息
         agent.message_processor.update_notification_message.reset_mock()
