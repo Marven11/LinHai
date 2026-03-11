@@ -199,7 +199,7 @@ class SecretInterceptorPlugin:
         elif status in ["success", "failed"]:
             if message is None:
                 return None
-            
+
             result_content = message.get_content()
             if result_content is None:
                 return None
