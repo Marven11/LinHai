@@ -66,6 +66,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
         # 模拟对话文件夹
         mock_conversation_folder = Path("/tmp/test_conversation")
+        mock_conversation_folder.mkdir(exists_ok=True)
         self.mock_group_chat.get_member_typechecked = MagicMock(
             side_effect=lambda name, cls=None: {
                 "conversation_folder": mock_conversation_folder
