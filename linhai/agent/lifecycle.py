@@ -157,6 +157,7 @@ class Lifecycle:
             AfkPlugin,
             VolcanoDeepseekFixPlugin,
             ProcessArgvCheckerPlugin,
+            SudoStdioCheckerPlugin,
         )
         from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -184,6 +185,7 @@ class Lifecycle:
             AfkPlugin(self.group_chat),
             VolcanoDeepseekFixPlugin(self.group_chat),
             ProcessArgvCheckerPlugin(self.group_chat),
+            SudoStdioCheckerPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
