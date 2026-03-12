@@ -183,7 +183,7 @@ def load_image(
         else:
             buffer = BytesIO()
             img_format = img.format.upper() if img.format else "PNG"
-            
+
             if img_format in ("JPEG", "JPG"):
                 img.save(buffer, format="JPEG")
                 mime_type = "image/jpeg"
@@ -191,7 +191,7 @@ def load_image(
                 img.save(buffer, format="PNG")
                 mime_type = "image/png"
             elif img_format == "WEBP":
-                if img.info.get('lossless', 0):
+                if img.info.get("lossless", 0):
                     img.save(buffer, format="PNG")
                     mime_type = "image/png"
                 else:

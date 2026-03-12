@@ -167,7 +167,7 @@ class TestLoadImage(TestCase):
 
     def test_load_image_parameter_name(self):
         """Test that load_image uses correct parameter name (image_filepath)."""
-        import inspect
+
         import linhai.multimodal as multimodal_module
 
         func_doc = multimodal_module.load_image.__doc__ or ""
