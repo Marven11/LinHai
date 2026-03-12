@@ -191,7 +191,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
             + "\n".join(
                 f"[位置{i}]\n{context}" for i, context in enumerate(contexts, 1)
             )
-            + "\n"
+            + "尝试在</think>和工具调用之间加上一行内容，如:\n\n</think>我将正确调用工具\n\n```json toolcall\n"
         )
 
         await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
