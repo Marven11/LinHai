@@ -182,20 +182,27 @@ def load_image(
             mime_type = "image/jpeg"
         else:
             buffer = BytesIO()
-            if img.format and img.format.upper() == "WEBP":
+            img_format = img.format.upper() if img.format else "PNG"
+            
+            if img_format in ("JPEG", "JPG"):
+                img.save(buffer, format="JPEG")
+                mime_type = "image/jpeg"
+            elif img_format == "PNG":
                 img.save(buffer, format="PNG")
                 mime_type = "image/png"
-            else:
-                save_format = img.format if img.format else "PNG"
-                img.save(buffer, format=save_format)
-                if save_format.upper() == "JPEG":
-                    mime_type = "image/jpeg"
-                elif save_format.upper() == "GIF":
-                    mime_type = "image/gif"
-                elif save_format.upper() == "BMP":
-                    mime_type = "image/bmp"
-                else:
+            elif img_format == "WEBP":
+                if img.info.get('lossless', 0):
+                    img.save(buffer, format="PNG")
                     mime_type = "image/png"
+                else:
+                    img.save(buffer, format="JPEG", quality=95)
+                    mime_type = "image/jpeg"
+            else:
+                # 其他格式尝试转换为JPEG，如果转换失败则让错误自然抛出
+                if img.mode in ("RGBA", "LA", "P"):
+                    img = img.convert("RGB")
+                img.save(buffer, format="JPEG", quality=95)
+                mime_type = "image/jpeg"
             image_bytes = buffer.getvalue()
 
     return ImageMessage(

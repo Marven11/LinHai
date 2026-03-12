@@ -186,9 +186,9 @@ class TestLoadImage(TestCase):
         test_cases = [
             (".jpg", "image/jpeg"),
             (".jpeg", "image/jpeg"),
-            (".gif", "image/png"),  # GIF转换为PNG因为模式转换
-            (".webp", "image/png"),  # WEBP转换为PNG因为llama.cpp不支持
-            (".bmp", "image/bmp"),
+            (".gif", "image/png"),  # GIF实际被PIL保存为PNG格式，接受此行为
+            (".webp", "image/jpeg"),  # WEBP默认视为有损，转换为JPEG
+            (".bmp", "image/jpeg"),  # BMP尝试转换为JPEG
         ]
 
         for ext, expected_mime in test_cases:
