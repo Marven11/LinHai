@@ -241,8 +241,13 @@ class ToolManager:
         except Exception as e:  # pylint: disable=broad-exception-caught
             error_msg = str(e)
             
-            failed_result = ToolResultFailed(content=error_msg)
-            
+            failed_result = ToolCallResultMessage(
+                tool_name=tool_call.function_name,
+                tool_index=tool_index,
+                result=ToolResultFailed(content=error_msg),
+                toolcall_arguments={},
+            )
+
             from linhai.agent.lifecycle import Lifecycle
             lifecycle = self.group_chat.get_member_typechecked(
                 "lifecycle", Lifecycle
