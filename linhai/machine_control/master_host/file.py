@@ -81,6 +81,30 @@ def validate_file(file_path: Path) -> str:
     return ""
 
 
+def validate_file_for_sed(file_path: Path) -> str:
+    """专门为read_file_with_sed验证文件：检查是否存在、是文件、是纯文本，但不检查文件大小。
+
+    Args:
+        file_path: 文件路径对象
+
+    Returns:
+        空字符串如果验证通过，否则错误消息
+    """
+    if not file_path.exists():
+        return f"文件路径{file_path.as_posix()!r}不存在"
+    if not file_path.is_file():
+        return f"路径{file_path.as_posix()!r}不是文件"
+
+    try:
+        _ = file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return f"文件{file_path.as_posix()!r}不是纯文本文件（UTF-8编码错误）"
+    except OSError as exc:
+        return f"读取文件时发生错误: {exc!r}"
+
+    return ""
+
+
 def read_file(
     filepath: str, show_line_numbers: bool = False
 ) -> FileContentMessage | ToolResultFailed:
@@ -348,7 +372,7 @@ def read_file_with_sed(
         sed命令输出或错误消息
     """
     file_path = Path(filepath)
-    validation_error = validate_file(file_path)
+    validation_error = validate_file_for_sed(file_path)
     if validation_error:
         return ToolResultFailed(content=validation_error)
 
@@ -367,6 +391,12 @@ def read_file_with_sed(
             return ToolResultFailed(
                 content=f"错误: 表达式以s开头，但此工具不能修改文件!\n{result.stdout=}"
             )
+
+        if len(result.stdout) > 1024 * 1024:
+            return ToolResultFailed(
+                content=f"错误: sed输出过大（{len(result.stdout)}字符），超过1MB限制。请使用更精确的sed表达式以减少输出。"
+            )
+
         return ToolResultSuccess(content=result.stdout)
     except subprocess.CalledProcessError as exc:
         return ToolResultFailed(content=f"sed命令执行错误: {exc.stderr}")
