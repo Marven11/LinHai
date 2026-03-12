@@ -51,7 +51,7 @@ jobs:
       - name: Run black
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          git diff --name-only | grep .py | xargs black --check
+          git diff --name-only | grep .py | xargs uv run black --check
 
       - name: Run pylint
         run: |
