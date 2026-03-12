@@ -35,6 +35,18 @@ jobs:
           cp config-example.toml /root/.config/linhai/config.toml
           ls -la /root/.config/linhai/config.toml
           
+      - name: Check for new Python comments
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for new # comments in Python files..."
+          uv run python .gitea/scripts/check_python_comments.py
+
+      - name: Check for garbage code patterns
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for garbage code patterns (hasattr/getattr/setattr/try except)..."
+          bash .gitea/scripts/check_git_diff.sh
+
       - name: Run unittests
         env:
           PYTHONPATH: $PWD
