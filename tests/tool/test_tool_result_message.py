@@ -132,7 +132,9 @@ class TestToolCallResultMessage(unittest.TestCase):
 
         content = str(llm_message.get("content", ""))
         # 检查JSON内容是否包含足够多的A字符
-        self.assertGreaterEqual(content.count("A"), 50000, "JSON内容应该包含至少50000个A")
+        self.assertGreaterEqual(
+            content.count("A"), 50000, "JSON内容应该包含至少50000个A"
+        )
 
     def test_tool_result_message_includes_line_count_for_long_content(self):
         """测试长内容时包含行数信息"""

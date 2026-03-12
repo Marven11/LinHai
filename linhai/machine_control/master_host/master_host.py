@@ -228,7 +228,9 @@ class MasterHostControl:
         self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         """读取进程的标准输出和标准错误内容"""
-        structured = await self.process_stdio_read_structured(pid, unescape_ansi, timeout)
+        structured = await self.process_stdio_read_structured(
+            pid, unescape_ansi, timeout
+        )
         if structured["success"]:
             return ToolResultSuccess(content=json.dumps(structured))
         else:

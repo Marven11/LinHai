@@ -176,6 +176,7 @@ class Config(BaseModel):
         llm_names = [llm.name for llm in self.llm]
         return f"Config(llms={llm_names}, agent={self.agent}, user_prompt={self.user_prompt}, tools={self.tools})"
 
+
 def load_config(config_path: Union[str, Path]) -> Config:
     """从指定路径加载配置并验证
     参数:

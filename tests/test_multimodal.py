@@ -187,7 +187,7 @@ class TestLoadImage(TestCase):
             (".jpg", "image/jpeg"),
             (".jpeg", "image/jpeg"),
             (".gif", "image/png"),  # GIF转换为PNG因为模式转换
-            (".webp", "image/png"),   # WEBP转换为PNG因为llama.cpp不支持
+            (".webp", "image/png"),  # WEBP转换为PNG因为llama.cpp不支持
             (".bmp", "image/bmp"),
         ]
 

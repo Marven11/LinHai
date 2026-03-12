@@ -270,7 +270,7 @@ class CLIApp(App):
             await self._handle_message_submission()
             event.stop()
             return
-        
+
         if event.key == "ctrl+enter":
             input_element = self.query_one("#input", ExtendedTextArea)
             input_element.insert("\n")
@@ -290,7 +290,7 @@ class CLIApp(App):
         input_element = self.query_one("#input", ExtendedTextArea)
         message_text = input_element.text
         input_element.text = ""
-        
+
         stripped_text = message_text.strip()
         if not stripped_text:
             return

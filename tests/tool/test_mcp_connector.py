@@ -50,8 +50,11 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_session.list_tools.return_value.tools = [mock_tool]
 
         from contextlib import AsyncExitStack
+
         exit_stack = AsyncExitStack()
-        await self.connector.connect_mcp_server("test_server", "test_server.py", exit_stack)
+        await self.connector.connect_mcp_server(
+            "test_server", "test_server.py", exit_stack
+        )
 
         self.assertIn("test_server", self.connector.sessions)
         session, _, toolset = self.connector.sessions["test_server"]
@@ -80,13 +83,19 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_session.list_tools.return_value.tools = []
 
         from contextlib import AsyncExitStack
+
         exit_stack = AsyncExitStack()
-        await self.connector.connect_mcp_server("test_server", "test_server.py", exit_stack)
+        await self.connector.connect_mcp_server(
+            "test_server", "test_server.py", exit_stack
+        )
 
         with self.assertRaises(RuntimeError) as context:
             from contextlib import AsyncExitStack
+
             exit_stack = AsyncExitStack()
-            await self.connector.connect_mcp_server("test_server", "another_server.py", exit_stack)
+            await self.connector.connect_mcp_server(
+                "test_server", "another_server.py", exit_stack
+            )
 
         self.assertIn("Duplicate name", str(context.exception))
 
@@ -94,8 +103,11 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         """测试连接不存在的MCP服务器文件。"""
         with self.assertRaises(FileNotFoundError):
             from contextlib import AsyncExitStack
+
             exit_stack = AsyncExitStack()
-            await self.connector.connect_mcp_server("test_server", "nonexistent.py", exit_stack)
+            await self.connector.connect_mcp_server(
+                "test_server", "nonexistent.py", exit_stack
+            )
 
     async def test_disconnect_success(self):
         """测试成功断开连接。"""

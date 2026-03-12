@@ -72,27 +72,23 @@ Screen {
     def __init__(self, config_path: Path | None = None):
         super().__init__()
         from linhai.config import get_default_config_path
+
         self.config_path = config_path or get_default_config_path()
         self.theme = "nord"
-
 
     def compose(self) -> ComposeResult:
         """Compose the UI."""
         yield Header(show_clock=False)
-        
+
         with VerticalScroll(id="main-container"):
             yield Static("LinHai 初始化配置", id="title")
             yield Static("配置你的第一个LLM", id="subtitle")
-            
+
             yield ConfigForm()
             yield ButtonBar(id="button-bar")
-            
-            yield Static(
-                "",
-                id="status-message",
-                classes="status-info"
-            )
-        
+
+            yield Static("", id="status-message", classes="status-info")
+
         yield Footer()
 
     def on_mount(self) -> None:
@@ -115,26 +111,26 @@ Screen {
 
     def validate_form(self, values: dict[str, str]) -> list[tuple[str, str]]:
         """Validate form values.
-        
+
         Returns:
             List of (field_name, error_message) tuples.
         """
         errors = []
-        
+
         if not values["name"].strip():
             errors.append(("name", "LLM名称不能为空"))
-        
+
         if not values["base_url"].strip():
             errors.append(("base_url", "Base URL不能为空"))
         elif not values["base_url"].startswith(("http://", "https://")):
             errors.append(("base_url", "Base URL必须以http://或https://开头"))
-        
+
         if not values["api_key"].strip():
             errors.append(("api_key", "API Key不能为空"))
-        
+
         if not values["model"].strip():
             errors.append(("model", "Model不能为空"))
-        
+
         return errors
 
     def on_key(self, event) -> None:
@@ -145,16 +141,16 @@ Screen {
     async def on_button_pressed(self, event) -> None:
         """Handle button press events."""
         button_id = event.button.id
-        
+
         if button_id == "btn-cancel":
             self.exit(0)
-        
+
         elif button_id == "btn-save":
             form = self.query_one(ConfigForm)
             values = form.get_values()
-            
+
             form.clear_errors()
-            
+
             errors = self.validate_form(values)
             if errors:
                 for field, message in errors:
@@ -162,7 +158,7 @@ Screen {
                 self.status_message = "错误: 请修正表单中的错误"
                 self.status_class = "status-error"
                 return
-            
+
             write_llm_config(
                 name=values["name"],
                 base_url=values["base_url"],

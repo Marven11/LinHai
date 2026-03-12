@@ -16,11 +16,13 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.added_messages = []
-        
+
         def capture_message(msg):
             self.added_messages.append(msg)
-        
-        self.agent.message_processor.add_new_message = AsyncMock(side_effect=capture_message)
+
+        self.agent.message_processor.add_new_message = AsyncMock(
+            side_effect=capture_message
+        )
         self.group_chat = MagicMock()
         self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
@@ -38,7 +40,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_no_abnormal_marker(self):
         """测试没有异常标记时不触发警告。"""
-        full_response = "正常的工具调用\n```json toolcall\n{\"name\": \"test\", \"arguments\": {}}\n```"
+        full_response = (
+            '正常的工具调用\n```json toolcall\n{"name": "test", "arguments": {}}\n```'
+        )
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -111,11 +115,9 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         prefix = "a" * 150
         suffix = "b" * 150
         full_response = (
-            prefix +
-            f"{abnormal_marker}\n"
+            prefix + f"{abnormal_marker}\n"
             '{"name": "test", "arguments": {}}\n'
-            "```\n" +
-            suffix
+            "```\n" + suffix
         )
 
         await self.plugin.after_message_generation(
@@ -131,15 +133,13 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         """测试上下文总长度约 100 字符。"""
         abnormal_marker = VolcanoDeepseekFixPlugin.ABNORMAL_MARKER
         self.assertEqual(VolcanoDeepseekFixPlugin.CONTEXT_CHARS, 50)
-        
+
         prefix = "a" * 100
         suffix = "b" * 100
         full_response = (
-            prefix +
-            f"{abnormal_marker}\n"
+            prefix + f"{abnormal_marker}\n"
             '{"name": "test", "arguments": {}}\n'
-            "```\n" +
-            suffix
+            "```\n" + suffix
         )
 
         await self.plugin.after_message_generation(
@@ -149,7 +149,22 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.added_messages), 1)
         runtime_msg = self.added_messages[0]
         message = runtime_msg.message
-        context_lines = [line for line in message.split("\n") if line.strip() and not any(x in line for x in ["警告", "正确", "请修正", "异常位置", "[位置"])]
+        context_lines = [
+            line
+            for line in message.split("\n")
+            if line.strip()
+            and not any(
+                x in line for x in ["警告", "正确", "请修正", "异常位置", "[位置"]
+            )
+        ]
         total_context_length = sum(len(line) for line in context_lines)
-        self.assertLess(total_context_length, 200, f"上下文总长度 {total_context_length} 超过 200 字符")
-        self.assertGreater(total_context_length, 50, f"上下文总长度 {total_context_length} 少于 50 字符")
+        self.assertLess(
+            total_context_length,
+            200,
+            f"上下文总长度 {total_context_length} 超过 200 字符",
+        )
+        self.assertGreater(
+            total_context_length,
+            50,
+            f"上下文总长度 {total_context_length} 少于 50 字符",
+        )

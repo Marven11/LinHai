@@ -24,10 +24,10 @@ class TestInitAppWithPilot(unittest.IsolatedAsyncioTestCase):
         async with app.run_test() as pilot:
             save_btn = pilot.app.query_one("#btn-save", Button)
             cancel_btn = pilot.app.query_one("#btn-cancel", Button)
-            
+
             self.assertIsNotNone(save_btn)
             self.assertIsNotNone(cancel_btn)
-            
+
             self.assertIn("Save", str(save_btn.label))
             self.assertIn("Cancel", str(cancel_btn.label))
 
@@ -40,26 +40,30 @@ class TestInitAppWithPilot(unittest.IsolatedAsyncioTestCase):
             base_url_input = pilot.app.query_one("#input-base-url", LabeledInput)
             api_key_input = pilot.app.query_one("#input-api-key", LabeledInput)
             model_input = pilot.app.query_one("#input-model", LabeledInput)
-            
+
             # Set empty values to trigger validation
             name_input.query_one("Input").value = ""
             base_url_input.query_one("Input").value = ""
             api_key_input.query_one("Input").value = ""
             model_input.query_one("Input").value = ""
-            
+
             # Focus the save button and press enter
             save_button = pilot.app.query_one("#btn-save", Button)
             save_button.focus()
             await pilot.press("enter")
-            
+
             # Wait for UI to update
             await pilot.pause()
-            
+
             # Verify that the form has been validated by checking status message
             status_widget = pilot.app.query_one("#status-message", Static)
             # Get content from Static widget - use the content property
-            status_text = str(status_widget.content) if hasattr(status_widget, 'content') else str(status_widget)
-            
+            status_text = (
+                str(status_widget.content)
+                if hasattr(status_widget, "content")
+                else str(status_widget)
+            )
+
             # The status message should indicate there's an error
             self.assertIn("错误", status_text, "Expected error message in status")
 

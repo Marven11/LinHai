@@ -17,13 +17,13 @@ class TestFooterWidget(unittest.TestCase):
     def test_footer_widget_init(self):
         """Test FooterWidget initialization."""
         from linhai.cli.components import FooterWidget
-        
+
         widget = FooterWidget(
             group_chat=self.group_chat,
             token_manager=self.token_manager,
-            use_nerd_font=False
+            use_nerd_font=False,
         )
-        
+
         self.assertEqual(widget.group_chat, self.group_chat)
         self.assertEqual(widget.token_manager, self.token_manager)
         self.assertFalse(widget.use_nerd_font)
@@ -31,13 +31,13 @@ class TestFooterWidget(unittest.TestCase):
     def test_footer_widget_with_nerd_font(self):
         """Test FooterWidget with nerd font enabled."""
         from linhai.cli.components import FooterWidget
-        
+
         widget = FooterWidget(
             group_chat=self.group_chat,
             token_manager=self.token_manager,
-            use_nerd_font=True
+            use_nerd_font=True,
         )
-        
+
         self.assertTrue(widget.use_nerd_font)
 
 

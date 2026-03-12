@@ -33,6 +33,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         # 注册machine_control
         from linhai.machine_control.main import MachineControl
+
         MachineControl(self.group_chat)
 
         from linhai.machine_control.master_host import terminal_toolset

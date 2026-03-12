@@ -53,7 +53,10 @@ async def run(args):
     group_chat.register_member("cli_args", args)
 
     from linhai.config import get_default_config_path
-    config_path = Path(args.config).expanduser() if args.config else get_default_config_path()
+
+    config_path = (
+        Path(args.config).expanduser() if args.config else get_default_config_path()
+    )
     config = load_config(config_path)
 
     context = create_agent_build_context(

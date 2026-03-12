@@ -161,7 +161,6 @@ def load_image(
 
     with Image.open(path) as img_for_verify:
         img_for_verify.verify()
-    
 
     with Image.open(path) as img:
         if img.mode in ("RGBA", "P"):
@@ -183,20 +182,20 @@ def load_image(
             mime_type = "image/jpeg"
         else:
             buffer = BytesIO()
-            if img.format and img.format.upper() == 'WEBP':
-                img.save(buffer, format='PNG')
-                mime_type = 'image/png'
+            if img.format and img.format.upper() == "WEBP":
+                img.save(buffer, format="PNG")
+                mime_type = "image/png"
             else:
-                save_format = img.format if img.format else 'PNG'
+                save_format = img.format if img.format else "PNG"
                 img.save(buffer, format=save_format)
-                if save_format.upper() == 'JPEG':
-                    mime_type = 'image/jpeg'
-                elif save_format.upper() == 'GIF':
-                    mime_type = 'image/gif'
-                elif save_format.upper() == 'BMP':
-                    mime_type = 'image/bmp'
+                if save_format.upper() == "JPEG":
+                    mime_type = "image/jpeg"
+                elif save_format.upper() == "GIF":
+                    mime_type = "image/gif"
+                elif save_format.upper() == "BMP":
+                    mime_type = "image/bmp"
                 else:
-                    mime_type = 'image/png'
+                    mime_type = "image/png"
             image_bytes = buffer.getvalue()
 
     return ImageMessage(

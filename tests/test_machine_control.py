@@ -141,7 +141,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             mock_process.stderr = AsyncMock()
             mock_process.stderr.read = AsyncMock(return_value=b"")
             mock_create.return_value = mock_process
-            
+
             result = await self.host_control.process_create(["echo", "test"], 1.0)
             self.assertIn("12345", result.content)
             self.assertIn("output", result.content)
@@ -149,8 +149,10 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
     async def test_process_create_default_wait_second(self):
         """测试process_create - wait_second为None时使用1.0秒默认值"""
-        with patch("asyncio.create_subprocess_exec") as mock_create, \
-             patch("time.perf_counter") as mock_time:
+        with (
+            patch("asyncio.create_subprocess_exec") as mock_create,
+            patch("time.perf_counter") as mock_time,
+        ):
             mock_process = AsyncMock()
             mock_process.pid = 12345
             mock_process.returncode = 0
@@ -159,10 +161,10 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             mock_process.stderr = AsyncMock()
             mock_process.stderr.read = AsyncMock(return_value=b"")
             mock_create.return_value = mock_process
-            
+
             # 模拟时间流逝: 0->0.3->0.6->0.9->1.2 (超过1.0秒阈值)
             mock_time.side_effect = [0.0, 0.3, 0.6, 0.9, 1.2]
-            
+
             # 不传wait_second参数(默认为None)
             result = await self.host_control.process_create(["echo", "test"])
             self.assertIn("12345", result.content)
@@ -172,10 +174,12 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
     async def test_process_create_timeout_with_output(self):
         """测试process_create - 超时但有输出"""
-        with patch("asyncio.create_subprocess_exec") as mock_create, \
-             patch("time.perf_counter") as mock_time, \
-             patch("asyncio.sleep"):
-            
+        with (
+            patch("asyncio.create_subprocess_exec") as mock_create,
+            patch("time.perf_counter") as mock_time,
+            patch("asyncio.sleep"),
+        ):
+
             mock_process = AsyncMock()
             mock_process.pid = 12346
             mock_process.returncode = None  # 进程仍在运行
@@ -185,9 +189,9 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             mock_process.stderr = AsyncMock()
             mock_process.stderr.read = AsyncMock(return_value=b"error output")
             mock_create.return_value = mock_process
-            
+
             mock_time.side_effect = [0.0, 0.5, 1.0, 1.5]  # 模拟时间流逝
-            
+
             result = await self.host_control.process_create(["sleep", "5"], 1.0)
             self.assertIn("12346", result.content)
             self.assertIn("等待失败", result.content)
@@ -198,7 +202,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         """测试process_stdio_read - 进程已退出"""
         # 创建一个模拟的MasterHostControl实例
         host_control = MasterHostControl()
-        
+
         # 模拟一个已退出的进程
         mock_process = AsyncMock()
         mock_process.pid = 12347
@@ -207,14 +211,15 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         mock_process.stdout.read = AsyncMock(return_value=b"final output")
         mock_process.stderr = AsyncMock()
         mock_process.stderr.read = AsyncMock(return_value=b"")
-        
+
         # 直接设置_processes字典，绕过process_create
         host_control._processes["12347"] = mock_process
-        
+
         result = await host_control.process_stdio_read("12347")
         self.assertIn("12347", result.content)
         # 现在返回JSON格式，检查JSON中的exit_note字段
         import json
+
         data = json.loads(result.content)
         self.assertIn("exit_note", data)
         self.assertIn("注意：当前程序12347已经退出", data["exit_note"])
@@ -223,7 +228,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
     async def test_process_stdio_read_with_running_process(self):
         """测试process_stdio_read - 进程仍在运行"""
         host_control = MasterHostControl()
-        
+
         mock_process = AsyncMock()
         mock_process.pid = 12348
         mock_process.returncode = None  # 进程仍在运行
@@ -231,9 +236,9 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         mock_process.stdout.read = AsyncMock(return_value=b"ongoing output")
         mock_process.stderr = AsyncMock()
         mock_process.stderr.read = AsyncMock(return_value=b"")
-        
+
         host_control._processes["12348"] = mock_process
-        
+
         result = await host_control.process_stdio_read("12348")
         self.assertIn("12348", result.content)
         self.assertNotIn("注意：当前程序12348已经退出", result.content)

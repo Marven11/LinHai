@@ -38,6 +38,7 @@ def check_jsonl(tool_call: str):
     except json.JSONDecodeError:
         return False
 
+
 def extract_json_blocks(markdown_text: str) -> List[Any]:
     """
     从Markdown文本中提取所有JSON代码块
@@ -147,8 +148,9 @@ def extract_tool_calls_with_errors(
                     f"错误附近内容:\n{context_str}\n"
                 )
                 if check_jsonl(block["content"]):
-                    error_message += ("在一个code block中发现了多个json数据，你是不是在一个code block中输出了多个json object了？\n"
-                    """
+                    error_message += (
+                        "在一个code block中发现了多个json数据，你是不是在一个code block中输出了多个json object了？\n"
+                        """
 多工具调用的正确格式是:
 
 ```json toolcall
@@ -165,10 +167,9 @@ def extract_tool_calls_with_errors(
 {"name": "toolcall1", "arguments": {...}}
 {"name": "toolcall2", "arguments": {...}}
 ```
-""")
-                errors.append(
-                    error_message
-                )
+"""
+                    )
+                errors.append(error_message)
                 continue
             except (ValueError, TypeError) as e:
                 errors.append(

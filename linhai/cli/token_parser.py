@@ -88,7 +88,7 @@ class TokenParser:
         for piece in self.gatherer.parse_token(token):
             if parsed_token := self.handle_piece(piece, False):
                 parsed.append(parsed_token)
-    
+
         return parsed
 
     def clear(self):

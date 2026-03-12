@@ -3,7 +3,17 @@
 from pathlib import Path
 import reprlib
 import time
-from typing import Any, ClassVar, Dict, List, Optional, TypeAlias, Union, Literal, TYPE_CHECKING
+from typing import (
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    TypeAlias,
+    Union,
+    Literal,
+    TYPE_CHECKING,
+)
 
 from linhai.agent.base import FileContentMessage
 

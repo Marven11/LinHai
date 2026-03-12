@@ -1,6 +1,10 @@
 import unittest
 import json
-from linhai.utils import simplify_value, simplify_toolcall_json, parse_and_simplify_toolcall
+from linhai.utils import (
+    simplify_value,
+    simplify_toolcall_json,
+    parse_and_simplify_toolcall,
+)
 
 
 class TestToolCallCollapse(unittest.TestCase):
@@ -43,7 +47,9 @@ class TestToolCallCollapse(unittest.TestCase):
             "key5": "value5",
         }
         result = simplify_value(long_dict)
-        self.assertIn('{"key1": "a very long value that makes this dic...", ...}', result)
+        self.assertIn(
+            '{"key1": "a very long value that makes this dic...", ...}', result
+        )
 
     def test_simplify_value_list_short(self):
         """测试短列表参数简化"""
@@ -56,7 +62,9 @@ class TestToolCallCollapse(unittest.TestCase):
         long_list = [
             "a very long item that makes the list exceed 80 characters by having even more text here to ensure the total length is over 80 and even more to guarantee it's really long enough for truncation",
             "another long item to add more length to the list representation",
-            "item3", "item4", "item5",
+            "item3",
+            "item4",
+            "item5",
         ]
         result = simplify_value(long_list)
         self.assertIn('"a very long item that makes the list ..."', result)
@@ -91,7 +99,7 @@ class TestToolCallCollapse(unittest.TestCase):
 
     def test_parse_and_simplify_toolcall_empty_string(self):
         """测试解析空字符串"""
-        json_str = ''
+        json_str = ""
         simplified = parse_and_simplify_toolcall(json_str)
         self.assertEqual(simplified, "<parse json error>")
 
@@ -99,13 +107,13 @@ class TestToolCallCollapse(unittest.TestCase):
         """测试解析没有arguments的正常工具调用"""
         json_str = '{"name": "list_files"}'
         simplified = parse_and_simplify_toolcall(json_str)
-        self.assertEqual(simplified, 'list_files()')
+        self.assertEqual(simplified, "list_files()")
 
     def test_parse_and_simplify_toolcall_normal_empty_arguments(self):
         """测试解析arguments为空的正常工具调用"""
         json_str = '{"name": "list_files", "arguments": {}}'
         simplified = parse_and_simplify_toolcall(json_str)
-        self.assertEqual(simplified, 'list_files()')
+        self.assertEqual(simplified, "list_files()")
 
     def test_normal_toolcall_not_marked_error(self):
         normal_toolcalls = [
@@ -123,18 +131,42 @@ class TestToolCallCollapse(unittest.TestCase):
         """全面测试change_directory工具的各种路径情况"""
         test_cases = [
             # (json字符串, 期望不是error toolcall)
-            ('{"name": "change_directory", "arguments": {"directory": "/home/user"}}', True),
-            ('{"name": "change_directory", "arguments": {"directory": "./relative/path"}}', True),
-            ('{"name": "change_directory", "arguments": {"directory": "~/Documents"}}', True),
-            ('{"name": "change_directory", "arguments": {"directory": "C:\\\\Program Files"}}', True),
-            ('{"name": "change_directory", "arguments": {"directory": "/path/with spaces/and\\"quotes\\""}}', True),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "/home/user"}}',
+                True,
+            ),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "./relative/path"}}',
+                True,
+            ),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "~/Documents"}}',
+                True,
+            ),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "C:\\\\Program Files"}}',
+                True,
+            ),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "/path/with spaces/and\\"quotes\\""}}',
+                True,
+            ),
             ('{"name": "change_directory", "arguments": {"directory": ""}}', True),
             # Windows路径
-            ('{"name": "change_directory", "arguments": {"directory": "C:\\\\Users\\\\Test"}}', True),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "C:\\\\Users\\\\Test"}}',
+                True,
+            ),
             # 包含特殊字符
-            ('{"name": "change_directory", "arguments": {"directory": "/path/with\\t tab"}}', True),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "/path/with\\t tab"}}',
+                True,
+            ),
             # 非常长路径
-            ('{"name": "change_directory", "arguments": {"directory": "/very/long/path/that/exceeds/the/typical/length/limit/for/display/purposes"}}', True),
+            (
+                '{"name": "change_directory", "arguments": {"directory": "/very/long/path/that/exceeds/the/typical/length/limit/for/display/purposes"}}',
+                True,
+            ),
         ]
         for json_str, should_pass in test_cases:
             simplified = parse_and_simplify_toolcall(json_str)

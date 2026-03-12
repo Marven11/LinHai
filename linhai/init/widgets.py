@@ -4,7 +4,6 @@ from textual.widgets import Input, Static, Button
 from textual.containers import Vertical, Horizontal
 
 
-
 class LabeledInput(Vertical):
     """A labeled input widget."""
 
@@ -42,7 +41,7 @@ class LabeledInput(Vertical):
     def set_error(self, message: str | None) -> None:
         """Set or clear error message."""
         error_widget = self.query_one(f"#{self.id}-error", Static)
-        
+
         if message:
             error_widget.update(message)
             error_widget.styles.display = "block"

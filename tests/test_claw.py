@@ -123,7 +123,9 @@ class TestClawPinnedMessages(unittest.TestCase):
             isinstance(msg, RuntimeMessage) and "CLAW模式介绍" in str(msg)
             for msg in messages
         )
-        self.assertFalse(claw_intro_found, "claw内容现在由插件添加，不在_create_pinned_messages中")
+        self.assertFalse(
+            claw_intro_found, "claw内容现在由插件添加，不在_create_pinned_messages中"
+        )
 
         # 文件内容也不再通过_create_pinned_messages添加
         file_content_found = any(

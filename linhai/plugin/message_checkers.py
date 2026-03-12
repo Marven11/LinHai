@@ -381,7 +381,10 @@ class KimiK25ToolCallPlugin(Plugin):
                 ),
             )
 
-        if "```<|tool_call_end|>" in full_response or "}<|tool_call_end|>" in full_response:
+        if (
+            "```<|tool_call_end|>" in full_response
+            or "}<|tool_call_end|>" in full_response
+        ):
             self._last_error_format_time = time.time()
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(

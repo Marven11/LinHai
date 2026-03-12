@@ -48,6 +48,7 @@ class TestCLITabs(unittest.TestCase):
 
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
+
         mock_lifecycle = Mock(spec=Lifecycle)
         group_chat.register_member("lifecycle", mock_lifecycle)
 
@@ -111,6 +112,7 @@ class TestCLITabs(unittest.TestCase):
 
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
+
         mock_lifecycle = Mock(spec=Lifecycle)
         group_chat.register_member("lifecycle", mock_lifecycle)
 
@@ -127,8 +129,6 @@ class TestCLITabs(unittest.TestCase):
         async with app.run_test() as pilot:
             agent_pane = pilot.app.query_one("#agent-tab")
             self.assertIsNotNone(agent_pane)
-
-
 
 
 if __name__ == "__main__":

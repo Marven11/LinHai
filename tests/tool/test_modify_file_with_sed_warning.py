@@ -46,7 +46,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             {"filepath": "test.txt", "expression": "1s/old/new/"},
         )
 
-        self.assertIn("警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content)
+        self.assertIn(
+            "警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content
+        )
         self.assertIn("文件的行号已经变化！", result.content)
         self.assertIn("使用行号匹配是不推荐的行为", result.content)
 
@@ -108,7 +110,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             {"filepath": "test.txt", "expression": "1,5s/old/new/"},
         )
 
-        self.assertIn("警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content)
+        self.assertIn(
+            "警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content
+        )
         self.assertIn("文件的行号已经变化！", result.content)
         self.assertIn("使用行号匹配是不推荐的行为", result.content)
 
@@ -138,7 +142,9 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
             {"filepath": "test.txt", "expression": "1s/old/new/"},
         )
 
-        self.assertIn("警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content)
+        self.assertIn(
+            "警告：使用行号匹配并修改文件，文件的行号已经变化！", result.content
+        )
 
         mock_run.assert_called_once_with(
             ["sed", "-i", "1s/old/new/", "test.txt"],

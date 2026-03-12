@@ -23,6 +23,7 @@ class MockAnswer:
 
     def get_message(self):
         from linhai.llm import AssistantMessage
+
         return AssistantMessage(message="test")
 
     def get_current_content(self):
@@ -54,7 +55,7 @@ class TestAfterNewParsedAnswerCallback(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock()
 
         parsed = ParsedAnswer(answer, lifecycle, agent)
-        
+
         # Callback should be triggered by the caller (main.py), not in __init__
         # This simulates what main.py does
         await lifecycle.trigger_after_new_parsed_answer(parsed)
@@ -82,7 +83,7 @@ class TestCallbackOrder(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock()
 
         parsed = ParsedAnswer(answer, lifecycle, agent)
-        
+
         # Simulate what main.py does
         await lifecycle.trigger_after_new_parsed_answer(parsed)
 

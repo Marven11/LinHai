@@ -44,7 +44,10 @@ class TestHttpRequestTool(unittest.TestCase):
         """测试文本内容返回"""
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
-        mock_response.headers = {"content-type": "text/html; charset=utf-8", "x-custom": "value"}
+        mock_response.headers = {
+            "content-type": "text/html; charset=utf-8",
+            "x-custom": "value",
+        }
         text_content = "<html><body>Test Content</body></html>"
         mock_response.content = text_content.encode("utf-8")
         mock_response.text = text_content
@@ -82,7 +85,7 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn(f"<<size>>{len(binary_content)}<<size>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        match = re.search(r"<<body_file>>(.*?)<<body_file>>", result.content)
         self.assertIsNotNone(match)
         assert match is not None
         filepath = match.group(1)
@@ -200,7 +203,7 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        match = re.search(r"<<body_file>>(.*?)<<body_file>>", result.content)
         if match:
             filepath = match.group(1)
             if os.path.exists(filepath):
@@ -223,7 +226,7 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        match = re.search(r"<<body_file>>(.*?)<<body_file>>", result.content)
         if match:
             filepath = match.group(1)
             if os.path.exists(filepath):
@@ -283,7 +286,7 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn(f"<<size>>{len(large_text)}<<size>>", result.content)
         self.assertIn("<<body_file>>", result.content)
         self.assertNotIn("<<body>>", result.content)
-        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+        match = re.search(r"<<body_file>>(.*?)<<body_file>>", result.content)
         self.assertIsNotNone(match)
         assert match is not None
         filepath = match.group(1)
@@ -334,24 +337,25 @@ class TestHttpRequestTool(unittest.TestCase):
         self.assertIn("<<status_code>>200<<status_code>>", result.content)
         self.assertIn("<<is_binary>>true<<is_binary>>", result.content)
         self.assertIn("<<body_file>>", result.content)
-        
-        match = re.search(r'<<body_file>>(.*?)<<body_file>>', result.content)
+
+        match = re.search(r"<<body_file>>(.*?)<<body_file>>", result.content)
         self.assertIsNotNone(match)
         assert match is not None
         filepath = match.group(1)
-        
+
         temp_dir = tempfile.gettempdir()
         self.assertTrue(
             filepath.startswith(temp_dir),
-            f"文件路径应该在临时目录中，但得到: {filepath}"
+            f"文件路径应该在临时目录中，但得到: {filepath}",
         )
-        
+
         hardcoded_path = "/home/cube/.local/share/linhai/conversation/1a28cf90-1879-47ae-8fba-70f68fad80f0/http_responses"
         self.assertNotIn(
-            hardcoded_path, filepath,
-            f"文件路径不应该包含硬编码路径，但得到: {filepath}"
+            hardcoded_path,
+            filepath,
+            f"文件路径不应该包含硬编码路径，但得到: {filepath}",
         )
-        
+
         if os.path.exists(filepath):
             os.unlink(filepath)
 

@@ -47,8 +47,7 @@ def save_context(conversation_dir: Path, messages: List[Message]) -> Path:
     context_file = conversation_dir / "context.json"
 
     history_data = [
-        {"type": msg.__class__.__name__, "data": msg.to_json()}
-        for msg in messages
+        {"type": msg.__class__.__name__, "data": msg.to_json()} for msg in messages
     ]
 
     with open(context_file, "w", encoding="utf-8") as f:
@@ -57,7 +56,9 @@ def save_context(conversation_dir: Path, messages: List[Message]) -> Path:
     return context_file
 
 
-def save_cleaned_messages(conversation_dir: Path, messages: List[Message], prefix: str) -> Path:
+def save_cleaned_messages(
+    conversation_dir: Path, messages: List[Message], prefix: str
+) -> Path:
     """保存被清理的消息到cleaned_messages目录。
 
     Args:
@@ -75,8 +76,7 @@ def save_cleaned_messages(conversation_dir: Path, messages: List[Message], prefi
     filepath = cleaned_messages_dir / filename
 
     history_data = [
-        {"type": msg.__class__.__name__, "data": msg.to_json()}
-        for msg in messages
+        {"type": msg.__class__.__name__, "data": msg.to_json()} for msg in messages
     ]
 
     with open(filepath, "w", encoding="utf-8") as f:
@@ -85,7 +85,9 @@ def save_cleaned_messages(conversation_dir: Path, messages: List[Message], prefi
     return filepath
 
 
-def save_large_message_chunk(conversation_dir: Path, content: str, chunk_index: int) -> Path:
+def save_large_message_chunk(
+    conversation_dir: Path, content: str, chunk_index: int
+) -> Path:
     """保存大消息分块到large_messages目录。
 
     Args:
@@ -129,7 +131,9 @@ def save_long_toolcall_output(
     return filepath
 
 
-def save_secret_intercepted(conversation_dir: Path, content: str, tool_name: str) -> Path:
+def save_secret_intercepted(
+    conversation_dir: Path, content: str, tool_name: str
+) -> Path:
     """保存被拦截的含secret内容到secret_intercepted目录。
 
     Args:

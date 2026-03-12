@@ -50,29 +50,29 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         agent = MagicMock()
         agent.get_current_model = MagicMock()
         agent.message_processor.update_notification_message = MagicMock()
-        
+
         model = MagicMock(spec=OpenAi)
         model.get_name.return_value = "test-llm"
         agent.get_current_model.return_value = model
-        
+
         self.group_chat.get_member_typechecked = MagicMock(return_value=agent)
         self.group_chat.send_if_exists = AsyncMock()
 
         # 测试第一次生成消息
         asyncio.run(self.plugin.before_message_generation(True, False))
-        
+
         # 应该设置notification消息
         agent.message_processor.update_notification_message.assert_called_once()
         # 注意：插件没有发送UI日志，所以send_if_exists不应该被调用
         self.group_chat.send_if_exists.assert_not_called()
-        
+
         # 重置mock，测试非第一次生成消息
         agent.message_processor.update_notification_message.reset_mock()
         self.group_chat.send_if_exists.reset_mock()
-        
+
         # 测试非第一次生成消息
         asyncio.run(self.plugin.before_message_generation(False, False))
-        
+
         # 应该设置notification消息但不发送UI日志
         agent.message_processor.update_notification_message.assert_called_once()
         self.group_chat.send_if_exists.assert_not_called()
@@ -82,17 +82,17 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         agent = MagicMock()
         agent.get_current_model = MagicMock()
         agent.message_processor.update_notification_message = MagicMock()
-        
+
         model = MagicMock(spec=OpenAi)
         model.get_name.return_value = "unconfigured-llm"
         agent.get_current_model.return_value = model
-        
+
         self.group_chat.get_member_typechecked = MagicMock(return_value=agent)
         self.group_chat.send_if_exists = AsyncMock()
 
         # 测试未配置LLM的情况
         asyncio.run(self.plugin.before_message_generation(True, False))
-        
+
         # 应该清理notification消息（传入None）
         agent.message_processor.update_notification_message.assert_called_once_with(
             None, source="prompt_fast_agent", sort_value=100
@@ -114,9 +114,9 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         # 模拟4个工具调用（超过限制3）
         current_content = "\n```json toolcall\n{}```\n" * 4
 
-        result = asyncio.run(self.plugin.after_token_generation(
-            agent, answer, current_content
-        ))
+        result = asyncio.run(
+            self.plugin.after_token_generation(agent, answer, current_content)
+        )
 
         self.assertFalse(result)
         answer.truncate.assert_called_once()
@@ -138,9 +138,9 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         # 模拟2个工具调用（在限制3内）
         current_content = "\n```json toolcall\n{}```\n" * 2
 
-        result = asyncio.run(self.plugin.after_token_generation(
-            agent, answer, current_content
-        ))
+        result = asyncio.run(
+            self.plugin.after_token_generation(agent, answer, current_content)
+        )
 
         self.assertFalse(result)
         answer.truncate.assert_not_called()
@@ -158,9 +158,9 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
 
         current_content = "\n```json toolcall\n{}```\n" * 100
 
-        result = asyncio.run(self.plugin.after_token_generation(
-            agent, answer, current_content
-        ))
+        result = asyncio.run(
+            self.plugin.after_token_generation(agent, answer, current_content)
+        )
 
         self.assertFalse(result)
         answer.truncate.assert_not_called()

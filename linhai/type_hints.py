@@ -72,6 +72,7 @@ class UserMultiModalMessage(TypedDict):
     ]
     name: NotRequired[str]
 
+
 class UserExplicitCacheMessage(TypedDict):
     """User multimodal message type definition, supports text and image content."""
 
@@ -80,6 +81,7 @@ class UserExplicitCacheMessage(TypedDict):
         ChatCompletionContentPartTextParam | ChatCompletionContentPartImageParam
     ]
     name: NotRequired[str]
+
 
 class AssistantMessage(TypedDict):
     """Assistant message type definition."""

@@ -128,7 +128,6 @@ class ToolManager:
         if tool_call.on_machine is not None:
             from linhai.machine_control.main import MachineControl
 
-
             machine_control = self.group_chat.get_member_typechecked(
                 "machine_control", MachineControl
             )
@@ -240,7 +239,7 @@ class ToolManager:
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             error_msg = str(e)
-            
+
             failed_result = ToolCallResultMessage(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
@@ -249,9 +248,8 @@ class ToolManager:
             )
 
             from linhai.agent.lifecycle import Lifecycle
-            lifecycle = self.group_chat.get_member_typechecked(
-                "lifecycle", Lifecycle
-            )
+
+            lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
             processed_result = await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
@@ -261,7 +259,7 @@ class ToolManager:
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            
+
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -269,7 +267,7 @@ class ToolManager:
                     content=f"工具执行失败: {tool_call.function_name} - {error_msg}",
                 ),
             )
-            
+
             if isinstance(processed_result, Message):
                 return processed_result
 

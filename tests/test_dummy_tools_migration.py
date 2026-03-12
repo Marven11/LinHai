@@ -27,10 +27,12 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         # 注册token_manager
         from linhai.token_manager import TokenManager
+
         TokenManager(self.group_chat)
 
         # 注册machine_control
         from linhai.machine_control.main import MachineControl
+
         MachineControl(self.group_chat)
 
         from linhai.tool.base import global_tools

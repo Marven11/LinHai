@@ -141,7 +141,7 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         status_line = [l for l in lines if l.startswith("<<status_code>>")][0]
         headers_line = [l for l in lines if l.startswith("<<headers>>")][0]
         body_line = [l for l in lines if l.startswith("<<body>>")][0]
-        
+
         self.assertEqual(status_line, "<<status_code>>200<<status_code>>")
         self.assertIn("Content-Type: application/json", headers_line)
         self.assertIn("Server: nginx", headers_line)
@@ -171,18 +171,21 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<<status_code>>", content)
         self.assertIn("<<headers>>", content)
         self.assertIn("<<file_path>>", content)
-        
+
         lines = content.split("\n")
         status_line = [l for l in lines if l.startswith("<<status_code>>")][0]
         headers_line = [l for l in lines if l.startswith("<<headers>>")][0]
         file_path_line = [l for l in lines if l.startswith("<<file_path>>")][0]
-        
+
         self.assertEqual(status_line, "<<status_code>>200<<status_code>>")
         self.assertIn("Content-Type: application/octet-stream", headers_line)
         # 提取文件路径
-        file_path = file_path_line.replace("<<file_path>>", "").replace("<<file_path>>", "")
+        file_path = file_path_line.replace("<<file_path>>", "").replace(
+            "<<file_path>>", ""
+        )
         # 清理临时文件
         import os
+
         if os.path.exists(file_path):
             os.unlink(file_path)
 

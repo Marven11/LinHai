@@ -41,7 +41,7 @@ def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
         items = []
         for k, v in value.items():
             simplified_v = simplify_value(v)
-            items.append(f'{json_repr(k)}: {simplified_v}')
+            items.append(f"{json_repr(k)}: {simplified_v}")
         if not items:
             return "{}"
         result = "{" + ", ".join(items) + "}"

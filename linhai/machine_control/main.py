@@ -112,9 +112,12 @@ class MachineControlToolSet(ToolSet):
             args={},
             required_args=[],
         )
-        async def ether_ghost_get_connection_args_definition_tool() -> ToolResultSuccess | ToolResultFailed:
+        async def ether_ghost_get_connection_args_definition_tool() -> (
+            ToolResultSuccess | ToolResultFailed
+        ):
             from ether_ghost.core.base import session_type_info
             import json
+
             definition = {}
             for session_type, info in session_type_info.items():
                 connection_args = info.get("connection_args", [])
@@ -127,10 +130,7 @@ class MachineControlToolSet(ToolSet):
                         "default": arg.get("default", None),
                     }
                 definition[session_type] = args_def
-            result = {
-                "type": "ether_ghost",
-                "connection_args_definition": definition
-            }
+            result = {"type": "ether_ghost", "connection_args_definition": definition}
             return ToolResultSuccess(content=json.dumps(result, ensure_ascii=False))
 
         @self.register_tool(
@@ -194,7 +194,8 @@ class MachineControlToolSet(ToolSet):
                     desc='进程参数列表，如["ls", "-l", "-a"]', type="list[str]"
                 ),
                 "wait_second": ToolArgInfo(
-                    desc="创建进程后等待的秒数，最多等待时间，为None时使用平台默认值(1秒)", type="Optional[float]"
+                    desc="创建进程后等待的秒数，最多等待时间，为None时使用平台默认值(1秒)",
+                    type="Optional[float]",
                 ),
             },
             required_args=["argv"],

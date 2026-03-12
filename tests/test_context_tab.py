@@ -113,6 +113,7 @@ class TestContextTab(unittest.TestCase):
         group_chat.register_member("agent_context_orchestration", mock_orchestration)
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
+
         mock_lifecycle = Mock(spec=Lifecycle)
         group_chat.register_member("lifecycle", mock_lifecycle)
         # 注意：这里不注册token_manager，因为CLIApp会创建并注册

@@ -426,9 +426,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试：最近20条内的大消息应该被保留
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages,
-            self.message_processor,
-            recent_count=20
+            self.orchestration.large_messages, self.message_processor, recent_count=20
         )
 
         # 100个消息，最近20条是80-99，所以索引99的大消息应该被保留
@@ -456,9 +454,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试：90和100位置的大消息应该被保留
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages,
-            self.message_processor,
-            recent_count=20
+            self.orchestration.large_messages, self.message_processor, recent_count=20
         )
 
         # 只有索引24, 49的大消息可以被清理

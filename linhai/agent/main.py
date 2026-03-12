@@ -110,9 +110,7 @@ class Agent:
         )
 
         used_tokens = token_manager.current_token_usage.total_tokens
-        usage_ratio = (
-            min(used_tokens / hard_limit, 1.0) if hard_limit > 0 else 0.0
-        )
+        usage_ratio = min(used_tokens / hard_limit, 1.0) if hard_limit > 0 else 0.0
         remaining_tokens = max(hard_limit - used_tokens, 0)
 
         return {
@@ -160,6 +158,7 @@ class Agent:
             self.state = "working"
 
             from linhai.llm import UserMessage
+
             while not self.group_chat.is_empty("user_message"):
                 msg = await self.group_chat.receive("user_message")
                 assert isinstance(msg, UserMessage)
@@ -345,7 +344,6 @@ class Agent:
                     with_secret=with_secret,
                 )
                 await self.toolcall_processor.call_tool(tool_call, tool_index=i)
-
 
         await self.lifecycle.trigger_after_message_generation(
             answer, full_response, tool_calls

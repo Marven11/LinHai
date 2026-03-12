@@ -16,7 +16,7 @@ class TestWriteLLMConfig(unittest.TestCase):
         """Test writing a new config file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.toml"
-            
+
             write_llm_config(
                 name="test-llm",
                 base_url="https://api.test.com/v1",
@@ -24,9 +24,9 @@ class TestWriteLLMConfig(unittest.TestCase):
                 model="test-model",
                 config_path=config_path,
             )
-            
+
             self.assertTrue(config_path.exists())
-            
+
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
             self.assertIn("llm", config)
@@ -40,7 +40,7 @@ class TestWriteLLMConfig(unittest.TestCase):
         """Test overwriting existing config."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.toml"
-            
+
             # Write initial config
             write_llm_config(
                 name="initial",
@@ -49,7 +49,7 @@ class TestWriteLLMConfig(unittest.TestCase):
                 model="initial-model",
                 config_path=config_path,
             )
-            
+
             # Overwrite with new config
             write_llm_config(
                 name="updated",
@@ -59,13 +59,10 @@ class TestWriteLLMConfig(unittest.TestCase):
                 config_path=config_path,
                 overwrite=True,
             )
-            
+
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
             self.assertEqual(config["llm"][0]["name"], "updated")
-
-
-
 
 
 class TestConfigLoadable(unittest.TestCase):
@@ -75,7 +72,7 @@ class TestConfigLoadable(unittest.TestCase):
         """Test that config written by write_llm_config can be loaded."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "config.toml"
-            
+
             write_llm_config(
                 name="test-llm",
                 base_url="https://api.test.com/v1",
@@ -83,10 +80,11 @@ class TestConfigLoadable(unittest.TestCase):
                 model="test-model",
                 config_path=config_path,
             )
-            
+
             from linhai.config import load_config
+
             loaded_config = load_config(config_path)
-            
+
             self.assertEqual(len(loaded_config.llm), 1)
             self.assertEqual(loaded_config.llm[0].name, "test-llm")
             self.assertEqual(loaded_config.llm[0].base_url, "https://api.test.com/v1")
