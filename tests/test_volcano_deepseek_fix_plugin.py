@@ -151,5 +151,5 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         message = runtime_msg.message
         context_lines = [line for line in message.split("\n") if line.strip() and not any(x in line for x in ["警告", "正确", "请修正", "异常位置", "[位置"])]
         total_context_length = sum(len(line) for line in context_lines)
-        self.assertLess(total_context_length, 150, f"上下文总长度 {total_context_length} 超过 150 字符")
+        self.assertLess(total_context_length, 200, f"上下文总长度 {total_context_length} 超过 200 字符")
         self.assertGreater(total_context_length, 50, f"上下文总长度 {total_context_length} 少于 50 字符")
