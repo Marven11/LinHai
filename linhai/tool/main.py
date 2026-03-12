@@ -262,10 +262,6 @@ class ToolManager:
                 is_tool_failed_duplicated_error=False,
             )
             
-            from linhai.agent.base import RuntimeMessage
-            if isinstance(processed_result, RuntimeMessage):
-                failed_result = ToolResultFailed(content=processed_result.content)
-            
             await self.group_chat.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
@@ -273,12 +269,11 @@ class ToolManager:
                     content=f"工具执行失败: {tool_call.function_name} - {error_msg}",
                 ),
             )
-            return ToolCallResultMessage(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                result=failed_result,
-                toolcall_arguments=kwargs,
-            )
+            
+            if isinstance(processed_result, Message):
+                return processed_result
+
+            return failed_result
         finally:
             if machine_control is not None and original_machine is not None:
                 machine_control.target_machine = original_machine
