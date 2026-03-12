@@ -36,6 +36,8 @@ from .security_config import (
     ProcessArgvCheckerPlugin,
 )
 
+from .sudo_stdio_checker import SudoStdioCheckerPlugin
+
 from .afk_plugin import AfkPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
 
