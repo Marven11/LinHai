@@ -9,6 +9,7 @@ from .message_checkers import (
     PreviousReasoningPlugin,
     JsonCodeBlockPlugin,
     KimiK25ToolCallPlugin,
+    MinimaxToolCallPlugin,
     RuntimeImitationPlugin,
     VolcanoDeepseekFixPlugin,
 )
@@ -58,6 +59,7 @@ __all__ = [
     "PreviousReasoningPlugin",
     "JsonCodeBlockPlugin",
     "KimiK25ToolCallPlugin",
+    "MinimaxToolCallPlugin",
     "RuntimeImitationPlugin",
     "PromptFastAgentPlugin",
     "SlowStartPlugin",

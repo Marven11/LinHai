@@ -410,6 +410,100 @@ class KimiK25ToolCallPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class MinimaxToolCallPlugin(Plugin):
+    """处理minimax特殊工具调用格式的插件。"""
+
+    TIME_WINDOW_SECONDS = 60
+
+    def __init__(self, group_chat: GroupChat):
+        super().__init__(group_chat)
+        self._last_error_format_time: float | None = None
+
+    async def after_token_generation(
+        self,
+        agent: "Agent",
+        _answer: Answer,
+        current_content: str,
+    ) -> bool:
+        if self._last_error_format_time is None:
+            return False
+
+        if time.time() - self._last_error_format_time > self.TIME_WINDOW_SECONDS:
+            return False
+
+        first_line, _, _ = current_content.partition("\n")
+        first_line = first_line.strip()
+        if "<minimax:tool_call>" in first_line:
+            await agent.interrupt(
+                "错误：检测到minimax特殊工具调用格式。请使用正确的`json toolcall`代码块格式。",
+                "Agent使用了错误的工具调用格式，已打断",
+            )
+            return True
+
+        return False
+
+    async def after_message_generation(
+        self,
+        _answer: Answer,
+        full_response: str,
+        tool_calls: list[dict],
+    ):
+        if not full_response:
+            return
+
+        has_minimax_marker = "<minimax:tool_call>" in full_response
+        has_correct_format = "```json toolcall" in full_response
+
+        if has_minimax_marker and not has_correct_format:
+            self._last_error_format_time = time.time()
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：检测到不支持的minimax特殊工具调用格式`<minimax:tool_call>`，"
+                    "但没有正确的`json toolcall`代码块格式。\n"
+                    "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
+                    "```json toolcall\n"
+                    '{"name": "tool_name", "arguments": {...}}\n'
+                    "```"
+                )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="检测到minimax特殊工具调用格式，已提醒模型",
+                ),
+            )
+
+        if (
+            "```<minimax:tool_call>" in full_response
+            or "}<minimax:tool_call>" in full_response
+        ):
+            self._last_error_format_time = time.time()
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：检测到混用json toolcall和minimax的特殊工具调用格式`<minimax:tool_call>`。"
+                    "这可能会导致markdown解析错误。"
+                    "正确的工具调用格式是**只**使用`json toolcall`代码块，例如：\n"
+                    "```json toolcall\n"
+                    '{"name": "tool_name", "arguments": {...}}\n'
+                    "```"
+                )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="检测到minimax特殊工具调用格式，已提醒模型",
+                ),
+            )
+
+    def register(self, lifecycle: "Lifecycle"):
+        lifecycle.register_after_token_generation(self.after_token_generation)
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class RuntimeImitationPlugin(Plugin):
     """阻断deepseek等模型模仿runtime输出的插件。"""
 
