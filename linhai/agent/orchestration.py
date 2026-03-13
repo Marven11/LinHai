@@ -195,7 +195,11 @@ class AgentContextOrchestration:
 
         notification_message = None
         if current_state != "绿灯" or is_dirty:
-            large_count = len(self.large_messages)
+            total_large_count = len(self.large_messages)
+            cleanable_messages = get_cleanable_large_messages(
+                self.large_messages, self.agent_message, recent_count=20
+            )
+            cleanable_count = len(cleanable_messages)
             token_manager = self.group_chat.get_member_typechecked(
                 "token_manager", TokenManager
             )
@@ -210,16 +214,16 @@ class AgentContextOrchestration:
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
 
             if is_dirty:
-                base_info = f"当前为失效状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息, token用量信息已失效{cache_ratio_text}"
+                base_info = f"当前为失效状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}, token用量信息已失效{cache_ratio_text}"
                 suggestion = "建议: 继续，在上下文实际长度更新之后runtime会另行通知"
             else:
-                base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 当前有{large_count}条大消息{cache_ratio_text}"
+                base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}{cache_ratio_text}"
                 if current_state == "红灯":
                     suggestion = "建议: 立即暂停当前任务，开始清理上下文"
                 elif current_state == "黄灯":
                     suggestion = (
                         "建议: 应该调用context_forget_large_message工具"
-                        if large_count >= 5
+                        if cleanable_count >= 5
                         else "建议: 应该避免读取文件，直接开始修改文件"
                     )
                 else:

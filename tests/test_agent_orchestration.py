@@ -91,7 +91,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         assert result is not None
         self.assertIn("黄灯状态", result)
         self.assertIn("上下文占用量", result)
-        self.assertIn("条大消息", result)
+        self.assertIn("总大消息数", result)
+        self.assertIn("可清理", result)
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息），因为通知没有被添加，只是返回
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
