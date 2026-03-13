@@ -47,6 +47,18 @@ jobs:
           echo "Checking for garbage code patterns (hasattr/getattr/setattr/try except)..."
           bash .gitea/scripts/check_git_diff.sh
 
+      - name: Check PR for missing tests (issue #46)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking if PR modifies linhai/ without adding tests..."
+          bash .gitea/scripts/check_pr_tests.sh
+
+      - name: Check commit count (issue #51)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking if commit count is reasonable..."
+          bash .gitea/scripts/check_commit_count.sh
+
       - name: Run unittests
         env:
           PYTHONPATH: $PWD
