@@ -92,7 +92,7 @@ class TestFetchArticleTool(unittest.TestCase):
         self.assertIn("http_downloader", tool_info["args"])
         self.assertEqual(
             tool_info["args"]["http_downloader"]["desc"],
-            "HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'"
+            "HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
         )
         self.assertEqual(tool_info["args"]["http_downloader"]["type"], "str")
         # 验证参数是可选参数：如果存在'required_args'，则检查http_downloader不在其中
@@ -103,15 +103,19 @@ class TestFetchArticleTool(unittest.TestCase):
     def test_fetch_article_httpx_downloader(self, mock_httpx_download):
         """测试fetch_article使用httpx下载器"""
         mock_httpx_download.return_value = "<html><body>Test content</body></html>"
-        
+
         # 模拟pandoc已安装和其他依赖
-        with unittest.mock.patch("linhai.tool.general.shutil.which", return_value="/usr/bin/pandoc"):
+        with unittest.mock.patch(
+            "linhai.tool.general.shutil.which", return_value="/usr/bin/pandoc"
+        ):
             with unittest.mock.patch("linhai.tool.general.subprocess.run"):
-                with unittest.mock.patch("builtins.open", unittest.mock.mock_open(read_data="# Test")):
+                with unittest.mock.patch(
+                    "builtins.open", unittest.mock.mock_open(read_data="# Test")
+                ):
                     # 测试调用工具时指定http_downloader='httpx'
                     result = self.toolset.call_tool(
-                        "fetch_article", 
-                        {"url": "http://example.com", "http_downloader": "httpx"}
+                        "fetch_article",
+                        {"url": "http://example.com", "http_downloader": "httpx"},
                     )
                     # 验证调用了httpx下载函数
                     mock_httpx_download.assert_called_once_with("http://example.com")
@@ -121,11 +125,13 @@ class TestFetchArticleTool(unittest.TestCase):
         """测试fetch_article使用无效的http_downloader参数"""
         # 测试调用工具时指定无效的http_downloader值
         result = self.toolset.call_tool(
-            "fetch_article", 
-            {"url": "http://example.com", "http_downloader": "invalid"}
+            "fetch_article", {"url": "http://example.com", "http_downloader": "invalid"}
         )
         # 验证返回了正确的错误信息
-        self.assertIn("错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'invalid'", result)
+        self.assertIn(
+            "错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'invalid'",
+            result,
+        )
 
     @unittest.mock.patch("linhai.tool.general._download_with_selenium")
     @unittest.mock.patch("linhai.tool.general.shutil.which")

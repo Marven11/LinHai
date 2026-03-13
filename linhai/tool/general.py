@@ -89,9 +89,7 @@ def _download_with_httpx(url: str) -> str:
 def fetch_article(url: str, http_downloader: str = "none") -> str:
 
     if http_downloader not in ("none", "selenium", "httpx"):
-        return (
-            f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'"
-        )
+        return f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'"
 
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
         output_md = file.name
