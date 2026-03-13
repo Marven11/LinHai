@@ -127,3 +127,46 @@ class TestFileValidation(unittest.TestCase):
             },
         )
         self.assertIn("不是纯文本文件", str(result))
+
+    def test_validate_file_for_sed_validates_text_file(self):
+        """测试validate_file_for_sed正确验证文本文件"""
+        from linhai.machine_control.master_host.file import validate_file_for_sed
+        from pathlib import Path
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("这是一个文本文件\n第二行")
+            temp_path = Path(f.name)
+
+        try:
+            result = validate_file_for_sed(temp_path)
+            self.assertEqual(result, "")
+        finally:
+            temp_path.unlink()
+
+    def test_validate_file_for_sed_rejects_nonexistent_file(self):
+        """测试validate_file_for_sed拒绝不存在的文件"""
+        from linhai.machine_control.master_host.file import validate_file_for_sed
+        from pathlib import Path
+
+        non_existent = Path("/nonexistent/file.txt")
+        result = validate_file_for_sed(non_existent)
+        self.assertIn("不存在", result)
+
+    def test_validate_file_for_sed_rejects_directory(self):
+        """测试validate_file_for_sed拒绝目录"""
+        from linhai.machine_control.master_host.file import validate_file_for_sed
+        from pathlib import Path
+
+        dir_path = Path(".")
+        result = validate_file_for_sed(dir_path)
+        self.assertIn("不是文件", result)
+
+    def test_validate_file_for_sed_rejects_binary_file(self):
+        """测试validate_file_for_sed拒绝二进制文件"""
+        from linhai.machine_control.master_host.file import validate_file_for_sed
+        from pathlib import Path
+
+        binary_file = Path("./tests/test_binary.zip")
+        result = validate_file_for_sed(binary_file)
+        self.assertIn("不是纯文本文件", result)
