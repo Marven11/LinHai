@@ -198,7 +198,6 @@ def load_image(
                     img.save(buffer, format="JPEG", quality=95)
                     mime_type = "image/jpeg"
             else:
-                # 其他格式尝试转换为JPEG，如果转换失败则让错误自然抛出
                 if img.mode in ("RGBA", "LA", "P"):
                     img = img.convert("RGB")
                 img.save(buffer, format="JPEG", quality=95)
