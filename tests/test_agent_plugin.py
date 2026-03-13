@@ -945,3 +945,113 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(self.group_chat.send_if_exists.call_count, 2)
+
+
+class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试MinimaxToolCallPlugin类。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.agent = MagicMock()
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.agent.interrupt = AsyncMock()
+        self.group_chat = MagicMock()
+        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.group_chat.send_if_exists = AsyncMock()
+        from linhai.plugin import MinimaxToolCallPlugin
+        
+        self.plugin = MinimaxToolCallPlugin(self.group_chat)
+        self.answer = MagicMock()
+        self.tool_calls = []
+
+    def test_register(self):
+        """测试插件注册。"""
+        lifecycle = MagicMock()
+        self.plugin.register(lifecycle)
+        lifecycle.register_after_message_generation.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+        lifecycle.register_after_token_generation.assert_called_once_with(
+            self.plugin.after_token_generation
+        )
+
+    async def test_after_message_generation_with_minimax_format_no_json_toolcall(self):
+        """测试检测到minimax特殊格式但没有json toolcall时设置错误时间。"""
+        full_response = '<minimax:tool_call>{"name": "tool1", "arguments": {}}'
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 验证设置了错误时间
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+        self.agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.agent.message_processor.add_new_message.call_args[0]
+        self.assertIsInstance(call_args[0], RuntimeMessage)
+        self.assertIn("检测到不支持的minimax特殊工具调用格式", call_args[0].message)
+        self.group_chat.send_if_exists.assert_called_once()
+
+    async def test_after_message_generation_with_minimax_format_with_json_toolcall(self):
+        """测试检测到minimax特殊格式但已有json toolcall时不设置错误时间。"""
+        full_response = '''<minimax:tool_call>```json toolcall
+{"name": "tool1", "arguments": {}}
+```'''
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        # 验证没有设置错误时间
+        self.assertIsNone(self.plugin._last_error_format_time)
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
+
+    async def test_after_message_generation_without_minimax_format(self):
+        """测试没有minimax特殊格式时不处理。"""
+        full_response = "正常的工具调用"
+
+        await self.plugin.after_message_generation(
+            self.answer, full_response, self.tool_calls
+        )
+
+        self.assertIsNone(self.plugin._last_error_format_time)
+        self.agent.message_processor.add_new_message.assert_not_called()
+        self.group_chat.send_if_exists.assert_not_called()
+
+    async def test_after_token_generation_within_time_window(self):
+        """测试在时间窗口内检测到minimax格式时打断agent。"""
+        # 设置错误时间
+        self.plugin._last_error_format_time = time.time()
+        
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, "<minimax:tool_call>some content"
+        )
+
+        self.assertTrue(result)
+        self.agent.interrupt.assert_called_once()
+        interrupt_call = self.agent.interrupt.call_args
+        self.assertIn("minimax特殊工具调用格式", interrupt_call[0][0])
+
+    async def test_after_token_generation_time_window_expired(self):
+        """测试时间窗口过期后不打断agent。"""
+        # 设置过期的错误时间
+        self.plugin._last_error_format_time = time.time() - 120
+        
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, "<minimax:tool_call>some content"
+        )
+
+        self.assertFalse(result)
+        self.agent.interrupt.assert_not_called()
+
+    async def test_after_token_generation_not_first_line(self):
+        """测试minimax标记不在第一行时不打断。"""
+        self.plugin._last_error_format_time = time.time()
+        
+        result = await self.plugin.after_token_generation(
+            self.agent, self.answer, "first line\nsecond line <minimax:tool_call>"
+        )
+
+        self.assertFalse(result)
+        self.agent.interrupt.assert_not_called()
