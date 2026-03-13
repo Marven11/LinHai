@@ -89,7 +89,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         await agent.message_processor.add_new_message(
             RuntimeMessage(
-                f"警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段: {has_secret_pattern}。\n"
+                f"警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段: {has_secret_pattern}。可能在{tool_name}工具调用中...\n"
                 "请确认：\n"
                 "1. 如果确实需要使用secret，请将`with_secret`字段添加到工具调用的顶层（与name、arguments平级）\n"
                 "2. 如果只是想写入包含`<$$>`的文本内容，可以忽略此警告"
