@@ -19,6 +19,10 @@ class TestFetchArticleTool(unittest.TestCase):
             desc="抓取网页并转换为Markdown格式",
             args={
                 "url": ToolArgInfo(desc="目标网页URL", type="str"),
+                "http_downloader": ToolArgInfo(
+                    desc="HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
+                    type="str",
+                ),
             },
             required_args=["url"],
         )(fetch_article)
@@ -79,10 +83,56 @@ class TestFetchArticleTool(unittest.TestCase):
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)
 
+    def test_fetch_article_default_http_downloader(self):
+        """测试fetch_article使用默认http_downloader（none）参数"""
+        # 验证工具注册包含http_downloader参数
+        tool_info = self.toolset.get_tools()["fetch_article"]
+        # 工具信息结构可能包含'args'和'required_args'，但先检查键是否存在
+        self.assertIn("args", tool_info)
+        self.assertIn("http_downloader", tool_info["args"])
+        self.assertEqual(
+            tool_info["args"]["http_downloader"]["desc"],
+            "HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'"
+        )
+        self.assertEqual(tool_info["args"]["http_downloader"]["type"], "str")
+        # 验证参数是可选参数：如果存在'required_args'，则检查http_downloader不在其中
+        if "required_args" in tool_info:
+            self.assertNotIn("http_downloader", tool_info["required_args"])
+
+    @unittest.mock.patch("linhai.tool.general._download_with_httpx")
+    def test_fetch_article_httpx_downloader(self, mock_httpx_download):
+        """测试fetch_article使用httpx下载器"""
+        mock_httpx_download.return_value = "<html><body>Test content</body></html>"
+        
+        # 模拟pandoc已安装和其他依赖
+        with unittest.mock.patch("linhai.tool.general.shutil.which", return_value="/usr/bin/pandoc"):
+            with unittest.mock.patch("linhai.tool.general.subprocess.run"):
+                with unittest.mock.patch("builtins.open", unittest.mock.mock_open(read_data="# Test")):
+                    # 测试调用工具时指定http_downloader='httpx'
+                    result = self.toolset.call_tool(
+                        "fetch_article", 
+                        {"url": "http://example.com", "http_downloader": "httpx"}
+                    )
+                    # 验证调用了httpx下载函数
+                    mock_httpx_download.assert_called_once_with("http://example.com")
+                    self.assertIn("Test", result)
+
+    def test_fetch_article_invalid_http_downloader(self):
+        """测试fetch_article使用无效的http_downloader参数"""
+        # 测试调用工具时指定无效的http_downloader值
+        result = self.toolset.call_tool(
+            "fetch_article", 
+            {"url": "http://example.com", "http_downloader": "invalid"}
+        )
+        # 验证返回了正确的错误信息
+        self.assertIn("错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'invalid'", result)
+
+    @unittest.mock.patch("linhai.tool.general._download_with_selenium")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
-    def test_fetch_article_pandoc_not_installed(self, mock_which):
+    def test_fetch_article_pandoc_not_installed(self, mock_which, mock_download):
         """测试pandoc未安装的情况"""
         mock_which.return_value = None
+        mock_download.return_value = "<html><body>Test</body></html>"
 
         result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 

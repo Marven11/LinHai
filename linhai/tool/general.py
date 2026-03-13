@@ -50,33 +50,67 @@ def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[s
     return False, encoding
 
 
+def _download_with_selenium(url: str) -> str:
+    """使用selenium下载网页内容"""
+    options = webdriver.FirefoxOptions()
+    with webdriver.Firefox(options=options) as driver:
+        driver.get(url)
+        return driver.page_source
+
+
+def _download_with_httpx(url: str) -> str:
+    """使用httpx下载网页内容"""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    try:
+        with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            return response.text
+    except httpx.RequestError as e:
+        raise RuntimeError(f"HTTP请求失败: {str(e)}") from e
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP状态错误: {str(e)}") from e
+
+
 @global_tools.register_tool(
     name="fetch_article",
     desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
     args={
         "url": ToolArgInfo(desc="目标网页URL", type="str"),
+        "http_downloader": ToolArgInfo(
+            desc="HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
+            type="str",
+        ),
     },
     required_args=["url"],
 )
-def fetch_article(url: str) -> str:
-    """抓取指定URL的网页内容并转换为Markdown格式"""
+def fetch_article(url: str, http_downloader: str = "none") -> str:
+
+    if http_downloader not in ("none", "selenium", "httpx"):
+        return (
+            f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'"
+        )
+
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
         output_md = file.name
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp_html:
         output_html = tmp_html.name
     try:
-        options = webdriver.FirefoxOptions()
+        if http_downloader == "httpx":
+            html_content = _download_with_httpx(url)
+        else:
+            html_content = _download_with_selenium(url)
 
-        with webdriver.Firefox(options=options) as driver:
-            driver.get(url)
-
-            soup = BeautifulSoup(driver.page_source, "html.parser")
+        soup = BeautifulSoup(html_content, "html.parser")
         for a in soup.find_all("a", href=True):
-            if a["href"].startswith("javascript:"):  # type: ignore
+            href_value = a.get("href", "")
+            if isinstance(href_value, str) and href_value.startswith("javascript:"):
                 a.decompose()
 
         for img in soup.find_all("img", src=True):
-            src = img.get("src", "")  # type: ignore
+            src = img.get("src", "")
             if len(str(src)) > 400:
                 img.decompose()
 
@@ -171,8 +205,8 @@ async def search_web(query: str, max_results: int = 5) -> str:
                 if not link_elem:
                     continue
 
-                title = link_elem.get_text(strip=True)  # type: ignore
-                link = link_elem.get("href", "")  # type: ignore
+                title = link_elem.get_text(strip=True)
+                link = link_elem.get("href", "")
 
                 if link and "y.js" in link:
                     continue
@@ -248,7 +282,7 @@ def safe_calculator(expression: str) -> str:
         return "错误: 表达式不能为空。"
 
     try:
-        result = eval(expression, {"__builtins__": {}}, {})  # pylint: disable=eval-used
+        result = eval(expression, {"__builtins__": {}}, {})
         return str(result)
     except (ValueError, ZeroDivisionError, SyntaxError) as e:
         return f"错误: 计算失败 - {str(e)}"
