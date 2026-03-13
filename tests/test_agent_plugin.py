@@ -960,7 +960,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
         from linhai.plugin import MinimaxToolCallPlugin
-        
+
         self.plugin = MinimaxToolCallPlugin(self.group_chat)
         self.answer = MagicMock()
         self.tool_calls = []
@@ -992,11 +992,13 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("检测到不支持的minimax特殊工具调用格式", call_args[0].message)
         self.group_chat.send_if_exists.assert_called_once()
 
-    async def test_after_message_generation_with_minimax_format_with_json_toolcall(self):
+    async def test_after_message_generation_with_minimax_format_with_json_toolcall(
+        self,
+    ):
         """测试检测到minimax特殊格式但已有json toolcall时不设置错误时间。"""
-        full_response = '''<minimax:tool_call>```json toolcall
+        full_response = """<minimax:tool_call>```json toolcall
 {"name": "tool1", "arguments": {}}
-```'''
+```"""
 
         await self.plugin.after_message_generation(
             self.answer, full_response, self.tool_calls
@@ -1023,7 +1025,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """测试在时间窗口内检测到minimax格式时打断agent。"""
         # 设置错误时间
         self.plugin._last_error_format_time = time.time()
-        
+
         result = await self.plugin.after_token_generation(
             self.agent, self.answer, "<minimax:tool_call>some content"
         )
@@ -1037,7 +1039,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """测试时间窗口过期后不打断agent。"""
         # 设置过期的错误时间
         self.plugin._last_error_format_time = time.time() - 120
-        
+
         result = await self.plugin.after_token_generation(
             self.agent, self.answer, "<minimax:tool_call>some content"
         )
@@ -1048,7 +1050,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_after_token_generation_not_first_line(self):
         """测试minimax标记不在第一行时不打断。"""
         self.plugin._last_error_format_time = time.time()
-        
+
         result = await self.plugin.after_token_generation(
             self.agent, self.answer, "first line\nsecond line <minimax:tool_call>"
         )
