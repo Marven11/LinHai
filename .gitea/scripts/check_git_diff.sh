@@ -43,7 +43,7 @@ while IFS= read -r file_path; do
         fi
         
         # Check for try: except: patterns (only new additions)
-        if echo "$line" | grep -q -E '^\s*try:\s*$|^\s*except\s+\(?[^)]*\)?\s*:|^\s*except\s*:\s*$'; then
+        if echo "$line" | grep -q -E '^\+?\s*try:\s*$|^\+?\s*except\s+\(?[^)]*\)?\s*:|^\+?\s*except\s*:\s*$'; then
             echo "ERROR: Found try/except pattern in new line at $file_path (line in diff): $line"
             errors_found=true
         fi
