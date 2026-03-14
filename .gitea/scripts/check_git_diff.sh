@@ -49,7 +49,7 @@ while IFS= read -r file_path; do
         fi
 
         # Check for import
-        if echo "$line" | grep -q -E '^\s+?\s+import [a-z]+$'; then
+        if echo "$line" | grep -q -E '^\+?\s+import [a-z]+$'; then
             echo "ERROR: Found bad import pattern: $line"
             errors_found=true
         fi
