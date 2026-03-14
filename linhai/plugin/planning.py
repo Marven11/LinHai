@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
+import re
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
@@ -7,7 +8,6 @@ from linhai.agent.base import RuntimeMessage
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.group_chat import GroupChat
 from linhai.llm import Answer, UserMessage
-from linhai.utils import CliRuntimeNotice
 from linhai.plugin.file_operations import Plugin
 
 if TYPE_CHECKING:
@@ -137,8 +137,8 @@ class PlanningStatusReminderPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        answer: Answer,
-        full_response: str,
+        _answer: Answer,
+        _full_response: str,
         tool_calls: list[dict],
     ) -> None:
         planning_folder = self._get_planning_folder()
@@ -159,6 +159,54 @@ class PlanningStatusReminderPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class TodolistCheckerPlugin(Plugin):
+    """检查TODOLIST.md是否有未完成任务，防止提前暂停的插件。"""
+
+    def __init__(self, group_chat: GroupChat):
+        super().__init__(group_chat)
+        self.group_chat = group_chat
+
+    def _get_planning_folder(self) -> Optional[Path]:
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        if agent is None:
+            return None
+
+        for msg in agent.message_processor.get_messages():
+            if isinstance(msg, PlanningPromptMessage):
+                return msg.planning_folder
+
+        return None
+
+    def _has_unfinished_tasks(self, todolist_path: Path) -> bool:
+        if not todolist_path.exists():
+            return False
+        content = todolist_path.read_text(encoding="utf-8")
+        pattern = r"^\s*-\s+\[(\s|\.)\]"
+        matches = re.findall(pattern, content, flags=re.MULTILINE)
+        return any(status in (" ", ".") for status in matches)
+
+    async def before_waiting_user(self, agent: "linhai_agent") -> None:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return
+
+        todolist_path = planning_folder / "TODOLIST.md"
+        if not todolist_path.exists():
+            return
+
+        if self._has_unfinished_tasks(todolist_path):
+            from linhai.agent.base import RuntimeMessage
+
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "错误：当前TODOLIST.md仍有未完成项，你是不是搞错什么了？"
+                )
+            )
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.register_before_waiting_user(self.before_waiting_user)
+
+
 class UserInputRuntimeMessagePlugin(Plugin):
     """在用户输入消息后添加RuntimeMessage的插件。"""
 
@@ -168,9 +216,9 @@ class UserInputRuntimeMessagePlugin(Plugin):
 
     async def after_message_generation(
         self,
-        answer: Answer,
-        full_response: str,
-        tool_calls: list[dict],
+        _answer: Answer,
+        _full_response: str,
+        _tool_calls: list[dict],
     ) -> None:
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:

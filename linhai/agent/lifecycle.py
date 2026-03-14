@@ -155,6 +155,7 @@ class Lifecycle:
             KimiK25ToolCallPlugin,
             MinimaxToolCallPlugin,
             MissingWithSecretWarningPlugin,
+            TodolistCheckerPlugin,
             AfkPlugin,
             VolcanoDeepseekFixPlugin,
             ProcessArgvCheckerPlugin,
@@ -188,6 +189,7 @@ class Lifecycle:
             VolcanoDeepseekFixPlugin(self.group_chat),
             ProcessArgvCheckerPlugin(self.group_chat),
             SudoStdioCheckerPlugin(self.group_chat),
+            TodolistCheckerPlugin(self.group_chat),
         ]
 
         for plugin in plugins:
