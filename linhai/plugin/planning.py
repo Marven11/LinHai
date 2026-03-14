@@ -202,6 +202,7 @@ class TodolistCheckerPlugin(Plugin):
                     "错误：当前TODOLIST.md仍有未完成项，你是不是搞错什么了？"
                 )
             )
+            agent.state = "working"
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.register_before_waiting_user(self.before_waiting_user)
