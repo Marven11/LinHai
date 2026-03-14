@@ -47,7 +47,13 @@ while IFS= read -r file_path; do
             echo "ERROR: Found try/except pattern in new line at $file_path (line in diff): $line"
             errors_found=true
         fi
-        
+
+        # Check for import
+        if echo "$line" | grep -q -E '^\s+?\s+import [a-z]+$'; then
+            echo "ERROR: Found bad import pattern: $line"
+            errors_found=true
+        fi
+
         line_num=$((line_num + 1))
     done < /tmp/diff_lines.txt
     
@@ -59,7 +65,7 @@ rm -f /tmp/changed_py_files.txt
 
 if [ "$errors_found" = true ]; then
     echo "\nERROR: Garbage code patterns detected in new lines."
-    echo "Please remove hasattr/getattr/setattr calls and try/except patterns from new code."
+    echo "Please remove hasattr/getattr/setattr calls, try/except and bad import patterns from new code."
     exit 1
 else
     echo "SUCCESS: No garbage code patterns found in new lines."
