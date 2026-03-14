@@ -465,3 +465,68 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertIn(large_msgs[1], cleanable)  # 索引49
         self.assertNotIn(large_msgs[2], cleanable)  # 索引89，应该被保留
         self.assertNotIn(large_msgs[3], cleanable)  # 索引99，应该被保留
+
+    def test_cleaned_messages_dict_expiry(self):
+        """测试cleaned_messages字典的过期清理机制。"""
+        current_time = time.time()
+
+        test_hashes = {
+            "hash1": current_time - 200,
+            "hash2": current_time - 100,
+            "hash3": current_time - 50,
+        }
+        self.orchestration.cleaned_messages = test_hashes.copy()
+
+        get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
+        )
+
+        self.assertNotIn("hash1", self.orchestration.cleaned_messages)
+        self.assertIn("hash2", self.orchestration.cleaned_messages)
+        self.assertIn("hash3", self.orchestration.cleaned_messages)
+        self.assertEqual(len(self.orchestration.cleaned_messages), 2)
+
+    def test_get_cleanable_large_messages_duplicate_content(self):
+        """测试get_cleanable_large_messages对重复内容的检查。"""
+        test_content = "This is a test message that will be hashed"
+        msg = RuntimeMessage(test_content)
+
+        self.message_processor.messages.append(msg)
+        self.orchestration.large_messages.add(msg)
+
+        import hashlib
+
+        content_hash = hashlib.md5(test_content.encode()).hexdigest()
+        self.orchestration.cleaned_messages[content_hash] = time.time() - 100
+
+        cleanable = get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
+        )
+        self.assertNotIn(msg, cleanable)
+
+        self.orchestration.cleaned_messages[content_hash] = time.time() - 200
+        cleanable = get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
+        )
+        self.assertNotIn(content_hash, self.orchestration.cleaned_messages)
+
+        binary_msg = RuntimeMessage(b"binary content")
+        self.message_processor.messages.append(binary_msg)
+        self.orchestration.large_messages.add(binary_msg)
+
+        cleanable = get_cleanable_large_messages(
+            self.orchestration.large_messages,
+            self.message_processor,
+            recent_count=20,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
+        )
+        self.assertNotIn(binary_msg, cleanable)

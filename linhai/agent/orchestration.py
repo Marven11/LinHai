@@ -7,6 +7,7 @@ import tiktoken
 import random
 from pathlib import Path
 import time
+import hashlib
 import reprlib
 from typing import Optional, Literal, TypedDict, TYPE_CHECKING, Union
 
@@ -42,24 +43,47 @@ class ToolBlockDetailsDict(TypedDict):
 
 
 def get_cleanable_large_messages(
-    large_messages: set[Message], agent_message: AgentMessage, recent_count: int = 20
+    large_messages: set[Message],
+    agent_message: AgentMessage,
+    recent_count: int = 20,
+    cleaned_messages_dict: dict[str, float] | None = None,
 ) -> list[Message]:
-    """获取可以清理的大消息列表，忽略最近添加的大消息。
+    """获取可以清理的大消息列表，忽略最近添加的大消息和最近清理的相同内容消息。
 
     Args:
         large_messages: 大消息集合
         agent_message: AgentMessage实例，用于查找消息索引
         recent_count: 忽略最近多少条消息，默认20条
+        cleaned_messages_dict: 已清理消息的哈希到时间戳的字典，可选
 
     Returns:
         可以清理的大消息列表
     """
     cleanable: list[Message] = []
+    current_time = time.time()
+    if cleaned_messages_dict is not None:
+        expired_hashes = [
+            hash_val
+            for hash_val, timestamp in cleaned_messages_dict.items()
+            if current_time - timestamp > 180
+        ]
+        for hash_val in expired_hashes:
+            del cleaned_messages_dict[hash_val]
+
     for msg in large_messages:
         index = agent_message.find_message(msg)
         if index is None:
             continue
         if index < len(agent_message.messages) - recent_count:
+            if cleaned_messages_dict is not None:
+                content = msg.get_content()
+                if isinstance(content, str):
+
+                    content_hash = hashlib.md5(content.encode()).hexdigest()
+                    if content_hash in cleaned_messages_dict:
+                        timestamp = cleaned_messages_dict[content_hash]
+                        if current_time - timestamp < 180:
+                            continue
             cleanable.append(msg)
     return cleanable
 
@@ -79,6 +103,7 @@ class AgentContextOrchestration:
         self.group_chat.register_member("agent_context_orchestration", self)
 
         self.large_messages: set[Message] = set()
+        self.cleaned_messages: dict[str, float] = {}
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
         self._register_lifecycle_callbacks()
@@ -98,7 +123,10 @@ class AgentContextOrchestration:
             )
 
         removed_messages = get_cleanable_large_messages(
-            self.large_messages, self.agent_message, recent_count=20
+            self.large_messages,
+            self.agent_message,
+            recent_count=20,
+            cleaned_messages_dict=self.cleaned_messages,
         )
 
         if len(removed_messages) < 5:
@@ -116,6 +144,11 @@ class AgentContextOrchestration:
         for message in removed_messages:
             placeholder = RuntimeMessage(f"当前消息已经被遗忘，转储到{saved_path}")
             await self.agent_message.replace_message(message, placeholder)
+            content = message.get_content()
+            if isinstance(content, str):
+
+                content_hash = hashlib.md5(content.encode()).hexdigest()
+                self.cleaned_messages[content_hash] = time.time()
 
         for msg in removed_messages:
             self.large_messages.discard(msg)
@@ -197,7 +230,10 @@ class AgentContextOrchestration:
         if current_state != "绿灯" or is_dirty:
             total_large_count = len(self.large_messages)
             cleanable_messages = get_cleanable_large_messages(
-                self.large_messages, self.agent_message, recent_count=20
+                self.large_messages,
+                self.agent_message,
+                recent_count=20,
+                cleaned_messages_dict=self.cleaned_messages,
             )
             cleanable_count = len(cleanable_messages)
             token_manager = self.group_chat.get_member_typechecked(
