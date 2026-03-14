@@ -43,6 +43,20 @@ if __name__ == "__main__":
 
 以下是从 python-telegram-bot 项目选择的五个测试示例，已转换为 unittest 格式或保留原始格式作为参考：
 
+## 测试文件
+
+现在 docs/telegram 目录下包含以下五个测试文件，均已转换为 unittest 格式：
+
+1. **`test_botcommand.py`** - 测试机器人命令处理
+2. **`test_callbackquery.py`** - 测试回调查询处理
+3. **`test_messagehandler.py`** - 测试消息处理器功能
+4. **`test_filters.py`** - 测试消息过滤器功能
+5. **`test_conversationhandler.py`** - 测试对话处理器功能
+
+## 测试示例
+
+以下是从 python-telegram-bot 项目选择的五个测试示例，已转换为 unittest 格式或保留原始格式作为参考：
+
 #### 示例 1: BotCommand 测试 (已转换)
 
 见 `test_botcommand.py`，已从 pytest 转换为 unittest 格式。
