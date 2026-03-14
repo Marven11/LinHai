@@ -30,45 +30,53 @@ from tests.auxil.slots import mro_slots
 class TestBotCommandWithoutRequest(unittest.TestCase):
     command = "start"
     description = "A command"
-    
+
     def setUp(self):
         self.bot_command = BotCommand(command="start", description="A command")
         self.offline_bot = Mock()
-    
+
     def test_slot_behaviour(self):
         for attr in self.bot_command.__slots__:
-            self.assertNotEqual(getattr(self.bot_command, attr, "err"), "err", f"got extra slot '{attr}'")
-        self.assertEqual(len(mro_slots(self.bot_command)), len(set(mro_slots(self.bot_command))), "duplicate slot")
-    
+            self.assertNotEqual(
+                getattr(self.bot_command, attr, "err"),
+                "err",
+                f"got extra slot '{attr}'",
+            )
+        self.assertEqual(
+            len(mro_slots(self.bot_command)),
+            len(set(mro_slots(self.bot_command))),
+            "duplicate slot",
+        )
+
     def test_de_json(self):
         json_dict = {"command": self.command, "description": self.description}
         bot_command = BotCommand.de_json(json_dict, self.offline_bot)
         self.assertEqual(bot_command.api_kwargs, {})
         self.assertEqual(bot_command.command, self.command)
         self.assertEqual(bot_command.description, self.description)
-    
+
     def test_to_dict(self):
         bot_command_dict = self.bot_command.to_dict()
         self.assertIsInstance(bot_command_dict, dict)
         self.assertEqual(bot_command_dict["command"], self.bot_command.command)
         self.assertEqual(bot_command_dict["description"], self.bot_command.description)
-    
+
     def test_equality(self):
         a = BotCommand("start", "some description")
         b = BotCommand("start", "some description")
         c = BotCommand("start", "some other description")
         d = BotCommand("hepl", "some description")
         e = Dice(4, "emoji")
-        
+
         self.assertEqual(a, b)
         self.assertEqual(hash(a), hash(b))
-        
+
         self.assertNotEqual(a, c)
         self.assertNotEqual(hash(a), hash(c))
-        
+
         self.assertNotEqual(a, d)
         self.assertNotEqual(hash(a), hash(d))
-        
+
         self.assertNotEqual(a, e)
         self.assertNotEqual(hash(a), hash(e))
 

@@ -106,8 +106,12 @@ class TestCallbackQueryWithoutRequest(CallbackQueryTestBase):
 
     def test_slot_behaviour(self, callback_query):
         for attr in callback_query.__slots__:
-            assert getattr(callback_query, attr, "err") != "err", f"got extra slot '{attr}'"
-        assert len(mro_slots(callback_query)) == len(set(mro_slots(callback_query))), "same slot"
+            assert (
+                getattr(callback_query, attr, "err") != "err"
+            ), f"got extra slot '{attr}'"
+        assert len(mro_slots(callback_query)) == len(
+            set(mro_slots(callback_query))
+        ), "same slot"
 
     def test_de_json(self, offline_bot):
         json_dict = {
@@ -140,7 +144,10 @@ class TestCallbackQueryWithoutRequest(CallbackQueryTestBase):
         if callback_query.message is not None:
             assert callback_query_dict["message"] == callback_query.message.to_dict()
         elif callback_query.inline_message_id:
-            assert callback_query_dict["inline_message_id"] == callback_query.inline_message_id
+            assert (
+                callback_query_dict["inline_message_id"]
+                == callback_query.inline_message_id
+            )
         assert callback_query_dict["data"] == callback_query.data
         assert callback_query_dict["game_short_name"] == callback_query.game_short_name
 
@@ -174,9 +181,13 @@ class TestCallbackQueryWithoutRequest(CallbackQueryTestBase):
         assert await check_shortcut_call(
             callback_query.answer, callback_query.get_bot(), "answer_callback_query"
         )
-        assert await check_defaults_handling(callback_query.answer, callback_query.get_bot())
+        assert await check_defaults_handling(
+            callback_query.answer, callback_query.get_bot()
+        )
 
-        monkeypatch.setattr(callback_query.get_bot(), "answer_callback_query", make_assertion)
+        monkeypatch.setattr(
+            callback_query.get_bot(), "answer_callback_query", make_assertion
+        )
         assert await callback_query.answer()
 
     # 注意：以下测试函数包含异步代码，使用pytest-asyncio，本项目使用unittest时需适配
