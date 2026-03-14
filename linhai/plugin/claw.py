@@ -16,7 +16,10 @@ class ClawPlugin(Plugin):
     def __init__(self, group_chat: GroupChat, cli_args):
         super().__init__(group_chat)
         self.cli_args = cli_args
-        self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
+        if cli_args.claw_folder is not None:
+            self.claw_dir = Path(cli_args.claw_folder).expanduser()
+        else:
+            self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
 
     async def before_agent_loop(self, agent: "linhai_agent") -> None:
         """在agent循环开始前添加CLAW模式介绍和文档内容。"""

@@ -129,6 +129,12 @@ def main():
         action="store_true",
         help="启用 Continuous Living Autonomous Worker 模式",
     )
+    parser.add_argument(
+        "--claw-folder",
+        type=Path,
+        default=None,
+        help="指定claw目录路径（默认：~/.local/share/linhai/claw）",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 

@@ -154,5 +154,76 @@ class TestClawPinnedMessages(unittest.TestCase):
         self.assertFalse(claw_intro_found, "claw目录不存在时不应添加CLAW介绍")
 
 
+class TestClawFolderOption(unittest.TestCase):
+    """测试--claw-folder选项功能"""
+
+    def test_init_claw_with_custom_directory(self):
+        """测试init_claw()使用自定义目录参数"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_dir = Path(tmpdir) / "custom_claw"
+
+            init_claw(claw_dir=custom_dir)
+
+            self.assertTrue(custom_dir.exists())
+            self.assertTrue(custom_dir.is_dir())
+
+            core_files = [
+                "AGENTS.md",
+                "BOOTSTRAP.md",
+                "IDENTITY.md",
+                "SOUL.md",
+                "USER.md",
+            ]
+
+            for filename in core_files:
+                file_path = custom_dir / filename
+                self.assertTrue(file_path.exists())
+                self.assertTrue(file_path.is_file())
+                content = file_path.read_text(encoding="utf-8")
+                self.assertGreater(len(content), 100)
+
+    def test_init_claw_default_and_custom_separate(self):
+        """测试默认目录和自定义目录互不干扰"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home_dir = Path(tmpdir)
+            default_dir = home_dir / ".local" / "share" / "linhai" / "claw"
+            custom_dir = home_dir / "custom_claw"
+
+            with patch("pathlib.Path.home", return_value=home_dir):
+                init_claw()
+                self.assertTrue(default_dir.exists())
+                self.assertFalse(custom_dir.exists())
+
+            init_claw(claw_dir=custom_dir)
+            self.assertTrue(custom_dir.exists())
+
+            self.assertTrue(default_dir.exists())
+            self.assertTrue(custom_dir.exists())
+
+    def test_init_claw_with_nonexistent_parent_directory(self):
+        """测试在不存在的父目录中创建claw目录"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_dir = Path(tmpdir) / "deep" / "deeper" / "custom_claw"
+
+            init_claw(claw_dir=custom_dir)
+
+            self.assertTrue(custom_dir.exists())
+            self.assertTrue(custom_dir.is_dir())
+
+    def test_init_claw_does_not_overwrite_existing_custom_directory(self):
+        """测试init_claw()不覆盖已存在的自定义目录文件"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_dir = Path(tmpdir) / "custom_claw"
+            custom_dir.mkdir(parents=True, exist_ok=True)
+
+            test_file = custom_dir / "AGENTS.md"
+            original_content = "# 自定义内容"
+            test_file.write_text(original_content, encoding="utf-8")
+
+            init_claw(claw_dir=custom_dir)
+
+            self.assertEqual(test_file.read_text(encoding="utf-8"), original_content)
+
+
 if __name__ == "__main__":
     unittest.main()
