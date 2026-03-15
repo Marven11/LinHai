@@ -67,7 +67,12 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
     for k, v in arguments.items():
         simplified_args.append(f"{k}={simplify_value(v)}")
 
-    return f"{name}({', '.join(simplified_args)})"
+    if len(simplified_args) >= 3:
+        inner = "\n" + "\n".join(f"    {arg}," for arg in simplified_args)
+        inner = inner.rstrip(",")
+        return f"{name}( {inner}\n)"
+    else:
+        return f"{name}({', '.join(simplified_args)})"
 
 
 def parse_and_simplify_toolcall(json_str: str) -> str:

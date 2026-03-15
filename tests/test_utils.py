@@ -2,7 +2,8 @@
 
 import unittest
 import re
-from linhai.utils import generate_id
+import json
+from linhai.utils import generate_id, simplify_toolcall_json
 
 
 class TestUtils(unittest.TestCase):
@@ -49,6 +50,67 @@ class TestUtils(unittest.TestCase):
             ids.add(large_message_id)
 
         self.assertEqual(len(ids), 200)
+
+    def test_simplify_toolcall_json_one_param(self):
+        """Test simplify_toolcall_json with one parameter."""
+        toolcall = {"name": "sleep", "arguments": {"seconds": 5}}
+        result = simplify_toolcall_json(toolcall)
+        self.assertEqual(result, "sleep(seconds=5)")
+
+    def test_simplify_toolcall_json_two_params(self):
+        """Test simplify_toolcall_json with two parameters."""
+        toolcall = {
+            "name": "http_request",
+            "arguments": {"method": "GET", "url": "https://example.com"},
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertEqual(
+            result, 'http_request(method="GET", url="https://example.com")'
+        )
+
+    def test_simplify_toolcall_json_three_params(self):
+        """Test simplify_toolcall_json with three parameters."""
+        toolcall = {
+            "name": "replace_file_content",
+            "arguments": {
+                "filepath": "/tmp/test.txt",
+                "old": "old_text",
+                "new": "new_text",
+            },
+        }
+        result = simplify_toolcall_json(toolcall)
+        expected = 'replace_file_content( \n    filepath="/tmp/test.txt",\n    old="old_text",\n    new="new_text"\n)'
+        self.assertEqual(result, expected)
+
+    def test_simplify_toolcall_json_four_params(self):
+        """Test simplify_toolcall_json with four parameters."""
+        toolcall = {
+            "name": "some_tool",
+            "arguments": {
+                "arg1": "value1",
+                "arg2": "value2",
+                "arg3": "value3",
+                "arg4": "value4",
+            },
+        }
+        result = simplify_toolcall_json(toolcall)
+        expected = 'some_tool( \n    arg1="value1",\n    arg2="value2",\n    arg3="value3",\n    arg4="value4"\n)'
+        self.assertEqual(result, expected)
+
+    def test_simplify_toolcall_json_no_arguments(self):
+        """Test simplify_toolcall_json with empty arguments."""
+        toolcall = {"name": "no_args_tool", "arguments": {}}
+        result = simplify_toolcall_json(toolcall)
+        self.assertEqual(result, "no_args_tool()")
+
+    def test_simplify_toolcall_json_with_path_argument(self):
+        """Test simplify_toolcall_json with a long file path."""
+        toolcall = {
+            "name": "read_file",
+            "arguments": {"filepath": "/very/long/path/to/some/interesting/file.txt"},
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertEqual(result, 'read_file(filepath=".../file.txt")')
 
 
 if __name__ == "__main__":
