@@ -128,6 +128,35 @@ class AgentToolcall:
             current_name = current_llm_instance.get_name()
             return f"当前使用的LLM: {current_name}"
 
+        @llm_toolset.register_tool(
+            name="list_llm",
+            desc="列出所有可用的LLM及其状态，包括名称、模型、token限制、是否支持图像等",
+            args={},
+            required_args=[],
+        )
+        def list_llm() -> str:
+            llms_info = llm_manager.list_available_llms()
+
+            if not llms_info:
+                return "没有可用的LLM"
+
+            result = []
+            result.append(f"找到 {len(llms_info)} 个LLM:")
+            for info in llms_info:
+                result.append(f"  - 名称: {info['name']}")
+                result.append(f"    模型: {info['model']}")
+                result.append(f"    token限制: {info['token_limit']}")
+                result.append(f"    支持图像: {info['support_image']}")
+                result.append(f"    当前使用: {info['is_current']}")
+                result.append(f"    默认: {info['is_default']}")
+                result.append(f"    禁用: {info['is_disabled']}")
+                if info["disabled_until"]:
+                    result.append(f"    禁用直到: {info['disabled_until']}")
+                result.append(f"    错误计数: {info['error_count']}")
+                result.append("")
+
+            return "\n".join(result)
+
         tool_manager = self.group_chat.get_member_typechecked(
             "tool_manager", ToolManager
         )

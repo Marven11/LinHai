@@ -151,7 +151,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         tool_call = ToolCallMessage(
             function_name="list_llm",
-            function_arguments={"group_chat": self.group_chat},
+            function_arguments={},
             assert_success=True,
             with_secret=None,
         )
