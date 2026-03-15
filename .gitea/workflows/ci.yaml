@@ -59,6 +59,18 @@ jobs:
           echo "Checking if commit count is reasonable..."
           bash .gitea/scripts/check_commit_count.sh
 
+      - name: Check for emoji in commit messages (issue #99)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for emoji in commit messages..."
+          uv run python .gitea/scripts/check_emoji.py
+
+      - name: Check for black overformatting (issue #101)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking if black is overformatting files..."
+          uv run python .gitea/scripts/check_black_overformat.py
+
       - name: Run unittests
         env:
           PYTHONPATH: $PWD
