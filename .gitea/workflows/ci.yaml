@@ -71,6 +71,12 @@ jobs:
           echo "Checking if black is overformatting files..."
           uv run python .gitea/scripts/check_black_overformat.py
 
+      - name: Check for browser MCP snapshot documents (issue #113)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for browser MCP snapshot documents..."
+          uv run python .gitea/scripts/check_snapshot_docs.py
+
       - name: Run unittests
         env:
           PYTHONPATH: $PWD
