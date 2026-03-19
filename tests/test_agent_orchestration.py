@@ -427,7 +427,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试：所有大消息都是可清理的（因为没有在cleaned_messages_dict中）
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages, self.message_processor, cleaned_messages_dict=self.orchestration.cleaned_messages
+            self.orchestration.large_messages,
+            self.message_processor,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
 
         # 所有4个大消息都是可清理的（因为没有在cleaned_messages_dict中）
@@ -452,7 +454,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         # 测试：所有大消息都是可清理的（因为没有在cleaned_messages_dict中）
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages, self.message_processor, cleaned_messages_dict=self.orchestration.cleaned_messages
+            self.orchestration.large_messages,
+            self.message_processor,
+            cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
 
         # 所有4个大消息都是可清理的（因为没有在cleaned_messages_dict中）
