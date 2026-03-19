@@ -218,7 +218,7 @@ class SecretInterceptorPlugin:
                 )
 
                 return_message = (
-                    f"工具调用的结果包含未指定的secret值，已拦截。"
+                    f"工具调用成功，但是工具调用的结果包含未指定的secret值，已拦截。"
                     f"原始内容已保存到文件: {filepath}"
                 )
                 return RuntimeMessage(return_message)
