@@ -179,7 +179,7 @@ class AgentMessage:
         """
         from .lifecycle import Lifecycle
 
-        if not self.explicit_cache_anchors and self.is_explicit_cache_enabled:
+        if not self.explicit_cache_anchors and self.is_explicit_cache_enabled():
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None:
                 self.explicit_cache_anchors.append(anchor)
