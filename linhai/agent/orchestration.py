@@ -523,40 +523,9 @@ class NotificationMessagePlugin:
                 sort_value=0,
             )
 
-    async def after_message_generation(
-        self,
-        _answer: Answer,
-        _full_response: str,
-        _tool_calls: list[dict],
-    ) -> None:
-        """在消息生成后添加notification message。"""
-        from .main import Agent
-
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
-        orchestration = self.group_chat.get_member_typechecked(
-            "agent_context_orchestration", AgentContextOrchestration
-        )
-
-        threshold_info = agent.get_threshold_info()
-        if threshold_info is None:
-            return
-
-        if orchestration is None:
-            return
-
-        context = orchestration.compute_orchestration_context("", threshold_info)
-        notification_message = context["notification_message"]
-        if notification_message is not None:
-            agent.message_processor.update_notification_message(
-                RuntimeMessage(notification_message),
-                source="threshold_notification",
-                sort_value=0,
-            )
-
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
 
 
 class LargeMessageCountPlugin:

@@ -48,40 +48,13 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
             "agent_context_orchestration", self.orchestration
         )
 
-    async def test_after_message_generation_with_threshold_info(self):
-        """测试有阈值信息时的消息生成后回调。"""
-        threshold_info: ThresholdInfo = {
-            "hard_limit": 100000,
-            "used_tokens": 50000,
-            "remaining_tokens": 50000,
-            "usage_ratio": 0.5,
-        }
-        self.agent.get_threshold_info.return_value = threshold_info
-
-        await self.plugin.after_message_generation(Mock(), "test response", [])
-
-        self.agent.get_threshold_info.assert_called_once()
-        self.orchestration.compute_orchestration_context.assert_called_once_with(
-            "", threshold_info
-        )
-        self.agent.message_processor.update_notification_message.assert_called_once()
-
-    async def test_after_message_generation_without_threshold_info(self):
-        """测试无阈值信息时的消息生成后回调。"""
-        self.agent.get_threshold_info.return_value = None
-
-        await self.plugin.after_message_generation(Mock(), "test response", [])
-
-        self.agent.get_threshold_info.assert_called_once()
-        self.orchestration.compute_orchestration_context.assert_not_called()
-
     def test_register(self):
         """测试插件注册。"""
         lifecycle = Mock()
         self.plugin.register(lifecycle)
 
-        lifecycle.register_after_message_generation.assert_called_once_with(
-            self.plugin.after_message_generation
+        lifecycle.register_before_message_generation.assert_called_once_with(
+            self.plugin.before_message_generation
         )
 
 
