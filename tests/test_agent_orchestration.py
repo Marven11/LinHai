@@ -425,18 +425,15 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             self.message_processor.messages[pos] = large_msg
             self.orchestration.large_messages.add(large_msg)
 
-        # 测试：最近20条内的大消息应该被保留
+        # 测试：所有大消息都是可清理的（因为没有在cleaned_messages_dict中）
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages, self.message_processor, recent_count=20
+            self.orchestration.large_messages, self.message_processor, cleaned_messages_dict=self.orchestration.cleaned_messages
         )
 
-        # 100个消息，最近20条是80-99，所以索引99的大消息应该被保留
-        # 索引24, 49, 74的大消息应该可以被清理
-        self.assertEqual(len(cleanable), 3)
-        self.assertIn(large_msgs[0], cleanable)  # 索引24
-        self.assertIn(large_msgs[1], cleanable)  # 索引49
-        self.assertIn(large_msgs[2], cleanable)  # 索引74
-        self.assertNotIn(large_msgs[3], cleanable)  # 索引99，应该被保留
+        # 所有4个大消息都是可清理的（因为没有在cleaned_messages_dict中）
+        self.assertEqual(len(cleanable), 4)
+        for msg in large_msgs:
+            self.assertIn(msg, cleanable)
 
     def test_get_cleanable_large_messages_two_recent(self):
         """测试当有2个大消息在recent_count内时的行为。"""
@@ -453,18 +450,15 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             self.message_processor.messages[pos] = large_msg
             self.orchestration.large_messages.add(large_msg)
 
-        # 测试：90和100位置的大消息应该被保留
+        # 测试：所有大消息都是可清理的（因为没有在cleaned_messages_dict中）
         cleanable = get_cleanable_large_messages(
-            self.orchestration.large_messages, self.message_processor, recent_count=20
+            self.orchestration.large_messages, self.message_processor, cleaned_messages_dict=self.orchestration.cleaned_messages
         )
 
-        # 只有索引24, 49的大消息可以被清理
-        # 索引89, 99的大消息应该被保留
-        self.assertEqual(len(cleanable), 2)
-        self.assertIn(large_msgs[0], cleanable)  # 索引24
-        self.assertIn(large_msgs[1], cleanable)  # 索引49
-        self.assertNotIn(large_msgs[2], cleanable)  # 索引89，应该被保留
-        self.assertNotIn(large_msgs[3], cleanable)  # 索引99，应该被保留
+        # 所有4个大消息都是可清理的（因为没有在cleaned_messages_dict中）
+        self.assertEqual(len(cleanable), 4)
+        for msg in large_msgs:
+            self.assertIn(msg, cleanable)
 
     def test_cleaned_messages_dict_expiry(self):
         """测试cleaned_messages字典的过期清理机制。"""
@@ -480,7 +474,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         get_cleanable_large_messages(
             self.orchestration.large_messages,
             self.message_processor,
-            recent_count=20,
             cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
 
@@ -499,13 +492,14 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         import hashlib
 
-        content_hash = hashlib.md5(test_content.encode()).hexdigest()
+        # 使用消息的实际内容计算哈希
+        actual_content = msg.get_content()
+        content_hash = hashlib.md5(actual_content.encode()).hexdigest()
         self.orchestration.cleaned_messages[content_hash] = time.time() - 100
 
         cleanable = get_cleanable_large_messages(
             self.orchestration.large_messages,
             self.message_processor,
-            recent_count=20,
             cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
         self.assertNotIn(msg, cleanable)
@@ -514,7 +508,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         cleanable = get_cleanable_large_messages(
             self.orchestration.large_messages,
             self.message_processor,
-            recent_count=20,
             cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
         self.assertNotIn(content_hash, self.orchestration.cleaned_messages)
@@ -526,7 +519,6 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         cleanable = get_cleanable_large_messages(
             self.orchestration.large_messages,
             self.message_processor,
-            recent_count=20,
             cleaned_messages_dict=self.orchestration.cleaned_messages,
         )
-        self.assertNotIn(binary_msg, cleanable)
+        self.assertIn(binary_msg, cleanable)
