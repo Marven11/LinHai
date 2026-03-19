@@ -454,6 +454,34 @@ class MinimaxToolCallPlugin(Plugin):
         has_minimax_marker = "<minimax:tool_call>" in full_response
         has_correct_format = "```json toolcall" in full_response
 
+        has_minimax_m25_error = False
+        lines = full_response.split("\n")
+        if lines and lines[0].strip() == "[TOOL_CALL]":
+            for line in lines:
+                if line.strip().startswith("</TOOL_CALL>"):
+                    has_minimax_m25_error = True
+                    break
+
+        if has_minimax_m25_error:
+            self._last_error_format_time = time.time()
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "警告：检测到minimax m2.5的错误工具调用格式`[TOOL_CALL]`和`</TOOL_CALL>`。"
+                    "正确的工具调用格式是使用`json toolcall`代码块，例如：\n"
+                    "```json toolcall\n"
+                    '{"name": "tool_name", "arguments": {...}}\n'
+                    "```"
+                )
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="检测到minimax m2.5错误工具调用格式，已提醒模型",
+                ),
+            )
+
         if has_minimax_marker and not has_correct_format:
             self._last_error_format_time = time.time()
             agent = self.group_chat.get_member_typechecked("agent", Agent)

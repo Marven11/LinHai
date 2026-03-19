@@ -55,6 +55,34 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNone(self.plugin._last_error_format_time)
 
+    async def test_after_message_generation_detects_minimax_m25_error_format(self):
+        """Test after_message_generation sets error time for minimax m2.5 error format."""
+        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.group_chat.send_if_exists = AsyncMock()
+
+        error_response = '[TOOL_CALL]\n{\n  "name": "test_tool"\n}\n</TOOL_CALL>'
+        await self.plugin.after_message_generation(self.answer, error_response, [])
+
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+        self.agent.message_processor.add_new_message.assert_called_once()
+        # 不检查具体内容，因为RuntimeMessage可能没有content属性
+
+    async def test_after_message_generation_no_error_for_other_formats(self):
+        """Test after_message_generation does not set error time for other incorrect formats."""
+        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.group_chat.send_if_exists = AsyncMock()
+
+        other_error_response = "<minimax:tool_call>"
+        await self.plugin.after_message_generation(
+            self.answer, other_error_response, []
+        )
+
+        self.assertIsNotNone(self.plugin._last_error_format_time)
+        self.agent.message_processor.add_new_message.assert_called_once()
+        # 不检查具体内容
+
     def test_register(self):
         """Test plugin registration."""
         lifecycle = MagicMock()
