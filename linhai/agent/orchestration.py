@@ -307,6 +307,7 @@ class AgentContextOrchestration:
             desc="清理大消息：如果当前有至少5条大消息，全部删除并返回每条被删除的消息的repr。",
             args={},
             required_args=[],
+            conflict_with=["context_forget_range_step1", "context_forget_range_step2"],
         )
         async def context_forget_large_message_tool() -> (
             ToolResultSuccess | ToolResultFailed
@@ -324,11 +325,16 @@ class AgentContextOrchestration:
             desc="压缩范围第一步：生成消息列表总结并返回range_clean_id。",
             args={},
             required_args=[],
+            conflict_with=[
+                "context_forget_large_message",
+                "context_forget_range_step2",
+            ],
         )
         async def context_forget_range_step1_tool() -> (
             ToolResultSuccess | ToolResultFailed
         ):
-            return await context_forget_range_step1(self.group_chat)
+            result = await context_forget_range_step1(self.group_chat)
+            return result
 
         @toolset.register_tool(
             name="context_forget_range_step2",
@@ -352,6 +358,10 @@ class AgentContextOrchestration:
                 ),
             },
             required_args=["range_clean_id", "start_id", "end_id", "description"],
+            conflict_with=[
+                "context_forget_large_message",
+                "context_forget_range_step1",
+            ],
         )
         async def context_forget_range_step2_tool(
             range_clean_id: str, start_id: int, end_id: int, description: str
