@@ -45,7 +45,6 @@ class ToolBlockDetailsDict(TypedDict):
 def get_cleanable_large_messages(
     large_messages: set[Message],
     agent_message: AgentMessage,
-    recent_count: int = 20,
     cleaned_messages_dict: dict[str, float] | None = None,
 ) -> list[Message]:
     """获取可以清理的大消息列表，忽略最近添加的大消息和最近清理的相同内容消息。
@@ -53,7 +52,6 @@ def get_cleanable_large_messages(
     Args:
         large_messages: 大消息集合
         agent_message: AgentMessage实例，用于查找消息索引
-        recent_count: 忽略最近多少条消息，默认20条
         cleaned_messages_dict: 已清理消息的哈希到时间戳的字典，可选
 
     Returns:
@@ -74,16 +72,14 @@ def get_cleanable_large_messages(
         index = agent_message.find_message(msg)
         if index is None:
             continue
-        if index < len(agent_message.messages) - recent_count:
-            if cleaned_messages_dict is not None:
-                content = msg.get_content()
-                if isinstance(content, str):
-
-                    content_hash = hashlib.md5(content.encode()).hexdigest()
-                    if content_hash in cleaned_messages_dict:
-                        timestamp = cleaned_messages_dict[content_hash]
-                        if current_time - timestamp < 180:
-                            continue
+        if cleaned_messages_dict is not None:
+            content = msg.get_content()
+            if isinstance(content, str):
+                content_hash = hashlib.md5(content.encode()).hexdigest()
+                if content_hash in cleaned_messages_dict:
+                    timestamp = cleaned_messages_dict[content_hash]
+                    if current_time - timestamp < 180:
+                        continue
             cleanable.append(msg)
     return cleanable
 
@@ -125,7 +121,6 @@ class AgentContextOrchestration:
         removed_messages = get_cleanable_large_messages(
             self.large_messages,
             self.agent_message,
-            recent_count=20,
             cleaned_messages_dict=self.cleaned_messages,
         )
 
@@ -232,7 +227,6 @@ class AgentContextOrchestration:
             cleanable_messages = get_cleanable_large_messages(
                 self.large_messages,
                 self.agent_message,
-                recent_count=20,
                 cleaned_messages_dict=self.cleaned_messages,
             )
             cleanable_count = len(cleanable_messages)
