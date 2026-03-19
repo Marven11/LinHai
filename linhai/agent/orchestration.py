@@ -71,7 +71,6 @@ def get_cleanable_large_messages(
         index = agent_message.find_message(msg)
         if index is None:
             continue
-        # 只根据清理记录判断
         content = msg.get_content()
         if isinstance(content, str):
             content_hash = hashlib.md5(content.encode()).hexdigest()
