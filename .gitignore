@@ -9,4 +9,3 @@ config.toml
 .vscode
 .*_cache
 conversations/
-MagicMock/
