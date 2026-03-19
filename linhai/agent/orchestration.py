@@ -59,7 +59,6 @@ def get_cleanable_large_messages(
     """
     cleanable: list[Message] = []
     current_time = time.time()
-    # 清理过期的哈希记录
     expired_hashes = [
         hash_val
         for hash_val, timestamp in cleaned_messages_dict.items()
