@@ -247,7 +247,10 @@ class AgentContextOrchestration:
             else:
                 base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}{cache_ratio_text}"
                 if current_state == "红灯":
-                    suggestion = "建议: 立即暂停当前任务，开始清理上下文"
+                    if cleanable_count >= 5:
+                        suggestion = "建议: 立即暂停当前任务，开始使用context_forget_large_message清理上下文"
+                    else:
+                        suggestion = "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文"
                 elif current_state == "黄灯":
                     suggestion = (
                         "建议: 应该调用context_forget_large_message工具"
