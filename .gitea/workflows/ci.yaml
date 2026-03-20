@@ -71,6 +71,12 @@ jobs:
           echo "Checking for emoji in commit messages..."
           uv run python .gitea/scripts/check_emoji.py
 
+      - name: Check for emoji in changed code files (issue #33)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for emoji in changed Python code files..."
+          uv run python .gitea/scripts/check_code_emoji.py
+
       - name: Check for black overformatting (issue #101)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
