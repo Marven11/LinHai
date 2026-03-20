@@ -183,9 +183,9 @@ class AgentMessage:
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None:
                 self.explicit_cache_anchors.append(anchor)
-            await self.group_chat.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
-            )
+                await self.group_chat.send_if_exists(
+                    "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
+                )
 
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         processed_message = await lifecycle.trigger_before_add_new_message(msg)
