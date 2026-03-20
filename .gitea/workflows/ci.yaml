@@ -126,3 +126,23 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           # uv run pylint linhai/ tests/  # temporarily disable
+
+  nix-build:
+    needs: [test]
+    runs-on: debian-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Build with Nix
+        run: nix build
