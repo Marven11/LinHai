@@ -125,7 +125,7 @@ class SlowStartPlugin(Plugin):
         if not self.enabled:
             return False
 
-        if current_content.count("\n```json toolcall") > 5:
+        if current_content.count("\n```json toolcall") > 8:
             self.enabled = False
             await self.group_chat.send_if_exists(
                 "ui_log",
@@ -139,7 +139,7 @@ class SlowStartPlugin(Plugin):
     async def after_message_generation(
         self, _answer: Answer, _full_response: str, tool_calls: list[dict]
     ):
-        if len(tool_calls) < 5:
+        if len(tool_calls) < 8:
             self.enabled = False
 
     def register(self, lifecycle: "Lifecycle"):
