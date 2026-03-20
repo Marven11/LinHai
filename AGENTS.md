@@ -54,3 +54,7 @@
 你根据你的规则重新选择一个最符合的issue
 
 保证下一个pr不包含多余文件至关重要，你需要重新检查git remote并根据main branch新建一个干净的issue
+
+## ci jobs
+
+你提交pr之后，有两个ci job会被依次运行，分别是ci test和ci nix-build, 如果ci test失败了，ci nix-build会被中止运行。因此为了效率，你优先查看ci test有没有通过，如果通过了再查看ci nix-build
