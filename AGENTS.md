@@ -57,4 +57,8 @@
 
 ## ci jobs
 
-你提交pr之后，有两个ci job会被依次运行，分别是ci test和ci nix-build, 如果ci test失败了，ci nix-build会被中止运行。因此为了效率，你优先查看ci test有没有通过，如果通过了再查看ci nix-build
+你提交pr之后，有两个ci job会被依次运行，分别是ci test和ci nix-build
+
+ci nix-build会等待ci test执行成功后才执行, 如果ci test失败了，ci nix-build会被中止运行。
+
+因此为了效率，你优先查看ci test有没有通过，如果通过了再查看ci nix-build
