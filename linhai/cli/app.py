@@ -277,9 +277,6 @@ class CLIApp(App):
 
         if event.key == "ctrl+c":
             close_all_terminals()
-            await self.group_chat.get_member_typechecked(
-                "mcp_connector", MCPConnector
-            ).disconnect_all_mcp_servers()
             self.app.exit()
 
     async def _handle_regular_message(self, message_text: str) -> None:

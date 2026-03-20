@@ -397,7 +397,3 @@ class Agent:
             except asyncio.CancelledError:
                 break
             await asyncio.sleep(0)
-
-        await self.group_chat.get_member_typechecked(
-            "mcp_connector", MCPConnector
-        ).disconnect_all_mcp_servers()

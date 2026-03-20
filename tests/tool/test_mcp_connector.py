@@ -132,26 +132,6 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("not exists", str(context.exception))
 
-    async def test_disconnect_all(self):
-        """测试断开所有连接。"""
-        mock_exit_stack1 = AsyncMock()
-        mock_exit_stack2 = AsyncMock()
-
-        self.connector.sessions["server1"] = (
-            AsyncMock(),
-            mock_exit_stack1,
-            MagicMock(),
-        )
-        self.connector.sessions["server2"] = (
-            AsyncMock(),
-            mock_exit_stack2,
-            MagicMock(),
-        )
-
-        await self.connector.disconnect_all_mcp_servers()
-
-        self.assertEqual(self.connector.sessions, {})
-
     async def test_get_server_success(self):
         """测试成功获取服务器。"""
         mock_session = AsyncMock()
@@ -288,44 +268,6 @@ if __name__ == "__main__":
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("断开失败", result.content)
         self.assertIn("'nonexistent' not exists", result.content)
-
-    async def test_disconnect_all_tool_success(self):
-        """测试disconnect_all工具成功。"""
-        mock_exit_stack1 = AsyncMock()
-        mock_exit_stack2 = AsyncMock()
-        self.connector.sessions["server1"] = (
-            AsyncMock(),
-            mock_exit_stack1,
-            MagicMock(),
-        )
-        self.connector.sessions["server2"] = (
-            AsyncMock(),
-            mock_exit_stack2,
-            MagicMock(),
-        )
-
-        result = await self.connector.connector_toolset.call_tool(
-            "disconnect_all_mcp_servers", {}
-        )
-
-        self.assertIsInstance(result, ToolResultSuccess)
-        self.assertIn("成功断开所有MCP服务器", result.content)
-        self.assertEqual(self.connector.sessions, {})
-
-    async def test_disconnect_all_tool_failure(self):
-        """测试disconnect_all工具失败。"""
-        with patch(
-            "linhai.tool.mcp_connector.MCPConnector.disconnect_all_mcp_servers"
-        ) as mock_disconnect_all:
-            mock_disconnect_all.side_effect = Exception("Disconnect error")
-
-            result = await self.connector.connector_toolset.call_tool(
-                "disconnect_all_mcp_servers", {}
-            )
-
-            self.assertIsInstance(result, ToolResultFailed)
-            self.assertIn("断开所有服务器失败", result.content)
-            self.assertIn("Disconnect error", result.content)
 
     async def test_list_mcp_servers_tool_with_servers(self):
         """测试list_mcp_servers工具有服务器的情况。"""

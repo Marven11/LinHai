@@ -89,11 +89,6 @@ class MCPConnector:
         _, exit_stack, _ = self.sessions.pop(name)
         await exit_stack.aclose()
 
-    async def disconnect_all_mcp_servers(self):
-        coros = [exit_stack.aclose() for _, exit_stack, _ in self.sessions.values()]
-        await asyncio.gather(*coros)
-        self.sessions = {}
-
     def get_server(self, name: str):
         if name not in self.sessions:
             raise RuntimeError(f"{name!r} not exists or not connected")
@@ -131,7 +126,6 @@ class MCPConnector:
             required_args=["name", "command"],
             conflict_with=[
                 "disconnect_mcp_server",
-                "disconnect_all_mcp_servers",
                 "list_mcp_servers",
             ],
         )
@@ -165,19 +159,6 @@ class MCPConnector:
                 return ToolResultSuccess(content=f"成功断开MCP服务器: {name!r}")
             except RuntimeError as e:
                 return ToolResultFailed(content=f"断开失败: {e!r}")
-
-        @connector_toolset.register_tool(
-            name="disconnect_all_mcp_servers",
-            desc="断开所有已连接的外部服务",
-            args={},
-            required_args=[],
-        )
-        async def disconnect_all_mcp_servers():
-            try:
-                await self.disconnect_all_mcp_servers()
-                return ToolResultSuccess(content="成功断开所有MCP服务器")
-            except (RuntimeError, ConnectionError, OSError) as e:
-                return ToolResultFailed(content=f"断开所有服务器失败: {e!r}")
 
         @connector_toolset.register_tool(
             name="list_mcp_servers",
