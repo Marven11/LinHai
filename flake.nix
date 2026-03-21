@@ -62,6 +62,7 @@
               tiktoken
               pillow
               tomli-w
+              feedparser
             ];
 
             src = ./.;

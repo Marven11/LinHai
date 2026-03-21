@@ -174,6 +174,27 @@ class TestRssPlugin(unittest.TestCase):
             plugin.before_agent_loop
         )
 
+    async def test_poll_rss_sources(self):
+        """测试轮询RSS源的功能。"""
+        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+
+        mock_response = Mock()
+        mock_response.text = TEST_RSS_XML
+        mock_response.raise_for_status = Mock()
+
+        with patch("linhai.rss.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get.return_value = mock_response
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            await plugin._poll_rss_sources()
+
+            self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
+            self.assertIn("guid-1", plugin.processed_guids)
+            self.assertIn("guid-2", plugin.processed_guids)
+
 
 if __name__ == "__main__":
     unittest.main()

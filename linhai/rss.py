@@ -134,6 +134,8 @@ class RssPlugin:
 
     async def _poll_rss_sources(self):
         """轮询所有RSS源。"""
+        from linhai.agent import Agent as AgentType
+
         agent = self.group_chat.get_member_typechecked("agent", AgentType)
         if not agent:
             return
