@@ -40,7 +40,23 @@ jobs:
           mkdir -p /root/.config/linhai/
           cp config-example.toml /root/.config/linhai/config.toml
           ls -la /root/.config/linhai/config.toml
-          
+
+      - name: Run black
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          # 检查PR中修改的Python文件，避免没有文件时black崩溃
+          # 使用git diff比较当前分支和主分支，而不是仅检查未提交的更改
+          changed_py_files=$(git diff --name-only origin/main..HEAD | grep '\.py$' || true)
+
+          if [ -n "$changed_py_files" ]; then
+            echo "Running black check on changed Python files:"
+            echo "$changed_py_files"
+            # 一次性检查所有修改的Python文件
+            uv run black --check $changed_py_files
+          else
+            echo "No Python files changed in this PR, skipping black check"
+          fi
+
       - name: Check for new Python comments
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
@@ -103,26 +119,6 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           uv run pyright linhai/
-
-      - name: Run black
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          # 检查PR中修改的Python文件，避免没有文件时black崩溃
-          # 使用git diff比较当前分支和主分支，而不是仅检查未提交的更改
-          changed_py_files=$(git diff --name-only origin/main..HEAD | grep '\.py$' || true)
-          
-          if [ -n "$changed_py_files" ]; then
-            echo "Running black check on changed Python files:"
-            echo "$changed_py_files"
-            # 使用while循环处理文件，避免xargs问题
-            echo "$changed_py_files" | while read -r py_file; do
-              if [ -f "$py_file" ]; then
-                uv run black --check "$py_file"
-              fi
-            done
-          else
-            echo "No Python files changed in this PR, skipping black check"
-          fi
 
       - name: Run pylint
         run: |
