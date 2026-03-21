@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 import re
+from os import access, R_OK
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
@@ -179,6 +180,8 @@ class TodolistCheckerPlugin(Plugin):
 
     def _has_unfinished_tasks(self, todolist_path: Path) -> bool:
         if not todolist_path.exists():
+            return False
+        if not access(todolist_path, R_OK):
             return False
         content = todolist_path.read_text(encoding="utf-8")
         pattern = r"^\s*-\s+\[(\s|\.)\]"
