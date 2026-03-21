@@ -62,6 +62,10 @@ class RangeCleanManager:
         if range_clean_id in self._clean_infos:
             del self._clean_infos[range_clean_id]
 
+    def clear_all_clean_infos(self):
+        """清除所有验证信息，让所有range_clean_id过期"""
+        self._clean_infos.clear()
+
     def is_valid(self, range_clean_id: str) -> bool:
         """检查ID是否有效"""
         return range_clean_id in self._clean_infos
@@ -238,6 +242,7 @@ async def context_forget_range_step2(
         start_id, end_id
     )
     range_clean_manager.remove_clean_info(range_clean_id)
+    range_clean_manager.clear_all_clean_infos()
 
     conversation_dir = group_chat.get_member_typechecked("conversation_folder", Path)
     filepath = save_cleaned_messages(
