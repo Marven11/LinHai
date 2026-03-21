@@ -139,6 +139,14 @@ def extract_tool_calls_with_errors(
                     )
                     continue
 
+                if not isinstance(data["arguments"], dict):
+                    errors.append(
+                        f"工具调用解析出错：第{i+1}个code block中的'arguments'字段不是字典类型，"
+                        f"实际类型: {type(data['arguments']).__name__}\n"
+                        f"内容: {repr_obj.repr(block['content'])}"
+                    )
+                    continue
+
                 tool_calls.append(data)
             except json.JSONDecodeError as e:
                 context_str = _extract_json_error_context(e, block["content"])
