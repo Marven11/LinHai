@@ -62,7 +62,9 @@ class PromptFastAgentPlugin(Plugin):
         model_name = model.get_name()
         # 更新notification消息，显示当前模型的工具限制
         agent.message_processor.update_notification_message(
-            RuntimeMessage(f"你现在是{model_name}，禁止调用超过{max_toolcall}个工具！"),
+            RuntimeMessage(
+                f"你现在是{model_name}，为了避免一次性造成大量错误，runtime会在你调用超过{max_toolcall}个工具时打断你"
+            ),
             source="prompt_fast_agent",
             sort_value=100,
         )
@@ -88,7 +90,7 @@ class PromptFastAgentPlugin(Plugin):
                 )
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
-                    f"禁止超速：你现在是{model_name}，禁止使用超过{max_toolcall}个工具！"
+                    f"禁止超速：你现在是{model_name}，为了避免一次性造成大量错误，runtime会在你调用超过{max_toolcall}个工具时打断你"
                     + extra_message
                 )
             )
