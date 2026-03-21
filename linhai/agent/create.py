@@ -156,8 +156,16 @@ async def create_agent_from_config(
         )
 
     from linhai.plugin import MachineControlIntroductionPlugin
+    from linhai.rss import RssPlugin
 
     MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
+
+    if context["config"].rss.rss_urls:
+        RssPlugin(
+            context["group_chat"],
+            context["config"].rss.rss_urls,
+            context["config"].rss.poll_interval,
+        ).register(agent.lifecycle)
 
     if context.get("planning", False):
         from linhai.plugin.planning import (

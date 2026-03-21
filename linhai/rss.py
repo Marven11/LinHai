@@ -1,10 +1,16 @@
-"""RSS模块，包含RSS消息定义和RSS解析工具函数。"""
+"""RSS模块，包含RSS消息定义、RSS解析工具函数和RSS定时检查插件。"""
 
+import asyncio
 import json
-from typing import List
+from typing import List, TYPE_CHECKING
 import feedparser
+import httpx
 
 from linhai.llm import LanguageModelMessage, Message
+
+if TYPE_CHECKING:
+    from linhai.agent.main import Agent
+    from linhai.agent import Agent as AgentType
 
 
 class RssMessage(Message):
@@ -105,3 +111,62 @@ def parse_rss(xml_content: str) -> List[RssMessage]:
         )
 
     return rss_messages
+
+
+class RssPlugin:
+    """RSS定时检查插件，定时轮询配置的RSS源并添加新消息到Agent消息队列。"""
+
+    def __init__(self, group_chat, rss_urls, poll_interval):
+        self.group_chat = group_chat
+        self.rss_urls = rss_urls
+        self.poll_interval = poll_interval
+        self.processed_guids = set()
+        self._polling_task = None
+
+    async def start_rss_polling(self):
+        """启动RSS轮询任务。"""
+        if not self.rss_urls:
+            return
+
+        while True:
+            await self._poll_rss_sources()
+            await asyncio.sleep(self.poll_interval)
+
+    async def _poll_rss_sources(self):
+        """轮询所有RSS源。"""
+        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        if not agent:
+            return
+
+        for rss_url in self.rss_urls:
+            await self._fetch_and_process_rss(rss_url, agent)
+
+    async def _fetch_and_process_rss(self, rss_url, agent):
+        """获取并处理单个RSS源。"""
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(rss_url)
+            response.raise_for_status()
+            xml_content = response.text
+
+        rss_messages = parse_rss(xml_content)
+
+        new_messages = [
+            msg for msg in rss_messages if msg.guid not in self.processed_guids
+        ]
+        if not new_messages:
+            return
+
+        for msg in new_messages:
+            self.processed_guids.add(msg.guid)
+            await agent.message_processor.add_new_message(msg)
+
+    async def before_agent_loop(self, agent: "Agent"):
+        """在Agent循环开始前启动RSS轮询任务。"""
+        if not self.rss_urls:
+            return
+
+        self._polling_task = asyncio.create_task(self.start_rss_polling())
+
+    def register(self, lifecycle) -> None:
+        """注册到Lifecycle。"""
+        lifecycle.register_before_agent_loop(self.before_agent_loop)
