@@ -95,7 +95,7 @@ class TestCreateAgent(unittest.TestCase):
         import argparse
 
         cli_args = argparse.Namespace(
-            message=None, file=None, claw=False, disable_waiting_marker=False
+            message=None, file=None, claw=False, disable_waiting_marker=False, rss=[]
         )
 
         context = create_agent_build_context(
@@ -198,7 +198,11 @@ class TestCreateAgent(unittest.TestCase):
             import argparse
 
             cli_args = argparse.Namespace(
-                message=None, file=None, claw=False, disable_waiting_marker=False
+                message=None,
+                file=None,
+                claw=False,
+                disable_waiting_marker=False,
+                rss=[],
             )
 
             context = create_agent_build_context(

@@ -149,19 +149,6 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, secret={self.secret})"
 
 
-class RssConfig(BaseModel):
-    """RSS配置类型定义。"""
-
-    rss_urls: list[str] = Field(default_factory=list)
-    poll_interval: int = Field(default=300, ge=60)
-
-    def __str__(self) -> str:
-        """返回RSS配置的字符串表示"""
-        return (
-            f"RssConfig(rss_urls={self.rss_urls}, poll_interval={self.poll_interval})"
-        )
-
-
 class CLIConfig(BaseModel):
     """CLI配置类型定义。"""
 
@@ -182,7 +169,6 @@ class Config(BaseModel):
         default_factory=lambda: UserPromptConfig(file_path="")
     )
     tools: ToolConfig = Field(default_factory=ToolConfig)
-    rss: RssConfig = Field(default_factory=RssConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
 
     def __str__(self) -> str:

@@ -27,6 +27,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.file = []
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
+        cli_args.rss = []
         self.group_chat.register_member("cli_args", cli_args)
         self.cli_args = cli_args
 

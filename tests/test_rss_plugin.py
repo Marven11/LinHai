@@ -49,6 +49,19 @@ class TestRssPlugin(unittest.TestCase):
         plugin = RssPlugin(self.group_chat, [], 300)
         self.assertEqual(plugin.rss_urls, [])
 
+    def test_plugin_from_cli_args(self):
+        """测试从CLI args获取RSS URL。"""
+        import argparse
+
+        mock_cli_args = argparse.Namespace()
+        mock_cli_args.rss = ["http://example.com/feed", "http://example.com/feed2"]
+        rss_urls = getattr(mock_cli_args, "rss", [])
+        plugin = RssPlugin(self.group_chat, rss_urls, 300)
+        self.assertEqual(
+            plugin.rss_urls, ["http://example.com/feed", "http://example.com/feed2"]
+        )
+        self.assertEqual(plugin.poll_interval, 300)
+
     async def test_fetch_and_process_rss_success(self):
         """测试成功获取和处理RSS。"""
         plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)

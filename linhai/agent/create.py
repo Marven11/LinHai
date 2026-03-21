@@ -160,11 +160,11 @@ async def create_agent_from_config(
 
     MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
 
-    if context["config"].rss.rss_urls:
+    if context["cli_args"].rss:
         RssPlugin(
             context["group_chat"],
-            context["config"].rss.rss_urls,
-            context["config"].rss.poll_interval,
+            context["cli_args"].rss,
+            300,
         ).register(agent.lifecycle)
 
     if context.get("planning", False):

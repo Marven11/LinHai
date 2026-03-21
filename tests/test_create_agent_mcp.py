@@ -31,6 +31,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.cli_args.file = []
         self.cli_args.claw = False
         self.cli_args.disable_waiting_marker = False
+        self.cli_args.rss = []
         self.group_chat.register_member("cli_args", self.cli_args)
 
         project_root = os.path.dirname(os.path.abspath(__file__))

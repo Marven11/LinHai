@@ -135,6 +135,13 @@ def main():
         default=None,
         help="指定claw目录路径（默认：~/.local/share/linhai/claw）",
     )
+    parser.add_argument(
+        "--rss",
+        type=str,
+        action="append",
+        default=[],
+        help="RSS feed URL，可指定多个",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 

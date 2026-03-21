@@ -35,6 +35,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args = argparse.Namespace()
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
+        cli_args.rss = []
 
         context = create_agent_build_context(
             group_chat=group_chat,
@@ -95,6 +96,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args = argparse.Namespace()
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
+        cli_args.rss = []
 
         context = create_agent_build_context(
             group_chat=group_chat,
