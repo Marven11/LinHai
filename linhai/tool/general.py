@@ -249,20 +249,6 @@ async def search_web(query: str, max_results: int = 5) -> str:
         return f"搜索过程中发生错误: {str(e)}"
 
 
-@global_tools.register_tool(
-    name="sleep",
-    desc="睡眠X秒，返回开始和结束时间",
-    args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
-    required_args=["seconds"],
-)
-async def sleep_tool(seconds: float) -> ToolResultSuccess:
-    start = datetime.now()
-    await asyncio.sleep(seconds)
-    return ToolResultSuccess(
-        content=f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
-
-
 def safe_calculator(expression: str) -> str:
     """安全计算数学表达式。只允许安全字符，避免代码执行。
 

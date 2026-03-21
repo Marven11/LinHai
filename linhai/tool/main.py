@@ -58,14 +58,44 @@ class ToolManager:
         group_chat.add_postinit(self.postinit)
 
     def postinit(self):
-        """后初始化：注册MachineControl工具集"""
+        """后初始化：注册MachineControl工具集和可打断的sleep工具"""
         from linhai.machine_control.main import register_machine_control_tools
         from linhai.machine_control import MachineControl
+        from datetime import datetime
+        from linhai.tool.base import ToolArgInfo
 
         machine_control = self.group_chat.get_member_typechecked(
             "machine_control", MachineControl
         )
         self.add_toolset(register_machine_control_tools(machine_control))
+
+        sleep_toolset = ToolSet()
+        group_chat = self.group_chat
+
+        @sleep_toolset.register_tool(
+            name="sleep",
+            desc="睡眠X秒，返回开始和结束时间",
+            args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
+            required_args=["seconds"],
+        )
+        async def sleep_tool(seconds: float) -> ToolResultSuccess:
+            start = datetime.now()
+            while True:
+                elapsed = (datetime.now() - start).total_seconds()
+                if elapsed >= seconds:
+                    break
+                if not group_chat.is_empty("user_message"):
+                    return ToolResultSuccess(
+                        content=f"有新用户消息，sleep已打断。已睡眠{elapsed}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
+                remaining = seconds - elapsed
+                sleep_time = min(1.0, remaining)
+                await asyncio.sleep(sleep_time)
+            return ToolResultSuccess(
+                content=f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+        self.add_toolset(sleep_toolset)
 
     async def ensure_mcp_connector(self):
         if self.mcp_connector is not None:
