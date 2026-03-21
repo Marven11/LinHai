@@ -112,6 +112,42 @@ class TestUtils(unittest.TestCase):
         result = simplify_toolcall_json(toolcall)
         self.assertEqual(result, 'read_file(filepath=".../file.txt")')
 
+    def test_simplify_toolcall_json_sed_expression_with_comma(self):
+        """Test sed expression with comma range is not treated as path."""
+        toolcall = {
+            "name": "read_file_with_sed",
+            "arguments": {
+                "filepath": "/some/file.txt",
+                "expression": "/JS_EvalFunction/,+30p",
+            },
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertIn('expression="/JS_EvalFunction/,+30p"', result)
+
+    def test_simplify_toolcall_json_sed_expression_with_plus(self):
+        """Test sed expression with + offset is not treated as path."""
+        toolcall = {
+            "name": "modify_file_with_sed",
+            "arguments": {
+                "filepath": "/path/to/file.txt",
+                "expression": "1,+5s/old/new/",
+            },
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertIn('expression="1,+5s/old/new/"', result)
+
+    def test_simplify_toolcall_json_sed_expression_with_caret(self):
+        """Test sed expression with regex pattern starting with caret."""
+        toolcall = {
+            "name": "read_file_with_sed",
+            "arguments": {
+                "filepath": "/file.txt",
+                "expression": "/^JSValue JS_Eval\\b/,/^}$/p",
+            },
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertIn('expression="/^JSValue JS_Eval\\\\b/,/^}$/p"', result)
+
 
 if __name__ == "__main__":
     unittest.main()

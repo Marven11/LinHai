@@ -30,6 +30,12 @@ def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
     json_repr = lambda x: json.dumps(x, ensure_ascii=False)
     if isinstance(value, str):
         if re.match(r"^[/~]|^[a-zA-Z]:\\|^(\./|\.\./)", value) and len(value) >= 20:
+            if re.search(r"[,+]", value) and "/" in value[1:]:
+                return (
+                    json_repr(value[:37] + "...")
+                    if len(value) > 40
+                    else json_repr(value)
+                )
             filename = os.path.basename(value)
             return json_repr(".../" + filename)
         if len(value) > 40:
