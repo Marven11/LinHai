@@ -28,6 +28,7 @@ dependencies = [
     "pillow",
     "tomli-w",
     "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
+    "feedparser",
 ]
 requires-python = ">=3.10"
 

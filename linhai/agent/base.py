@@ -13,6 +13,7 @@ from linhai.llm import (
 )
 
 from linhai.prompt import COMPRESS_RANGE_PROMPT
+from linhai.rss import RssMessage
 
 repr_obj = Repr()
 repr_obj.maxstring = 100
@@ -379,66 +380,6 @@ class PreviousReasoningMessage(Message):
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
         return cls(reasoning_contents=data["reasoning_contents"])
-
-
-class RssMessage(Message):
-    """RSS消息，用于表示单个RSS条目。"""
-
-    def __init__(self, title: str, link: str, pubdate: str, guid: str):
-        self.title = title
-        self.link = link
-        self.pubdate = pubdate
-        self.guid = guid
-
-    def to_llm_message(self) -> LanguageModelMessage:
-        return {
-            "role": "user",
-            "content": self.get_content(),
-        }
-
-    def get_content(self) -> str:
-        return (
-            "<<rss>>\n"
-            f"<<title>>{self.title}<<title>>\n"
-            f"<<link>>{self.link}<<link>>\n"
-            f"<<pubdate>>{self.pubdate}<<pubdate>>\n"
-            f"<<guid>>{self.guid}<<guid>>\n"
-            "<<rss>>"
-        )
-
-    def to_json(self) -> str:
-        data = {
-            "title": self.title,
-            "link": self.link,
-            "pubdate": self.pubdate,
-            "guid": self.guid,
-        }
-        return json.dumps(data)
-
-    @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
-        data = json.loads(json_str)
-        return cls(
-            title=data["title"],
-            link=data["link"],
-            pubdate=data["pubdate"],
-            guid=data["guid"],
-        )
-
-    def __eq__(self, other: object) -> bool:
-        """比较两个RssMessage是否相同。"""
-        if not isinstance(other, RssMessage):
-            return False
-        return (
-            self.title == other.title
-            and self.link == other.link
-            and self.pubdate == other.pubdate
-            and self.guid == other.guid
-        )
-
-    def __hash__(self) -> int:
-        """哈希支持，用于set比较。"""
-        return hash((self.title, self.link, self.pubdate, self.guid))
 
 
 class SpoofedReasoningMessage(Message):
