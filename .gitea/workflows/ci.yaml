@@ -41,6 +41,25 @@ jobs:
           cp config-example.toml /root/.config/linhai/config.toml
           ls -la /root/.config/linhai/config.toml
 
+      - name: Check PR for missing tests (issue #46)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking if PR modifies linhai/ without adding tests..."
+          bash .gitea/scripts/check_pr_tests.sh
+
+      - name: Run unittests
+        env:
+          PYTHONPATH: $PWD
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Running unittest discover -s . -p 'test_*.py' -v"
+          uv run python -m unittest discover -s . -p 'test_*.py'
+
+      - name: Run pyright
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pyright linhai/
+
       - name: Run black
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -71,11 +90,11 @@ jobs:
           echo "Checking for garbage code patterns (hasattr/getattr/setattr/try except)..."
           bash .gitea/scripts/check_git_diff.sh
 
-      - name: Check PR for missing tests (issue #46)
+      - name: Check for black overformatting (issue #101)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          echo "Checking if PR modifies linhai/ without adding tests..."
-          bash .gitea/scripts/check_pr_tests.sh
+          echo "Checking if black is overformatting files..."
+          uv run python .gitea/scripts/check_black_overformat.py
 
       - name: Check commit count (issue #51)
         run: |
@@ -95,35 +114,11 @@ jobs:
           echo "Checking for emoji in changed Python code files..."
           uv run python .gitea/scripts/check_code_emoji.py
 
-      - name: Check for black overformatting (issue #101)
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "Checking if black is overformatting files..."
-          uv run python .gitea/scripts/check_black_overformat.py
-
       - name: Check for browser MCP snapshot documents (issue #113)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for browser MCP snapshot documents..."
           uv run python .gitea/scripts/check_snapshot_docs.py
-
-      - name: Run unittests
-        env:
-          PYTHONPATH: $PWD
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "Running unittest discover -s . -p 'test_*.py' -v"
-          uv run python -m unittest discover -s . -p 'test_*.py'
-
-      - name: Run pyright
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run pyright linhai/
-
-      - name: Run pylint
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          # uv run pylint linhai/ tests/  # temporarily disable
 
   nix-build:
     needs: [test]
