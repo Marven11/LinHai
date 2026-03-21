@@ -90,9 +90,13 @@ def main():
     """
     Main function to check all Python files in linhai/ directory for new comments.
     """
-    base_ref = "origin/main"
+    base_ref = os.environ.get("BASE_REF")
+    if base_ref:
+        base_ref = f"origin/{base_ref}"
+    else:
+        base_ref = "origin/main"
     try:
-        # Check if origin/main exists, fallback to HEAD^
+        # Check if base_ref exists, fallback to HEAD^
         check_cmd = ["git", "rev-parse", "--verify", base_ref]
         if subprocess.run(check_cmd, capture_output=True).returncode != 0:
             base_ref = "HEAD^"
