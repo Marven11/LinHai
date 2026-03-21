@@ -147,6 +147,13 @@ class AgentContextOrchestration:
             self.large_messages.discard(msg)
 
         result = f"清理了{len(removed_messages)}条大消息，保存到: {saved_path}"
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content=f"已清理{len(removed_messages)}条大消息",
+            ),
+        )
         return ToolResultSuccess(content=result)
 
     def compute_orchestration_context(
