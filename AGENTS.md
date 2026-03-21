@@ -61,4 +61,8 @@
 
 ci nix-build会等待ci test执行成功后才执行, 如果ci test失败了，ci nix-build会被中止运行。
 
-因此为了效率，你优先查看ci test有没有通过，如果通过了再查看ci nix-build
+你总是同时查看两个ci job
+
+## 注意
+
+你**永远**耐心等待ci, **永远不**同时处理两个issue，**永远**不做pr轰炸，打开下一个pr前**总是**关闭上一个pr
