@@ -48,10 +48,26 @@ class MasterHostControl:
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
+        auth: Optional[tuple[str, str]] = None,
+        cookies: Optional[dict] = None,
+        json_data: Optional[dict] = None,
+        proxy: Optional[str] = None,
+        verify: Optional[bool] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
         """发送HTTP请求并返回响应内容或文件路径"""
         return await http_request(
-            method, url, params, headers, data, follow_redirects, timeout
+            method,
+            url,
+            params,
+            headers,
+            data,
+            follow_redirects,
+            timeout,
+            auth,
+            cookies,
+            json_data,
+            proxy,
+            verify,
         )
 
     async def process_create(

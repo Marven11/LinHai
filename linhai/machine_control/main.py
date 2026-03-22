@@ -151,6 +151,20 @@ class MachineControlToolSet(ToolSet):
                     desc="是否跟随重定向，默认True", type="bool"
                 ),
                 "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="int"),
+                "auth": ToolArgInfo(
+                    desc="认证参数，如['username', 'password']",
+                    type="Optional[tuple[str, str]]",
+                ),
+                "cookies": ToolArgInfo(
+                    desc="Cookie字典", type="Optional[Dict[str, str]]"
+                ),
+                "json_data": ToolArgInfo(
+                    desc="JSON数据（与data互斥）", type="Optional[Dict[str, Any]]"
+                ),
+                "proxy": ToolArgInfo(desc="代理URL", type="Optional[str]"),
+                "verify": ToolArgInfo(
+                    desc="SSL验证，True/False/ssl.SSLContext", type="Optional[bool]"
+                ),
             },
             required_args=["method", "url"],
             conflict_with=None,
@@ -163,12 +177,28 @@ class MachineControlToolSet(ToolSet):
             data: Optional[str] = None,
             follow_redirects: bool = True,
             timeout: int = 60,
+            auth: Optional[tuple[str, str]] = None,
+            cookies: Optional[Dict[str, str]] = None,
+            json_data: Optional[Dict[str, Any]] = None,
+            proxy: Optional[str] = None,
+            verify: Optional[bool] = None,
         ) -> ToolResultSuccess | ToolResultFailed:
             host_control = self.machine_control.machines[
                 self.machine_control.target_machine
             ]
             return await host_control.http_request(
-                method, url, params, headers, data, follow_redirects, timeout
+                method,
+                url,
+                params,
+                headers,
+                data,
+                follow_redirects,
+                timeout,
+                auth,
+                cookies,
+                json_data,
+                proxy,
+                verify,
             )
 
         @self.register_tool(
@@ -564,6 +594,11 @@ class HostControl(Protocol):
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
+        auth: Optional[tuple[str, str]] = None,
+        cookies: Optional[Dict[str, str]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        proxy: Optional[str] = None,
+        verify: Optional[bool] = None,
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def change_directory(

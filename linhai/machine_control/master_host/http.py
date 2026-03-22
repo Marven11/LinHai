@@ -41,6 +41,11 @@ async def http_request(
     data: Optional[str] = None,
     follow_redirects: bool = True,
     timeout: int = 60,
+    auth: Optional[tuple[str, str]] = None,
+    cookies: Optional[dict] = None,
+    json_data: Optional[dict] = None,
+    proxy: Optional[str] = None,
+    verify: Optional[bool] = None,
 ) -> ToolResultSuccess | ToolResultFailed:
     """发送HTTP请求并返回响应内容或文件路径。"""
     headers = headers or {}
@@ -48,7 +53,12 @@ async def http_request(
         "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
     )
     try:
-        async with httpx.AsyncClient() as client:
+        client_kwargs: dict = {}
+        if proxy is not None:
+            client_kwargs["proxy"] = proxy
+        if verify is not None:
+            client_kwargs["verify"] = verify
+        async with httpx.AsyncClient(**client_kwargs) as client:
             response = await client.request(
                 method=method,
                 url=url,
@@ -57,6 +67,9 @@ async def http_request(
                 follow_redirects=follow_redirects,
                 data=data,  # type: ignore[arg-type]
                 timeout=timeout,
+                auth=auth,
+                cookies=cookies,
+                json=json_data,
             )
             content_type = response.headers.get("content-type", "").lower()
             status_code = response.status_code

@@ -98,6 +98,11 @@ class SshMachineControl:
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
+        auth: Optional[tuple[str, str]] = None,
+        cookies: Optional[Dict[str, str]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        proxy: Optional[str] = None,
+        verify: Optional[bool] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
         """SSH不支持http_request工具"""
         return ToolResultFailed(content="SSH机器不支持http_request工具")

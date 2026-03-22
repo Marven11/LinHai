@@ -273,6 +273,146 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             headers_dict = json.loads(parts["headers"])
             self.assertEqual(headers_dict.get("content-type"), "text/html; charset=gbk")
 
+    async def test_http_request_with_auth(self):
+        """测试带auth参数的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"authenticated": true}'
+        mock_response.content = b'{"authenticated": true}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            auth = ("user", "pass")
+            result = await self.host_control.http_request(
+                "GET", "http://example.com/protected", auth=auth
+            )
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            mock_client.request.assert_called_once()
+            call_args = mock_client.request.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["auth"], auth)
+
+    async def test_http_request_with_cookies(self):
+        """测试带cookies参数的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"status": "ok"}'
+        mock_response.content = b'{"status": "ok"}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            cookies = {"session_id": "abc123"}
+            result = await self.host_control.http_request(
+                "GET", "http://example.com/", cookies=cookies
+            )
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            mock_client.request.assert_called_once()
+            call_args = mock_client.request.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["cookies"], cookies)
+
+    async def test_http_request_with_json_data(self):
+        """测试带json_data参数的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 201
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"created": true}'
+        mock_response.content = b'{"created": true}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            json_data = {"name": "test", "value": 123}
+            result = await self.host_control.http_request(
+                "POST", "http://example.com/api", json_data=json_data
+            )
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            mock_client.request.assert_called_once()
+            call_args = mock_client.request.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["json"], json_data)
+
+    async def test_http_request_with_proxy(self):
+        """测试带proxy参数的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"status": "ok"}'
+        mock_response.content = b'{"status": "ok"}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            proxy = "http://proxy.example.com:8080"
+            result = await self.host_control.http_request(
+                "GET", "http://example.com/", proxy=proxy
+            )
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            mock_client_class.assert_called_once()
+            call_args = mock_client_class.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["proxy"], proxy)
+
+    async def test_http_request_with_verify(self):
+        """测试带verify参数的请求"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"status": "ok"}'
+        mock_response.content = b'{"status": "ok"}'
+
+        with patch(
+            "linhai.machine_control.master_host.http.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            verify = False
+            result = await self.host_control.http_request(
+                "GET", "http://example.com/", verify=verify
+            )
+
+            self.assertIsInstance(result, ToolResultSuccess)
+            mock_client_class.assert_called_once()
+            call_args = mock_client_class.call_args
+            kwargs = call_args[1]
+            self.assertEqual(kwargs["verify"], verify)
+
 
 if __name__ == "__main__":
     unittest.main()

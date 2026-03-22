@@ -55,6 +55,11 @@ class EtherGhostMachineControl(HostControl):
         data: Optional[str] = None,
         follow_redirects: bool = True,
         timeout: int = 60,
+        auth: Optional[tuple[str, str]] = None,
+        cookies: Optional[Dict[str, str]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        proxy: Optional[str] = None,
+        verify: Optional[bool] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
         if self.session is None:
             return ToolResultFailed(content="Session未初始化")
@@ -64,6 +69,21 @@ class EtherGhostMachineControl(HostControl):
             unsupported.append("follow_redirects")
         if timeout != 60:
             unsupported.append("timeout")
+        if auth is not None:
+            unsupported.append("auth")
+        if cookies is not None:
+            unsupported.append("cookies")
+        if json_data is not None:
+            unsupported.append("json_data")
+        if proxy is not None:
+            unsupported.append("proxy")
+        if verify is not None:
+            unsupported.append("verify")
+
+        if unsupported:
+            return ToolResultFailed(
+                content=f"EtherGhost不支持以下参数: {', '.join(unsupported)}"
+            )
 
         if unsupported:
             return ToolResultFailed(
