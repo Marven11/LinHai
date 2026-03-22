@@ -42,6 +42,7 @@ from .sudo_stdio_checker import SudoStdioCheckerPlugin
 from .afk_plugin import AfkPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
 from .planning import TodolistCheckerPlugin
+from .reminder import ReminderPlugin
 
 from .helpers import (
     is_small_file,
@@ -80,6 +81,7 @@ __all__ = [
     "VolcanoDeepseekFixPlugin",
     "MachineControlIntroductionPlugin",
     "TodolistCheckerPlugin",
+    "ReminderPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",

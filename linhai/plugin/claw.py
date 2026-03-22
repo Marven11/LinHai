@@ -5,6 +5,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.plugin.message_checkers import Plugin
+from .reminder import ReminderPlugin
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -20,11 +21,21 @@ class ClawPlugin(Plugin):
             self.claw_dir = Path(cli_args.claw_folder).expanduser()
         else:
             self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
+        self.reminder_plugin = ReminderPlugin(group_chat, self.claw_dir)
 
     async def before_agent_loop(self, agent: "linhai_agent") -> None:
         """在agent循环开始前添加CLAW模式介绍和文档内容。"""
         # 插件只在cli_args.claw为True时注册，因此无需再次检查
         if not self.claw_dir.exists():
+            self.claw_dir.mkdir(parents=True, exist_ok=True)
+            (self.claw_dir / "REMINDER.md").write_text(
+                "务必优先遵守AGENTS.md和SOUL.md,务必维护prompt.md和prompt/",
+                encoding="utf-8",
+            )
+            (self.claw_dir / "AGENTS.md").write_text(
+                "# AGENTS.md - 工作空间指南\n\n这个文件夹是Claw记忆的根目录，位于`~/.local/share/linhai/claw/`。\n",
+                encoding="utf-8",
+            )
             return
 
         # 添加CLAW模式介绍到pinned messages
@@ -65,4 +76,5 @@ class ClawPlugin(Plugin):
                 )
 
     def register(self, lifecycle: Lifecycle):
+        self.reminder_plugin.register(lifecycle)
         lifecycle.register_before_agent_loop(self.before_agent_loop)
