@@ -264,6 +264,17 @@ class Agent:
         返回:
             Answer: 生成的回答对象
         """
+        if self.queued_messages:
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+            )
+            await self.message_processor.add_new_message(
+                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
+            )
+            for msg in self.queued_messages:
+                await self.message_processor.add_new_message(msg)
+            self.queued_messages = []
+
         if self.message_processor.get_message_count() > 0:
             last_msg = self.message_processor.get_messages()[-1]
             from linhai.llm import AssistantMessage

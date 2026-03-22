@@ -48,9 +48,19 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "messages_list": mock_messages_list,
         }[name]
 
+        # Mock _show_success_message to ensure it's not called
+        self.handler._show_success_message = AsyncMock()
+
         result = await self.handler.handle_command("/queue Test message")
         self.assertTrue(result)
         self.assertEqual(len(mock_agent.queued_messages), 1)
+        # Verify that no success message was shown (which would interrupt agent)
+        self.handler._show_success_message.assert_not_called()
+        # Verify the queued message content
+        queued_msg = mock_agent.queued_messages[0]
+        self.assertEqual(queued_msg.message, "Test message")
+        # Verify that add_runtime_message was not called (no interrupt)
+        mock_messages_list.add_runtime_message.assert_not_called()
 
     async def test_handle_quit_command(self):
         """Test /quit command."""

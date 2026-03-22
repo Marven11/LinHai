@@ -69,7 +69,6 @@ class CommandHandler:
         queued_msg = UserMessage(message=queue_content)
         agent.queued_messages.append(queued_msg)
 
-        await self._show_success_message("消息已加入排队列表,将在下次回答后处理")
         return True
 
     async def _handle_quit_command(self) -> bool:
