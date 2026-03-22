@@ -298,9 +298,10 @@ class CLIApp(App):
         """处理消息提交"""
         input_element = self.query_one("#input", ExtendedTextArea)
         message_text = input_element.text
+        stripped_text = message_text.strip()
+
         input_element.text = ""
 
-        stripped_text = message_text.strip()
         if not stripped_text:
             return
 

@@ -147,6 +147,48 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
             # 输入框应被清空
             self.assertEqual(input_element.text, "", "仅包含空白字符的输入应被清空")
 
+    @patch("linhai.cli.app.CLIApp.on_mount")
+    async def test_enter_key_clears_multiline_input(self, mock_on_mount):
+        """测试按下回车键后多行输入被清空。"""
+        mock_on_mount.return_value = None
+        async with self.app.run_test() as pilot:
+            input_element = pilot.app.query_one("#input")
+
+            # 设置多行文本
+            input_element.text = "Line 1\nLine 2\nLine 3"
+
+            # 模拟按下回车键
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+
+            # 验证输入框被清空
+            self.assertEqual(input_element.text, "", "多行输入应在回车发送后被清空")
+            # 验证没有遗留的换行符
+            self.assertEqual(
+                input_element.text.count("\n"), 0, "输入框不应有任何遗留的换行符"
+            )
+
+    @patch("linhai.cli.app.CLIApp.on_mount")
+    async def test_enter_key_clears_input_with_cursor_at_end(self, mock_on_mount):
+        """测试按下回车键后光标在末尾时输入框被清空。"""
+        mock_on_mount.return_value = None
+        async with self.app.run_test() as pilot:
+            input_element = pilot.app.query_one("#input")
+
+            # 设置文本并移动光标到末尾
+            input_element.text = "Hello world"
+            input_element.move_cursor((11, 0))
+
+            # 模拟按下回车键
+            await pilot.press("enter")
+            await pilot.pause(0.1)
+
+            # 验证输入框被清空
+            self.assertEqual(input_element.text, "")
+            # 验证光标位置在开头
+            cursor_location = input_element.cursor_location
+            self.assertEqual(cursor_location, (0, 0), "光标应在开头位置 (0, 0)")
+
 
 if __name__ == "__main__":
     unittest.main()
