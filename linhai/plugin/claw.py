@@ -5,6 +5,14 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.group_chat import GroupChat
 from linhai.plugin.message_checkers import Plugin
+from linhai.prompt import (
+    AGENTS_MD,
+    BOOTSTRAP_MD,
+    IDENTITY_MD,
+    REMINDER_MD,
+    SOUL_MD,
+    USER_MD,
+)
 from .reminder import ReminderPlugin
 
 if TYPE_CHECKING:
@@ -27,15 +35,7 @@ class ClawPlugin(Plugin):
         """在agent循环开始前添加CLAW模式介绍和文档内容。"""
         # 插件只在cli_args.claw为True时注册，因此无需再次检查
         if not self.claw_dir.exists():
-            self.claw_dir.mkdir(parents=True, exist_ok=True)
-            (self.claw_dir / "REMINDER.md").write_text(
-                "务必优先遵守AGENTS.md和SOUL.md,务必维护prompt.md和prompt/",
-                encoding="utf-8",
-            )
-            (self.claw_dir / "AGENTS.md").write_text(
-                "# AGENTS.md - 工作空间指南\n\n这个文件夹是Claw记忆的根目录，位于`~/.local/share/linhai/claw/`。\n",
-                encoding="utf-8",
-            )
+            self._initialize_claw_files()
             return
 
         # 添加CLAW模式介绍到pinned messages
@@ -74,6 +74,22 @@ class ClawPlugin(Plugin):
                         show_line_numbers=False,
                     )
                 )
+
+    def _initialize_claw_files(self) -> None:
+        """从prompt.py常量读取初始内容并写入claw目录的所有文件。"""
+        self.claw_dir.mkdir(parents=True, exist_ok=True)
+
+        files = [
+            ("AGENTS.md", AGENTS_MD),
+            ("BOOTSTRAP.md", BOOTSTRAP_MD),
+            ("IDENTITY.md", IDENTITY_MD),
+            ("REMINDER.md", REMINDER_MD),
+            ("SOUL.md", SOUL_MD),
+            ("USER.md", USER_MD),
+        ]
+
+        for filename, content in files:
+            (self.claw_dir / filename).write_text(content, encoding="utf-8")
 
     def register(self, lifecycle: Lifecycle):
         self.reminder_plugin.register(lifecycle)

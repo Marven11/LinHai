@@ -182,7 +182,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             ),
             patch("linhai.agent.create._create_pinned_messages", return_value=[]),
             patch("linhai.agent.create.initialize_secret_system"),
-            patch("linhai.agent.create.init_claw"),
             patch("linhai.agent.lifecycle.Lifecycle", return_value=mock_lifecycle),
             patch(
                 "linhai.plugin.planning.PlanningStatusReminderPlugin"
@@ -261,7 +260,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             ),
             patch("linhai.agent.create._create_pinned_messages", return_value=[]),
             patch("linhai.agent.create.initialize_secret_system"),
-            patch("linhai.agent.create.init_claw"),
             patch(
                 "linhai.plugin.planning.PlanningStatusReminderPlugin",
                 return_value=mock_planning_status_plugin_instance,

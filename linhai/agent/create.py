@@ -38,30 +38,6 @@ class AgentBuildContext(TypedDict):
     cli_args: argparse.Namespace
 
 
-def init_claw(claw_dir: Path | None = None) -> None:
-    """确保claw目录存在，并初始化五个核心markdown文档。"""
-    from linhai.prompt import AGENTS_MD, BOOTSTRAP_MD, IDENTITY_MD, SOUL_MD, USER_MD
-
-    if claw_dir is None:
-        claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
-    else:
-        claw_dir = Path(claw_dir).expanduser()
-    claw_dir.mkdir(parents=True, exist_ok=True)
-
-    core_docs = [
-        ("AGENTS.md", AGENTS_MD),
-        ("BOOTSTRAP.md", BOOTSTRAP_MD),
-        ("IDENTITY.md", IDENTITY_MD),
-        ("SOUL.md", SOUL_MD),
-        ("USER.md", USER_MD),
-    ]
-
-    for filename, content in core_docs:
-        file_path = claw_dir / filename
-        if not file_path.exists():
-            file_path.write_text(content, encoding="utf-8")
-
-
 def create_agent_build_context(
     group_chat: GroupChat,
     config: Config,
@@ -118,10 +94,6 @@ async def create_agent_from_config(
     Returns:
         Agent实例
     """
-
-    if context["cli_args"].claw:
-        claw_dir = context["cli_args"].claw_folder
-        init_claw(claw_dir)
 
     llm_manager = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(context)
