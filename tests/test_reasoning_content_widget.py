@@ -23,6 +23,7 @@ class TestReasoningContentWidget(unittest.TestCase):
             sender_name=self.sender_name,
             theme="nord",
             segment=self.mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         self.widget.content_str += self.content
 
@@ -121,7 +122,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += multi_line_content
         widget.is_expanded = False
@@ -146,7 +151,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += content_with_special_chars
         widget.is_expanded = False
@@ -167,7 +176,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += "test content"
         mock_timer = Mock()
@@ -200,7 +213,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += "test content"
 
@@ -234,7 +251,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += "test content"
         widget.timer = None
@@ -259,7 +280,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += "test content"
 
@@ -281,7 +306,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += "测试内容"
         widget.is_expanded = False
@@ -307,7 +336,11 @@ class TestReasoningContentWidget(unittest.TestCase):
             "is_finished": False,
         }
         widget = ReasoningContentWidget(
-            role="assistant", sender_name="test", theme="nord", segment=mock_segment
+            role="assistant",
+            sender_name="test",
+            theme="nord",
+            segment=mock_segment,
+            get_refresh_interval=lambda: 0.05,
         )
         widget.content_str += long_content
         widget.is_expanded = False

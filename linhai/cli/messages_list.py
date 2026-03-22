@@ -33,6 +33,7 @@ class MessagesList(VerticalScroll):
         cli_config: CLIConfig,
         theme: str,
         lifecycle: Lifecycle,
+        get_refresh_interval,
         *args,
         **kwargs,
     ):
@@ -40,6 +41,7 @@ class MessagesList(VerticalScroll):
         self.group_chat = group_chat
         self.cli_config = cli_config
         self.theme = theme
+        self.get_refresh_interval = get_refresh_interval
         self.messages: List[
             Union[MessageWidget, UserMessageWidget, MessageGenerationWidget]
         ] = []
@@ -112,6 +114,7 @@ class MessagesList(VerticalScroll):
             sender_name=llm_name,
             theme=self.theme,
             parsed_answer=parsed_answer,
+            get_refresh_interval=self.get_refresh_interval,
         )
         generation_widget.set_message_widget(message_widget)
 
@@ -175,6 +178,10 @@ class MessagesList(VerticalScroll):
     async def on_unmount(self) -> None:
         """组件卸载时清理任务"""
         await self.cleanup()
+
+    def get_message_count(self) -> int:
+        """获取当前消息数量."""
+        return len(self.messages)
 
     async def cleanup(self):
         """清理任务."""

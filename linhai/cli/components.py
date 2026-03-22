@@ -19,9 +19,6 @@ from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
 from linhai.utils import parse_and_simplify_toolcall
 
-
-REFRESH_INTERVAL = 0.05
-
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
 ]
@@ -90,7 +87,12 @@ class RainbowAsciiArt(Static):
     }
     """
 
-    def __init__(self, ascii_art: str, small_ascii_art: str):
+    def __init__(
+        self,
+        ascii_art: str,
+        small_ascii_art: str,
+        get_refresh_interval: Callable[[], float],
+    ):
         super().__init__()
         self.ascii_art = ascii_art
         self.small_ascii_art = small_ascii_art
@@ -98,6 +100,8 @@ class RainbowAsciiArt(Static):
         self.last_call_time = time.perf_counter()
         self.slow_counter = 0
         self.rainbow_colors: list[Style] = self._generate_rainbow_colors()
+        self.get_refresh_interval = get_refresh_interval
+        self.timer: Timer | None = None
 
     def _generate_rainbow_colors(self) -> list[Style]:
         """使用HSL颜色空间生成平滑的彩虹颜色样式列表"""
@@ -118,7 +122,8 @@ class RainbowAsciiArt(Static):
 
     def on_mount(self) -> None:
         """组件挂载时启动动画"""
-        self.set_interval(REFRESH_INTERVAL, self._update_animation)
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self._update_animation)
 
     def _update_animation(self) -> None:
         """更新动画时间索引并重新渲染"""
@@ -177,7 +182,9 @@ class AnimatedWelcomeWidget(Static):
     }
     """
 
-    def __init__(self, version: str, llm_name: str):
+    def __init__(
+        self, version: str, llm_name: str, get_refresh_interval: Callable[[], float]
+    ):
         super().__init__()
         self.version = version
         self.llm_name = llm_name
@@ -185,11 +192,13 @@ class AnimatedWelcomeWidget(Static):
         self.elapsed_time = 0.0
         self.daily_quote = "/time set 0"
         self.version_info = f"{self.version} | LLM: {self.llm_name}"
+        self.get_refresh_interval = get_refresh_interval
         self.timer: Timer | None = None
 
     def on_mount(self) -> None:
         """组件挂载时启动动画"""
-        self.timer = self.set_interval(0.05, self._update_animation)
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self._update_animation)
 
     def _update_animation(self) -> None:
         """更新动画"""
@@ -318,7 +327,9 @@ class ToolCallWidget(Static):
     }
     """
 
-    def __init__(self, theme: str, segment: Segment):
+    def __init__(
+        self, theme: str, segment: Segment, get_refresh_interval: Callable[[], float]
+    ):
         super().__init__()
         self.theme = theme
         self._segment = segment
@@ -336,12 +347,14 @@ class ToolCallWidget(Static):
         self.error_message = ""
         self.is_collapsed = False
         self.collapse_timer: Timer | None = None
+        self.get_refresh_interval = get_refresh_interval
 
         self.border_title = "tool call"
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self.update_display)
 
     def update_display(self) -> None:
         if self.has_error:
@@ -530,7 +543,14 @@ class ReasoningContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str, segment: Segment):
+    def __init__(
+        self,
+        role: str,
+        sender_name: str,
+        theme: str,
+        segment: Segment,
+        get_refresh_interval: Callable[[], float],
+    ):
         super().__init__()
         self.theme = theme
         self._segment = segment
@@ -539,6 +559,7 @@ class ReasoningContentWidget(Static):
         self.is_expanded = False
         self.timer: Timer | None = None
         self.sender_name = sender_name
+        self.get_refresh_interval = get_refresh_interval
         self.border_title = self.calculate_border_title()
         self.add_class("reasoning-widget-collapsed")
 
@@ -560,7 +581,8 @@ class ReasoningContentWidget(Static):
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
-        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self.update_display)
 
     def update_display(self) -> None:
         """更新思考消息显示"""
@@ -662,7 +684,14 @@ class NormalContentWidget(Static):
     }
     """
 
-    def __init__(self, role: str, sender_name: str, theme: str, segment: Segment):
+    def __init__(
+        self,
+        role: str,
+        sender_name: str,
+        theme: str,
+        segment: Segment,
+        get_refresh_interval: Callable[[], float],
+    ):
         super().__init__()
         self.theme = theme
         self.content_str = ""
@@ -670,12 +699,14 @@ class NormalContentWidget(Static):
         self.role = role
         self.timer = None
         self._segment = segment
+        self.get_refresh_interval = get_refresh_interval
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
-        self.timer = self.set_interval(REFRESH_INTERVAL, self.update_display)
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self.update_display)
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
@@ -718,13 +749,19 @@ class MessageWidget(Static):
     """
 
     def __init__(
-        self, role: str, sender_name: str, theme: str, parsed_answer: ParsedAnswer
+        self,
+        role: str,
+        sender_name: str,
+        theme: str,
+        parsed_answer: ParsedAnswer,
+        get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.role = role
         self.sender_name = sender_name
         self.theme = theme
         self.parsed_answer = parsed_answer
+        self.get_refresh_interval = get_refresh_interval
 
     def on_mount(self):
         self._start_processing_segments()
@@ -748,13 +785,18 @@ class MessageWidget(Static):
 
             segment_type = segment["segment_type"]
             if segment_type == "toolcall":
-                widget = ToolCallWidget(theme=self.theme, segment=segment)
+                widget = ToolCallWidget(
+                    theme=self.theme,
+                    segment=segment,
+                    get_refresh_interval=self.get_refresh_interval,
+                )
             elif segment_type == "normal":
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
                     theme=self.theme,
                     segment=segment,
+                    get_refresh_interval=self.get_refresh_interval,
                 )
             elif segment_type == "reasoning":
                 widget = ReasoningContentWidget(
@@ -762,6 +804,7 @@ class MessageWidget(Static):
                     sender_name=self.sender_name,
                     theme=self.theme,
                     segment=segment,
+                    get_refresh_interval=self.get_refresh_interval,
                 )
             else:
                 continue

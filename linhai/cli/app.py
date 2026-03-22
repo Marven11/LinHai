@@ -118,6 +118,13 @@ class CLIApp(App):
 
         self.group_chat.add_postinit(self.postinit)
 
+    def get_refresh_interval(self) -> float:
+        """根据当前消息数量获取widget刷新间隔"""
+        message_count = self.messages_list.get_message_count()
+        if message_count < 500:
+            return 0.1
+        return 0.5
+
     def postinit(self):
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
@@ -136,6 +143,7 @@ class CLIApp(App):
                     cli_config=self.cli_config,
                     theme=self.theme,
                     lifecycle=lifecycle,
+                    get_refresh_interval=self.get_refresh_interval,
                     id="chat-container",
                 )
                 yield self.messages_list
@@ -208,13 +216,17 @@ class CLIApp(App):
         if self.init_messages:
             await self.messages_list.add_initial_messages(self.init_messages)
         else:
-            rainbow_art = RainbowAsciiArt(ASCII_ART, ASCII_ART_SMALL)
+            rainbow_art = RainbowAsciiArt(
+                ASCII_ART, ASCII_ART_SMALL, self.get_refresh_interval
+            )
             rainbow_art.add_class("welcome-message")
             self.messages_list.mount(rainbow_art)
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
-            animated_welcome = AnimatedWelcomeWidget(version, llm_name)
+            animated_welcome = AnimatedWelcomeWidget(
+                version, llm_name, self.get_refresh_interval
+            )
             animated_welcome.add_class("welcome-message")
             self.messages_list.mount(animated_welcome)
 

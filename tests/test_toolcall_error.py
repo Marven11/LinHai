@@ -15,7 +15,9 @@ class TestToolCallErrorHandling(unittest.TestCase):
         # 创建mock segment
         segment = {"segment_type": "toolcall", "content": "", "is_finished": False}
 
-        widget = ToolCallWidget(theme="nord", segment=segment)
+        widget = ToolCallWidget(
+            theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+        )
         # feed_string方法已删除，直接设置segment内容
         segment["content"] = invalid_json
 
@@ -31,7 +33,9 @@ class TestToolCallErrorHandling(unittest.TestCase):
         # 创建mock segment
         segment = {"segment_type": "toolcall", "content": "", "is_finished": False}
 
-        widget = ToolCallWidget(theme="nord", segment=segment)
+        widget = ToolCallWidget(
+            theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
+        )
         # feed_string方法已删除，直接设置segment内容
         segment["content"] = valid_json
 
