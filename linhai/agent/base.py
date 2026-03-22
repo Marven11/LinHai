@@ -349,6 +349,62 @@ class FileContentMessage(Message):
         return hash((self._resolved_path, normalized_hash))
 
 
+class DynamicFileContentMessage(Message):
+    """动态文件内容消息，每次get_content都重新读取文件内容。"""
+
+    def __init__(self, filepath: str, show_line_numbers: bool):
+        self.filepath = filepath
+        self.show_line_numbers = show_line_numbers
+
+    def to_llm_message(self) -> LanguageModelMessage:
+        """转换为LLM消息格式。"""
+        return {
+            "role": "user",
+            "content": self.get_content(),
+        }
+
+    def get_content(self) -> str:
+        """读取文件内容并格式化。"""
+        path = Path(self.filepath)
+
+        if not path.exists():
+            return f"<<file_content>>\n<<filepath>>{self.filepath!r}<<filepath>>\n<<error>>文件不存在或已被移动/删除<<error>>\n<<file_content>>"
+
+        if not path.is_file():
+            return f"<<file_content>>\n<<filepath>>{self.filepath!r}<<filepath>>\n<<error>>路径不是文件<<error>>\n<<file_content>>"
+
+        content = path.read_text()
+
+        if self.show_line_numbers:
+            lines = content.splitlines()
+            numbered_lines = [f"{i+1}: {line}" for i, line in enumerate(lines)]
+            formatted_content = "\n".join(numbered_lines)
+        else:
+            formatted_content = content
+        return (
+            "<<file_content>>\n<<message>>以下是文件的完整内容，不要重复读取！<<message>>"
+            f"<<filepath>>{self.filepath!r}<<filepath>>\n<<content>>{formatted_content}<<content>>\n"
+            "<<file_content>>"
+        )
+
+    def to_json(self) -> str:
+        """转换为JSON字符串，只保存路径和行号设置。"""
+        data = {
+            "filepath": self.filepath,
+            "show_line_numbers": self.show_line_numbers,
+        }
+        return json.dumps(data)
+
+    @classmethod
+    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+        """从JSON字符串创建实例。"""
+        data = json.loads(json_str)
+        return cls(
+            filepath=data["filepath"],
+            show_line_numbers=data["show_line_numbers"],
+        )
+
+
 class PreviousReasoningMessage(Message):
     """之前的思考内容消息，用于提供agent最近的思考内容参考。"""
 
