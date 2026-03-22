@@ -136,7 +136,7 @@ async def create_agent_from_config(
         RssPlugin(
             context["group_chat"],
             context["cli_args"].rss,
-            300,
+            30,
         ).register(agent.lifecycle)
 
     if context.get("planning", False):
