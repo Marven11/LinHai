@@ -211,7 +211,6 @@ class ChecklistMessage(Message):
     def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
         """
         从JSON字符串反序列化检查清单对象。
-
         参数:
             json_str: JSON格式的字符串
             group_chat: GroupChat实例（未使用，但为接口兼容性保留）

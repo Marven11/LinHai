@@ -169,6 +169,21 @@ class AgentMessage:
             )
             self.explicit_cache_anchors = []
 
+    async def add_pinned_message(self, msg: Message) -> None:
+        """添加pinned消息。
+
+        Args:
+            msg: 要添加的pinned消息
+        """
+        from .lifecycle import Lifecycle
+
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        processed_message = await lifecycle.trigger_before_add_new_message(msg)
+        if processed_message is None:
+            processed_message = msg
+        self.pinned_messages.append(processed_message)
+        self._save_context()
+
     async def add_new_message(self, msg: Message) -> None:
         """添加消息到队列。
 
