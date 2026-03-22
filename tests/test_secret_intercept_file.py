@@ -71,7 +71,7 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         # 验证返回的是RuntimeMessage
         self.assertIsInstance(result, RuntimeMessage)
         result_str = str(result)
-        self.assertIn("已拦截", result_str)
+        self.assertIn("本插件拦截", result_str)
         # 注意：新实现不再在消息中包含具体的secret键名
 
     def test_after_toolcall_with_secret_specified_masks_content(self):

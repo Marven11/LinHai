@@ -405,7 +405,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
-        self.assertIn("已拦截", result_str)
+        self.assertIn("本插件拦截", result_str)
         self.assertNotIn("secret-value-1", result_str)
 
     def test_no_intercept_when_no_with_secret_and_no_secret(self):
@@ -494,7 +494,7 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
-        self.assertIn("已拦截", result_str)
+        self.assertIn("本插件拦截", result_str)
         self.assertNotIn("secret-value-2", result_str)
 
     def test_mask_when_incomplete_with_secret_and_no_unlisted_secret(self):

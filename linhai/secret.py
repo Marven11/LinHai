@@ -218,8 +218,8 @@ class SecretInterceptorPlugin:
                 )
 
                 return_message = (
-                    f"工具调用成功，但是工具调用的结果包含未指定的secret值，已拦截。"
-                    f"原始内容已保存到文件: {filepath}，你需要使用with_secret指定对应的secret查看"
+                    f"您没有选择使用with_secret遮盖可能存在的secret，因此系统试图返回原始内容。"
+                    f"但被本插件拦截，原始内容已保存到文件，请指定正确的with_secret查看: {filepath}"
                 )
                 return RuntimeMessage(return_message)
 
