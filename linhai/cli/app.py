@@ -121,8 +121,8 @@ class CLIApp(App):
     def get_refresh_interval(self) -> float:
         """根据当前消息数量获取widget刷新间隔"""
         message_count = self.messages_list.get_message_count()
-        if message_count < 500:
-            return 0.1
+        if message_count < 200:
+            return 0.05
         return 0.5
 
     def postinit(self):
