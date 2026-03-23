@@ -15,6 +15,7 @@ class TestReminderPlugin(TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.claw_dir = Path(self.temp_dir.name)
         self.reminder_file = self.claw_dir / "REMINDER.md"
+        self.soul_file = self.claw_dir / "SOUL.md"
         self.plugin = ReminderPlugin(self.group_chat, self.claw_dir)
 
         # 创建模拟的Agent
@@ -37,3 +38,11 @@ class TestReminderPlugin(TestCase):
         self.assertEqual(
             len(self.lifecycle._before_message_generation_callbacks), initial_count + 1
         )
+
+    def test_soul_file_is_tracked(self):
+        """测试SOUL.md文件路径被正确设置"""
+        self.assertEqual(self.plugin.soul_file, self.soul_file)
+
+    def test_reminder_file_is_tracked(self):
+        """测试REMINDER.md文件路径被正确设置"""
+        self.assertEqual(self.plugin.reminder_file, self.reminder_file)
