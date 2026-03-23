@@ -522,8 +522,7 @@ class OpenAiAnswer:
             content = delta.content or ""
             self.content += content
 
-            delta_dict = delta.__dict__
-            reasoning_content = delta_dict.get("reasoning_content")
+            reasoning_content = getattr(delta, "reasoning_content", None)
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
                 self.reasoning_content = (
@@ -533,7 +532,7 @@ class OpenAiAnswer:
                 )
 
             reasoning_details = (
-                delta_dict.get("reasoning_details")
+                getattr(delta, "reasoning_details", None)
                 if self.compatibility == "minimax"
                 else None
             )
