@@ -135,68 +135,6 @@ class Lifecycle:
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._before_add_new_message_callbacks: list[BeforeAddNewMessageCallback] = []
 
-        self._plugins = self._register_default_plugins()
-
-    def _register_default_plugins(self):
-        """注册默认的Plugin。"""
-        from linhai.plugin import (
-            WrongEndPlugin,
-            SlowStartPlugin,
-            WeirdTokenPlugin,
-            EndThinkPlugin,
-            OnlyReasoningPlugin,
-            ToolCallInReasoningPlugin,
-            SingleToolCallReminderPlugin,
-            JsonCodeBlockPlugin,
-            RuntimeImitationPlugin,
-            UnnecessarySedReadPlugin,
-            UnnecessaryRunCommandPlugin,
-            FileReadWriteConflictPlugin,
-            KimiK25ToolCallPlugin,
-            MinimaxToolCallPlugin,
-            MissingWithSecretWarningPlugin,
-            TodolistCheckerPlugin,
-            AfkPlugin,
-            VolcanoDeepseekFixPlugin,
-            ProcessArgvCheckerPlugin,
-            SudoStdioCheckerPlugin,
-        )
-        from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
-
-        plugins = [
-            WrongEndPlugin(self.group_chat),
-            SlowStartPlugin(self.group_chat),
-            WeirdTokenPlugin(self.group_chat),
-            EndThinkPlugin(self.group_chat),
-            OnlyReasoningPlugin(self.group_chat),
-            # 不兼容deepseek api，可能因为最后一个消息是assistant消息
-            # linhai.plugin.PreviousReasoningPlugin(self.group_chat),
-            ToolCallInReasoningPlugin(self.group_chat),
-            SingleToolCallReminderPlugin(self.group_chat),
-            JsonCodeBlockPlugin(self.group_chat),
-            RuntimeImitationPlugin(self.group_chat),
-            # 貌似会影响模型性能，我们可能不需要这么严格的上下文控制
-            # DuplicateFileReadPlugin(self.group_chat),
-            UnnecessarySedReadPlugin(self.group_chat),
-            UnnecessaryRunCommandPlugin(self.group_chat),
-            RedStateToolBlockPlugin(self.group_chat),
-            NotificationMessagePlugin(self.group_chat),
-            FileReadWriteConflictPlugin(self.group_chat),
-            KimiK25ToolCallPlugin(self.group_chat),
-            MinimaxToolCallPlugin(self.group_chat),
-            MissingWithSecretWarningPlugin(self.group_chat),
-            AfkPlugin(self.group_chat),
-            VolcanoDeepseekFixPlugin(self.group_chat),
-            ProcessArgvCheckerPlugin(self.group_chat),
-            SudoStdioCheckerPlugin(self.group_chat),
-            TodolistCheckerPlugin(self.group_chat),
-        ]
-
-        for plugin in plugins:
-            plugin.register(self)
-
-        return plugins
-
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback
     ):

@@ -172,6 +172,8 @@ async def create_agent_from_config(
         )
         plugin.register(agent.lifecycle)
 
+    _register_default_plugins(agent.lifecycle)
+
     return agent
 
 
@@ -298,18 +300,73 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         for msg in cli_args.message:
             pinned_messages.append(UserMessage(msg))
 
-    if not cli_args.file:
-        return pinned_messages
+    if cli_args.file:
+        from linhai.agent.base import FileContentMessage
 
-    for file_path in cli_args.file:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            pinned_messages.append(
-                FileContentMessage(
-                    filepath=str(file_path),
-                    content=content,
-                    show_line_numbers=False,
+        for file_path in cli_args.file:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                pinned_messages.append(
+                    FileContentMessage(
+                        filepath=str(file_path),
+                        content=content,
+                        show_line_numbers=False,
+                    )
                 )
-            )
 
     return pinned_messages
+
+
+def _register_default_plugins(lifecycle):
+    """注册默认的Plugin。"""
+    from linhai.plugin import (
+        WrongEndPlugin,
+        SlowStartPlugin,
+        WeirdTokenPlugin,
+        EndThinkPlugin,
+        OnlyReasoningPlugin,
+        ToolCallInReasoningPlugin,
+        SingleToolCallReminderPlugin,
+        JsonCodeBlockPlugin,
+        RuntimeImitationPlugin,
+        UnnecessarySedReadPlugin,
+        UnnecessaryRunCommandPlugin,
+        FileReadWriteConflictPlugin,
+        KimiK25ToolCallPlugin,
+        MinimaxToolCallPlugin,
+        MissingWithSecretWarningPlugin,
+        TodolistCheckerPlugin,
+        AfkPlugin,
+        VolcanoDeepseekFixPlugin,
+        ProcessArgvCheckerPlugin,
+        SudoStdioCheckerPlugin,
+    )
+    from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
+
+    plugins = [
+        WrongEndPlugin(lifecycle.group_chat),
+        SlowStartPlugin(lifecycle.group_chat),
+        WeirdTokenPlugin(lifecycle.group_chat),
+        EndThinkPlugin(lifecycle.group_chat),
+        OnlyReasoningPlugin(lifecycle.group_chat),
+        ToolCallInReasoningPlugin(lifecycle.group_chat),
+        SingleToolCallReminderPlugin(lifecycle.group_chat),
+        JsonCodeBlockPlugin(lifecycle.group_chat),
+        RuntimeImitationPlugin(lifecycle.group_chat),
+        UnnecessarySedReadPlugin(lifecycle.group_chat),
+        UnnecessaryRunCommandPlugin(lifecycle.group_chat),
+        RedStateToolBlockPlugin(lifecycle.group_chat),
+        NotificationMessagePlugin(lifecycle.group_chat),
+        FileReadWriteConflictPlugin(lifecycle.group_chat),
+        KimiK25ToolCallPlugin(lifecycle.group_chat),
+        MinimaxToolCallPlugin(lifecycle.group_chat),
+        MissingWithSecretWarningPlugin(lifecycle.group_chat),
+        AfkPlugin(lifecycle.group_chat),
+        VolcanoDeepseekFixPlugin(lifecycle.group_chat),
+        ProcessArgvCheckerPlugin(lifecycle.group_chat),
+        SudoStdioCheckerPlugin(lifecycle.group_chat),
+        TodolistCheckerPlugin(lifecycle.group_chat),
+    ]
+
+    for plugin in plugins:
+        plugin.register(lifecycle)
