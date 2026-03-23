@@ -91,6 +91,14 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.mock_llm1.answer_stream.assert_called_once()
         self.mock_llm2.answer_stream.assert_called_once()
 
+    async def test_answer_stream_429_switch(self):
+        self.mock_llm1.answer_stream.side_effect = Exception("429 Too Many Requests")
+        history = [MagicMock(spec=Message)]
+        answer = await self.llm_manager.answer_stream(history)
+        self.assertIsInstance(answer, MockAnswer)
+        self.mock_llm1.answer_stream.assert_called_once()
+        self.mock_llm2.answer_stream.assert_called_once()
+
     async def test_answer_stream_all_disabled(self):
         with patch.object(self.llm_manager, "_is_llm_disabled", return_value=True):
             self.mock_llm1.answer_stream.side_effect = Exception("test error")

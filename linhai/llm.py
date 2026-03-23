@@ -480,36 +480,29 @@ class OpenAiAnswer:
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = chunk.usage
+                usage_dict = usage.__dict__
 
-                self.input_tokens = (
-                    usage.prompt_tokens if hasattr(usage, "prompt_tokens") else 0
-                )
-                cached_input_tokens = getattr(
-                    getattr(usage, "prompt_tokens_details", None), "cached_tokens", None
-                )
-                cache_creation_input_tokens = getattr(
-                    getattr(usage, "prompt_tokens_details", None),
-                    "cache_creation_input_tokens",
-                    None,
-                )
-                if cache_creation_input_tokens is None:
-                    # for openrouter
-                    cache_creation_input_tokens = getattr(
-                        getattr(usage, "prompt_tokens_details", None),
-                        "cache_write_tokens",
-                        None,
+                self.input_tokens = usage_dict.get("prompt_tokens", 0)
+
+                prompt_tokens_details = usage_dict.get("prompt_tokens_details")
+                if prompt_tokens_details:
+                    details_dict = prompt_tokens_details.__dict__
+                    cached_input_tokens = details_dict.get("cached_tokens")
+                    cache_creation_input_tokens = details_dict.get(
+                        "cache_creation_input_tokens"
                     )
+                    if cache_creation_input_tokens is None:
+                        cache_creation_input_tokens = details_dict.get(
+                            "cache_write_tokens"
+                        )
+                else:
+                    cached_input_tokens = None
+                    cache_creation_input_tokens = None
                 if cached_input_tokens:
                     self.cached_input_tokens = cached_input_tokens
 
-                self.output_tokens = (
-                    usage.completion_tokens
-                    if hasattr(usage, "completion_tokens")
-                    else 0
-                )
-                self.total_tokens = (
-                    usage.total_tokens if hasattr(usage, "total_tokens") else 0
-                )
+                self.output_tokens = usage_dict.get("completion_tokens", 0)
+                self.total_tokens = usage_dict.get("total_tokens", 0)
                 if self.llm_instance is not None and self.input_tokens > 0:
                     self.llm_instance.previous_input_tokens = self.input_tokens
                 # Send token usage directly to CLI queue instead of through agent
@@ -529,7 +522,8 @@ class OpenAiAnswer:
             content = delta.content or ""
             self.content += content
 
-            reasoning_content = getattr(delta, "reasoning_content", None)
+            delta_dict = delta.__dict__
+            reasoning_content = delta_dict.get("reasoning_content")
             if reasoning_content:
                 assert isinstance(reasoning_content, str)
                 self.reasoning_content = (
@@ -539,7 +533,7 @@ class OpenAiAnswer:
                 )
 
             reasoning_details = (
-                getattr(delta, "reasoning_details", None)
+                delta_dict.get("reasoning_details")
                 if self.compatibility == "minimax"
                 else None
             )
@@ -624,22 +618,35 @@ class MinimaxAnswer:
         cached_input_tokens: int = 0,
         llm_instance=None,
     ):
-        """初始化Minimax回答。"""
+        """初始化Minimax回答。
+
+        注意：使用__dict__读取字段是因为各个API提供商返回的字段不一致，
+        这样可以及时发现配置问题而不是静默返回None。"""
         # 解析响应
         message = response.choices[0].message
-        # 对于openai库，我们只能使用getattr
-        self.reasoning_content = getattr(
-            getattr(message, "reasoning_details", None), "text", None
-        )
-        self.content = getattr(message, "content", None) or ""
-        usage = getattr(response, "usage", None)
+        message_dict = message.__dict__
+        response_dict = response.__dict__
+
+        reasoning_details = message_dict.get("reasoning_details")
+        if reasoning_details:
+            self.reasoning_content = reasoning_details.__dict__.get("text")
+        else:
+            self.reasoning_content = None
+        self.content = message_dict.get("content") or ""
+        usage = response_dict.get("usage")
 
         self.tokens = []
         self.interrupted = False
         self.truncated = False
-        self.total_tokens = usage.total_tokens if usage else 0
-        self.input_tokens = usage.prompt_tokens if usage else 0
-        self.output_tokens = usage.completion_tokens if usage else 0
+        if usage:
+            usage_dict = usage.__dict__
+            self.total_tokens = usage_dict.get("total_tokens", 0)
+            self.input_tokens = usage_dict.get("prompt_tokens", 0)
+            self.output_tokens = usage_dict.get("completion_tokens", 0)
+        else:
+            self.total_tokens = 0
+            self.input_tokens = 0
+            self.output_tokens = 0
         self.group_chat = group_chat
         self.cached_input_tokens = cached_input_tokens
         self.llm_instance = llm_instance
@@ -893,69 +900,34 @@ class OpenAi:
         if self.tools:
             params["tools"] = self.tools
 
-        retry_delay = 5
-
-        answer = None
-        while True:
-            try:
-                if self.compatibility == "minimax":
-                    # 对于minimax，使用非流式请求并返回MinimaxAnswer
-                    response = await self.openai.chat.completions.create(**params)
-                    # 提取usage并直接发送token_usage，不放在toyield里
-                    usage = getattr(response, "usage", None)
-                    if usage:
-                        await self.group_chat.send(
-                            "token_usage",
-                            AnswerTokenUsage(
-                                input_tokens=(
-                                    usage.prompt_tokens
-                                    if hasattr(usage, "prompt_tokens")
-                                    else 0
-                                ),
-                                output_tokens=(
-                                    usage.completion_tokens
-                                    if hasattr(usage, "completion_tokens")
-                                    else 0
-                                ),
-                                total_tokens=(
-                                    usage.total_tokens
-                                    if hasattr(usage, "total_tokens")
-                                    else 0
-                                ),
-                                cached_input_tokens=estimated_cached_input_tokens,
-                            ),
-                        )
-                    answer = MinimaxAnswer(
-                        response,
-                        group_chat=self.group_chat,
-                        cached_input_tokens=estimated_cached_input_tokens,
-                        llm_instance=self,
-                    )
-                else:
-                    stream = await self.openai.chat.completions.create(**params)
-                    answer = OpenAiAnswer(
-                        stream,
-                        group_chat=self.group_chat,
-                        compatibility=self.compatibility,
-                        estimated_cached_input_tokens=estimated_cached_input_tokens,
-                        llm_instance=self,
-                    )
-                break
-            except (asyncio.TimeoutError, OpenAIError) as e:
-
+        if self.compatibility == "minimax":
+            response = await self.openai.chat.completions.create(**params)
+            usage = response.__dict__.get("usage", None)
+            if usage:
                 await self.group_chat.send(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"API调用失败，将在约{retry_delay:.1f}秒后重试: {e}",
+                    "token_usage",
+                    AnswerTokenUsage(
+                        input_tokens=usage.__dict__.get("prompt_tokens", 0),
+                        output_tokens=usage.__dict__.get("completion_tokens", 0),
+                        total_tokens=usage.__dict__.get("total_tokens", 0),
+                        cached_input_tokens=estimated_cached_input_tokens,
                     ),
                 )
-                await asyncio.sleep(retry_delay)
-                retry_delay *= 1.5
-                retry_delay = min(retry_delay, 300)
-
-        if answer is not None:
-            self.previous_history = history
-            return answer
+            answer = MinimaxAnswer(
+                response,
+                group_chat=self.group_chat,
+                cached_input_tokens=estimated_cached_input_tokens,
+                llm_instance=self,
+            )
         else:
-            raise RuntimeError("Failed to create OpenAI answer after retries")
+            stream = await self.openai.chat.completions.create(**params)
+            answer = OpenAiAnswer(
+                stream,
+                group_chat=self.group_chat,
+                compatibility=self.compatibility,
+                estimated_cached_input_tokens=estimated_cached_input_tokens,
+                llm_instance=self,
+            )
+
+        self.previous_history = history
+        return answer
