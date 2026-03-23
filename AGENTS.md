@@ -61,15 +61,21 @@ issue中的评论一般包含之前的经验总结。为了避免犯下同样的
 
 等待issue被关闭，如果对应issue没被关闭，你添加评论并等待issue更新（被回复或者被关闭等）
 
-## ci jobs
+## 查看CI
 
-你提交pr之后，有两个ci job会被依次运行，分别是ci test和ci nix-build
+你提交pr之后，有两个CI job会被依次运行，分别是CI test和CI nix-build
 
-ci nix-build会等待ci test执行成功后才执行, 如果ci test失败了，ci nix-build会被**跳过**运行。
+CI nix-build会等待CI test执行成功后才执行, 如果CI test失败了，CI nix-build会被**跳过**运行。
 
-如果ci nix-build被跳过，则说明ci test**大概率失败**，你需要查看详情
+如果CI nix-build被跳过，则说明CI test**大概率失败**，你需要查看详情
 
-你总是同时查看两个ci job
+你总是优先查看CI test而不是可能被跳过的CI nix-build
+
+### CI运行状态返回空列表
+
+CI运行状态为空，可能是因为CI还没有运行，也有可能是**因为前面的CI失败**而跳过
+
+如果CI运行状态一直为空，查看head sha对应的所有CI，检查前面的CI是否失败
 
 ## 注意
 
