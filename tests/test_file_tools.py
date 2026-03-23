@@ -110,6 +110,25 @@ class TestFileTools(unittest.TestCase):
         self.assertIn("test2.txt", result.content)
         self.assertIn("subdir", result.content)
 
+    def test_list_files_sorted_by_filename(self):
+        """测试list_files按文件名排序"""
+        test_files = [
+            "z_last.txt",
+            "a_first.txt",
+            "m_middle.txt",
+        ]
+        for filename in test_files:
+            (Path(self.temp_dir) / filename).write_text("test")
+
+        result = list_files(self.temp_dir)
+        lines = result.content.split("\n")
+        file_lines = [
+            line for line in lines if any(filename in line for filename in test_files)
+        ]
+        file_names = [line.split()[-1] for line in file_lines]
+        expected_order = sorted(test_files)
+        self.assertEqual(file_names, expected_order)
+
     def test_get_absolute_path(self):
         """测试获取绝对路径"""
         result = get_absolute_path(".")

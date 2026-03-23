@@ -301,7 +301,7 @@ def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         for item in dir_path.iterdir():
             items.append(get_file_info(item))
 
-        items.sort()
+        items.sort(key=lambda x: x.split()[-1])
 
         items_str = "\n".join(items)
         return ToolResultSuccess(
