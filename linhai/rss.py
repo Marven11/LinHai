@@ -122,6 +122,7 @@ class RssPlugin:
         self.poll_interval = poll_interval
         self.processed_guids = set()
         self._polling_task = None
+        self._initialized = False
 
     async def start_rss_polling(self):
         """启动RSS轮询任务。"""
@@ -143,12 +144,17 @@ class RssPlugin:
         for rss_url in self.rss_urls:
             await self._fetch_and_process_rss(rss_url, agent)
 
-    async def _fetch_and_process_rss(self, rss_url, agent):
+    async def _fetch_and_process_rss(self, rss_url, agent, send_to_agent=True):
         """获取并处理单个RSS源。"""
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(rss_url)
-            response.raise_for_status()
+            if response.status_code != 200:
+                return
+
             xml_content = response.text
+
+        if feedparser.parse(xml_content).bozo:
+            return
 
         rss_messages = parse_rss(xml_content)
 
@@ -157,16 +163,38 @@ class RssPlugin:
         ]
         if not new_messages:
             return
-
         for msg in new_messages:
             self.processed_guids.add(msg.guid)
-            await agent.message_processor.add_new_message(msg)
+            if send_to_agent:
+                await agent.message_processor.add_new_message(msg)
 
-    async def before_agent_loop(self, agent: "Agent"):
-        """在Agent循环开始前启动RSS轮询任务。"""
-        if not self.rss_urls:
+    async def _initialize_processed_guids(self):
+        """初始化时获取所有已存在的RSS消息的guid，不发送给agent。"""
+        from linhai.agent import Agent as AgentType
+
+        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        if not agent:
             return
 
+        for rss_url in self.rss_urls:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(rss_url)
+                if response.status_code != 200:
+                    continue
+                xml_content = response.text
+
+                if feedparser.parse(xml_content).bozo:
+                    continue
+                rss_messages = parse_rss(xml_content)
+                for msg in rss_messages:
+                    self.processed_guids.add(msg.guid)
+        self._initialized = True
+
+    async def before_agent_loop(self, agent: "Agent"):
+        """在Agent循环开始前初始化RSS插件并启动轮询任务。"""
+        if not self.rss_urls:
+            return
+        await self._initialize_processed_guids()
         self._polling_task = asyncio.create_task(self.start_rss_polling())
 
     def register(self, lifecycle) -> None:
