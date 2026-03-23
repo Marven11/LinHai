@@ -63,6 +63,7 @@
               pillow
               tomli-w
               feedparser
+              python-telegram-bot
             ];
 
             src = ./.;

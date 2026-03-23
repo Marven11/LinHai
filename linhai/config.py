@@ -1,6 +1,5 @@
 """Configuration module for LinHai agent."""
 
-import io
 import os
 import re
 from pathlib import Path
@@ -8,7 +7,6 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 
 import tomllib
-import tomli_w
 from pydantic import BaseModel, Field, field_validator
 
 from .exceptions import ConfigValidationError
@@ -138,6 +136,27 @@ class SecretSubConfig(BaseModel):
         return f"SecretSubConfig(config_path={self.config_path})"
 
 
+class TelegramConfig(BaseModel):
+    """Telegram bot配置类型定义。"""
+
+    bot_token: str = Field(..., min_length=1)
+    default_chat_id: str = Field(..., min_length=1)
+
+    def __str__(self) -> str:
+        """返回Telegram配置的字符串表示"""
+        return f"TelegramConfig(bot_token=***, default_chat_id={self.default_chat_id})"
+
+
+class RemoteControlConfig(BaseModel):
+    """远程控制配置类型定义。"""
+
+    telegram: Optional[TelegramConfig] = None
+
+    def __str__(self) -> str:
+        """返回远程控制配置的字符串表示"""
+        return f"RemoteControlConfig(telegram={self.telegram})"
+
+
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
@@ -170,6 +189,7 @@ class Config(BaseModel):
     )
     tools: ToolConfig = Field(default_factory=ToolConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
+    remote_control: RemoteControlConfig = Field(default_factory=RemoteControlConfig)
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""

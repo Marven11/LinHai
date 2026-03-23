@@ -139,6 +139,12 @@ async def create_agent_from_config(
             30,
         ).register(agent.lifecycle)
 
+    telegram_config = context["config"].remote_control.telegram
+    if telegram_config:
+        from linhai.plugin.telegram import TelegramPlugin
+
+        TelegramPlugin(context["group_chat"], telegram_config).register(agent.lifecycle)
+
     if context.get("planning", False):
         from linhai.plugin.planning import (
             PlanningStatusReminderPlugin,
