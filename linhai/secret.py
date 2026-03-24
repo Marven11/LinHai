@@ -24,8 +24,10 @@ class SecretInfo(TypedDict):
 
 
 def load_secrets_from_config(
-    config_path: str, base_dir: str | Path
+    config_path: str, base_dir: str | Path | None
 ) -> dict[str, SecretInfo]:
+    if base_dir is None:
+        raise ValueError("Secret配置需要config_basedir")
     config_path = config_path.strip()
     path = Path(config_path).expanduser()
 
@@ -269,7 +271,7 @@ class SecretInterceptorPlugin:
 
 
 def initialize_secret_system(
-    group_chat: "GroupChat", secret_config_path: str, config_basedir: str | Path
+    group_chat: "GroupChat", secret_config_path: str, config_basedir: str | Path | None
 ) -> SecretInterceptorPlugin:
     from linhai.llm import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM

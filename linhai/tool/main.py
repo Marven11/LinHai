@@ -8,7 +8,7 @@ import inspect
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Awaitable
+from typing import Awaitable, Optional
 
 from linhai.config import ToolConfig, MCPConfig
 from linhai.group_chat import GroupChat
@@ -33,7 +33,7 @@ class ToolManager:
         toolsets: list[ToolSet],
         config: ToolConfig,
         mcp_config: list[MCPConfig],
-        mcp_basedir: Path,
+        mcp_basedir: Optional[Path],
     ):
         """初始化工具管理器
 
@@ -100,6 +100,8 @@ class ToolManager:
     async def ensure_mcp_connector(self):
         if self.mcp_connector is not None:
             return
+        if self.mcp_basedir is None:
+            raise ValueError("MCP配置需要config_basedir")
         self.mcp_connector = MCPConnector(self.group_chat)
         for mcp_config in self.mcp_config:
             server_script_path = self.mcp_basedir / mcp_config.server_script_path

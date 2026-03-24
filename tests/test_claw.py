@@ -71,6 +71,8 @@ class TestClawPinnedMessages(unittest.TestCase):
 
         mock_config = Mock()
         mock_config.memory = None
+        mock_config.user_prompt = None
+        mock_config.user_prompt = None
 
         mock_context_dict = {
             "group_chat": Mock(),

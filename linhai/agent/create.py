@@ -30,7 +30,7 @@ class AgentBuildContext(TypedDict):
 
     group_chat: GroupChat
     config: Config
-    config_basedir: Path
+    config_basedir: Optional[Path]
     llm_name: str
     max_toolcall_token_in_round: int
     checklist_path: Optional[Path]
@@ -41,7 +41,7 @@ class AgentBuildContext(TypedDict):
 def create_agent_build_context(
     group_chat: GroupChat,
     config: Config,
-    config_basedir: Path,
+    config_basedir: Optional[Path],
     cli_args: argparse.Namespace,
     planning: bool = False,
     llm_name: Optional[str] = None,
@@ -255,7 +255,9 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
 
     cli_args = context["cli_args"]
 
-    if context["config"].user_prompt and context["config_basedir"]:
+    if context["config"].user_prompt and context["config"].user_prompt.file_path:
+        if context["config_basedir"] is None:
+            raise ValueError("User prompt文件需要config_basedir")
         prompt_file_path = (
             context["config_basedir"] / context["config"].user_prompt.file_path
         )
