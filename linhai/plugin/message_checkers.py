@@ -68,9 +68,12 @@ class WaitingUserPlugin(Plugin):
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
-                    "消息内容已经发送给用户。"
-                    f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：使用{WAITING_USER_MARKER!r}等待用户回答"
-                    "如果需要调用工具：必须输出工具调用"
+                    "runtime不知道你是需要暂停等待还是需要继续调用工具，因此让你继续生成消息，之前的消息内容已经发送给用户。"
+                    f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：使用{WAITING_USER_MARKER!r}等待用户回答，并保证:"
+                    "1. 你不完全重复回答 - 因为用户已经看到了，重复回答会导致用户看到两条消息。"
+                    f"2. 你正确在结尾加上{WAITING_USER_MARKER!r} - 否则runtime仍然不知道你是否需要等待用户。"
+                    "3. 这条回复应该明显短于之前的回复 - 否则用户会看到两条长消息"
+                    f"如果需要调用工具：必须继续输出工具调用且不应同时使用{WAITING_USER_MARKER!r}"
                 )
             )
             await self.group_chat.send_if_exists(
