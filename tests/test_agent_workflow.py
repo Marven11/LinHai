@@ -59,6 +59,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
+            llm_fallback_map={"test_llm": None},
         )
         self.agent = Agent(
             llm_manager=llm_manager,

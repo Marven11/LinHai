@@ -133,6 +133,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=[self.mock_llm],
             default_llm_name="test_llm",
+            llm_fallback_map={"test_llm": None},
         )
 
         config = {
@@ -419,6 +420,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             group_chat=new_group_chat,
             llms=[mock_llm1, mock_llm2],
             default_llm_name="deepseek-reasoning",
+            llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
         )
 
         agent = Agent(

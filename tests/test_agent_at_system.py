@@ -104,6 +104,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=self.config["llms"],
             default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
+            llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
         )
 
         self.agent = Agent(

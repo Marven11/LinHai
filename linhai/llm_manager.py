@@ -22,8 +22,8 @@ class LlmManager:
         self,
         group_chat: GroupChat,
         llms: list[LanguageModel],
+        llm_fallback_map: dict[str, str | None],
         default_llm_name: str | None = None,
-        llm_fallback_map: dict[str, str | None] | None = None,
     ) -> None:
         """初始化LlmManager
 
@@ -60,8 +60,9 @@ class LlmManager:
                     )
                 self.llm_fallback_map[llm_name] = fallback_name
         for llm_name in self.llm_names:
-            if llm_name not in self.llm_fallback_map:
-                self.llm_fallback_map[llm_name] = None
+            assert (
+                llm_name in self.llm_fallback_map
+            ), f"LLM名称 '{llm_name}' 未在llm_fallback_map中配置"
 
         self.llm_stack: list[tuple[str, datetime | None]] = [
             (self.default_llm_name, None)

@@ -58,6 +58,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=[mock_llm],
             default_llm_name="test-llm",
+            llm_fallback_map={"test-llm": None},
         )
         self.agent = Agent(
             llm_manager=llm_manager,

@@ -266,6 +266,7 @@ class TestCreateLLMInstances(unittest.TestCase):
                 group_chat=mock_group_chat,
                 llms=[mock_llm],
                 default_llm_name="test-llm",
+                llm_fallback_map={"test-llm": None},
             )
             mock_create_llm.return_value = llm_manager
 

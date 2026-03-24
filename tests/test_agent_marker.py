@@ -154,6 +154,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
+            llm_fallback_map={"test-llm": None},
         )
 
         from linhai.token_manager import TokenManager

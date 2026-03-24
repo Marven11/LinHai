@@ -63,6 +63,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             llms=mock_config["llms"],
             default_llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
+            llm_fallback_map={"test_llm": None},
         )
         Agent(
             llm_manager=llm_manager,
