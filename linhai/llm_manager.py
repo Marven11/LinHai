@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Sequence
 import asyncio
 from datetime import datetime, timedelta
-from linhai.llm import Message, LanguageModel, Answer, OpenAi
+from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
 from linhai.group_chat import GroupChat
 from linhai.utils import CliRuntimeNotice
 
@@ -236,7 +236,31 @@ class LlmManager:
                         await asyncio.sleep(delay)
                         retry_count += 1
                 else:
-                    raise
+                    if isinstance(e, OpenAIError):
+                        self._record_error(current_llm_name, "openai_error")
+                        if fallback_llm is not None:
+                            disabled_until = datetime.now() + timedelta(minutes=1)
+                            self.llm_stack.append((fallback_llm, disabled_until))
+                            await self.group_chat.send_if_exists(
+                                "ui_log",
+                                CliRuntimeNotice(
+                                    level="WARNING",
+                                    content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
+                                ),
+                            )
+                        else:
+                            delay = min(1.5**retry_count, 300)
+                            await self.group_chat.send_if_exists(
+                                "ui_log",
+                                CliRuntimeNotice(
+                                    level="WARNING",
+                                    content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
+                                ),
+                            )
+                            await asyncio.sleep(delay)
+                            retry_count += 1
+                    else:
+                        raise
 
     def list_available_llms(self) -> list[dict[str, object]]:
         """列出所有可用的LLM及其状态

@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime, timedelta
 from linhai.llm_manager import LlmManager, NoAvailableLlmError
 from linhai.group_chat import GroupChat
-from linhai.llm import Message, Answer
+from linhai.llm import Message, Answer, OpenAIError
 
 
 class MockAnswer(Answer):
@@ -280,6 +280,63 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_count2, 1)
         self.assertEqual(mock_llm3.answer_stream.call_count, 1)
         self.assertEqual(len(llm_manager_chain.llm_stack), 3)
+
+    async def test_answer_stream_fallback_on_openai_error(self):
+        call_count = 0
+
+        async def mock_answer_stream_fail_first(history):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise OpenAIError("API error")
+            return MockAnswer()
+
+        self.mock_llm1.answer_stream = AsyncMock(
+            side_effect=mock_answer_stream_fail_first
+        )
+        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
+
+        history = [MagicMock(spec=Message)]
+        answer = await self.llm_manager.answer_stream(history)
+        self.assertIsInstance(answer, MockAnswer)
+        self.assertEqual(self.mock_llm1.answer_stream.call_count, 1)
+        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
+        self.assertEqual(len(self.llm_manager.llm_stack), 2)
+
+    async def test_answer_stream_retry_on_openai_error_no_fallback(self):
+        call_count = 0
+
+        async def mock_answer_stream_fail_then_succeed(history):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                raise OpenAIError("API error")
+            return MockAnswer()
+
+        self.mock_llm1.answer_stream = AsyncMock(
+            side_effect=mock_answer_stream_fail_then_succeed
+        )
+
+        llm_manager_no_fallback = LlmManager(
+            group_chat=self.mock_group_chat,
+            llms=[self.mock_llm1, self.mock_llm2],
+            default_llm_name="llm1",
+            llm_fallback_map={"llm1": None},
+        )
+
+        history = [MagicMock(spec=Message)]
+        answer = await llm_manager_no_fallback.answer_stream(history)
+        self.assertIsInstance(answer, MockAnswer)
+        self.assertEqual(call_count, 3)
+
+    async def test_non_openai_error_propagates(self):
+        self.mock_llm1.answer_stream = AsyncMock(
+            side_effect=ValueError("unexpected error")
+        )
+        history = [MagicMock(spec=Message)]
+        with self.assertRaises(ValueError) as context:
+            await self.llm_manager.answer_stream(history)
+        self.assertIn("unexpected error", str(context.exception))
 
 
 if __name__ == "__main__":
