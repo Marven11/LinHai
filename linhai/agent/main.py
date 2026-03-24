@@ -16,7 +16,7 @@ from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
-from linhai.markdown_parser import extract_tool_calls_with_errors, ParseError
+from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import (
     Message,
     LanguageModel,
@@ -326,18 +326,7 @@ class Agent:
                 await self.message_processor.add_new_message(msg)
             self.queued_messages = []
 
-        try:
-            tool_calls, errors = extract_tool_calls_with_errors(full_response)
-        except ParseError:
-            interrupt_msg = CliRuntimeNotice(
-                level="WARNING", content="工具调用格式出错"
-            )
-            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-
-            await self.message_processor.add_new_message(
-                RuntimeMessage("工具调用格式出错")
-            )
-            return answer
+        tool_calls, errors = extract_tool_calls_with_errors(full_response)
 
         for error in errors:
             await self.message_processor.add_new_message(RuntimeMessage(error))

@@ -9,9 +9,6 @@ repr_obj = Repr()
 repr_obj.maxstring = 50
 
 
-class ParseError(Exception): ...
-
-
 class CodeBlockRenderer(mistune.HTMLRenderer):
     """自定义渲染器用于提取JSON工具调用的代码块"""
 
