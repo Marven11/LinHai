@@ -45,6 +45,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
         # Mock orchestration - 使用spec确保类型匹配
         self.mock_orchestration = MagicMock(spec=AgentContextOrchestration)
+        self.mock_orchestration.consecutive_red_block_count = 0
         self.mock_orchestration.compute_orchestration_context = MagicMock(
             return_value={
                 "threshold_info": None,

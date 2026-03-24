@@ -69,6 +69,14 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             self.group_chat, self.message_processor
         )
 
+        # 注册一个mock的agent，因为NotificationMessagePlugin需要它
+        from linhai.agent.main import Agent
+
+        mock_agent = Mock(spec=Agent)
+        mock_agent.message_processor = self.message_processor
+        mock_agent.get_threshold_info = Mock(return_value=None)
+        self.group_chat.register_member("agent", mock_agent)
+
     async def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
         threshold_info: ThresholdInfo = {
@@ -558,3 +566,120 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             set(step2_tool["conflict_with"]),
             {"context_forget_large_message", "context_forget_range_step1"},
         )
+
+    async def test_consecutive_red_block_notification_not_shows_after_two_blocks(
+        self,
+    ):
+        """测试两次红灯拦截后不显示通知消息。"""
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95,
+        }
+
+        # 模拟两次红灯拦截
+        self.orchestration.consecutive_red_block_count = 2
+
+        # 调用before_message_generation
+        from linhai.agent.orchestration import NotificationMessagePlugin
+
+        plugin = NotificationMessagePlugin(self.group_chat)
+        await plugin.before_message_generation()
+
+        # 验证notification message不存在（因为count<3）
+        notifications = self.message_processor.notification_messages.get(
+            "consecutive_red_block"
+        )
+        self.assertIsNone(notifications)
+
+    async def test_consecutive_red_block_notification_shows_after_three_blocks(
+        self,
+    ):
+        """测试三次红灯拦截后显示通知消息。"""
+        # 修改mock_agent返回红灯状态的threshold_info
+        from linhai.agent.main import Agent
+
+        mock_agent = self.group_chat.get_member_typechecked("agent", Agent)
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95,
+        }
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
+
+        # 模拟三次红灯拦截
+        self.orchestration.consecutive_red_block_count = 3
+
+        # 调用before_message_generation
+        from linhai.agent.orchestration import NotificationMessagePlugin
+
+        plugin = NotificationMessagePlugin(self.group_chat)
+        await plugin.before_message_generation()
+
+        # 验证notification message存在
+        notifications = self.message_processor.notification_messages.get(
+            "consecutive_red_block"
+        )
+        self.assertIsNotNone(notifications)
+        # 验证消息内容符合issue要求
+        notification_msg = notifications["message"].get_content()
+        self.assertIn(
+            "【注意】你应该立即开始使用正确的工具调用清理上下文", notification_msg
+        )
+        self.assertIn("```json toolcall", notification_msg)
+
+    async def test_consecutive_red_block_notification_cleared_after_success(
+        self,
+    ):
+        """测试工具调用成功后清除通知消息。"""
+        # 修改mock_agent返回红灯状态的threshold_info
+        from linhai.agent.main import Agent
+
+        mock_agent = self.group_chat.get_member_typechecked("agent", Agent)
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 95000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.95,
+        }
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
+
+        # 模拟三次红灯拦截
+        self.orchestration.consecutive_red_block_count = 3
+
+        # 添加通知消息
+        from linhai.agent.orchestration import NotificationMessagePlugin
+
+        plugin = NotificationMessagePlugin(self.group_chat)
+        await plugin.before_message_generation()
+
+        # 验证notification message存在
+        notifications = self.message_processor.notification_messages.get(
+            "consecutive_red_block"
+        )
+        self.assertIsNotNone(notifications)
+
+        # 模拟工具调用成功
+        from linhai.agent.orchestration import RedStateToolBlockPlugin
+
+        block_plugin = RedStateToolBlockPlugin(self.group_chat)
+        await block_plugin.after_toolcall(
+            tool_name="read_file",
+            tool_index=0,
+            status="success",
+            message=None,
+            toolcall_arguments=None,
+            with_secret=None,
+            is_tool_failed_duplicated_error=False,
+        )
+
+        # 验证计数器被重置
+        self.assertEqual(self.orchestration.consecutive_red_block_count, 0)
+
+        # 验证notification message被清除
+        notifications = self.message_processor.notification_messages.get(
+            "consecutive_red_block"
+        )
+        self.assertIsNone(notifications)

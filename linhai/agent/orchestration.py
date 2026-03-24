@@ -99,6 +99,7 @@ class AgentContextOrchestration:
         self.large_messages: set[Message] = set()
         self.cleaned_messages: dict[str, float] = {}
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        self.consecutive_red_block_count: int = 0
 
         self._register_lifecycle_callbacks()
 
@@ -445,15 +446,20 @@ class RedStateToolBlockPlugin:
             bool: 仅当status为"skipped"时有效，True表示跳过工具调用
             RuntimeMessage: 替换工具结果
         """
-        if status != "skipped":
-            return None
+        orchestration = self.group_chat.get_member_typechecked(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
 
         from .main import Agent
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
-        orchestration = self.group_chat.get_member_typechecked(
-            "agent_context_orchestration", AgentContextOrchestration
-        )
+
+        if status != "skipped":
+            orchestration.consecutive_red_block_count = 0
+            agent.message_processor.update_notification_message(
+                None, source="consecutive_red_block", sort_value=0
+            )
+            return None
 
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
@@ -468,6 +474,8 @@ class RedStateToolBlockPlugin:
         if details["blocked_category"] == details["actual_category"]:
             is_dirty = details["is_dirty"]
             current_state = details["current_state"]
+            if details["blocked_category"] == "other":
+                orchestration.consecutive_red_block_count += 1
 
             if details["blocked_category"] == "cleanup" and is_dirty:
                 error_msg = f"token用量信息已失效，禁止调用{tool_name}工具"
@@ -521,6 +529,33 @@ class NotificationMessagePlugin:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(notification_message),
                 source="threshold_notification",
+                sort_value=0,
+            )
+
+        if orchestration.consecutive_red_block_count >= 3:
+            cleanable_messages = get_cleanable_large_messages(
+                orchestration.large_messages,
+                orchestration.agent_message,
+                cleaned_messages_dict=orchestration.cleaned_messages,
+            )
+            cleanable_count = len(cleanable_messages)
+
+            if cleanable_count >= 5:
+                example_call = (
+                    '{"name": "context_forget_large_message", "arguments": {}}'
+                )
+            else:
+                example_call = '{"name": "context_forget_range_step1", "arguments": {}}'
+
+            message_content = f"""【注意】你应该立即开始使用正确的工具调用清理上下文，而不是继续工作或者使用错误的工具调用，例如：
+
+```json toolcall
+{example_call}
+```
+"""
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(message_content),
+                source="consecutive_red_block",
                 sort_value=0,
             )
 

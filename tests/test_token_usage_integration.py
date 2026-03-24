@@ -79,6 +79,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
 
         # Mock orchestration - 使用spec确保类型匹配
         mock_orchestration = MagicMock(spec=AgentContextOrchestration)
+        mock_orchestration.consecutive_red_block_count = 0
         notification_msg = (
             "当前Token用量为40000，硬限制为80000，当前使用50.0%（绿灯状态）。"
         )
