@@ -126,17 +126,16 @@ class CommandHandler:
             return True
 
         llm_manager = agent.llm_manager
-        llm_names = [llm.get_name() for llm in llm_manager.llms]
 
         if model_name == "default":
-            llm_manager.current_llm_index = 0
-            await self._show_success_message("已将底层LLM切换为默认（第一个）LLM")
-        elif model_name in llm_names:
-            llm_manager.current_llm_index = llm_names.index(model_name)
+            await llm_manager.switch_to_llm(llm_manager.default_llm_name)
+            await self._show_success_message("已将底层LLM切换为默认LLM")
+        elif model_name in llm_manager.llm_names:
+            await llm_manager.switch_to_llm(model_name)
             await self._show_success_message(f"已将底层LLM切换为 {model_name!r}")
         else:
             await self._show_error_message(
-                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: default, {', '.join(llm_names)}"
+                f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: {', '.join(llm_manager.llm_names)}"
             )
 
         return True

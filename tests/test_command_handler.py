@@ -150,8 +150,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_llm2.get_name = Mock(return_value="another-llm")
         mock_llm_manager.llms = [mock_llm1, mock_llm2]
         mock_llm_manager.llm_names = ["test-llm", "another-llm"]
-        mock_llm_manager.current_llm_index = 0
+        mock_llm_manager.switch_to_llm = AsyncMock()
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm1)
+        mock_llm_manager.default_llm_name = "test-llm"
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = Mock()
@@ -171,7 +172,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await self.handler.handle_command("@test-llm")
         self.assertTrue(result)
-        self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
+        mock_llm_manager.switch_to_llm.assert_called_once_with("test-llm")
 
     async def test_handle_switch_model_invalid(self):
         """Test @invalid_model_name command."""

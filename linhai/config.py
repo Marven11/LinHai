@@ -39,6 +39,7 @@ class LLMConfig(BaseModel):
     client_options: dict = Field(default_factory=dict)
     completion_options: dict = Field(default_factory=dict)
     token_limit: int = Field(default=0)
+    fallback: Optional[str] = Field(default=None)
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument

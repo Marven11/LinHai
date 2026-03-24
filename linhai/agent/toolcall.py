@@ -149,9 +149,6 @@ class AgentToolcall:
                 result.append(f"    支持图像: {info['support_image']}")
                 result.append(f"    当前使用: {info['is_current']}")
                 result.append(f"    默认: {info['is_default']}")
-                result.append(f"    禁用: {info['is_disabled']}")
-                if info["disabled_until"]:
-                    result.append(f"    禁用直到: {info['disabled_until']}")
                 result.append(f"    错误计数: {info['error_count']}")
                 result.append("")
 

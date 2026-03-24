@@ -108,7 +108,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, ToolCallResultMessage)
         self.assertIn("已切换到LLM: secondary", str(result))
 
-        self.assertEqual(self.agent.llm_manager.current_llm_index, 1)
+        self.assertEqual(self.agent.llm_manager.get_current_llm(), self.mock_llm2)
 
     async def test_switch_llm_tool_failure(self):
         """Test LLM switching with non-existent LLM."""
@@ -128,14 +128,14 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.assertIn("错误：LLM名称 'nonexistent' 不存在", str(result))
         self.assertIn("可用的LLM包括: primary, secondary", str(result))
 
-        self.assertEqual(self.agent.llm_manager.current_llm_index, 0)
+        self.assertEqual(self.agent.llm_manager.get_current_llm(), self.mock_llm1)
 
-    def test_llm_selection(self):
+    async def test_llm_selection(self):
         """Test LLM selection based on current_llm_index."""
         selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm1)
 
-        self.agent.llm_manager.current_llm_index = 1
+        await self.agent.llm_manager.switch_to_llm("secondary")
         selected_llm = self.agent.get_current_model()
         self.assertEqual(selected_llm, self.mock_llm2)
 

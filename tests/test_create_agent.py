@@ -102,7 +102,8 @@ class TestCreateAgent(unittest.TestCase):
         self.assertIsInstance(result, Agent)
 
         agent = group_chat.get_member_typechecked("agent", Agent)
-        self.assertEqual(agent.llm_manager.current_llm_index, 0)  # test是第一个LLM
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm.get_name(), "test")
 
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""

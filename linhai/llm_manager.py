@@ -23,7 +23,7 @@ class LlmManager:
         group_chat: GroupChat,
         llms: list[LanguageModel],
         default_llm_name: str | None = None,
-        max_retries_per_llm: int = 3,
+        llm_fallback_map: dict[str, str | None] | None = None,
     ) -> None:
         """初始化LlmManager
 
@@ -31,7 +31,7 @@ class LlmManager:
             group_chat: GroupChat实例，用于消息通信
             llms: LanguageModel实例列表
             default_llm_name: 默认LLM名称，如果为None则使用第一个LLM
-            max_retries_per_llm: 每个LLM的最大重试次数
+            llm_fallback_map: LLM fallback映射，key为LLM名称，value为fallback的LLM名称
 
         """
         self.group_chat = group_chat
@@ -39,25 +39,56 @@ class LlmManager:
         self.llm_names = [llm.get_name() for llm in llms]
 
         if default_llm_name is None:
-            self.default_llm_index = 0
+            self.default_llm_name = self.llm_names[0]
         elif default_llm_name in self.llm_names:
-            self.default_llm_index = self.llm_names.index(default_llm_name)
+            self.default_llm_name = default_llm_name
         else:
             raise ValueError(
                 f"错误：默认LLM名称 '{default_llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
             )
 
-        self.current_llm_index = self.default_llm_index
-        self.max_retries_per_llm = max_retries_per_llm
+        self.llm_fallback_map: dict[str, str | None] = {}
+        if llm_fallback_map is not None:
+            for llm_name, fallback_name in llm_fallback_map.items():
+                if llm_name not in self.llm_names:
+                    raise ValueError(
+                        f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                    )
+                if fallback_name is not None and fallback_name not in self.llm_names:
+                    raise ValueError(
+                        f"错误：fallback LLM名称 '{fallback_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                    )
+                self.llm_fallback_map[llm_name] = fallback_name
+        for llm_name in self.llm_names:
+            if llm_name not in self.llm_fallback_map:
+                self.llm_fallback_map[llm_name] = None
 
+        self.llm_stack: list[tuple[str, datetime | None]] = [
+            (self.default_llm_name, None)
+        ]
         self.llm_errors: dict[str, list[tuple[datetime, str]]] = {
             name: [] for name in self.llm_names
         }
-        self.llm_disabled_until: dict[str, datetime | None] = {
-            name: None for name in self.llm_names
-        }
 
         self.group_chat.register_member("llm_manager", self)
+
+    def _is_llm_expired(self, disabled_until: datetime | None) -> bool:
+        """检查LLM是否已过期
+
+        Args:
+            disabled_until: 禁用截止时间，None表示永不过期
+
+        Returns:
+            bool: 如果LLM已过期则返回True，否则返回False
+        """
+        if disabled_until is None:
+            return False
+        return datetime.now() >= disabled_until
+
+    def _cleanup_expired_llms(self) -> None:
+        """清理栈中过期的LLM，但永远保留至少一个元素"""
+        while len(self.llm_stack) > 1 and self._is_llm_expired(self.llm_stack[-1][1]):
+            self.llm_stack.pop()
 
     def get_current_llm(self) -> LanguageModel:
         """获取当前使用的LLM实例
@@ -65,7 +96,11 @@ class LlmManager:
         Returns:
             LanguageModel: 当前LLM实例
         """
-        return self.llms[self.current_llm_index]
+        self._cleanup_expired_llms()
+        assert len(self.llm_stack) > 0, "llm_stack should never be empty"
+        llm_name = self.llm_stack[-1][0]
+        index = self.llm_names.index(llm_name)
+        return self.llms[index]
 
     async def switch_to_llm(self, name: str) -> None:
         """切换到指定的LLM
@@ -80,7 +115,7 @@ class LlmManager:
             raise ValueError(
                 f"错误：LLM名称 '{name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
             )
-        self.current_llm_index = self.llm_names.index(name)
+        self.llm_stack = [(name, None)]
         await self.group_chat.send_if_exists(
             "ui_log", CliRuntimeNotice(level="INFO", content=f"已切换到LLM: {name}")
         )
@@ -96,48 +131,17 @@ class LlmManager:
         self.llm_errors[llm_name].append((current_time, error_type))
         if len(self.llm_errors[llm_name]) > 100:
             self.llm_errors[llm_name] = self.llm_errors[llm_name][-100:]
-        if error_type == "rate_limit" or "429" in error_type:
-            disable_until = current_time + timedelta(minutes=5)
-            self.llm_disabled_until[llm_name] = disable_until
 
-    def _is_llm_disabled(self, llm_name: str) -> bool:
-        """检查LLM是否被禁用
+    def _get_fallback_llm(self, llm_name: str) -> str | None:
+        """获取LLM的fallback配置
 
         Args:
             llm_name: LLM名称
 
         Returns:
-            bool: 如果LLM被禁用则返回True，否则返回False
+            fallback的LLM名称，如果没有配置则返回None
         """
-        disabled_until = self.llm_disabled_until[llm_name]
-        if disabled_until is None:
-            return False
-        if datetime.now() >= disabled_until:
-            self.llm_disabled_until[llm_name] = None
-            return False
-        return True
-
-    def _get_next_available_llm(self) -> LanguageModel:
-        """获取下一个可用的LLM
-
-        如果所有LLM都被禁用，则不断重试第一个LLM
-
-        Returns:
-            LanguageModel: 可用的LLM实例
-        """
-        start_index = self.current_llm_index
-        checked = 0
-        while checked < len(self.llms):
-            index = (start_index + 1) % len(self.llms)
-            llm_name = self.llm_names[index]
-            if not self._is_llm_disabled(llm_name):
-                self.current_llm_index = index
-                return self.llms[index]
-            start_index = index
-            checked += 1
-
-        self.current_llm_index = 0
-        return self.llms[0]
+        return self.llm_fallback_map.get(llm_name)
 
     async def answer_stream(self, history: Sequence[Message]) -> Answer:
         """生成流式回答
@@ -150,7 +154,7 @@ class LlmManager:
 
         Raises:
             ValueError: 如果历史为空
-            RuntimeError: 如果重试次数耗尽仍无法完成
+            NoAvailableLlmError: 如果栈为空（理论上不可能）
         """
         if not history:
             raise ValueError("history is empty")
@@ -158,26 +162,11 @@ class LlmManager:
         retry_count = 0
         last_error = None
 
-        while retry_count < self.max_retries_per_llm:
-            current_llm = self.get_current_llm()
-            current_llm_name = self.llm_names[self.current_llm_index]
-
-            if self._is_llm_disabled(current_llm_name):
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"LLM '{current_llm_name}' 被禁用，正在切换到下一个可用LLM",
-                    ),
-                )
-                current_llm = self._get_next_available_llm()
-                current_llm_name = self.llm_names[self.current_llm_index]
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="INFO", content=f"已切换到LLM: {current_llm_name}"
-                    ),
-                )
+        while True:
+            self._cleanup_expired_llms()
+            assert len(self.llm_stack) > 0, "llm_stack should never be empty"
+            current_llm_name = self.llm_stack[-1][0]
+            current_llm = self.llms[self.llm_names.index(current_llm_name)]
 
             try:
                 answer = await current_llm.answer_stream(history)
@@ -198,45 +187,56 @@ class LlmManager:
             except Exception as e:
                 last_error = e
                 error_str = str(e).lower()
+                fallback_llm = self._get_fallback_llm(current_llm_name)
 
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="WARNING",
-                            content=f"LLM '{current_llm_name}' 速率限制，将切换到下一个LLM",
-                        ),
-                    )
-                    current_llm = self._get_next_available_llm()
-                    await self.group_chat.send_if_exists(
-                        "ui_log",
-                        CliRuntimeNotice(
-                            level="INFO",
-                            content=f"已切换到LLM: {self.llm_names[self.current_llm_index]}",
-                        ),
-                    )
-                    continue
+                    if fallback_llm is not None:
+                        disabled_until = datetime.now() + timedelta(minutes=10)
+                        self.llm_stack.append((fallback_llm, disabled_until))
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="WARNING",
+                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，10分钟后恢复",
+                            ),
+                        )
+                    else:
+                        delay = min(1.5**retry_count, 300)
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="WARNING",
+                                content=f"LLM '{current_llm_name}' 速率限制，将在 {delay:.1f} 秒后重试",
+                            ),
+                        )
+                        await asyncio.sleep(delay)
+                        retry_count += 1
                 elif "connection" in error_str or "network" in error_str:
-                    error_type = "connection"
+                    self._record_error(current_llm_name, "connection")
+                    if fallback_llm is not None:
+                        disabled_until = datetime.now() + timedelta(minutes=1)
+                        self.llm_stack.append((fallback_llm, disabled_until))
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="WARNING",
+                                content=f"LLM '{current_llm_name}' 网络错误，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
+                            ),
+                        )
+                    else:
+                        delay = min(1.5**retry_count, 300)
+                        await self.group_chat.send_if_exists(
+                            "ui_log",
+                            CliRuntimeNotice(
+                                level="WARNING",
+                                content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
+                            ),
+                        )
+                        await asyncio.sleep(delay)
+                        retry_count += 1
                 else:
-                    error_type = "unknown"
-
-                self._record_error(current_llm_name, error_type)
-                delay = min(1.5**retry_count, 300)
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
-                    ),
-                )
-                await asyncio.sleep(delay)
-                retry_count += 1
-
-        raise RuntimeError(
-            f"LLM处理失败，重试{self.max_retries_per_llm}次后仍无法完成: {last_error}"
-        )
+                    raise
 
     def list_available_llms(self) -> list[dict[str, object]]:
         """列出所有可用的LLM及其状态
@@ -249,12 +249,12 @@ class LlmManager:
                 - support_image: 是否支持图像
                 - is_current: 是否是当前使用的LLM
                 - is_default: 是否是默认LLM
-                - is_disabled: 是否被禁用
-                - disabled_until: 禁用截止时间
                 - error_count: 错误计数
         """
+        self._cleanup_expired_llms()
+        current_llm_name = self.llm_stack[-1][0] if self.llm_stack else None
         result = []
-        for i, (llm, name) in enumerate(zip(self.llms, self.llm_names)):
+        for llm, name in zip(self.llms, self.llm_names):
             model_name = "unknown"
             if isinstance(llm, OpenAi):
                 model_name = llm.model
@@ -265,10 +265,8 @@ class LlmManager:
                     "model": model_name,
                     "token_limit": llm.get_token_limit(),
                     "support_image": llm.support_image(),
-                    "is_current": i == self.current_llm_index,
-                    "is_default": i == self.default_llm_index,
-                    "is_disabled": self._is_llm_disabled(name),
-                    "disabled_until": self.llm_disabled_until[name],
+                    "is_current": name == current_llm_name,
+                    "is_default": name == self.default_llm_name,
                     "error_count": len(self.llm_errors[name]),
                 }
             )

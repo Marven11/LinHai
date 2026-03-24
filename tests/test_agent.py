@@ -282,9 +282,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             await self.agent.handle_user_message(test_msg)
             await self.agent.generate_response()
 
-        self.assertEqual(
-            str(cm.exception), "LLM处理失败，重试3次后仍无法完成: Test error"
-        )
+        self.assertEqual(str(cm.exception), "Test error")
         self.assertEqual(self.agent.state, "waiting_user")
 
     async def test_run_loop(self):
@@ -431,15 +429,17 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
 
         await agent.handle_user_message(UserMessage(message="@qwen Hello"))
-        self.assertEqual(agent.llm_manager.current_llm_index, 1)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm2)
         self.assertEqual(agent.llm_manager.llm_names[1], "qwen")
 
         mock_cli_app.reset_mock()
         mock_container.reset_mock()
 
-        agent.llm_manager.current_llm_index = 0
+        await agent.llm_manager.switch_to_llm("deepseek-reasoning")
         await agent.handle_user_message(UserMessage(message="@invalid command"))
-        self.assertEqual(agent.llm_manager.current_llm_index, 0)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm1)
 
         # 现在MessagesList管理消息列表，CLIApp不再需要query_one和mount
         # 所以我们不再断言这些调用，而是验证agent行为
@@ -447,18 +447,22 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         agent.llm_manager.current_llm_index = 0
         await agent.handle_user_message(UserMessage(message="Hello world"))
-        self.assertEqual(agent.llm_manager.current_llm_index, 0)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm1)
 
         await agent.handle_user_message(UserMessage(message="@qwen first"))
-        self.assertEqual(agent.llm_manager.current_llm_index, 1)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm2)
 
         await agent.handle_user_message(UserMessage(message="Normal message"))
-        self.assertEqual(agent.llm_manager.current_llm_index, 1)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm2)
 
         await agent.handle_user_message(
             UserMessage(message="@deepseek-reasoning second")
         )
-        self.assertEqual(agent.llm_manager.current_llm_index, 0)
+        current_llm = agent.llm_manager.get_current_llm()
+        self.assertEqual(current_llm, mock_llm1)
 
     async def test_queue_command(self):
         """测试/queue命令，将消息加入排队列表。"""

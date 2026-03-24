@@ -211,7 +211,6 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
         group_chat=context["group_chat"],
         llms=llms,
         default_llm_name=context["llm_name"],
-        max_retries_per_llm=3,
     )
     return llm_manager
 
