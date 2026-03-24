@@ -174,7 +174,7 @@ class LlmManager:
             except asyncio.TimeoutError as e:
                 last_error = e
                 self._record_error(current_llm_name, "timeout")
-                delay = min(1.5**retry_count, 300)
+                delay = min(3**retry_count, 300)
                 await self.group_chat.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
@@ -202,7 +202,7 @@ class LlmManager:
                             ),
                         )
                     else:
-                        delay = min(1.5**retry_count, 300)
+                        delay = min(3**retry_count, 300)
                         await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
@@ -225,7 +225,7 @@ class LlmManager:
                             ),
                         )
                     else:
-                        delay = min(1.5**retry_count, 300)
+                        delay = min(3**retry_count, 300)
                         await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
@@ -249,7 +249,7 @@ class LlmManager:
                                 ),
                             )
                         else:
-                            delay = min(1.5**retry_count, 300)
+                            delay = min(3**retry_count, 300)
                             await self.group_chat.send_if_exists(
                                 "ui_log",
                                 CliRuntimeNotice(
