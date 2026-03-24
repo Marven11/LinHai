@@ -22,13 +22,7 @@ from linhai.llm import (
 )
 
 
-BeforeMessageGenerationCallback: TypeAlias = Callable[
-    [
-        bool,
-        bool,
-    ],
-    Awaitable[None],
-]
+BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
     [
@@ -208,14 +202,10 @@ class Lifecycle:
 
         return should_interrupt
 
-    async def trigger_before_message_generation(
-        self,
-        enable_compress: bool,
-        disable_waiting_user_warning: bool,
-    ):
+    async def trigger_before_message_generation(self):
         """触发消息生成前的事件。"""
         for callback in self._before_message_generation_callbacks:
-            await callback(enable_compress, disable_waiting_user_warning)
+            await callback()
 
     async def trigger_after_message_generation(
         self,

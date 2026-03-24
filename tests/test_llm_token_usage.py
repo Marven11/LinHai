@@ -130,7 +130,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         plugin = NotificationMessagePlugin(self.group_chat)
 
         # 测试threshold_info为None的情况
-        await plugin.before_message_generation(True, False)
+        await plugin.before_message_generation()
 
         # 验证没有调用update_notification_message
         self.mock_agent.message_processor.update_notification_message.assert_not_called()
@@ -160,7 +160,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             },
         }
 
-        await plugin.before_message_generation(True, False)
+        await plugin.before_message_generation()
 
         # 验证调用了update_notification_message
         self.mock_agent.message_processor.update_notification_message.assert_called_once()

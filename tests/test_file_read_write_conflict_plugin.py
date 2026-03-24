@@ -37,7 +37,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表（模拟新消息开始）
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
         # 模拟读取文件工具调用
         read_tool_call = ToolCallMessage(
             function_name="read_file",
@@ -102,7 +102,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
         # 创建第二个文件
         other_file = Path(self.temp_dir) / "other.txt"
         other_file.write_text("其他文件内容", encoding="utf-8")
@@ -137,7 +137,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
         # 模拟读取文件
         read_tool_call = ToolCallMessage(
             function_name="read_file",
@@ -215,7 +215,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_various_read_write_tools(self):
         """测试各种读取和写入工具"""
         self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
         # 测试read_file_with_sed
         read_tool_call = ToolCallMessage(
             function_name="read_file_with_sed",
@@ -296,7 +296,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_failed_tool_call_should_be_ignored(self):
         """测试失败的工具调用应被忽略"""
         self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
         # 模拟失败的读取文件工具调用
         read_tool_call = ToolCallMessage(
             function_name="read_file",
@@ -321,7 +321,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.read_files = {"/path/to/file1.txt", "/path/to/file2.txt"}
         self.assertEqual(len(self.plugin.read_files), 2)
         # 调用before_message_generation
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
         # 列表应该被清空
         self.assertEqual(len(self.plugin.read_files), 0)
 

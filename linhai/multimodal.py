@@ -244,9 +244,7 @@ class MultimodalToolsetManager:
         """注册生命周期回调，在Agent创建完成后调用。"""
         lifecycle.register_before_message_generation(self._update_tool_availability)
 
-    async def _update_tool_availability(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ) -> None:
+    async def _update_tool_availability(self) -> None:
         """根据当前LLM配置添加或移除load_image工具。"""
         should_have = self._current_llm_supports_image()
         has_tool = self._toolset.has_tool("load_image")

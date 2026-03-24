@@ -150,10 +150,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         self.lifecycle.register_before_message_generation(callback1)
         self.lifecycle.register_before_message_generation(callback2)
 
-        await self.lifecycle.trigger_before_message_generation(True, False)
+        await self.lifecycle.trigger_before_message_generation()
 
-        callback1.assert_called_once_with(True, False)
-        callback2.assert_called_once_with(True, False)
+        callback1.assert_called_once_with()
+        callback2.assert_called_once_with()
 
     async def test_register_and_trigger_after_message_generation(self):
         """Test registering and triggering after message generation callbacks."""
@@ -219,39 +219,39 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         """Test that callbacks are triggered in registration order."""
         call_order = []
 
-        async def callback1(_enable_compress, _disable_waiting_user_warning):
+        async def callback1():
             call_order.append(1)
 
-        async def callback2(_enable_compress, _disable_waiting_user_warning):
+        async def callback2():
             call_order.append(2)
 
         self.lifecycle.register_before_message_generation(callback1)
         self.lifecycle.register_before_message_generation(callback2)
 
-        await self.lifecycle.trigger_before_message_generation(True, False)
+        await self.lifecycle.trigger_before_message_generation()
 
         self.assertEqual(call_order, [1, 2])
 
     async def test_callback_exception_handling(self):
         """Test that exceptions in callbacks are propagated."""
 
-        async def failing_callback(_enable_compress, _disable_waiting_user_warning):
+        async def failing_callback():
             raise RuntimeError("Callback failed")
 
-        async def succeeding_callback(_enable_compress, _disable_waiting_user_warning):
+        async def succeeding_callback():
             pass
 
         self.lifecycle.register_before_message_generation(failing_callback)
         self.lifecycle.register_before_message_generation(succeeding_callback)
 
         with self.assertRaises(RuntimeError) as cm:
-            await self.lifecycle.trigger_before_message_generation(True, False)
+            await self.lifecycle.trigger_before_message_generation()
         self.assertEqual(str(cm.exception), "Callback failed")
 
     async def test_empty_callbacks(self):
         """Test triggering when no callbacks are registered."""
         try:
-            await self.lifecycle.trigger_before_message_generation(True, False)
+            await self.lifecycle.trigger_before_message_generation()
             await self.lifecycle.trigger_after_message_generation(
                 self.mock_answer, "test response", []
             )

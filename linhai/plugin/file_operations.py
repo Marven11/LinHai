@@ -320,9 +320,7 @@ class FileReadWriteConflictPlugin(Plugin):
         super().__init__(group_chat)
         self.read_files: set[str] = set()
 
-    async def before_message_generation(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ):
+    async def before_message_generation(self):
         """在消息生成前清空已读取文件列表。"""
         self.read_files.clear()
 
@@ -409,9 +407,7 @@ class DirectoryChangePlugin(Plugin):
         super().__init__(group_chat)
         self.last_directory = None
 
-    async def before_message_generation(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ):
+    async def before_message_generation(self):
         """在消息生成前检查目录是否更改。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
 

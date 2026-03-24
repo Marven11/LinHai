@@ -26,7 +26,7 @@ class TestMachineControlPlugin(unittest.TestCase):
         self.plugin = MachineControlIntroductionPlugin(self.mock_group_chat)
 
     async def call_before_helper(self):
-        await self.plugin.before_message_generation(None, None)
+        await self.plugin.before_message_generation()
 
     def test_removes_machine_control_when_only_master_host(self):
         self.machine_control.machines = {"master_host": MagicMock()}

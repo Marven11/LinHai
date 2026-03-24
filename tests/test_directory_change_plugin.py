@@ -103,7 +103,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
         # 插件禁用时不应添加PathPrompt或GlobalPrompt
@@ -123,7 +123,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         final_message_count = len(self.mock_agent.message_processor.get_messages())
         # 插件启用但目录未更改，不应添加PathPrompt或GlobalPrompt
@@ -141,7 +141,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         self.assertIsNotNone(self.plugin.last_directory)
         if self.plugin.last_directory is not None:
@@ -160,7 +160,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         messages = self.mock_agent.message_processor.get_messages()
         pathprompt_count = sum(1 for msg in messages if isinstance(msg, PathPrompt))
@@ -184,7 +184,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         pathprompt_count = sum(
             1
@@ -209,7 +209,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         import asyncio
 
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         prompt_count = sum(
             1

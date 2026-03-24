@@ -59,7 +59,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         self.group_chat.send_if_exists = AsyncMock()
 
         # 测试第一次生成消息
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         # 应该设置notification消息
         agent.message_processor.update_notification_message.assert_called_once()
@@ -71,7 +71,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         self.group_chat.send_if_exists.reset_mock()
 
         # 测试非第一次生成消息
-        asyncio.run(self.plugin.before_message_generation(False, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         # 应该设置notification消息但不发送UI日志
         agent.message_processor.update_notification_message.assert_called_once()
@@ -91,7 +91,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         self.group_chat.send_if_exists = AsyncMock()
 
         # 测试未配置LLM的情况
-        asyncio.run(self.plugin.before_message_generation(True, False))
+        asyncio.run(self.plugin.before_message_generation())
 
         # 应该清理notification消息（传入None）
         agent.message_processor.update_notification_message.assert_called_once_with(

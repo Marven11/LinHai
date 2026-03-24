@@ -45,43 +45,42 @@ class WaitingUserPlugin(Plugin):
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
-        if not agent.current_disable_waiting_user_warning:
-            if tool_calls and has_waiting_marker:
-                await agent.message_processor.add_new_message(
-                    RuntimeMessage(
-                        f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
-                        f"工具调用和等待用户是互斥的，请只选择其中一种方式"
-                    )
+        if tool_calls and has_waiting_marker:
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    f"错误：你既调用了工具又使用了{WAITING_USER_MARKER!r}等待用户回答，"
+                    f"工具调用和等待用户是互斥的，请只选择其中一种方式"
                 )
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING", content="已警告agent：工具调用和等待用户冲突"
-                    ),
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING", content="已警告agent：工具调用和等待用户冲突"
+                ),
+            )
+            return
+        if (
+            agent.state == "working"
+            and not tool_calls
+            and not has_waiting_marker
+            and full_response.strip()
+        ):
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
+                    "消息内容已经发送给用户。"
+                    f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：使用{WAITING_USER_MARKER!r}等待用户回答"
+                    "如果需要调用工具：必须输出工具调用"
                 )
-                return
-            if (
-                agent.state == "working"
-                and not tool_calls
-                and not has_waiting_marker
-                and full_response.strip()
-            ):
-                await agent.message_processor.add_new_message(
-                    RuntimeMessage(
-                        f"错误 - 垃圾消息：既没有调用工具，也没有使用{WAITING_USER_MARKER!r}等待用户回答（没有识别到工具调用）。"
-                        "消息内容已经发送给用户。"
-                        f"如果你不再需要调用任何工具（任务完成/无法完成），需要直接回复用户：使用{WAITING_USER_MARKER!r}等待用户回答"
-                        "如果需要调用工具：必须输出工具调用"
-                    )
-                )
-                await self.group_chat.send_if_exists(
-                    "ui_log",
-                    CliRuntimeNotice(
-                        level="WARNING",
-                        content="已警告agent：既没有调用工具也没有等待用户",
-                    ),
-                )
-                return
+            )
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="WARNING",
+                    content="已警告agent：既没有调用工具也没有等待用户",
+                ),
+            )
+            return
 
         if has_waiting_marker:
             last_line = full_response.strip().rpartition("\n")[2]

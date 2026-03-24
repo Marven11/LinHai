@@ -919,7 +919,7 @@ class MachineControlPlugin:
         self.consecutive_same_on_machine_count = 0
         self.last_on_machine: Optional[str] = None
 
-    async def before_message_generation(self, *_args, **_kwargs):
+    async def before_message_generation(self):
         """在消息生成前更新notification_message。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         agent.message_processor.update_notification_message(

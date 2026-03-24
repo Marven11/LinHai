@@ -3,7 +3,7 @@ from .message_checkers import Plugin
 
 class MachineControlIntroductionPlugin(Plugin):
 
-    async def before_message_generation(self, agent, history):
+    async def before_message_generation(self):
         from ..machine_control import MachineControl
         from ..llm import SystemMessage
 

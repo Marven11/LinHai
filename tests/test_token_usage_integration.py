@@ -104,7 +104,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         plugin = NotificationMessagePlugin(group_chat)
 
         # 测试before_message_generation
-        await plugin.before_message_generation(True, False)
+        await plugin.before_message_generation()
 
         # 验证调用
         mock_agent.get_threshold_info.assert_called_once()

@@ -46,7 +46,7 @@ class PromptFastAgentPlugin(Plugin):
             return self.max_toolcall_for_llm[model_name]
         return None
 
-    async def before_message_generation(self, is_first: bool, is_continue: bool):
+    async def before_message_generation(self):
         """在消息生成前更新通知，显示当前模型的工具限制。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         max_toolcall = self._get_max_toolcall_for_current_model(agent)

@@ -16,9 +16,7 @@ class ReminderPlugin(Plugin):
         self.reminder_file = claw_dir / "REMINDER.md"
         self.soul_file = claw_dir / "SOUL.md"
 
-    async def before_message_generation(
-        self, _enable_compress: bool, _disable_waiting_user_warning: bool
-    ) -> None:
+    async def before_message_generation(self) -> None:
         """在每次消息生成前读取REMINDER.md和SOUL.md并更新notification messages。"""
         if not self.group_chat.has_member("agent"):
             return

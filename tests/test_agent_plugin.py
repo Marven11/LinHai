@@ -99,7 +99,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         """测试目录更改检测关闭的情况。"""
         self.plugin.last_directory = pathlib.Path("/old/path")
 
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
 
         self.assertIsNotNone(self.plugin.last_directory)
 
@@ -110,7 +110,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         current_dir = pathlib.Path.cwd()
         self.plugin.last_directory = current_dir
 
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
 
         self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
@@ -122,7 +122,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
 
         current_dir = pathlib.Path.cwd()
 
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
 
         self.assertEqual(self.plugin.last_directory, current_dir)
 
@@ -137,7 +137,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         existing_pathprompt = PathPrompt(pathlib.Path.cwd() / "AGENTS.md")
         self.agent.message_processor.get_messages.return_value = [existing_pathprompt]
 
-        await self.plugin.before_message_generation(True, False)
+        await self.plugin.before_message_generation()
 
 
 class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):

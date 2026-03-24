@@ -121,9 +121,7 @@ class CommandWhitelistPlugin(Plugin):
         lifecycle.register_before_message_generation(self.before_message_generation)
         lifecycle.register_before_tool_call(self.before_tool_call)
 
-    async def before_message_generation(
-        self, enable_compress: bool, disable_waiting_user_warning: bool
-    ) -> None:
+    async def before_message_generation(self) -> None:
         from linhai.agent import Agent
         from linhai.agent.base import RuntimeMessage
 

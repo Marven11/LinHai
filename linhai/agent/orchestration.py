@@ -406,9 +406,7 @@ class AgentContextOrchestration:
                 if token_count > 800:
                     self.large_messages.add(message)
 
-    async def _before_message_generation(
-        self, enable_compress: bool, disable_waiting_user_warning: bool
-    ) -> None:
+    async def _before_message_generation(self) -> None:
         """在消息生成前清理无效的大消息引用。"""
         valid_messages = set(self.agent_message.messages)
         self.large_messages = {
@@ -501,11 +499,7 @@ class NotificationMessagePlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
-    async def before_message_generation(
-        self,
-        _enable_compress: bool,
-        _disable_waiting_user_warning: bool,
-    ) -> None:
+    async def before_message_generation(self) -> None:
         """在消息生成前添加notification message。"""
         from .main import Agent
 
@@ -546,11 +540,7 @@ class LargeMessageCountPlugin:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
-    async def before_message_generation(
-        self,
-        _enable_compress: bool,
-        _disable_waiting_user_warning: bool,
-    ) -> None:
+    async def before_message_generation(self) -> None:
         """在消息生成前根据大消息数量管理notification_message。"""
         from .main import Agent
 

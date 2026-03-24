@@ -64,11 +64,7 @@ class Agent:
 
         self.range_clean_manager = RangeCleanManager(group_chat)
 
-        self.current_enable_compress = True
-        self.soft_compress_triggered = False
-
         self.compress_tool_called_in_last_response = False
-        self.current_disable_waiting_user_warning = False
 
         self.current_answer: Answer | None = None
 
@@ -251,9 +247,7 @@ class Agent:
         """
         return self.llm_manager.get_current_llm()
 
-    async def generate_response(
-        self, enable_compress: bool = True, disable_waiting_user_warning: bool = False
-    ) -> Answer:
+    async def generate_response(self) -> Answer:
         """
         生成回复并发送给用户。
 
@@ -283,12 +277,7 @@ class Agent:
                 empty_user_msg = RuntimeMessage("继续")
                 await self.message_processor.add_new_message(empty_user_msg)
 
-        self.current_enable_compress = enable_compress
-        self.current_disable_waiting_user_warning = disable_waiting_user_warning
-
-        await self.lifecycle.trigger_before_message_generation(
-            enable_compress, disable_waiting_user_warning
-        )
+        await self.lifecycle.trigger_before_message_generation()
 
         answer: Answer = await self.llm_manager.answer_stream(
             self.message_processor.get_messages()

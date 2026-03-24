@@ -72,7 +72,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(manager._toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Now should have the tool
         self.assertTrue(manager._toolset.has_tool("load_image"))
@@ -100,7 +100,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(manager._toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Now should not have the tool
         self.assertFalse(manager._toolset.has_tool("load_image"))
@@ -111,14 +111,14 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
 
         # First call: LLM does not support image
         self.mock_llm.support_image.return_value = False
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Should not add message because no tool is added or removed
         self.mock_agent.message_processor.add_new_message.assert_not_called()
 
         # Second call: LLM supports image (switch)
         self.mock_llm.support_image.return_value = True
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Should add message about adding tool
         self.mock_agent.message_processor.add_new_message.assert_called_once()
@@ -136,7 +136,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
 
         # First call: LLM supports image
         self.mock_llm.support_image.return_value = True
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Should add message because tool is added
         self.mock_agent.message_processor.add_new_message.assert_called_once()
@@ -151,7 +151,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
 
         # Second call: LLM does not support image (switch)
         self.mock_llm.support_image.return_value = False
-        await manager._update_tool_availability(False, False)
+        await manager._update_tool_availability()
 
         # Should add message about removing tool
         self.mock_agent.message_processor.add_new_message.assert_called_once()
