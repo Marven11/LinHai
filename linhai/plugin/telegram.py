@@ -68,6 +68,9 @@ class TelegramPlugin(Plugin):
                 message_id=update.message.message_id,
             )
             await agent.message_processor.add_new_message(message)
+            if agent.state == "waiting_user":
+                agent.state = "working"
+                await agent.generate_response()
 
     async def before_agent_loop(self, _agent: "AgentType"):
         """在Agent循环开始前启动telegram bot。"""

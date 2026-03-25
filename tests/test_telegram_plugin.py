@@ -123,6 +123,40 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertIsInstance(call_args, TelegramMessage)
         self.assertEqual(call_args.content, "Hello")
 
+    async def test_handle_telegram_message_state_switch(self):
+        """测试telegram消息加入后agent状态从waiting_user切换到working。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        self.agent.state = "waiting_user"
+        self.agent.generate_response = AsyncMock()
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.text = "Hello"
+        mock_update.message.message_id = 123
+
+        await plugin._handle_telegram_message(mock_update, None)
+
+        self.assertEqual(self.agent.state, "working")
+        self.agent.generate_response.assert_called_once()
+
+    async def test_handle_telegram_message_state_already_working(self):
+        """测试agent已经在working状态时不会重复调用generate_response。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        self.agent.state = "working"
+        self.agent.generate_response = AsyncMock()
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.text = "Hello"
+        mock_update.message.message_id = 123
+
+        await plugin._handle_telegram_message(mock_update, None)
+
+        self.assertEqual(self.agent.state, "working")
+        self.agent.generate_response.assert_not_called()
+
     async def test_handle_telegram_message_invalid_chat_id(self):
         """测试处理来自未授权chat_id的消息。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
