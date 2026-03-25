@@ -4,7 +4,7 @@ import re
 import time
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Literal, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
@@ -15,7 +15,7 @@ from linhai.agent.base import (
 )
 from linhai.group_chat import GroupChat
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.llm import Answer, AssistantMessage, OpenAi
+from linhai.llm import Answer, AssistantMessage, OpenAi, Message
 from linhai.utils import CliRuntimeNotice
 
 from .helpers import JsonValue
@@ -216,7 +216,7 @@ class OnlyReasoningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        answer: Answer,
+        _answer: Answer,
         full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
@@ -226,7 +226,7 @@ class OnlyReasoningPlugin(Plugin):
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return
 
-        reasoning_content = answer.get_reasoning_message()
+        reasoning_content = _answer.get_reasoning_message()
 
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_notification_message(
@@ -354,7 +354,7 @@ class KimiK25ToolCallPlugin(Plugin):
         self,
         _answer: Answer,
         full_response: str,
-        tool_calls: list[dict],
+        _tool_calls: list[dict],
     ):
         if not full_response:
             return
@@ -448,7 +448,7 @@ class MinimaxToolCallPlugin(Plugin):
         self,
         _answer: Answer,
         full_response: str,
-        tool_calls: list[dict],
+        _tool_calls: list[dict],
     ):
         if not full_response:
             return
@@ -540,7 +540,7 @@ class RuntimeImitationPlugin(Plugin):
     async def after_token_generation(
         self,
         agent: "Agent",
-        answer: Answer,
+        _answer: Answer,
         current_content: str,
     ):
         """检查deepseek等是否在模仿runtime输出并阻断。"""
@@ -569,3 +569,62 @@ class RuntimeImitationPlugin(Plugin):
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
         lifecycle.register_after_token_generation(self.after_token_generation)
+
+
+class GlmInsultMaskPlugin(Plugin):
+    """GLM脏话检查插件，屏蔽脏话为拼音。"""
+
+    INSULTS = {
+        "傻逼": "shabi",
+        "垃圾": "laji",
+        "弱智": "ruozhi",
+        "脑残": "naocan",
+    }
+
+    async def after_toolcall(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: "Message | None",
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        """在工具调用后检查结果是否包含脏话。"""
+        if status == "skipped":
+            return None
+
+        if message is None:
+            return None
+
+        result_content = message.get_content()
+        if result_content is None:
+            return None
+
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        model = agent.get_current_model()
+        if not isinstance(model, OpenAi) or model.compatibility != "glm":
+            return None
+
+        has_insult = False
+        masked_content = result_content
+
+        for insult, pinyin in self.INSULTS.items():
+            if insult in masked_content:
+                has_insult = True
+                masked_content = masked_content.replace(insult, pinyin)
+
+        if not has_insult:
+            return None
+
+        warning_msg = (
+            "<<insult-mask>><<message>>你是GLM，当前工具结果中包含脏话，"
+            "为了符合API TOS、保证正常运行，脏话已屏蔽为拼音<<message>><<masked>>"
+            f"{masked_content}<<masked>><<insult-mask>>"
+        )
+        return RuntimeMessage(warning_msg)
+
+    def register(self, lifecycle: "Lifecycle"):
+        """注册到after_toolcall回调。"""
+        lifecycle.register_after_toolcall(self.after_toolcall)
