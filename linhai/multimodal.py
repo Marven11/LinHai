@@ -106,8 +106,8 @@ class ImageMessage(Message):
     def estimated_tokens(self) -> int:
         import math
 
-        tokens_h = math.ceil(self.height / 28)
-        tokens_w = math.ceil(self.width / 28)
+        tokens_h = math.ceil(self.height / 32)
+        tokens_w = math.ceil(self.width / 32)
         return tokens_h * tokens_w
 
     def to_json(self) -> str:
