@@ -35,15 +35,11 @@ class TelegramPlugin(Plugin):
 
     async def _send_to_telegram(self, content: str):
         """发送消息到telegram。"""
-        if self._bot is None:
-            from telegram import Bot
-
-            self._bot = Bot(token=self.config.bot_token)
-
-        await self._bot.send_message(
-            chat_id=self.config.default_chat_id,
-            text=content,
-        )
+        if self._bot is not None:
+            await self._bot.send_message(
+                chat_id=self.config.default_chat_id,
+                text=content,
+            )
 
     async def _handle_telegram_message(self, update, _context):
         """处理来自telegram的消息。"""
@@ -94,6 +90,10 @@ class TelegramPlugin(Plugin):
 
         await self._application.initialize()
         await self._application.start()
+        assert self._application.updater is not None
+        await self._application.updater.start_polling()
+        self._bot = self._application.bot
+
         self._running = True
 
     async def shutdown(self):
