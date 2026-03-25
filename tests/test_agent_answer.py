@@ -1,0 +1,157 @@
+import unittest
+from unittest.mock import AsyncMock, MagicMock
+
+from linhai.agent import AgentLlm, Lifecycle
+from linhai.llm import UserMessage, AssistantMessage
+from linhai.agent.base import RuntimeMessage
+
+
+class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
+    """Test cases for AgentLlm class."""
+
+    def setUp(self):
+        from linhai.group_chat import GroupChat
+        from linhai.agent import Agent
+        from linhai.llm_manager import LlmManager
+
+        self.group_chat = MagicMock(spec=GroupChat)
+        self.group_chat.is_empty.return_value = True
+
+        self.mock_agent = MagicMock(spec=Agent)
+        self.mock_agent.state = "waiting_user"
+
+        self.mock_llm_manager = MagicMock(spec=LlmManager)
+
+        self.mock_toolcall_processor = MagicMock()
+        self.mock_message_processor = MagicMock()
+        self.mock_message_processor.add_new_message = AsyncMock()
+
+        self.lifecycle = MagicMock(spec=Lifecycle)
+        self.mock_agent.lifecycle = self.lifecycle
+
+        self.agent_llm = AgentLlm(
+            llm_manager=self.mock_llm_manager,
+            group_chat=self.group_chat,
+            agent=self.mock_agent,
+            toolcall_processor=self.mock_toolcall_processor,
+            message_processor=self.mock_message_processor,
+        )
+
+    async def test_init(self):
+        """__init__：正确初始化所有属性。"""
+        self.assertEqual(self.agent_llm.llm_manager, self.mock_llm_manager)
+        self.assertEqual(self.agent_llm.group_chat, self.group_chat)
+        self.assertEqual(self.agent_llm.agent, self.mock_agent)
+        self.assertEqual(
+            self.agent_llm.toolcall_processor, self.mock_toolcall_processor
+        )
+        self.assertEqual(self.agent_llm.message_processor, self.mock_message_processor)
+        self.assertIsNone(self.agent_llm._current_parsed_answer)
+
+    async def test_check_interrupt_no_message_no_answer(self):
+        """check_interrupt：无用户消息无current_answer时不打断。"""
+        self.group_chat.is_empty.return_value = True
+        self.agent_llm._current_parsed_answer = None
+
+        result = await self.agent_llm.check_interrupt()
+
+        self.assertFalse(result)
+
+    async def test_check_interrupt_no_message_with_answer(self):
+        """check_interrupt：无用户消息有current_answer时不打断。"""
+        self.group_chat.is_empty.return_value = True
+        self.agent_llm._current_parsed_answer = MagicMock()
+
+        result = await self.agent_llm.check_interrupt()
+
+        self.assertFalse(result)
+
+    async def test_check_interrupt_with_message_and_answer(self):
+        """check_interrupt：有用户消息有current_answer时打断。"""
+        parsed_answer_mock = MagicMock()
+        self.agent_llm._current_parsed_answer = parsed_answer_mock
+        self.group_chat.is_empty.return_value = False
+        self.group_chat.get_member_typechecked.return_value = self.mock_agent
+        self.mock_agent.state = "working"
+
+        result = await self.agent_llm.check_interrupt()
+
+        self.assertTrue(result)
+        parsed_answer_mock.interrupt.assert_called_once()
+        self.assertEqual(self.mock_agent.state, "waiting_user")
+
+    def test_get_current_answer_with_parsed_answer(self):
+        """get_current_answer：有current_parsed_answer时返回answer。"""
+        parsed_answer_mock = MagicMock()
+        mock_answer = MagicMock()
+        parsed_answer_mock._answer = mock_answer
+        self.agent_llm._current_parsed_answer = parsed_answer_mock
+
+        result = self.agent_llm.get_current_answer()
+
+        self.assertEqual(result, mock_answer)
+
+    def test_get_current_answer_without_parsed_answer(self):
+        """get_current_answer：无current_parsed_answer时返回None。"""
+        self.agent_llm._current_parsed_answer = None
+
+        result = self.agent_llm.get_current_answer()
+
+        self.assertIsNone(result)
+
+    async def test_interrupt_no_current_answer(self):
+        """interrupt：无current_answer时不执行任何操作。"""
+        self.agent_llm._current_parsed_answer = None
+
+        await self.agent_llm.interrupt("agent message", "ui notice")
+
+        self.assertIsNone(self.agent_llm._current_parsed_answer)
+
+    async def test_interrupt_with_current_answer(self):
+        """interrupt：有current_answer时正常打断。"""
+        parsed_answer_mock = MagicMock()
+        answer_mock = MagicMock()
+        answer_mock.get_current_content.return_value = "test content"
+        parsed_answer_mock._answer = answer_mock
+        self.agent_llm._current_parsed_answer = parsed_answer_mock
+        self.mock_agent.state = "working"
+
+        await self.agent_llm.interrupt("agent message", "ui notice")
+
+        parsed_answer_mock.interrupt.assert_called_once()
+
+    async def test_interrupt_batches_user_messages(self):
+        """interrupt：批量处理用户消息。"""
+        parsed_answer_mock = MagicMock()
+        answer_mock = MagicMock()
+        answer_mock.get_current_content.return_value = "test content"
+        parsed_answer_mock._answer = answer_mock
+        self.agent_llm._current_parsed_answer = parsed_answer_mock
+
+        self.group_chat.is_empty.side_effect = [False, True, True]
+
+        # 模拟receive返回UserMessage
+        mock_user_msg = MagicMock(spec=UserMessage)
+        self.group_chat.receive = AsyncMock(return_value=mock_user_msg)
+        self.mock_agent.handle_user_message = AsyncMock()
+
+        await self.agent_llm.interrupt("agent message", "ui notice")
+
+        parsed_answer_mock.interrupt.assert_called_once()
+
+    async def test_interrupt_with_tool_calls_in_content(self):
+        """interrupt：content包含工具调用时添加警告。"""
+        parsed_answer_mock = MagicMock()
+        answer_mock = MagicMock()
+        parsed_answer_mock._answer = answer_mock
+        answer_mock.get_current_content.return_value = r"""\n```json toolcall\n{}\\```
+"""
+        self.agent_llm._current_parsed_answer = parsed_answer_mock
+
+        await self.agent_llm.interrupt("agent message", "ui notice")
+
+        parsed_answer_mock.interrupt.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

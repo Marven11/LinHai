@@ -1,7 +1,8 @@
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Tuple
 import asyncio
 from .llm import Answer
 from .agent.lifecycle import Lifecycle
+from .markdown_parser import extract_tool_calls_with_errors
 
 
 class Segment(TypedDict):
@@ -12,7 +13,7 @@ class Segment(TypedDict):
 
 class ParsedAnswer:
     def __init__(self, answer: Answer, lifecycle: Lifecycle, agent):
-        self.answer = answer
+        self._answer = answer
         self.lifecycle = lifecycle
         self.agent = agent
         self.segment_queue: asyncio.Queue[Segment] = asyncio.Queue()
@@ -61,7 +62,7 @@ class ParsedAnswer:
 
     async def _parse_answer(self):
         await self.lifecycle.trigger_before_parsing(self)
-        async for token in self.answer:
+        async for token in self._answer:
             if self.interrupted:
                 break
             reasoning_content = token.reasoning_content
@@ -73,7 +74,7 @@ class ParsedAnswer:
             for parsed_token in parsed_tokens:
                 await self._process_token(parsed_token)
             interrupted = await self.lifecycle.trigger_after_token_generation(
-                self.agent, self.answer, self.answer.get_current_content()
+                self.agent, self._answer, self._answer.get_current_content()
             )
             if interrupted:
                 self.interrupted = True
@@ -90,4 +91,14 @@ class ParsedAnswer:
 
     def interrupt(self):
         self.interrupted = True
-        self.answer.interrupt()
+        self._answer.interrupt()
+
+    def get_toolcalls(self) -> Tuple[list[dict], list[str]]:
+        """获取工具调用和错误列表。
+
+        Returns:
+            Tuple[list[dict], list[str]]: (工具调用列表, 错误列表)
+        """
+        full_response = self._answer.get_current_content()
+        tool_calls, errors = extract_tool_calls_with_errors(full_response)
+        return tool_calls, errors
