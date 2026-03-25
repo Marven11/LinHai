@@ -32,7 +32,7 @@ class MockAnswer(Answer):
         return AssistantMessage(message=content)
 
     def get_current_content(self):
-        return "".join(tok.content for tok in self.tokens[: self.index])
+        return "".join(tok.content for tok in self.tokens[: len(self.tokens)])
 
     def interrupt(self):
         pass
@@ -233,6 +233,134 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         )
         # Also verify that trigger_after_parsing was called
         lifecycle.trigger_after_parsing.assert_called_once_with(parsed)
+
+    def test_get_toolcalls_normal(self):
+        """Test get_toolcalls with valid tool calls."""
+        lifecycle = MagicMock(spec=Lifecycle)
+        agent = MagicMock()
+
+        # Create mock answer with tool call content
+        from linhai.llm import AnswerToken
+
+        tokens = [
+            AnswerToken(reasoning_content=None, content="Here is a tool call:\n\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{"name": "test_tool", "arguments": {"arg1": "value1"}}\n```',
+            ),
+        ]
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent)
+
+        tool_calls, errors = parsed.get_toolcalls()
+
+        self.assertEqual(len(tool_calls), 1)
+        self.assertEqual(tool_calls[0]["name"], "test_tool")
+        self.assertEqual(tool_calls[0]["arguments"], {"arg1": "value1"})
+        self.assertEqual(len(errors), 0)
+
+    def test_get_toolcalls_multiple(self):
+        """Test get_toolcalls with multiple tool calls."""
+        lifecycle = MagicMock(spec=Lifecycle)
+        agent = MagicMock()
+
+        from linhai.llm import AnswerToken
+
+        tokens = [
+            AnswerToken(reasoning_content=None, content="First tool:\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{"name": "tool1", "arguments": {"a": 1}}\n```\n',
+            ),
+            AnswerToken(reasoning_content=None, content="Second tool:\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{"name": "tool2", "arguments": {"b": 2}}\n```',
+            ),
+        ]
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent)
+
+        tool_calls, errors = parsed.get_toolcalls()
+
+        self.assertEqual(len(tool_calls), 2)
+        self.assertEqual(tool_calls[0]["name"], "tool1")
+        self.assertEqual(tool_calls[1]["name"], "tool2")
+        self.assertEqual(len(errors), 0)
+
+    def test_get_toolcalls_with_errors(self):
+        """Test get_toolcalls with invalid tool calls."""
+        lifecycle = MagicMock(spec=Lifecycle)
+        agent = MagicMock()
+
+        from linhai.llm import AnswerToken
+
+        tokens = [
+            AnswerToken(reasoning_content=None, content="Valid tool:\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{"name": "valid_tool", "arguments": {}}\n```\n',
+            ),
+            AnswerToken(reasoning_content=None, content="Invalid tool:\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{"invalid": "json"}\n```',
+            ),
+        ]
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent)
+
+        tool_calls, errors = parsed.get_toolcalls()
+
+        # Should have one valid tool call
+        self.assertEqual(len(tool_calls), 1)
+        self.assertEqual(tool_calls[0]["name"], "valid_tool")
+        # Should have one error for the invalid tool call
+        self.assertEqual(len(errors), 1)
+        self.assertIn("缺少必需的'name'字段", errors[0])
+
+    def test_get_toolcalls_empty(self):
+        """Test get_toolcalls with empty content."""
+        lifecycle = MagicMock(spec=Lifecycle)
+        agent = MagicMock()
+
+        from linhai.llm import AnswerToken
+
+        tokens = [
+            AnswerToken(
+                reasoning_content=None, content="Just a normal message without tools."
+            )
+        ]
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent)
+
+        tool_calls, errors = parsed.get_toolcalls()
+
+        self.assertEqual(len(tool_calls), 0)
+        self.assertEqual(len(errors), 0)
+
+    def test_get_toolcalls_invalid_json(self):
+        """Test get_toolcalls with invalid JSON syntax."""
+        lifecycle = MagicMock(spec=Lifecycle)
+        agent = MagicMock()
+
+        from linhai.llm import AnswerToken
+
+        tokens = [
+            AnswerToken(reasoning_content=None, content="Broken tool:\n"),
+            AnswerToken(
+                reasoning_content=None,
+                content='```json toolcall\n{name: "broken", arguments: {}}\n```',
+            ),
+        ]
+        answer = MockAnswer(tokens)
+        parsed = ParsedAnswer(answer, lifecycle, agent)
+
+        tool_calls, errors = parsed.get_toolcalls()
+
+        self.assertEqual(len(tool_calls), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("JSON格式无效", errors[0])
 
 
 if __name__ == "__main__":
