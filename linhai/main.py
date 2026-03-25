@@ -142,6 +142,11 @@ def main():
         default=[],
         help="RSS feed URL，可指定多个",
     )
+    parser.add_argument(
+        "--telegram",
+        action="store_true",
+        help="启用Telegram远程控制功能",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
