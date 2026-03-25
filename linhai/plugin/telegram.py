@@ -10,7 +10,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.group_chat import GroupChat
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage
-
+from linhai.utils import CliRuntimeNotice
 
 class TelegramPlugin(Plugin):
     """Telegram bot插件，实现通过telegram远程控制Agent。"""
@@ -47,6 +47,13 @@ class TelegramPlugin(Plugin):
 
     async def _handle_telegram_message(self, update, _context):
         """处理来自telegram的消息。"""
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content="收到Telegram消息",
+            ),
+        )  
         from linhai.agent import Agent as AgentType
 
         if not update.message:
@@ -70,7 +77,6 @@ class TelegramPlugin(Plugin):
             await agent.message_processor.add_new_message(message)
             if agent.state == "waiting_user":
                 agent.state = "working"
-                await agent.generate_response()
 
     async def before_agent_loop(self, _agent: "AgentType"):
         """在Agent循环开始前启动telegram bot。"""
