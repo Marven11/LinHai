@@ -68,13 +68,17 @@ CI nix-build会等待CI test执行成功后才执行。
 
 ### CI运行状态返回空列表
 
-CI运行状态为空，可能是因为CI job还没有运行，也有可能是**因为前面的CI job失败**而跳过
+CI运行状态为空，可能是因为
 
-【重要】如果CI run列表一直为空，重新检查head sha对应的所有CI run查看是否有其他CI失败
+1. CI job还没有运行
+2. **前面的CI job失败**而跳过
+3. 本地commit没有push
 
-【重要】如果CI run列表一直为空，重新检查head sha对应的所有CI run查看是否有其他CI失败
+【重要】如果CI run列表一直为空，重新检查本地和远程的head sha是否一致，head sha对应的所有CI run查看是否有其他CI失败
 
-【重要】如果CI run列表一直为空，重新检查head sha对应的所有CI run查看是否有其他CI失败
+【重要】如果CI run列表一直为空，重新检查本地和远程的head sha是否一致，head sha对应的所有CI run查看是否有其他CI失败
+
+【重要】如果CI run列表一直为空，重新检查本地和远程的head sha是否一致，head sha对应的所有CI run查看是否有其他CI失败
 
 ### CI因为网络失败
 
