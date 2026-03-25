@@ -25,7 +25,6 @@ class TestTelegramPlugin(unittest.TestCase):
         """测试插件初始化。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
         self.assertEqual(plugin.config, self.telegram_config)
-        self.assertEqual(len(plugin.sent_hashes), 0)
         self.assertIsNone(plugin._bot)
         self.assertIsNone(plugin._application)
         self.assertFalse(plugin._running)
@@ -39,13 +38,6 @@ class TestTelegramPlugin(unittest.TestCase):
         segment = {"segment_type": "normal", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
 
-        self.assertEqual(len(plugin.sent_hashes), 1)
-        plugin._bot.send_message.assert_called_once()
-
-        segment = {"segment_type": "normal", "content": "test content"}
-        await plugin.after_segment_finished(None, segment)
-
-        self.assertEqual(len(plugin.sent_hashes), 1)
         plugin._bot.send_message.assert_called_once()
 
     async def test_after_segment_finished_reasoning(self):
@@ -57,7 +49,6 @@ class TestTelegramPlugin(unittest.TestCase):
         segment = {"segment_type": "reasoning", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
 
-        self.assertEqual(len(plugin.sent_hashes), 0)
         plugin._bot.send_message.assert_not_called()
 
     async def test_after_segment_finished_empty_content(self):
@@ -69,11 +60,10 @@ class TestTelegramPlugin(unittest.TestCase):
         segment = {"segment_type": "normal", "content": "   "}
         await plugin.after_segment_finished(None, segment)
 
-        self.assertEqual(len(plugin.sent_hashes), 0)
         plugin._bot.send_message.assert_not_called()
 
     async def test_after_segment_finished_duplicate(self):
-        """测试去重逻辑。"""
+        """测试相同内容会被发送两次。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
         plugin._bot = Mock()
         plugin._bot.send_message = AsyncMock()
@@ -82,8 +72,7 @@ class TestTelegramPlugin(unittest.TestCase):
         await plugin.after_segment_finished(None, segment)
         await plugin.after_segment_finished(None, segment)
 
-        self.assertEqual(len(plugin.sent_hashes), 1)
-        self.assertEqual(plugin._bot.send_message.call_count, 1)
+        self.assertEqual(plugin._bot.send_message.call_count, 2)
 
     async def test_send_to_telegram_without_app(self):
         """测试在app未初始化时发送消息。"""

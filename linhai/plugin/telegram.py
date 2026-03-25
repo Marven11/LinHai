@@ -1,6 +1,5 @@
 """Telegram bot插件，监听Agent消息并通过telegram发送，接收telegram用户消息。"""
 
-import hashlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,7 +18,6 @@ class TelegramPlugin(Plugin):
     def __init__(self, group_chat: GroupChat, telegram_config: "TelegramConfig"):
         super().__init__(group_chat)
         self.config = telegram_config
-        self.sent_hashes = set()
         self._bot = None
         self._application = None
         self._running = False
@@ -32,11 +30,6 @@ class TelegramPlugin(Plugin):
         content = segment["content"].strip()
         if not content:
             return
-
-        content_hash = hashlib.md5(content.encode()).hexdigest()
-        if content_hash in self.sent_hashes:
-            return
-        self.sent_hashes.add(content_hash)
 
         await self._send_to_telegram(content)
 
