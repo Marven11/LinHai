@@ -132,7 +132,7 @@ class EndThinkPlugin(Plugin):
         lines = current_content.split("\n")
         for line in lines:
             if line.strip() == "</think>":
-                await agent.interrupt(
+                await agent.agent_llm.interrupt(
                     "错误：检测到只有'</think>'的行，你将两条消息合并成了一条发送！请依次发送每条消息！",
                     "Agent消息合并错误，已纠正",
                 )
@@ -342,7 +342,7 @@ class KimiK25ToolCallPlugin(Plugin):
         first_line, _, _ = current_content.partition("\n")
         first_line = first_line.strip()
         if "<|tool_call_begin|>" in first_line or "<|tool_call_end|>" in first_line:
-            await agent.interrupt(
+            await agent.agent_llm.interrupt(
                 "错误：检测到kimi k2.5特殊工具调用格式。请使用正确的`json toolcall`代码块格式。",
                 "Agent使用了错误的工具调用格式，已打断",
             )
@@ -436,7 +436,7 @@ class MinimaxToolCallPlugin(Plugin):
         first_line, _, _ = current_content.partition("\n")
         first_line = first_line.strip()
         if "<minimax:tool_call>" in first_line:
-            await agent.interrupt(
+            await agent.agent_llm.interrupt(
                 "错误：检测到minimax特殊工具调用格式。请使用正确的`json toolcall`代码块格式。",
                 "Agent使用了错误的工具调用格式，已打断",
             )
@@ -547,18 +547,18 @@ class RuntimeImitationPlugin(Plugin):
 
         if matches := re.search(r"^\s*<<([a-z_]+)>>", current_content, re.MULTILINE):
             if matches.group(1) == "agent":
-                await agent.interrupt(
+                await agent.agent_llm.interrupt(
                     "不要输出<<agent>>这个tag!", "Agent输出了无效标签，已纠正"
                 )
             else:
-                await agent.interrupt(
+                await agent.agent_llm.interrupt(
                     f"不要模仿{matches.group(1)}的输出！",
                     "Agent尝试模仿其他输出格式，已纠正",
                 )
             return True
 
         if current_content.lstrip().startswith("<tool>{"):
-            await agent.interrupt(
+            await agent.agent_llm.interrupt(
                 "工具调用的格式是```json toolcall不是XML!",
                 "Agent使用了错误的工具调用格式，已纠正",
             )

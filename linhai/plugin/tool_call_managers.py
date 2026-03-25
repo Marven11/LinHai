@@ -177,7 +177,7 @@ class WeirdTokenPlugin(Plugin):
                 and model.compatibility == "minimax"
                 and line == "<tool_call>"
             ):
-                await agent.interrupt(
+                await agent.agent_llm.interrupt(
                     "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！",
                     "检测到错误工具调用格式",
                 )

@@ -24,7 +24,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.group_chat = Mock()
         self.agent.group_chat.send = AsyncMock()
 
-        self.agent.interrupt = AsyncMock()
+        self.agent.agent_llm = AsyncMock()
 
         self.agent.message_processor = Mock()
         self.agent.message_processor.get_messages.return_value = []

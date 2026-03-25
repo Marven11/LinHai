@@ -46,7 +46,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             self.agent, self.answer, "first line\nsecond line with marker"
         )
         self.assertFalse(result)
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()
 
     async def test_after_message_generation_no_error_time_when_correct_format(self):
         """Test after_message_generation does not set error time when correct format."""

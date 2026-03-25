@@ -68,6 +68,16 @@ class Agent:
 
         self.current_answer: Answer | None = None
 
+        from .answer import AgentLlm
+
+        self.agent_llm = AgentLlm(
+            llm_manager=llm_manager,
+            group_chat=group_chat,
+            agent=self,
+            toolcall_processor=self.toolcall_processor,
+            message_processor=self.message_processor,
+        )
+
         self.messages = self.message_processor.get_messages()
 
         self.queued_messages: list = []
@@ -124,41 +134,6 @@ class Agent:
             agent.current_answer.interrupt()
             return True
         return False
-
-    async def interrupt(self, agent_message: str, ui_notice: str):
-        """
-        打断当前Answer并添加自定义消息。
-
-        参数:
-            agent_message: 发送给agent的消息内容，放入RuntimeMessage
-            ui_notice: 发送给UI的通知内容，必须提供
-        """
-        if self.current_answer:
-            self.current_answer.interrupt()
-
-            await self.message_processor.add_new_message(RuntimeMessage(agent_message))
-
-            if ui_notice is not None:
-                interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
-            else:
-                interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
-
-            if "```json toolcall" in self.current_answer.get_current_content():
-                await self.message_processor.add_new_message(
-                    RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
-                )
-
-            self.current_answer = None
-
-            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-            self.state = "working"
-
-            from linhai.llm import UserMessage
-
-            while not self.group_chat.is_empty("user_message"):
-                msg = await self.group_chat.receive("user_message")
-                assert isinstance(msg, UserMessage)
-                await self.handle_user_message(msg)
 
     async def receive_one_user_message(self):
         msg = await self.group_chat.receive("user_message")

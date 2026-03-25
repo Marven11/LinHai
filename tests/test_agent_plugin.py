@@ -25,7 +25,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.group_chat = MagicMock()
         self.agent.group_chat.send = AsyncMock()
-        self.agent.interrupt = AsyncMock(
+        self.agent.agent_llm = AsyncMock(
             side_effect=lambda msg=None: self.agent.message_processor.add_new_message(
                 RuntimeMessage(msg or "Agent被插件打断")
             )
@@ -64,7 +64,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(result)
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()
         self.assertTrue(self.agent.message_processor.add_new_message.called)
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
@@ -250,7 +250,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.interrupt = AsyncMock()
+        self.agent.agent_llm = AsyncMock()
         self.agent.get_current_model = MagicMock()
         self.group_chat = MagicMock()
         self.group_chat.get_member_typechecked = MagicMock(
@@ -315,7 +315,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("minimax", call_args[0].message)
 
         self.answer.truncate.assert_called_once()
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()
 
 
 class TestRedStateToolBlockPlugin(unittest.TestCase):
@@ -333,7 +333,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.interrupt = AsyncMock()  # 设置为AsyncMock
+        self.agent.agent_llm = AsyncMock()  # 设置为AsyncMock
         # 默认阈值信息：绿灯状态
         self.agent.get_threshold_info.return_value = {
             "hard_limit": 80000,
@@ -633,13 +633,13 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         # 验证阻止
         self.assertTrue(result)
         self.agent.get_threshold_info.assert_called_once()
-        self.agent.interrupt.assert_called_once_with(
+        self.agent.agent_llm.interrupt.assert_called_once_with(
             "token用量信息已失效，禁止调用context_forget_large_message工具",
             "token用量信息已失效，禁止调用清理工具",
         )
 
         # 检查错误消息是否包含token用量失效
-        interrupt_call = self.agent.interrupt.call_args
+        interrupt_call = self.agent.agent_llm.interrupt.call_args
         error_msg = interrupt_call[0][0]
         self.assertIn("token用量信息已失效", error_msg)
         self.assertIn("禁止调用context_forget_large_message工具", error_msg)
@@ -955,7 +955,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.interrupt = AsyncMock()
+        self.agent.agent_llm = AsyncMock()
         self.group_chat = MagicMock()
         self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
         self.group_chat.send_if_exists = AsyncMock()
@@ -1031,8 +1031,8 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
-        interrupt_call = self.agent.interrupt.call_args
+        self.agent.agent_llm.interrupt.assert_called_once()
+        interrupt_call = self.agent.agent_llm.interrupt.call_args
         self.assertIn("minimax特殊工具调用格式", interrupt_call[0][0])
 
     async def test_after_token_generation_time_window_expired(self):
@@ -1045,7 +1045,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(result)
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()
 
     async def test_after_token_generation_not_first_line(self):
         """测试minimax标记不在第一行时不打断。"""
@@ -1056,4 +1056,4 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(result)
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()

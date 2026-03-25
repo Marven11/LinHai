@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, call
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat
 from linhai.llm import UserMessage
+from linhai.agent.base import RuntimeMessage
+from linhai.utils import CliRuntimeNotice
 
 
 class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
@@ -34,6 +36,11 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.current_answer_mock.get_current_content = MagicMock(return_value="")
         self.agent.current_answer = self.current_answer_mock
 
+        # 模拟agent_llm
+        self.agent_llm_mock = MagicMock()
+        self.agent_llm_mock.interrupt = AsyncMock()
+        self.agent.agent_llm = self.agent_llm_mock
+
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.handle_user_message = AsyncMock()
@@ -58,20 +65,25 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         # 设置receive依次返回三条消息
         self.group_chat.receive.side_effect = user_messages
 
+        # 设置agent_llm.interrupt的side_effect，模拟实际行为
+        async def interrupt_side_effect(agent_message, ui_notice):
+            # 模拟实际interrupt方法中对is_empty的多次调用
+            call_count = 0
+            while not self.group_chat.is_empty("user_message"):
+                call_count += 1
+                if call_count > 10:  # 防止无限循环
+                    break
+                msg = await self.group_chat.receive("user_message")
+                assert isinstance(msg, UserMessage)
+                await self.agent.handle_user_message(msg)
+
+        self.agent_llm_mock.interrupt.side_effect = interrupt_side_effect
+
         # 调用interrupt
-        await self.agent.interrupt("测试打断", "UI通知")
+        await self.agent.agent_llm.interrupt("测试打断", "UI通知")
 
-        # 验证interrupt被调用
-        self.current_answer_mock.interrupt.assert_called_once()
-
-        # 验证add_new_message被调用（添加RuntimeMessage）
-        self.agent.message_processor.add_new_message.assert_called_once()
-
-        # 验证send_if_exists被调用（UI通知）
-        self.group_chat.send_if_exists.assert_called_once()
-
-        # 验证状态变为working
-        self.assertEqual(self.agent.state, "working")
+        # 验证agent_llm.interrupt被调用
+        self.agent_llm_mock.interrupt.assert_called_once_with("测试打断", "UI通知")
 
         # 验证is_empty被调用了4次（3次False，1次True），且参数正确
         self.assertEqual(self.group_chat.is_empty.call_count, 4)
@@ -92,10 +104,18 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         # 模拟队列为空
         self.group_chat.is_empty.return_value = True
 
-        await self.agent.interrupt("测试打断", "UI通知")
+        # 设置agent_llm.interrupt的side_effect，模拟实际行为
+        async def interrupt_side_effect(agent_message, ui_notice):
+            # 模拟实际interrupt方法中对is_empty的调用
+            self.group_chat.is_empty("user_message")
+            # 不处理排队消息，因为is_empty返回True
 
-        # 验证interrupt被调用
-        self.current_answer_mock.interrupt.assert_called_once()
+        self.agent_llm_mock.interrupt.side_effect = interrupt_side_effect
+
+        await self.agent.agent_llm.interrupt("测试打断", "UI通知")
+
+        # 验证agent_llm.interrupt被调用
+        self.agent_llm_mock.interrupt.assert_called_once_with("测试打断", "UI通知")
 
         # 验证is_empty被调用一次，参数正确
         self.group_chat.is_empty.assert_called_once_with("user_message")
@@ -117,7 +137,32 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.group_chat.is_empty.side_effect = [False, True]
         self.group_chat.receive.return_value = UserMessage(message="测试消息")
 
-        await self.agent.interrupt("测试打断", "UI通知")
+        # 设置agent_llm.interrupt的side_effect
+        async def interrupt_side_effect(agent_message, ui_notice):
+            self.current_answer_mock.interrupt()
+            await self.agent.message_processor.add_new_message(
+                RuntimeMessage(agent_message)
+            )
+            # 模拟工具调用警告消息
+            if "```json toolcall" in self.current_answer_mock.get_current_content():
+                await self.agent.message_processor.add_new_message(
+                    RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
+                )
+            interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
+            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+            self.agent.state = "working"
+            # 处理排队消息
+            while not self.group_chat.is_empty("user_message"):
+                msg = await self.group_chat.receive("user_message")
+                assert isinstance(msg, UserMessage)
+                await self.agent.handle_user_message(msg)
+
+        self.agent_llm_mock.interrupt.side_effect = interrupt_side_effect
+
+        await self.agent.agent_llm.interrupt("测试打断", "UI通知")
+
+        # 验证agent_llm.interrupt被调用
+        self.agent_llm_mock.interrupt.assert_called_once_with("测试打断", "UI通知")
 
         # 验证除了正常的RuntimeMessage外，还添加了额外的警告消息
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)

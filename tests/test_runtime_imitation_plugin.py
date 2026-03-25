@@ -16,7 +16,8 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = MagicMock()
-        self.agent.interrupt = AsyncMock()
+        self.agent.agent_llm.interrupt = AsyncMock()
+        self.agent.agent_llm = AsyncMock()
         self.agent.get_current_model = MagicMock()
 
         self.group_chat = MagicMock()
@@ -49,8 +50,8 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 应该被拦截
         self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
-        interrupt_msg = self.agent.interrupt.call_args[0][0]
+        self.agent.agent_llm.interrupt.assert_called_once()
+        interrupt_msg = self.agent.agent_llm.interrupt.call_args[0][0]
         self.assertIn("不要模仿tool的输出", interrupt_msg)
 
     async def test_after_token_generation_deepseek_tool_tag_not_first_line(self):
@@ -71,7 +72,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         # 但为了检测漏洞，我们期望它应该被拦截
         # 所以这里我们断言应该为True，但实际会返回False
         self.assertTrue(result, "漏洞：非第一行的<<tool>>标签没有被拦截")
-        self.agent.interrupt.assert_called_once()
+        self.agent.agent_llm.interrupt.assert_called_once()
 
     async def test_after_token_generation_deepseek_tool_tag_with_spaces(self):
         """测试deepseek模型输出前面有空格的<<tool>>时也应该被拦截（这也是漏洞）。"""
@@ -89,7 +90,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
 
         # 这个测试应该失败，因为当前实现只匹配行首
         self.assertTrue(result, "漏洞：前面有空格的<<tool>>标签没有被拦截")
-        self.agent.interrupt.assert_called_once()
+        self.agent.agent_llm.interrupt.assert_called_once()
 
     async def test_after_token_generation_deepseek_agent_tag_first_line(self):
         """测试deepseek模型在第一行输出<<agent>>时被拦截。"""
@@ -105,8 +106,8 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
-        interrupt_msg = self.agent.interrupt.call_args[0][0]
+        self.agent.agent_llm.interrupt.assert_called_once()
+        interrupt_msg = self.agent.agent_llm.interrupt.call_args[0][0]
         self.assertIn("不要输出<<agent>>这个tag", interrupt_msg)
 
     async def test_after_token_generation_non_deepseek_model(self):
@@ -124,7 +125,7 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
 
         # main branch修改后，现在对所有模型都会检查<<tool>>标签
         self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
+        self.agent.agent_llm.interrupt.assert_called_once()
 
     async def test_after_token_generation_tool_xml_start(self):
         """测试以<tool>{开头的XML格式工具调用被拦截。"""
@@ -140,8 +141,8 @@ class TestRuntimeImitationPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertTrue(result)
-        self.agent.interrupt.assert_called_once()
-        interrupt_msg = self.agent.interrupt.call_args[0][0]
+        self.agent.agent_llm.interrupt.assert_called_once()
+        interrupt_msg = self.agent.agent_llm.interrupt.call_args[0][0]
         self.assertIn("工具调用的格式是```json toolcall不是XML", interrupt_msg)
 
 

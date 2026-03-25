@@ -89,12 +89,12 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         full_response = "思考中...\n</think>```json toolcall\ninvalid json\n```"
 
         tool_calls = []
-        self.agent.interrupt = AsyncMock()
+        self.agent.agent_llm = AsyncMock()
         await self.plugin.after_message_generation(
             MagicMock(spec=Answer), full_response, tool_calls
         )
 
-        self.agent.interrupt.assert_not_called()
+        self.agent.agent_llm.interrupt.assert_not_called()
         self.agent.message_processor.add_new_message.assert_called_once()
         self.assertEqual(len(tool_calls), 0)
 

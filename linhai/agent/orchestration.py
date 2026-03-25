@@ -488,7 +488,7 @@ class RedStateToolBlockPlugin:
                 )
                 ui_msg = f"{current_state}状态下阻止调用{tool_name}工具，请先调用消息清理类工具"
 
-            await agent.interrupt(error_msg, ui_msg)
+            await agent.agent_llm.interrupt(error_msg, ui_msg)
             return True
 
         return None
