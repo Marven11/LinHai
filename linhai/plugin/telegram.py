@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from linhai.agent import Agent as AgentType
     from linhai.config import TelegramConfig
 
+from linhai.agent.base import WAITING_USER_MARKER
 from linhai.agent.lifecycle import Lifecycle
 from linhai.group_chat import GroupChat
 from linhai.plugin.message_checkers import Plugin
@@ -33,7 +34,7 @@ class TelegramPlugin(Plugin):
         if segment["segment_type"] != "normal":
             return
 
-        content = segment["content"].strip()
+        content = segment["content"].removesuffix(WAITING_USER_MARKER).strip()
         if not content:
             return
 
