@@ -48,57 +48,6 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent_llm.message_processor, self.mock_message_processor)
         self.assertIsNone(self.agent_llm._current_parsed_answer)
 
-    async def test_check_interrupt_no_message_no_answer(self):
-        """check_interrupt：无用户消息无current_answer时不打断。"""
-        self.group_chat.is_empty.return_value = True
-        self.agent_llm._current_parsed_answer = None
-
-        result = await self.agent_llm.check_interrupt()
-
-        self.assertFalse(result)
-
-    async def test_check_interrupt_no_message_with_answer(self):
-        """check_interrupt：无用户消息有current_answer时不打断。"""
-        self.group_chat.is_empty.return_value = True
-        self.agent_llm._current_parsed_answer = MagicMock()
-
-        result = await self.agent_llm.check_interrupt()
-
-        self.assertFalse(result)
-
-    async def test_check_interrupt_with_message_and_answer(self):
-        """check_interrupt：有用户消息有current_answer时打断。"""
-        parsed_answer_mock = MagicMock()
-        self.agent_llm._current_parsed_answer = parsed_answer_mock
-        self.group_chat.is_empty.return_value = False
-        self.group_chat.get_member_typechecked.return_value = self.mock_agent
-        self.mock_agent.state = "working"
-
-        result = await self.agent_llm.check_interrupt()
-
-        self.assertTrue(result)
-        parsed_answer_mock.interrupt.assert_called_once()
-        self.assertEqual(self.mock_agent.state, "waiting_user")
-
-    def test_get_current_answer_with_parsed_answer(self):
-        """get_current_answer：有current_parsed_answer时返回answer。"""
-        parsed_answer_mock = MagicMock()
-        mock_answer = MagicMock()
-        parsed_answer_mock._answer = mock_answer
-        self.agent_llm._current_parsed_answer = parsed_answer_mock
-
-        result = self.agent_llm.get_current_answer()
-
-        self.assertEqual(result, mock_answer)
-
-    def test_get_current_answer_without_parsed_answer(self):
-        """get_current_answer：无current_parsed_answer时返回None。"""
-        self.agent_llm._current_parsed_answer = None
-
-        result = self.agent_llm.get_current_answer()
-
-        self.assertIsNone(result)
-
     async def test_interrupt_no_current_answer(self):
         """interrupt：无current_answer时不执行任何操作。"""
         self.agent_llm._current_parsed_answer = None

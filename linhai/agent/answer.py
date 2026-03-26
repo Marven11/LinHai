@@ -166,24 +166,3 @@ class AgentLlm:
                 msg = await self.group_chat.receive("user_message")
                 assert isinstance(msg, UserMessage)
                 await agent.handle_user_message(msg)
-
-    async def check_interrupt(self) -> bool:
-        """检查是否需要打断当前回答。
-
-        Returns:
-            bool: 如果需要打断则返回True
-        """
-        if not self.group_chat.is_empty("user_message") and self._current_parsed_answer:
-            self._current_parsed_answer.interrupt()
-            agent = cast(
-                "Agent", self.group_chat.get_member_typechecked("agent", object)
-            )
-            agent.state = "waiting_user"
-            return True
-        return False
-
-    def get_current_answer(self) -> Answer | None:
-        """获取当前Answer（兼容旧接口）。"""
-        if self._current_parsed_answer:
-            return self._current_parsed_answer._answer
-        return None

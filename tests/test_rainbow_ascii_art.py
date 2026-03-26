@@ -7,7 +7,7 @@ class TestRainbowAsciiArt(unittest.TestCase):
     """Test RainbowAsciiArt width adaptation functionality."""
 
     def setUp(self):
-        self.standard_art = """
+        self.standard_art = r"""
   _   _      _ _       
  | | | | ___| | | ___  
  | |_| |/ _ \ | |/ _ \ 
