@@ -55,8 +55,8 @@ class AgentLlm:
         Returns:
             Tuple[ParsedAnswer, bool]: (ParsedAnswer, 是否被打断)
         """
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         agent = cast("Agent", self.agent)
+        lifecycle = agent.lifecycle
         self._queued_messages = queued_messages
         if self._queued_messages:
             await self.group_chat.send_if_exists(
@@ -134,9 +134,9 @@ class AgentLlm:
             agent_message: 发送给agent的消息内容，放入RuntimeMessage
             ui_notice: 发送给UI的通知内容，必须提供
         """
-        message_processor = self.message_processor
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         agent = cast("Agent", self.agent)
+        message_processor = self.message_processor
+        lifecycle = agent.lifecycle
 
         if self._current_parsed_answer:
             self._current_parsed_answer.interrupt()

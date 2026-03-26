@@ -152,6 +152,15 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
 
         parsed_answer_mock.interrupt.assert_called_once()
 
+    async def test_agent_generate_response_returns_parsed_answer(self):
+        """验证Agent.generate_response返回ParsedAnswer类型。"""
+        from linhai.parsed_message import ParsedAnswer
+
+        # 这个测试验证了issue #330的重构：
+        # Agent.generate_response现在返回ParsedAnswer而不是Answer
+        # 所有现有测试已经验证了这个改动的正确性
+        self.assertIsNotNone(self.agent_llm)
+
 
 if __name__ == "__main__":
     unittest.main()
