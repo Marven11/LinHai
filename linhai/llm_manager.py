@@ -193,13 +193,13 @@ class LlmManager:
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
                     if fallback_llm is not None:
-                        disabled_until = datetime.now() + timedelta(minutes=10)
+                        disabled_until = datetime.now() + timedelta(minutes=5)
                         self.llm_stack.append((fallback_llm, disabled_until))
                         await self.group_chat.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，10分钟后恢复",
+                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，5分钟后恢复",
                             ),
                         )
                     else:
