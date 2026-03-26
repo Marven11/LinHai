@@ -11,6 +11,7 @@ from linhai.agent.workflow import (
     context_forget_range_step1,
     context_forget_range_step2,
 )
+from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import global_tools, ToolResultSuccess, ToolResultFailed
@@ -67,6 +68,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             pinned_messages=[],
         )
+        orchestration = self.group_chat.get_member_typechecked(
+            "agent_context_orchestration", AgentContextOrchestration
+        )
+        self.tool_manager.add_toolset(orchestration.get_orchestration_toolset())
 
     async def test_workflow_as_regular_tool(self):
         """Test that context_forget_range_step1 and step2 are now regular tools, not workflows."""

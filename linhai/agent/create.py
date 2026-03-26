@@ -20,6 +20,7 @@ from linhai.secret import initialize_secret_system
 from .base import GlobalPrompt, PathPrompt
 
 from .main import Agent
+from .orchestration import AgentContextOrchestration
 
 
 class AgentBuildContext(TypedDict):
@@ -112,6 +113,10 @@ async def create_agent_from_config(
         pinned_messages=await _create_pinned_messages(context),
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
+    orchestration = context["group_chat"].get_member_typechecked(
+        "agent_context_orchestration", AgentContextOrchestration
+    )
+    tool_manager.add_toolset(orchestration.get_orchestration_toolset())
     machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()

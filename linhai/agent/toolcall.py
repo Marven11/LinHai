@@ -187,9 +187,6 @@ class AgentToolcall:
 
         tool_manager.add_toolset(dummy_toolset)
 
-        orchestration_toolset = self.agent.orchestration.get_orchestration_toolset()
-        tool_manager.add_toolset(orchestration_toolset)
-
     def _split_and_save_large_output(
         self,
         result_content: str,
