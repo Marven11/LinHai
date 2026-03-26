@@ -225,17 +225,23 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
 async def _create_tool_manager(context: "AgentBuildContext"):
     from linhai.machine_control import MachineControl
+    from linhai.machine_control.main import register_machine_control_tools
     from linhai.tool.general import generate_sleep_toolset
+
+    machine_control = MachineControl(context["group_chat"])
+    machine_control_toolset = register_machine_control_tools(machine_control)
 
     tool_manager = ToolManager(
         group_chat=context["group_chat"],
-        toolsets=[global_tools, generate_sleep_toolset(context["group_chat"])],
+        toolsets=[
+            global_tools,
+            generate_sleep_toolset(context["group_chat"]),
+            machine_control_toolset,
+        ],
         config=context["config"].tools,
         mcp_config=context["config"].agent.mcp,
         mcp_basedir=context["config_basedir"],
     )
-
-    machine_control = MachineControl(context["group_chat"])
 
     if context["config"].tools.secret.config_path:
         initialize_secret_system(

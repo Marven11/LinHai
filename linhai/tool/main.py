@@ -55,17 +55,6 @@ class ToolManager:
                 f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
             )
         self._toolsets = toolsets
-        group_chat.add_postinit(self.postinit)
-
-    def postinit(self):
-        """后初始化：注册MachineControl工具集"""
-        from linhai.machine_control.main import register_machine_control_tools
-        from linhai.machine_control import MachineControl
-
-        machine_control = self.group_chat.get_member_typechecked(
-            "machine_control", MachineControl
-        )
-        self.add_toolset(register_machine_control_tools(machine_control))
 
     async def ensure_mcp_connector(self):
         if self.mcp_connector is not None:
