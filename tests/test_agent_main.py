@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.main import Agent
 from linhai.group_chat import GroupChat
+from linhai.parsed_message import ParsedAnswer
 
 
 class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
@@ -91,6 +92,40 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         self.agent.state = "working"
 
         self.assertEqual(self.agent.state, "working")
+
+    async def test_generate_response_returns_parsed_answer(self):
+        """测试generate_response函数返回ParsedAnswer类型。"""
+        # 创建模拟的ParsedAnswer对象
+        mock_parsed_answer = MagicMock(spec=ParsedAnswer)
+        mock_answer = MagicMock()
+
+        # 设置agent_llm.call_and_wait_llm返回模拟值
+        self.agent.agent_llm = MagicMock()
+        self.agent.agent_llm.call_and_wait_llm = AsyncMock(
+            return_value=(mock_answer, mock_parsed_answer, True)
+        )
+
+        # mock lifecycle
+        mock_lifecycle = MagicMock()
+        mock_lifecycle.trigger_before_add_new_message = AsyncMock()
+        mock_lifecycle.trigger_after_message_generation = AsyncMock()
+        self.agent.lifecycle = mock_lifecycle
+
+        # mock message_processor以避免实际方法调用
+        self.agent.message_processor = MagicMock()
+        self.agent.message_processor.add_new_message = AsyncMock()
+        self.agent.message_processor.get_message_count = MagicMock(return_value=0)
+        self.agent.message_processor.lifecycle = mock_lifecycle
+
+        # 调用generate_response
+        result = await self.agent.generate_response()
+
+        # 验证返回的是ParsedAnswer类型
+        self.assertIsInstance(result, ParsedAnswer)
+        self.assertEqual(result, mock_parsed_answer)
+
+        # 验证call_and_wait_llm被调用
+        self.agent.agent_llm.call_and_wait_llm.assert_called_once()
 
 
 if __name__ == "__main__":

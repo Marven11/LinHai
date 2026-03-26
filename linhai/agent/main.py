@@ -222,7 +222,7 @@ class Agent:
         """
         return self.llm_manager.get_current_llm()
 
-    async def generate_response(self) -> Answer:
+    async def generate_response(self) -> ParsedAnswer:
         """
         生成回复并发送给用户。
 
@@ -256,7 +256,7 @@ class Agent:
             await self.agent_llm.call_and_wait_llm()
         )
         if not completed_normally:
-            return answer
+            return parsed_answer
 
         from linhai.llm import AssistantMessage
 
@@ -306,7 +306,7 @@ class Agent:
             return await self.generate_response()
 
         self.current_answer = None
-        return answer
+        return parsed_answer
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
         """获取当前LLM的名称和实例。
