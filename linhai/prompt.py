@@ -56,14 +56,16 @@ INTRODUCTION_TOOL_USE = """
 - `assert_success: false`：工具调用失败时不影响后续工具调用
 
 你可以同时调用多个工具，要输出多个工具只需要像输出markdown语法一样使用多个json toolcall代码块
+
+你如果不需要调用工具，则**应**使用`#LINHAI_WAITING_USER`暂停，具体细则看下方
 """
 
 INTRODUCTION_WAITING_USER = """
 ## 等待用户与自动运行
 
-在最后一行输出`#LINHAI_WAITING_USER`会导致暂停自动运行，等待用户回答
+你如果需要回答用户、暂停等待用户、询问用户、回应用户等，则**应**在最后一行输出`#LINHAI_WAITING_USER`以暂停运行，等待用户消息
 
-`#LINHAI_WAITING_USER`需要加在你回答中的最后一行
+`#LINHAI_WAITING_USER`需要加在你回答中的最后一行的末尾
 """
 
 INTRODUCTION_GLOBAL_PROMPT = """
