@@ -62,7 +62,7 @@ class TelegramPlugin(Plugin):
                 return_exceptions=True,
             )
 
-            if result[0] is not None:
+            if isinstance(result[0], Exception):
                 self.send_queue.appendleft(content)
                 await asyncio.sleep(self._send_delay)
                 self._send_delay *= 1.5
@@ -162,8 +162,8 @@ class TelegramPlugin(Plugin):
         await self._application.updater.start_polling()
         self._bot = self._application.bot
 
-        self._send_task = asyncio.create_task(self._send_loop())
         self._running = True
+        self._send_task = asyncio.create_task(self._send_loop())
 
     async def shutdown(self):
         """关闭telegram bot和发送任务。"""
