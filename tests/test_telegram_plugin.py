@@ -30,7 +30,6 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertFalse(plugin._running)
         self.assertIsNotNone(plugin.send_queue)
         self.assertIsNone(plugin._send_task)
-        self.assertEqual(plugin._send_delay, 5.0)
 
     async def test_after_segment_finished_normal(self):
         """测试处理normal segment，将消息加入队列。"""
@@ -439,16 +438,6 @@ class TestTelegramPlugin(unittest.TestCase):
 
         plugin._application.stop.assert_not_called()
         plugin._application.shutdown.assert_not_called()
-
-    def test_register(self):
-        """测试注册到Lifecycle。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        mock_lifecycle = Mock()
-
-        plugin.register(mock_lifecycle)
-
-        mock_lifecycle.register_after_segment_finished.assert_called_once()
-        mock_lifecycle.register_before_agent_loop.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -769,7 +769,7 @@ requires-dist = [
     { name = "pylint", marker = "extra == 'dev'" },
     { name = "pyright", marker = "extra == 'dev'" },
     { name = "pyte" },
-    { name = "python-telegram-bot" },
+    { name = "python-telegram-bot", specifier = ">=22.7" },
     { name = "selenium" },
     { name = "textual" },
     { name = "tiktoken" },
