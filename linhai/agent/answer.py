@@ -116,7 +116,7 @@ class AgentLlm:
                 await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
         await lifecycle.trigger_after_message_generation(
-            answer, full_response, tool_calls
+            parsed_answer, full_response, tool_calls
         )
 
         if self.toolcall_processor.early_return:

@@ -118,7 +118,7 @@ class MessagesList(VerticalScroll):
         )
         generation_widget.set_message_widget(message_widget)
 
-    async def after_message_generation(self, answer, full_response, tool_calls):
+    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         # 当消息生成完成后，如果用户没有手动滚动，则滚动到底部
         if self.should_auto_scroll():
             self.scroll_end(animate=False)

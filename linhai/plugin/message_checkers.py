@@ -38,9 +38,7 @@ class Plugin(ABC):
 class WaitingUserPlugin(Plugin):
     """等待用户标记检查Plugin。"""
 
-    async def after_message_generation(
-        self, _answer: Answer, full_response, tool_calls
-    ):
+    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
@@ -106,7 +104,7 @@ class WrongEndPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         full_response: str,
         _tool_calls,
     ):
@@ -153,7 +151,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         full_response: str,
         _tool_calls: list,
     ) -> None:
@@ -216,7 +214,7 @@ class OnlyReasoningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
@@ -226,7 +224,7 @@ class OnlyReasoningPlugin(Plugin):
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
             return
 
-        reasoning_content = _answer.get_reasoning_message()
+        reasoning_content = parsed_answer._answer.get_reasoning_message()
 
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_notification_message(
@@ -257,7 +255,7 @@ class PreviousReasoningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         _full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
@@ -287,7 +285,7 @@ class JsonCodeBlockPlugin(Plugin):
     """检测agent误用`json`而非`json toolcall`代码块的插件。"""
 
     async def after_message_generation(
-        self, _answer: Answer, full_response: str, _tool_calls
+        self, parsed_answer, full_response: str, _tool_calls
     ):
         """检查是否有json代码块包含有效的工具调用。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
@@ -352,7 +350,7 @@ class KimiK25ToolCallPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         full_response: str,
         _tool_calls: list[dict],
     ):
@@ -446,7 +444,7 @@ class MinimaxToolCallPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         full_response: str,
         _tool_calls: list[dict],
     ):

@@ -164,8 +164,8 @@ class CLIApp(App):
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.group_chat)
 
-    async def after_message_generation(self, answer, full_response, tool_calls):
-        token_usage = answer.get_token_usage()
+    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+        token_usage = parsed_answer._answer.get_token_usage()
         if token_usage is not None and all(
             tool_call.get("name")
             not in [

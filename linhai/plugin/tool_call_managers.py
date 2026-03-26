@@ -139,7 +139,7 @@ class SlowStartPlugin(Plugin):
         return False
 
     async def after_message_generation(
-        self, _answer: Answer, _full_response: str, tool_calls: list[dict]
+        self, parsed_answer, _full_response: str, tool_calls: list[dict]
     ):
         if len(tool_calls) < 8:
             self.enabled = False
@@ -197,7 +197,7 @@ class SingleToolCallReminderPlugin(Plugin):
         self.single_tool_call_count = 0
 
     async def after_message_generation(
-        self, _answer: Answer, _full_response: str, tool_calls: list[dict]
+        self, parsed_answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
@@ -245,14 +245,14 @@ class ToolCallInReasoningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        answer: Answer,
+        parsed_answer,
         _full_response: str,
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
         agent = self.group_chat.get_member_typechecked("agent", Agent)
 
-        reasoning_content = answer.get_reasoning_message()
+        reasoning_content = parsed_answer._answer.get_reasoning_message()
         if not reasoning_content:
             return
 
@@ -301,7 +301,7 @@ class LoadImageUrlWarningPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         _full_response: str,
         tool_calls: List[Dict[str, JsonValue]],
     ):

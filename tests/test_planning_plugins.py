@@ -99,7 +99,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_counters_increment_on_non_write_tools(self):
         """测试非写文件工具调用时计数器递增。"""
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {
@@ -116,7 +116,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_no_increment_when_no_tool_calls(self):
         """测试消息没有工具调用时计数器不递增。"""
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[],
         )
@@ -134,7 +134,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             ) as mock_update_notifications,
         ):
             result = await self.plugin.after_message_generation(
-                _answer=MagicMock(spec=Answer),
+                parsed_answer=MagicMock(),
                 _full_response="Test response",
                 tool_calls=[],
             )
@@ -159,7 +159,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             ) as mock_update_notifications,
         ):
             result = await self.plugin.after_message_generation(
-                _answer=MagicMock(spec=Answer),
+                parsed_answer=MagicMock(),
                 _full_response="Test response",
                 tool_calls=[],
             )
@@ -178,7 +178,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             ) as mock_update_notifications,
         ):
             result = await self.plugin.after_message_generation(
-                _answer=MagicMock(spec=Answer),
+                parsed_answer=MagicMock(),
                 _full_response="Test response",
                 tool_calls=[],
             )
@@ -192,7 +192,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.todolist_counter = 2
 
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {
@@ -214,7 +214,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.todolist_counter = 2
 
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {
@@ -236,7 +236,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.todolist_counter = 7
 
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {"name": "read_file", "arguments": {"filepath": "test.txt"}},
@@ -253,7 +253,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin, "_update_notifications", return_value=None
         ) as mock_update_notifications:
             result = await self.plugin.after_message_generation(
-                _answer=MagicMock(spec=Answer),
+                parsed_answer=MagicMock(),
                 _full_response="Test response",
                 tool_calls=[
                     {"name": "read_file", "arguments": {"filepath": "test.txt"}},
@@ -271,7 +271,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             self.plugin, "_update_notifications", return_value=None
         ) as mock_update_notifications:
             result = await self.plugin.after_message_generation(
-                _answer=MagicMock(spec=Answer),
+                parsed_answer=MagicMock(),
                 _full_response="Test response",
                 tool_calls=[
                     {"name": "read_file", "arguments": {"filepath": "test.txt"}},
@@ -287,7 +287,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.todolist_counter = 2
 
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {"name": "read_file", "arguments": {"filepath": "test.txt"}},
@@ -311,7 +311,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin.todolist_counter = 2
 
         result = await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             tool_calls=[
                 {
@@ -370,7 +370,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             _tool_calls=[],
         )
@@ -389,7 +389,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             _tool_calls=[],
         )
@@ -401,7 +401,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
         self.group_chat.get_member_typechecked.return_value = None
 
         await self.plugin.after_message_generation(
-            _answer=MagicMock(spec=Answer),
+            parsed_answer=MagicMock(),
             _full_response="Test response",
             _tool_calls=[],
         )

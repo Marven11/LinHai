@@ -138,7 +138,7 @@ class PlanningStatusReminderPlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         _full_response: str,
         tool_calls: list[dict],
     ) -> None:
@@ -220,7 +220,7 @@ class UserInputRuntimeMessagePlugin(Plugin):
 
     async def after_message_generation(
         self,
-        _answer: Answer,
+        parsed_answer,
         _full_response: str,
         _tool_calls: list[dict],
     ) -> None:

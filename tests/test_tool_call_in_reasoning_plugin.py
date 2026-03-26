@@ -33,6 +33,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self,
     ):
         """测试思考内容中包含工具调用但实际输出中没有工具调用时发出警告。"""
+        parsed_answer = MagicMock()
         answer = MagicMock(spec=Answer)
         reasoning_content = """我需要调用工具来完成任务。
 ```json toolcall
@@ -45,9 +46,10 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 """
         answer.get_reasoning_message.return_value = reasoning_content
         answer.reasoning_message = reasoning_content
+        parsed_answer._answer = answer
 
         result = await self.plugin.after_message_generation(
-            answer, "当前实际输出内容", []
+            parsed_answer, "当前实际输出内容", []
         )
 
         self.assertFalse(result)  # 不应该中断
@@ -71,6 +73,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self,
     ):
         """测试思考内容中包含工具调用且实际输出中也调用了工具时不发出警告。"""
+        parsed_answer = MagicMock()
         answer = MagicMock(spec=Answer)
         reasoning_content = """我需要调用工具来完成任务。
 ```json toolcall
@@ -83,6 +86,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 """
         answer.get_reasoning_message.return_value = reasoning_content
         answer.reasoning_message = reasoning_content
+        parsed_answer._answer = answer
 
         actual_tool_calls = [
             {"name": "read_file", "arguments": {"filepath": "test.txt"}},
@@ -90,7 +94,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         ]
 
         result = await self.plugin.after_message_generation(
-            answer, "当前实际输出内容", actual_tool_calls
+            parsed_answer, "当前实际输出内容", actual_tool_calls
         )
 
         self.assertFalse(result)
@@ -100,14 +104,16 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_without_reasoning_content(self):
         """测试没有思考内容时不做任何操作。"""
+        parsed_answer = MagicMock()
         answer = MagicMock(spec=Answer)
         answer.get_reasoning_message.return_value = None
+        parsed_answer._answer = answer
 
         with patch.object(
             self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
-                answer, "当前实际输出内容", []
+                parsed_answer, "当前实际输出内容", []
             )
 
             self.assertFalse(result)
@@ -117,15 +123,17 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_reasoning_but_no_tool_calls(self):
         """测试思考内容中没有工具调用时不做任何操作。"""
+        parsed_answer = MagicMock()
         answer = MagicMock(spec=Answer)
         reasoning_content = "我只是在思考，没有工具调用。"
         answer.get_reasoning_message.return_value = reasoning_content
+        parsed_answer._answer = answer
 
         with patch.object(
             self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
-                answer, "当前实际输出内容", []
+                parsed_answer, "当前实际输出内容", []
             )
 
             self.assertFalse(result)
@@ -135,6 +143,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_with_duplicate_tool_names(self):
         """测试重复工具名称时去重。"""
+        parsed_answer = MagicMock()
         answer = MagicMock(spec=Answer)
         reasoning_content = """```json toolcall
 {"name": "read_file", "arguments": {"filepath": "test1.txt"}}
@@ -144,9 +153,10 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 ```
 """
         answer.get_reasoning_message.return_value = reasoning_content
+        parsed_answer._answer = answer
 
         result = await self.plugin.after_message_generation(
-            answer, "当前实际输出内容", []
+            parsed_answer, "当前实际输出内容", []
         )
 
         self.assertFalse(result)

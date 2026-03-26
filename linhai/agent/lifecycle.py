@@ -26,7 +26,7 @@ BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
     [
-        Answer,
+        "ParsedAnswer",
         str,
         list[dict],
     ],
@@ -209,13 +209,13 @@ class Lifecycle:
 
     async def trigger_after_message_generation(
         self,
-        answer: Answer,
+        parsed_answer: "ParsedAnswer",
         full_response: str,
         tool_calls: list[dict],
     ):
         """触发消息生成后的事件。"""
         for callback in self._after_message_generation_callbacks:
-            await callback(answer, full_response, tool_calls)
+            await callback(parsed_answer, full_response, tool_calls)
 
     async def trigger_after_toolcall(
         self,
