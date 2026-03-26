@@ -285,3 +285,43 @@ def safe_calculator(expression: str) -> str:
 )
 def registered_safe_calculator(expression: str) -> str:
     return safe_calculator(expression)
+
+
+def generate_sleep_toolset(group_chat: GroupChat) -> ToolSet:
+    """生成sleep工具集，包含可打断的sleep工具。
+
+    Args:
+        group_chat: GroupChat实例，用于检查新用户消息
+
+    Returns:
+        ToolSet实例，包含sleep工具
+    """
+    from datetime import datetime
+    from linhai.tool.base import ToolArgInfo, ToolSet, ToolResultSuccess
+
+    sleep_toolset = ToolSet()
+
+    @sleep_toolset.register_tool(
+        name="sleep",
+        desc="睡眠X秒，返回开始和结束时间",
+        args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
+        required_args=["seconds"],
+    )
+    async def sleep_tool(seconds: float) -> ToolResultSuccess:
+        start = datetime.now()
+        while True:
+            elapsed = (datetime.now() - start).total_seconds()
+            if elapsed >= seconds:
+                break
+            if not group_chat.is_empty("user_message"):
+                return ToolResultSuccess(
+                    content=f"有新用户消息，sleep已打断。已睡眠{elapsed}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+            remaining = seconds - elapsed
+            sleep_time = min(1.0, remaining)
+            await asyncio.sleep(sleep_time)
+        return ToolResultSuccess(
+            content=f"睡眠了{seconds} 秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+    return sleep_toolset

@@ -225,10 +225,11 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
 async def _create_tool_manager(context: "AgentBuildContext"):
     from linhai.machine_control import MachineControl
+    from linhai.tool.general import generate_sleep_toolset
 
     tool_manager = ToolManager(
         group_chat=context["group_chat"],
-        toolsets=[global_tools],
+        toolsets=[global_tools, generate_sleep_toolset(context["group_chat"])],
         config=context["config"].tools,
         mcp_config=context["config"].agent.mcp,
         mcp_basedir=context["config_basedir"],
