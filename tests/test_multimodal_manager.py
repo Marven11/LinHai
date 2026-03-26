@@ -53,29 +53,30 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         """Test that __init__ creates a ToolSet."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
-        self.assertIsInstance(manager._toolset, ToolSet)
+        self.assertIsInstance(manager.toolset, ToolSet)
         self.mock_group_chat.register_member.assert_called_once_with(
             "multimodal_toolset_manager", manager
         )
 
-    def test_init_adds_toolset_to_manager(self):
-        """Test that __init__ adds the ToolSet to ToolManager."""
+    def test_toolset_is_public_attribute(self):
+        """Test that toolset is a public attribute."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
-        self.mock_tool_manager.add_toolset.assert_called_once_with(manager._toolset)
+        self.assertTrue(hasattr(manager, "toolset"))
+        self.assertIsInstance(manager.toolset, ToolSet)
 
     async def test_adds_load_image_when_llm_supports_image(self):
         """Test that load_image is added when LLM supports image."""
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
         # Initially no tool
-        self.assertFalse(manager._toolset.has_tool("load_image"))
+        self.assertFalse(manager.toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
         await manager._update_tool_availability()
 
         # Now should have the tool
-        self.assertTrue(manager._toolset.has_tool("load_image"))
+        self.assertTrue(manager.toolset.has_tool("load_image"))
 
     async def test_removes_load_image_when_llm_does_not_support_image(self):
         """Test that load_image is removed when LLM does not support image."""
@@ -86,7 +87,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         manager = MultimodalToolsetManager(self.mock_group_chat)
 
         # Manually add the tool first
-        manager._toolset.register_tool(
+        manager.toolset.register_tool(
             name="load_image",
             desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
             args={
@@ -97,13 +98,13 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
             required_args=["image_filepath"],
         )(load_image)
 
-        self.assertTrue(manager._toolset.has_tool("load_image"))
+        self.assertTrue(manager.toolset.has_tool("load_image"))
 
         # Mock lifecycle callback
         await manager._update_tool_availability()
 
         # Now should not have the tool
-        self.assertFalse(manager._toolset.has_tool("load_image"))
+        self.assertFalse(manager.toolset.has_tool("load_image"))
 
     async def test_adds_runtime_message_when_switching_to_image_supporting_llm(self):
         """Test that RuntimeMessage is added when switching to image-supporting LLM."""

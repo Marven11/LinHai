@@ -232,13 +232,7 @@ class MultimodalToolsetManager:
         self.group_chat = group_chat
         self.group_chat.register_member("multimodal_toolset_manager", self)
 
-        self._toolset = ToolSet()
-        from linhai.tool.main import ToolManager
-
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
-        tool_manager.add_toolset(self._toolset)
+        self.toolset = ToolSet()
 
     def register_lifecycle(self, lifecycle: Lifecycle) -> None:
         """注册生命周期回调，在Agent创建完成后调用。"""
@@ -247,13 +241,13 @@ class MultimodalToolsetManager:
     async def _update_tool_availability(self) -> None:
         """根据当前LLM配置添加或移除load_image工具。"""
         should_have = self._current_llm_supports_image()
-        has_tool = self._toolset.has_tool("load_image")
+        has_tool = self.toolset.has_tool("load_image")
 
         if should_have and not has_tool:
             from linhai.agent.main import Agent
             from linhai.agent.base import RuntimeMessage
 
-            @self._toolset.register_tool(
+            @self.toolset.register_tool(
                 name="load_image",
                 desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
                 args={
@@ -281,7 +275,7 @@ class MultimodalToolsetManager:
             from linhai.agent.main import Agent
             from linhai.agent.base import RuntimeMessage
 
-            del self._toolset.tools["load_image"]
+            del self.toolset.tools["load_image"]
 
             agent = self.group_chat.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(

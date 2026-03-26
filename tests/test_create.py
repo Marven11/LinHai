@@ -343,7 +343,11 @@ class TestCreateToolManager(unittest.TestCase):
             "tools_config": config,
         }
 
-        result = asyncio.run(_create_tool_manager(context))
+        from linhai.tool.main import ToolSet
+
+        mock_multimodal_toolset = Mock(spec=ToolSet)
+        mock_multimodal_toolset.get_tools.return_value = {}
+        result = asyncio.run(_create_tool_manager(context, mock_multimodal_toolset))
 
         self.assertIsNotNone(result)
 

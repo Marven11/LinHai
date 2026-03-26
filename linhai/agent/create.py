@@ -95,12 +95,13 @@ async def create_agent_from_config(
         Agent实例
     """
 
-    llm_manager = await _create_llm_instances(context)
-    tool_manager, machine_control = await _create_tool_manager(context)
-
     from linhai.multimodal import MultimodalToolsetManager
 
     multimodal_manager = MultimodalToolsetManager(context["group_chat"])
+    llm_manager = await _create_llm_instances(context)
+    tool_manager, machine_control = await _create_tool_manager(
+        context, multimodal_manager.toolset
+    )
 
     register_conversation_folder(context["group_chat"])
 
@@ -223,7 +224,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
     return llm_manager
 
 
-async def _create_tool_manager(context: "AgentBuildContext"):
+async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset):
     from linhai.machine_control import MachineControl
     from linhai.machine_control.main import register_machine_control_tools
     from linhai.tool.general import generate_sleep_toolset
@@ -237,6 +238,7 @@ async def _create_tool_manager(context: "AgentBuildContext"):
             global_tools,
             generate_sleep_toolset(context["group_chat"]),
             machine_control_toolset,
+            multimodal_toolset,
         ],
         config=context["config"].tools,
         mcp_config=context["config"].agent.mcp,
