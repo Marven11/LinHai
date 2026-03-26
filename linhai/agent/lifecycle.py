@@ -102,6 +102,8 @@ BeforeAddNewMessageCallback: TypeAlias = Callable[
     Awaitable[Union[None, "Message"]],
 ]
 
+BeforeCacheInvalidateCallback: TypeAlias = Callable[[], Awaitable[None]]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -128,6 +130,9 @@ class Lifecycle:
         self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
         self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
         self._before_add_new_message_callbacks: list[BeforeAddNewMessageCallback] = []
+        self._before_cache_invalidate_callbacks: list[BeforeCacheInvalidateCallback] = (
+            []
+        )
 
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback
@@ -188,6 +193,10 @@ class Lifecycle:
     def register_before_add_new_message(self, callback: BeforeAddNewMessageCallback):
         """注册添加新消息前的回调。"""
         self._before_add_new_message_callbacks.append(callback)
+
+    def register_before_cache_invalidate(self, callback: BeforeCacheInvalidateCallback):
+        """注册缓存失效前的回调。"""
+        self._before_cache_invalidate_callbacks.append(callback)
 
     async def trigger_after_token_generation(
         self, agent: "Agent", answer: Answer, current_content: str
@@ -320,3 +329,8 @@ class Lifecycle:
             if result is not None:
                 current_message = result
         return current_message
+
+    async def trigger_before_cache_invalidate(self):
+        """触发缓存失效前的事件。"""
+        for callback in self._before_cache_invalidate_callbacks:
+            await callback()

@@ -281,6 +281,19 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1.assert_called_once_with(self.mock_agent)
         callback2.assert_called_once_with(self.mock_agent)
 
+    async def test_register_and_trigger_before_cache_invalidate(self):
+        """Test registering and triggering before cache invalidate callbacks."""
+        callback1 = AsyncMock()
+        callback2 = AsyncMock()
+
+        self.lifecycle.register_before_cache_invalidate(callback1)
+        self.lifecycle.register_before_cache_invalidate(callback2)
+
+        await self.lifecycle.trigger_before_cache_invalidate()
+
+        callback1.assert_called_once_with()
+        callback2.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()

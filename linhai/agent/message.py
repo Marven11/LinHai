@@ -163,6 +163,10 @@ class AgentMessage:
         """标记当前缓存失效
 
         在使用隐式缓存时什么都不做，在使用显式缓存时清除缓存点并提醒用户"""
+        from .lifecycle import Lifecycle
+
+        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        await lifecycle.trigger_before_cache_invalidate()
         if self.explicit_cache_anchors:
             await self.group_chat.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content="上下文缓存失效！")
