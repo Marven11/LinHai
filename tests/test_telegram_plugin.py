@@ -265,6 +265,117 @@ class TestTelegramPlugin(unittest.TestCase):
 
         await plugin._handle_telegram_message(mock_update, None)
 
+    async def test_handle_telegram_sticker_valid(self):
+        """测试处理有效的sticker消息。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = Mock()
+        mock_file = Mock()
+        mock_file.download_as_bytearray = AsyncMock(
+            return_value=bytearray(b"fake_sticker_data")
+        )
+        plugin._bot.get_file = AsyncMock(return_value=mock_file)
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.sticker = Mock()
+        mock_update.message.sticker.file_id = "test_file_id"
+
+        with patch("linhai.plugin.telegram.load_sticker") as mock_load_sticker:
+            mock_sticker_message = Mock()
+            mock_load_sticker.return_value = mock_sticker_message
+            await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.agent.message_processor.add_new_message.call_args[0][0]
+        self.assertEqual(call_args, mock_sticker_message)
+
+    async def test_handle_telegram_sticker_state_switch(self):
+        """测试sticker消息加入后agent状态从waiting_user切换到working。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = Mock()
+        mock_file = Mock()
+        mock_file.download_as_bytearray = AsyncMock(
+            return_value=bytearray(b"fake_sticker_data")
+        )
+        plugin._bot.get_file = AsyncMock(return_value=mock_file)
+        self.agent.state = "waiting_user"
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.sticker = Mock()
+        mock_update.message.sticker.file_id = "test_file_id"
+
+        with patch("linhai.plugin.telegram.load_sticker") as mock_load_sticker:
+            mock_sticker_message = Mock()
+            mock_load_sticker.return_value = mock_sticker_message
+            await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.assertEqual(self.agent.state, "working")
+
+    async def test_handle_telegram_sticker_invalid_chat_id(self):
+        """测试处理来自未授权chat_id的sticker消息。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = Mock()
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "invalid_chat_id"
+        mock_update.message.sticker = Mock()
+        mock_update.message.sticker.file_id = "test_file_id"
+
+        await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.agent.message_processor.add_new_message.assert_not_called()
+        plugin._bot.get_file.assert_not_called()
+
+    async def test_handle_telegram_sticker_no_sticker(self):
+        """测试处理没有sticker字段的消息。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = Mock()
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.sticker = None
+
+        await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.agent.message_processor.add_new_message.assert_not_called()
+        plugin._bot.get_file.assert_not_called()
+
+    async def test_handle_telegram_sticker_no_bot(self):
+        """测试bot为None时不处理sticker。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = None
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.sticker = Mock()
+        mock_update.message.sticker.file_id = "test_file_id"
+
+        await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_handle_telegram_sticker_exception(self):
+        """测试下载sticker失败时的异常处理。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._bot = Mock()
+        plugin._bot.get_file = AsyncMock(side_effect=Exception("Download failed"))
+
+        mock_update = Mock()
+        mock_update.message = Mock()
+        mock_update.message.chat_id = "test_chat_id"
+        mock_update.message.sticker = Mock()
+        mock_update.message.sticker.file_id = "test_file_id"
+
+        await plugin._handle_telegram_sticker(mock_update, None)
+
+        self.agent.message_processor.add_new_message.assert_not_called()
+
     async def test_before_agent_loop(self):
         """测试Agent循环开始时启动telegram bot。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)

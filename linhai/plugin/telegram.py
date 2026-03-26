@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 from linhai.agent.lifecycle import Lifecycle
 from linhai.group_chat import GroupChat
 from linhai.plugin.message_checkers import Plugin
-from linhai.telegram import TelegramMessage
+from linhai.telegram import TelegramMessage, load_sticker
 from linhai.utils import CliRuntimeNotice
 
 
@@ -102,6 +102,43 @@ class TelegramPlugin(Plugin):
             if agent.state == "waiting_user":
                 agent.state = "working"
 
+    async def _handle_telegram_sticker(self, update, _context):
+        """处理来自telegram的表情包消息。"""
+        await self.group_chat.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="INFO",
+                content="收到Telegram表情包",
+            ),
+        )
+        from linhai.agent import Agent as AgentType
+
+        if not update.message:
+            return
+
+        chat_id = str(update.message.chat_id)
+        if chat_id != self.config.default_chat_id:
+            return
+
+        if not update.message.sticker:
+            return
+
+        sticker = update.message.sticker
+        if not self._bot:
+            return
+
+        file = await self._bot.get_file(sticker.file_id)
+        sticker_data = await file.download_as_bytearray()
+        sticker_bytes = bytes(sticker_data)
+
+        message = load_sticker(sticker_bytes, self.group_chat)
+
+        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        if agent:
+            await agent.message_processor.add_new_message(message)
+            if agent.state == "waiting_user":
+                agent.state = "working"
+
     async def before_agent_loop(self, _agent: "AgentType"):
         """在Agent循环开始前启动telegram bot和发送任务。"""
         from telegram.ext import Application, MessageHandler, filters
@@ -114,6 +151,9 @@ class TelegramPlugin(Plugin):
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self._handle_telegram_message
             )
+        )
+        self._application.add_handler(
+            MessageHandler(filters.Sticker.ALL, self._handle_telegram_sticker)
         )
 
         await self._application.initialize()
