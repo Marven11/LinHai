@@ -875,7 +875,7 @@ class FooterWidget(Static):
         if self.use_nerd_font:
             llm_piece = b"\xf3\xb0\xab\xa2".decode() + f" {llm_name}"
         else:
-            llm_piece = llm_name
+            llm_piece = f"✦ {llm_name}"
         all_pieces = token_pieces + [llm_piece]
         display_text = " | ".join(all_pieces)
 
