@@ -28,83 +28,140 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertIsNone(plugin._bot)
         self.assertIsNone(plugin._application)
         self.assertFalse(plugin._running)
+        self.assertIsNotNone(plugin.send_queue)
+        self.assertIsNone(plugin._send_task)
+        self.assertEqual(plugin._send_delay, 5.0)
 
     async def test_after_segment_finished_normal(self):
-        """测试处理normal segment。"""
+        """测试处理normal segment，将消息加入队列。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        plugin._bot = Mock()
-        plugin._bot.send_message = AsyncMock()
 
         segment = {"segment_type": "normal", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
 
-        plugin._bot.send_message.assert_called_once()
+        self.assertEqual(len(plugin.send_queue), 1)
+        self.assertEqual(plugin.send_queue[0], "test content")
 
     async def test_after_segment_finished_reasoning(self):
         """测试不处理reasoning segment。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        plugin._bot = Mock()
-        plugin._bot.send_message = AsyncMock()
 
         segment = {"segment_type": "reasoning", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
 
-        plugin._bot.send_message.assert_not_called()
+        self.assertEqual(len(plugin.send_queue), 0)
 
     async def test_after_segment_finished_empty_content(self):
         """测试不处理空内容的segment。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        plugin._bot = Mock()
-        plugin._bot.send_message = AsyncMock()
 
         segment = {"segment_type": "normal", "content": "   "}
         await plugin.after_segment_finished(None, segment)
 
-        plugin._bot.send_message.assert_not_called()
+        self.assertEqual(len(plugin.send_queue), 0)
 
     async def test_after_segment_finished_duplicate(self):
-        """测试相同内容会被发送两次。"""
+        """测试相同内容会被加入队列两次。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        plugin._bot = Mock()
-        plugin._bot.send_message = AsyncMock()
 
         segment = {"segment_type": "normal", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
         await plugin.after_segment_finished(None, segment)
 
-        self.assertEqual(plugin._bot.send_message.call_count, 2)
+        self.assertEqual(len(plugin.send_queue), 2)
+        self.assertEqual(plugin.send_queue[0], "test content")
+        self.assertEqual(plugin.send_queue[1], "test content")
 
-    async def test_send_to_telegram_without_app(self):
-        """测试在app未初始化时发送消息。"""
+    async def test_send_loop_with_no_bot(self):
+        """测试bot为None时，消息被放回队头并增加延迟。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._running = True
+        plugin.send_queue.append("test message")
 
-        with patch("linhai.plugin.telegram.Bot") as mock_bot_class:
-            mock_bot = Mock()
-            mock_bot.send_message = AsyncMock()
-            mock_bot_class.return_value = mock_bot
+        async def run_one_iteration():
+            if plugin.send_queue:
+                content = plugin.send_queue.popleft()
+                if plugin._bot is None:
+                    plugin.send_queue.appendleft(content)
+                    await asyncio.sleep(plugin._send_delay)
+                    plugin._send_delay *= 1.5
+                    return
 
-            await plugin._send_to_telegram("test message")
+        await run_one_iteration()
 
-            mock_bot_class.assert_called_once_with(token="test_token")
-            mock_bot.send_message.assert_called_once()
+        self.assertEqual(len(plugin.send_queue), 1)
+        self.assertEqual(plugin.send_queue[0], "test message")
+        self.assertGreater(plugin._send_delay, 5.0)
 
-    async def test_send_to_telegram_with_bot(self):
-        """测试在bot已初始化时发送消息。"""
+    async def test_send_loop_with_bot(self):
+        """测试bot存在时成功发送消息。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._running = True
         plugin._bot = Mock()
         plugin._bot.send_message = AsyncMock()
+        plugin.send_queue.append("test message")
 
-        await plugin._send_to_telegram("test message")
+        async def run_one_iteration():
+            if plugin.send_queue:
+                content = plugin.send_queue.popleft()
+                if plugin._bot is not None:
+                    result = await asyncio.gather(
+                        plugin._bot.send_message(
+                            chat_id=plugin.config.default_chat_id,
+                            text=content,
+                        ),
+                        return_exceptions=True,
+                    )
+                    if result[0] is None:
+                        plugin._send_delay = 5.0
 
+        await run_one_iteration()
+
+        self.assertEqual(len(plugin.send_queue), 0)
+        self.assertEqual(plugin._send_delay, 5.0)
         plugin._bot.send_message.assert_called_once()
 
-    async def test_send_to_telegram_exception(self):
-        """测试发送消息失败时的异常处理。"""
+    async def test_send_loop_with_error(self):
+        """测试发送失败时消息被放回队头并增加延迟。"""
         plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._running = True
         plugin._bot = Mock()
-        plugin._bot.send_message = AsyncMock(side_effect=Exception("Send failed"))
+        plugin._bot.send_message = AsyncMock(side_effect=Exception("Network error"))
+        plugin.send_queue.append("test message")
 
-        await plugin._send_to_telegram("test message")
+        async def run_one_iteration():
+            if plugin.send_queue:
+                content = plugin.send_queue.popleft()
+                if plugin._bot is not None:
+                    result = await asyncio.gather(
+                        plugin._bot.send_message(
+                            chat_id=plugin.config.default_chat_id,
+                            text=content,
+                        ),
+                        return_exceptions=True,
+                    )
+                    if result[0] is not None:
+                        plugin.send_queue.appendleft(content)
+                        await asyncio.sleep(plugin._send_delay)
+                        plugin._send_delay *= 1.5
+
+        await run_one_iteration()
+
+        self.assertEqual(len(plugin.send_queue), 1)
+        self.assertEqual(plugin.send_queue[0], "test message")
+        self.assertGreater(plugin._send_delay, 5.0)
+
+    async def test_send_loop_exponential_backoff(self):
+        """测试指数回避机制。"""
+        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin._running = True
+        initial_delay = plugin._send_delay
+
+        for i in range(3):
+            plugin._send_delay *= 1.5
+
+        expected_delay = initial_delay * (1.5**3)
+        self.assertAlmostEqual(plugin._send_delay, expected_delay)
 
     async def test_handle_telegram_message_valid(self):
         """测试处理有效的telegram消息。"""
