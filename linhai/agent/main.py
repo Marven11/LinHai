@@ -1,19 +1,28 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
-from typing import Sequence
+from typing import (
+    cast,
+    Sequence,
+)
 
 import asyncio
 
-from .base import RuntimeMessage
+from .base import (
+    RuntimeMessage,
+)
 from linhai.parsed_message import ParsedAnswer
 from .workflow import RangeCleanManager
 from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
+from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import (
     Message,
     LanguageModel,
+    Answer,
+    OpenAiAnswer,
+    ToolCallMessage,
 )
 from linhai.llm_manager import LlmManager
 from linhai.group_chat import GroupChat
@@ -57,6 +66,8 @@ class Agent:
 
         self.compress_tool_called_in_last_response = False
 
+        self.current_answer: Answer | None = None
+
         from .answer import AgentLlm
 
         self.agent_llm = AgentLlm(
@@ -93,6 +104,7 @@ class Agent:
 
         current_llm = self.llm_manager.get_current_llm()
         token_limit = current_llm.get_token_limit()
+
         if token_limit is None:
             token_limit = 65536
 
@@ -118,7 +130,10 @@ class Agent:
         self, agent: "Agent", answer, current_content
     ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
-        return await self.agent_llm.check_interrupt()
+        if not agent.group_chat.is_empty("user_message") and agent.current_answer:
+            agent.current_answer.interrupt()
+            return True
+        return False
 
     async def receive_one_user_message(self):
         msg = await self.group_chat.receive("user_message")
@@ -207,18 +222,102 @@ class Agent:
         """
         return self.llm_manager.get_current_llm()
 
-    async def generate_response(self) -> ParsedAnswer:
+    async def generate_response(self) -> Answer:
         """
-        生成AI响应，简化实现，完全委托给 AgentLlm。
+        生成回复并发送给用户。
+
+        参数:
+            enable_compress: 是否启用压缩功能
+            disable_waiting_user_warning: 是否禁用等待用户警告
 
         返回:
-            ParsedAnswer: 解析后的回答对象
+            Answer: 生成的回答对象
         """
-        parsed_answer, _ = await self.agent_llm.call_llm(
-            self.message_processor.get_messages(), self.queued_messages
+        if self.queued_messages:
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+            )
+            await self.message_processor.add_new_message(
+                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
+            )
+            for msg in self.queued_messages:
+                await self.message_processor.add_new_message(msg)
+            self.queued_messages = []
+
+        if self.message_processor.get_message_count() > 0:
+            last_msg = self.message_processor.get_messages()[-1]
+            from linhai.llm import AssistantMessage
+
+            if isinstance(last_msg, AssistantMessage):
+                empty_user_msg = RuntimeMessage("继续")
+                await self.message_processor.add_new_message(empty_user_msg)
+
+        await self.lifecycle.trigger_before_message_generation()
+
+        answer: Answer = await self.llm_manager.answer_stream(
+            self.message_processor.get_messages()
         )
-        self.queued_messages = []
-        return parsed_answer
+
+        self.current_answer = answer
+
+        parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
+        await parsed_answer.start_parsing()
+        await self.lifecycle.trigger_after_new_parsed_answer(parsed_answer)
+        await self.group_chat.send("parsed_agent_answer", parsed_answer)
+
+        completed_normally = await parsed_answer.wait_parsing()
+        if not completed_normally:
+            return answer
+
+        from linhai.llm import AssistantMessage
+
+        chat_message = cast(AssistantMessage, answer.get_message())
+
+        from linhai.llm import AssistantMessage
+
+        chat_message = cast(AssistantMessage, answer.get_message())
+        full_response = chat_message.message
+        await self.message_processor.add_new_message(chat_message)
+
+        if self.queued_messages:
+            await self.group_chat.send_if_exists(
+                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+            )
+            await self.message_processor.add_new_message(
+                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
+            )
+            for msg in self.queued_messages:
+                await self.message_processor.add_new_message(msg)
+            self.queued_messages = []
+
+        tool_calls, errors = extract_tool_calls_with_errors(full_response)
+
+        for error in errors:
+            await self.message_processor.add_new_message(RuntimeMessage(error))
+
+        self.toolcall_processor.start_new_tool_call_round()
+
+        for i, call in enumerate(tool_calls, start=1):
+            if "name" in call and "arguments" in call:
+                assert_success = call.get("assert_success", True)
+                with_secret = call.get("with_secret", None)
+                tool_call = ToolCallMessage(
+                    function_name=call["name"],
+                    function_arguments=call["arguments"],
+                    assert_success=assert_success,
+                    with_secret=with_secret,
+                )
+                await self.toolcall_processor.call_tool(tool_call, tool_index=i)
+
+        await self.lifecycle.trigger_after_message_generation(
+            parsed_answer, full_response, tool_calls
+        )
+
+        if self.toolcall_processor.early_return:
+            return await self.generate_response()
+
+        self.current_answer = None
+        return answer
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
         """获取当前LLM的名称和实例。
@@ -226,9 +325,10 @@ class Agent:
         返回:
             tuple[str, LanguageModel]: (LLM名称, LLM实例)
         """
+        llm_instance = self.llm_manager.get_current_llm()
         current_llm = self.llm_manager.get_current_llm()
         llm_name = current_llm.get_name()
-        return llm_name, current_llm
+        return llm_name, llm_instance
 
     async def run(self):
         """
