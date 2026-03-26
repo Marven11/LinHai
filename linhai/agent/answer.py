@@ -43,37 +43,14 @@ class AgentLlm:
         self._current_parsed_answer: ParsedAnswer | None = None
         self._queued_messages: list = []
 
-    async def call_llm(
-        self, messages: list[Message], queued_messages: list
-    ) -> Tuple[ParsedAnswer, bool]:
-        """调用LLM并返回解析好的ParsedAnswer。
-
-        Args:
-            messages: 消息历史
-            queued_messages: 排队的消息
+    async def call_and_wait_llm(self) -> Tuple[Answer, ParsedAnswer, bool]:
+        """调用LLM并等待解析完成。
 
         Returns:
-            Tuple[ParsedAnswer, bool]: (ParsedAnswer, 是否被打断)
+            Tuple[Answer, ParsedAnswer, bool]: (Answer, ParsedAnswer, 是否正常完成)
         """
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
         agent = cast("Agent", self.agent)
-        self._queued_messages = queued_messages
-        if self._queued_messages:
-            await self.group_chat.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
-            )
-            await self.message_processor.add_new_message(
-                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
-            )
-            for msg in self._queued_messages:
-                await self.message_processor.add_new_message(msg)
-            self._queued_messages = []
-
-        if self.message_processor.get_message_count() > 0:
-            last_msg = self.message_processor.get_messages()[-1]
-            if isinstance(last_msg, AssistantMessage):
-                empty_user_msg = RuntimeMessage("继续")
-                await self.message_processor.add_new_message(empty_user_msg)
+        lifecycle = agent.lifecycle
 
         await lifecycle.trigger_before_message_generation()
 
@@ -81,51 +58,15 @@ class AgentLlm:
             self.message_processor.get_messages()
         )
 
+        self.current_answer = answer
+
         parsed_answer = ParsedAnswer(answer, lifecycle, agent=agent)
-        self._current_parsed_answer = parsed_answer
         await parsed_answer.start_parsing()
         await lifecycle.trigger_after_new_parsed_answer(parsed_answer)
         await self.group_chat.send("parsed_agent_answer", parsed_answer)
 
         completed_normally = await parsed_answer.wait_parsing()
-        if not completed_normally:
-            return parsed_answer, True
-
-        chat_message = answer.get_message()
-        assert isinstance(chat_message, AssistantMessage)
-        full_response = chat_message.message
-        await self.message_processor.add_new_message(chat_message)
-
-        tool_calls, errors = parsed_answer.get_toolcalls()
-
-        for error in errors:
-            await self.message_processor.add_new_message(RuntimeMessage(error))
-
-        self.toolcall_processor.start_new_tool_call_round()
-
-        for i, call in enumerate(tool_calls, start=1):
-            if "name" in call and "arguments" in call:
-                assert_success = call.get("assert_success", True)
-                with_secret = call.get("with_secret", None)
-                tool_call = ToolCallMessage(
-                    function_name=call["name"],
-                    function_arguments=call["arguments"],
-                    assert_success=assert_success,
-                    with_secret=with_secret,
-                )
-                await self.toolcall_processor.call_tool(tool_call, tool_index=i)
-
-        await lifecycle.trigger_after_message_generation(
-            parsed_answer, full_response, tool_calls
-        )
-
-        if self.toolcall_processor.early_return:
-            return await self.call_llm(
-                self.message_processor.get_messages(), self._queued_messages
-            )
-
-        self._current_parsed_answer = None
-        return parsed_answer, False
+        return answer, parsed_answer, completed_normally
 
     async def interrupt(self, agent_message: str, ui_notice: str):
         """打断当前Answer并添加自定义消息。

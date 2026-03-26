@@ -252,20 +252,9 @@ class Agent:
                 empty_user_msg = RuntimeMessage("继续")
                 await self.message_processor.add_new_message(empty_user_msg)
 
-        await self.lifecycle.trigger_before_message_generation()
-
-        answer: Answer = await self.llm_manager.answer_stream(
-            self.message_processor.get_messages()
+        answer, parsed_answer, completed_normally = (
+            await self.agent_llm.call_and_wait_llm()
         )
-
-        self.current_answer = answer
-
-        parsed_answer = ParsedAnswer(answer, self.lifecycle, agent=self)
-        await parsed_answer.start_parsing()
-        await self.lifecycle.trigger_after_new_parsed_answer(parsed_answer)
-        await self.group_chat.send("parsed_agent_answer", parsed_answer)
-
-        completed_normally = await parsed_answer.wait_parsing()
         if not completed_normally:
             return answer
 
