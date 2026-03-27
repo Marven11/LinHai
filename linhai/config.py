@@ -105,12 +105,22 @@ class MCPConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
-    compress_threshold: Union[int, float] = Field(default=0.8, ge=0.0)
-    mcp: list[MCPConfig] = Field(default_factory=list)
-    enable_directory_change_detection: bool = Field(default=False)
-    enable_task_planning: bool = Field(default=False)
-    allowed_commands: list[list[str]] = Field(default_factory=list)
-    max_toolcall_for_llm: dict[str, int] = Field(default_factory=dict)
+    compress_threshold: Union[int, float] = Field(
+        default=0.8, ge=0.0, description="上下文压缩阈值。"
+    )
+    mcp: list[MCPConfig] = Field(
+        default_factory=list, description="MCP服务器配置列表。"
+    )
+    enable_directory_change_detection: bool = Field(
+        default=False, description="是否启用目录变化检测。"
+    )
+    enable_task_planning: bool = Field(default=False, description="是否启用任务规划。")
+    allowed_commands: list[list[str]] = Field(
+        default_factory=list, description="允许执行的命令列表。"
+    )
+    max_toolcall_for_llm: dict[str, int] = Field(
+        default_factory=dict, description="每个LLM的最大工具调用次数限制。"
+    )
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
@@ -134,7 +144,7 @@ class AgentConfig(BaseModel):
 class UserPromptConfig(BaseModel):
     """内存配置类型定义。"""
 
-    file_path: str
+    file_path: str = Field(description="用户提示文件路径。")
 
     def __str__(self) -> str:
         """返回内存配置的字符串表示"""
@@ -144,7 +154,7 @@ class UserPromptConfig(BaseModel):
 class SecretSubConfig(BaseModel):
     """Secret子配置类型定义。"""
 
-    config_path: str = Field(default="")
+    config_path: str = Field(default="", description="Secret配置文件路径。")
 
     def __str__(self) -> str:
         """返回Secret子配置的字符串表示"""

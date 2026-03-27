@@ -371,6 +371,43 @@ model = "test_model"
         finally:
             os.unlink(temp_file)
 
+    def test_field_descriptions(self):
+        """Test that field descriptions are correctly set for config classes."""
+        from linhai.config import AgentConfig, UserPromptConfig, SecretSubConfig
+
+        # Test AgentConfig field descriptions
+        agent_fields = AgentConfig.model_fields
+        self.assertEqual(
+            agent_fields["compress_threshold"].description, "上下文压缩阈值。"
+        )
+        self.assertEqual(agent_fields["mcp"].description, "MCP服务器配置列表。")
+        self.assertEqual(
+            agent_fields["enable_directory_change_detection"].description,
+            "是否启用目录变化检测。",
+        )
+        self.assertEqual(
+            agent_fields["enable_task_planning"].description, "是否启用任务规划。"
+        )
+        self.assertEqual(
+            agent_fields["allowed_commands"].description, "允许执行的命令列表。"
+        )
+        self.assertEqual(
+            agent_fields["max_toolcall_for_llm"].description,
+            "每个LLM的最大工具调用次数限制。",
+        )
+
+        # Test UserPromptConfig field descriptions
+        user_prompt_fields = UserPromptConfig.model_fields
+        self.assertEqual(
+            user_prompt_fields["file_path"].description, "用户提示文件路径。"
+        )
+
+        # Test SecretSubConfig field descriptions
+        secret_fields = SecretSubConfig.model_fields
+        self.assertEqual(
+            secret_fields["config_path"].description, "Secret配置文件路径。"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
