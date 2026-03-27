@@ -1,7 +1,7 @@
 """测试create_agent函数的基本功能"""
 
 import unittest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, Mock
 import sys
 import os
 import asyncio
@@ -24,7 +24,7 @@ class TestCreateAgent(unittest.TestCase):
     @patch("linhai.tool.mcp_connector.MCPConnector")
     def test_create_agent_basic_functionality(self, mock_mcp_connector):
         """测试create_agent基本功能：创建agent并返回group_chat"""
-        mock_mcp_instance = AsyncMock()
+        mock_mcp_instance = Mock()
         mock_mcp_instance.get_toolsets.return_value = []
         mock_mcp_connector.return_value = mock_mcp_instance
 
@@ -71,7 +71,7 @@ class TestCreateAgent(unittest.TestCase):
     @patch("linhai.tool.mcp_connector.MCPConnector")
     def test_create_agent_with_llm_name(self, mock_mcp_connector):
         """测试使用llm_name参数创建agent"""
-        mock_mcp_instance = AsyncMock()
+        mock_mcp_instance = Mock()
         mock_mcp_instance.get_toolsets.return_value = []
         mock_mcp_connector.return_value = mock_mcp_instance
 

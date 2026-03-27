@@ -239,11 +239,10 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
     machine_control = MachineControl(context["group_chat"])
     machine_control_toolset = register_machine_control_tools(machine_control)
 
-    mcp_connector: MCPConnector | None = None
+    mcp_connector = MCPConnector(context["group_chat"])
     if context["config"].agent.mcp and context["config_basedir"] is not None:
         from contextlib import AsyncExitStack
 
-        mcp_connector = MCPConnector(context["group_chat"])
         for mcp_config in context["config"].agent.mcp:
             server_script_path = (
                 context["config_basedir"] / mcp_config.server_script_path

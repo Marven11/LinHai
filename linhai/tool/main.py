@@ -32,13 +32,13 @@ class ToolManager:
         group_chat: GroupChat,
         toolsets: list[ToolSet],
         config: ToolConfig,
-        mcp_connector: MCPConnector | None,
+        mcp_connector: MCPConnector,
     ):
         """初始化工具管理器
 
         Args:
             config: 可选配置对象
-            mcp_connector: 已初始化的MCPConnector实例，如果没有配置MCP则为None
+            mcp_connector: 已初始化的MCPConnector实例
         """
         group_chat.register_member("tool_manager", self)
         self.group_chat = group_chat
