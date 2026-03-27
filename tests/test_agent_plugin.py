@@ -442,8 +442,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_toolcall.assert_called_once_with(
-            self.plugin.after_toolcall
+        lifecycle.register_before_tool_call.assert_called_once_with(
+            self.plugin.before_toolcall
         )
 
     def test_green_state_not_block(self):
@@ -472,14 +472,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.after_toolcall(
+            self.plugin.before_toolcall(
                 tool_name=tool_call.function_name,
-                tool_index=0,
-                status="skipped",
-                message=None,
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=None,
-                is_tool_failed_duplicated_error=False,
             )
         )
 
@@ -513,14 +509,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.after_toolcall(
+            self.plugin.before_toolcall(
                 tool_name=tool_call.function_name,
-                tool_index=0,
-                status="skipped",
-                message=None,
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=None,
-                is_tool_failed_duplicated_error=False,
             )
         )
 
@@ -575,14 +567,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             import asyncio
 
             result = asyncio.run(
-                self.plugin.after_toolcall(
+                self.plugin.before_toolcall(
                     tool_name=tool_call.function_name,
-                    tool_index=0,
-                    status="skipped",
-                    message=None,
                     toolcall_arguments=tool_call.function_arguments,
                     with_secret=None,
-                    is_tool_failed_duplicated_error=False,
                 )
             )
 
@@ -619,30 +607,29 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.after_toolcall(
+            self.plugin.before_toolcall(
                 tool_name=tool_call.function_name,
-                tool_index=0,
-                status="skipped",
-                message=None,
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=None,
-                is_tool_failed_duplicated_error=False,
             )
         )
 
-        # 验证阻止
-        self.assertTrue(result)
-        self.agent.get_threshold_info.assert_called_once()
-        self.agent.agent_llm.interrupt.assert_called_once_with(
-            "token用量信息已失效，禁止调用context_forget_large_message工具",
-            "token用量信息已失效，禁止调用清理工具",
-        )
+        # 验证阻止 - 新实现返回ToolResultFailed
+        from linhai.tool.base import ToolResultFailed
 
-        # 检查错误消息是否包含token用量失效
-        interrupt_call = self.agent.agent_llm.interrupt.call_args
-        error_msg = interrupt_call[0][0]
-        self.assertIn("token用量信息已失效", error_msg)
-        self.assertIn("禁止调用context_forget_large_message工具", error_msg)
+        self.assertIsInstance(result, ToolResultFailed)
+        self.agent.get_threshold_info.assert_called_once()
+
+        # 验证通过send_if_exists发送UI消息（而不是interrupt）
+        self.group_chat.send_if_exists.assert_called_once()
+        ui_msg = self.group_chat.send_if_exists.call_args
+        self.assertEqual(ui_msg[0][0], "ui_log")
+        self.assertEqual(ui_msg[0][1].level, "ERROR")
+        self.assertIn("token用量信息已失效", ui_msg[0][1].content)
+
+        # 验证错误消息内容
+        self.assertIn("token用量信息已失效", result.content)
+        self.assertIn("禁止调用context_forget_large_message工具", result.content)
 
     def test_red_state_recent_cleanup_allow_other_tool(self):
         """测试红灯状态、最近调用过清理工具、调用其他工具时不被拦截。"""
@@ -672,14 +659,10 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         import asyncio
 
         result = asyncio.run(
-            self.plugin.after_toolcall(
+            self.plugin.before_toolcall(
                 tool_name=tool_call.function_name,
-                tool_index=0,
-                status="skipped",
-                message=None,
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=None,
-                is_tool_failed_duplicated_error=False,
             )
         )
 

@@ -661,21 +661,28 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsNotNone(notifications)
 
-        # 模拟工具调用成功
+        # 模拟工具调用成功 - 使用绿灯状态，工具不被阻止时才会重置计数器
+        # 首先清除红灯状态
+        self.orchestration.consecutive_red_block_count = 0
+        mock_agent.get_threshold_info = Mock(
+            return_value={
+                "hard_limit": 100000,
+                "used_tokens": 30000,
+                "remaining_tokens": 70000,
+                "usage_ratio": 0.3,  # 绿灯状态
+            }
+        )
+
         from linhai.agent.orchestration import RedStateToolBlockPlugin
 
         block_plugin = RedStateToolBlockPlugin(self.group_chat)
-        await block_plugin.after_toolcall(
+        await block_plugin.before_toolcall(
             tool_name="read_file",
-            tool_index=0,
-            status="success",
-            message=None,
-            toolcall_arguments=None,
+            toolcall_arguments={},
             with_secret=None,
-            is_tool_failed_duplicated_error=False,
         )
 
-        # 验证计数器被重置
+        # 验证计数器被重置（绿灯状态下工具不被阻止）
         self.assertEqual(self.orchestration.consecutive_red_block_count, 0)
 
         # 验证notification message被清除

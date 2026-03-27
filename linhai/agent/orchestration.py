@@ -429,22 +429,18 @@ class RedStateToolBlockPlugin:
             "context_forget_large_message",
         }
 
-    async def after_toolcall(
+    async def before_toolcall(
         self,
         tool_name: str,
-        tool_index: int,
-        status: Literal["skipped", "success", "failed"],
-        message: Message | None,
-        toolcall_arguments: dict | None,
+        toolcall_arguments: dict,
         with_secret: list[str] | None,
-        is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, "RuntimeMessage"]:
-        """检查是否需要跳过工具调用。
+    ) -> Union[ToolResultSuccess, ToolResultFailed, dict, None]:
+        """在工具调用前检查是否需要阻止工具调用。
 
         Returns:
-            None: 没有特殊处理
-            bool: 仅当status为"skipped"时有效，True表示跳过工具调用
-            RuntimeMessage: 替换工具结果
+            ToolResultFailed: 阻止工具调用并返回失败结果
+            dict: 修改后的工具调用参数
+            None: 不做处理
         """
         orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
@@ -453,13 +449,6 @@ class RedStateToolBlockPlugin:
         from .main import Agent
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
-
-        if status != "skipped":
-            orchestration.consecutive_red_block_count = 0
-            agent.message_processor.update_notification_message(
-                None, source="consecutive_red_block", sort_value=0
-            )
-            return None
 
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
@@ -488,14 +477,24 @@ class RedStateToolBlockPlugin:
                 )
                 ui_msg = f"{current_state}状态下阻止调用{tool_name}工具，请先调用消息清理类工具"
 
-            await agent.agent_llm.interrupt(error_msg, ui_msg)
-            return True
+            await self.group_chat.send_if_exists(
+                "ui_log",
+                CliRuntimeNotice(
+                    level="ERROR",
+                    content=ui_msg,
+                ),
+            )
+            return ToolResultFailed(content=error_msg)
 
+        orchestration.consecutive_red_block_count = 0
+        agent.message_processor.update_notification_message(
+            None, source="consecutive_red_block", sort_value=0
+        )
         return None
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.register_before_tool_call(self.before_toolcall)
 
 
 class NotificationMessagePlugin:
