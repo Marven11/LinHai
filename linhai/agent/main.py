@@ -215,6 +215,7 @@ class Agent:
 
         if not handled:
             await self.message_processor.add_new_message(msg)
+            return True
 
         return should_interrupt
 
