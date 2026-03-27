@@ -20,26 +20,40 @@ def get_default_config_path() -> Path:
 class ExplicitCacheConfig(BaseModel):
     """显式缓存配置类型定义。"""
 
-    enable: bool
-    cache_write_price_ratio: float = Field(default=1.25)
-    cache_hit_price_ratio: float = Field(default=0.1)
+    enable: bool = Field(description="是否启用显式缓存")
+    cache_write_price_ratio: float = Field(
+        default=1.25, description="缓存写入价格相对于默认价格的比例"
+    )
+    cache_hit_price_ratio: float = Field(
+        default=0.1, description="缓存命中价格相对于默认价格的比例"
+    )
 
 
 class LLMConfig(BaseModel):
     """单个LLM配置类型定义。"""
 
-    name: str = Field(..., min_length=1)
-    type: str = Field(default="openai")
-    compatibility: str = Field(default="")
-    support_image: bool = Field(default=False)
-    explicit_cache: Optional[ExplicitCacheConfig] = None
-    base_url: str
-    api_key: str = Field(..., min_length=1)
-    model: str = Field(..., min_length=1)
-    client_options: dict = Field(default_factory=dict)
-    completion_options: dict = Field(default_factory=dict)
-    token_limit: int = Field(default=0)
-    fallback: Optional[str] = Field(default=None)
+    name: str = Field(..., min_length=1, description="LLM实例的唯一标识名称")
+    type: str = Field(default="openai", description="LLM服务提供商类型")
+    compatibility: str = Field(
+        default="", description="兼容性标识，用于指定兼容的模型变体"
+    )
+    support_image: bool = Field(default=False, description="是否支持图像输入")
+    explicit_cache: Optional[ExplicitCacheConfig] = Field(
+        default=None, description="显式缓存配置"
+    )
+    base_url: str = Field(..., description="API服务的基地址")
+    api_key: str = Field(..., min_length=1, description="API认证密钥")
+    model: str = Field(..., min_length=1, description="使用的模型名称")
+    client_options: dict = Field(default_factory=dict, description="客户端额外配置选项")
+    completion_options: dict = Field(
+        default_factory=dict, description="完成请求的额外配置选项"
+    )
+    token_limit: int = Field(
+        default=0, description="上下文窗口的token限制，0表示使用默认值"
+    )
+    fallback: Optional[str] = Field(
+        default=None, description="回退LLM的名称，当主LLM不可用时使用"
+    )
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument
@@ -69,8 +83,8 @@ class LLMConfig(BaseModel):
 class MCPConfig(BaseModel):
     """MCP服务器配置类型定义。"""
 
-    name: str = Field(..., min_length=1)
-    server_script_path: str
+    name: str = Field(..., min_length=1, description="MCP服务器的唯一标识名称")
+    server_script_path: str = Field(..., description="MCP服务器脚本的路径")
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument
