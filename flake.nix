@@ -30,6 +30,26 @@
 
           overlays = [ nur.overlays.default ];
         };
+
+        python-telegram-bot' = pkgs.python3Packages.buildPythonPackage rec {
+          pname = "python-telegram-bot";
+          version = "22.7";
+          pyproject = true;
+
+          src = pkgs.fetchFromGitHub {
+            owner = "python-telegram-bot";
+            repo = "python-telegram-bot";
+            tag = "v${version}";
+            hash = "sha256-+mbVN1XFChUMYReHMjQd1tx5gYpP1CWGNtuZCoY9TMo=";
+          };
+
+          build-system = [
+            pkgs.python3Packages.setuptools
+            pkgs.python3Packages.hatchling
+          ];
+
+          dependencies = [ pkgs.python3Packages.httpx ];
+        };
       in
       {
         packages.default =
@@ -63,7 +83,7 @@
               pillow
               tomli-w
               feedparser
-              python-telegram-bot
+              python-telegram-bot'
             ];
 
             src = ./.;
