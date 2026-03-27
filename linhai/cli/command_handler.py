@@ -22,8 +22,9 @@ class CommandHandler:
         parsed_input = parse_user_input(message_text)
 
         if parsed_input.switch_model:
-            await self._register_llm_toolset(parsed_input.switch_model, message_text)
-            return True, False
+            return await self._handle_switch_model(
+                parsed_input.switch_model, message_text
+            )
 
         if parsed_input.command:
             if parsed_input.command == "context_forget_large_message":
@@ -121,7 +122,9 @@ class CommandHandler:
         await self._show_runtime_message("INFO", "\n".join(status_lines))
         return True, False
 
-    async def _register_llm_toolset(self, model_name: str, message_text: str) -> None:
+    async def _handle_switch_model(
+        self, model_name: str, message_text: str
+    ) -> tuple[bool, bool]:
         """处理@切换模型命令."""
         from linhai.agent import Agent
         from linhai.llm import UserMessage
@@ -129,9 +132,12 @@ class CommandHandler:
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
-            return
+            return True, False
 
         llm_manager = agent.llm_manager
+
+        user_msg = UserMessage(message=message_text)
+        await agent.message_processor.add_new_message(user_msg)
 
         if model_name == "default":
             await llm_manager.switch_to_llm(llm_manager.default_llm_name)
@@ -144,8 +150,7 @@ class CommandHandler:
                 f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: {', '.join(llm_manager.llm_names)}"
             )
 
-        user_msg = UserMessage(message=message_text)
-        await agent.message_processor.add_new_message(user_msg)
+        return True, True
 
     def get_command_completions(self) -> list[str]:
         """返回所有支持的命令补全列表"""

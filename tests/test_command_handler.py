@@ -182,7 +182,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
         handled, should_interrupt = await self.handler.handle_command("@test-llm")
         self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertTrue(should_interrupt)
         mock_llm_manager.switch_to_llm.assert_called_once_with("test-llm")
         mock_agent.message_processor.add_new_message.assert_called_once()
 
@@ -216,7 +216,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
         handled, should_interrupt = await self.handler.handle_command("@invalid")
         self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertTrue(should_interrupt)
         self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
         mock_agent.message_processor.add_new_message.assert_called_once()
 
