@@ -3,7 +3,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 from urllib.parse import urlparse
 
 import tomllib
@@ -182,15 +182,32 @@ class RemoteControlConfig(BaseModel):
         return f"RemoteControlConfig(telegram={self.telegram})"
 
 
+AVAILABLE_TOOLSETS = frozenset(
+    ["utils", "sleep", "machine_control", "multimodal", "llm", "context_cleaning"]
+)
+
+
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
     secret: SecretSubConfig = Field(default_factory=SecretSubConfig)
     max_toolcall_token_in_round: int = Field(default=30000, ge=1)
+    toolsets: Union[Literal["defaults"], list[str]] = Field(default="defaults")
+
+    @field_validator("toolsets")
+    def validate_toolsets(cls, v):
+        """验证toolsets配置：如果是列表，检查是否包含有效名称"""
+        if isinstance(v, list):
+            invalid_toolsets = [t for t in v if t not in AVAILABLE_TOOLSETS]
+            if invalid_toolsets:
+                raise ConfigValidationError(
+                    f"Invalid toolsets: {invalid_toolsets}. Available: {list(AVAILABLE_TOOLSETS)}"
+                )
+        return v
 
     def __str__(self) -> str:
         """返回工具配置的字符串表示"""
-        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, secret={self.secret})"
+        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, toolsets={self.toolsets}, secret={self.secret})"
 
 
 class CLIConfig(BaseModel):

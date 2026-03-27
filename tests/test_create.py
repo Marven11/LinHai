@@ -352,6 +352,45 @@ class TestCreateToolManager(unittest.TestCase):
         self.assertIsNotNone(result)
 
 
+class TestToolsetsConfig(unittest.TestCase):
+    """测试toolsets配置功能"""
+
+    def test_toolsets_defaults(self):
+        """测试toolsets配置为defaults时，使用所有toolset"""
+        from linhai.config import ToolConfig
+
+        config = ToolConfig()
+        self.assertEqual(config.toolsets, "defaults")
+
+    def test_toolsets_list(self):
+        """测试toolsets配置为列表"""
+        from linhai.config import ToolConfig
+
+        config = ToolConfig(toolsets=["utils", "sleep"])
+        self.assertEqual(config.toolsets, ["utils", "sleep"])
+
+    def test_toolsets_invalid(self):
+        """测试无效的toolset名称"""
+        from linhai.config import ToolConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(toolsets=["invalid_toolset"])
+
+    def test_available_toolsets(self):
+        """测试AVAILABLE_TOOLSETS包含所有预期toolset"""
+        from linhai.config import AVAILABLE_TOOLSETS
+
+        expected = {
+            "utils",
+            "sleep",
+            "machine_control",
+            "multimodal",
+            "llm",
+            "context_cleaning",
+        }
+        self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
+
+
 class TestCreatePinnedMessages(unittest.TestCase):
     """测试初始化消息创建功能"""
 

@@ -1,7 +1,7 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
 from pathlib import Path
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Tuple
 import argparse
 from datetime import datetime
 
@@ -12,6 +12,13 @@ from linhai.llm_manager import LlmManager
 
 from linhai.tool.base import utils_tools
 from linhai.tool.main import ToolManager
+from linhai.config import AVAILABLE_TOOLSETS
+
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from linhai.machine_control import MachineControl
 
 from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
@@ -104,6 +111,12 @@ async def create_agent_from_config(
         context, multimodal_manager.toolset
     )
 
+    toolsets_config = context["config"].tools.toolsets
+    if toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
+        enabled_toolsets = list(AVAILABLE_TOOLSETS)
+    else:
+        enabled_toolsets = list(toolsets_config)
+
     register_conversation_folder(context["group_chat"])
 
     agent = Agent(
@@ -116,9 +129,12 @@ async def create_agent_from_config(
     orchestration = context["group_chat"].get_member_typechecked(
         "agent_context_orchestration", AgentContextOrchestration
     )
-    tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
-    tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
-    machine_control.register_plugin(agent.lifecycle)
+    if "context_cleaning" in enabled_toolsets:
+        tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
+    if "llm" in enabled_toolsets:
+        tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
+    if machine_control is not None:
+        machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()
 
@@ -230,14 +246,46 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
     return llm_manager
 
 
-async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset):
-    from linhai.machine_control import MachineControl
+def _build_toolsets_from_config(
+    context: "AgentBuildContext", multimodal_toolset
+) -> Tuple[list, Optional["MachineControl"]]:
+    """根据配置构建toolsets列表"""
     from linhai.machine_control.main import register_machine_control_tools
     from linhai.tool.general import generate_sleep_toolset
+
+    toolsets_config = context["config"].tools.toolsets
+    group_chat = context["group_chat"]
+
+    if toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
+        enabled_toolsets = list(AVAILABLE_TOOLSETS)
+    else:
+        enabled_toolsets = list(toolsets_config)
+
+    toolsets = []
+    machine_control = None
+
+    if "utils" in enabled_toolsets:
+        toolsets.append(utils_tools)
+
+    if "sleep" in enabled_toolsets:
+        toolsets.append(generate_sleep_toolset(group_chat))
+
+    if "machine_control" in enabled_toolsets:
+        from linhai.machine_control import MachineControl
+
+        machine_control = MachineControl(group_chat)
+        toolsets.append(register_machine_control_tools(machine_control))
+
+    if "multimodal" in enabled_toolsets:
+        toolsets.append(multimodal_toolset)
+
+    return toolsets, machine_control
+
+
+async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset):
     from linhai.tool.mcp_connector import MCPConnector
 
-    machine_control = MachineControl(context["group_chat"])
-    machine_control_toolset = register_machine_control_tools(machine_control)
+    toolsets, machine_control = _build_toolsets_from_config(context, multimodal_toolset)
 
     mcp_connector = MCPConnector(context["group_chat"])
     if context["config"].agent.mcp and context["config_basedir"] is not None:
@@ -254,12 +302,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
 
     tool_manager = ToolManager(
         group_chat=context["group_chat"],
-        toolsets=[
-            utils_tools,
-            generate_sleep_toolset(context["group_chat"]),
-            machine_control_toolset,
-            multimodal_toolset,
-        ],
+        toolsets=toolsets,
         config=context["config"].tools,
         mcp_connector=mcp_connector,
     )
