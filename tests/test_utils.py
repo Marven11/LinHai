@@ -148,6 +148,15 @@ class TestUtils(unittest.TestCase):
         result = simplify_toolcall_json(toolcall)
         self.assertIn('expression="/^JSValue JS_Eval\\\\b/,/^}$/p"', result)
 
+    def test_simplify_toolcall_json_arguments_is_list(self):
+        """Test simplify_toolcall_json when arguments is a list instead of dict."""
+        toolcall = {
+            "name": "process_create",
+            "arguments": ["uv", "run", "python", "-m", "linhai"],
+        }
+        result = simplify_toolcall_json(toolcall)
+        self.assertEqual(result, "process_create(<not a dict>)")
+
 
 if __name__ == "__main__":
     unittest.main()

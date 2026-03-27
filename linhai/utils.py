@@ -69,6 +69,8 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
     name = toolcall_json.get("name", "")
 
     arguments = toolcall_json.get("arguments", {})
+    if not isinstance(arguments, dict):
+        return f"{name}(<not a dict>)"
     simplified_args = []
     for k, v in arguments.items():
         simplified_args.append(f"{k}={simplify_value(v)}")
