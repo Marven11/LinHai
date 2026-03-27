@@ -164,8 +164,8 @@ class SecretSubConfig(BaseModel):
 class TelegramConfig(BaseModel):
     """Telegram bot配置类型定义。"""
 
-    bot_token: str = Field(..., min_length=1)
-    default_chat_id: str = Field(..., min_length=1)
+    bot_token: str = Field(..., min_length=1, description="Telegram bot的认证令牌")
+    default_chat_id: str = Field(..., min_length=1, description="默认的聊天ID")
 
     def __str__(self) -> str:
         """返回Telegram配置的字符串表示"""
@@ -175,7 +175,9 @@ class TelegramConfig(BaseModel):
 class RemoteControlConfig(BaseModel):
     """远程控制配置类型定义。"""
 
-    telegram: Optional[TelegramConfig] = None
+    telegram: Optional[TelegramConfig] = Field(
+        default=None, description="Telegram远程控制配置"
+    )
 
     def __str__(self) -> str:
         """返回远程控制配置的字符串表示"""
@@ -190,8 +192,12 @@ AVAILABLE_TOOLSETS = frozenset(
 class ToolConfig(BaseModel):
     """工具配置类型定义。"""
 
-    secret: SecretSubConfig = Field(default_factory=SecretSubConfig)
-    max_toolcall_token_in_round: int = Field(default=30000, ge=1)
+    secret: SecretSubConfig = Field(
+        default_factory=SecretSubConfig, description="Secret子配置"
+    )
+    max_toolcall_token_in_round: int = Field(
+        default=30000, ge=1, description="单轮工具调用中允许的最大token数"
+    )
     toolsets: Union[Literal["defaults"], list[str]] = Field(default="defaults")
 
     @field_validator("toolsets")
@@ -213,8 +219,8 @@ class ToolConfig(BaseModel):
 class CLIConfig(BaseModel):
     """CLI配置类型定义。"""
 
-    use_nerd_font: bool = Field(default=False)
-    theme: str = Field(default="nord")
+    use_nerd_font: bool = Field(default=False, description="是否使用Nerd Font图标")
+    theme: str = Field(default="nord", description="CLI主题名称")
 
     def __str__(self) -> str:
         """返回CLI配置的字符串表示"""

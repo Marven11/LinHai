@@ -408,6 +408,49 @@ model = "test_model"
             secret_fields["config_path"].description, "Secret配置文件路径。"
         )
 
+    def test_field_descriptions_additional(self):
+        """Test that additional config fields have descriptions."""
+        from linhai.config import (
+            TelegramConfig,
+            RemoteControlConfig,
+            ToolConfig,
+            CLIConfig,
+        )
+
+        telegram_fields = TelegramConfig.model_fields
+        self.assertIsNotNone(
+            telegram_fields["bot_token"].description,
+            "bot_token should have a description",
+        )
+        self.assertIsNotNone(
+            telegram_fields["default_chat_id"].description,
+            "default_chat_id should have a description",
+        )
+
+        remote_control_fields = RemoteControlConfig.model_fields
+        self.assertIsNotNone(
+            remote_control_fields["telegram"].description,
+            "telegram should have a description",
+        )
+
+        tool_fields = ToolConfig.model_fields
+        self.assertIsNotNone(
+            tool_fields["secret"].description, "secret should have a description"
+        )
+        self.assertIsNotNone(
+            tool_fields["max_toolcall_token_in_round"].description,
+            "max_toolcall_token_in_round should have a description",
+        )
+
+        cli_fields = CLIConfig.model_fields
+        self.assertIsNotNone(
+            cli_fields["use_nerd_font"].description,
+            "use_nerd_font should have a description",
+        )
+        self.assertIsNotNone(
+            cli_fields["theme"].description, "theme should have a description"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
