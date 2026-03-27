@@ -826,6 +826,9 @@ COMPRESS_RANGE_PROMPT = """
 
 ## 格式要求
 
+调用context_forget_range_step2，并传入这四个参数
+
+- range_clean_id: 本条消息的range_clean_id
 - description: 描述这段消息的内容和当前的任务，包括主要目标，文件代码等，严格按照下方“description实例”格式输出
 - start_id: 要压缩范围的起始消息ID（包含）
 - end_id: 要压缩范围的结束消息ID（包含）
