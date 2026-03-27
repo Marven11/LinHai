@@ -66,8 +66,6 @@ class Agent:
 
         self.compress_tool_called_in_last_response = False
 
-        self.current_answer: Answer | None = None
-
         from .answer import AgentLlm
 
         self.agent_llm = AgentLlm(
@@ -130,10 +128,13 @@ class Agent:
         self, agent: "Agent", answer, current_content
     ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
-        if not agent.group_chat.is_empty("user_message") and agent.current_answer:
+        if not agent.group_chat.is_empty("user_message"):
             should_interrupt = await self.receive_one_user_message()
-            if should_interrupt and agent.current_answer:
-                agent.current_answer.interrupt()
+            if should_interrupt and agent.agent_llm:
+                await agent.agent_llm.interrupt(
+                    "用户发来新的消息打断了你的输出",
+                    "Agent已被打断"
+                )
                 return True
         return False
 
@@ -311,7 +312,6 @@ class Agent:
         if self.toolcall_processor.early_return:
             return await self.generate_response()
 
-        self.current_answer = None
         return parsed_answer
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
