@@ -1,7 +1,6 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
 from typing import (
-    cast,
     Sequence,
 )
 
@@ -132,8 +131,7 @@ class Agent:
             should_interrupt = await self.receive_one_user_message()
             if should_interrupt and agent.agent_llm:
                 await agent.agent_llm.interrupt(
-                    "用户发来新的消息打断了你的输出",
-                    "Agent已被打断"
+                    "用户发来新的消息打断了你的输出", "Agent已被打断"
                 )
                 return True
         return False
@@ -267,11 +265,13 @@ class Agent:
 
         from linhai.llm import AssistantMessage
 
-        chat_message = cast(AssistantMessage, answer.get_message())
+        message = answer.get_message()
+        if not isinstance(message, AssistantMessage):
+            raise TypeError(f"Expected AssistantMessage, got {type(message).__name__}")
+        chat_message: AssistantMessage = message
 
         from linhai.llm import AssistantMessage
 
-        chat_message = cast(AssistantMessage, answer.get_message())
         full_response = chat_message.message
         await self.message_processor.add_new_message(chat_message)
 

@@ -76,6 +76,12 @@ jobs:
             echo "No Python files changed in this PR, skipping black check"
           fi
 
+      - name: Check for cast function calls (issue #457)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for cast/typing.cast function calls in Python files..."
+          uv run python .gitea/scripts/check_cast_usage.py
+
       - name: Check for new Python comments
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
@@ -119,6 +125,8 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for browser MCP snapshot documents..."
           uv run python .gitea/scripts/check_snapshot_docs.py
+
+
 
   nix-build:
     needs: [test]

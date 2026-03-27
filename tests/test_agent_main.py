@@ -99,6 +99,12 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         mock_parsed_answer = MagicMock(spec=ParsedAnswer)
         mock_answer = MagicMock()
 
+        from linhai.llm import AssistantMessage
+
+        mock_assistant_message = MagicMock(spec=AssistantMessage)
+        mock_assistant_message.message = "test message"
+        mock_answer.get_message.return_value = mock_assistant_message
+
         # 设置agent_llm.call_and_wait_llm返回模拟值
         self.agent.agent_llm = MagicMock()
         self.agent.agent_llm.call_and_wait_llm = AsyncMock(
