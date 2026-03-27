@@ -131,18 +131,21 @@ class Agent:
     ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
         if not agent.group_chat.is_empty("user_message") and agent.current_answer:
-            agent.current_answer.interrupt()
-            return True
+            should_interrupt = await self.receive_one_user_message()
+            if should_interrupt and agent.current_answer:
+                agent.current_answer.interrupt()
+                return True
         return False
 
-    async def receive_one_user_message(self):
+    async def receive_one_user_message(self) -> bool:
+        """接收并处理一条用户消息，返回是否需要打断agent."""
         msg = await self.group_chat.receive("user_message")
         from linhai.llm import UserMessage
 
         assert isinstance(msg, UserMessage)
-        await self.handle_user_message(msg)
+        should_interrupt = await self.handle_user_message(msg)
         self.state = "working"
-        return msg
+        return should_interrupt
 
     async def state_waiting_user(self):
         """
@@ -197,8 +200,8 @@ class Agent:
 
         return isinstance(msg, UserMessage)
 
-    async def handle_user_message(self, msg: "Message"):
-        """处理并加入用户的消息，首先尝试通过CommandHandler处理命令"""
+    async def handle_user_message(self, msg: "Message") -> bool:
+        """处理并加入用户的消息，返回是否需要打断agent."""
         from linhai.llm import UserMessage
 
         assert isinstance(msg, UserMessage)
@@ -208,10 +211,12 @@ class Agent:
         from linhai.cli.command_handler import CommandHandler
 
         handler = CommandHandler(self.group_chat)
-        handled = await handler.handle_command(content)
+        handled, should_interrupt = await handler.handle_command(content)
 
         if not handled:
             await self.message_processor.add_new_message(msg)
+
+        return should_interrupt
 
     def get_current_model(self) -> LanguageModel:
         """

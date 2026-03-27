@@ -13,12 +13,17 @@ class CommandHandler:
     def __init__(self, group_chat: GroupChat):
         self.group_chat = group_chat
 
-    async def handle_command(self, message_text: str) -> bool:
-        """处理命令,返回True表示已处理,False表示不是命令."""
+    async def handle_command(self, message_text: str) -> tuple[bool, bool]:
+        """处理命令,返回(handled, should_interrupt).
+
+        handled: 是否是命令
+        should_interrupt: 是否需要打断agent
+        """
         parsed_input = parse_user_input(message_text)
 
         if parsed_input.switch_model:
-            return await self._register_llm_toolset(parsed_input.switch_model)
+            await self._register_llm_toolset(parsed_input.switch_model, message_text)
+            return True, False
 
         if parsed_input.command:
             if parsed_input.command == "context_forget_large_message":
@@ -33,7 +38,7 @@ class CommandHandler:
             elif parsed_input.command == "status":
                 return await self._handle_status_command()
 
-        return False
+        return False, False
 
     async def _show_error_message(self, content: str) -> None:
         await self._show_runtime_message("ERROR", content)
@@ -51,7 +56,7 @@ class CommandHandler:
         widget = RuntimeMessageWidget(level=level, content=content)
         container.mount(widget)
 
-    async def _handle_queue_command(self, message_text: str) -> bool:
+    async def _handle_queue_command(self, message_text: str) -> tuple[bool, bool]:
         """处理/queue命令,将消息加入排队列表."""
         from linhai.agent import Agent
         from linhai.llm import UserMessage
@@ -59,24 +64,24 @@ class CommandHandler:
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
-            return True
+            return True, False
 
         queue_content = message_text.removeprefix("/queue").strip()
         if not queue_content:
             await self._show_error_message("用法: /queue <消息内容>")
-            return True
+            return True, False
 
         queued_msg = UserMessage(message=queue_content)
         agent.queued_messages.append(queued_msg)
 
-        return True
+        return True, False
 
-    async def _handle_quit_command(self) -> bool:
+    async def _handle_quit_command(self) -> tuple[bool, bool]:
         """处理/quit和/exit命令,发送退出信号."""
         await self.group_chat.send("exit_signal", {"return_code": 0})
-        return True
+        return True, False
 
-    async def _handle_help_command(self) -> bool:
+    async def _handle_help_command(self) -> tuple[bool, bool]:
         """处理/help命令,显示帮助信息."""
         help_text = """可用命令:
 /queue <消息> - 将消息加入排队列表,在下次回答后处理
@@ -91,16 +96,16 @@ class CommandHandler:
 """
 
         await self._show_runtime_message("INFO", help_text)
-        return True
+        return True, False
 
-    async def _handle_status_command(self) -> bool:
+    async def _handle_status_command(self) -> tuple[bool, bool]:
         """处理/status命令,显示状态信息."""
         from linhai.agent import Agent
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
-            return True
+            return True, False
 
         llm_name, _llm = agent.get_current_llm_info()
         threshold_info = agent.get_threshold_info()
@@ -114,16 +119,17 @@ class CommandHandler:
             )
 
         await self._show_runtime_message("INFO", "\n".join(status_lines))
-        return True
+        return True, False
 
-    async def _register_llm_toolset(self, model_name: str) -> bool:
+    async def _register_llm_toolset(self, model_name: str, message_text: str) -> None:
         """处理@切换模型命令."""
         from linhai.agent import Agent
+        from linhai.llm import UserMessage
 
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
-            return True
+            return
 
         llm_manager = agent.llm_manager
 
@@ -138,7 +144,8 @@ class CommandHandler:
                 f"错误：LLM名称 {model_name!r} 不存在.可用的LLM包括: {', '.join(llm_manager.llm_names)}"
             )
 
-        return True
+        user_msg = UserMessage(message=message_text)
+        await agent.message_processor.add_new_message(user_msg)
 
     def get_command_completions(self) -> list[str]:
         """返回所有支持的命令补全列表"""
@@ -151,18 +158,20 @@ class CommandHandler:
             "/context_forget_large_message",
         ]
 
-    async def _handle_context_tool_command(self, message_text: str) -> bool:
+    async def _handle_context_tool_command(
+        self, message_text: str
+    ) -> tuple[bool, bool]:
         parsed_input = parse_user_input(message_text)
         if not parsed_input.command:
             await self._show_error_message("错误：无法解析命令")
-            return True
+            return True, True
 
         supported_commands = ["context_forget_large_message"]
         if parsed_input.command not in supported_commands:
             await self._show_error_message(
                 f"错误：不支持的命令 '{parsed_input.command}',支持的命令有: {', '.join(supported_commands)}"
             )
-            return True
+            return True, True
 
         from linhai.agent import Agent
         from linhai.llm import ToolCallMessage
@@ -170,7 +179,7 @@ class CommandHandler:
         agent = self.group_chat.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
-            return True
+            return True, True
 
         await self._show_success_message(f"正在执行命令: {parsed_input.command}")
 
@@ -194,4 +203,4 @@ class CommandHandler:
                 ),
             )
 
-        return True
+        return True, True

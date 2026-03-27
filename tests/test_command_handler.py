@@ -22,13 +22,15 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_handle_command_empty(self):
         """Test handling empty input."""
-        result = await self.handler.handle_command("")
-        self.assertFalse(result)
+        handled, should_interrupt = await self.handler.handle_command("")
+        self.assertFalse(handled)
+        self.assertFalse(should_interrupt)
 
     async def test_handle_command_not_a_command(self):
         """Test handling non-command input."""
-        result = await self.handler.handle_command("Hello world")
-        self.assertFalse(result)
+        handled, should_interrupt = await self.handler.handle_command("Hello world")
+        self.assertFalse(handled)
+        self.assertFalse(should_interrupt)
 
     async def test_handle_queue_command(self):
         """Test /queue command."""
@@ -51,8 +53,11 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         # Mock _show_success_message to ensure it's not called
         self.handler._show_success_message = AsyncMock()
 
-        result = await self.handler.handle_command("/queue Test message")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command(
+            "/queue Test message"
+        )
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         self.assertEqual(len(mock_agent.queued_messages), 1)
         # Verify that no success message was shown (which would interrupt agent)
         self.handler._show_success_message.assert_not_called()
@@ -74,8 +79,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "cli_app": mock_cli_app
         }[name]
 
-        result = await self.handler.handle_command("/quit")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("/quit")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         self.group_chat.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
     async def test_handle_exit_command(self):
@@ -90,8 +96,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "cli_app": mock_cli_app
         }[name]
 
-        result = await self.handler.handle_command("/exit")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("/exit")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         self.group_chat.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
     async def test_handle_help_command(self):
@@ -102,8 +109,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         self.group_chat.get_member_typechecked.return_value = mock_cli_app
 
-        result = await self.handler.handle_command("/help")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("/help")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
 
     async def test_handle_status_command(self):
         """Test /status command."""
@@ -124,8 +132,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "messages_list": mock_messages_list,
         }[name]
 
-        result = await self.handler.handle_command("/status")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("/status")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         mock_agent.get_current_llm_info.assert_called_once()
 
     async def test_handle_unknown_command(self):
@@ -136,8 +145,9 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         self.group_chat.get_member_typechecked.return_value = mock_cli_app
 
-        result = await self.handler.handle_command("/unknown")
-        self.assertFalse(result)
+        handled, should_interrupt = await self.handler.handle_command("/unknown")
+        self.assertFalse(handled)
+        self.assertFalse(should_interrupt)
 
     async def test_handle_switch_model_command(self):
         """Test @model_name command."""
@@ -155,7 +165,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_llm_manager.default_llm_name = "test-llm"
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         self.group_chat.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
@@ -170,9 +180,11 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "messages_list": mock_messages_list,
         }[name]
 
-        result = await self.handler.handle_command("@test-llm")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("@test-llm")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         mock_llm_manager.switch_to_llm.assert_called_once_with("test-llm")
+        mock_agent.message_processor.add_new_message.assert_called_once()
 
     async def test_handle_switch_model_invalid(self):
         """Test @invalid_model_name command."""
@@ -187,7 +199,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
-        mock_agent.message_processor.add_new_message = Mock()
+        mock_agent.message_processor.add_new_message = AsyncMock()
         self.group_chat.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
@@ -202,9 +214,11 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
             "messages_list": mock_messages_list,
         }[name]
 
-        result = await self.handler.handle_command("@invalid")
-        self.assertTrue(result)
+        handled, should_interrupt = await self.handler.handle_command("@invalid")
+        self.assertTrue(handled)
+        self.assertFalse(should_interrupt)
         self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
+        mock_agent.message_processor.add_new_message.assert_called_once()
 
 
 if __name__ == "__main__":
