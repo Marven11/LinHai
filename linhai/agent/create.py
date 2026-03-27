@@ -117,6 +117,7 @@ async def create_agent_from_config(
         "agent_context_orchestration", AgentContextOrchestration
     )
     tool_manager.add_toolset(orchestration.get_orchestration_toolset())
+    tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
     machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()

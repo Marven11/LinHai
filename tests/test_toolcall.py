@@ -54,17 +54,14 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.toolcall_processor.group_chat, self.mock_agent.group_chat)
         # context属性已移除，不再检查
 
-    def test_register_llm_toolset(self):
-        """测试LLM工具集注册。"""
-        self.mock_tool_manager.add_toolset.assert_called()
-
-    def test_register_dummy_toolset(self):
-        """测试虚拟工具集注册。"""
-        self.mock_tool_manager.add_toolset.assert_called()
-
-    def test_register_workflow_toolset(self):
-        """测试工作流工具集注册。"""
-        self.mock_tool_manager.add_toolset.assert_called()
+    def test_calculate_llm_toolset(self):
+        """测试calculate_llm_toolset方法返回正确的toolset。"""
+        toolset = self.toolcall_processor.calculate_llm_toolset()
+        self.assertIsNotNone(toolset)
+        self.assertIn("switch_llm", toolset.get_tools())
+        self.assertIn("current_llm", toolset.get_tools())
+        self.assertIn("list_llm", toolset.get_tools())
+        self.assertIn("get_token_usage", toolset.get_tools())
 
     async def test_call_tool_without_confirmation_success(self):
         """测试无需确认的工具调用成功。"""

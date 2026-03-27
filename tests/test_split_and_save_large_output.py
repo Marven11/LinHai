@@ -32,15 +32,15 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
 
         mock_agent = Mock()
         mock_agent.group_chat = self.mock_group_chat
-        mock_agent.llm_names = []
-        mock_agent.current_llm_index = 0
-        mock_agent.orchestration = Mock()
-        mock_agent.orchestration.get_orchestration_toolset = Mock(return_value=Mock())
+        mock_llm_manager = Mock()
+        mock_llm = Mock()
+        mock_llm.get_name = Mock(return_value="test_llm")
+        mock_llm_manager.llms = [mock_llm]
+        mock_agent.llm_manager = mock_llm_manager
 
-        with patch.object(AgentToolcall, "_register_default_toolsets"):
-            toolcall = AgentToolcall(mock_agent)
-            toolcall.group_chat = self.mock_group_chat
-            return toolcall
+        toolcall = AgentToolcall(mock_agent)
+        toolcall.group_chat = self.mock_group_chat
+        return toolcall
 
     def test_split_into_three_parts(self):
         """验证内容被固定分割成3块。"""

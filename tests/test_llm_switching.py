@@ -74,6 +74,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.tool_manager = self.group_chat.get_member_typechecked(
             "tool_manager", ToolManager
         )
+        # 显式注册LLM工具集
+        self.tool_manager.add_toolset(
+            self.agent.toolcall_processor.calculate_llm_toolset()
+        )
 
     async def test_current_llm_tool(self):
         """Test current_llm tool functionality."""

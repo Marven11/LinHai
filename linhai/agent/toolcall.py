@@ -50,8 +50,6 @@ class AgentToolcall:
         self.current_round_token_count = 0
         self.max_token_limit = max_toolcall_token_in_round
 
-        self._register_default_toolsets()
-
     def _check_tool_conflict(self, tool_name: str) -> str | None:
         """检查工具调用冲突，返回冲突工具的名字，没有冲突返回None
 
@@ -90,14 +88,15 @@ class AgentToolcall:
 
         return None
 
-    def _register_default_toolsets(self):
-        """注册默认工具集（LLM切换、虚拟工具）。"""
-        self._register_llm_toolset()
-        self._register_dummy_toolset()
+    def calculate_llm_toolset(self) -> ToolSet:
+        """计算并返回包含LLM和虚拟工具的toolset."""
+        toolset = ToolSet()
+        self._register_llm_tools(toolset)
+        self._register_dummy_tools(toolset)
+        return toolset
 
-    def _register_llm_toolset(self):
-        """注册LLM切换工具集。"""
-        llm_toolset = ToolSet()
+    def _register_llm_tools(self, toolset: ToolSet):
+        """注册LLM切换工具到给定的toolset."""
         llm_manager = self.agent.llm_manager
         llm_names = [llm.get_name() for llm in llm_manager.llms]
 
@@ -105,7 +104,7 @@ class AgentToolcall:
         if llm_names:
             desc += "可用的LLM包括: " + ", ".join(llm_names)
 
-        @llm_toolset.register_tool(
+        @toolset.register_tool(
             name="switch_llm",
             desc=desc,
             args={
@@ -117,7 +116,7 @@ class AgentToolcall:
             await llm_manager.switch_to_llm(llm_name)
             return f"已切换到LLM: {llm_name}"
 
-        @llm_toolset.register_tool(
+        @toolset.register_tool(
             name="current_llm",
             desc="显示当前使用的LLM名称",
             args={},
@@ -128,7 +127,7 @@ class AgentToolcall:
             current_name = current_llm_instance.get_name()
             return f"当前使用的LLM: {current_name}"
 
-        @llm_toolset.register_tool(
+        @toolset.register_tool(
             name="list_llm",
             desc="列出所有可用的LLM及其状态，包括名称、模型、token限制、是否支持图像等",
             args={},
@@ -154,16 +153,10 @@ class AgentToolcall:
 
             return "\n".join(result)
 
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
-        tool_manager.add_toolset(llm_toolset)
+    def _register_dummy_tools(self, toolset: ToolSet):
+        """注册虚拟工具到给定的toolset（token使用情况、历史消息管理等）。"""
 
-    def _register_dummy_toolset(self):
-        """注册虚拟工具集（token使用情况、历史消息管理等）。"""
-        dummy_toolset = ToolSet()
-
-        @dummy_toolset.register_tool(
+        @toolset.register_tool(
             name="get_token_usage",
             desc="获取token使用情况。",
             args={},
@@ -180,12 +173,6 @@ class AgentToolcall:
                 return f"当前token总用量为: {total} ({total/1000:.2f} k)"
             else:
                 return "暂无token用量信息"
-
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
-
-        tool_manager.add_toolset(dummy_toolset)
 
     def _split_and_save_large_output(
         self,
