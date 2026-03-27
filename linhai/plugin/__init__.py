@@ -12,6 +12,7 @@ from .message_checkers import (
     MinimaxToolCallPlugin,
     RuntimeImitationPlugin,
     VolcanoDeepseekFixPlugin,
+    GlmToolCallPlugin,
     GlmInsultMaskPlugin,
 )
 
@@ -64,6 +65,7 @@ __all__ = [
     "KimiK25ToolCallPlugin",
     "MinimaxToolCallPlugin",
     "RuntimeImitationPlugin",
+    "GlmToolCallPlugin",
     "GlmInsultMaskPlugin",
     "PromptFastAgentPlugin",
     "SlowStartPlugin",
