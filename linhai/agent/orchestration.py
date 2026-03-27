@@ -301,7 +301,7 @@ class AgentContextOrchestration:
 
         return pieces
 
-    def get_orchestration_toolset(self) -> "ToolSet":
+    def get_context_cleaning_toolset(self) -> "ToolSet":
         """获取编排工具集，合并消息管理和工作流工具。
 
         Returns:

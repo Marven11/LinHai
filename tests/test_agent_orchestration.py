@@ -537,7 +537,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_toolset_conflict_with_parameter(self):
         """测试工具集的conflict_with参数。"""
-        toolset = self.orchestration.get_orchestration_toolset()
+        toolset = self.orchestration.get_context_cleaning_toolset()
         tools = toolset.get_tools()
 
         # 检查context_forget_large_message

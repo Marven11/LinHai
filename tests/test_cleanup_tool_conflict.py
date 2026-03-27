@@ -46,7 +46,7 @@ class TestCleanupToolConflict(unittest.TestCase):
         )
 
     def test_conflict_with_parameter_exists(self):
-        toolset = self.orchestration.get_orchestration_toolset()
+        toolset = self.orchestration.get_context_cleaning_toolset()
         tools = toolset.get_tools()
         # 检查context_forget_large_message
         large_message_tool = tools.get("context_forget_large_message")
@@ -74,7 +74,7 @@ class TestCleanupToolConflict(unittest.TestCase):
         )
 
     def test_conflict_with_mutual_exclusion(self):
-        toolset = self.orchestration.get_orchestration_toolset()
+        toolset = self.orchestration.get_context_cleaning_toolset()
         tools = toolset.get_tools()
         large_message_tool = tools.get("context_forget_large_message")
         step1_tool = tools.get("context_forget_range_step1")

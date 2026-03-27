@@ -70,7 +70,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         orchestration = self.group_chat.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
-        self.tool_manager.add_toolset(orchestration.get_orchestration_toolset())
+        self.tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
 
     async def test_workflow_as_regular_tool(self):
         """Test that context_forget_range_step1 and step2 are now regular tools, not workflows."""
