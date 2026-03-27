@@ -234,9 +234,24 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
     from linhai.machine_control import MachineControl
     from linhai.machine_control.main import register_machine_control_tools
     from linhai.tool.general import generate_sleep_toolset
+    from linhai.tool.mcp_connector import MCPConnector
 
     machine_control = MachineControl(context["group_chat"])
     machine_control_toolset = register_machine_control_tools(machine_control)
+
+    mcp_connector: MCPConnector | None = None
+    if context["config"].agent.mcp and context["config_basedir"] is not None:
+        from contextlib import AsyncExitStack
+
+        mcp_connector = MCPConnector(context["group_chat"])
+        for mcp_config in context["config"].agent.mcp:
+            server_script_path = (
+                context["config_basedir"] / mcp_config.server_script_path
+            )
+            exit_stack = AsyncExitStack()
+            await mcp_connector.connect_mcp_server(
+                mcp_config.name, server_script_path.absolute().as_posix(), exit_stack
+            )
 
     tool_manager = ToolManager(
         group_chat=context["group_chat"],
@@ -247,8 +262,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
             multimodal_toolset,
         ],
         config=context["config"].tools,
-        mcp_config=context["config"].agent.mcp,
-        mcp_basedir=context["config_basedir"],
+        mcp_connector=mcp_connector,
     )
 
     if context["config"].tools.secret.config_path:

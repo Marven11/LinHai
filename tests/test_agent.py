@@ -113,8 +113,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             toolsets=[utils_tools],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
 
         from linhai.token_manager import TokenManager

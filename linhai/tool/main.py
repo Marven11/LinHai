@@ -32,20 +32,18 @@ class ToolManager:
         group_chat: GroupChat,
         toolsets: list[ToolSet],
         config: ToolConfig,
-        mcp_config: list[MCPConfig],
-        mcp_basedir: Optional[Path],
+        mcp_connector: MCPConnector | None,
     ):
         """初始化工具管理器
 
         Args:
             config: 可选配置对象
+            mcp_connector: 已初始化的MCPConnector实例，如果没有配置MCP则为None
         """
         group_chat.register_member("tool_manager", self)
         self.group_chat = group_chat
         self.config = config
-        self.mcp_connector: MCPConnector | None = None
-        self.mcp_config = mcp_config
-        self.mcp_basedir = mcp_basedir
+        self.mcp_connector = mcp_connector
 
         names = Counter(
             [name for toolset in toolsets for name in toolset.get_tools().keys()]
@@ -55,21 +53,6 @@ class ToolManager:
                 f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
             )
         self._toolsets = toolsets
-
-    async def ensure_mcp_connector(self):
-        if self.mcp_connector is not None:
-            return
-        if self.mcp_basedir is None:
-            raise ValueError("MCP配置需要config_basedir")
-        self.mcp_connector = MCPConnector(self.group_chat)
-        for mcp_config in self.mcp_config:
-            server_script_path = self.mcp_basedir / mcp_config.server_script_path
-            from contextlib import AsyncExitStack
-
-            exit_stack = AsyncExitStack()
-            await self.mcp_connector.connect_mcp_server(
-                mcp_config.name, server_script_path.absolute().as_posix(), exit_stack
-            )
 
     @property
     def toolsets(self) -> list[ToolSet]:
@@ -96,9 +79,6 @@ class ToolManager:
             for info in to_tools_info(toolset.get_tools())
         ]
 
-    def get_mcp_connector(self):
-        return self.mcp_connector
-
     async def process_tool_call(
         self, tool_call: ToolCallMessage, tool_index: int
     ) -> Message:
@@ -110,8 +90,6 @@ class ToolManager:
         Returns:
             Message: 工具调用结果消息
         """
-        await self.ensure_mcp_connector()
-
         kwargs = tool_call.function_arguments
 
         original_machine = None

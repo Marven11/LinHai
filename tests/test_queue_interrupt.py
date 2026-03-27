@@ -70,8 +70,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
 
         self.mock_llm = Mock()

@@ -51,8 +51,7 @@ class TestToolConflictRefactor(unittest.TestCase):
             group_chat=self.agent_mock.group_chat,
             toolsets=[],
             config=config,
-            mcp_config=mcp_config,
-            mcp_basedir=mcp_basedir,
+            mcp_connector=None,
         )
 
         def get_member_typechecked_side_effect(member_type, _member_class=None):

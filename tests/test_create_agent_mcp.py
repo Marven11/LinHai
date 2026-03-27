@@ -40,6 +40,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         import shutil
 
         shutil.copy2(source_file, dest_file)
+        os.chmod(dest_file, 0o755)
 
     def tearDown(self):
         """清理测试fixtures"""

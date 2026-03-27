@@ -334,7 +334,6 @@ class Agent:
         """
 
         user_input_found = False
-        await self.toolcall_processor.ensure_mcp_connector()
         await self.lifecycle.trigger_before_agent_loop(self)
 
         while not self.group_chat.is_empty("user_message"):

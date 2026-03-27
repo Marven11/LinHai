@@ -236,13 +236,6 @@ class AgentToolcall:
 
         return f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
 
-    async def ensure_mcp_connector(self):
-        """确保MCP连接器已准备就绪。"""
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
-        await tool_manager.ensure_mcp_connector()
-
     def start_new_tool_call_round(self):
         """开始新一轮工具调用，清空已调用工具记录"""
         self.called_tools_in_round = []

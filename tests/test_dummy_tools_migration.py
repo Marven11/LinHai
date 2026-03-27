@@ -43,8 +43,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
 
     async def test_get_token_usage_tool_registered(self):

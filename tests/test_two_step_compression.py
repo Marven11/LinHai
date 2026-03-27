@@ -44,8 +44,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             group_chat=self.group_chat,
             toolsets=[utils_tools],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
 
         from linhai.llm_manager import LlmManager

@@ -47,8 +47,8 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         from pathlib import Path
 
         """Test full integration with real MCP server."""
-        project_root = Path(__file__).parent.parent.parent
-        server_path = project_root / "linhai" / "tests" / "real_mcp_server.py"
+        project_root = Path(__file__).parent.parent
+        server_path = project_root / "tests" / "real_mcp_server.py"
 
         config_content = f"""
 [[llm]]
