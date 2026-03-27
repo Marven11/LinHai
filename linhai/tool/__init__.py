@@ -11,7 +11,7 @@ from .general import (
 )
 
 from .base import (
-    global_tools,
+    utils_tools,
     ToolArgInfo,
     ToolSet,
     ToolCallResultMessage,
@@ -22,7 +22,7 @@ from .main import ToolManager
 from .mcp_connector import MCPConnector
 
 __all__ = [
-    "global_tools",
+    "utils_tools",
     "ToolArgInfo",
     "ToolCallResultMessage",
     "ToolResultSuccess",

@@ -5,7 +5,7 @@ import unittest.mock
 from pathlib import Path
 
 from linhai.llm import ToolCallMessage
-from linhai.tool.base import ToolArgInfo, global_tools
+from linhai.tool.base import ToolArgInfo, utils_tools
 from linhai.tool.main import ToolManager
 from linhai.group_chat import GroupChat
 from linhai.config import ToolConfig, MCPConfig
@@ -19,7 +19,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         group_chat = GroupChat()
         self.manager = ToolManager(
             group_chat=group_chat,
-            toolsets=[global_tools],
+            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
@@ -35,9 +35,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            unittest.mock.patch.object(global_tools, "has_tool", return_value=True),
+            unittest.mock.patch.object(utils_tools, "has_tool", return_value=True),
             unittest.mock.patch(
-                "linhai.tool.base.global_tools.call_tool", return_value=8
+                "linhai.tool.base.utils_tools.call_tool", return_value=8
             ) as mock_call,
         ):
             result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
@@ -58,7 +58,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         )
 
         with unittest.mock.patch(
-            "linhai.tool.base.global_tools.call_tool",
+            "linhai.tool.base.utils_tools.call_tool",
             side_effect=ValueError("Tool not found"),
         ):
             result = await self.manager.process_tool_call(mock_tool_call, tool_index=1)
@@ -72,9 +72,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             return arg1 + arg2
 
         with (
-            unittest.mock.patch.object(global_tools, "has_tool", return_value=True),
+            unittest.mock.patch.object(utils_tools, "has_tool", return_value=True),
             unittest.mock.patch(
-                "linhai.tool.base.global_tools.call_tool",
+                "linhai.tool.base.utils_tools.call_tool",
                 return_value=mock_async_tool(2, 3),
             ) as mock_call,
         ):
@@ -121,7 +121,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         group_chat = GroupChat()
         manager_with_config = ToolManager(
             group_chat=group_chat,
-            toolsets=[global_tools],
+            toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
@@ -136,9 +136,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            unittest.mock.patch.object(global_tools, "has_tool", return_value=True),
+            unittest.mock.patch.object(utils_tools, "has_tool", return_value=True),
             unittest.mock.patch(
-                "linhai.tool.base.global_tools.call_tool", return_value=long_content
+                "linhai.tool.base.utils_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
             result = await manager_with_config.process_tool_call(
@@ -173,7 +173,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         group_chat = GroupChat()
         manager_with_config = ToolManager(
             group_chat=group_chat,
-            toolsets=[global_tools],
+            toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
@@ -188,9 +188,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            unittest.mock.patch.object(global_tools, "has_tool", return_value=True),
+            unittest.mock.patch.object(utils_tools, "has_tool", return_value=True),
             unittest.mock.patch(
-                "linhai.tool.base.global_tools.call_tool", return_value=long_content
+                "linhai.tool.base.utils_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
             result = await manager_with_config.process_tool_call(
@@ -209,7 +209,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         group_chat = GroupChat()
         manager_without_config = ToolManager(
             group_chat=group_chat,
-            toolsets=[global_tools],
+            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),
@@ -224,9 +224,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            unittest.mock.patch.object(global_tools, "has_tool", return_value=True),
+            unittest.mock.patch.object(utils_tools, "has_tool", return_value=True),
             unittest.mock.patch(
-                "linhai.tool.base.global_tools.call_tool", return_value=long_content
+                "linhai.tool.base.utils_tools.call_tool", return_value=long_content
             ) as mock_call,
         ):
             result = await manager_without_config.process_tool_call(

@@ -10,7 +10,7 @@ from linhai.group_chat import GroupChat
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
 
-from linhai.tool.base import global_tools
+from linhai.tool.base import utils_tools
 from linhai.tool.main import ToolManager
 
 from .conversation import register_conversation_folder
@@ -241,7 +241,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
     tool_manager = ToolManager(
         group_chat=context["group_chat"],
         toolsets=[
-            global_tools,
+            utils_tools,
             generate_sleep_toolset(context["group_chat"]),
             machine_control_toolset,
             multimodal_toolset,

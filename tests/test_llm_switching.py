@@ -10,7 +10,7 @@ from linhai.llm import SystemMessage, ToolCallMessage
 from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 from linhai.group_chat import GroupChat
 from linhai.tool.main import ToolManager
-from linhai.tool.base import global_tools
+from linhai.tool.base import utils_tools
 
 
 class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
@@ -41,7 +41,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,
-            toolsets=[global_tools, terminal_toolset],
+            toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),

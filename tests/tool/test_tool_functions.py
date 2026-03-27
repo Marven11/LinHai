@@ -2,7 +2,7 @@
 
 import unittest
 
-from linhai.tool.base import ToolArgInfo, global_tools
+from linhai.tool.base import ToolArgInfo, utils_tools
 
 
 class TestToolFunctions(unittest.TestCase):
@@ -58,5 +58,5 @@ class TestToolFunctions(unittest.TestCase):
     def test_tool_not_found(self):
         """测试工具不存在的情况"""
         with self.assertRaises(ValueError) as context:
-            global_tools.call_tool("nonexistent_tool", {})
+            utils_tools.call_tool("nonexistent_tool", {})
         self.assertEqual(str(context.exception), "Tool not found: nonexistent_tool")

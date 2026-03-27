@@ -14,7 +14,7 @@ from linhai.agent.workflow import (
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
-from linhai.tool.base import global_tools, ToolResultSuccess, ToolResultFailed
+from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
 from linhai.group_chat import GroupChat
 
 r = reprlib.Repr()
@@ -48,7 +48,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,
-            toolsets=[global_tools],
+            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),

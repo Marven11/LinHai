@@ -35,13 +35,13 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         MachineControl(self.group_chat)
 
-        from linhai.tool.base import global_tools
+        from linhai.tool.base import utils_tools
         from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
             group_chat=self.group_chat,
-            toolsets=[global_tools, terminal_toolset],
+            toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_config=[],
             mcp_basedir=Path("/tmp"),

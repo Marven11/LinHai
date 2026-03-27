@@ -239,4 +239,4 @@ class ToolCallResultMessage(Message):
         )
 
 
-global_tools = ToolSet()
+utils_tools = ToolSet()

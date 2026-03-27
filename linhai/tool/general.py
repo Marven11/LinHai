@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 
 from linhai.tool.base import (
-    global_tools,
+    utils_tools,
     ToolArgInfo,
     ToolSet,
     ToolResultSuccess,
@@ -74,7 +74,7 @@ def _download_with_httpx(url: str) -> str:
         raise RuntimeError(f"HTTP状态错误: {str(e)}") from e
 
 
-@global_tools.register_tool(
+@utils_tools.register_tool(
     name="fetch_article",
     desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
     args={
@@ -159,7 +159,7 @@ markdown内容如下
         return f"转换失败: {str(e)}"
 
 
-@global_tools.register_tool(
+@utils_tools.register_tool(
     name="search_web",
     desc="使用DuckDuckGo进行网页搜索并返回格式化结果",
     args={
@@ -273,7 +273,7 @@ def safe_calculator(expression: str) -> str:
 
 
 # 注册计算器工具
-@global_tools.register_tool(
+@utils_tools.register_tool(
     name="safe_calculator",
     desc="安全计算数学表达式。表达式只能包含数字、加减乘除符号(+ - * /)、乘方(**)、取模(%)、大于小于(> <)和空格。建议在计算任何数字时优先使用此工具。",
     args={
