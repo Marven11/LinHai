@@ -230,14 +230,17 @@ class CLIConfig(BaseModel):
 class Config(BaseModel):
     """主配置类型定义。"""
 
-    llm: list[LLMConfig]
-    agent: AgentConfig = Field(default_factory=AgentConfig)
+    llm: list[LLMConfig] = Field(description="LLM配置列表")
+    agent: AgentConfig = Field(default_factory=AgentConfig, description="Agent行为配置")
     user_prompt: UserPromptConfig = Field(
-        default_factory=lambda: UserPromptConfig(file_path="")
+        default_factory=lambda: UserPromptConfig(file_path=""),
+        description="用户提示配置",
     )
-    tools: ToolConfig = Field(default_factory=ToolConfig)
-    cli: CLIConfig = Field(default_factory=CLIConfig)
-    remote_control: RemoteControlConfig = Field(default_factory=RemoteControlConfig)
+    tools: ToolConfig = Field(default_factory=ToolConfig, description="工具相关配置")
+    cli: CLIConfig = Field(default_factory=CLIConfig, description="CLI界面配置")
+    remote_control: RemoteControlConfig = Field(
+        default_factory=RemoteControlConfig, description="远程控制配置"
+    )
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""

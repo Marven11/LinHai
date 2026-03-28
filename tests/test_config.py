@@ -451,6 +451,16 @@ model = "test_model"
             cli_fields["theme"].description, "theme should have a description"
         )
 
+    def test_config_field_descriptions(self):
+        """Test that Config class fields have descriptions."""
+        config_fields = Config.model_fields
+        self.assertEqual(config_fields["llm"].description, "LLM配置列表")
+        self.assertEqual(config_fields["agent"].description, "Agent行为配置")
+        self.assertEqual(config_fields["user_prompt"].description, "用户提示配置")
+        self.assertEqual(config_fields["tools"].description, "工具相关配置")
+        self.assertEqual(config_fields["cli"].description, "CLI界面配置")
+        self.assertEqual(config_fields["remote_control"].description, "远程控制配置")
+
 
 if __name__ == "__main__":
     unittest.main()
