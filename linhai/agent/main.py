@@ -70,7 +70,6 @@ class Agent:
         self.agent_llm = AgentLlm(
             llm_manager=llm_manager,
             group_chat=group_chat,
-            agent=self,
             toolcall_processor=self.toolcall_processor,
             message_processor=self.message_processor,
         )

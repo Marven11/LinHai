@@ -29,10 +29,12 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         self.lifecycle = MagicMock(spec=Lifecycle)
         self.mock_agent.lifecycle = self.lifecycle
 
+        # 注册mock agent到group_chat，因为AgentLlm现在从group_chat获取agent
+        self.group_chat.get_member_typechecked.return_value = self.mock_agent
+
         self.agent_llm = AgentLlm(
             llm_manager=self.mock_llm_manager,
             group_chat=self.group_chat,
-            agent=self.mock_agent,
             toolcall_processor=self.mock_toolcall_processor,
             message_processor=self.mock_message_processor,
         )
@@ -41,12 +43,12 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         """__init__：正确初始化所有属性。"""
         self.assertEqual(self.agent_llm.llm_manager, self.mock_llm_manager)
         self.assertEqual(self.agent_llm.group_chat, self.group_chat)
-        self.assertEqual(self.agent_llm.agent, self.mock_agent)
         self.assertEqual(
             self.agent_llm.toolcall_processor, self.mock_toolcall_processor
         )
         self.assertEqual(self.agent_llm.message_processor, self.mock_message_processor)
         self.assertIsNone(self.agent_llm._current_parsed_answer)
+        self.assertIsNone(self.agent_llm.current_answer)
 
     async def test_interrupt_no_current_answer(self):
         """interrupt：无current_answer时不执行任何操作。"""

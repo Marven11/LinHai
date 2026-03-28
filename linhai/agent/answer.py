@@ -1,4 +1,4 @@
-from typing import Tuple, TYPE_CHECKING, cast
+from typing import Tuple, TYPE_CHECKING
 import asyncio
 from linhai.llm import Answer, Message
 from linhai.llm_manager import LlmManager
@@ -22,7 +22,6 @@ class AgentLlm:
         self,
         llm_manager: LlmManager,
         group_chat: GroupChat,
-        agent: object,
         toolcall_processor: "AgentToolcall",
         message_processor: "AgentMessage",
     ):
@@ -31,17 +30,16 @@ class AgentLlm:
         Args:
             llm_manager: LlmManager实例
             group_chat: GroupChat实例
-            agent: Agent实例（用于访问state）
             toolcall_processor: AgentToolcall实例
             message_processor: AgentMessage实例
         """
         self.llm_manager = llm_manager
         self.group_chat = group_chat
-        self.agent = agent
         self.toolcall_processor = toolcall_processor
         self.message_processor = message_processor
         self._current_parsed_answer: ParsedAnswer | None = None
         self._queued_messages: list = []
+        self.current_answer: Answer | None = None
 
     async def call_and_wait_llm(self) -> Tuple[Answer, ParsedAnswer, bool]:
         """调用LLM并等待解析完成。
@@ -49,7 +47,9 @@ class AgentLlm:
         Returns:
             Tuple[Answer, ParsedAnswer, bool]: (Answer, ParsedAnswer, 是否正常完成)
         """
-        agent = cast("Agent", self.agent)
+        from .main import Agent
+
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
         lifecycle = agent.lifecycle
 
         await lifecycle.trigger_before_message_generation()
@@ -75,9 +75,11 @@ class AgentLlm:
             agent_message: 发送给agent的消息内容，放入RuntimeMessage
             ui_notice: 发送给UI的通知内容，必须提供
         """
+        from .main import Agent
+
         message_processor = self.message_processor
         lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
-        agent = cast("Agent", self.agent)
+        agent = self.group_chat.get_member_typechecked("agent", Agent)
 
         if self._current_parsed_answer:
             self._current_parsed_answer.interrupt()
@@ -98,9 +100,8 @@ class AgentLlm:
             self._current_parsed_answer = None
 
             await self.group_chat.send_if_exists("ui_log", interrupt_msg)
-            from .main import Agent
 
-            agent = cast(Agent, self.agent)
+            agent = self.group_chat.get_member_typechecked("agent", Agent)
             agent.state = "working"
 
             while not self.group_chat.is_empty("user_message"):
