@@ -110,10 +110,18 @@ class PlanningStatusReminderPlugin(Plugin):
         if agent is None:
             return
 
-        if self.status_counter >= 3:
+        if self.status_counter >= 5:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
                     f"你已经连续{self.status_counter}次没有修改STATUS.md，你偏离计划了吗？"
+                ),
+                source="planning_status_reminder",
+                sort_value=0,
+            )
+        elif self.status_counter >= 3:
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(
+                    "提醒：你应该更新STATUS.md以反应当前状态"
                 ),
                 source="planning_status_reminder",
                 sort_value=0,
@@ -126,7 +134,15 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.todolist_counter >= 8:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你偏离任务了吗？你应该如何修改TODOLIST.md?当前任务是否需要分解？当前任务是否需要被推迟？"
+                    f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你偏离任务了吗？你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？"
+                ),
+                source="planning_todolist_reminder",
+                sort_value=0,
+            )
+        if self.todolist_counter >= 6:
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(
+                    f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？"
                 ),
                 source="planning_todolist_reminder",
                 sort_value=0,
