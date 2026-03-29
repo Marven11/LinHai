@@ -89,6 +89,12 @@ jobs:
           echo "Checking for cast/typing.cast function calls in Python files..."
           uv run python .gitea/scripts/check_cast_usage.py
 
+      - name: Check for Any/object type annotations (issue #461)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for Any/object type annotations in function parameters..."
+          uv run python .gitea/scripts/check_any_object_type_annotations.py
+
       - name: Check for new Python comments
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
