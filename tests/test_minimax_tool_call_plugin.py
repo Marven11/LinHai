@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import time
 
 from linhai.plugin.message_checkers import MinimaxToolCallPlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Answer
 
 
@@ -14,8 +14,8 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """Set up test fixtures."""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = MinimaxToolCallPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = MinimaxToolCallPlugin(self.registry)
         self.agent = AsyncMock()
         self.answer = MagicMock(spec=Answer)
 
@@ -57,9 +57,9 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_detects_minimax_m25_error_format(self):
         """Test after_message_generation sets error time for minimax m2.5 error format."""
-        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
         error_response = '[TOOL_CALL]\n{\n  "name": "test_tool"\n}\n</TOOL_CALL>'
         await self.plugin.after_message_generation(self.answer, error_response, [])
@@ -70,9 +70,9 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_no_error_for_other_formats(self):
         """Test after_message_generation does not set error time for other incorrect formats."""
-        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
         other_error_response = "<minimax:tool_call>"
         await self.plugin.after_message_generation(

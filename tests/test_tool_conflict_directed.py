@@ -13,7 +13,7 @@ class TestDirectedToolConflict(unittest.TestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.group_chat = MagicMock()
+        self.agent.registry = MagicMock()
         self.agent.context = MagicMock()
         self.agent.lifecycle = MagicMock()
         self.agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
@@ -26,7 +26,7 @@ class TestDirectedToolConflict(unittest.TestCase):
         self.tool_manager.toolsets = []
         self.tool_manager.process_tool_call = AsyncMock()
 
-        self.agent.group_chat.get_member_typechecked = MagicMock(
+        self.agent.registry.get_member_typechecked = MagicMock(
             return_value=self.tool_manager
         )
 

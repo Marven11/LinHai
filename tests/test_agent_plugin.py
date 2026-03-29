@@ -23,19 +23,19 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.group_chat = MagicMock()
-        self.agent.group_chat.send = AsyncMock()
+        self.agent.registry = MagicMock()
+        self.agent.registry.send = AsyncMock()
         self.agent.agent_llm = AsyncMock(
             side_effect=lambda msg=None: self.agent.message_processor.add_new_message(
                 RuntimeMessage(msg or "Agent被插件打断")
             )
         )  # 添加interrupt mock并模拟添加消息
         self.agent.get_current_model = MagicMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
-        self.plugin = WeirdTokenPlugin(self.group_chat)
+        self.plugin = WeirdTokenPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -56,8 +56,8 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.group_chat = MagicMock()
-        self.agent.group_chat.send = AsyncMock()
+        self.agent.registry = MagicMock()
+        self.agent.registry.send = AsyncMock()
 
         result = await self.plugin.after_token_generation(
             self.agent, self.answer, current_content
@@ -81,11 +81,11 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
-        self.plugin = DirectoryChangePlugin(self.group_chat)
+        self.plugin = DirectoryChangePlugin(self.registry)
 
     def test_register(self):
         """测试插件注册。"""
@@ -149,13 +149,13 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
         from linhai.plugin import SingleToolCallReminderPlugin
 
-        self.plugin = SingleToolCallReminderPlugin(self.group_chat)
+        self.plugin = SingleToolCallReminderPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -252,13 +252,13 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.agent_llm = AsyncMock()
         self.agent.get_current_model = MagicMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
         # 模拟配置：minimax模型最多5个工具调用
-        self.plugin = PromptFastAgentPlugin(self.group_chat, {"minimax": 5})
+        self.plugin = PromptFastAgentPlugin(self.registry, {"minimax": 5})
         self.answer = MagicMock()
         self.answer.truncate = MagicMock()
         self.tool_calls = []
@@ -323,11 +323,11 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock()
-        self.group_chat.send_if_exists = AsyncMock(return_value=None)
+        self.registry = MagicMock()
+        self.registry.send_if_exists = AsyncMock(return_value=None)
         from linhai.agent.orchestration import RedStateToolBlockPlugin
 
-        self.plugin = RedStateToolBlockPlugin(self.group_chat)
+        self.plugin = RedStateToolBlockPlugin(self.registry)
 
         # 模拟agent
         self.agent = MagicMock()
@@ -413,7 +413,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             side_effect=mock_compute_orchestration_context
         )
 
-        # 设置group_chat.get_member_typechecked返回值
+        # 设置registry.get_member_typechecked返回值
         def get_member_typechecked_side_effect(name, cls):
             if name == "agent":
                 return self.agent
@@ -422,13 +422,13 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             else:
                 return None
 
-        self.group_chat.get_member_typechecked.side_effect = (
+        self.registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
     def test_init(self):
         """测试初始化。"""
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
         self.assertEqual(
             self.plugin.CLEANUP_TOOLS,
             {
@@ -483,7 +483,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     def test_red_state_allow_cleanup_tool(self):
         """测试红灯状态允许清理类工具。"""
@@ -520,7 +520,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     def test_all_allowed_tools(self):
         """测试所有允许的清理类工具。"""
@@ -538,7 +538,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             else:
                 return None
 
-        self.group_chat.get_member_typechecked.side_effect = (
+        self.registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
@@ -551,7 +551,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         for tool_name in allowed_tools:
             # 重置模拟调用计数
             self.agent.message_processor.add_new_message.reset_mock()
-            self.group_chat.send_if_exists.reset_mock()
+            self.registry.send_if_exists.reset_mock()
 
             # 创建工具调用
             from linhai.llm import ToolCallMessage
@@ -577,7 +577,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             # 验证允许调用
             self.assertFalse(result, f"工具 {tool_name} 应该被允许")
             self.agent.message_processor.add_new_message.assert_not_called()
-            self.group_chat.send_if_exists.assert_not_called()
+            self.registry.send_if_exists.assert_not_called()
 
     def test_red_state_recent_cleanup_block_cleanup_tool(self):
         """测试红灯状态、最近调用过清理工具、调用清理工具时被拦截并显示正确错误消息。"""
@@ -621,8 +621,8 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.agent.get_threshold_info.assert_called_once()
 
         # 验证通过send_if_exists发送UI消息（而不是interrupt）
-        self.group_chat.send_if_exists.assert_called_once()
-        ui_msg = self.group_chat.send_if_exists.call_args
+        self.registry.send_if_exists.assert_called_once()
+        ui_msg = self.registry.send_if_exists.call_args
         self.assertEqual(ui_msg[0][0], "ui_log")
         self.assertEqual(ui_msg[0][1].level, "ERROR")
         self.assertIn("token用量信息已失效", ui_msg[0][1].content)
@@ -670,7 +670,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.assertFalse(result)
         self.agent.get_threshold_info.assert_called_once()
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
 
 class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
@@ -685,11 +685,11 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.update_notification_message = MagicMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
-        self.plugin = PreviousReasoningPlugin(self.group_chat)
+        self.plugin = PreviousReasoningPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -794,12 +794,12 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.registry.send_if_exists = AsyncMock()
         from linhai.plugin import KimiK25ToolCallPlugin
 
-        self.plugin = KimiK25ToolCallPlugin(self.group_chat)
+        self.plugin = KimiK25ToolCallPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -823,7 +823,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("检测到不支持的kimi k2.5特殊工具调用格式", call_args[0].message)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_after_message_generation_with_kimi_format_with_json_toolcall(self):
         """测试检测到kimi特殊格式但已有json toolcall时不警告。"""
@@ -834,7 +834,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_kimi_format(self):
         """测试没有kimi特殊格式时不处理。"""
@@ -845,7 +845,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_empty_response(self):
         """测试空响应时不处理。"""
@@ -856,7 +856,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_mixed_kimi_format_with_code_block(self):
         """测试检测到混用格式 - ```<|tool_call_end|> 代码块。"""
@@ -881,7 +881,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             "混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message
         )
         self.assertIn("```<|tool_call_end|>", full_response)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_mixed_kimi_format_with_inline(self):
         """测试检测到混用格式 - }<|tool_call_end|> 行内格式。"""
@@ -903,7 +903,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             "混用json toolcall和kimi k2.5的特殊工具调用格式", call_args[0].message
         )
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_both_kimi_warnings(self):
         """测试同时触发两种kimi格式警告。"""
@@ -927,7 +927,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
             "混用json toolcall和kimi k2.5的特殊工具调用格式", second_msg.message
         )
 
-        self.assertEqual(self.group_chat.send_if_exists.call_count, 2)
+        self.assertEqual(self.registry.send_if_exists.call_count, 2)
 
 
 class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
@@ -939,12 +939,12 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.agent_llm = AsyncMock()
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.registry.send_if_exists = AsyncMock()
         from linhai.plugin import MinimaxToolCallPlugin
 
-        self.plugin = MinimaxToolCallPlugin(self.group_chat)
+        self.plugin = MinimaxToolCallPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -973,7 +973,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("检测到不支持的minimax特殊工具调用格式", call_args[0].message)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_after_message_generation_with_minimax_format_with_json_toolcall(
         self,
@@ -990,7 +990,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         # 验证没有设置错误时间
         self.assertIsNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_minimax_format(self):
         """测试没有minimax特殊格式时不处理。"""
@@ -1002,7 +1002,7 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(self.plugin._last_error_format_time)
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_token_generation_within_time_window(self):
         """测试在时间窗口内检测到minimax格式时打断agent。"""

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 from datetime import datetime, timedelta
 from linhai.llm_manager import LlmManager, NoAvailableLlmError
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Message, Answer, OpenAIError
 
 
@@ -25,9 +25,9 @@ class MockAnswer(Answer):
 
 class TestLlmManager(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_group_chat = MagicMock(spec=GroupChat)
-        self.mock_group_chat.send_if_exists = AsyncMock()
-        self.mock_group_chat.register_member = MagicMock()
+        self.mock_registry = MagicMock(spec=Registry)
+        self.mock_registry.send_if_exists = AsyncMock()
+        self.mock_registry.register_member = MagicMock()
 
         self.mock_llm1 = MagicMock()
         self.mock_llm1.get_name = MagicMock(return_value="llm1")
@@ -42,7 +42,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
 
         self.llm_manager = LlmManager(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": "llm2", "llm2": None},
@@ -66,7 +66,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
         self.assertEqual(self.llm_manager.llm_stack[0][0], "llm2")
         self.assertIsNone(self.llm_manager.llm_stack[0][1])
-        self.mock_group_chat.send_if_exists.assert_called()
+        self.mock_registry.send_if_exists.assert_called()
 
     async def test_switch_to_llm_invalid(self):
         with self.assertRaises(ValueError) as context:
@@ -140,7 +140,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         )
 
         llm_manager_no_fallback = LlmManager(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": None, "llm2": None},
@@ -251,7 +251,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         mock_llm3.answer_stream = AsyncMock(return_value=MockAnswer())
 
         llm_manager_chain = LlmManager(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             llms=[self.mock_llm1, self.mock_llm2, mock_llm3],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": "llm2", "llm2": "llm3", "llm3": None},
@@ -318,7 +318,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         )
 
         llm_manager_no_fallback = LlmManager(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": None, "llm2": None},

@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock, MagicMock
 
 from linhai.cli.command_handler import CommandHandler
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
@@ -13,12 +13,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.group_chat = Mock(spec=GroupChat)
-        self.handler = CommandHandler(self.group_chat)
+        self.registry = Mock(spec=Registry)
+        self.handler = CommandHandler(self.registry)
 
     def test_init(self):
         """Test CommandHandler initialization."""
-        self.assertEqual(self.handler.group_chat, self.group_chat)
+        self.assertEqual(self.handler.registry, self.registry)
 
     async def test_handle_command_empty(self):
         """Test handling empty input."""
@@ -36,7 +36,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         """Test /queue command."""
         mock_agent = Mock()
         mock_agent.queued_messages = []
-        self.group_chat.get_member_typechecked.return_value = mock_agent
+        self.registry.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
         mock_container = Mock()
@@ -44,7 +44,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
             "messages_list": mock_messages_list,
@@ -69,37 +69,37 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_handle_quit_command(self):
         """Test /quit command."""
-        self.group_chat.send = AsyncMock()
+        self.registry.send = AsyncMock()
 
         mock_cli_app = Mock()
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "cli_app": mock_cli_app
         }[name]
 
         handled, should_interrupt = await self.handler.handle_command("/quit")
         self.assertTrue(handled)
         self.assertFalse(should_interrupt)
-        self.group_chat.send.assert_called_once_with("exit_signal", {"return_code": 0})
+        self.registry.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
     async def test_handle_exit_command(self):
         """Test /exit command."""
-        self.group_chat.send = AsyncMock()
+        self.registry.send = AsyncMock()
 
         mock_cli_app = Mock()
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "cli_app": mock_cli_app
         }[name]
 
         handled, should_interrupt = await self.handler.handle_command("/exit")
         self.assertTrue(handled)
         self.assertFalse(should_interrupt)
-        self.group_chat.send.assert_called_once_with("exit_signal", {"return_code": 0})
+        self.registry.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
     async def test_handle_help_command(self):
         """Test /help command."""
@@ -107,7 +107,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
-        self.group_chat.get_member_typechecked.return_value = mock_cli_app
+        self.registry.get_member_typechecked.return_value = mock_cli_app
 
         handled, should_interrupt = await self.handler.handle_command("/help")
         self.assertTrue(handled)
@@ -118,7 +118,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent = Mock()
         mock_agent.get_current_llm_info.return_value = ("test-llm", Mock())
         mock_agent.get_threshold_info.return_value = None
-        self.group_chat.get_member_typechecked.return_value = mock_agent
+        self.registry.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
         mock_container = Mock()
@@ -126,7 +126,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
             "messages_list": mock_messages_list,
@@ -143,7 +143,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_container = Mock()
         mock_cli_app.query_one.return_value = mock_container
         mock_cli_app.should_auto_scroll.return_value = True
-        self.group_chat.get_member_typechecked.return_value = mock_cli_app
+        self.registry.get_member_typechecked.return_value = mock_cli_app
 
         handled, should_interrupt = await self.handler.handle_command("/unknown")
         self.assertFalse(handled)
@@ -166,7 +166,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.get_member_typechecked.return_value = mock_agent
+        self.registry.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
         mock_container = Mock()
@@ -174,7 +174,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
             "messages_list": mock_messages_list,
@@ -200,7 +200,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.get_member_typechecked.return_value = mock_agent
+        self.registry.get_member_typechecked.return_value = mock_agent
 
         mock_cli_app = Mock()
         mock_container = Mock()
@@ -208,7 +208,7 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_cli_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
-        self.group_chat.get_member_typechecked.side_effect = lambda name, cls: {
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
             "cli_app": mock_cli_app,
             "messages_list": mock_messages_list,

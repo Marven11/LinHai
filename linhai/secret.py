@@ -14,7 +14,7 @@ from .agent.lifecycle import Lifecycle
 from .tool.base import ToolResultSuccess, ToolResultFailed
 
 if TYPE_CHECKING:
-    from .group_chat import GroupChat
+    from .registry import Registry
 
 
 class SecretInfo(TypedDict):
@@ -180,8 +180,8 @@ def contains_any_secret(obj: object, secrets_dict: dict[str, SecretInfo]) -> boo
 
 
 class SecretInterceptorPlugin:
-    def __init__(self, group_chat: "GroupChat", secrets_dict: dict[str, SecretInfo]):
-        self.group_chat = group_chat
+    def __init__(self, registry: "Registry", secrets_dict: dict[str, SecretInfo]):
+        self.registry = registry
         self.secrets_dict = secrets_dict
 
     async def after_toolcall(
@@ -212,7 +212,7 @@ class SecretInterceptorPlugin:
                 )
 
             if contains_any_secret(result_content, self.secrets_dict):
-                conversation_dir = self.group_chat.get_member_typechecked(
+                conversation_dir = self.registry.get_member_typechecked(
                     "conversation_folder", Path
                 )
                 filepath = save_secret_intercepted(
@@ -271,7 +271,7 @@ class SecretInterceptorPlugin:
 
 
 def initialize_secret_system(
-    group_chat: "GroupChat", secret_config_path: str, config_basedir: str | Path | None
+    registry: "Registry", secret_config_path: str, config_basedir: str | Path | None
 ) -> SecretInterceptorPlugin:
     from linhai.llm import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
@@ -289,13 +289,13 @@ def initialize_secret_system(
 
     secrets_dict = load_secrets_from_config(config_path, config_basedir)
 
-    secret_plugin = SecretInterceptorPlugin(group_chat, secrets_dict)
+    secret_plugin = SecretInterceptorPlugin(registry, secrets_dict)
 
     secrets_message = get_available_secrets_message(secrets_dict)
     if secrets_message:
 
         def add_secret_rule():
-            system_message = group_chat.get_member_typechecked(
+            system_message = registry.get_member_typechecked(
                 "system_message", SystemMessage
             )
             rule_content = INTRODUCTION_SECRET_SYSTEM.format(
@@ -303,12 +303,12 @@ def initialize_secret_system(
             )
             system_message.add_rule("SECRET SYSTEM", rule_content)
 
-        group_chat.add_postinit(add_secret_rule)
+        registry.add_postinit(add_secret_rule)
 
     def register_plugin_to_lifecycle():
-        lifecycle = group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = registry.get_member_typechecked("lifecycle", Lifecycle)
         secret_plugin.register(lifecycle)
 
-    group_chat.add_postinit(register_plugin_to_lifecycle)
+    registry.add_postinit(register_plugin_to_lifecycle)
 
     return secret_plugin

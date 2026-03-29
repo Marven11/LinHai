@@ -10,12 +10,12 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
     """Test cases for AgentLlm class."""
 
     def setUp(self):
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
         from linhai.agent import Agent
         from linhai.llm_manager import LlmManager
 
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.group_chat.is_empty.return_value = True
+        self.registry = MagicMock(spec=Registry)
+        self.registry.is_empty.return_value = True
 
         self.mock_agent = MagicMock(spec=Agent)
         self.mock_agent.state = "waiting_user"
@@ -29,12 +29,12 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         self.lifecycle = MagicMock(spec=Lifecycle)
         self.mock_agent.lifecycle = self.lifecycle
 
-        # 注册mock agent到group_chat，因为AgentLlm现在从group_chat获取agent
-        self.group_chat.get_member_typechecked.return_value = self.mock_agent
+        # 注册mock agent到registry，因为AgentLlm现在从registry获取agent
+        self.registry.get_member_typechecked.return_value = self.mock_agent
 
         self.agent_llm = AgentLlm(
             llm_manager=self.mock_llm_manager,
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolcall_processor=self.mock_toolcall_processor,
             message_processor=self.mock_message_processor,
         )
@@ -42,7 +42,7 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
     async def test_init(self):
         """__init__：正确初始化所有属性。"""
         self.assertEqual(self.agent_llm.llm_manager, self.mock_llm_manager)
-        self.assertEqual(self.agent_llm.group_chat, self.group_chat)
+        self.assertEqual(self.agent_llm.registry, self.registry)
         self.assertEqual(
             self.agent_llm.toolcall_processor, self.mock_toolcall_processor
         )
@@ -79,11 +79,11 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         parsed_answer_mock._answer = answer_mock
         self.agent_llm._current_parsed_answer = parsed_answer_mock
 
-        self.group_chat.is_empty.side_effect = [False, True, True]
+        self.registry.is_empty.side_effect = [False, True, True]
 
         # 模拟receive返回UserMessage
         mock_user_msg = MagicMock(spec=UserMessage)
-        self.group_chat.receive = AsyncMock(return_value=mock_user_msg)
+        self.registry.receive = AsyncMock(return_value=mock_user_msg)
         self.mock_agent.handle_user_message = AsyncMock()
 
         await self.agent_llm.interrupt("agent message", "ui notice")

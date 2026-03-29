@@ -5,7 +5,7 @@ from linhai.llm_manager import LlmManager
 from linhai.parsed_message import ParsedAnswer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import CliRuntimeNotice
 from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage
 
@@ -21,7 +21,7 @@ class AgentLlm:
     def __init__(
         self,
         llm_manager: LlmManager,
-        group_chat: GroupChat,
+        registry: Registry,
         toolcall_processor: "AgentToolcall",
         message_processor: "AgentMessage",
     ):
@@ -29,12 +29,12 @@ class AgentLlm:
 
         Args:
             llm_manager: LlmManager实例
-            group_chat: GroupChat实例
+            registry: Registry实例
             toolcall_processor: AgentToolcall实例
             message_processor: AgentMessage实例
         """
         self.llm_manager = llm_manager
-        self.group_chat = group_chat
+        self.registry = registry
         self.toolcall_processor = toolcall_processor
         self.message_processor = message_processor
         self._current_parsed_answer: ParsedAnswer | None = None
@@ -49,7 +49,7 @@ class AgentLlm:
         """
         from .main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         lifecycle = agent.lifecycle
 
         await lifecycle.trigger_before_message_generation()
@@ -63,7 +63,7 @@ class AgentLlm:
         parsed_answer = ParsedAnswer(answer, lifecycle, agent=agent)
         await parsed_answer.start_parsing()
         await lifecycle.trigger_after_new_parsed_answer(parsed_answer)
-        await self.group_chat.send("parsed_agent_answer", parsed_answer)
+        await self.registry.send("parsed_agent_answer", parsed_answer)
 
         completed_normally = await parsed_answer.wait_parsing()
         return answer, parsed_answer, completed_normally
@@ -78,8 +78,8 @@ class AgentLlm:
         from .main import Agent
 
         message_processor = self.message_processor
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         if self._current_parsed_answer:
             self._current_parsed_answer.interrupt()
@@ -99,12 +99,12 @@ class AgentLlm:
 
             self._current_parsed_answer = None
 
-            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+            await self.registry.send_if_exists("ui_log", interrupt_msg)
 
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             agent.state = "working"
 
-            while not self.group_chat.is_empty("user_message"):
-                msg = await self.group_chat.receive("user_message")
+            while not self.registry.is_empty("user_message"):
+                msg = await self.registry.receive("user_message")
                 assert isinstance(msg, UserMessage)
                 await agent.handle_user_message(msg)

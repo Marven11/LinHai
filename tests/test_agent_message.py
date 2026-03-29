@@ -14,35 +14,35 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
         from linhai.tool.main import ToolManager
         from unittest.mock import MagicMock, AsyncMock, create_autospec
         from tempfile import TemporaryDirectory
         from pathlib import Path
 
-        group_chat = GroupChat()
+        registry = Registry()
 
         # 注册一个Mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        group_chat.register_member("tool_manager", mock_tool_manager)
+        registry.register_member("tool_manager", mock_tool_manager)
 
         # 创建临时目录并注册为conversation_folder，以便save_context可以工作
         self.temp_dir = TemporaryDirectory()
         conversation_dir = Path(self.temp_dir.name)
-        group_chat.register_member("conversation_folder", conversation_dir)
+        registry.register_member("conversation_folder", conversation_dir)
 
         # 注册lifecycle（mock），用于add_new_message和replace_message中的回调
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = create_autospec(Lifecycle, instance=True)
         mock_lifecycle.trigger_before_add_new_message = AsyncMock(return_value=None)
-        group_chat.register_member("lifecycle", mock_lifecycle)
+        registry.register_member("lifecycle", mock_lifecycle)
 
         # 注册token_manager（mock），用于replace_message中的count_invalidate_cache
         mock_token_manager = AsyncMock()
         mock_token_manager.count_invalidate_cache = AsyncMock(return_value=None)
-        group_chat.register_member("token_manager", mock_token_manager)
+        registry.register_member("token_manager", mock_token_manager)
 
         # 注册llm_manager（mock），用于is_explicit_cache_enabled
         from linhai.llm_manager import LlmManager
@@ -51,18 +51,18 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         mock_llm = MagicMock()
         mock_llm.get_explicit_cache_info = MagicMock(return_value=None)
         mock_llm_manager.get_current_llm = MagicMock(return_value=mock_llm)
-        group_chat.register_member("llm_manager", mock_llm_manager)
+        registry.register_member("llm_manager", mock_llm_manager)
 
         # 创建SystemMessage，它应该使用我们已注册的mock对象
         system_message = SystemMessage(
-            group_chat=group_chat,
+            registry=registry,
         )
 
         self.pinned_messages = [
             system_message,
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(group_chat, self.pinned_messages)
+        self.message_processor = AgentMessage(registry, self.pinned_messages)
 
     def tearDown(self):
         """清理测试环境。"""

@@ -10,7 +10,7 @@ from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
 from linhai.llm import SystemMessage, OpenAi
@@ -70,9 +70,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
     """Test cases for the Agent class."""
 
     def setUp(self):
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
-        self.group_chat.register_queue("parsed_agent_answer")
+        self.registry.register_queue("parsed_agent_answer")
 
         from tempfile import TemporaryDirectory
 
@@ -81,7 +81,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         from pathlib import Path
 
         conversation_dir = Path(self.temp_dir.name)
-        self.group_chat.register_member("conversation_folder", conversation_dir)
+        self.registry.register_member("conversation_folder", conversation_dir)
 
         from linhai.cli.app import CLIApp
         from linhai.cli.messages_list import MessagesList
@@ -90,27 +90,27 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
         # should_auto_scroll现在在MessagesList中，CLIApp不再有这个方法
-        self.group_chat.register_member("cli_app", mock_cli_app)
+        self.registry.register_member("cli_app", mock_cli_app)
 
         # 创建一个mock的MessagesList
         mock_messages_list = MagicMock(spec=MessagesList)
         mock_messages_list.should_auto_scroll.return_value = True
-        self.group_chat.register_member("messages_list", mock_messages_list)
+        self.registry.register_member("messages_list", mock_messages_list)
 
         from linhai.machine_control import MachineControl
 
         self.mock_machine_control = MagicMock(spec=MachineControl)
         self.mock_machine_control.target_machine = "master_host"
-        self.group_chat.register_member("machine_control", self.mock_machine_control)
+        self.registry.register_member("machine_control", self.mock_machine_control)
 
         import argparse
 
-        self.group_chat.register_member("cli_args", argparse.Namespace(afk=False))
+        self.registry.register_member("cli_args", argparse.Namespace(afk=False))
 
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
@@ -118,7 +118,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         from linhai.token_manager import TokenManager
 
-        self.token_manager = TokenManager(self.group_chat)
+        self.token_manager = TokenManager(self.registry)
 
         self.mock_llm = MagicMock()
         self.mock_llm.answer_stream = AsyncMock(return_value=AsyncMock())
@@ -129,7 +129,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         self.llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=[self.mock_llm],
             default_llm_name="test_llm",
             llm_fallback_map={"test_llm": None},
@@ -142,14 +142,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         pinned_messages = [
             SystemMessage(
-                group_chat=self.group_chat,
+                registry=self.registry,
             )
         ]
 
         self.agent = Agent(
             llm_manager=config["llm_manager"],
             compress_threshold=config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=pinned_messages,
         )
 
@@ -173,8 +173,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         await self.agent.generate_response()
 
         parsed_answer = None
-        while not self.agent.group_chat.is_empty("parsed_agent_answer"):
-            item = await self.agent.group_chat.receive("parsed_agent_answer")
+        while not self.agent.registry.is_empty("parsed_agent_answer"):
+            item = await self.agent.registry.receive("parsed_agent_answer")
             if hasattr(item, "segment_queue"):
                 parsed_answer = item
                 break
@@ -349,7 +349,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
     async def test_at_system_logic(self):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""
-        new_group_chat = GroupChat()
+        new_registry = Registry()
 
         from linhai.cli.app import CLIApp
         from linhai.cli.messages_list import MessagesList
@@ -358,12 +358,12 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
         # should_auto_scroll现在在MessagesList中，CLIApp不再有这个方法
-        new_group_chat.register_member("cli_app", mock_cli_app)
+        new_registry.register_member("cli_app", mock_cli_app)
 
         # 创建一个mock的MessagesList
         mock_messages_list = MagicMock(spec=MessagesList)
         mock_messages_list.should_auto_scroll.return_value = True
-        new_group_chat.register_member("messages_list", mock_messages_list)
+        new_registry.register_member("messages_list", mock_messages_list)
 
         from tempfile import TemporaryDirectory
 
@@ -371,15 +371,15 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         from pathlib import Path
 
         conversation_dir = Path(temp_dir.name)
-        new_group_chat.register_member("conversation_folder", conversation_dir)
+        new_registry.register_member("conversation_folder", conversation_dir)
 
         from linhai.tool.main import ToolManager
         from linhai.config import ToolConfig
         from pathlib import Path
 
         mock_tool_manager = MagicMock(spec=ToolManager)
-        mock_tool_manager.group_chat = new_group_chat
-        new_group_chat.register_member("tool_manager", mock_tool_manager)
+        mock_tool_manager.registry = new_registry
+        new_registry.register_member("tool_manager", mock_tool_manager)
 
         # 在测试结束时清理临时目录
         self.addCleanup(temp_dir.cleanup)
@@ -416,7 +416,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         # 创建LlmManager实例
         llm_manager = LlmManager(
-            group_chat=new_group_chat,
+            registry=new_registry,
             llms=[mock_llm1, mock_llm2],
             default_llm_name="deepseek-reasoning",
             llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
@@ -425,7 +425,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=800,
-            group_chat=new_group_chat,
+            registry=new_registry,
             pinned_messages=[],
         )
 

@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Dict, Optional, Any
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils import CliRuntimeNotice
 from ..trojan.ssh_transport import SshTrojanTransport
@@ -16,12 +16,12 @@ class SshMachineControl:
     def __init__(
         self,
         host: str,
-        group_chat: GroupChat,
+        registry: Registry,
         port: int = 22,
         username: Optional[str] = None,
     ):
-        self.transport = SshTrojanTransport(host, group_chat, port, username)
-        self.group_chat = group_chat
+        self.transport = SshTrojanTransport(host, registry, port, username)
+        self.registry = registry
         self._username = username
 
     @property
@@ -40,7 +40,7 @@ class SshMachineControl:
         try:
             return await self.transport.connect()
         except Exception as e:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",

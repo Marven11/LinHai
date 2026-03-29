@@ -36,8 +36,8 @@ class RangeCleanInfo:
 class RangeCleanManager:
     """管理range_clean_id和对应的验证信息"""
 
-    def __init__(self, group_chat: "linhai.group_chat.GroupChat"):
-        group_chat.register_member("range_clean_manager", self)
+    def __init__(self, registry: "linhai.registry.Registry"):
+        registry.register_member("range_clean_manager", self)
         self._clean_infos: dict[str, RangeCleanInfo] = {}
 
     def create_clean_info(
@@ -140,17 +140,17 @@ def _validate_compression_range(
 
 
 async def context_forget_range_step1(
-    group_chat: "linhai.group_chat.GroupChat",
+    registry: "linhai.registry.Registry",
 ) -> ToolResultSuccess | ToolResultFailed:
     """
     压缩范围第一步：生成消息列表总结并返回range_clean_id。
     """
     from .main import Agent
 
-    agent = group_chat.get_member_typechecked("agent", Agent)
+    agent = registry.get_member_typechecked("agent", Agent)
 
     current_message_count = len(agent.message_processor.messages)
-    await group_chat.send_if_exists(
+    await registry.send_if_exists(
         "ui_log",
         CliRuntimeNotice(
             level="INFO",
@@ -172,7 +172,7 @@ async def context_forget_range_step1(
     min_safe_id = 0 if max_system_index == -1 else max_system_index + 1
 
     range_clean_id = generate_id("rangeclean")
-    range_clean_manager = group_chat.get_member_typechecked(
+    range_clean_manager = registry.get_member_typechecked(
         "range_clean_manager", RangeCleanManager
     )
     range_clean_manager.create_clean_info(range_clean_id, message_length, min_safe_id)
@@ -192,7 +192,7 @@ async def context_forget_range_step1(
 
 
 async def context_forget_range_step2(
-    group_chat: "linhai.group_chat.GroupChat",
+    registry: "linhai.registry.Registry",
     range_clean_id: str,
     start_id: int,
     end_id: int,
@@ -203,9 +203,9 @@ async def context_forget_range_step2(
     """
     from .main import Agent
 
-    agent = group_chat.get_member_typechecked("agent", Agent)
+    agent = registry.get_member_typechecked("agent", Agent)
 
-    range_clean_manager = group_chat.get_member_typechecked(
+    range_clean_manager = registry.get_member_typechecked(
         "range_clean_manager", RangeCleanManager
     )
     info = range_clean_manager.get_clean_info(range_clean_id)
@@ -244,7 +244,7 @@ async def context_forget_range_step2(
     range_clean_manager.remove_clean_info(range_clean_id)
     range_clean_manager.clear_all_clean_infos()
 
-    conversation_dir = group_chat.get_member_typechecked("conversation_folder", Path)
+    conversation_dir = registry.get_member_typechecked("conversation_folder", Path)
     filepath = save_cleaned_messages(
         conversation_dir, deleted_messages, prefix="range_compress"
     )

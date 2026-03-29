@@ -12,8 +12,8 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.mock_agent = Mock()
-        self.mock_agent.group_chat = Mock()
-        self.mock_agent.group_chat.send_if_exists = AsyncMock()
+        self.mock_agent.registry = Mock()
+        self.mock_agent.registry.send_if_exists = AsyncMock()
         self.mock_agent.context = {
             "llms": [Mock()],
             "llm_names": ["test_llm"],
@@ -42,7 +42,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.group_chat.get_member_typechecked.return_value = (
+        self.mock_agent.registry.get_member_typechecked.return_value = (
             self.mock_tool_manager
         )
 
@@ -51,7 +51,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     def test_initialization(self):
         """测试AgentToolcall初始化。"""
         self.assertEqual(self.toolcall_processor.agent, self.mock_agent)
-        self.assertEqual(self.toolcall_processor.group_chat, self.mock_agent.group_chat)
+        self.assertEqual(self.toolcall_processor.registry, self.mock_agent.registry)
         # context属性已移除，不再检查
 
     def test_calculate_llm_toolset(self):
@@ -266,7 +266,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     async def test_tool_conflict_detection(self):
         """测试工具冲突检测。"""
 
-        self.mock_agent.group_chat.send_if_exists = AsyncMock()
+        self.mock_agent.registry.send_if_exists = AsyncMock()
 
         from linhai.tool.base import ToolSet, ToolArgInfo
 

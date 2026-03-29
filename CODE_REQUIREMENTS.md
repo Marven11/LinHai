@@ -29,7 +29,7 @@
     - 返回None
     - 通过副作用改变外部状态
 - 存在问题：没有遵守该项目的惯例:
-  - `GroupChat.get_member_typechecked`
+  - `Registry.get_member_typechecked`
     - 第二个参数t只能是类型，不能是字符串
     - 传给t的类型可以在同一个函数那import，这是为了解决循环导入的问题
     - 禁止使用assert甚至if检查返回值是否是t指定的类型

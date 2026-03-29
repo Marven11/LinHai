@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, MagicMock
 
 from linhai.agent import Agent
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
 
@@ -14,7 +14,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = Mock(spec=GroupChat)
+        self.registry = Mock(spec=Registry)
         self.mock_cli_app = Mock()
         self.mock_container = Mock()
         self.mock_cli_app.query_one = Mock(return_value=self.mock_container)
@@ -48,12 +48,12 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             else:
                 return Mock()
 
-        self.group_chat.get_member_typechecked = Mock(
+        self.registry.get_member_typechecked = Mock(
             side_effect=get_member_typechecked_side_effect
         )
-        # 确保group_chat有register_member方法，避免Agent初始化时出错
-        self.group_chat.register_member = Mock()
-        self.group_chat.has_member = Mock(return_value=True)
+        # 确保registry有register_member方法，避免Agent初始化时出错
+        self.registry.register_member = Mock()
+        self.registry.has_member = Mock(return_value=True)
 
         self.mock_llm1 = MagicMock()
         self.mock_llm1.get_name = MagicMock(return_value="deepseek-reasoning")
@@ -101,7 +101,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         self.llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=self.config["llms"],
             default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
             llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
@@ -110,7 +110,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=self.llm_manager,
             compress_threshold=self.config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=[],
         )
 

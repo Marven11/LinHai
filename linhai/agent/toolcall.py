@@ -43,7 +43,7 @@ class AgentToolcall:
 
     def __init__(self, agent: "Agent", max_toolcall_token_in_round: int = 30000):
         self.agent = agent
-        self.group_chat = agent.group_chat
+        self.registry = agent.registry
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
@@ -68,9 +68,7 @@ class AgentToolcall:
         """
 
         tool_def = None
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
         for toolset in tool_manager.toolsets:
             if toolset.has_tool(tool_name):
                 tool_def = toolset.get_tools()[tool_name]
@@ -165,7 +163,7 @@ class AgentToolcall:
         def get_token_usage() -> str:
             from ..token_manager import TokenManager
 
-            token_manager = self.group_chat.get_member_typechecked(
+            token_manager = self.registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
             if token_manager.cumulative_token_usage is not None:
@@ -182,7 +180,7 @@ class AgentToolcall:
         single_tool_limit: int,
     ) -> str:
         """分割并保存过大的工具输出到文件。"""
-        conversation_dir = self.group_chat.get_member_typechecked(
+        conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         long_toolcall_dir = conversation_dir / "long_toolcall"
@@ -223,7 +221,7 @@ class AgentToolcall:
         current_round_token_count: int,
     ) -> str:
         """保存当前轮次超限的工具输出到文件。"""
-        conversation_dir = self.group_chat.get_member_typechecked(
+        conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         long_toolcall_dir = conversation_dir / "long_toolcall"
@@ -258,7 +256,7 @@ class AgentToolcall:
         if self.early_return:
             msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
             await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -271,7 +269,7 @@ class AgentToolcall:
         if conflict_tool:
             conflict_msg = f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool} 存在冲突，已阻止调用，剩余工具调用已忽略"
 
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -438,9 +436,7 @@ class AgentToolcall:
         elif isinstance(before_result, dict):
             tool_call.function_arguments = before_result
 
-        tool_manager = self.group_chat.get_member_typechecked(
-            "tool_manager", ToolManager
-        )
+        tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
         try:
             tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
 

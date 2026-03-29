@@ -13,13 +13,13 @@ class TestMainCommandLine(unittest.TestCase):
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     def test_agent_command_with_message_option(
-        self, mock_group_chat, mock_cli_app, mock_create_agent
+        self, mock_registry, mock_cli_app, mock_create_agent
     ):
         """测试使用-m选项时消息被正确传递"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -34,7 +34,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_args.message = ["测试消息"]
         mock_cli_args.file = []
         mock_cli_args.claw = False
-        mock_group_chat_instance.get_member_typechecked = MagicMock(
+        mock_registry_instance.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: mock_cli_args
         )
 
@@ -50,29 +50,27 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
         self.assertIn("cli_args", context)  # cli_args应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
         # 不再检查init_messages参数，因为现在它在CLIApp内部构建
 
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     def test_agent_command_without_message_option(
-        self, mock_group_chat, mock_cli_app, mock_create_agent
+        self, mock_registry, mock_cli_app, mock_create_agent
     ):
         """测试不使用-m选项时init_message为None"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -94,28 +92,26 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     @patch("builtins.open")
     def test_agent_command_with_file_option(
-        self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent
+        self, mock_open, mock_registry, mock_cli_app, mock_create_agent
     ):
         """测试使用-f选项时从文件读取消息"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -141,28 +137,26 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     @patch("builtins.open")
     def test_agent_command_with_both_message_and_file_options(
-        self, mock_open, mock_group_chat, mock_cli_app, mock_create_agent
+        self, mock_open, mock_registry, mock_cli_app, mock_create_agent
     ):
         """测试同时使用-m和-f选项时文件内容优先"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -188,15 +182,13 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
 
@@ -247,13 +239,13 @@ class TestMainCommandLine(unittest.TestCase):
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     def test_agent_command_with_llm_option(
-        self, mock_group_chat, mock_cli_app, mock_create_agent, mock_create_context
+        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
     ):
         """测试使用--llm选项时LLM名称被正确传递"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -265,7 +257,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         # 模拟create_agent_build_context返回有效的context
         mock_context = {
-            "group_chat": mock_group_chat_instance,
+            "registry": mock_registry_instance,
             "config": MagicMock(spec=Config),
             "config_basedir": Path("."),
             "llm_name": "test_llm",
@@ -287,8 +279,8 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
         context = call_args[0][0]
         self.assertEqual(
@@ -297,22 +289,20 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     def test_agent_command_with_llm_and_message_options(
-        self, mock_group_chat, mock_cli_app, mock_create_agent, mock_create_context
+        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
     ):
         """测试同时使用--llm和-m选项"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -324,7 +314,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         # 模拟create_agent_build_context返回有效的context
         mock_context = {
-            "group_chat": mock_group_chat_instance,
+            "registry": mock_registry_instance,
             "config": MagicMock(spec=Config),
             "config_basedir": Path("."),
             "llm_name": "test_llm",
@@ -346,8 +336,8 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(len(call_args[0]), 1)  # 现在只有一个参数：context字典
         context = call_args[0][0]
         self.assertEqual(
-            context["group_chat"], mock_group_chat_instance
-        )  # context字典中的group_chat
+            context["registry"], mock_registry_instance
+        )  # context字典中的registry
         self.assertIsInstance(context["config"], Config)  # context字典中的config
         context = call_args[0][0]
         self.assertEqual(
@@ -356,22 +346,20 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
-        self.assertEqual(
-            cli_call_args.kwargs.get("group_chat"), mock_group_chat_instance
-        )
+        self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
 
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
     @patch("linhai.main.CLIApp")
-    @patch("linhai.main.GroupChat")
+    @patch("linhai.main.Registry")
     def test_agent_command_with_checklist_option(
-        self, mock_group_chat, mock_cli_app, mock_create_agent, mock_create_context
+        self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
     ):
         """测试使用--checklist选项时checklist路径被正确传递"""
-        mock_group_chat_instance = MagicMock()
-        mock_group_chat.return_value = mock_group_chat_instance
+        mock_registry_instance = MagicMock()
+        mock_registry.return_value = mock_registry_instance
 
         mock_agent = MagicMock()
         mock_create_agent.return_value = mock_agent
@@ -383,7 +371,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         # 模拟create_agent_build_context返回有效的context
         mock_context = {
-            "group_chat": mock_group_chat_instance,
+            "registry": mock_registry_instance,
             "config": MagicMock(spec=Config),
             "config_basedir": Path("."),
             "llm_name": None,

@@ -22,10 +22,10 @@ class TestClawInitialization(unittest.TestCase):
             claw_dir = Path(tmpdir) / "claw"
             claw_dir.mkdir(parents=True, exist_ok=True)
 
-            mock_group_chat = Mock()
+            mock_registry = Mock()
             mock_cli_args = Mock()
             mock_cli_args.claw_folder = str(claw_dir)
-            plugin = ClawPlugin(mock_group_chat, mock_cli_args)
+            plugin = ClawPlugin(mock_registry, mock_cli_args)
             plugin._initialize_claw_files()
 
             self.assertTrue((claw_dir / "AGENTS.md").exists())
@@ -43,10 +43,10 @@ class TestClawInitialization(unittest.TestCase):
             claw_dir = Path(tmpdir) / "claw"
             claw_dir.mkdir(parents=True, exist_ok=True)
 
-            mock_group_chat = Mock()
+            mock_registry = Mock()
             mock_cli_args = Mock()
             mock_cli_args.claw_folder = str(claw_dir)
-            plugin = ClawPlugin(mock_group_chat, mock_cli_args)
+            plugin = ClawPlugin(mock_registry, mock_cli_args)
 
             plugin._initialize_claw_files()
 
@@ -75,7 +75,7 @@ class TestClawPinnedMessages(unittest.TestCase):
         mock_config.user_prompt = None
 
         mock_context_dict = {
-            "group_chat": Mock(),
+            "registry": Mock(),
             "config": mock_config,
             "config_basedir": None,
             "llm_name": "test-llm",

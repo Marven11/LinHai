@@ -5,7 +5,7 @@ from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.llm import Message
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import (
     ToolArgInfo,
     ToolResultSuccess,
@@ -17,10 +17,10 @@ from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
 
 
-
 def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet:
     """注册所有工具"""
     toolset = ToolSet()
+
     @toolset.register_tool(
         name="list_terminals",
         desc="列出所有机器上的所有终端",
@@ -42,9 +42,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     @toolset.register_tool(
         name="switch_machine",
         desc="切换到指定机器",
-        args={
-            "machine_id": ToolArgInfo(desc="机器ID，如'master_host'", type="str")
-        },
+        args={"machine_id": ToolArgInfo(desc="机器ID，如'master_host'", type="str")},
         required_args=["machine_id"],
     )
     async def switch_machine_tool(
@@ -70,9 +68,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         port: int = 22,
         username: Optional[str] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
-        return await machine_control.add_ssh_machine(
-            machine_id, host, port, username
-        )
+        return await machine_control.add_ssh_machine(machine_id, host, port, username)
 
     @toolset.register_tool(
         name="connect_ether_ghost_machine",
@@ -148,9 +144,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 desc="认证参数，如['username', 'password']",
                 type="Optional[tuple[str, str]]",
             ),
-            "cookies": ToolArgInfo(
-                desc="Cookie字典", type="Optional[Dict[str, str]]"
-            ),
+            "cookies": ToolArgInfo(desc="Cookie字典", type="Optional[Dict[str, str]]"),
             "json_data": ToolArgInfo(
                 desc="JSON数据（与data互斥）", type="Optional[Dict[str, Any]]"
             ),
@@ -176,9 +170,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.http_request(
             method,
             url,
@@ -204,9 +196,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def change_directory_tool(
         directory: str,
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.change_directory(directory)
 
     @toolset.register_tool(
@@ -227,9 +217,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_create_tool(
         argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.process_create(argv, wait_second)
 
     @toolset.register_tool(
@@ -246,9 +234,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_stdio_write_tool(
         pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.process_stdio_write(pid, content, with_enter)
 
     @toolset.register_tool(
@@ -267,9 +253,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_stdio_read_tool(
         pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.process_stdio_read(pid, unescape_ansi, timeout)
 
     @toolset.register_tool(
@@ -285,9 +269,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_wait_tool(
         pid: str, timeout: float
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.process_wait(pid, timeout)
 
     @toolset.register_tool(
@@ -295,9 +277,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         desc="杀死进程，可选择优雅终止。",
         args={
             "pid": ToolArgInfo(desc="进程ID", type="str"),
-            "graceful": ToolArgInfo(
-                desc="是否优雅终止进程，默认为True", type="bool"
-            ),
+            "graceful": ToolArgInfo(desc="是否优雅终止进程，默认为True", type="bool"),
         },
         required_args=["pid"],
         conflict_with=None,
@@ -305,9 +285,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def process_kill_tool(
         pid: str, graceful: bool = True
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.process_kill(pid, graceful)
 
     @toolset.register_tool(
@@ -328,9 +306,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def create_terminal_tool(
         columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_create(columns, lines)
 
     @toolset.register_tool(
@@ -348,9 +324,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def send_keys_to_terminal_tool(
         terminal_id: str, keys: list[str]
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_send_keys(terminal_id, keys)
 
     @toolset.register_tool(
@@ -370,9 +344,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def send_string_to_terminal_tool(
         terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_send_string(
             terminal_id, string, with_enter, wait_seconds
         )
@@ -387,9 +359,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def read_terminal_screen_tool(
         terminal_id: str,
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_read_screen(terminal_id)
 
     @toolset.register_tool(
@@ -402,9 +372,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def close_terminal_tool(
         terminal_id: str,
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.terminal_close(terminal_id)
 
     @toolset.register_tool(
@@ -420,9 +388,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def read_file_tool(
         filepath: str, show_line_numbers: bool = False
     ) -> Union[ToolResultSuccess, ToolResultFailed, FileContentMessage]:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.read_file(filepath, show_line_numbers)
 
     @toolset.register_tool(
@@ -443,9 +409,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def write_file_tool(
         filepath: str, content: str, override: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.write_file(filepath, content, override)
 
     @toolset.register_tool(
@@ -467,9 +431,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def replace_file_content_tool(
         filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.replace_file_content(
             filepath, old, new, replace_times
         )
@@ -478,17 +440,13 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="list_files",
         desc="列出指定文件夹中的文件(使用./表示当前文件夹)",
         args={
-            "dirpath": ToolArgInfo(
-                desc="文件夹路径，使用./表示当前目录", type="str"
-            )
+            "dirpath": ToolArgInfo(desc="文件夹路径，使用./表示当前目录", type="str")
         },
         required_args=["dirpath"],
         conflict_with=None,
     )
     async def list_files_tool(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.list_files(dirpath)
 
     @toolset.register_tool(
@@ -501,9 +459,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def get_absolute_path_tool(
         path: str,
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.get_absolute_path(path)
 
     @toolset.register_tool(
@@ -519,9 +475,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def read_file_with_sed_tool(
         expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.read_file_with_sed(expression, filepath)
 
     @toolset.register_tool(
@@ -537,9 +491,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
     async def modify_file_with_sed_tool(
         expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[
-            machine_control.target_machine
-        ]
+        host_control = machine_control.machines[machine_control.target_machine]
         return await host_control.modify_file_with_sed(expression, filepath)
 
     @toolset.register_tool(
@@ -685,8 +637,8 @@ class HostControl(Protocol):
 class MachineControl:
     """机器控制管理器，负责注册工具和切换机器。"""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
         self.target_machine = "master_host"
         self.machines: Dict[str, HostControl] = {
             "master_host": MasterHostControl(),
@@ -694,7 +646,7 @@ class MachineControl:
         self.machine_descriptions: Dict[str, str] = {
             "master_host": "本地主机",
         }
-        group_chat.register_member("machine_control", self)
+        registry.register_member("machine_control", self)
 
     async def switch_machine(
         self, machine_id: str
@@ -705,7 +657,7 @@ class MachineControl:
         old_machine_id = self.target_machine
         self.target_machine = machine_id
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"已切换机器: {old_machine_id} -> {machine_id}"
@@ -725,7 +677,7 @@ class MachineControl:
             return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
 
         ssh_control = SshMachineControl(
-            host=host, group_chat=self.group_chat, port=port, username=username
+            host=host, registry=self.registry, port=port, username=username
         )
 
         try:
@@ -738,7 +690,7 @@ class MachineControl:
         self.machines[machine_id] = ssh_control
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -773,7 +725,7 @@ class MachineControl:
             f"EtherGhost webshell主机 (类型: {session_type})"
         )
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -896,22 +848,22 @@ class MachineControl:
 
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
-        plugin = MachineControlPlugin(self.group_chat, self)
+        plugin = MachineControlPlugin(self.registry, self)
         plugin.register(lifecycle)
 
 
 class MachineControlPlugin:
     """MachineControl的插件，用于添加当前机器提示和on_machine使用警告。"""
 
-    def __init__(self, group_chat: GroupChat, machine_control: MachineControl):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry, machine_control: MachineControl):
+        self.registry = registry
         self.machine_control = machine_control
         self.consecutive_same_on_machine_count = 0
         self.last_on_machine: Optional[str] = None
 
     async def before_message_generation(self):
         """在消息生成前更新notification_message。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         agent.message_processor.update_notification_message(
             RuntimeMessage(f"当前在{self.machine_control.target_machine}上"),
             source="machine_control",
@@ -938,7 +890,7 @@ class MachineControlPlugin:
                 if on_machine is not None:
                     current_machine = self.machine_control.target_machine
                     if on_machine != current_machine:
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="INFO",
@@ -966,7 +918,7 @@ class MachineControlPlugin:
                         self.last_on_machine = on_machine
 
                     if self.consecutive_same_on_machine_count >= 3:
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",

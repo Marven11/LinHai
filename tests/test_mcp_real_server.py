@@ -7,7 +7,7 @@ from pathlib import Path
 from linhai.agent.create import create_agent_from_config
 from linhai.agent import Agent
 from linhai.config import load_config
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
@@ -18,7 +18,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         import argparse
 
         self.temp_dir = tempfile.mkdtemp()
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         # Register cli_args required by create_agent_from_config
         cli_args = argparse.Namespace()
 
@@ -28,7 +28,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
-        self.group_chat.register_member("cli_args", cli_args)
+        self.registry.register_member("cli_args", cli_args)
         self.cli_args = cli_args
 
     def tearDown(self):
@@ -70,7 +70,7 @@ server_script_path = "{server_path}"
         from pathlib import Path
 
         context = {
-            "group_chat": self.group_chat,
+            "registry": self.registry,
             "config": config,
             "config_basedir": Path("."),
             "llm_name": None,

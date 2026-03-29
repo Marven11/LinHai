@@ -27,8 +27,8 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
             "SSH_PASSWORD": {"value": "mypassword123", "description": "SSH password"},
         }
 
-        # 模拟GroupChat
-        self.mock_group_chat = Mock()
+        # 模拟Registry
+        self.mock_registry = Mock()
 
     def tearDown(self):
         import shutil
@@ -39,17 +39,17 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
         self,
     ):
         """测试当结果包含secret值但没有with_secret时，内容被保存到文件"""
-        # 使用真实GroupChat并注册conversation_folder
-        from linhai.group_chat import GroupChat
+        # 使用真实Registry并注册conversation_folder
+        from linhai.registry import Registry
         from linhai.agent.conversation import register_conversation_folder
 
-        real_group_chat = GroupChat()
-        register_conversation_folder(real_group_chat)
+        real_registry = Registry()
+        register_conversation_folder(real_registry)
 
-        # 创建插件使用真实group_chat
+        # 创建插件使用真实registry
         from linhai.secret import SecretInterceptorPlugin
 
-        plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         # 模拟工具调用结果包含secret值
         result_content = "API key is sk-real-123456 and password is mypassword123"
@@ -76,15 +76,15 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
 
     def test_after_toolcall_with_secret_specified_masks_content(self):
         """测试当指定了with_secret时，进行掩码但不保存文件"""
-        # 使用真实GroupChat并注册conversation_folder
-        from linhai.group_chat import GroupChat
+        # 使用真实Registry并注册conversation_folder
+        from linhai.registry import Registry
         from linhai.agent.conversation import register_conversation_folder
 
-        real_group_chat = GroupChat()
-        register_conversation_folder(real_group_chat)
+        real_registry = Registry()
+        register_conversation_folder(real_registry)
 
-        # 创建插件使用真实group_chat
-        plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        # 创建插件使用真实registry
+        plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         # 模拟工具调用结果包含secret值，但指定了with_secret
         result_content = "API key is sk-real-123456"
@@ -111,17 +111,17 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
 
     def test_after_toolcall_without_secret_returns_none(self):
         """测试当结果不包含secret值时返回None"""
-        # 使用真实GroupChat并注册conversation_folder
-        from linhai.group_chat import GroupChat
+        # 使用真实Registry并注册conversation_folder
+        from linhai.registry import Registry
         from linhai.agent.conversation import register_conversation_folder
 
-        real_group_chat = GroupChat()
-        register_conversation_folder(real_group_chat)
+        real_registry = Registry()
+        register_conversation_folder(real_registry)
 
-        # 创建插件使用真实group_chat
+        # 创建插件使用真实registry
         from linhai.secret import SecretInterceptorPlugin
 
-        plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         # 模拟工具调用结果不包含secret值
         result_content = "This is a normal message without secrets"
@@ -145,17 +145,17 @@ class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):
 
     def test_after_toolcall_saves_file_with_correct_name_format(self):
         """测试保存的文件名格式正确"""
-        # 使用真实GroupChat并注册conversation_folder
-        from linhai.group_chat import GroupChat
+        # 使用真实Registry并注册conversation_folder
+        from linhai.registry import Registry
         from linhai.agent.conversation import register_conversation_folder
 
-        real_group_chat = GroupChat()
-        conversation_dir = register_conversation_folder(real_group_chat)
+        real_registry = Registry()
+        conversation_dir = register_conversation_folder(real_registry)
 
-        # 创建插件使用真实group_chat
+        # 创建插件使用真实registry
         from linhai.secret import SecretInterceptorPlugin
 
-        plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         # 模拟工具调用
         result_content = "API key is sk-real-123456"

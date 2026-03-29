@@ -9,7 +9,7 @@ from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
 from linhai.config import CLIConfig
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
@@ -90,16 +90,16 @@ class CLIApp(App):
 
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         cli_config: CLIConfig,
     ):
         super().__init__()
         self.theme = cli_config.theme
-        self.group_chat = group_chat
-        self.group_chat.register_queue("exit_signal")
-        group_chat.register_member("cli_app", self)
+        self.registry = registry
+        self.registry.register_queue("exit_signal")
+        registry.register_member("cli_app", self)
 
-        cli_args = group_chat.get_member_typechecked("cli_args", argparse.Namespace)
+        cli_args = registry.get_member_typechecked("cli_args", argparse.Namespace)
         self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
         if cli_args.file:
             self.init_messages += [
@@ -108,15 +108,15 @@ class CLIApp(App):
 
         self.current_response_buffer = ""
 
-        self.token_manager = TokenManager(group_chat)
+        self.token_manager = TokenManager(registry)
 
         self.completions = []
         self.autocomplete = None
 
         self.cli_config = cli_config
-        self.command_handler = CommandHandler(self.group_chat)
+        self.command_handler = CommandHandler(self.registry)
 
-        self.group_chat.add_postinit(self.postinit)
+        self.registry.add_postinit(self.postinit)
 
     def get_refresh_interval(self) -> float:
         """根据当前消息数量获取widget刷新间隔"""
@@ -126,7 +126,7 @@ class CLIApp(App):
         return 0.5
 
     def postinit(self):
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
         self.watch_exit_signal_queue()
         self.token_manager.start_watching()
@@ -135,11 +135,9 @@ class CLIApp(App):
         """组合UI组件"""
         with TabbedContent(id="main-tabs"):
             with TabPane("Agent", id="agent-tab"):
-                lifecycle = self.group_chat.get_member_typechecked(
-                    "lifecycle", Lifecycle
-                )
+                lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
                 self.messages_list = MessagesList(
-                    group_chat=self.group_chat,
+                    registry=self.registry,
                     cli_config=self.cli_config,
                     theme=self.theme,
                     lifecycle=lifecycle,
@@ -156,13 +154,13 @@ class CLIApp(App):
                         show_line_numbers=False,
                     )
                 yield FooterWidget(
-                    self.group_chat,
+                    self.registry,
                     self.token_manager,
                     use_nerd_font=self.cli_config.use_nerd_font,
                 )
 
             with TabPane("Context", id="context-tab"):
-                yield ContextTabWidget(self.group_chat)
+                yield ContextTabWidget(self.registry)
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         token_usage = parsed_answer._answer.get_token_usage()
@@ -181,7 +179,7 @@ class CLIApp(App):
     async def watch_exit_signal_queue(self) -> None:
         """监听exit_signal队列并处理退出信号"""
         while True:
-            output = await self.group_chat.receive("exit_signal")
+            output = await self.registry.receive("exit_signal")
 
             if isinstance(output, dict) and "return_code" in output:
                 return_code = output["return_code"]
@@ -194,14 +192,14 @@ class CLIApp(App):
 
     @work(exclusive=False)
     async def _run_agent(self) -> None:
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.run()
 
     def _generate_dynamic_completions(self) -> list[str]:
         """动态生成@补全列表"""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         llm_manager = agent.llm_manager
         llm_names = [llm.get_name() for llm in llm_manager.llms]
@@ -221,7 +219,7 @@ class CLIApp(App):
             )
             rainbow_art.add_class("welcome-message")
             self.messages_list.mount(rainbow_art)
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             llm_name, _llm = agent.get_current_llm_info()
             version = "v0.1.0"
             animated_welcome = AnimatedWelcomeWidget(
@@ -260,7 +258,7 @@ class CLIApp(App):
 
         from linhai.tool.main import ToolManager
 
-        self.group_chat.get_member_typechecked("tool_manager", ToolManager).add_toolset(
+        self.registry.get_member_typechecked("tool_manager", ToolManager).add_toolset(
             cliapp_tool
         )
 

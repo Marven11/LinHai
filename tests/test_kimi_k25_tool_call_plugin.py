@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import time
 
 from linhai.plugin.message_checkers import KimiK25ToolCallPlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Answer
 
 
@@ -14,8 +14,8 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """Set up test fixtures."""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = KimiK25ToolCallPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = KimiK25ToolCallPlugin(self.registry)
         self.agent = AsyncMock()
         self.answer = MagicMock(spec=Answer)
 

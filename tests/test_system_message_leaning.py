@@ -9,21 +9,21 @@ from linhai.plugin.system_message_leaning import MachineControlIntroductionPlugi
 
 class TestMachineControlPlugin(unittest.TestCase):
     def setUp(self):
-        self.mock_group_chat = MagicMock()
-        self.mock_group_chat.members = {}
+        self.mock_registry = MagicMock()
+        self.mock_registry.members = {}
 
         def get_member_typechecked(name, t):
-            return self.mock_group_chat.members[name]
+            return self.mock_registry.members[name]
 
-        self.mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked
+        self.mock_registry.get_member_typechecked.side_effect = get_member_typechecked
 
-        self.system_message = SystemMessage(self.mock_group_chat)
-        self.mock_group_chat.members["system_message"] = self.system_message
+        self.system_message = SystemMessage(self.mock_registry)
+        self.mock_registry.members["system_message"] = self.system_message
 
-        self.machine_control = MachineControl(self.mock_group_chat)
-        self.mock_group_chat.members["machine_control"] = self.machine_control
+        self.machine_control = MachineControl(self.mock_registry)
+        self.mock_registry.members["machine_control"] = self.machine_control
 
-        self.plugin = MachineControlIntroductionPlugin(self.mock_group_chat)
+        self.plugin = MachineControlIntroductionPlugin(self.mock_registry)
 
     async def call_before_helper(self):
         await self.plugin.before_message_generation()

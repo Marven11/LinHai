@@ -24,7 +24,7 @@ class TestToolConflictRefactor(unittest.TestCase):
 
     def _setup_agent_mock(self) -> None:
         self.agent_mock = Mock()
-        self.agent_mock.group_chat = Mock()
+        self.agent_mock.registry = Mock()
         # 模拟llm_manager
         self.mock_llm_manager = Mock()
         # 创建模拟的LLM对象
@@ -48,7 +48,7 @@ class TestToolConflictRefactor(unittest.TestCase):
         mcp_basedir = Path(".")
 
         tool_manager = ToolManager(
-            group_chat=self.agent_mock.group_chat,
+            registry=self.agent_mock.registry,
             toolsets=[],
             config=config,
             mcp_connector=None,
@@ -59,7 +59,7 @@ class TestToolConflictRefactor(unittest.TestCase):
                 return tool_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.agent_mock.group_chat.get_member_typechecked.side_effect = (
+        self.agent_mock.registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
         self.toolcall.tool_manager = tool_manager
@@ -135,7 +135,7 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.assertIsNone(result)
 
     def _setup_async_mocks(self) -> None:
-        self.toolcall.agent.group_chat.send_if_exists = AsyncMock()
+        self.toolcall.agent.registry.send_if_exists = AsyncMock()
         self.toolcall.agent.lifecycle = Mock()
         self.toolcall.agent.lifecycle.trigger_after_toolcall = AsyncMock()
         self.toolcall.agent.message_processor = Mock()

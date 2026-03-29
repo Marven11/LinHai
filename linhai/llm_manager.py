@@ -3,7 +3,7 @@ from typing import Sequence
 import asyncio
 from datetime import datetime, timedelta
 from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import CliRuntimeNotice
 
 
@@ -20,7 +20,7 @@ class LlmManager:
 
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         llms: list[LanguageModel],
         llm_fallback_map: dict[str, str | None],
         default_llm_name: str | None = None,
@@ -28,13 +28,13 @@ class LlmManager:
         """初始化LlmManager
 
         Args:
-            group_chat: GroupChat实例，用于消息通信
+            registry: Registry实例，用于消息通信
             llms: LanguageModel实例列表
             default_llm_name: 默认LLM名称，如果为None则使用第一个LLM
             llm_fallback_map: LLM fallback映射，key为LLM名称，value为fallback的LLM名称
 
         """
-        self.group_chat = group_chat
+        self.registry = registry
         self.llms = llms
         self.llm_names = [llm.get_name() for llm in llms]
 
@@ -71,7 +71,7 @@ class LlmManager:
             name: [] for name in self.llm_names
         }
 
-        self.group_chat.register_member("llm_manager", self)
+        self.registry.register_member("llm_manager", self)
 
     def _is_llm_expired(self, disabled_until: datetime | None) -> bool:
         """检查LLM是否已过期
@@ -117,7 +117,7 @@ class LlmManager:
                 f"错误：LLM名称 '{name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
             )
         self.llm_stack = [(name, None)]
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log", CliRuntimeNotice(level="INFO", content=f"已切换到LLM: {name}")
         )
 
@@ -176,7 +176,7 @@ class LlmManager:
                 last_error = e
                 self._record_error(current_llm_name, "timeout")
                 delay = min(3**retry_count, 300)
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
@@ -195,7 +195,7 @@ class LlmManager:
                     if fallback_llm is not None:
                         disabled_until = datetime.now() + timedelta(minutes=5)
                         self.llm_stack.append((fallback_llm, disabled_until))
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
@@ -204,7 +204,7 @@ class LlmManager:
                         )
                     else:
                         delay = min(3**retry_count, 300)
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
@@ -218,7 +218,7 @@ class LlmManager:
                     if fallback_llm is not None:
                         disabled_until = datetime.now() + timedelta(minutes=1)
                         self.llm_stack.append((fallback_llm, disabled_until))
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
@@ -227,7 +227,7 @@ class LlmManager:
                         )
                     else:
                         delay = min(3**retry_count, 300)
-                        await self.group_chat.send_if_exists(
+                        await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
@@ -242,7 +242,7 @@ class LlmManager:
                         if fallback_llm is not None:
                             disabled_until = datetime.now() + timedelta(minutes=1)
                             self.llm_stack.append((fallback_llm, disabled_until))
-                            await self.group_chat.send_if_exists(
+                            await self.registry.send_if_exists(
                                 "ui_log",
                                 CliRuntimeNotice(
                                     level="WARNING",
@@ -251,7 +251,7 @@ class LlmManager:
                             )
                         else:
                             delay = min(3**retry_count, 300)
-                            await self.group_chat.send_if_exists(
+                            await self.registry.send_if_exists(
                                 "ui_log",
                                 CliRuntimeNotice(
                                     level="WARNING",

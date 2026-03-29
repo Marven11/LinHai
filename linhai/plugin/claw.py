@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.prompt import (
     AGENTS_MD,
@@ -22,14 +22,14 @@ if TYPE_CHECKING:
 class ClawPlugin(Plugin):
     """CLAW模式插件：在启用--claw时添加系统提示和固定消息。"""
 
-    def __init__(self, group_chat: GroupChat, cli_args):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry, cli_args):
+        super().__init__(registry)
         self.cli_args = cli_args
         if cli_args.claw_folder is not None:
             self.claw_dir = Path(cli_args.claw_folder).expanduser()
         else:
             self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
-        self.reminder_plugin = ReminderPlugin(group_chat, self.claw_dir)
+        self.reminder_plugin = ReminderPlugin(registry, self.claw_dir)
 
     async def before_agent_loop(self, agent: "linhai_agent") -> None:
         """在agent循环开始前添加CLAW模式介绍和文档内容。"""

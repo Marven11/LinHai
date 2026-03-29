@@ -24,7 +24,7 @@ from linhai.llm import (
     ToolCallMessage,
 )
 from linhai.llm_manager import LlmManager
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils import CliRuntimeNotice
@@ -38,30 +38,28 @@ class Agent:
         self,
         llm_manager: LlmManager,
         compress_threshold: int | float,
-        group_chat: GroupChat,
+        registry: Registry,
         pinned_messages: list[Message],
         max_toolcall_token_in_round: int = 30000,
     ):
         self.llm_manager = llm_manager
 
         self.compress_threshold = compress_threshold
-        self.group_chat = group_chat
+        self.registry = registry
 
-        group_chat.register_queue("user_message")
-        group_chat.register_member("agent", self)
+        registry.register_queue("user_message")
+        registry.register_member("agent", self)
 
         self.mcp_connector: MCPConnector | None = None
 
         self.state: AgentState = "waiting_user"
 
-        self.lifecycle = Lifecycle(group_chat)
-        self.message_processor = AgentMessage(group_chat, pinned_messages)
-        self.orchestration = AgentContextOrchestration(
-            group_chat, self.message_processor
-        )
+        self.lifecycle = Lifecycle(registry)
+        self.message_processor = AgentMessage(registry, pinned_messages)
+        self.orchestration = AgentContextOrchestration(registry, self.message_processor)
         self.toolcall_processor = AgentToolcall(self, max_toolcall_token_in_round)
 
-        self.range_clean_manager = RangeCleanManager(group_chat)
+        self.range_clean_manager = RangeCleanManager(registry)
 
         self.compress_tool_called_in_last_response = False
 
@@ -69,7 +67,7 @@ class Agent:
 
         self.agent_llm = AgentLlm(
             llm_manager=llm_manager,
-            group_chat=group_chat,
+            registry=registry,
             toolcall_processor=self.toolcall_processor,
             message_processor=self.message_processor,
         )
@@ -92,7 +90,7 @@ class Agent:
         """
         from ..token_manager import TokenManager
 
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         if token_manager.current_token_usage is None:
@@ -126,7 +124,7 @@ class Agent:
         self, agent: "Agent", answer, current_content
     ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
-        if not agent.group_chat.is_empty("user_message"):
+        if not agent.registry.is_empty("user_message"):
             should_interrupt = await self.receive_one_user_message()
             if should_interrupt and agent.agent_llm:
                 await agent.agent_llm.interrupt(
@@ -137,7 +135,7 @@ class Agent:
 
     async def receive_one_user_message(self) -> bool:
         """接收并处理一条用户消息，返回是否需要打断agent."""
-        msg = await self.group_chat.receive("user_message")
+        msg = await self.registry.receive("user_message")
         from linhai.llm import UserMessage
 
         assert isinstance(msg, UserMessage)
@@ -157,14 +155,14 @@ class Agent:
 
         await self.lifecycle.trigger_before_waiting_user(self)
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
         )
-        while self.group_chat.is_empty("user_message") and self.state == "waiting_user":
+        while self.registry.is_empty("user_message") and self.state == "waiting_user":
             await asyncio.sleep(0.01)
         if self.state != "waiting_user":
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(level="INFO", content="Agent在等待用户时被切换状态"),
             )
@@ -181,7 +179,7 @@ class Agent:
         同时监控token使用量并在需要时触发压缩。
         """
 
-        if not self.group_chat.is_empty("user_message"):
+        if not self.registry.is_empty("user_message"):
             try:
                 await self.receive_one_user_message()
                 await self.generate_response()
@@ -208,7 +206,7 @@ class Agent:
 
         from linhai.cli.command_handler import CommandHandler
 
-        handler = CommandHandler(self.group_chat)
+        handler = CommandHandler(self.registry)
         handled, should_interrupt = await handler.handle_command(content)
 
         if not handled:
@@ -238,7 +236,7 @@ class Agent:
             Answer: 生成的回答对象
         """
         if self.queued_messages:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
             )
             await self.message_processor.add_new_message(
@@ -275,7 +273,7 @@ class Agent:
         await self.message_processor.add_new_message(chat_message)
 
         if self.queued_messages:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
             )
             await self.message_processor.add_new_message(
@@ -335,7 +333,7 @@ class Agent:
         user_input_found = False
         await self.lifecycle.trigger_before_agent_loop(self)
 
-        while not self.group_chat.is_empty("user_message"):
+        while not self.registry.is_empty("user_message"):
             await self.receive_one_user_message()
             user_input_found = True
         if user_input_found:

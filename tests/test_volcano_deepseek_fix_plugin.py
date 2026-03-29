@@ -23,10 +23,10 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = AsyncMock(
             side_effect=capture_message
         )
-        self.group_chat = MagicMock()
-        self.group_chat.get_member_typechecked = MagicMock(return_value=self.agent)
-        self.group_chat.send_if_exists = AsyncMock()
-        self.plugin = VolcanoDeepseekFixPlugin(self.group_chat)
+        self.registry = MagicMock()
+        self.registry.get_member_typechecked = MagicMock(return_value=self.agent)
+        self.registry.send_if_exists = AsyncMock()
+        self.plugin = VolcanoDeepseekFixPlugin(self.registry)
         self.answer = MagicMock()
         self.tool_calls = []
 
@@ -49,7 +49,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(len(self.added_messages), 0)
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_with_abnormal_marker(self):
         """测试有异常标记时显示上下文内容。"""
@@ -75,8 +75,8 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(re.search(r"\[位置\s*1\]", message))
         self.assertIn(abnormal_marker, message)
 
-        self.group_chat.send_if_exists.assert_called_once()
-        ui_call = self.group_chat.send_if_exists.call_args[0]
+        self.registry.send_if_exists.assert_called_once()
+        ui_call = self.registry.send_if_exists.call_args[0]
         self.assertIsInstance(ui_call[1], CliRuntimeNotice)
         self.assertIn("已提醒 agent 并显示上下文", ui_call[1].content)
 
@@ -105,8 +105,8 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(re.search(r"\[位置\s*1\]", message))
         self.assertTrue(re.search(r"\[位置\s*2\]", message))
 
-        self.group_chat.send_if_exists.assert_called_once()
-        ui_call = self.group_chat.send_if_exists.call_args[0]
+        self.registry.send_if_exists.assert_called_once()
+        ui_call = self.registry.send_if_exists.call_args[0]
         self.assertTrue(re.search(r"共\s*2\s*处", ui_call[1].content))
 
     async def test_after_message_generation_context_truncation(self):

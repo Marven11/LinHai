@@ -51,7 +51,7 @@ class Message(Protocol):
 
     @classmethod
     def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+        cls, json_str: str, registry: "linhai.registry.Registry"
     ) -> "Message":
         """从JSON字符串创建消息实例。"""
         raise NotImplementedError()
@@ -62,15 +62,15 @@ class SystemMessage:
 
     def __init__(
         self,
-        group_chat: linhai.group_chat.GroupChat,
+        registry: linhai.registry.Registry,
     ):
         """初始化系统消息。
 
-        完全修改设计：group_chat必须提供，系统提示语通过结构化常量动态构建。
+        完全修改设计：registry必须提供，系统提示语通过结构化常量动态构建。
         template参数已移除，不再支持兼容模式。
         """
-        self.group_chat = group_chat
-        self.group_chat.register_member("system_message", self)
+        self.registry = registry
+        self.registry.register_member("system_message", self)
 
         from linhai.prompt import (
             INTRODUCTION_ITEMS,
@@ -186,9 +186,9 @@ class SystemMessage:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
-        instance = cls(group_chat=group_chat)
+        instance = cls(registry=registry)
 
         instance.overview = data["overview"]
         instance.introduction_items = data["introduction_items"]
@@ -227,9 +227,9 @@ class UserMessage:
 
     @classmethod
     def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+        cls, json_str: str, registry: "linhai.registry.Registry"
     ):  # pylint: disable=unused-argument
-        _ = group_chat  # 使用参数以消除警告
+        _ = registry  # 使用参数以消除警告
         data = json.loads(json_str)
         return cls(message=data["message"], name=data.get("name"))
 
@@ -277,9 +277,9 @@ class AssistantMessage:
 
     @classmethod
     def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+        cls, json_str: str, registry: "linhai.registry.Registry"
     ):  # pylint: disable=unused-argument
-        _ = group_chat  # 使用参数以消除警告
+        _ = registry  # 使用参数以消除警告
         data = json.loads(json_str)
         return cls(
             message=data["message"],
@@ -439,7 +439,7 @@ class OpenAiAnswer:
     def __init__(
         self,
         stream,
-        group_chat: linhai.group_chat.GroupChat,
+        registry: linhai.registry.Registry,
         compatibility: str | None = None,
         estimated_cached_input_tokens: int = 0,
         llm_instance=None,
@@ -455,7 +455,7 @@ class OpenAiAnswer:
         self.total_tokens = 0
         self.input_tokens = 0
         self.output_tokens = 0
-        self.group_chat = group_chat
+        self.registry = registry
         self.cached_input_tokens = estimated_cached_input_tokens
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken] = []
@@ -506,7 +506,7 @@ class OpenAiAnswer:
                 if self.llm_instance is not None and self.input_tokens > 0:
                     self.llm_instance.previous_input_tokens = self.input_tokens
                 # Send token usage directly to CLI queue instead of through agent
-                await self.group_chat.send(
+                await self.registry.send(
                     "token_usage",
                     AnswerTokenUsage(
                         input_tokens=self.input_tokens,
@@ -613,7 +613,7 @@ class MinimaxAnswer:
     def __init__(
         self,
         response,  # ChatCompletion对象
-        group_chat: linhai.group_chat.GroupChat,
+        registry: linhai.registry.Registry,
         cached_input_tokens: int = 0,
         llm_instance=None,
     ):
@@ -646,7 +646,7 @@ class MinimaxAnswer:
             self.total_tokens = 0
             self.input_tokens = 0
             self.output_tokens = 0
-        self.group_chat = group_chat
+        self.registry = registry
         self.cached_input_tokens = cached_input_tokens
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken] = []
@@ -728,7 +728,7 @@ class OpenAi:
     def __init__(
         self,
         *,
-        group_chat: linhai.group_chat.GroupChat,
+        registry: linhai.registry.Registry,
         api_key: str,
         base_url: str,
         model: str,
@@ -744,7 +744,7 @@ class OpenAi:
         """初始化OpenAI语言模型。
 
         参数:
-            group_chat: GroupChat实例，用于发送通知和协调组件
+            registry: Registry实例，用于发送通知和协调组件
             api_key: OpenAI API密钥
             base_url: API基础URL
             model: 模型名称
@@ -755,7 +755,7 @@ class OpenAi:
             compatibility: API兼容性模式，支持minimax、kimi等
             name: LLM的名称
         """
-        self.group_chat = group_chat
+        self.registry = registry
         self.model = model
         self.openai = AsyncOpenAI(
             api_key=api_key,
@@ -884,7 +884,7 @@ class OpenAi:
             params["stream"] = False
             # 提示用户，但只提示一次
             if not self._minimax_warning_sent:
-                await self.group_chat.send(
+                await self.registry.send(
                     "ui_log",
                     CliRuntimeNotice(
                         level="INFO",
@@ -903,7 +903,7 @@ class OpenAi:
             response = await self.openai.chat.completions.create(**params)
             usage = response.__dict__.get("usage", None)
             if usage:
-                await self.group_chat.send(
+                await self.registry.send(
                     "token_usage",
                     AnswerTokenUsage(
                         input_tokens=usage.__dict__.get("prompt_tokens", 0),
@@ -914,7 +914,7 @@ class OpenAi:
                 )
             answer = MinimaxAnswer(
                 response,
-                group_chat=self.group_chat,
+                registry=self.registry,
                 cached_input_tokens=estimated_cached_input_tokens,
                 llm_instance=self,
             )
@@ -922,7 +922,7 @@ class OpenAi:
             stream = await self.openai.chat.completions.create(**params)
             answer = OpenAiAnswer(
                 stream,
-                group_chat=self.group_chat,
+                registry=self.registry,
                 compatibility=self.compatibility,
                 estimated_cached_input_tokens=estimated_cached_input_tokens,
                 llm_instance=self,

@@ -19,7 +19,7 @@ from linhai.agent.workflow import (
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.base import GlobalPrompt
 
 
@@ -37,11 +37,11 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 800,
         }
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
@@ -50,7 +50,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
@@ -58,7 +58,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=[],
         )
 
@@ -66,9 +66,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_step1_creates_range_clean_id(self):
         """Test that step1 creates a valid range_clean_id."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
-        mock_agent.group_chat = mock_group_chat
+        mock_agent.registry = mock_registry
 
         # Mock get_members to return appropriate objects based on arguments
         def mock_get_member_typechecked(member_type, member_class=None):
@@ -83,14 +83,14 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
 
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.send_if_exists = AsyncMock()
 
         mock_messages = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test.md")),
         ] + [
             RuntimeMessage(f"User message {i}") for i in range(1, 16)
@@ -137,7 +137,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path(tempfile.mktemp(suffix=".json"))
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
         self.assertIsInstance(result, ToolResultSuccess)
         self.assertIn("已生成消息列表总结，ID:", result.content)
@@ -160,9 +160,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_step2_valid_range_clean_id(self):
         """Test that step2 works with a valid range_clean_id."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
-        mock_agent.group_chat = mock_group_chat
+        mock_agent.registry = mock_registry
 
         # Mock get_members to return appropriate objects based on arguments
         def mock_get_member_typechecked(member_type, member_class=None):
@@ -185,11 +185,11 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
 
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.send_if_exists = AsyncMock()
 
         # Create messages with a MessagesListSummerizeMessage
         summerize_message = MessagesListSummerizeMessage(
@@ -199,7 +199,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_messages = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test.md")),
         ] + [
             RuntimeMessage(f"Message {i}") for i in range(1, 16)
@@ -215,7 +215,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step2(
-                mock_group_chat,
+                mock_registry,
                 range_clean_id="test_range_clean_id",
                 start_id=2,
                 end_id=11,  # Delete 10 messages (2-11)
@@ -229,7 +229,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_step2_invalid_range_clean_id(self):
         """Test that step2 fails with an invalid range_clean_id."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
 
         # Mock get_members to return appropriate objects based on arguments
         def mock_get_member_typechecked(member_type, member_class=None):
@@ -244,12 +244,12 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
 
         result = await context_forget_range_step2(
-            mock_group_chat,
+            mock_registry,
             range_clean_id="invalid_id",
             start_id=2,
             end_id=7,
@@ -261,14 +261,14 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_step2_out_of_range(self):
         """Test that step2 fails when start_id/end_id are out of allowed range."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
 
         # Mock get_members to return appropriate objects based on arguments
         def mock_get_member_typechecked(member_type, member_class=None):
             if member_type == "agent":
                 mock_agent = MagicMock()
                 mock_agent.message_processor.messages = [
-                    SystemMessage(group_chat=mock_group_chat),
+                    SystemMessage(registry=mock_registry),
                     GlobalPrompt(filepath=Path("/tmp/test.md")),
                     RuntimeMessage("Message 1"),
                     RuntimeMessage("Message 2"),
@@ -292,13 +292,13 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
 
         # Try to delete beyond current bounds (end_id=9, but max is 7)
         result = await context_forget_range_step2(
-            mock_group_chat,
+            mock_registry,
             range_clean_id="test_range_clean_id",
             start_id=2,
             end_id=9,  # Beyond current max of 7
@@ -310,8 +310,8 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_range_clean_manager_functionality(self):
         """Test RangeCleanManager basic functionality."""
-        mock_group_chat = MagicMock()
-        manager = RangeCleanManager(mock_group_chat)
+        mock_registry = MagicMock()
+        manager = RangeCleanManager(mock_registry)
 
         # Test creation and retrieval
         info = manager.create_clean_info("test_id", 10, 2)
@@ -367,9 +367,9 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
     async def test_step1_with_few_messages(self):
         """Test step1 when there are few messages."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
-        mock_agent.group_chat = mock_group_chat
+        mock_agent.registry = mock_registry
 
         # Mock get_members to return appropriate objects
         def mock_get_member_typechecked(member_type, member_class=None):
@@ -384,14 +384,14 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.send_if_exists = AsyncMock()
 
         # Only 5 messages total
         mock_messages = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test.md")),
             RuntimeMessage("Message 1"),
             RuntimeMessage("Message 2"),
@@ -417,16 +417,16 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path(tempfile.mktemp(suffix=".json"))
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
         # Should still succeed, even if LLM says there are too few messages
         self.assertIsInstance(result, ToolResultSuccess)
 
     async def test_step2_user_message_protection_summary(self):
         """Test that step2 creates a summary of protected user messages."""
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
-        mock_agent.group_chat = mock_group_chat
+        mock_agent.registry = mock_registry
 
         # Mock get_members to return appropriate objects
         def mock_get_member_typechecked(member_type, member_class=None):
@@ -449,10 +449,10 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
             else:
                 raise ValueError(f"Unexpected member type: {member_type}")
 
-        mock_group_chat.get_member_typechecked = MagicMock(
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=mock_get_member_typechecked
         )
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.send_if_exists = AsyncMock()
 
         # Create messages with user messages that should be protected
         summerize_message = MessagesListSummerizeMessage(
@@ -463,7 +463,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
 
         # Create 15 total messages: 2 system + 12 user/runtime + 1 summerize = 15
         mock_messages = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test.md")),
             UserMessage(message="Important task 1"),
             RuntimeMessage("Tool output 1"),
@@ -511,7 +511,7 @@ class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):
         with patch("linhai.agent.workflow.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step2(
-                mock_group_chat,
+                mock_registry,
                 range_clean_id="test_range_clean_id",
                 start_id=2,
                 end_id=11,  # Delete 10 messages (2-11) to meet minimum requirement

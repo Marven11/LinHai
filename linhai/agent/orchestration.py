@@ -19,7 +19,7 @@ from .lifecycle import Lifecycle
 from linhai.llm import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils import CliRuntimeNotice
 from linhai.type_hints import ThresholdInfo
@@ -85,16 +85,16 @@ def get_cleanable_large_messages(
 class AgentContextOrchestration:
     """消息编排器，负责管理大消息、垃圾消息、阈值通知等高级消息管理功能。"""
 
-    def __init__(self, group_chat: GroupChat, agent_message: AgentMessage):
+    def __init__(self, registry: Registry, agent_message: AgentMessage):
         """初始化消息编排器。
 
         Args:
-            group_chat: GroupChat实例
+            registry: Registry实例
             agent_message: 基础消息管理器实例
         """
-        self.group_chat = group_chat
+        self.registry = registry
         self.agent_message = agent_message
-        self.group_chat.register_member("agent_context_orchestration", self)
+        self.registry.register_member("agent_context_orchestration", self)
 
         self.large_messages: set[Message] = set()
         self.cleaned_messages: dict[str, float] = {}
@@ -128,7 +128,7 @@ class AgentContextOrchestration:
                 content=f"可清理的大消息不足5条（总共{large_count}条），无法执行清理"
             )
 
-        conversation_dir = self.group_chat.get_member_typechecked(
+        conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         saved_path = save_cleaned_messages(
@@ -148,7 +148,7 @@ class AgentContextOrchestration:
             self.large_messages.discard(msg)
 
         result = f"清理了{len(removed_messages)}条大消息，保存到: {saved_path}"
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -197,7 +197,7 @@ class AgentContextOrchestration:
         else:
             current_state = "红灯"
 
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         is_dirty = token_manager.is_dirty
@@ -236,7 +236,7 @@ class AgentContextOrchestration:
                 cleaned_messages_dict=self.cleaned_messages,
             )
             cleanable_count = len(cleanable_messages)
-            token_manager = self.group_chat.get_member_typechecked(
+            token_manager = self.registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
             cache_ratio_text = ""
@@ -322,7 +322,7 @@ class AgentContextOrchestration:
         ):
             result = await self.context_forget_large_message()
             if isinstance(result, ToolResultSuccess):
-                token_manager = self.group_chat.get_member_typechecked(
+                token_manager = self.registry.get_member_typechecked(
                     "token_manager", TokenManager
                 )
                 token_manager.mark_dirty()
@@ -341,7 +341,7 @@ class AgentContextOrchestration:
         async def context_forget_range_step1_tool() -> (
             ToolResultSuccess | ToolResultFailed
         ):
-            result = await context_forget_range_step1(self.group_chat)
+            result = await context_forget_range_step1(self.registry)
             return result
 
         @toolset.register_tool(
@@ -375,10 +375,10 @@ class AgentContextOrchestration:
             range_clean_id: str, start_id: int, end_id: int, description: str
         ) -> ToolResultSuccess | ToolResultFailed:
             result = await context_forget_range_step2(
-                self.group_chat, range_clean_id, start_id, end_id, description
+                self.registry, range_clean_id, start_id, end_id, description
             )
             if isinstance(result, ToolResultSuccess):
-                token_manager = self.group_chat.get_member_typechecked(
+                token_manager = self.registry.get_member_typechecked(
                     "token_manager", TokenManager
                 )
                 token_manager.mark_dirty()
@@ -390,7 +390,7 @@ class AgentContextOrchestration:
         """注册生命周期回调。"""
         from .lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_before_add_new_message(self._before_add_new_message)
         lifecycle.register_before_message_generation(self._before_message_generation)
 
@@ -421,8 +421,8 @@ class RedStateToolBlockPlugin:
     在红灯状态且一分钟内没有调用过消息清理类工具时禁止调用其他工具。
     """
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
         self.CLEANUP_TOOLS = {
             "context_forget_range_step1",
             "context_forget_range_step2",
@@ -442,13 +442,13 @@ class RedStateToolBlockPlugin:
             dict: 修改后的工具调用参数
             None: 不做处理
         """
-        orchestration = self.group_chat.get_member_typechecked(
+        orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
         from .main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         threshold_info = agent.get_threshold_info()
         if threshold_info is None:
@@ -477,7 +477,7 @@ class RedStateToolBlockPlugin:
                 )
                 ui_msg = f"{current_state}状态下阻止调用{tool_name}工具，请先调用消息清理类工具"
 
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -503,15 +503,15 @@ class NotificationMessagePlugin:
     将添加notification message的实现拆分成一个新的plugin类。
     """
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     async def before_message_generation(self) -> None:
         """在消息生成前添加notification message。"""
         from .main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
-        orchestration = self.group_chat.get_member_typechecked(
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -571,15 +571,15 @@ class LargeMessageCountPlugin:
     - 大消息至少5条时：删除提示（不添加notification_message）
     """
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     async def before_message_generation(self) -> None:
         """在消息生成前根据大消息数量管理notification_message。"""
         from .main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
-        orchestration = self.group_chat.get_member_typechecked(
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 

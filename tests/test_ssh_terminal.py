@@ -5,7 +5,7 @@ import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
@@ -14,10 +14,10 @@ class TestSshTerminal(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境"""
-        self.group_chat = Mock(spec=GroupChat)
+        self.registry = Mock(spec=Registry)
         self.ssh_control = SshMachineControl(
             host="test-host",
-            group_chat=self.group_chat,
+            registry=self.registry,
             port=22,
             username="testuser",
         )

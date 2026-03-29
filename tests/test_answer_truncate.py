@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.llm import OpenAiAnswer
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
@@ -12,10 +12,10 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
     async def test_truncate_sets_truncated_flag_not_interrupted(self):
         """测试truncate会设置truncated标志但不设置interrupted标志。"""
         mock_stream = MagicMock()
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         answer = OpenAiAnswer(
             stream=mock_stream,
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             compatibility=None,
             estimated_cached_input_tokens=0,
         )
@@ -29,10 +29,10 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
     async def test_interrupt_sets_interrupted_flag(self):
         """测试interrupt会设置interrupted标志。"""
         mock_stream = MagicMock()
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         answer = OpenAiAnswer(
             stream=mock_stream,
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             compatibility=None,
             estimated_cached_input_tokens=0,
         )
@@ -63,10 +63,10 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 StopAsyncIteration(),
             ]
         )
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         answer = OpenAiAnswer(
             stream=mock_stream,
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             compatibility=None,
             estimated_cached_input_tokens=0,
         )
@@ -124,10 +124,10 @@ class TestAnswerTruncate(unittest.IsolatedAsyncioTestCase):
                 StopAsyncIteration(),
             ]
         )
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         answer = OpenAiAnswer(
             stream=mock_stream,
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             compatibility=None,
             estimated_cached_input_tokens=0,
         )

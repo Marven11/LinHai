@@ -5,7 +5,7 @@ from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import CliRuntimeNotice
 from .transport import TrojanTransport
 
@@ -14,7 +14,7 @@ class SshTrojanTransport:
     def __init__(
         self,
         host: str,
-        group_chat: GroupChat,
+        registry: Registry,
         port: int = 22,
         username: Optional[str] = None,
     ):
@@ -26,7 +26,7 @@ class SshTrojanTransport:
         self.host = host
         self.port = port
         self.username = username
-        self.group_chat = group_chat
+        self.registry = registry
         self.trojan_path: Optional[Path] = None
         self.remote_trojan_path: Optional[str] = None
         self._trojan_transport: Optional[TrojanTransport] = None
@@ -44,7 +44,7 @@ class SshTrojanTransport:
         _, stderr = await process.communicate()
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"检查远程Python版本失败: {error_msg}"
@@ -70,7 +70,7 @@ class SshTrojanTransport:
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"创建远程临时文件失败: {error_msg}"
@@ -92,7 +92,7 @@ class SshTrojanTransport:
         _, stderr = await process.communicate()
         if process.returncode != 0:
             error_msg = stderr.decode()
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"写入远程文件失败: {error_msg}"
@@ -138,7 +138,7 @@ class SshTrojanTransport:
             "ConnectTimeout=10",
         ]
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
@@ -152,7 +152,7 @@ class SshTrojanTransport:
         trojan_content = trojan_file_path.read_text(encoding="utf-8")
         self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -161,7 +161,7 @@ class SshTrojanTransport:
         )
 
         if not await self._check_python_version(ssh_cmd):
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -172,14 +172,14 @@ class SshTrojanTransport:
                 self.trojan_path.unlink(missing_ok=True)
             return False
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
             ),
         )
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -190,7 +190,7 @@ class SshTrojanTransport:
         remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
         self.remote_trojan_path = remote_trojan_path
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -198,7 +198,7 @@ class SshTrojanTransport:
             ),
         )
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
@@ -212,7 +212,7 @@ class SshTrojanTransport:
             or process.stdout is None
             or process.stderr is None
         ):
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -223,7 +223,7 @@ class SshTrojanTransport:
                 self.trojan_path.unlink(missing_ok=True)
             return False
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -232,7 +232,7 @@ class SshTrojanTransport:
         )
 
         self._trojan_transport = TrojanTransport(
-            group_chat=self.group_chat,
+            registry=self.registry,
             stdin=process.stdin,
             stdout=process.stdout,
             stderr=process.stderr,

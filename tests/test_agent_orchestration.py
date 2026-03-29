@@ -12,7 +12,7 @@ from linhai.agent.orchestration import (
 from linhai.agent.message import AgentMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.lifecycle import Lifecycle
 from linhai.tool.main import ToolManager
 from linhai.token_manager import TokenManager
@@ -23,23 +23,23 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         # 注册一个mock的lifecycle以避免RuntimeError
         mock_lifecycle = AsyncMock(spec=Lifecycle)
         mock_lifecycle.trigger_before_add_new_message.return_value = None
-        self.group_chat.register_member("lifecycle", mock_lifecycle)
+        self.registry.register_member("lifecycle", mock_lifecycle)
 
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        self.group_chat.register_member("tool_manager", mock_tool_manager)
+        self.registry.register_member("tool_manager", mock_tool_manager)
 
         # 注册一个mock的token_manager，因为compute_orchestration_context需要它
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
         mock_token_manager.is_dirty = False
-        self.group_chat.register_member("token_manager", mock_token_manager)
+        self.registry.register_member("token_manager", mock_token_manager)
 
         # 注册一个mock的llm_manager，因为is_explicit_cache_enabled需要它
         from linhai.llm_manager import LlmManager
@@ -48,7 +48,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_llm = Mock()
         mock_llm.get_explicit_cache_info = Mock(return_value=None)
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        self.group_chat.register_member("llm_manager", mock_llm_manager)
+        self.registry.register_member("llm_manager", mock_llm_manager)
 
         # 注册conversation_folder，因为AgentMessage._save_context需要它
         from pathlib import Path
@@ -56,17 +56,17 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         self.temp_dir = TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
-        self.group_chat.register_member("conversation_folder", Path(self.temp_dir.name))
+        self.registry.register_member("conversation_folder", Path(self.temp_dir.name))
 
         self.init_messages = [
             SystemMessage(
-                group_chat=self.group_chat,
+                registry=self.registry,
             ),
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(self.group_chat, self.init_messages)
+        self.message_processor = AgentMessage(self.registry, self.init_messages)
         self.orchestration = AgentContextOrchestration(
-            self.group_chat, self.message_processor
+            self.registry, self.message_processor
         )
 
         # 注册一个mock的agent，因为NotificationMessagePlugin需要它
@@ -75,7 +75,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         mock_agent = Mock(spec=Agent)
         mock_agent.message_processor = self.message_processor
         mock_agent.get_threshold_info = Mock(return_value=None)
-        self.group_chat.register_member("agent", mock_agent)
+        self.registry.register_member("agent", mock_agent)
 
     async def test_add_soft_threshold_notification(self):
         """测试添加软限制通知。"""
@@ -118,7 +118,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         await self.message_processor.add_new_message(large_msg)
 
         # 设置token用量失效
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = True
@@ -252,7 +252,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         await self.message_processor.add_new_message(large_msg)
 
         # 获取token管理器并设置dirty状态
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = True
@@ -275,7 +275,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 设置token用量失效
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = True
@@ -307,7 +307,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 确保token用量未失效（默认状态）
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = False
@@ -338,7 +338,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 确保token用量未失效（默认状态）
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = False
@@ -369,7 +369,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         }
 
         # 测试token用量失效时，清理工具被阻塞（因为刚清理过）
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         token_manager.is_dirty = True
@@ -584,7 +584,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 调用before_message_generation
         from linhai.agent.orchestration import NotificationMessagePlugin
 
-        plugin = NotificationMessagePlugin(self.group_chat)
+        plugin = NotificationMessagePlugin(self.registry)
         await plugin.before_message_generation()
 
         # 验证notification message不存在（因为count<3）
@@ -600,7 +600,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 修改mock_agent返回红灯状态的threshold_info
         from linhai.agent.main import Agent
 
-        mock_agent = self.group_chat.get_member_typechecked("agent", Agent)
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
             "used_tokens": 95000,
@@ -615,7 +615,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 调用before_message_generation
         from linhai.agent.orchestration import NotificationMessagePlugin
 
-        plugin = NotificationMessagePlugin(self.group_chat)
+        plugin = NotificationMessagePlugin(self.registry)
         await plugin.before_message_generation()
 
         # 验证notification message存在
@@ -637,7 +637,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 修改mock_agent返回红灯状态的threshold_info
         from linhai.agent.main import Agent
 
-        mock_agent = self.group_chat.get_member_typechecked("agent", Agent)
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
             "used_tokens": 95000,
@@ -652,7 +652,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 添加通知消息
         from linhai.agent.orchestration import NotificationMessagePlugin
 
-        plugin = NotificationMessagePlugin(self.group_chat)
+        plugin = NotificationMessagePlugin(self.registry)
         await plugin.before_message_generation()
 
         # 验证notification message存在
@@ -675,7 +675,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         from linhai.agent.orchestration import RedStateToolBlockPlugin
 
-        block_plugin = RedStateToolBlockPlugin(self.group_chat)
+        block_plugin = RedStateToolBlockPlugin(self.registry)
         await block_plugin.before_toolcall(
             tool_name="read_file",
             toolcall_arguments={},

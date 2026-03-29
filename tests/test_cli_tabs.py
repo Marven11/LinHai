@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch, Mock
 import asyncio
 from linhai.cli.app import CLIApp
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import CLIConfig
 from linhai.agent.main import Agent
 
@@ -17,7 +17,7 @@ class TestCLITabs(unittest.TestCase):
         """测试标签页是否正确显示"""
         mock_on_mount.return_value = None
 
-        group_chat = GroupChat()
+        registry = Registry()
         mock_agent = Mock(spec=Agent)
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
@@ -42,15 +42,15 @@ class TestCLITabs(unittest.TestCase):
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 
-        group_chat.register_member("agent", mock_agent)
-        group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("agent", mock_agent)
+        registry.register_member("agent_message", mock_agent_message)
+        registry.register_member("agent_context_orchestration", mock_orchestration)
 
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
-        group_chat.register_member("lifecycle", mock_lifecycle)
+        registry.register_member("lifecycle", mock_lifecycle)
 
         # 注册cli_args模拟对象
         import argparse
@@ -58,9 +58,9 @@ class TestCLITabs(unittest.TestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
         mock_cli_args.file = None
-        group_chat.register_member("cli_args", mock_cli_args)
+        registry.register_member("cli_args", mock_cli_args)
 
-        app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
+        app = CLIApp(registry=registry, cli_config=CLIConfig())
 
         async def _run_test():
             async with app.run_test() as pilot:
@@ -81,7 +81,7 @@ class TestCLITabs(unittest.TestCase):
         """异步测试标签页切换功能"""
         mock_on_mount.return_value = None
 
-        group_chat = GroupChat()
+        registry = Registry()
         mock_agent = Mock(spec=Agent)
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
@@ -106,15 +106,15 @@ class TestCLITabs(unittest.TestCase):
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_orchestration.large_messages = {}
 
-        group_chat.register_member("agent", mock_agent)
-        group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("agent", mock_agent)
+        registry.register_member("agent_message", mock_agent_message)
+        registry.register_member("agent_context_orchestration", mock_orchestration)
 
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
-        group_chat.register_member("lifecycle", mock_lifecycle)
+        registry.register_member("lifecycle", mock_lifecycle)
 
         # 注册cli_args模拟对象
         import argparse
@@ -122,9 +122,9 @@ class TestCLITabs(unittest.TestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
         mock_cli_args.file = None
-        group_chat.register_member("cli_args", mock_cli_args)
+        registry.register_member("cli_args", mock_cli_args)
 
-        app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
+        app = CLIApp(registry=registry, cli_config=CLIConfig())
 
         async with app.run_test() as pilot:
             agent_pane = pilot.app.query_one("#agent-tab")

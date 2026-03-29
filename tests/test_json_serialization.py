@@ -20,7 +20,7 @@ class TestJsonSerialization(unittest.TestCase):
         from linhai.tool.main import ToolManager
         from unittest.mock import Mock
 
-        self.mock_group_chat = Mock()
+        self.mock_registry = Mock()
         # 为SystemMessage初始化提供mock的tool_manager
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
@@ -30,17 +30,17 @@ class TestJsonSerialization(unittest.TestCase):
                 return mock_tool_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.mock_group_chat.get_member_typechecked = Mock(
+        self.mock_registry.get_member_typechecked = Mock(
             side_effect=get_member_typechecked_side_effect
         )
 
     def test_system_message_serialization(self):
         """测试SystemMessage的序列化"""
         original = SystemMessage(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
         )
         json_str = original.to_json()
-        restored = SystemMessage.from_json(json_str, self.mock_group_chat)
+        restored = SystemMessage.from_json(json_str, self.mock_registry)
 
         # 验证反序列化后的对象也是SystemMessage实例
         self.assertIsInstance(restored, SystemMessage)
@@ -53,8 +53,8 @@ class TestJsonSerialization(unittest.TestCase):
         self.assertIn("overview", original_data)
         self.assertIn("overview", restored_data)
 
-        # 确保group_chat正确传递（虽然不被序列化，但from_json会传入）
-        # 我们无法直接比较group_chat，但可以确认它们都使用相同的mock_group_chat
+        # 确保registry正确传递（虽然不被序列化，但from_json会传入）
+        # 我们无法直接比较registry，但可以确认它们都使用相同的mock_registry
         # 通过检查to_llm_message()返回相同内容来间接验证
         original_llm_msg = original.to_llm_message()
         restored_llm_msg = restored.to_llm_message()
@@ -69,7 +69,7 @@ class TestJsonSerialization(unittest.TestCase):
         """测试UserMessage的序列化"""
         original = UserMessage("这是一条用户消息", "test_user")
         json_str = original.to_json()
-        restored = UserMessage.from_json(json_str, self.mock_group_chat)
+        restored = UserMessage.from_json(json_str, self.mock_registry)
 
         self.assertEqual(original.message, restored.message)
         # name字段不再序列化，所以不检查name字段
@@ -83,7 +83,7 @@ class TestJsonSerialization(unittest.TestCase):
             toolcall_arguments=None,
         )
         json_str = original.to_json()
-        restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)
+        restored = ToolCallResultMessage.from_json(json_str, self.mock_registry)
 
         self.assertEqual(original.result.content, restored.result.content)
         self.assertEqual(original.tool_name, restored.tool_name)
@@ -97,7 +97,7 @@ class TestJsonSerialization(unittest.TestCase):
             toolcall_arguments={"arg": "value"},
         )
         json_str = original.to_json()
-        restored = ToolCallResultMessage.from_json(json_str, self.mock_group_chat)
+        restored = ToolCallResultMessage.from_json(json_str, self.mock_registry)
 
         self.assertEqual(original.result.content, restored.result.content)
         self.assertEqual(original.tool_name, restored.tool_name)

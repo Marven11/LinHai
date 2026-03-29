@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Sequence, TypedDict
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.input_parser import parse_user_input
 from linhai.llm import UserMessage, Answer
 from linhai.utils import CliRuntimeNotice
@@ -46,8 +46,8 @@ class ExplicitCacheMessage(Message):
         return json.dumps({"text": self.text})
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: GroupChat):
-        _ = group_chat
+    def from_json(cls, json_str: str, registry: Registry):
+        _ = registry
         data = json.loads(json_str)
         return cls(text=data["text"])
 
@@ -57,7 +57,7 @@ class AgentMessage:
 
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         pinned_messages: Sequence[Message],
     ):
         """初始化基础消息管理器。
@@ -65,21 +65,21 @@ class AgentMessage:
         Args:
             pinned_messages: 固化的初始消息列表，不会被历史压缩删除
         """
-        self.group_chat = group_chat
-        self.group_chat.register_member("agent_message", self)
+        self.registry = registry
+        self.registry.register_member("agent_message", self)
 
         self.pinned_messages: List[Message] = list(pinned_messages)
         self.messages: List[Message] = []
         self.notification_messages: dict[str, NotificationMessageEntry] = {}
         self.queued_messages: List[Message] = []
         self.explicit_cache_anchors: list[int] = []
-        self.group_chat.add_postinit(self.postinit)
+        self.registry.add_postinit(self.postinit)
         self.is_anchor_updated = False
 
     def postinit(self):
         from .lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_after_message_generation(self.after_message_generation)
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
@@ -91,14 +91,14 @@ class AgentMessage:
 
         from ..llm_manager import LlmManager
 
-        llm_manager = self.group_chat.get_member_typechecked("llm_manager", LlmManager)
+        llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
         cache_info = llm_manager.get_current_llm().get_explicit_cache_info()
         if cache_info is None:
             return
 
         from ..token_manager import TokenManager
 
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         if (
@@ -134,7 +134,7 @@ class AgentMessage:
                 self.explicit_cache_anchors.append(anchor)
                 self.explicit_cache_anchors.sort(reverse=True)
                 self.explicit_cache_anchors = self.explicit_cache_anchors[-4:]
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",
@@ -165,10 +165,10 @@ class AgentMessage:
         在使用隐式缓存时什么都不做，在使用显式缓存时清除缓存点并提醒用户"""
         from .lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         await lifecycle.trigger_before_cache_invalidate()
         if self.explicit_cache_anchors:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content="上下文缓存失效！")
             )
             self.explicit_cache_anchors = []
@@ -181,7 +181,7 @@ class AgentMessage:
         """
         from .lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         processed_message = await lifecycle.trigger_before_add_new_message(msg)
         if processed_message is None:
             processed_message = msg
@@ -202,11 +202,11 @@ class AgentMessage:
             anchor = self.calculate_explicit_cache_anchor()
             if anchor is not None:
                 self.explicit_cache_anchors.append(anchor)
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
                 )
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         processed_message = await lifecycle.trigger_before_add_new_message(msg)
         if processed_message is None:
             processed_message = msg
@@ -216,7 +216,7 @@ class AgentMessage:
     def is_explicit_cache_enabled(self) -> bool:
         from ..llm_manager import LlmManager
 
-        llm_manager = self.group_chat.get_member_typechecked("llm_manager", LlmManager)
+        llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
         return llm_manager.get_current_llm().get_explicit_cache_info() is not None
 
     def calculate_explicit_cache_anchor(self) -> Optional[int]:
@@ -331,7 +331,7 @@ class AgentMessage:
             index = self.messages.index(old_message)
             from .lifecycle import Lifecycle
 
-            lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
             processed_message = await lifecycle.trigger_before_add_new_message(
                 new_message
             )
@@ -369,7 +369,7 @@ class AgentMessage:
 
     def _save_context(self) -> None:
         """保存当前上下文到文件。"""
-        conversation_dir = self.group_chat.get_member_typechecked(
+        conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         save_context(conversation_dir, self.get_messages())

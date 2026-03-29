@@ -7,7 +7,7 @@ from pathlib import Path
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolArgInfo, utils_tools
 from linhai.tool.main import ToolManager
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import ToolConfig, MCPConfig
 
 
@@ -16,9 +16,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
 
-        group_chat = GroupChat()
+        registry = Registry()
         self.manager = ToolManager(
-            group_chat=group_chat,
+            registry=registry,
             toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_config=[],
@@ -116,11 +116,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ),
             tools=ToolConfig(max_output_length=1000),
         )
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
 
-        group_chat = GroupChat()
+        registry = Registry()
         manager_with_config = ToolManager(
-            group_chat=group_chat,
+            registry=registry,
             toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
             mcp_config=[],
@@ -168,11 +168,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 compress_threshold=60000,
             ),
         )
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
 
-        group_chat = GroupChat()
+        registry = Registry()
         manager_with_config = ToolManager(
-            group_chat=group_chat,
+            registry=registry,
             toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
             mcp_config=[],
@@ -204,11 +204,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_manager_without_config(self):
         """测试ToolManager不使用配置的情况（使用默认值）"""
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
 
-        group_chat = GroupChat()
+        registry = Registry()
         manager_without_config = ToolManager(
-            group_chat=group_chat,
+            registry=registry,
             toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_config=[],

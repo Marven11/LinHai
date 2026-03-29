@@ -14,7 +14,7 @@ from pathlib import Path
 # 导入必要的模块
 from linhai.secret import SecretInterceptorPlugin, load_secrets_from_config
 from linhai.tool.main import ToolManager
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultFailed
 from linhai.llm import ToolCallMessage
 from linhai.agent.base import RuntimeMessage
@@ -39,19 +39,17 @@ class TestSecretExceptionLeak(unittest.TestCase):
             },
         }
 
-        # 创建模拟的GroupChat
-        self.mock_group_chat = Mock(spec=GroupChat)
-        self.mock_group_chat.get_member_typechecked = Mock()
+        # 创建模拟的Registry
+        self.mock_registry = Mock(spec=Registry)
+        self.mock_registry.get_member_typechecked = Mock()
 
         # 创建ToolManager的模拟
         self.mock_tool_manager = Mock(spec=ToolManager)
-        self.mock_group_chat.get_member_typechecked.return_value = (
-            self.mock_tool_manager
-        )
+        self.mock_registry.get_member_typechecked.return_value = self.mock_tool_manager
 
         # 创建secret插件
         self.secret_plugin = SecretInterceptorPlugin(
-            self.mock_group_chat, self.secrets_dict
+            self.mock_registry, self.secrets_dict
         )
 
         # 创建测试用的ToolSet和会抛出异常的工具
@@ -102,7 +100,7 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 return self.temp_dir
             raise ValueError(f"Member {name} not found")
 
-        self.mock_group_chat.get_member_typechecked = get_member_typechecked
+        self.mock_registry.get_member_typechecked = get_member_typechecked
 
     def tearDown(self):
         """清理测试环境"""

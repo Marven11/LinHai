@@ -10,10 +10,10 @@ class TestTokenCache(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        # 创建Mock的group_chat参数
-        mock_group_chat = MagicMock()
+        # 创建Mock的registry参数
+        mock_registry = MagicMock()
         self.openai = OpenAi(
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             api_key="test_key",
             base_url="https://api.example.com",
             model="test-model",

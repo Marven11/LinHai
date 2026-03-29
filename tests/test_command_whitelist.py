@@ -52,8 +52,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config = Mock()
         config.agent = Mock()
         config.agent.allowed_commands = [["ls"]]
-        group_chat = Mock()
-        plugin = CommandWhitelistPlugin(group_chat, config)
+        registry = Mock()
+        plugin = CommandWhitelistPlugin(registry, config)
 
         agent = Mock()
         context = {}
@@ -69,8 +69,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config = Mock()
         config.agent = Mock()
         config.agent.allowed_commands = [["ls"]]
-        group_chat = Mock()
-        plugin = CommandWhitelistPlugin(group_chat, config)
+        registry = Mock()
+        plugin = CommandWhitelistPlugin(registry, config)
 
         agent = Mock()
         context = {}
@@ -87,8 +87,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config = Mock()
         config.agent = Mock()
         config.agent.allowed_commands = [["ls"]]
-        group_chat = Mock()
-        plugin = CommandWhitelistPlugin(group_chat, config)
+        registry = Mock()
+        plugin = CommandWhitelistPlugin(registry, config)
 
         agent = Mock()
         context = {}
@@ -105,8 +105,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config = Mock()
         config.agent = Mock()
         config.agent.allowed_commands = [["ls"]]
-        group_chat = Mock()
-        plugin = CommandWhitelistPlugin(group_chat, config)
+        registry = Mock()
+        plugin = CommandWhitelistPlugin(registry, config)
 
         # argv是字符串
         result = await plugin.before_tool_call(
@@ -140,8 +140,8 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         config = Mock()
         config.agent = Mock()
         config.agent.allowed_commands = [["ls"]]
-        group_chat = Mock()
-        plugin = CommandWhitelistPlugin(group_chat, config)
+        registry = Mock()
+        plugin = CommandWhitelistPlugin(registry, config)
 
         # argv包含数字
         result = await plugin.before_tool_call(

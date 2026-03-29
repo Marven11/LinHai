@@ -18,8 +18,8 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock()
-        self.group_chat.send_if_exists = AsyncMock(return_value=None)
+        self.registry = MagicMock()
+        self.registry.send_if_exists = AsyncMock(return_value=None)
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
@@ -37,17 +37,17 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
                 return self.mock_machine_control
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=get_member_typechecked_side_effect
         )
 
-        self.plugin = UnnecessarySedReadPlugin(self.group_chat)
+        self.plugin = UnnecessarySedReadPlugin(self.registry)
 
         self.small_result = "line 1\nline 2\nline 3\n"
 
     def test_init(self):
         """测试初始化。"""
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
         self.assertEqual(self.plugin.warning_count, 0)
 
     def test_register(self):
@@ -371,7 +371,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试当没有完整读取文件时，DuplicateFileReadPlugin允许read_file_with_sed。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -409,7 +409,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 应该允许，因为没有完整读取
         self.assertIsNone(result)
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     @patch("pathlib.Path")
     @patch(
@@ -421,7 +421,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试DuplicateFileReadPlugin在重复读取相同内容时阻止read_file。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -461,10 +461,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
         # 重置模拟，准备第二次调用
-        self.group_chat.send_if_exists.reset_mock()
+        self.registry.send_if_exists.reset_mock()
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
@@ -485,7 +485,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         self.assertIsInstance(result2, RuntimeMessage)
         self.assertIn("错误：你已经读取过文件", result2.message)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
@@ -497,7 +497,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试第一次读取文件应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -547,7 +547,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试读取相同文件但内容不同应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -600,7 +600,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试不在master_host上时应忽略。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         # 模拟不在master_host上
         self.mock_machine_control.target_machine = "other_host"
@@ -659,7 +659,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试多个历史消息，最新相同应拦截。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -705,10 +705,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
         # 重置模拟，准备第二次调用
-        self.group_chat.send_if_exists.reset_mock()
+        self.registry.send_if_exists.reset_mock()
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
         result2 = asyncio.run(
@@ -727,7 +727,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result2)
         self.assertIsInstance(result2, RuntimeMessage)
         self.assertIn("错误：你已经读取过文件", result2.message)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     @patch("pathlib.Path")
     @patch("builtins.open", new_callable=mock_open, read_data=b"line1\nline2\nline3\n")
@@ -741,7 +741,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试多个历史消息，最新不同应允许。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.is_file.return_value = True
         absolute_path = "/absolute/path/test.py"
@@ -804,7 +804,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试当前文件路径解析失败时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         # 模拟Path.resolve抛出OSError
         mock_path.return_value.resolve.side_effect = OSError("Permission denied")
@@ -851,7 +851,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试历史消息文件路径解析失败时跳过该消息。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         absolute_path = "/absolute/path/test.py"
 
@@ -924,10 +924,10 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         self.assertIsNone(result)
         # 检查是否发送了警告
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
         # 重置模拟，准备第二次调用
-        self.group_chat.send_if_exists.reset_mock()
+        self.registry.send_if_exists.reset_mock()
         mock_path.reset_mock()
 
         # 第二次调用：应该返回RuntimeMessage（阻止）
@@ -947,7 +947,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.assertIsNotNone(result2)
         self.assertIsInstance(result2, RuntimeMessage)
         self.assertIn("错误：你已经读取过文件", result2.message)
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     def test_duplicate_file_read_plugin_returns_none_on_failed_tool_call(self):
 
@@ -957,7 +957,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试工具调用失败时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -989,7 +989,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试非read_file工具时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         tool_call = ToolCallMessage(
             function_name="write_file",
@@ -1021,7 +1021,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试缺少filepath参数时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -1053,7 +1053,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试tool_result不是FileContentMessage时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -1084,7 +1084,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试当前文件路径解析抛出ValueError时返回None。"""
         from linhai.plugin import DuplicateFileReadPlugin
 
-        plugin = DuplicateFileReadPlugin(self.group_chat)
+        plugin = DuplicateFileReadPlugin(self.registry)
 
         mock_path.return_value.resolve.side_effect = ValueError("Invalid path")
 

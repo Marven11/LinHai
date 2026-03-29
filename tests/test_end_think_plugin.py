@@ -12,17 +12,17 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """测试前准备。"""
-        self.group_chat = Mock()
-        self.plugin = EndThinkPlugin(self.group_chat)
+        self.registry = Mock()
+        self.plugin = EndThinkPlugin(self.registry)
         self.answer = Mock(spec=Answer)
         self.agent = Mock()
 
-        self.group_chat.get_member_typechecked = Mock(
+        self.registry.get_member_typechecked = Mock(
             side_effect=lambda name, t: self.agent
         )
 
-        self.agent.group_chat = Mock()
-        self.agent.group_chat.send = AsyncMock()
+        self.agent.registry = Mock()
+        self.agent.registry.send = AsyncMock()
 
         self.agent.agent_llm = AsyncMock()
 
@@ -63,7 +63,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(result)
-        self.agent.group_chat.send.assert_not_called()
+        self.agent.registry.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
         self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 
@@ -77,7 +77,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertFalse(result)
-        self.agent.group_chat.send.assert_not_called()
+        self.agent.registry.send.assert_not_called()
         self.answer.interrupt.assert_not_called()
         self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
 

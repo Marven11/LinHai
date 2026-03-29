@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Union
 from linhai.agent import Agent
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.lifecycle import Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolResultFailed, ToolResultSuccess
 from linhai.plugin import Plugin
 from linhai.utils import CliRuntimeNotice
@@ -19,8 +19,8 @@ class SudoStdioCheckerPlugin(Plugin):
 
     TIME_WINDOW_SECONDS = 300
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
         self._last_warning_time: float | None = None
 
     def register(self, lifecycle: Lifecycle) -> None:
@@ -95,14 +95,14 @@ class SudoStdioCheckerPlugin(Plugin):
                 return None
 
         self._last_warning_time = time.time()
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.message_processor.add_new_message(
             RuntimeMessage(
                 "警告：检测到你使用了bash -c运行一长串命令，这会导致命令难以被用户理解、审查和解析。"
                 "如果方便的话请避免自发使用bash -c，直接调用process_create工具并传入参数列表会更好喵~"
             )
         )
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="WARNING",

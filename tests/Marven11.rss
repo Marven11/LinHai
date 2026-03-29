@@ -67,8 +67,8 @@
     <item>
       <title>Marven11 closed pull request &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/231&#34;&gt;Marven11/LinHai#231&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/231#issuecomment-1174</link>
-      <description>fix #32: list_llm通过group_chat获取llm_manager (v3)</description>
-      <content:encoded><![CDATA[fix #32: list_llm通过group_chat获取llm_manager (v3)]]></content:encoded>
+      <description>fix #32: list_llm通过registry获取llm_manager (v3)</description>
+      <content:encoded><![CDATA[fix #32: list_llm通过registry获取llm_manager (v3)]]></content:encoded>
       <author>Marven11</author>
       <guid isPermaLink="false">1537: http://localhost:3000/Marven11/LinHai/pulls/231#issuecomment-1174</guid>
       <pubDate>Sat, 21 Mar 2026 18:20:19 +0800</pubDate>
@@ -76,8 +76,8 @@
     <item>
       <title>Marven11 commented on pull request &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/231&#34;&gt;Marven11/LinHai#231&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/231#issuecomment-1173</link>
-      <description>fix #32: list_llm通过group_chat获取llm_manager (v3)&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;不要每次失败都打开一个issue&lt;/p&gt;&#xA;</description>
-      <content:encoded><![CDATA[fix #32: list_llm通过group_chat获取llm_manager (v3)
+      <description>fix #32: list_llm通过registry获取llm_manager (v3)&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;不要每次失败都打开一个issue&lt;/p&gt;&#xA;</description>
+      <content:encoded><![CDATA[fix #32: list_llm通过registry获取llm_manager (v3)
 
 <p dir="auto">不要每次失败都打开一个issue</p>
 ]]></content:encoded>
@@ -133,8 +133,8 @@
     <item>
       <title>Marven11 closed pull request &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/229&#34;&gt;Marven11/LinHai#229&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/229#issuecomment-1160</link>
-      <description>fix #32: list_llm通过group_chat获取llm_manager (v2)</description>
-      <content:encoded><![CDATA[fix #32: list_llm通过group_chat获取llm_manager (v2)]]></content:encoded>
+      <description>fix #32: list_llm通过registry获取llm_manager (v2)</description>
+      <content:encoded><![CDATA[fix #32: list_llm通过registry获取llm_manager (v2)]]></content:encoded>
       <author>Marven11</author>
       <guid isPermaLink="false">1520: http://localhost:3000/Marven11/LinHai/pulls/229#issuecomment-1160</guid>
       <pubDate>Sat, 21 Mar 2026 17:26:25 +0800</pubDate>
@@ -142,8 +142,8 @@
     <item>
       <title>Marven11 suggested changes for &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/229&#34;&gt;Marven11/LinHai#229&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/229#issuecomment-1159</link>
-      <description>fix #32: list_llm通过group_chat获取llm_manager (v2)&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;你的branch落后于main&lt;/p&gt;&#xA;</description>
-      <content:encoded><![CDATA[fix #32: list_llm通过group_chat获取llm_manager (v2)
+      <description>fix #32: list_llm通过registry获取llm_manager (v2)&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;你的branch落后于main&lt;/p&gt;&#xA;</description>
+      <content:encoded><![CDATA[fix #32: list_llm通过registry获取llm_manager (v2)
 
 <p dir="auto">你的branch落后于main</p>
 ]]></content:encoded>

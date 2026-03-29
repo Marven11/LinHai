@@ -12,12 +12,12 @@ class TestSudoStdioCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """测试前准备"""
-        self.group_chat = Mock()
-        self.plugin = SudoStdioCheckerPlugin(self.group_chat)
+        self.registry = Mock()
+        self.plugin = SudoStdioCheckerPlugin(self.registry)
 
     def test_initialization(self):
         """测试插件初始化"""
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
         self.assertIsInstance(self.plugin, SudoStdioCheckerPlugin)
 
     async def test_before_tool_call_not_process_create(self):

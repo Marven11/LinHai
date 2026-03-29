@@ -108,9 +108,9 @@ BeforeCacheInvalidateCallback: TypeAlias = Callable[[], Awaitable[None]]
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
 
-    def __init__(self, group_chat):
-        self.group_chat = group_chat
-        self.group_chat.register_member("lifecycle", self)
+    def __init__(self, registry):
+        self.registry = registry
+        self.registry.register_member("lifecycle", self)
 
         self._before_message_generation_callbacks: list[
             BeforeMessageGenerationCallback

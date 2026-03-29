@@ -827,9 +827,9 @@ class FooterWidget(Static):
     }
     """
 
-    def __init__(self, group_chat, token_manager, use_nerd_font=False):
+    def __init__(self, registry, token_manager, use_nerd_font=False):
         super().__init__("")
-        self.group_chat = group_chat
+        self.registry = registry
         self.token_manager = token_manager
         self.use_nerd_font = use_nerd_font
         self.current_answer_token = 0
@@ -852,7 +852,7 @@ class FooterWidget(Static):
         """获取当前LLM名称"""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         llm_name, _ = agent.get_current_llm_info()
         return llm_name
 
@@ -865,7 +865,7 @@ class FooterWidget(Static):
         """
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         token_pieces = self.token_manager.get_token_display_pieces(
             agent, self.current_answer_token, self.use_nerd_font

@@ -6,7 +6,7 @@ import unittest.mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
@@ -15,12 +15,12 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """Set up test fixtures."""
-        self.group_chat = GroupChat()
-        self.connector = MCPConnector(self.group_chat)
+        self.registry = Registry()
+        self.connector = MCPConnector(self.registry)
 
     async def test_initialization(self):
         """测试MCP连接器初始化。"""
-        self.assertEqual(self.connector.group_chat, self.group_chat)
+        self.assertEqual(self.connector.registry, self.registry)
         self.assertEqual(self.connector.sessions, {})
         self.assertIsNotNone(self.connector.connector_toolset)
 
@@ -203,8 +203,8 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """Set up test fixtures."""
-        self.group_chat = GroupChat()
-        self.connector = MCPConnector(self.group_chat)
+        self.registry = Registry()
+        self.connector = MCPConnector(self.registry)
 
     @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
     async def test_connect_mcp_server_tool_success(self, mock_connect):

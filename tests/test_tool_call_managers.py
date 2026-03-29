@@ -5,25 +5,25 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 from linhai.plugin.tool_call_managers import LoadImageUrlWarningPlugin
 from linhai.agent import Agent, Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
     """Test cases for LoadImageUrlWarningPlugin."""
 
     def setUp(self):
-        self.mock_group_chat = MagicMock(spec=GroupChat)
+        self.mock_registry = MagicMock(spec=Registry)
         self.mock_agent = MagicMock(spec=Agent)
         self.mock_message_processor = MagicMock()
         self.mock_message_processor.add_new_message = AsyncMock()
         self.mock_lifecycle = MagicMock(spec=Lifecycle)
 
         self.mock_agent.message_processor = self.mock_message_processor
-        self.mock_group_chat.get_member_typechecked = MagicMock(
+        self.mock_registry.get_member_typechecked = MagicMock(
             return_value=self.mock_agent
         )
 
-        self.plugin = LoadImageUrlWarningPlugin(self.mock_group_chat)
+        self.plugin = LoadImageUrlWarningPlugin(self.mock_registry)
 
     async def test_warning_for_http_url(self):
         """Test warning for HTTP URL in load_image parameter."""

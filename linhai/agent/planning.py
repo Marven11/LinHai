@@ -56,7 +56,7 @@ def create_planning_files(planning_folder: Path) -> None:
 
 def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
     """为agent设置规划模式，返回PlanningPromptMessage实例"""
-    conversation_folder = context["group_chat"].get_member_typechecked(
+    conversation_folder = context["registry"].get_member_typechecked(
         "conversation_folder", Path
     )
     if not conversation_folder:
@@ -68,7 +68,7 @@ def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
     def register_system_message():
         from ..llm import SystemMessage
 
-        system_message = context["group_chat"].get_member_typechecked(
+        system_message = context["registry"].get_member_typechecked(
             "system_message", SystemMessage
         )
         system_message.add_introduction(
@@ -81,6 +81,6 @@ def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
         )
         system_message.add_example("PLANNING", EXAMPLES_PLANNING_MODE)
 
-    context["group_chat"].add_postinit(register_system_message)
+    context["registry"].add_postinit(register_system_message)
 
     return PlanningPromptMessage(planning_folder)

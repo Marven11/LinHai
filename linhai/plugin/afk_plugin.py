@@ -12,9 +12,7 @@ if TYPE_CHECKING:
 
 class AfkPlugin(Plugin):
     async def before_waiting_user(self, agent: "Agent"):
-        cli_args = self.group_chat.get_member_typechecked(
-            "cli_args", argparse.Namespace
-        )
+        cli_args = self.registry.get_member_typechecked("cli_args", argparse.Namespace)
         if not cli_args.afk:
             return
 
@@ -27,7 +25,7 @@ class AfkPlugin(Plugin):
             )
         )
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="INFO", content="AFK模式激活，已阻止等待用户功能"),
         )

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.agent.orchestration import NotificationMessagePlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.main import Agent
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
@@ -16,8 +16,8 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
-        self.plugin = NotificationMessagePlugin(self.group_chat)
+        self.registry = Registry()
+        self.plugin = NotificationMessagePlugin(self.registry)
 
         # 创建模拟的Agent和AgentContextOrchestration
         self.agent = Mock(spec=Agent)
@@ -43,10 +43,8 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         # 注册到group chat
-        self.group_chat.register_member("agent", self.agent)
-        self.group_chat.register_member(
-            "agent_context_orchestration", self.orchestration
-        )
+        self.registry.register_member("agent", self.agent)
+        self.registry.register_member("agent_context_orchestration", self.orchestration)
 
     def test_register(self):
         """测试插件注册。"""

@@ -4,7 +4,7 @@ import uuid
 from asyncio.subprocess import Process
 from typing import Dict, Any, Optional, cast
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import CliRuntimeNotice
 
 
@@ -15,13 +15,13 @@ class JsonRpcResponse(Dict[str, Any]):
 class TrojanTransport:
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         stdin: Optional[asyncio.StreamWriter] = None,
         stdout: Optional[asyncio.StreamReader] = None,
         stderr: Optional[asyncio.StreamReader] = None,
         process: Optional[Process] = None,
     ):
-        self.group_chat = group_chat
+        self.registry = registry
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
@@ -109,7 +109,7 @@ class TrojanTransport:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",

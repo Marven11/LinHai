@@ -56,10 +56,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
     """Test cases for the Lifecycle class."""
 
     def setUp(self):
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
         from linhai.agent import Agent
 
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
         # 先模拟get_members，然后再创建Lifecycle
         self.mock_agent = MagicMock()
@@ -92,12 +92,12 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=get_member_typechecked_side_effect
         )
 
         # 现在创建Lifecycle，模拟已设置
-        self.lifecycle = Lifecycle(self.group_chat)
+        self.lifecycle = Lifecycle(self.registry)
 
         self.mock_answer = MagicMock()
         self.mock_answer.get_reasoning_message.return_value = None
@@ -138,7 +138,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=get_member_typechecked_side_effect
         )
 

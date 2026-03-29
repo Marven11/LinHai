@@ -15,7 +15,7 @@ class TestImageMessage(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
 
     def test_init(self):
         """Test ImageMessage initialization."""
@@ -24,7 +24,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/jpeg",
             filename="test.jpg",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -40,7 +40,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -54,7 +54,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -69,7 +69,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/png",
             filename="test.png",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -85,7 +85,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/gif",
             filename=None,
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -100,7 +100,7 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/webp",
             filename="test.webp",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -120,14 +120,14 @@ class TestImageMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/bmp",
             filename="test.bmp",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
         json_str = original.to_json()
 
-        mock_group_chat = MagicMock()
-        restored = ImageMessage.from_json(json_str, mock_group_chat)
+        mock_registry = MagicMock()
+        restored = ImageMessage.from_json(json_str, mock_registry)
 
         self.assertEqual(restored.image_bytes, image_bytes)
         self.assertEqual(restored.mime_type, "image/bmp")
@@ -141,7 +141,7 @@ class TestLoadImage(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
 
     def test_load_image_success(self):
         """Test loading an existing image file."""
@@ -158,7 +158,7 @@ class TestLoadImage(TestCase):
             temp_path = f.name
 
         try:
-            result = load_image(temp_path, self.mock_group_chat, quality="raw")
+            result = load_image(temp_path, self.mock_registry, quality="raw")
             self.assertIsInstance(result, ImageMessage)
             self.assertEqual(result.mime_type, "image/png")
             self.assertEqual(result.filename, Path(temp_path).name)
@@ -175,9 +175,7 @@ class TestLoadImage(TestCase):
 
     def test_load_image_not_found(self):
         with self.assertRaises(FileNotFoundError):
-            load_image(
-                "/nonexistent/path/image.png", self.mock_group_chat, quality="raw"
-            )
+            load_image("/nonexistent/path/image.png", self.mock_registry, quality="raw")
 
     def test_load_image_different_mime_types(self):
         from PIL import Image
@@ -210,7 +208,7 @@ class TestLoadImage(TestCase):
                     temp_path = f.name
 
                 try:
-                    result = load_image(temp_path, self.mock_group_chat, quality="raw")
+                    result = load_image(temp_path, self.mock_registry, quality="raw")
                     self.assertEqual(result.mime_type, expected_mime)
                 finally:
                     Path(temp_path).unlink()
@@ -229,10 +227,10 @@ class TestLoadImage(TestCase):
             temp_path = f.name
 
         try:
-            result = load_image(temp_path, self.mock_group_chat, quality="raw")
+            result = load_image(temp_path, self.mock_registry, quality="raw")
             self.assertEqual(result.quality, "raw")
 
-            result2 = load_image(temp_path, self.mock_group_chat, quality="compressed")
+            result2 = load_image(temp_path, self.mock_registry, quality="compressed")
             self.assertEqual(result2.quality, "compressed")
         finally:
             Path(temp_path).unlink()
@@ -243,12 +241,12 @@ class TestImageMessageToLlmMessage(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
         self.mock_agent = MagicMock()
         self.mock_llm = MagicMock()
         self.mock_llm.support_image = MagicMock(return_value=True)
         self.mock_agent.get_current_model.return_value = self.mock_llm
-        self.mock_group_chat.get_member_typechecked = MagicMock(
+        self.mock_registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.mock_agent
         )
 
@@ -259,7 +257,7 @@ class TestImageMessageToLlmMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -279,7 +277,7 @@ class TestImageMessageToLlmMessage(TestCase):
             image_bytes=image_bytes,
             mime_type="image/png",
             filename=None,
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )

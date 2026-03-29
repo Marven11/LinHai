@@ -8,7 +8,7 @@ from linhai.agent import Agent
 from pathlib import Path
 from linhai.llm import SystemMessage, ToolCallMessage
 from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
 
@@ -29,18 +29,18 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 800,
         }
 
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
         # 注册machine_control
         from linhai.machine_control.main import MachineControl
 
-        MachineControl(self.group_chat)
+        MachineControl(self.registry)
 
         from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_connector=None,
@@ -48,7 +48,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         init_messages = [
             SystemMessage(
-                group_chat=self.group_chat,
+                registry=self.registry,
             )
         ]
 
@@ -59,7 +59,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"primary": None, "secondary": None},
@@ -67,10 +67,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=init_messages,
         )
-        self.tool_manager = self.group_chat.get_member_typechecked(
+        self.tool_manager = self.registry.get_member_typechecked(
             "tool_manager", ToolManager
         )
         # 显式注册LLM工具集

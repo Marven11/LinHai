@@ -48,7 +48,7 @@ class RssMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat):
+    def from_json(cls, json_str: str, registry):
         data = json.loads(json_str)
         return cls(
             title=data["title"],
@@ -116,8 +116,8 @@ def parse_rss(xml_content: str) -> List[RssMessage]:
 class RssPlugin:
     """RSS定时检查插件，定时轮询配置的RSS源并添加新消息到Agent消息队列。"""
 
-    def __init__(self, group_chat, rss_urls, poll_interval):
-        self.group_chat = group_chat
+    def __init__(self, registry, rss_urls, poll_interval):
+        self.registry = registry
         self.rss_urls = rss_urls
         self.poll_interval = poll_interval
         self.processed_guids = set()
@@ -137,7 +137,7 @@ class RssPlugin:
         """轮询所有RSS源。"""
         from linhai.agent import Agent as AgentType
 
-        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        agent = self.registry.get_member_typechecked("agent", AgentType)
         if not agent:
             return
 
@@ -172,7 +172,7 @@ class RssPlugin:
         """初始化时获取所有已存在的RSS消息的guid，不发送给agent。"""
         from linhai.agent import Agent as AgentType
 
-        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        agent = self.registry.get_member_typechecked("agent", AgentType)
         if not agent:
             return
 

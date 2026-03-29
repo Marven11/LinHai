@@ -333,8 +333,8 @@ TEST_KEY = { value = "test-value", description = "Test key" }
         self.assertEqual(get_available_secrets_message({}), "无可用secret键")
 
 
-class MockGroupChat:
-    """模拟GroupChat用于测试"""
+class MockRegistry:
+    """模拟Registry用于测试"""
 
     def __init__(self):
         self.members = {}
@@ -364,10 +364,10 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
                 "disabled_in_toolcall_argument": False,
             },
         }
-        self.mock_group_chat = MockGroupChat()
+        self.mock_registry = MockRegistry()
         from linhai.secret import SecretInterceptorPlugin
 
-        self.plugin = SecretInterceptorPlugin(self.mock_group_chat, self.secrets_dict)
+        self.plugin = SecretInterceptorPlugin(self.mock_registry, self.secrets_dict)
 
     def test_intercept_when_no_with_secret_and_contains_secret(self):
         """测试：如果没有指定with_secret，结果/错误信息中包含secret值，应该完全拦截"""
@@ -375,16 +375,16 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         from pathlib import Path
         from linhai.agent.conversation import register_conversation_folder
 
-        # 使用真实GroupChat并注册conversation_folder
-        from linhai.group_chat import GroupChat
+        # 使用真实Registry并注册conversation_folder
+        from linhai.registry import Registry
 
-        real_group_chat = GroupChat()
-        register_conversation_folder(real_group_chat)
+        real_registry = Registry()
+        register_conversation_folder(real_registry)
 
-        # 重新创建plugin使用真实group_chat
+        # 重新创建plugin使用真实registry
         from linhai.secret import SecretInterceptorPlugin
 
-        real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        real_plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         result_content = "This contains secret-value-1 and some other text"
 
@@ -465,15 +465,15 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
         import asyncio
         from pathlib import Path
         from linhai.agent.conversation import register_conversation_folder
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
         from linhai.secret import SecretInterceptorPlugin
 
-        # 使用真实GroupChat并注册conversation_folder
-        real_group_chat = GroupChat()
-        register_conversation_folder(real_group_chat)
+        # 使用真实Registry并注册conversation_folder
+        real_registry = Registry()
+        register_conversation_folder(real_registry)
 
-        # 重新创建plugin使用真实group_chat
-        real_plugin = SecretInterceptorPlugin(real_group_chat, self.secrets_dict)
+        # 重新创建plugin使用真实registry
+        real_plugin = SecretInterceptorPlugin(real_registry, self.secrets_dict)
 
         result_content = "This contains secret-value-1 and secret-value-2"
 

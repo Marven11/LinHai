@@ -14,7 +14,7 @@ class TestTelegramStickerMessage(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
 
     def test_init(self):
         """Test TelegramStickerMessage initialization."""
@@ -22,7 +22,7 @@ class TestTelegramStickerMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/jpeg",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -38,7 +38,7 @@ class TestTelegramStickerMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -52,7 +52,7 @@ class TestTelegramStickerMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -69,7 +69,7 @@ class TestTelegramStickerMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/gif",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -83,7 +83,7 @@ class TestTelegramStickerMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/webp",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -101,14 +101,14 @@ class TestTelegramStickerMessage(TestCase):
         original = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/bmp",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
         json_str = original.to_json()
 
-        mock_group_chat = MagicMock()
-        restored = TelegramStickerMessage.from_json(json_str, mock_group_chat)
+        mock_registry = MagicMock()
+        restored = TelegramStickerMessage.from_json(json_str, mock_registry)
 
         self.assertEqual(restored.image_bytes, image_bytes)
         self.assertEqual(restored.mime_type, "image/bmp")
@@ -121,12 +121,12 @@ class TestTelegramStickerMessageToLlmMessage(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
         self.mock_agent = MagicMock()
         self.mock_llm = MagicMock()
         self.mock_llm.support_image = MagicMock(return_value=True)
         self.mock_agent.get_current_model.return_value = self.mock_llm
-        self.mock_group_chat.get_member_typechecked = MagicMock(
+        self.mock_registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.mock_agent
         )
 
@@ -136,7 +136,7 @@ class TestTelegramStickerMessageToLlmMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -161,7 +161,7 @@ class TestTelegramStickerMessageToLlmMessage(TestCase):
         msg = TelegramStickerMessage(
             image_bytes=image_bytes,
             mime_type="image/png",
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             width=100,
             height=100,
         )
@@ -185,7 +185,7 @@ class TestLoadSticker(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
 
     def test_load_sticker_success(self):
         """Test loading a valid sticker image."""
@@ -197,7 +197,7 @@ class TestLoadSticker(TestCase):
         img.save(buffer, format="PNG")
         sticker_data = buffer.getvalue()
 
-        result = load_sticker(sticker_data, self.mock_group_chat)
+        result = load_sticker(sticker_data, self.mock_registry)
         self.assertIsInstance(result, TelegramStickerMessage)
         self.assertEqual(result.mime_type, "image/jpeg")
         self.assertEqual(result.quality, "compressed")
@@ -214,7 +214,7 @@ class TestLoadSticker(TestCase):
         img.save(buffer, format="PNG")
         sticker_data = buffer.getvalue()
 
-        result = load_sticker(sticker_data, self.mock_group_chat)
+        result = load_sticker(sticker_data, self.mock_registry)
         self.assertEqual(result.width, 128)
         self.assertEqual(result.height, 128)
 
@@ -228,7 +228,7 @@ class TestLoadSticker(TestCase):
         img.save(buffer, format="PNG")
         sticker_data = buffer.getvalue()
 
-        result = load_sticker(sticker_data, self.mock_group_chat)
+        result = load_sticker(sticker_data, self.mock_registry)
         self.assertLessEqual(result.width, 128)
         self.assertLessEqual(result.height, 128)
         self.assertAlmostEqual(
@@ -248,7 +248,7 @@ class TestLoadSticker(TestCase):
         img.save(buffer, format="PNG")
         sticker_data = buffer.getvalue()
 
-        result = load_sticker(sticker_data, self.mock_group_chat)
+        result = load_sticker(sticker_data, self.mock_registry)
         self.assertLessEqual(result.width, 128)
         self.assertLessEqual(result.height, 128)
         self.assertAlmostEqual(
@@ -268,7 +268,7 @@ class TestLoadSticker(TestCase):
         img.save(buffer, format="PNG")
         sticker_data = buffer.getvalue()
 
-        result = load_sticker(sticker_data, self.mock_group_chat)
+        result = load_sticker(sticker_data, self.mock_registry)
         self.assertEqual(result.mime_type, "image/jpeg")
         self.assertEqual(result.quality, "compressed")
 

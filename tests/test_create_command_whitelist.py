@@ -6,7 +6,7 @@ from pathlib import Path
 import argparse
 from linhai.agent.create import create_agent_build_context, create_agent_from_config
 from linhai.config import Config
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
@@ -15,7 +15,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
     async def test_plugin_registered_when_allowed_commands_present(self):
         """测试当配置中有allowed_commands时插件被注册。"""
 
-        group_chat = Mock(spec=GroupChat)
+        registry = Mock(spec=Registry)
         config_data = {
             "llm": [
                 {
@@ -38,7 +38,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args.rss = []
 
         context = create_agent_build_context(
-            group_chat=group_chat,
+            registry=registry,
             config=config,
             config_basedir=config_basedir,
             cli_args=cli_args,
@@ -77,7 +77,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
     async def test_plugin_not_registered_when_no_allowed_commands(self):
         """测试当配置中没有allowed_commands时插件不被注册。"""
 
-        group_chat = Mock(spec=GroupChat)
+        registry = Mock(spec=Registry)
         config_data = {
             "llm": [
                 {
@@ -99,7 +99,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args.rss = []
 
         context = create_agent_build_context(
-            group_chat=group_chat,
+            registry=registry,
             config=config,
             config_basedir=config_basedir,
             cli_args=cli_args,

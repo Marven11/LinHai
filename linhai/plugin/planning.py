@@ -7,7 +7,7 @@ from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.agent.planning import PlanningPromptMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Answer, UserMessage
 from linhai.plugin.file_operations import Plugin
 
@@ -18,9 +18,9 @@ if TYPE_CHECKING:
 class PlanningStatusReminderPlugin(Plugin):
     """提醒修改STATUS.md和TODOLIST.md的插件。"""
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
         self.status_counter = 0
         self.todolist_counter = 0
         self.planning_folder: Optional[Path] = None
@@ -29,7 +29,7 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.planning_folder is not None:
             return self.planning_folder
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return None
 
@@ -43,8 +43,8 @@ class PlanningStatusReminderPlugin(Plugin):
     def _get_current_state(self) -> str:
         from linhai.agent.orchestration import AgentContextOrchestration
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
-        orchestration = self.group_chat.get_member_typechecked(
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
 
@@ -96,7 +96,7 @@ class PlanningStatusReminderPlugin(Plugin):
 
     async def _update_notifications(self, current_state: str) -> None:
         if current_state == "红灯":
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             if agent:
                 agent.message_processor.update_notification_message(
                     None, source="planning_status_reminder", sort_value=0
@@ -106,7 +106,7 @@ class PlanningStatusReminderPlugin(Plugin):
                 )
             return
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return
 
@@ -163,12 +163,12 @@ class PlanningStatusReminderPlugin(Plugin):
 class TodolistCheckerPlugin(Plugin):
     """检查TODOLIST.md是否有未完成任务，防止提前暂停的插件。"""
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
 
     def _get_planning_folder(self) -> Optional[Path]:
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return None
 
@@ -214,9 +214,9 @@ class TodolistCheckerPlugin(Plugin):
 class UserInputRuntimeMessagePlugin(Plugin):
     """在用户输入消息后添加RuntimeMessage的插件。"""
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
 
     async def after_message_generation(
         self,
@@ -224,7 +224,7 @@ class UserInputRuntimeMessagePlugin(Plugin):
         _full_response: str,
         _tool_calls: list[dict],
     ) -> None:
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return
 

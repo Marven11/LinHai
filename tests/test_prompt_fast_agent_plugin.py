@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.plugin.tool_call_managers import PromptFastAgentPlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Answer, OpenAi
 
 
@@ -14,9 +14,9 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
+        self.registry = MagicMock(spec=Registry)
         self.max_toolcall_for_llm = {"test-llm": 3, "another-llm": 5}
-        self.plugin = PromptFastAgentPlugin(self.group_chat, self.max_toolcall_for_llm)
+        self.plugin = PromptFastAgentPlugin(self.registry, self.max_toolcall_for_llm)
 
     def test_init(self):
         """测试插件初始化。"""
@@ -55,8 +55,8 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         model.get_name.return_value = "test-llm"
         agent.get_current_model.return_value = model
 
-        self.group_chat.get_member_typechecked = MagicMock(return_value=agent)
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.get_member_typechecked = MagicMock(return_value=agent)
+        self.registry.send_if_exists = AsyncMock()
 
         # 测试第一次生成消息
         asyncio.run(self.plugin.before_message_generation())
@@ -64,18 +64,18 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         # 应该设置notification消息
         agent.message_processor.update_notification_message.assert_called_once()
         # 注意：插件没有发送UI日志，所以send_if_exists不应该被调用
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
         # 重置mock，测试非第一次生成消息
         agent.message_processor.update_notification_message.reset_mock()
-        self.group_chat.send_if_exists.reset_mock()
+        self.registry.send_if_exists.reset_mock()
 
         # 测试非第一次生成消息
         asyncio.run(self.plugin.before_message_generation())
 
         # 应该设置notification消息但不发送UI日志
         agent.message_processor.update_notification_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     def test_before_message_generation_with_unconfigured_llm(self):
         """测试未配置LLM的before_message_generation。"""
@@ -87,8 +87,8 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         model.get_name.return_value = "unconfigured-llm"
         agent.get_current_model.return_value = model
 
-        self.group_chat.get_member_typechecked = MagicMock(return_value=agent)
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.get_member_typechecked = MagicMock(return_value=agent)
+        self.registry.send_if_exists = AsyncMock()
 
         # 测试未配置LLM的情况
         asyncio.run(self.plugin.before_message_generation())
@@ -97,13 +97,13 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         agent.message_processor.update_notification_message.assert_called_once_with(
             None, source="prompt_fast_agent", sort_value=100
         )
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     def test_after_token_generation_exceeds_limit(self):
         """测试工具调用数量超过限制。"""
         agent = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
         model = MagicMock(spec=OpenAi)
         model.get_name.return_value = "test-llm"
@@ -127,7 +127,7 @@ class TestPromptFastAgentPlugin(unittest.TestCase):
         """测试工具调用数量在限制内。"""
         agent = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
         model = MagicMock(spec=OpenAi)
         model.get_name.return_value = "test-llm"
@@ -171,12 +171,12 @@ class TestPromptFastAgentPluginIntegration(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
+        self.registry = MagicMock(spec=Registry)
 
     def test_switch_llm_with_different_limits(self):
         """测试切换LLM时的不同限制。"""
         max_toolcall_for_llm = {"llm-a": 3, "llm-b": 5}
-        plugin = PromptFastAgentPlugin(self.group_chat, max_toolcall_for_llm)
+        plugin = PromptFastAgentPlugin(self.registry, max_toolcall_for_llm)
 
         # 测试llm-a限制为3
         agent = MagicMock()

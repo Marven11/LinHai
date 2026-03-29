@@ -7,7 +7,7 @@ from pathlib import Path
 import argparse
 
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import SystemMessage, UserMessage
 from linhai.agent.base import (
     GlobalPrompt,
@@ -24,13 +24,13 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         # 注册必要的成员
         from linhai.tool.main import ToolManager
 
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        self.group_chat.register_member("tool_manager", mock_tool_manager)
+        self.registry.register_member("tool_manager", mock_tool_manager)
 
         # 创建模拟配置
         self.config = MagicMock()
@@ -58,7 +58,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
     def create_context(self, prompt_config=None, checklist_path=None):
         """创建AgentBuildContext。"""
         context = {
-            "group_chat": self.group_chat,
+            "registry": self.registry,
             "config": self.config,
             "config_basedir": self.config_basedir,
             "cli_args": self.cli_args,
@@ -185,8 +185,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
     @patch("linhai.agent.workflow._prepare_messages_for_compression")
     async def test_context_forget_range_step1_generates_id(self, mock_prepare):
         """测试context_forget_range_step1生成range_clean_id。"""
-        # 模拟group_chat和agent
-        mock_group_chat = MagicMock()
+        # 模拟registry和agent
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
         mock_message_processor = MagicMock()
         mock_agent.message_processor = mock_message_processor
@@ -198,7 +198,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         mock_range_clean_manager = MagicMock()
         mock_range_clean_manager.create_clean_info = MagicMock()
 
-        # 设置group_chat.get_member_typechecked的返回值
+        # 设置registry.get_member_typechecked的返回值
         def get_member_typechecked_side_effect(name, cls):
             if name == "agent":
                 return mock_agent
@@ -207,7 +207,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             else:
                 return MagicMock()
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
@@ -216,7 +216,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         mock_message_processor.add_new_message = AsyncMock()
 
         # 模拟send_if_exists为异步函数
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.send_if_exists = AsyncMock()
 
         # 模拟_prepare_messages_for_compression返回一个字符串
         mock_prepare.return_value = "消息总结"
@@ -227,7 +227,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         ):
             from linhai.agent.workflow import context_forget_range_step1
 
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
             # 验证结果
             self.assertEqual(
@@ -249,8 +249,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         self, mock_save, mock_validate
     ):
         """测试context_forget_range_step2验证range_clean_id并删除消息。"""
-        # 模拟group_chat和agent
-        mock_group_chat = MagicMock()
+        # 模拟registry和agent
+        mock_registry = MagicMock()
         mock_agent = MagicMock()
         mock_message_processor = MagicMock()
         mock_agent.message_processor = mock_message_processor
@@ -272,7 +272,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         mock_range_clean_manager.get_clean_info.return_value = mock_info
         mock_range_clean_manager.remove_clean_info = MagicMock()
 
-        # 设置group_chat.get_member_typechecked的返回值
+        # 设置registry.get_member_typechecked的返回值
         def get_member_typechecked_side_effect(name, cls):
             if name == "agent":
                 return mock_agent
@@ -281,7 +281,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             else:
                 return MagicMock()
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
@@ -296,7 +296,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         # 模拟Path和save_cleaned_messages
         mock_conversation_dir = MagicMock(spec=Path)
-        mock_group_chat.get_member_typechecked.return_value = mock_conversation_dir
+        mock_registry.get_member_typechecked.return_value = mock_conversation_dir
 
         # 模拟_validate_compression_range返回成功
         mock_validate.return_value = (True, "")
@@ -308,7 +308,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         # 调用函数
         result = await context_forget_range_step2(
-            mock_group_chat,
+            mock_registry,
             range_clean_id="test_id",
             start_id=20,
             end_id=30,

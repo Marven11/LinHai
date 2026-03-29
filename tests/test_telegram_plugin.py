@@ -11,19 +11,19 @@ class TestTelegramPlugin(unittest.TestCase):
     """TelegramPlugin单元测试。"""
 
     def setUp(self):
-        self.group_chat = Mock()
-        self.group_chat.get_member_typechecked = Mock()
+        self.registry = Mock()
+        self.registry.get_member_typechecked = Mock()
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.get_member_typechecked.return_value = self.agent
+        self.registry.get_member_typechecked.return_value = self.agent
         self.telegram_config = TelegramConfig(
             bot_token="test_token", default_chat_id="test_chat_id"
         )
 
     def test_plugin_initialization(self):
         """测试插件初始化。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         self.assertEqual(plugin.config, self.telegram_config)
         self.assertIsNone(plugin._bot)
         self.assertIsNone(plugin._application)
@@ -33,7 +33,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_after_segment_finished_normal(self):
         """测试处理normal segment，将消息加入队列。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         segment = {"segment_type": "normal", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
@@ -43,7 +43,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_after_segment_finished_reasoning(self):
         """测试不处理reasoning segment。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         segment = {"segment_type": "reasoning", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
@@ -52,7 +52,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_after_segment_finished_empty_content(self):
         """测试不处理空内容的segment。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         segment = {"segment_type": "normal", "content": "   "}
         await plugin.after_segment_finished(None, segment)
@@ -61,7 +61,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_after_segment_finished_duplicate(self):
         """测试相同内容会被加入队列两次。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         segment = {"segment_type": "normal", "content": "test content"}
         await plugin.after_segment_finished(None, segment)
@@ -73,7 +73,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_send_loop_with_no_bot(self):
         """测试bot为None时，消息被放回队头并增加延迟。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._running = True
         plugin.send_queue.append("test message")
 
@@ -94,7 +94,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_send_loop_with_bot(self):
         """测试bot存在时成功发送消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._running = True
         plugin._bot = Mock()
         plugin._bot.send_message = AsyncMock()
@@ -122,7 +122,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_send_loop_with_error(self):
         """测试发送失败时消息被放回队头并增加延迟。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._running = True
         plugin._bot = Mock()
         plugin._bot.send_message = AsyncMock(side_effect=Exception("Network error"))
@@ -152,7 +152,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_send_loop_exponential_backoff(self):
         """测试指数回避机制。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._running = True
         initial_delay = plugin._send_delay
 
@@ -164,7 +164,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_valid(self):
         """测试处理有效的telegram消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -181,7 +181,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_state_switch(self):
         """测试telegram消息加入后agent状态从waiting_user切换到working。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         self.agent.state = "waiting_user"
         self.agent.generate_response = AsyncMock()
 
@@ -198,7 +198,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_state_already_working(self):
         """测试agent已经在working状态时不会重复调用generate_response。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         self.agent.state = "working"
         self.agent.generate_response = AsyncMock()
 
@@ -215,7 +215,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_invalid_chat_id(self):
         """测试处理来自未授权chat_id的消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -228,7 +228,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_no_message(self):
         """测试处理没有message字段的update。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         mock_update = Mock()
         mock_update.message = None
@@ -239,7 +239,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_empty_text(self):
         """测试处理空文本消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -252,10 +252,8 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_message_exception(self):
         """测试处理telegram消息时的异常处理。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
-        self.group_chat.get_member_typechecked.side_effect = Exception(
-            "Agent not found"
-        )
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+        self.registry.get_member_typechecked.side_effect = Exception("Agent not found")
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -266,7 +264,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_valid(self):
         """测试处理有效的sticker消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = Mock()
         mock_file = Mock()
         mock_file.download_as_bytearray = AsyncMock(
@@ -291,7 +289,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_state_switch(self):
         """测试sticker消息加入后agent状态从waiting_user切换到working。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = Mock()
         mock_file = Mock()
         mock_file.download_as_bytearray = AsyncMock(
@@ -315,7 +313,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_invalid_chat_id(self):
         """测试处理来自未授权chat_id的sticker消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = Mock()
 
         mock_update = Mock()
@@ -331,7 +329,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_no_sticker(self):
         """测试处理没有sticker字段的消息。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = Mock()
 
         mock_update = Mock()
@@ -346,7 +344,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_no_bot(self):
         """测试bot为None时不处理sticker。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = None
 
         mock_update = Mock()
@@ -361,7 +359,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_handle_telegram_sticker_exception(self):
         """测试下载sticker失败时的异常处理。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._bot = Mock()
         plugin._bot.get_file = AsyncMock(side_effect=Exception("Download failed"))
 
@@ -377,7 +375,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_before_agent_loop(self):
         """测试Agent循环开始时启动telegram bot。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._application = Mock()
         plugin._application.run_polling = AsyncMock()
         plugin._application.initialize = AsyncMock()
@@ -401,7 +399,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_before_agent_loop_already_running(self):
         """测试bot已在运行时不重复启动。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._running = True
         plugin._application = Mock()
         plugin._application.initialize = AsyncMock()
@@ -414,7 +412,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_shutdown(self):
         """测试关闭telegram bot。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._application = Mock()
         plugin._application.stop = AsyncMock()
         plugin._application.shutdown = AsyncMock()
@@ -428,7 +426,7 @@ class TestTelegramPlugin(unittest.TestCase):
 
     async def test_shutdown_not_running(self):
         """测试bot未运行时不执行关闭。"""
-        plugin = TelegramPlugin(self.group_chat, self.telegram_config)
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
         plugin._application = Mock()
         plugin._application.stop = AsyncMock()
         plugin._application.shutdown = AsyncMock()

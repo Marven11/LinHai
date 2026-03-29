@@ -17,8 +17,8 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.conversation_dir = Path(self.temp_dir)
 
-        self.mock_group_chat = Mock()
-        self.mock_group_chat.get_member_typechecked = Mock(
+        self.mock_registry = Mock()
+        self.mock_registry.get_member_typechecked = Mock(
             return_value=self.conversation_dir
         )
 
@@ -31,7 +31,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         from linhai.agent.toolcall import AgentToolcall
 
         mock_agent = Mock()
-        mock_agent.group_chat = self.mock_group_chat
+        mock_agent.registry = self.mock_registry
         mock_llm_manager = Mock()
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
@@ -39,7 +39,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         mock_agent.llm_manager = mock_llm_manager
 
         toolcall = AgentToolcall(mock_agent)
-        toolcall.group_chat = self.mock_group_chat
+        toolcall.registry = self.mock_registry
         return toolcall
 
     def test_split_into_three_parts(self):

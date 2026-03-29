@@ -13,7 +13,7 @@ from linhai.llm import (
     UserMessage,
     SystemMessage,
 )
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent import Agent
 from linhai.agent.orchestration import (
     NotificationMessagePlugin,
@@ -28,8 +28,8 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
-        self.group_chat.register_queue("ui_log")
+        self.registry = Registry()
+        self.registry.register_queue("ui_log")
 
         # Mock stream for OpenAiAnswer
         self.mock_stream = AsyncMock()
@@ -41,7 +41,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.update_notification_message = MagicMock()
 
-        self.group_chat.register_member("agent", self.mock_agent)
+        self.registry.register_member("agent", self.mock_agent)
 
         # Mock orchestration - 使用spec确保类型匹配
         self.mock_orchestration = MagicMock(spec=AgentContextOrchestration)
@@ -60,18 +60,18 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
                 },
             }
         )
-        self.group_chat.register_member(
+        self.registry.register_member(
             "agent_context_orchestration", self.mock_orchestration
         )
 
     async def test_openai_answer_sends_token_usage(self):
-        """测试OpenAiAnswer将token usage发送到group_chat。"""
-        self.group_chat.register_queue("token_usage")
+        """测试OpenAiAnswer将token usage发送到registry。"""
+        self.registry.register_queue("token_usage")
 
         # 创建OpenAiAnswer实例
         answer = OpenAiAnswer(
             stream=self.mock_stream,
-            group_chat=self.group_chat,
+            registry=self.registry,
             compatibility=None,
             estimated_cached_input_tokens=100,
             llm_instance=None,
@@ -97,15 +97,15 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         # 设置stream的返回值
         self.mock_stream.__anext__.return_value = mock_chunk
 
-        # 模拟group_chat.send方法
+        # 模拟registry.send方法
         sent_messages = []
-        original_send = self.group_chat.send
+        original_send = self.registry.send
 
         async def mock_send(name: str, message: object):
             sent_messages.append((name, message))
             return await original_send(name, message)
 
-        self.group_chat.send = mock_send
+        self.registry.send = mock_send
 
         try:
             # 尝试获取token，这会触发update_toyield
@@ -124,11 +124,11 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
 
             self.assertTrue(token_usage_sent, "应该发送token_usage消息")
         finally:
-            self.group_chat.send = original_send
+            self.registry.send = original_send
 
     async def test_notification_message_plugin_before_message_generation(self):
         """测试NotificationMessagePlugin的before_message_generation钩子。"""
-        plugin = NotificationMessagePlugin(self.group_chat)
+        plugin = NotificationMessagePlugin(self.registry)
 
         # 测试threshold_info为None的情况
         await plugin.before_message_generation()
@@ -175,7 +175,7 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
     async def test_cli_token_usage_queue_handling(self):
         """测试CLI app正确处理token_usage队列。"""
         # 创建TokenManager
-        token_manager = TokenManager(self.group_chat)
+        token_manager = TokenManager(self.registry)
 
         # 模拟CLIApp的watch_token_usage_queue方法
         cli_app = MagicMock(spec=CLIApp)
@@ -189,10 +189,10 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
             cached_input_tokens=20,
         )
 
-        await self.group_chat.send("token_usage", token_usage)
+        await self.registry.send("token_usage", token_usage)
 
         # 手动调用watch_token_usage_queue的逻辑
-        output = await self.group_chat.receive("token_usage")
+        output = await self.registry.receive("token_usage")
 
         self.assertIsInstance(output, AnswerTokenUsage)
         self.assertEqual(output.input_tokens, 100)

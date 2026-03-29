@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 from unittest import mock
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.conversation import (
     register_conversation_folder,
     save_context,
@@ -29,9 +29,9 @@ class TestConversationFunctions(unittest.IsolatedAsyncioTestCase):
         )
         self.home_patcher.start()
 
-        # 创建GroupChat并注册conversation_folder
-        self.group_chat = GroupChat()
-        self.conversation_dir = register_conversation_folder(self.group_chat)
+        # 创建Registry并注册conversation_folder
+        self.registry = Registry()
+        self.conversation_dir = register_conversation_folder(self.registry)
 
     def tearDown(self):
         """测试后清理。"""
@@ -47,10 +47,10 @@ class TestConversationFunctions(unittest.IsolatedAsyncioTestCase):
         self.assertTrue((self.conversation_dir / "long_toolcall").exists())
         self.assertTrue((self.conversation_dir / "secret_intercepted").exists())
 
-        # 检查是否注册到group_chat
+        # 检查是否注册到registry
         from pathlib import Path
 
-        retrieved_dir = self.group_chat.get_member_typechecked(
+        retrieved_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
         )
         self.assertEqual(retrieved_dir, self.conversation_dir)
@@ -150,8 +150,8 @@ class TestConversationDirectoryStructure(unittest.TestCase):
 
     def test_conversation_dir_path(self):
         """测试对话目录路径是否正确。"""
-        group_chat = GroupChat()
-        conversation_dir = register_conversation_folder(group_chat)
+        registry = Registry()
+        conversation_dir = register_conversation_folder(registry)
 
         # 验证路径包含 ~/.local/share/linhai/conversation/
         expected_base = (

@@ -13,7 +13,7 @@ from linhai.agent.base import (
     WAITING_USER_MARKER,
     SpoofedReasoningMessage,
 )
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import Answer, AssistantMessage, OpenAi, Message
 from linhai.utils import CliRuntimeNotice
@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     @abstractmethod
     def register(self, lifecycle: "Lifecycle") -> None:
@@ -40,7 +40,7 @@ class WaitingUserPlugin(Plugin):
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         """检查等待用户标记的位置和工具调用冲突。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         has_waiting_marker = WAITING_USER_MARKER in full_response
 
         if tool_calls and has_waiting_marker:
@@ -50,7 +50,7 @@ class WaitingUserPlugin(Plugin):
                     f"工具调用和等待用户是互斥的，请只选择其中一种方式"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING", content="已警告agent：工具调用和等待用户冲突"
@@ -74,7 +74,7 @@ class WaitingUserPlugin(Plugin):
                     f"如果需要调用工具：必须继续输出工具调用且不应同时使用{WAITING_USER_MARKER!r}"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -108,7 +108,7 @@ class WrongEndPlugin(Plugin):
         full_response: str,
         _tool_calls,
     ):
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         regex_result = re.search(r"<｜end▁of▁[a-z]+｜>", full_response)
         if regex_result:
             await agent.message_processor.add_new_message(
@@ -156,7 +156,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
         _tool_calls: list,
     ) -> None:
         """在消息生成后检查并提醒异常标记。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         positions = []
         start = 0
@@ -196,7 +196,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
 
         await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="WARNING",
@@ -218,7 +218,7 @@ class OnlyReasoningPlugin(Plugin):
         full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
@@ -234,7 +234,7 @@ class OnlyReasoningPlugin(Plugin):
                 source="only_reasoning",
                 sort_value=0,
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING", content="模型只思考不输出，已提醒模型"
@@ -259,7 +259,7 @@ class PreviousReasoningPlugin(Plugin):
         _full_response: str,
         _tool_calls: List[Dict[str, JsonValue]],
     ):
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         msgs = [
             msg.reasoning_message
@@ -288,7 +288,7 @@ class JsonCodeBlockPlugin(Plugin):
         self, parsed_answer, full_response: str, _tool_calls
     ):
         """检查是否有json代码块包含有效的工具调用。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         json_tool_calls, json_errors = extract_tool_calls_with_errors(
             full_response, language="json"
@@ -306,7 +306,7 @@ class JsonCodeBlockPlugin(Plugin):
                 ui_msg = f"检测到json代码块中的工具调用: {', '.join(unique_tool_names)}"
 
             await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
             )
 
@@ -320,8 +320,8 @@ class KimiK25ToolCallPlugin(Plugin):
 
     TIME_WINDOW_SECONDS = 60
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
         self._last_error_format_time: float | None = None
 
     async def after_token_generation(
@@ -362,7 +362,7 @@ class KimiK25ToolCallPlugin(Plugin):
 
         if has_kimi_marker and not has_correct_format:
             self._last_error_format_time = time.time()
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：检测到不支持的kimi k2.5特殊工具调用格式`<|tool_call_begin|>`，"
@@ -373,7 +373,7 @@ class KimiK25ToolCallPlugin(Plugin):
                     "```"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -386,7 +386,7 @@ class KimiK25ToolCallPlugin(Plugin):
             or "}<|tool_call_end|>" in full_response
         ):
             self._last_error_format_time = time.time()
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：检测到混用json toolcall和kimi k2.5的特殊工具调用格式`<|tool_call_end|>`。"
@@ -397,7 +397,7 @@ class KimiK25ToolCallPlugin(Plugin):
                     "```"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -415,8 +415,8 @@ class MinimaxToolCallPlugin(Plugin):
 
     TIME_WINDOW_SECONDS = 60
 
-    def __init__(self, group_chat: GroupChat):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
         self._last_error_format_time: float | None = None
 
     async def after_token_generation(
@@ -459,7 +459,7 @@ class MinimaxToolCallPlugin(Plugin):
 
         if has_minimax_m25_error:
             self._last_error_format_time = time.time()
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：检测到minimax m2.5的错误工具调用格式`[TOOL_CALL]`。"
@@ -469,7 +469,7 @@ class MinimaxToolCallPlugin(Plugin):
                     "```"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -479,7 +479,7 @@ class MinimaxToolCallPlugin(Plugin):
 
         if has_minimax_marker and not has_correct_format:
             self._last_error_format_time = time.time()
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：检测到不支持的minimax特殊工具调用格式`<minimax:tool_call>`，"
@@ -490,7 +490,7 @@ class MinimaxToolCallPlugin(Plugin):
                     "```"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -503,7 +503,7 @@ class MinimaxToolCallPlugin(Plugin):
             or "}<minimax:tool_call>" in full_response
         ):
             self._last_error_format_time = time.time()
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "警告：检测到混用json toolcall和minimax的特殊工具调用格式`<minimax:tool_call>`。"
@@ -514,7 +514,7 @@ class MinimaxToolCallPlugin(Plugin):
                     "```"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -574,7 +574,7 @@ class GlmToolCallPlugin(Plugin):
         _tool_calls: list,
     ):
         """在消息生成后检查GLM是否错误使用了<tool_call>格式。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
         if not isinstance(model, OpenAi) or model.compatibility != "glm":
@@ -589,7 +589,7 @@ class GlmToolCallPlugin(Plugin):
                 "```"
             )
             await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -633,7 +633,7 @@ class GlmInsultMaskPlugin(Plugin):
         if result_content is None:
             return None
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
         if not isinstance(model, OpenAi) or model.compatibility != "glm":
             return None

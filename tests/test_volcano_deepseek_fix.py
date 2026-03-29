@@ -10,13 +10,13 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
     """火山平台deepseek异常输出插件测试。"""
 
     def setUp(self) -> None:
-        self.group_chat = MagicMock()
-        self.plugin = VolcanoDeepseekFixPlugin(self.group_chat)
+        self.registry = MagicMock()
+        self.plugin = VolcanoDeepseekFixPlugin(self.registry)
 
         self.agent = MagicMock(spec=Agent)
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
 
@@ -25,7 +25,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         self.model.model = "deepseek-chat"
         self.agent.get_current_model.return_value = self.model
 
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
     async def test_is_volcano_deepseek_detection(self) -> None:
         """测试火山平台deepseek检测逻辑。"""
@@ -36,7 +36,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             MagicMock(spec=Answer), full_response, tool_calls
         )
 
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
 
         self.assertEqual(len(tool_calls), 0)
@@ -50,7 +50,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             MagicMock(spec=Answer), full_response, tool_calls
         )
 
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
 
         self.assertEqual(len(tool_calls), 0)
@@ -64,7 +64,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             MagicMock(spec=Answer), full_response, tool_calls
         )
 
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
         self.agent.message_processor.add_new_message.assert_called_once()
 
         self.assertEqual(len(tool_calls), 0)
@@ -80,7 +80,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
             MagicMock(spec=Answer), full_response, tool_calls
         )
 
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
         self.assertEqual(len(tool_calls), 0)
 

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Union
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import CliRuntimeNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     @abstractmethod
     def register(self, lifecycle: "Lifecycle") -> None:
@@ -46,7 +46,7 @@ class WithSecretParameterPositionPlugin(Plugin):
         if "with_secret" not in toolcall_arguments:
             return None
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
@@ -86,7 +86,7 @@ class MissingWithSecretWarningPlugin(Plugin):
         if with_secret:
             return None
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.message_processor.add_new_message(
             RuntimeMessage(
                 f"警告：检测到工具调用参数中包含`<$KEY$>`占位符，但没有使用`with_secret`字段: {has_secret_pattern}。可能在{tool_name}工具调用中...\n"
@@ -96,7 +96,7 @@ class MissingWithSecretWarningPlugin(Plugin):
             )
         )
 
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO", content="检测到可能忘记使用with_secret的工具调用"
@@ -112,8 +112,8 @@ class MissingWithSecretWarningPlugin(Plugin):
 class CommandWhitelistPlugin(Plugin):
     """命令白名单插件，检查process_create命令是否在配置的允许列表中。"""
 
-    def __init__(self, group_chat, config):
-        super().__init__(group_chat)
+    def __init__(self, registry, config):
+        super().__init__(registry)
         self.config = config
         self.allowed_commands = config.agent.allowed_commands
 
@@ -125,7 +125,7 @@ class CommandWhitelistPlugin(Plugin):
         from linhai.agent import Agent
         from linhai.agent.base import RuntimeMessage
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent and self.allowed_commands:
             allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
             agent.message_processor.update_notification_message(
@@ -196,8 +196,8 @@ class ProcessArgvCheckerPlugin(Plugin):
         "${",
     ]
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
 
     def register(self, lifecycle):
         lifecycle.register_before_tool_call(self.before_tool_call)
@@ -241,7 +241,7 @@ class ProcessArgvCheckerPlugin(Plugin):
                     + repr(warnings)
                     + "注意：这些操作符在直接执行进程时可能不会被解释，但如果执行shell可能会被解释。请确认参数安全性。"
                 )
-                agent = self.group_chat.get_member_typechecked("agent", Agent)
+                agent = self.registry.get_member_typechecked("agent", Agent)
                 await agent.message_processor.add_new_message(
                     RuntimeMessage(warning_msg)
                 )

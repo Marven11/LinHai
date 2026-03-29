@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Dict, List
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import Answer, OpenAi
 from linhai.utils import CliRuntimeNotice
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     @abstractmethod
     def register(self, lifecycle: "Lifecycle") -> None:
@@ -33,8 +33,8 @@ class Plugin(ABC):
 class PromptFastAgentPlugin(Plugin):
     """限制特定LLM调用工具数量的插件"""
 
-    def __init__(self, group_chat: GroupChat, max_toolcall_for_llm: dict[str, int]):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry, max_toolcall_for_llm: dict[str, int]):
+        super().__init__(registry)
         self.max_toolcall_for_llm = max_toolcall_for_llm
         self.speeding_counter = 0
 
@@ -48,7 +48,7 @@ class PromptFastAgentPlugin(Plugin):
 
     async def before_message_generation(self):
         """在消息生成前更新通知，显示当前模型的工具限制。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         max_toolcall = self._get_max_toolcall_for_current_model(agent)
 
         if max_toolcall is None:
@@ -94,7 +94,7 @@ class PromptFastAgentPlugin(Plugin):
                     + extra_message
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -116,8 +116,8 @@ class PromptFastAgentPlugin(Plugin):
 class SlowStartPlugin(Plugin):
     """防止agent在一开始就调用大量工具的插件"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.enabled = True
 
     async def after_token_generation(
@@ -129,7 +129,7 @@ class SlowStartPlugin(Plugin):
 
         if current_content.count("\n```json toolcall") > 8:
             self.enabled = False
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(level="WARNING", content="过量工具调用，已打断"),
             )
@@ -192,15 +192,15 @@ class WeirdTokenPlugin(Plugin):
 class SingleToolCallReminderPlugin(Plugin):
     """提醒agent不要连续多次只调用单个工具的插件。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.single_tool_call_count = 0
 
     async def after_message_generation(
         self, parsed_answer, _full_response: str, tool_calls: list[dict]
     ):
         """检查是否连续多次只调用了一个工具。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         if len(tool_calls) == 1:
             self.single_tool_call_count += 1
@@ -250,7 +250,7 @@ class ToolCallInReasoningPlugin(Plugin):
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查推理内容中是否包含工具调用，且实际输出中没有调用工具。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         reasoning_content = parsed_answer._answer.get_reasoning_message()
         if not reasoning_content:
@@ -286,7 +286,7 @@ class ToolCallInReasoningPlugin(Plugin):
         await agent.message_processor.add_new_message(
             RuntimeMessage(agent_warning_message)
         )
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(level="WARNING", content=ui_warning_message),
         )
@@ -306,7 +306,7 @@ class LoadImageUrlWarningPlugin(Plugin):
         tool_calls: List[Dict[str, JsonValue]],
     ):
         """检查工具调用中load_image的参数是否为URL。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         load_image_toolcalls = [
             tool_call
             for tool_call in tool_calls
@@ -327,7 +327,7 @@ class LoadImageUrlWarningPlugin(Plugin):
                     "警告：load_image工具的参数image_filepath看起来是一个URL，但load_image只支持本地文件路径！请先下载图片到master_host"
                 )
             )
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",

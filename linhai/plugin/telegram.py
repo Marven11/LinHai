@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 from linhai.parsed_message import Segment
 from linhai.agent.base import WAITING_USER_MARKER
 from linhai.agent.lifecycle import Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
 from linhai.utils import CliRuntimeNotice
@@ -25,8 +25,8 @@ DRAFT_INTERVAL = 1
 class TelegramPlugin(Plugin):
     """Telegram bot插件，实现通过telegram远程控制Agent。"""
 
-    def __init__(self, group_chat: GroupChat, telegram_config: "TelegramConfig"):
-        super().__init__(group_chat)
+    def __init__(self, registry: Registry, telegram_config: "TelegramConfig"):
+        super().__init__(registry)
         self.config = telegram_config
         self._bot = None
         self._application = None
@@ -91,7 +91,7 @@ class TelegramPlugin(Plugin):
 
     async def _handle_telegram_message(self, update: Update, _context):
         """处理来自telegram的消息。"""
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -111,7 +111,7 @@ class TelegramPlugin(Plugin):
         if not content:
             return
 
-        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        agent = self.registry.get_member_typechecked("agent", AgentType)
         if agent:
             message = TelegramMessage(
                 chat_id=chat_id,
@@ -124,7 +124,7 @@ class TelegramPlugin(Plugin):
 
     async def _handle_telegram_sticker(self, update: Update, _context):
         """处理来自telegram的表情包消息。"""
-        await self.group_chat.send_if_exists(
+        await self.registry.send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -151,9 +151,9 @@ class TelegramPlugin(Plugin):
         sticker_data = await file.download_as_bytearray()
         sticker_bytes = bytes(sticker_data)
 
-        message = load_sticker(sticker_bytes, self.group_chat)
+        message = load_sticker(sticker_bytes, self.registry)
 
-        agent = self.group_chat.get_member_typechecked("agent", AgentType)
+        agent = self.registry.get_member_typechecked("agent", AgentType)
         if agent:
             await agent.message_processor.add_new_message(message)
             if agent.state == "waiting_user":

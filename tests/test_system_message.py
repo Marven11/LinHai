@@ -7,7 +7,7 @@ import json
 
 from linhai.prompt import OVERVIEW, INTRODUCTION_TOOL_USE, RULES_TOOL_USE
 from linhai.llm import SystemMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 
 
@@ -16,9 +16,9 @@ class TestSystemMessage(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = Mock(spec=GroupChat)
-        self.group_chat.register_member = Mock()
-        self.group_chat.register_queue = Mock()
+        self.registry = Mock(spec=Registry)
+        self.registry.register_member = Mock()
+        self.registry.register_queue = Mock()
 
         # 模拟tool_manager
         self.mock_tool_manager = Mock(spec=ToolManager)
@@ -31,16 +31,16 @@ class TestSystemMessage(unittest.TestCase):
                 return self.mock_tool_manager
             return Mock()
 
-        self.group_chat.get_member_typechecked = Mock(
+        self.registry.get_member_typechecked = Mock(
             side_effect=get_member_typechecked_side_effect
         )
 
     def test_system_message_initialization(self):
         """测试SystemMessage初始化。"""
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
 
-        # 验证group_chat被设置
-        self.assertEqual(system_msg.group_chat, self.group_chat)
+        # 验证registry被设置
+        self.assertEqual(system_msg.registry, self.registry)
 
         # 验证模板已构建
         content = system_msg.to_llm_message()["content"]
@@ -52,7 +52,7 @@ class TestSystemMessage(unittest.TestCase):
     def test_system_message_contains_tool_definitions(self):
         """测试SystemMessage包含工具定义。"""
         # 工具列表已经在setUp中设置，这里确保使用
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
 
         # 验证工具定义被包含
         content = system_msg.to_llm_message()["content"]
@@ -66,7 +66,7 @@ class TestSystemMessage(unittest.TestCase):
 
     def test_system_message_structure(self):
         """测试SystemMessage的结构化章节。"""
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         content = system_msg.to_llm_message()["content"]
 
         # 检查章节标题格式
@@ -87,10 +87,10 @@ class TestSystemMessage(unittest.TestCase):
         # 模拟get_members返回一个tool_manager，但get_tools_info返回空列表
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info = Mock(return_value=[])
-        self.group_chat.get_member_typechecked = Mock(return_value=mock_tool_manager)
+        self.registry.get_member_typechecked = Mock(return_value=mock_tool_manager)
 
         # 应该能正常初始化，但工具列表为空
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         content = system_msg.to_llm_message()["content"]
         self.assertIsNotNone(content)
 
@@ -101,7 +101,7 @@ class TestSystemMessage(unittest.TestCase):
     def test_system_message_from_structured_constants(self):
         """测试从结构化常量构建prompt。"""
         # 使用原始的常量检查内容是否被正确包含
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         content = system_msg.to_llm_message()["content"]
 
         # 检查常量内容是否被包含
@@ -117,7 +117,7 @@ class TestSystemMessage(unittest.TestCase):
             {"name": "test2", "description": "工具2"},
         ]
 
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         content = system_msg.to_llm_message()["content"]
 
         # 验证工具信息被包含
@@ -140,7 +140,7 @@ class TestSystemMessage(unittest.TestCase):
         ]
 
         # 应该能正常初始化
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         content = system_msg.to_llm_message()["content"]
         self.assertIsNotNone(content)
 
@@ -156,7 +156,7 @@ class TestSystemMessage(unittest.TestCase):
 
     def test_system_message_to_llm_message(self):
         """测试转换为LLM消息格式。"""
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         llm_message = system_msg.to_llm_message()
 
         # 验证返回正确的消息格式
@@ -169,7 +169,7 @@ class TestSystemMessage(unittest.TestCase):
 
     def test_system_message_repr(self):
         """测试SystemMessage的字符串表示。"""
-        system_msg = SystemMessage(group_chat=self.group_chat)
+        system_msg = SystemMessage(registry=self.registry)
         repr_str = repr(system_msg)
 
         # 验证repr包含关键信息

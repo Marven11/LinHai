@@ -13,7 +13,7 @@ from textual.widgets import Static
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.message import AgentMessage, NotificationMessageEntry
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
@@ -45,9 +45,9 @@ class ContextTabWidget(Static):
     }
     """
 
-    def __init__(self, group_chat: GroupChat) -> None:
+    def __init__(self, registry: Registry) -> None:
         super().__init__()
-        self.group_chat: GroupChat = group_chat
+        self.registry: Registry = registry
         self.refresh_interval = 1.0  # seconds
 
     def compose(self) -> ComposeResult:
@@ -149,12 +149,12 @@ class ContextTabWidget(Static):
         Returns:
             Tuple of (cached_tokens: int, cache_percentage: float)
         """
-        if not self.group_chat.has_member("token_manager"):
-            raise RuntimeError("token_manager should be registered in group_chat")
+        if not self.registry.has_member("token_manager"):
+            raise RuntimeError("token_manager should be registered in registry")
 
         from linhai.token_manager import TokenManager
 
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
 
@@ -237,7 +237,7 @@ class ContextTabWidget(Static):
         grid.add_row("硬限制:", f"{hard}")
         grid.add_row("使用率:", progress_bar_text)
 
-        token_manager = self.group_chat.get_member_typechecked(
+        token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
         )
         if token_manager.current_token_usage is not None:
@@ -317,17 +317,15 @@ class ContextTabWidget(Static):
 
     def update_display(self) -> None:
         """Update the display with current context information."""
-        agent_message: AgentMessage = self.group_chat.get_member_typechecked(
+        agent_message: AgentMessage = self.registry.get_member_typechecked(
             "agent_message", AgentMessage
         )
         from linhai.agent.orchestration import AgentContextOrchestration
 
-        orchestration: AgentContextOrchestration = (
-            self.group_chat.get_member_typechecked(
-                "agent_context_orchestration", AgentContextOrchestration
-            )
+        orchestration: AgentContextOrchestration = self.registry.get_member_typechecked(
+            "agent_context_orchestration", AgentContextOrchestration
         )
-        agent: Agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent: Agent = self.registry.get_member_typechecked("agent", Agent)
 
         grid = Table.grid(padding=(0, 1))
         grid.add_column(style="bold cyan")

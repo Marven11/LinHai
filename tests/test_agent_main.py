@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.main import Agent
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.parsed_message import ParsedAnswer
 
 
@@ -15,7 +15,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
+        self.registry = MagicMock(spec=Registry)
 
         self.context = {
             "llms": [],
@@ -25,9 +25,9 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         }
         self.init_messages = []
 
-        self.group_chat.is_empty = MagicMock(return_value=False)
-        self.group_chat.receive = AsyncMock()
-        self.group_chat.send = AsyncMock()
+        self.registry.is_empty = MagicMock(return_value=False)
+        self.registry.receive = AsyncMock()
+        self.registry.send = AsyncMock()
 
         # 需要为Agent提供正确的参数
         # 由于这是单元测试，我们mock了context，但需要确保它有正确的结构
@@ -56,7 +56,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         mock_llm = MagicMock()
         mock_llm.get_name = MagicMock(return_value="test-llm")
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=[mock_llm],
             default_llm_name="test-llm",
             llm_fallback_map={"test-llm": None},
@@ -64,7 +64,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=compress_threshold_val,
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=self.init_messages,
         )
 

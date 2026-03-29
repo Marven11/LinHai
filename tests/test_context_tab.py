@@ -5,7 +5,7 @@ from unittest.mock import patch, Mock
 import asyncio
 from linhai.cli.app import CLIApp
 from linhai.cli.context_tab import ContextTabWidget
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import CLIConfig
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
@@ -16,8 +16,8 @@ class TestContextTab(unittest.TestCase):
 
     def test_context_tab_creation(self):
         """测试ContextTabWidget创建"""
-        group_chat = GroupChat()
-        widget = ContextTabWidget(group_chat)
+        registry = Registry()
+        widget = ContextTabWidget(registry)
         self.assertIsNotNone(widget)
         self.assertEqual(widget.refresh_interval, 1.0)
 
@@ -25,8 +25,8 @@ class TestContextTab(unittest.TestCase):
     @patch("linhai.cli.context_tab.ContextTabWidget.set_interval")
     def test_on_mount(self, mock_set_interval, mock_update_display):
         """测试组件挂载"""
-        group_chat = GroupChat()
-        widget = ContextTabWidget(group_chat)
+        registry = Registry()
+        widget = ContextTabWidget(registry)
 
         # 模拟mount
         widget.on_mount()
@@ -41,7 +41,7 @@ class TestContextTab(unittest.TestCase):
         """测试Context tab是否在应用中正确显示"""
         mock_on_mount.return_value = None
 
-        group_chat = GroupChat()
+        registry = Registry()
 
         # 避免token_manager重复注册
         # TokenManager会在CLIApp初始化时自动注册，这里不需要手动注册
@@ -80,7 +80,7 @@ class TestContextTab(unittest.TestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
         mock_cli_args.file = None
-        group_chat.register_member("cli_args", mock_cli_args)
+        registry.register_member("cli_args", mock_cli_args)
         from linhai.llm import AnswerTokenUsage
 
         mock_token_usage = AnswerTokenUsage(
@@ -108,21 +108,21 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
 
-        group_chat.register_member("agent", mock_agent)
-        group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("agent", mock_agent)
+        registry.register_member("agent_message", mock_agent_message)
+        registry.register_member("agent_context_orchestration", mock_orchestration)
         # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
-        group_chat.register_member("lifecycle", mock_lifecycle)
+        registry.register_member("lifecycle", mock_lifecycle)
         # 注意：这里不注册token_manager，因为CLIApp会创建并注册
         # 使用patch来模拟TokenManager的创建，避免重复注册
         with patch("linhai.cli.app.TokenManager", return_value=mock_token_manager):
-            # 直接注册token_manager到group_chat，这样ContextTabWidget就不会抛出RuntimeError
-            group_chat.register_member("token_manager", mock_token_manager)
+            # 直接注册token_manager到registry，这样ContextTabWidget就不会抛出RuntimeError
+            registry.register_member("token_manager", mock_token_manager)
 
-            app = CLIApp(group_chat=group_chat, cli_config=CLIConfig())
+            app = CLIApp(registry=registry, cli_config=CLIConfig())
 
         async def _run_test():
             async with app.run_test() as pilot:
@@ -146,7 +146,7 @@ class TestContextTab(unittest.TestCase):
 
     def test_update_display_with_mocks(self):
         """测试update_display功能"""
-        group_chat = GroupChat()
+        registry = Registry()
 
         # 创建模拟组件
         from linhai.agent.main import Agent
@@ -204,13 +204,13 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager.current_token_usage = mock_token_usage
 
         # 注册所有必需的组件
-        group_chat.register_member("agent_message", mock_agent_message)
-        group_chat.register_member("agent_context_orchestration", mock_orchestration)
-        group_chat.register_member("agent", mock_agent)
-        group_chat.register_member("token_manager", mock_token_manager)
+        registry.register_member("agent_message", mock_agent_message)
+        registry.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("agent", mock_agent)
+        registry.register_member("token_manager", mock_token_manager)
 
         # 创建widget并测试
-        widget = ContextTabWidget(group_chat)
+        widget = ContextTabWidget(registry)
 
         # 模拟query_one
         from textual.widgets import Static
@@ -230,8 +230,8 @@ class TestContextTab(unittest.TestCase):
 
     def test_update_display_without_components(self):
         """测试在没有组件时的update_display"""
-        group_chat = GroupChat()
-        widget = ContextTabWidget(group_chat)
+        registry = Registry()
+        widget = ContextTabWidget(registry)
 
         # 模拟query_one
         from textual.widgets import Static

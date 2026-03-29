@@ -12,7 +12,7 @@ from typing import cast, Literal
 from linhai.llm import LanguageModelMessage, Message
 
 if TYPE_CHECKING:
-    from linhai.group_chat import GroupChat
+    from linhai.registry import Registry
 
 
 class TelegramMessage(Message):
@@ -41,7 +41,7 @@ class TelegramMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat):
+    def from_json(cls, json_str: str, registry):
         data = json.loads(json_str)
         return cls(
             chat_id=data["chat_id"],
@@ -74,7 +74,7 @@ class TelegramStickerMessage(Message):
         self,
         image_bytes: bytes,
         mime_type: str,
-        group_chat: "GroupChat",
+        registry: "Registry",
         width: int,
         height: int,
         quality: Literal["compressed", "raw"] = "raw",
@@ -84,14 +84,14 @@ class TelegramStickerMessage(Message):
         Args:
             image_bytes: 图片的二进制数据
             mime_type: 图片的MIME类型
-            group_chat: GroupChat实例（用于动态获取LLM支持状态）
+            registry: Registry实例（用于动态获取LLM支持状态）
             width: 图片宽度
             height: 图片高度
             quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
         """
         self.image_bytes = image_bytes
         self.mime_type = mime_type
-        self.group_chat = group_chat
+        self.registry = registry
         self.quality = quality
         self.width = width
         self.height = height
@@ -121,7 +121,7 @@ class TelegramStickerMessage(Message):
         """
         from linhai.agent.main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         if llm.support_image():
             return {
@@ -165,30 +165,26 @@ class TelegramStickerMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(
-        cls, json_str: str, group_chat: "GroupChat"
-    ) -> "TelegramStickerMessage":
+    def from_json(cls, json_str: str, registry: "Registry") -> "TelegramStickerMessage":
         """从JSON字符串创建TelegramStickerMessage实例。"""
         data = json.loads(json_str)
         image_bytes = base64.b64decode(data["image_bytes"])
         return cls(
             image_bytes=image_bytes,
             mime_type=data.get("mime_type", "image/png"),
-            group_chat=group_chat,
+            registry=registry,
             quality=data.get("quality", "raw"),
             width=data.get("width", 0),
             height=data.get("height", 0),
         )
 
 
-def load_sticker(
-    sticker_data: bytes, group_chat: "GroupChat"
-) -> TelegramStickerMessage:
+def load_sticker(sticker_data: bytes, registry: "Registry") -> TelegramStickerMessage:
     """加载表情包数据并返回TelegramStickerMessage。
 
     Args:
         sticker_data: 表情包的二进制数据
-        group_chat: GroupChat实例（用于动态获取LLM支持状态）
+        registry: Registry实例（用于动态获取LLM支持状态）
 
     Returns:
         TelegramStickerMessage: 包含表情包数据的消息对象
@@ -218,7 +214,7 @@ def load_sticker(
     return TelegramStickerMessage(
         image_bytes=image_bytes,
         mime_type=mime_type,
-        group_chat=group_chat,
+        registry=registry,
         quality="compressed",
         width=final_width,
         height=final_height,

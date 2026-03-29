@@ -7,7 +7,7 @@ from unittest.mock import Mock, MagicMock, AsyncMock
 from linhai.plugin.planning import TodolistCheckerPlugin
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, Answer
 from linhai.agent.planning import PlanningPromptMessage
@@ -18,8 +18,8 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = TodolistCheckerPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = TodolistCheckerPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
         self.todolist_file = self.temp_dir / "TODOLIST.md"
@@ -37,7 +37,7 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             return None
 
-        self.group_chat.get_member_typechecked.side_effect = side_effect
+        self.registry.get_member_typechecked.side_effect = side_effect
 
     def tearDown(self):
         """清理测试环境。"""

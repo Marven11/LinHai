@@ -19,7 +19,7 @@ from linhai.tool.base import (
     ToolSet,
     ToolResultSuccess,
 )
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.utils import generate_id
 
 
@@ -287,11 +287,11 @@ def registered_safe_calculator(expression: str) -> str:
     return safe_calculator(expression)
 
 
-def generate_sleep_toolset(group_chat: GroupChat) -> ToolSet:
+def generate_sleep_toolset(registry: Registry) -> ToolSet:
     """生成sleep工具集，包含可打断的sleep工具。
 
     Args:
-        group_chat: GroupChat实例，用于检查新用户消息
+        registry: Registry实例，用于检查新用户消息
 
     Returns:
         ToolSet实例，包含sleep工具
@@ -313,7 +313,7 @@ def generate_sleep_toolset(group_chat: GroupChat) -> ToolSet:
             elapsed = (datetime.now() - start).total_seconds()
             if elapsed >= seconds:
                 break
-            if not group_chat.is_empty("user_message"):
+            if not registry.is_empty("user_message"):
                 return ToolResultSuccess(
                     content=f"有新用户消息，sleep已打断。已睡眠{elapsed}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 )

@@ -1,6 +1,6 @@
 """Command handler for CLI commands that should not be sent to agent."""
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 from linhai.cli.components import RuntimeMessageWidget
 from linhai.utils import CliRuntimeNotice
@@ -10,8 +10,8 @@ from linhai.input_parser import parse_user_input
 class CommandHandler:
     """处理CLI命令,这些命令不会发送给agent."""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     async def handle_command(self, message_text: str) -> tuple[bool, bool]:
         """处理命令,返回(handled, should_interrupt).
@@ -50,7 +50,7 @@ class CommandHandler:
     async def _show_runtime_message(self, level: str, content: str) -> None:
         from linhai.cli.app import CLIApp
 
-        cli_app = self.group_chat.get_member_typechecked("cli_app", CLIApp)
+        cli_app = self.registry.get_member_typechecked("cli_app", CLIApp)
         assert cli_app is not None
 
         container = cli_app.query_one("#chat-container")
@@ -62,7 +62,7 @@ class CommandHandler:
         from linhai.agent import Agent
         from linhai.llm import UserMessage
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True, False
@@ -79,7 +79,7 @@ class CommandHandler:
 
     async def _handle_quit_command(self) -> tuple[bool, bool]:
         """处理/quit和/exit命令,发送退出信号."""
-        await self.group_chat.send("exit_signal", {"return_code": 0})
+        await self.registry.send("exit_signal", {"return_code": 0})
         return True, False
 
     async def _handle_help_command(self) -> tuple[bool, bool]:
@@ -103,7 +103,7 @@ class CommandHandler:
         """处理/status命令,显示状态信息."""
         from linhai.agent import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True, False
@@ -129,7 +129,7 @@ class CommandHandler:
         from linhai.agent import Agent
         from linhai.llm import UserMessage
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True, False
@@ -181,7 +181,7 @@ class CommandHandler:
         from linhai.agent import Agent
         from linhai.llm import ToolCallMessage
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             await self._show_error_message("无法获取agent实例")
             return True, True
@@ -200,7 +200,7 @@ class CommandHandler:
         if not early_return:
             await self._show_success_message(f"命令{parsed_input.command}执行成功")
 
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="INFO",

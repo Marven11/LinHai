@@ -9,7 +9,7 @@ from linhai.agent.planning import PlanningPromptMessage
 
 class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
         self.mock_config = MagicMock()
         # 模拟LLM配置对象列表
         mock_llm_config = MagicMock()
@@ -37,7 +37,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 注意：create_agent_build_context需要llm_name参数，我们通过cli_args.llm传递
         self.mock_cli_args.llm = None
         context = create_agent_build_context(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
             cli_args=self.mock_cli_args,
@@ -49,7 +49,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_planning_parameter_true(self):
         self.mock_cli_args.llm = None
         context = create_agent_build_context(
-            group_chat=self.mock_group_chat,
+            registry=self.mock_registry,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
             cli_args=self.mock_cli_args,
@@ -67,7 +67,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 模拟对话文件夹
         mock_conversation_folder = Path("/tmp/test_conversation")
         mock_conversation_folder.mkdir(exist_ok=True)
-        self.mock_group_chat.get_member_typechecked = MagicMock(
+        self.mock_registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, cls=None: {
                 "conversation_folder": mock_conversation_folder
             }.get(name)
@@ -75,7 +75,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
         # 模拟消息列表
         mock_messages = [
-            SystemMessage(group_chat=self.mock_group_chat),
+            SystemMessage(registry=self.mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test_global_prompt.md")),
             RuntimeMessage("User message 1"),
             AssistantMessage(message="Assistant response 1"),
@@ -83,7 +83,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
         context = {
             "planning": True,
-            "group_chat": self.mock_group_chat,
+            "registry": self.mock_registry,
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
@@ -127,7 +127,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
         context = {
             "planning": False,
-            "group_chat": self.mock_group_chat,
+            "registry": self.mock_registry,
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
@@ -150,7 +150,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 创建上下文配置，planning为True
         context = {
             "planning": True,
-            "group_chat": self.mock_group_chat,
+            "registry": self.mock_registry,
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
@@ -206,8 +206,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
                 UserInputRuntimeMessagePlugin,
             )
 
-            mock_planning_plugin_cls.assert_called_once_with(self.mock_group_chat)
-            mock_user_input_plugin_cls.assert_called_once_with(self.mock_group_chat)
+            mock_planning_plugin_cls.assert_called_once_with(self.mock_registry)
+            mock_user_input_plugin_cls.assert_called_once_with(self.mock_registry)
 
             # 验证register被调用，且参数不为空
             mock_planning_status_plugin_instance.register.assert_called_once()
@@ -226,7 +226,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         # 创建上下文配置，planning为False
         context = {
             "planning": False,
-            "group_chat": self.mock_group_chat,
+            "registry": self.mock_registry,
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,

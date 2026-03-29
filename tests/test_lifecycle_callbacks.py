@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from linhai.parsed_message import ParsedAnswer, Segment
 from linhai.agent.lifecycle import Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class MockAnswer:
@@ -38,8 +38,8 @@ class TestAfterNewParsedAnswerCallback(unittest.IsolatedAsyncioTestCase):
 
     async def test_callback_called_when_triggered(self):
         """Test that after_new_parsed_answer callback is called when triggered by caller."""
-        group_chat = GroupChat()
-        lifecycle = Lifecycle(group_chat)
+        registry = Registry()
+        lifecycle = Lifecycle(registry)
 
         callback_called = False
         received_parsed_answer = None
@@ -69,8 +69,8 @@ class TestCallbackOrder(unittest.IsolatedAsyncioTestCase):
 
     async def test_parsing_lifecycle_callback_order(self):
         """Test that after_new_parsed_answer is called when triggered by caller."""
-        group_chat = GroupChat()
-        lifecycle = Lifecycle(group_chat)
+        registry = Registry()
+        lifecycle = Lifecycle(registry)
 
         call_order = []
 

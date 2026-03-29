@@ -7,10 +7,10 @@ class MachineControlIntroductionPlugin(Plugin):
         from ..machine_control import MachineControl
         from ..llm import SystemMessage
 
-        machine_control = self.group_chat.get_member_typechecked(
+        machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
-        system_message = self.group_chat.get_member_typechecked(
+        system_message = self.registry.get_member_typechecked(
             "system_message", SystemMessage
         )
         machine_count = len(machine_control.machines)

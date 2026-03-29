@@ -15,7 +15,7 @@ from linhai.init import InitApp
 from linhai.config import get_default_config_path
 from linhai.cli import CLIApp
 from linhai.agent.base import Message
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 def run_tests():
@@ -49,8 +49,8 @@ async def run(args):
     from linhai.agent.create import create_agent_from_config
     from linhai.agent.create import create_agent_build_context
 
-    group_chat = GroupChat()
-    group_chat.register_member("cli_args", args)
+    registry = Registry()
+    registry.register_member("cli_args", args)
 
     from linhai.config import get_default_config_path
 
@@ -60,7 +60,7 @@ async def run(args):
     config = load_config(config_path)
 
     context = create_agent_build_context(
-        group_chat=group_chat,
+        registry=registry,
         config=config,
         config_basedir=config_path.parent,
         cli_args=args,
@@ -71,11 +71,11 @@ async def run(args):
     _agent = await create_agent_from_config(context)
 
     app = CLIApp(
-        group_chat=group_chat,
+        registry=registry,
         cli_config=config.cli,
     )
 
-    group_chat.call_postinit()
+    registry.call_postinit()
 
     await app.run_async()
     return app.return_code

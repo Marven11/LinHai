@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, call
 
 from linhai.agent.main import Agent
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import UserMessage
 from linhai.agent.base import RuntimeMessage
 from linhai.utils import CliRuntimeNotice
@@ -16,7 +16,7 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
+        self.registry = MagicMock(spec=Registry)
 
         # 模拟LLM Manager
         self.llm_manager = MagicMock()
@@ -26,7 +26,7 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=self.llm_manager,
             compress_threshold=800,
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=[],
         )
 
@@ -45,10 +45,10 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.handle_user_message = AsyncMock()
 
-        # 设置group_chat模拟
-        self.group_chat.is_empty = MagicMock()
-        self.group_chat.receive = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
+        # 设置registry模拟
+        self.registry.is_empty = MagicMock()
+        self.registry.receive = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
     async def test_interrupt_batches_multiple_user_messages(self):
         """测试interrupt方法批量处理多条排队用户消息。"""
@@ -60,20 +60,20 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         ]
 
         # 设置is_empty先返回False三次，然后返回True
-        self.group_chat.is_empty.side_effect = [False, False, False, True]
+        self.registry.is_empty.side_effect = [False, False, False, True]
 
         # 设置receive依次返回三条消息
-        self.group_chat.receive.side_effect = user_messages
+        self.registry.receive.side_effect = user_messages
 
         # 设置agent_llm.interrupt的side_effect，模拟实际行为
         async def interrupt_side_effect(agent_message, ui_notice):
             # 模拟实际interrupt方法中对is_empty的多次调用
             call_count = 0
-            while not self.group_chat.is_empty("user_message"):
+            while not self.registry.is_empty("user_message"):
                 call_count += 1
                 if call_count > 10:  # 防止无限循环
                     break
-                msg = await self.group_chat.receive("user_message")
+                msg = await self.registry.receive("user_message")
                 assert isinstance(msg, UserMessage)
                 await self.agent.handle_user_message(msg)
 
@@ -86,12 +86,12 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.agent_llm_mock.interrupt.assert_called_once_with("测试打断", "UI通知")
 
         # 验证is_empty被调用了4次（3次False，1次True），且参数正确
-        self.assertEqual(self.group_chat.is_empty.call_count, 4)
+        self.assertEqual(self.registry.is_empty.call_count, 4)
         expected_calls = [call("user_message")] * 4
-        self.group_chat.is_empty.assert_has_calls(expected_calls)
+        self.registry.is_empty.assert_has_calls(expected_calls)
 
         # 验证receive被调用了3次
-        self.assertEqual(self.group_chat.receive.call_count, 3)
+        self.assertEqual(self.registry.receive.call_count, 3)
 
         # 验证handle_user_message被调用了3次，每次处理一条用户消息
         self.assertEqual(self.agent.handle_user_message.call_count, 3)
@@ -102,12 +102,12 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
     async def test_interrupt_with_no_user_messages(self):
         """测试interrupt方法在没有排队用户消息时的行为。"""
         # 模拟队列为空
-        self.group_chat.is_empty.return_value = True
+        self.registry.is_empty.return_value = True
 
         # 设置agent_llm.interrupt的side_effect，模拟实际行为
         async def interrupt_side_effect(agent_message, ui_notice):
             # 模拟实际interrupt方法中对is_empty的调用
-            self.group_chat.is_empty("user_message")
+            self.registry.is_empty("user_message")
             # 不处理排队消息，因为is_empty返回True
 
         self.agent_llm_mock.interrupt.side_effect = interrupt_side_effect
@@ -118,10 +118,10 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.agent_llm_mock.interrupt.assert_called_once_with("测试打断", "UI通知")
 
         # 验证is_empty被调用一次，参数正确
-        self.group_chat.is_empty.assert_called_once_with("user_message")
+        self.registry.is_empty.assert_called_once_with("user_message")
 
         # 验证receive没有被调用
-        self.group_chat.receive.assert_not_called()
+        self.registry.receive.assert_not_called()
 
         # 验证handle_user_message没有被调用
         self.agent.handle_user_message.assert_not_called()
@@ -134,8 +134,8 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         )
 
         # 模拟队列中有消息
-        self.group_chat.is_empty.side_effect = [False, True]
-        self.group_chat.receive.return_value = UserMessage(message="测试消息")
+        self.registry.is_empty.side_effect = [False, True]
+        self.registry.receive.return_value = UserMessage(message="测试消息")
 
         # 设置agent_llm.interrupt的side_effect
         async def interrupt_side_effect(agent_message, ui_notice):
@@ -149,11 +149,11 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
                 )
             interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
-            await self.group_chat.send_if_exists("ui_log", interrupt_msg)
+            await self.registry.send_if_exists("ui_log", interrupt_msg)
             self.agent.state = "working"
             # 处理排队消息
-            while not self.group_chat.is_empty("user_message"):
-                msg = await self.group_chat.receive("user_message")
+            while not self.registry.is_empty("user_message"):
+                msg = await self.registry.receive("user_message")
                 assert isinstance(msg, UserMessage)
                 await self.agent.handle_user_message(msg)
 
@@ -168,8 +168,8 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
 
         # 验证批量处理逻辑仍然执行
-        self.group_chat.is_empty.assert_any_call("user_message")
-        self.group_chat.receive.assert_called_once()
+        self.registry.is_empty.assert_any_call("user_message")
+        self.registry.receive.assert_called_once()
         self.agent.handle_user_message.assert_called_once()
 
 

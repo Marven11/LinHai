@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 
 from linhai.plugin import FileReadWriteConflictPlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolResultSuccess
 
@@ -14,8 +14,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境"""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = FileReadWriteConflictPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = FileReadWriteConflictPlugin(self.registry)
         # 创建临时文件用于测试
         self.temp_dir = tempfile.mkdtemp()
         self.test_file = Path(self.temp_dir) / "test.txt"
@@ -33,8 +33,8 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_read_then_write_same_file_should_warn(self):
         """测试读取文件后写入同一文件应触发警告"""
-        # 模拟group_chat.get_member_typechecked返回machine_control
-        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
+        # 模拟registry.get_member_typechecked返回machine_control
+        self.registry.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表（模拟新消息开始）
         await self.plugin.before_message_generation()
@@ -94,12 +94,12 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("警告", result.message)
         self.assertIn(str(self.test_file), result.message)
         # 应该调用了send_if_exists发送UI日志
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_read_then_write_different_file_should_not_warn(self):
         """测试读取文件后写入不同文件不应触发警告"""
-        # 模拟group_chat.get_member_typechecked返回machine_control
-        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
+        # 模拟registry.get_member_typechecked返回machine_control
+        self.registry.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
         await self.plugin.before_message_generation()
@@ -134,7 +134,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
         """测试非master_host机器不应检查冲突"""
         # 模拟machine_control返回非master_host
         self.mock_machine_control.target_machine = "other_host"
-        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
+        self.registry.get_member_typechecked.return_value = self.mock_machine_control
 
         # 清空读取文件列表
         await self.plugin.before_message_generation()
@@ -214,7 +214,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_various_read_write_tools(self):
         """测试各种读取和写入工具"""
-        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
+        self.registry.get_member_typechecked.return_value = self.mock_machine_control
         await self.plugin.before_message_generation()
         # 测试read_file_with_sed
         read_tool_call = ToolCallMessage(
@@ -295,7 +295,7 @@ class TestFileReadWriteConflictPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_failed_tool_call_should_be_ignored(self):
         """测试失败的工具调用应被忽略"""
-        self.group_chat.get_member_typechecked.return_value = self.mock_machine_control
+        self.registry.get_member_typechecked.return_value = self.mock_machine_control
         await self.plugin.before_message_generation()
         # 模拟失败的读取文件工具调用
         read_tool_call = ToolCallMessage(

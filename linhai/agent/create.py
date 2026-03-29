@@ -6,7 +6,7 @@ import argparse
 from datetime import datetime
 
 from linhai.config import Config
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
 
@@ -36,7 +36,7 @@ class AgentBuildContext(TypedDict):
     这是一个TypedDict，用于类型安全的参数传递。
     """
 
-    group_chat: GroupChat
+    registry: Registry
     config: Config
     config_basedir: Optional[Path]
     llm_name: str
@@ -47,7 +47,7 @@ class AgentBuildContext(TypedDict):
 
 
 def create_agent_build_context(
-    group_chat: GroupChat,
+    registry: Registry,
     config: Config,
     config_basedir: Optional[Path],
     cli_args: argparse.Namespace,
@@ -80,7 +80,7 @@ def create_agent_build_context(
     )
 
     return {
-        "group_chat": group_chat,
+        "registry": registry,
         "config": config,
         "config_basedir": config_basedir,
         "llm_name": resolved_llm_name,
@@ -105,7 +105,7 @@ async def create_agent_from_config(
 
     from linhai.multimodal import MultimodalToolsetManager
 
-    multimodal_manager = MultimodalToolsetManager(context["group_chat"])
+    multimodal_manager = MultimodalToolsetManager(context["registry"])
     llm_manager = await _create_llm_instances(context)
     tool_manager, machine_control = await _create_tool_manager(
         context, multimodal_manager.toolset
@@ -117,16 +117,16 @@ async def create_agent_from_config(
     else:
         enabled_toolsets = list(toolsets_config)
 
-    register_conversation_folder(context["group_chat"])
+    register_conversation_folder(context["registry"])
 
     agent = Agent(
         llm_manager=llm_manager,
         compress_threshold=context["config"].agent.compress_threshold,
-        group_chat=context["group_chat"],
+        registry=context["registry"],
         pinned_messages=await _create_pinned_messages(context),
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
     )
-    orchestration = context["group_chat"].get_member_typechecked(
+    orchestration = context["registry"].get_member_typechecked(
         "agent_context_orchestration", AgentContextOrchestration
     )
     if "context_cleaning" in enabled_toolsets:
@@ -141,23 +141,23 @@ async def create_agent_from_config(
     if context["config"].agent.enable_directory_change_detection:
         from linhai.plugin import DirectoryChangePlugin
 
-        DirectoryChangePlugin(context["group_chat"]).register(agent.lifecycle)
+        DirectoryChangePlugin(context["registry"]).register(agent.lifecycle)
 
     if context["config"].agent.allowed_commands:
         from linhai.plugin import CommandWhitelistPlugin
 
-        CommandWhitelistPlugin(context["group_chat"], context["config"]).register(
+        CommandWhitelistPlugin(context["registry"], context["config"]).register(
             agent.lifecycle
         )
 
     from linhai.plugin import MachineControlIntroductionPlugin
     from linhai.rss import RssPlugin
 
-    MachineControlIntroductionPlugin(context["group_chat"]).register(agent.lifecycle)
+    MachineControlIntroductionPlugin(context["registry"]).register(agent.lifecycle)
 
     if context["cli_args"].rss:
         RssPlugin(
-            context["group_chat"],
+            context["registry"],
             context["cli_args"].rss,
             30,
         ).register(agent.lifecycle)
@@ -166,7 +166,7 @@ async def create_agent_from_config(
     if telegram_config and context["cli_args"].telegram:
         from linhai.plugin.telegram import TelegramPlugin
 
-        TelegramPlugin(context["group_chat"], telegram_config).register(agent.lifecycle)
+        TelegramPlugin(context["registry"], telegram_config).register(agent.lifecycle)
 
     if context.get("planning", False):
         from linhai.plugin.planning import (
@@ -174,24 +174,24 @@ async def create_agent_from_config(
             UserInputRuntimeMessagePlugin,
         )
 
-        PlanningStatusReminderPlugin(context["group_chat"]).register(agent.lifecycle)
-        UserInputRuntimeMessagePlugin(context["group_chat"]).register(agent.lifecycle)
+        PlanningStatusReminderPlugin(context["registry"]).register(agent.lifecycle)
+        UserInputRuntimeMessagePlugin(context["registry"]).register(agent.lifecycle)
 
     if context["cli_args"].claw:
         from linhai.plugin.claw import ClawPlugin
 
-        ClawPlugin(context["group_chat"], context["cli_args"]).register(agent.lifecycle)
+        ClawPlugin(context["registry"], context["cli_args"]).register(agent.lifecycle)
 
     if not context["cli_args"].disable_waiting_marker:
         from linhai.plugin.message_checkers import WaitingUserPlugin
 
-        WaitingUserPlugin(context["group_chat"]).register(agent.lifecycle)
+        WaitingUserPlugin(context["registry"]).register(agent.lifecycle)
 
     if context["config"].agent.max_toolcall_for_llm:
         from linhai.plugin import PromptFastAgentPlugin
 
         plugin = PromptFastAgentPlugin(
-            context["group_chat"], context["config"].agent.max_toolcall_for_llm
+            context["registry"], context["config"].agent.max_toolcall_for_llm
         )
         plugin.register(agent.lifecycle)
 
@@ -216,7 +216,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
     llms = []
     for llm_config in context["config"].llm:
         llm = OpenAi(
-            group_chat=context["group_chat"],
+            registry=context["registry"],
             api_key=llm_config.api_key,
             base_url=llm_config.base_url,
             model=llm_config.model,
@@ -238,7 +238,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
             llm_fallback_map[llm_config.name] = None
 
     llm_manager = LlmManager(
-        group_chat=context["group_chat"],
+        registry=context["registry"],
         llms=llms,
         default_llm_name=context["llm_name"],
         llm_fallback_map=llm_fallback_map,
@@ -254,7 +254,7 @@ def _build_toolsets_from_config(
     from linhai.tool.general import generate_sleep_toolset
 
     toolsets_config = context["config"].tools.toolsets
-    group_chat = context["group_chat"]
+    registry = context["registry"]
 
     if toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
         enabled_toolsets = list(AVAILABLE_TOOLSETS)
@@ -268,12 +268,12 @@ def _build_toolsets_from_config(
         toolsets.append(utils_tools)
 
     if "sleep" in enabled_toolsets:
-        toolsets.append(generate_sleep_toolset(group_chat))
+        toolsets.append(generate_sleep_toolset(registry))
 
     if "machine_control" in enabled_toolsets:
         from linhai.machine_control import MachineControl
 
-        machine_control = MachineControl(group_chat)
+        machine_control = MachineControl(registry)
         toolsets.append(register_machine_control_tools(machine_control))
 
     if "multimodal" in enabled_toolsets:
@@ -287,7 +287,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
 
     toolsets, machine_control = _build_toolsets_from_config(context, multimodal_toolset)
 
-    mcp_connector = MCPConnector(context["group_chat"])
+    mcp_connector = MCPConnector(context["registry"])
     if context["config"].agent.mcp and context["config_basedir"] is not None:
         from contextlib import AsyncExitStack
 
@@ -301,7 +301,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
             )
 
     tool_manager = ToolManager(
-        group_chat=context["group_chat"],
+        registry=context["registry"],
         toolsets=toolsets,
         config=context["config"].tools,
         mcp_connector=mcp_connector,
@@ -309,7 +309,7 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
 
     if context["config"].tools.secret.config_path:
         initialize_secret_system(
-            group_chat=context["group_chat"],
+            registry=context["registry"],
             secret_config_path=context["config"].tools.secret.config_path,
             config_basedir=context["config_basedir"],
         )
@@ -328,7 +328,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     """
     from linhai.agent.base import RuntimeMessage
 
-    pinned_messages: list[Message] = [SystemMessage(context["group_chat"])]
+    pinned_messages: list[Message] = [SystemMessage(context["registry"])]
     startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pinned_messages.append(RuntimeMessage(f"Agent启动时间: {startup_time}"))
 
@@ -350,7 +350,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         from .base import ChecklistMessage
 
         pinned_messages.append(ChecklistMessage(context["checklist_path"]))
-        await context["group_chat"].send_if_exists(
+        await context["registry"].send_if_exists(
             "ui_log",
             CliRuntimeNotice(
                 level="INFO",
@@ -426,30 +426,30 @@ def _register_default_plugins(lifecycle):
     from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
     plugins = [
-        WrongEndPlugin(lifecycle.group_chat),
-        SlowStartPlugin(lifecycle.group_chat),
-        WeirdTokenPlugin(lifecycle.group_chat),
-        EndThinkPlugin(lifecycle.group_chat),
-        OnlyReasoningPlugin(lifecycle.group_chat),
-        ToolCallInReasoningPlugin(lifecycle.group_chat),
-        SingleToolCallReminderPlugin(lifecycle.group_chat),
-        JsonCodeBlockPlugin(lifecycle.group_chat),
-        RuntimeImitationPlugin(lifecycle.group_chat),
-        UnnecessarySedReadPlugin(lifecycle.group_chat),
-        UnnecessaryRunCommandPlugin(lifecycle.group_chat),
-        RedStateToolBlockPlugin(lifecycle.group_chat),
-        NotificationMessagePlugin(lifecycle.group_chat),
-        FileReadWriteConflictPlugin(lifecycle.group_chat),
-        KimiK25ToolCallPlugin(lifecycle.group_chat),
-        MinimaxToolCallPlugin(lifecycle.group_chat),
-        GlmToolCallPlugin(lifecycle.group_chat),
-        GlmInsultMaskPlugin(lifecycle.group_chat),
-        MissingWithSecretWarningPlugin(lifecycle.group_chat),
-        AfkPlugin(lifecycle.group_chat),
-        VolcanoDeepseekFixPlugin(lifecycle.group_chat),
-        ProcessArgvCheckerPlugin(lifecycle.group_chat),
-        SudoStdioCheckerPlugin(lifecycle.group_chat),
-        TodolistCheckerPlugin(lifecycle.group_chat),
+        WrongEndPlugin(lifecycle.registry),
+        SlowStartPlugin(lifecycle.registry),
+        WeirdTokenPlugin(lifecycle.registry),
+        EndThinkPlugin(lifecycle.registry),
+        OnlyReasoningPlugin(lifecycle.registry),
+        ToolCallInReasoningPlugin(lifecycle.registry),
+        SingleToolCallReminderPlugin(lifecycle.registry),
+        JsonCodeBlockPlugin(lifecycle.registry),
+        RuntimeImitationPlugin(lifecycle.registry),
+        UnnecessarySedReadPlugin(lifecycle.registry),
+        UnnecessaryRunCommandPlugin(lifecycle.registry),
+        RedStateToolBlockPlugin(lifecycle.registry),
+        NotificationMessagePlugin(lifecycle.registry),
+        FileReadWriteConflictPlugin(lifecycle.registry),
+        KimiK25ToolCallPlugin(lifecycle.registry),
+        MinimaxToolCallPlugin(lifecycle.registry),
+        GlmToolCallPlugin(lifecycle.registry),
+        GlmInsultMaskPlugin(lifecycle.registry),
+        MissingWithSecretWarningPlugin(lifecycle.registry),
+        AfkPlugin(lifecycle.registry),
+        VolcanoDeepseekFixPlugin(lifecycle.registry),
+        ProcessArgvCheckerPlugin(lifecycle.registry),
+        SudoStdioCheckerPlugin(lifecycle.registry),
+        TodolistCheckerPlugin(lifecycle.registry),
     ]
 
     for plugin in plugins:

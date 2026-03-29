@@ -30,23 +30,23 @@ class TestRssPlugin(unittest.TestCase):
     """RssPlugin单元测试。"""
 
     def setUp(self):
-        self.group_chat = Mock()
-        self.group_chat.get_member_typechecked = Mock()
+        self.registry = Mock()
+        self.registry.get_member_typechecked = Mock()
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.group_chat.get_member_typechecked.return_value = self.agent
+        self.registry.get_member_typechecked.return_value = self.agent
 
     def test_plugin_initialization(self):
         """测试插件初始化。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
         self.assertEqual(plugin.rss_urls, ["http://example.com/feed"])
         self.assertEqual(plugin.poll_interval, 300)
         self.assertEqual(len(plugin.processed_guids), 0)
 
     def test_plugin_with_empty_urls(self):
         """测试空RSS URL列表。"""
-        plugin = RssPlugin(self.group_chat, [], 300)
+        plugin = RssPlugin(self.registry, [], 300)
         self.assertEqual(plugin.rss_urls, [])
 
     def test_plugin_from_cli_args(self):
@@ -56,7 +56,7 @@ class TestRssPlugin(unittest.TestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.rss = ["http://example.com/feed", "http://example.com/feed2"]
         rss_urls = getattr(mock_cli_args, "rss", [])
-        plugin = RssPlugin(self.group_chat, rss_urls, 300)
+        plugin = RssPlugin(self.registry, rss_urls, 300)
         self.assertEqual(
             plugin.rss_urls, ["http://example.com/feed", "http://example.com/feed2"]
         )
@@ -64,7 +64,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_fetch_and_process_rss_success(self):
         """测试成功获取和处理RSS。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
@@ -85,7 +85,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_fetch_and_process_rss_duplicate(self):
         """测试RSS条目去重。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
         plugin.processed_guids.add("guid-1")
 
         mock_response = Mock()
@@ -107,7 +107,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_fetch_and_process_rss_network_error(self):
         """测试网络错误处理。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         with patch("linhai.rss.httpx.AsyncClient") as mock_client:
             mock_async_client = AsyncMock()
@@ -122,7 +122,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_fetch_and_process_rss_parse_error(self):
         """测试RSS解析错误处理。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         mock_response = Mock()
         mock_response.text = "<invalid>xml</content>"
@@ -141,7 +141,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_before_agent_loop_with_urls(self):
         """测试Agent循环开始时启动轮询。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 1)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 1)
         mock_agent = Mock()
         mock_lifecycle = Mock()
 
@@ -155,7 +155,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_before_agent_loop_without_urls(self):
         """测试无RSS URL时不启动轮询。"""
-        plugin = RssPlugin(self.group_chat, [], 300)
+        plugin = RssPlugin(self.registry, [], 300)
         mock_agent = Mock()
 
         with patch("asyncio.create_task") as mock_create_task:
@@ -165,7 +165,7 @@ class TestRssPlugin(unittest.TestCase):
 
     def test_register(self):
         """测试注册到Lifecycle。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
         mock_lifecycle = Mock()
 
         plugin.register(mock_lifecycle)
@@ -176,7 +176,7 @@ class TestRssPlugin(unittest.TestCase):
 
     async def test_poll_rss_sources(self):
         """测试轮询RSS源的功能。"""
-        plugin = RssPlugin(self.group_chat, ["http://example.com/feed"], 300)
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML

@@ -15,7 +15,7 @@ from io import BytesIO
 from linhai.llm import Message
 from linhai.agent.lifecycle import Lifecycle
 from linhai.type_hints import LanguageModelMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class ImageMessage(Message):
@@ -26,7 +26,7 @@ class ImageMessage(Message):
         image_bytes: bytes,
         mime_type: str,
         filename: str | None,
-        group_chat: GroupChat,
+        registry: Registry,
         width: int,
         height: int,
         quality: Literal["compressed", "raw"] = "raw",
@@ -37,7 +37,7 @@ class ImageMessage(Message):
             image_bytes: 图片的二进制数据
             mime_type: 图片的MIME类型
             filename: 原始文件名（可选，None表示未知）
-            group_chat: GroupChat实例（用于动态获取LLM支持状态）
+            registry: Registry实例（用于动态获取LLM支持状态）
             width: 图片宽度
             height: 图片高度
             quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
@@ -45,7 +45,7 @@ class ImageMessage(Message):
         self.image_bytes = image_bytes
         self.mime_type = mime_type
         self.filename = filename
-        self.group_chat = group_chat
+        self.registry = registry
         self.quality = quality
         self.width = width
         self.height = height
@@ -69,7 +69,7 @@ class ImageMessage(Message):
         否则保存到临时文件并返回文本消息。
 
         严格按照_current_llm_supports_image的方法获取LLM支持状态：
-        - 通过self.group_chat获取agent
+        - 通过self.registry获取agent
         - 调用agent.get_current_model()获取当前llm
         - 调用llm.support_image()获取支持状态
 
@@ -78,7 +78,7 @@ class ImageMessage(Message):
         """
         from linhai.agent.main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         if llm.support_image():
             return {
@@ -123,7 +123,7 @@ class ImageMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: GroupChat) -> "ImageMessage":
+    def from_json(cls, json_str: str, registry: Registry) -> "ImageMessage":
         """从JSON字符串创建ImageMessage实例。"""
         data = json.loads(json_str)
         image_bytes = base64.b64decode(data["image_bytes"])
@@ -131,7 +131,7 @@ class ImageMessage(Message):
             image_bytes=image_bytes,
             mime_type=data.get("mime_type", "image/png"),
             filename=data.get("filename"),
-            group_chat=group_chat,
+            registry=registry,
             quality=data.get("quality", "raw"),
             width=data.get("width", 0),
             height=data.get("height", 0),
@@ -139,13 +139,13 @@ class ImageMessage(Message):
 
 
 def load_image(
-    image_filepath: str, group_chat: GroupChat, quality: Literal["compressed", "raw"]
+    image_filepath: str, registry: Registry, quality: Literal["compressed", "raw"]
 ) -> ImageMessage:
     """加载图片文件并返回ImageMessage。
 
     Args:
         image_filepath: 图片文件路径
-        group_chat: GroupChat实例（用于动态获取LLM支持状态）
+        registry: Registry实例（用于动态获取LLM支持状态）
         quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
 
     Returns:
@@ -208,7 +208,7 @@ def load_image(
         image_bytes=image_bytes,
         mime_type=mime_type,
         filename=path.name,
-        group_chat=group_chat,
+        registry=registry,
         quality=quality,
         width=width,
         height=height,
@@ -227,10 +227,10 @@ class MultimodalToolsetManager:
     - 根据LLM配置动态添加/移除工具，而不是整个ToolSet
     """
 
-    def __init__(self, group_chat: GroupChat):
+    def __init__(self, registry: Registry):
         """初始化多模态工具集管理器。"""
-        self.group_chat = group_chat
-        self.group_chat.register_member("multimodal_toolset_manager", self)
+        self.registry = registry
+        self.registry.register_member("multimodal_toolset_manager", self)
 
         self.toolset = ToolSet()
 
@@ -264,9 +264,9 @@ class MultimodalToolsetManager:
             def _load_image(
                 image_filepath, quality: Literal["compressed", "raw"] = "raw"
             ) -> ImageMessage:
-                return load_image(image_filepath, self.group_chat, quality)
+                return load_image(image_filepath, self.registry, quality)
 
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage("当前LLM支持多模态，已添加load_image工具")
             )
@@ -277,7 +277,7 @@ class MultimodalToolsetManager:
 
             del self.toolset.tools["load_image"]
 
-            agent = self.group_chat.get_member_typechecked("agent", Agent)
+            agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(
                 RuntimeMessage("当前LLM不支持多模态，已移除load_image工具")
             )
@@ -286,6 +286,6 @@ class MultimodalToolsetManager:
         """检查当前LLM是否支持图像。"""
         from linhai.agent.main import Agent
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         return llm.support_image()

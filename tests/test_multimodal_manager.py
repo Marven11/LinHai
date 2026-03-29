@@ -13,7 +13,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_group_chat = MagicMock()
+        self.mock_registry = MagicMock()
         self.mock_tool_manager = MagicMock()
         self.mock_tool_manager._toolsets = []
 
@@ -46,28 +46,28 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             return MagicMock()
 
-        self.mock_group_chat.get_member_typechecked = mock_get_member_typechecked
-        self.mock_group_chat.register_member = MagicMock()
+        self.mock_registry.get_member_typechecked = mock_get_member_typechecked
+        self.mock_registry.register_member = MagicMock()
 
     def test_init_creates_toolset(self):
         """Test that __init__ creates a ToolSet."""
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         self.assertIsInstance(manager.toolset, ToolSet)
-        self.mock_group_chat.register_member.assert_called_once_with(
+        self.mock_registry.register_member.assert_called_once_with(
             "multimodal_toolset_manager", manager
         )
 
     def test_toolset_is_public_attribute(self):
         """Test that toolset is a public attribute."""
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         self.assertTrue(hasattr(manager, "toolset"))
         self.assertIsInstance(manager.toolset, ToolSet)
 
     async def test_adds_load_image_when_llm_supports_image(self):
         """Test that load_image is added when LLM supports image."""
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         # Initially no tool
         self.assertFalse(manager.toolset.has_tool("load_image"))
@@ -84,7 +84,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_name.return_value = "deepseek"
         self.mock_llm.support_image.return_value = False
 
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         # Manually add the tool first
         manager.toolset.register_tool(
@@ -108,7 +108,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_adds_runtime_message_when_switching_to_image_supporting_llm(self):
         """Test that RuntimeMessage is added when switching to image-supporting LLM."""
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         # First call: LLM does not support image
         self.mock_llm.support_image.return_value = False
@@ -133,7 +133,7 @@ class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):
         self,
     ):
         """Test that RuntimeMessage is added when switching to non-image-supporting LLM."""
-        manager = MultimodalToolsetManager(self.mock_group_chat)
+        manager = MultimodalToolsetManager(self.mock_registry)
 
         # First call: LLM supports image
         self.mock_llm.support_image.return_value = True

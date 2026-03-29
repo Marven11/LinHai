@@ -3,7 +3,7 @@ import asyncio
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent.message import AgentMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolCallResultMessage
@@ -17,7 +17,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
     """大消息标记和清理功能的单元测试。"""
 
     def setUp(self):
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
         # 注册必要的mock组件
         from linhai.agent.lifecycle import Lifecycle
@@ -26,16 +26,16 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         mock_lifecycle.trigger_before_add_new_message = AsyncMock(
             side_effect=lambda msg: msg
         )
-        self.group_chat.register_member("lifecycle", mock_lifecycle)
+        self.registry.register_member("lifecycle", mock_lifecycle)
 
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        self.group_chat.register_member("tool_manager", mock_tool_manager)
+        self.registry.register_member("tool_manager", mock_tool_manager)
 
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.get_large_message_reprs = Mock(return_value=[])
         mock_token_manager.cumulative_token_usage = None
-        self.group_chat.register_member("token_manager", mock_token_manager)
+        self.registry.register_member("token_manager", mock_token_manager)
 
         # 注册llm_manager（mock），用于is_explicit_cache_enabled
         from linhai.llm_manager import LlmManager
@@ -44,20 +44,20 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         mock_llm = Mock()
         mock_llm.get_explicit_cache_info = Mock(return_value=None)
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        self.group_chat.register_member("llm_manager", mock_llm_manager)
+        self.registry.register_member("llm_manager", mock_llm_manager)
 
         from pathlib import Path
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
         conversation_folder = Path(temp_dir)
-        self.group_chat.register_member("conversation_folder", conversation_folder)
+        self.registry.register_member("conversation_folder", conversation_folder)
 
         self.pinned_messages = [
-            SystemMessage(group_chat=self.group_chat),
+            SystemMessage(registry=self.registry),
             UserMessage(message="Initial message"),
         ]
-        self.message_processor = AgentMessage(self.group_chat, self.pinned_messages)
+        self.message_processor = AgentMessage(self.registry, self.pinned_messages)
         # 在初始化orchestration前模拟tiktoken.get_encoding
         import tiktoken
         from unittest.mock import patch
@@ -69,7 +69,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         self.mock_get_encoding.return_value = mock_encoder
 
         self.orchestration = AgentContextOrchestration(
-            self.group_chat, self.message_processor
+            self.registry, self.message_processor
         )
 
     def tearDown(self):

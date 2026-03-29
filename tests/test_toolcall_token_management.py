@@ -17,8 +17,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.mock_agent = Mock()
-        self.mock_agent.group_chat = Mock()
-        self.mock_agent.group_chat.send_if_exists = AsyncMock()
+        self.mock_agent.registry = Mock()
+        self.mock_agent.registry.send_if_exists = AsyncMock()
         self.mock_agent.context = {
             "llms": [Mock()],
             "llm_names": ["test_llm"],
@@ -47,7 +47,7 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.group_chat.get_member_typechecked.return_value = (
+        self.mock_agent.registry.get_member_typechecked.return_value = (
             self.mock_tool_manager
         )
 
@@ -81,10 +81,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -115,10 +115,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -198,10 +198,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         """测试5个工具，每个输出都小于限制长度的1/5时正常返回。"""
         total_tokens = 0
 
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -234,10 +234,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -262,10 +262,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -298,10 +298,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 
@@ -382,10 +382,10 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             return_value=replacement_message
         )
 
-        # 修改mock group_chat以返回conversation_folder
+        # 修改mock registry以返回conversation_folder
         from pathlib import Path
 
-        self.mock_agent.group_chat.get_member_typechecked = Mock(
+        self.mock_agent.registry.get_member_typechecked = Mock(
             return_value=Path(self.temp_dir)
         )
 

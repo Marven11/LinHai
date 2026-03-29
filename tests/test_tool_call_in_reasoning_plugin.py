@@ -12,22 +12,22 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock()
-        self.plugin = ToolCallInReasoningPlugin(self.group_chat)
+        self.registry = MagicMock()
+        self.plugin = ToolCallInReasoningPlugin(self.registry)
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.agent
         )
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
     def test_plugin_initialization(self):
         """测试插件初始化。"""
         self.assertIsInstance(self.plugin, ToolCallInReasoningPlugin)
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
 
     async def test_after_message_generation_with_tool_call_in_reasoning_and_no_actual_tool_calls(
         self,
@@ -62,8 +62,8 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("list_files", call_args[0][0].message)
         self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
 
-        self.group_chat.send_if_exists.assert_called_once()
-        ui_call_args = self.group_chat.send_if_exists.call_args
+        self.registry.send_if_exists.assert_called_once()
+        ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
         self.assertIn("read_file", ui_call_args[0][1].content)
@@ -100,7 +100,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result)
         answer.get_reasoning_message.assert_called_once()
         self.agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_reasoning_content(self):
         """测试没有思考内容时不做任何操作。"""
@@ -110,7 +110,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         parsed_answer._answer = answer
 
         with patch.object(
-            self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
+            self.plugin.registry, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
                 parsed_answer, "当前实际输出内容", []
@@ -118,7 +118,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
-            self.group_chat.send_if_exists.assert_not_called()
+            self.registry.send_if_exists.assert_not_called()
             self.agent.message_processor.add_new_message.assert_not_called()
 
     async def test_after_message_generation_with_reasoning_but_no_tool_calls(self):
@@ -130,7 +130,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         parsed_answer._answer = answer
 
         with patch.object(
-            self.plugin.group_chat, "get_member_typechecked", return_value=self.agent
+            self.plugin.registry, "get_member_typechecked", return_value=self.agent
         ):
             result = await self.plugin.after_message_generation(
                 parsed_answer, "当前实际输出内容", []
@@ -138,7 +138,7 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(result)
             answer.get_reasoning_message.assert_called_once()
-            self.group_chat.send_if_exists.assert_not_called()
+            self.registry.send_if_exists.assert_not_called()
             self.agent.message_processor.add_new_message.assert_not_called()
 
     async def test_after_message_generation_with_duplicate_tool_names(self):
@@ -168,8 +168,8 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[0][0].message.count("read_file"), 1)
         self.assertIn("警告：你在推理内容中调用了工具", call_args[0][0].message)
 
-        self.group_chat.send_if_exists.assert_called_once()
-        ui_call_args = self.group_chat.send_if_exists.call_args
+        self.registry.send_if_exists.assert_called_once()
+        ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
         self.assertIn("read_file", ui_call_args[0][1].content)

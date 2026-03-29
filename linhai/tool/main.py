@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Awaitable, Optional
 
 from linhai.config import ToolConfig, MCPConfig
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Message, ToolCallMessage
 from linhai.tool.base import (
     ToolSet,
@@ -29,7 +29,7 @@ class ToolManager:
 
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         toolsets: list[ToolSet],
         config: ToolConfig,
         mcp_connector: MCPConnector,
@@ -40,8 +40,8 @@ class ToolManager:
             config: 可选配置对象
             mcp_connector: 已初始化的MCPConnector实例
         """
-        group_chat.register_member("tool_manager", self)
-        self.group_chat = group_chat
+        registry.register_member("tool_manager", self)
+        self.registry = registry
         self.config = config
         self.mcp_connector = mcp_connector
 
@@ -97,11 +97,11 @@ class ToolManager:
         if tool_call.on_machine is not None:
             from linhai.machine_control.main import MachineControl
 
-            machine_control = self.group_chat.get_member_typechecked(
+            machine_control = self.registry.get_member_typechecked(
                 "machine_control", MachineControl
             )
             if tool_call.on_machine not in machine_control.machines:
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR", content=f"机器未找到: {tool_call.on_machine}"
@@ -124,7 +124,7 @@ class ToolManager:
             if toolset.has_tool(tool_call.function_name):
                 target_toolset = toolset
         if target_toolset is None:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR", content=f"未找到工具: {tool_call.function_name}"
@@ -150,7 +150,7 @@ class ToolManager:
                 result = await asyncio.to_thread(func, **kwargs)
 
             if isinstance(result, ToolResultFailed):
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="ERROR",
@@ -218,7 +218,7 @@ class ToolManager:
 
             from linhai.agent.lifecycle import Lifecycle
 
-            lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
             processed_result = await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
@@ -229,7 +229,7 @@ class ToolManager:
                 is_tool_failed_duplicated_error=False,
             )
 
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="ERROR",
@@ -249,14 +249,14 @@ class ToolManager:
 
         from linhai.agent.lifecycle import Lifecycle
 
-        lifecycle = self.group_chat.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.register_before_message_generation(self.update_tools_definition)
 
     async def update_tools_definition(self):
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""
         from linhai.llm import SystemMessage
 
-        system_message = self.group_chat.get_member_typechecked(
+        system_message = self.registry.get_member_typechecked(
             "system_message", SystemMessage
         )
 

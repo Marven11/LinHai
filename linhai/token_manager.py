@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import Optional, TYPE_CHECKING
 from linhai.llm import AnswerTokenUsage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.type_hints import CumulativeTokenUsage
 
 if TYPE_CHECKING:
@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 class TokenManager:
     """Manager for token usage tracking and display."""
 
-    def __init__(self, group_chat: GroupChat):
-        group_chat.register_member("token_manager", self)
-        group_chat.register_queue("token_usage")
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        registry.register_member("token_manager", self)
+        registry.register_queue("token_usage")
+        self.registry = registry
         self._current_token_usage: Optional[AnswerTokenUsage] = None
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
         self.explicit_cache_tokens: int = 0
@@ -35,7 +35,7 @@ class TokenManager:
     async def watch_token_usage_queue(self) -> None:
         """监听token_usage队列并处理token使用信息"""
         while True:
-            output = await self.group_chat.receive("token_usage")
+            output = await self.registry.receive("token_usage")
             if isinstance(output, AnswerTokenUsage):
                 self._current_token_usage = output
             else:

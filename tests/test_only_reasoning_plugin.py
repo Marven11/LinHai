@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 import asyncio
 
 from linhai.plugin import OnlyReasoningPlugin
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Answer, OpenAi
 from linhai.agent.base import RuntimeMessage
 from linhai.utils import CliRuntimeNotice
@@ -11,8 +11,8 @@ from linhai.utils import CliRuntimeNotice
 
 class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = OnlyReasoningPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = OnlyReasoningPlugin(self.registry)
 
         self.mock_agent = MagicMock()
         self.mock_agent.message_processor = MagicMock()
@@ -20,16 +20,16 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.update_notification_message = MagicMock()
         self.mock_agent.get_current_model = MagicMock()
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: self.mock_agent
         )
 
-        self.group_chat.send_if_exists = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
     def test_plugin_initialization(self):
         """测试插件初始化。"""
         self.assertIsInstance(self.plugin, OnlyReasoningPlugin)
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
 
     async def test_after_message_generation_with_only_reasoning_deepseek(self):
         """测试deepseek模型只有推理内容没有实际输出时发出警告。"""
@@ -48,7 +48,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.update_notification_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
         call_args = (
             self.mock_agent.message_processor.update_notification_message.call_args
@@ -57,7 +57,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(warning_message, RuntimeMessage)
         self.assertIn("检测到在思考后没有输出任何内容", warning_message.message)
 
-        ui_call_args = self.group_chat.send_if_exists.call_args
+        ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
         self.assertIsInstance(ui_call_args[0][1], CliRuntimeNotice)
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
@@ -82,7 +82,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_without_reasoning_deepseek(self):
         """测试deepseek模型没有推理内容时不发出警告。"""
@@ -101,7 +101,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_with_content_only_deepseek(self):
         """测试deepseek模型只有实际输出没有推理内容时不发出警告。"""
@@ -122,7 +122,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_with_whitespace_content_deepseek(self):
         """测试deepseek模型推理内容有但实际输出只有空白字符时发出警告。"""
@@ -143,7 +143,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.update_notification_message.assert_called_once()
-        self.group_chat.send_if_exists.assert_called_once()
+        self.registry.send_if_exists.assert_called_once()
 
     async def test_after_message_generation_non_deepseek_model(self):
         """测试非deepseek模型时不检查只思考不输出。"""
@@ -162,7 +162,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_non_openai_model(self):
         """测试非OpenAi模型时不检查只思考不输出。"""
@@ -180,7 +180,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_not_called()  # 因为模型检查失败，提前返回
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     async def test_after_message_generation_deepseek_with_tool_calls(self):
         """测试deepseek模型有工具调用时不发出警告（因为full_response不为空）。"""
@@ -204,7 +204,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.get_current_model.assert_called_once()
         answer.get_reasoning_message.assert_called_once()
         self.mock_agent.message_processor.add_new_message.assert_not_called()
-        self.group_chat.send_if_exists.assert_not_called()
+        self.registry.send_if_exists.assert_not_called()
 
     def test_register(self):
         """测试插件注册。"""

@@ -8,7 +8,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.llm import OpenAi
 
 
-class MockGroupChat:
+class MockRegistry:
     def __init__(self, agent=None):
         self.members = {}
         if agent:
@@ -51,8 +51,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
         pass
 
     def test_plugin_initialization(self):
-        group_chat = MockGroupChat()
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry()
+        plugin = GlmInsultMaskPlugin(registry)
         self.assertEqual(
             plugin.INSULTS,
             {
@@ -65,8 +65,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
 
     def test_after_toolcall_non_glm_model(self):
         agent = MockAgent("deepseek")
-        group_chat = MockGroupChat(agent)
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry(agent)
+        plugin = GlmInsultMaskPlugin(registry)
 
         message = MockMessage("这是一个傻逼测试")
 
@@ -89,8 +89,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
 
     def test_after_toolcall_glm_model_no_insult(self):
         agent = MockAgent("glm")
-        group_chat = MockGroupChat(agent)
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry(agent)
+        plugin = GlmInsultMaskPlugin(registry)
 
         message = MockMessage("这是一个正常测试")
 
@@ -113,8 +113,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
 
     def test_after_toolcall_glm_model_with_insult(self):
         agent = MockAgent("glm")
-        group_chat = MockGroupChat(agent)
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry(agent)
+        plugin = GlmInsultMaskPlugin(registry)
 
         message = MockMessage("这是一个傻逼测试")
 
@@ -143,8 +143,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
 
     def test_after_toolcall_glm_model_multiple_insults(self):
         agent = MockAgent("glm")
-        group_chat = MockGroupChat(agent)
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry(agent)
+        plugin = GlmInsultMaskPlugin(registry)
 
         message = MockMessage("傻逼和垃圾都是弱智")
 
@@ -177,8 +177,8 @@ class TestGlmInsultMaskPlugin(unittest.TestCase):
 
     def test_after_toolcall_glm_model_partial_match(self):
         agent = MockAgent("glm")
-        group_chat = MockGroupChat(agent)
-        plugin = GlmInsultMaskPlugin(group_chat)
+        registry = MockRegistry(agent)
+        plugin = GlmInsultMaskPlugin(registry)
 
         message = MockMessage("脑残粉不是脑残")
 

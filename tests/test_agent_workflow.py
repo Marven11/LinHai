@@ -15,7 +15,7 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 r = reprlib.Repr()
 r.maxstring = 200
@@ -43,11 +43,11 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             "current_llm_index": 0,
             "compress_threshold": 800,
         }
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
@@ -56,7 +56,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
@@ -64,10 +64,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=[],
         )
-        orchestration = self.group_chat.get_member_typechecked(
+        orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
         self.tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
@@ -158,9 +158,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_context_forget_range_step1_functionality(self):
         """Test the context_forget_range_step1 function with mock data."""
         mock_agent = MagicMock()
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_range_clean_manager = MagicMock()
-        mock_agent.group_chat = mock_group_chat
+        mock_agent.registry = mock_registry
 
         # 设置get_members根据参数返回不同的对象
         def get_member_typechecked_side_effect(name, cls=None):
@@ -173,14 +173,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         async def mock_send_if_exists(queue_name, message):
             pass
 
-        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        mock_registry.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         mock_messages = [
             RuntimeMessage("System message"),
@@ -210,7 +210,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
         # 验证结果，应为ToolResultSuccess
         self.assertIsInstance(result, ToolResultSuccess)
@@ -221,7 +221,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_workflow_with_invalid_range(self):
         """Test context_forget_range_step1 with invalid range parameters."""
         mock_agent = MagicMock()
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_range_clean_manager = MagicMock()
 
         def get_member_typechecked_side_effect(name, cls=None):
@@ -234,14 +234,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         async def mock_send_if_exists(queue_name, message):
             pass
 
-        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        mock_registry.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         mock_agent.message_processor.messages = [
             RuntimeMessage(f"Message {i}") for i in range(20)
@@ -258,14 +258,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
         self.assertIsInstance(result, ToolResultSuccess)
 
     async def test_workflow_with_small_range(self):
         """Test context_forget_range_step1 with range smaller than minimum."""
         mock_agent = MagicMock()
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_range_clean_manager = MagicMock()
 
         def get_member_typechecked_side_effect(name, cls=None):
@@ -278,14 +278,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         async def mock_send_if_exists(queue_name, message):
             pass
 
-        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        mock_registry.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         mock_agent.message_processor.messages = [
             RuntimeMessage(f"Message {i}") for i in range(15)
@@ -302,7 +302,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
         self.assertIsInstance(result, ToolResultSuccess)
 
@@ -350,15 +350,15 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_context_forget_range_step2_user_message_protection(self):
         """Test that user messages are protected during history compression in step2."""
         mock_agent = MagicMock()
-        mock_group_chat = MagicMock()
-        mock_agent.group_chat = mock_group_chat
-        mock_group_chat.get_member_typechecked.return_value = Path(tempfile.mkdtemp())
+        mock_registry = MagicMock()
+        mock_agent.registry = mock_registry
+        mock_registry.get_member_typechecked.return_value = Path(tempfile.mkdtemp())
 
         async def mock_send_if_exists(queue_name, message):
             _ = queue_name
             _ = message
 
-        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        mock_registry.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         mock_messages = [
             RuntimeMessage("System message"),
@@ -421,7 +421,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         mock_info.min_safe_id = 1
         mock_range_clean_manager.get_clean_info.return_value = mock_info
 
-        # 设置group_chat.get_member_typechecked返回相应的mock对象
+        # 设置registry.get_member_typechecked返回相应的mock对象
         def get_member_typechecked_side_effect(name, cls=None):
             if name == "agent":
                 return mock_agent
@@ -432,14 +432,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
             result = await context_forget_range_step2(
-                mock_group_chat,
+                mock_registry,
                 range_clean_id="test-range-clean-id",
                 start_id=2,
                 end_id=15,
@@ -474,12 +474,12 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         mock_agent = MagicMock()
 
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
 
         from pathlib import Path
 
         mock_messages = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test_global_prompt.md")),
             RuntimeMessage("User message 1"),
             RuntimeMessage("User message 2"),
@@ -494,7 +494,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("压缩范围至少需要10条消息", error_msg)
 
         mock_messages_extended = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test_global_prompt.md")),
         ] + [RuntimeMessage(f"User message {i}") for i in range(20)]
         mock_agent.message_processor.messages = mock_messages_extended
@@ -525,9 +525,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("压缩范围至少需要10条消息", error_msg)
 
         mock_messages_all_system = [
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
             GlobalPrompt(filepath=Path("/tmp/test_global_prompt.md")),
-            SystemMessage(group_chat=mock_group_chat),
+            SystemMessage(registry=mock_registry),
         ]
         mock_agent.message_processor.messages = mock_messages_all_system
 
@@ -540,7 +540,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_context_forget_range_step1_sends_ui_log_message(self):
         """Test that context_forget_range_step1 sends UI log message with current message count."""
         mock_agent = MagicMock()
-        mock_group_chat = MagicMock()
+        mock_registry = MagicMock()
         mock_range_clean_manager = MagicMock()
 
         def get_member_typechecked_side_effect(name, cls=None):
@@ -553,14 +553,14 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        mock_group_chat.get_member_typechecked.side_effect = (
+        mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         async def mock_send_if_exists(queue_name, message):
             pass
 
-        mock_group_chat.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
+        mock_registry.send_if_exists = AsyncMock(side_effect=mock_send_if_exists)
 
         mock_messages = [
             RuntimeMessage("System message"),
@@ -581,10 +581,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         with patch("linhai.agent.conversation.save_cleaned_messages") as mock_save:
             mock_save.return_value = Path("/tmp/test.json")
-            result = await context_forget_range_step1(mock_group_chat)
+            result = await context_forget_range_step1(mock_registry)
 
-        mock_group_chat.send_if_exists.assert_called_once()
-        call_args = mock_group_chat.send_if_exists.call_args
+        mock_registry.send_if_exists.assert_called_once()
+        call_args = mock_registry.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
         ui_message = call_args[0][1]
         from linhai.utils import CliRuntimeNotice

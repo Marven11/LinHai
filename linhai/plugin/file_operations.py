@@ -15,7 +15,7 @@ from linhai.agent.base import (
     PathPrompt,
 )
 from linhai.tool.base import ToolCallResultMessage
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.machine_control import MachineControl
 from linhai.utils import CliRuntimeNotice
 from linhai.llm import Message
@@ -34,8 +34,8 @@ if TYPE_CHECKING:
 class Plugin(ABC):
     """Plugin基类，定义统一的Plugin接口。"""
 
-    def __init__(self, group_chat: GroupChat):
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        self.registry = registry
 
     @abstractmethod
     def register(self, lifecycle: "Lifecycle") -> None:
@@ -45,8 +45,8 @@ class Plugin(ABC):
 class DuplicateFileReadPlugin(Plugin):
     """拦截重复文件读取以优化代理行为。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.counter = 0
 
     def register(self, lifecycle: "Lifecycle"):
@@ -64,7 +64,7 @@ class DuplicateFileReadPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用结果回调，检查是否重复读取文件。"""
-        machine_control = self.group_chat.get_member_typechecked(
+        machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
         if machine_control.target_machine != "master_host":
@@ -80,7 +80,7 @@ class DuplicateFileReadPlugin(Plugin):
         if not filepath:
             return None
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return None
 
@@ -105,7 +105,7 @@ class DuplicateFileReadPlugin(Plugin):
             if message == latest_message:
                 self.counter += 1
                 if self.counter == 1:
-                    await self.group_chat.send_if_exists(
+                    await self.registry.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
@@ -123,7 +123,7 @@ class DuplicateFileReadPlugin(Plugin):
                     )
                     return None
                 else:
-                    await self.group_chat.send_if_exists(
+                    await self.registry.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
@@ -149,8 +149,8 @@ class DuplicateFileReadPlugin(Plugin):
 class UnnecessarySedReadPlugin(Plugin):
     """拦截不必要的sed调用插件。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.warning_count = 0
         self.last_reset_time = time.time()
 
@@ -169,7 +169,7 @@ class UnnecessarySedReadPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的小块读取。"""
-        machine_control = self.group_chat.get_member_typechecked(
+        machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
         if machine_control.target_machine != "master_host":
@@ -189,7 +189,7 @@ class UnnecessarySedReadPlugin(Plugin):
         if not filepath:
             return None
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         is_small = await is_small_file(filepath)
         is_already = await is_already_read(agent, filepath)
@@ -200,7 +200,7 @@ class UnnecessarySedReadPlugin(Plugin):
         self.warning_count += 1
 
         if self.warning_count >= 3:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -214,7 +214,7 @@ class UnnecessarySedReadPlugin(Plugin):
                 "如果需要查看修改过的文件，使用read_file重新读取！"
             )
         else:
-            await self.group_chat.send_if_exists(
+            await self.registry.send_if_exists(
                 "ui_log",
                 CliRuntimeNotice(
                     level="WARNING",
@@ -229,8 +229,8 @@ class UnnecessarySedReadPlugin(Plugin):
 class UnnecessaryRunCommandPlugin(Plugin):
     """拦截不必要的process_create调用插件。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.warning_count = 0
         self.last_reset_time = time.time()
 
@@ -249,7 +249,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """工具调用后回调，检查是否不必要的process_create用于读取已读文件。"""
-        machine_control = self.group_chat.get_member_typechecked(
+        machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl
         )
         if machine_control.target_machine != "master_host":
@@ -270,7 +270,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
         if cmd not in READ_FILE_COMMANDS:
             return None
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         file_args = []
         for arg in command_list[1:]:
@@ -284,7 +284,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
             if await is_already_read(agent, filepath):
                 self.warning_count += 1
                 if self.warning_count >= 3:
-                    await self.group_chat.send_if_exists(
+                    await self.registry.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
@@ -298,7 +298,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
                         "如果需要执行命令，确保命令必要且文件未重复读取。"
                     )
                 else:
-                    await self.group_chat.send_if_exists(
+                    await self.registry.send_if_exists(
                         "ui_log",
                         CliRuntimeNotice(
                             level="WARNING",
@@ -316,8 +316,8 @@ class UnnecessaryRunCommandPlugin(Plugin):
 class FileReadWriteConflictPlugin(Plugin):
     """检查读写文件冲突的插件。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.read_files: set[str] = set()
 
     async def before_message_generation(self):
@@ -336,7 +336,7 @@ class FileReadWriteConflictPlugin(Plugin):
     ) -> Union[None, bool, RuntimeMessage]:
         """工具结果回调，检查读写文件冲突。"""
         try:
-            machine_control = self.group_chat.get_member_typechecked(
+            machine_control = self.registry.get_member_typechecked(
                 "machine_control", MachineControl
             )
             if machine_control.target_machine != "master_host":
@@ -378,7 +378,7 @@ class FileReadWriteConflictPlugin(Plugin):
                 return None
 
             if abs_path in self.read_files:
-                await self.group_chat.send_if_exists(
+                await self.registry.send_if_exists(
                     "ui_log",
                     CliRuntimeNotice(
                         level="WARNING",
@@ -403,13 +403,13 @@ class FileReadWriteConflictPlugin(Plugin):
 class DirectoryChangePlugin(Plugin):
     """目录更改检测插件，检测当前目录更改并检查特定文件。"""
 
-    def __init__(self, group_chat):
-        super().__init__(group_chat)
+    def __init__(self, registry):
+        super().__init__(registry)
         self.last_directory = None
 
     async def before_message_generation(self):
         """在消息生成前检查目录是否更改。"""
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
 
         context = getattr(agent, "context", {})
         if not context.get("enable_directory_change_detection", False):

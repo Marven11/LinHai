@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.machine_control import MachineControl
 from linhai.machine_control.master_host.master_host import MasterHostControl
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
 from linhai.machine_control.main import MachineControlPlugin
@@ -19,8 +19,8 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """测试前准备"""
-        self.group_chat = Mock(spec=GroupChat)
-        self.machine_control = MachineControl(self.group_chat)
+        self.registry = Mock(spec=Registry)
+        self.machine_control = MachineControl(self.registry)
         self.tool_manager = Mock(spec=ToolManager)
 
     def test_initialization(self):
@@ -79,7 +79,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
     async def test_switch_machine_success(self):
         """测试成功切换机器"""
         mock_send = AsyncMock()
-        self.machine_control.group_chat.send = mock_send
+        self.machine_control.registry.send = mock_send
 
         result = await self.machine_control.switch_machine("master_host")
         self.assertIn("已切换到机器", result.content)
@@ -299,14 +299,14 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """测试前准备"""
-        self.group_chat = Mock(spec=GroupChat)
+        self.registry = Mock(spec=Registry)
         self.machine_control = Mock(spec=MachineControl)
         self.machine_control.target_machine = "master_host"
-        self.plugin = MachineControlPlugin(self.group_chat, self.machine_control)
+        self.plugin = MachineControlPlugin(self.registry, self.machine_control)
 
     def test_initialization(self):
         """测试插件初始化"""
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
         self.assertEqual(self.plugin.machine_control, self.machine_control)
         self.assertEqual(self.plugin.consecutive_same_on_machine_count, 0)
         self.assertIsNone(self.plugin.last_on_machine)
@@ -322,7 +322,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             on_machine="other_machine",
         )
         mock_send = AsyncMock()
-        self.group_chat.send_if_exists = mock_send
+        self.registry.send_if_exists = mock_send
 
         result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
@@ -356,7 +356,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             on_machine="master_host",
         )
         mock_send = AsyncMock()
-        self.group_chat.send_if_exists = mock_send
+        self.registry.send_if_exists = mock_send
 
         result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
@@ -384,7 +384,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             on_machine=None,
         )
         mock_send = AsyncMock()
-        self.group_chat.send_if_exists = mock_send
+        self.registry.send_if_exists = mock_send
 
         result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
@@ -415,7 +415,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
             on_machine="master_host",
         )
         mock_send = AsyncMock()
-        self.group_chat.send_if_exists = mock_send
+        self.registry.send_if_exists = mock_send
 
         result = await self.plugin.after_toolcall(
             tool_name=tool_call.function_name,
@@ -565,12 +565,12 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         from unittest.mock import Mock
-        from linhai.group_chat import GroupChat
+        from linhai.registry import Registry
 
-        self.group_chat = Mock(spec=GroupChat)
+        self.registry = Mock(spec=Registry)
         from linhai.machine_control import MachineControl
 
-        self.machine_control = MachineControl(self.group_chat)
+        self.machine_control = MachineControl(self.registry)
 
     async def test_transfer_file_same_machine(self):
         """测试同一台机器传输应失败"""

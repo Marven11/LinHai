@@ -24,13 +24,13 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from .base import ToolArgInfo, ToolSet, ToolResultSuccess, ToolResultFailed
-from ..group_chat import GroupChat
+from ..registry import Registry
 
 
 class MCPConnector:
-    def __init__(self, group_chat: GroupChat):
-        group_chat.register_member("mcp_connector", self)
-        self.group_chat = group_chat
+    def __init__(self, registry: Registry):
+        registry.register_member("mcp_connector", self)
+        self.registry = registry
         self.sessions: dict[str, tuple[ClientSession, AsyncExitStack, ToolSet]] = {}
         self.connector_toolset = self.init_connector_toolset()
 

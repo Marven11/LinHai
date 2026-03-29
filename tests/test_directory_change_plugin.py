@@ -8,7 +8,7 @@ from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 from linhai.plugin import DirectoryChangePlugin
 from linhai.agent.base import PathPrompt, GlobalPrompt
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 
 
 class TestDirectoryChangePlugin(unittest.TestCase):
@@ -16,8 +16,8 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
-        self.plugin = DirectoryChangePlugin(self.group_chat)
+        self.registry = Registry()
+        self.plugin = DirectoryChangePlugin(self.registry)
 
         self.temp_dir = tempfile.mkdtemp()
         self.conversation_temp_dir = tempfile.mkdtemp()  # 专门为conversation_folder创建
@@ -45,17 +45,17 @@ class TestDirectoryChangePlugin(unittest.TestCase):
                 return Path(self.conversation_temp_dir)  # 直接返回已创建的路径
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_member_typechecked = Mock(
+        self.registry.get_member_typechecked = Mock(
             side_effect=get_member_typechecked_side_effect
         )
 
         init_messages = [
             SystemMessage(
-                group_chat=self.group_chat,
+                registry=self.registry,
             ),
             UserMessage(message="Initial message"),
         ]
-        self.mock_agent.message_processor = AgentMessage(self.group_chat, init_messages)
+        self.mock_agent.message_processor = AgentMessage(self.registry, init_messages)
         # 创建消息列表并模拟异步方法
         self.messages = init_messages
 
@@ -71,7 +71,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
         )
 
         self.get_member_typechecked_patch = patch.object(
-            self.group_chat, "get_member_typechecked", return_value=self.mock_agent
+            self.registry, "get_member_typechecked", return_value=self.mock_agent
         )
         self.mock_get_members = self.get_member_typechecked_patch.start()
 

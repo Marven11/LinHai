@@ -12,12 +12,12 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """测试前准备"""
-        self.group_chat = Mock()
-        self.plugin = ProcessArgvCheckerPlugin(self.group_chat)
+        self.registry = Mock()
+        self.plugin = ProcessArgvCheckerPlugin(self.registry)
 
     def test_initialization(self):
         """测试插件初始化"""
-        self.assertEqual(self.plugin.group_chat, self.group_chat)
+        self.assertEqual(self.plugin.registry, self.registry)
         self.assertTrue(hasattr(ProcessArgvCheckerPlugin, "BASH_OPERATORS"))
         self.assertIsInstance(ProcessArgvCheckerPlugin.BASH_OPERATORS, list)
         self.assertGreater(len(ProcessArgvCheckerPlugin.BASH_OPERATORS), 0)
@@ -59,10 +59,10 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
-        # 模拟group_chat.get_member_typechecked返回mock_agent
+        # 模拟registry.get_member_typechecked返回mock_agent
         from linhai.agent import Agent
 
-        self.plugin.group_chat.get_member_typechecked = Mock(return_value=mock_agent)
+        self.plugin.registry.get_member_typechecked = Mock(return_value=mock_agent)
 
         result = await self.plugin.before_tool_call(
             tool_name="process_create",
@@ -91,10 +91,10 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
                 mock_agent.message_processor = Mock()
                 mock_agent.message_processor.add_new_message = AsyncMock()
 
-                # 模拟group_chat.get_member_typechecked返回mock_agent
+                # 模拟registry.get_member_typechecked返回mock_agent
                 from linhai.agent import Agent
 
-                self.plugin.group_chat.get_member_typechecked = Mock(
+                self.plugin.registry.get_member_typechecked = Mock(
                     return_value=mock_agent
                 )
 
@@ -122,10 +122,10 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
-        # 模拟group_chat.get_member_typechecked返回mock_agent
+        # 模拟registry.get_member_typechecked返回mock_agent
         from linhai.agent import Agent
 
-        self.plugin.group_chat.get_member_typechecked = Mock(return_value=mock_agent)
+        self.plugin.registry.get_member_typechecked = Mock(return_value=mock_agent)
 
         result = await self.plugin.before_tool_call(
             tool_name="process_create",

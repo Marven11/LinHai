@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.create import create_agent_from_config
 from linhai.agent import Agent
 from linhai.config import load_config
@@ -21,7 +21,7 @@ class TestCreateAgentMCP(unittest.TestCase):
     def setUp(self):
         """设置测试fixtures"""
         self.temp_dir = tempfile.mkdtemp()
-        self.group_chat = GroupChat()
+        self.registry = Registry()
         import argparse
 
         self.cli_args = argparse.Namespace()
@@ -32,7 +32,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.cli_args.claw = False
         self.cli_args.disable_waiting_marker = False
         self.cli_args.rss = []
-        self.group_chat.register_member("cli_args", self.cli_args)
+        self.registry.register_member("cli_args", self.cli_args)
 
         project_root = os.path.dirname(os.path.abspath(__file__))
         source_file = os.path.join(project_root, "real_mcp_server.py")
@@ -77,7 +77,7 @@ server_script_path = "{server_script_path}"
         from pathlib import Path
 
         context = {
-            "group_chat": self.group_chat,
+            "registry": self.registry,
             "config": config,
             "config_basedir": Path("."),
             "llm_name": None,
@@ -111,7 +111,7 @@ compress_threshold = 80000
         from pathlib import Path
 
         context = {
-            "group_chat": self.group_chat,
+            "registry": self.registry,
             "config": config,
             "config_basedir": Path("."),
             "llm_name": None,
@@ -123,7 +123,7 @@ compress_threshold = 80000
 
         self.assertIsInstance(result, Agent)
 
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         self.assertIsNotNone(agent)
 
 

@@ -7,7 +7,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from linhai.plugin.message_checkers import WaitingUserPlugin
 from linhai.plugin.afk_plugin import AfkPlugin
 from linhai.agent.main import Agent
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import CLIConfig
 from linhai.agent.base import RuntimeMessage
 
@@ -16,18 +16,18 @@ class TestAfkParam(unittest.TestCase):
     """测试--afk命令行参数功能"""
 
     def setUp(self):
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
     def test_waiting_user_plugin_afk_true(self):
         """测试afk=True时WaitingUserPlugin直接返回，不执行检查"""
         cli_args = argparse.Namespace(afk=True)
-        self.group_chat.register_member("cli_args", cli_args)
+        self.registry.register_member("cli_args", cli_args)
 
         mock_agent = Mock()
         mock_agent.current_disable_waiting_user_warning = False
         mock_agent.message_processor = Mock()
 
-        plugin = WaitingUserPlugin(self.group_chat)
+        plugin = WaitingUserPlugin(self.registry)
 
         def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
@@ -38,7 +38,7 @@ class TestAfkParam(unittest.TestCase):
                 raise RuntimeError(f"Unexpected name: {name}")
 
         with patch.object(
-            self.group_chat,
+            self.registry,
             "get_member_typechecked",
             side_effect=get_member_typechecked_side_effect,
         ):
@@ -53,7 +53,7 @@ class TestAfkParam(unittest.TestCase):
     def test_waiting_user_plugin_afk_false(self):
         """测试afk=False时WaitingUserPlugin正常执行检查"""
         cli_args = argparse.Namespace(afk=False)
-        self.group_chat.register_member("cli_args", cli_args)
+        self.registry.register_member("cli_args", cli_args)
 
         mock_agent = Mock()
         mock_agent.current_disable_waiting_user_warning = False
@@ -61,7 +61,7 @@ class TestAfkParam(unittest.TestCase):
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
-        plugin = WaitingUserPlugin(self.group_chat)
+        plugin = WaitingUserPlugin(self.registry)
 
         def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
@@ -72,7 +72,7 @@ class TestAfkParam(unittest.TestCase):
                 raise RuntimeError(f"Unexpected name: {name}")
 
         with patch.object(
-            self.group_chat,
+            self.registry,
             "get_member_typechecked",
             side_effect=get_member_typechecked_side_effect,
         ):
@@ -136,14 +136,14 @@ class TestAfkParam(unittest.TestCase):
     def test_afk_plugin_afk_true(self):
         """测试afk=True时AfkPlugin正确设置working状态并发送消息"""
         cli_args = argparse.Namespace(afk=True)
-        self.group_chat.register_member("cli_args", cli_args)
+        self.registry.register_member("cli_args", cli_args)
 
         mock_agent = Mock()
         mock_agent.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
-        plugin = AfkPlugin(self.group_chat)
+        plugin = AfkPlugin(self.registry)
 
         def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
@@ -154,7 +154,7 @@ class TestAfkParam(unittest.TestCase):
                 raise RuntimeError(f"Unexpected name: {name}")
 
         with patch.object(
-            self.group_chat,
+            self.registry,
             "get_member_typechecked",
             side_effect=get_member_typechecked_side_effect,
         ):
@@ -170,14 +170,14 @@ class TestAfkParam(unittest.TestCase):
     def test_afk_plugin_afk_false(self):
         """测试afk=False时AfkPlugin不执行任何操作"""
         cli_args = argparse.Namespace(afk=False)
-        self.group_chat.register_member("cli_args", cli_args)
+        self.registry.register_member("cli_args", cli_args)
 
         mock_agent = Mock()
         mock_agent.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
-        plugin = AfkPlugin(self.group_chat)
+        plugin = AfkPlugin(self.registry)
 
         def get_member_typechecked_side_effect(name, t):
             if name == "cli_args":
@@ -188,7 +188,7 @@ class TestAfkParam(unittest.TestCase):
                 raise RuntimeError(f"Unexpected name: {name}")
 
         with patch.object(
-            self.group_chat,
+            self.registry,
             "get_member_typechecked",
             side_effect=get_member_typechecked_side_effect,
         ):
@@ -201,7 +201,7 @@ class TestAfkParam(unittest.TestCase):
 
     def test_afk_plugin_register(self):
         """测试AfkPlugin注册正确的事件"""
-        plugin = AfkPlugin(self.group_chat)
+        plugin = AfkPlugin(self.registry)
         mock_lifecycle = Mock()
 
         plugin.register(mock_lifecycle)

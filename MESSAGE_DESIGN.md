@@ -28,7 +28,7 @@ class Message(Protocol):
 
     @classmethod
     def from_json(
-        cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"
+        cls, json_str: str, registry: "linhai.registry.Registry"
     ) -> "Message":
         """从JSON字符串创建消息实例。"""
         raise NotImplementedError()

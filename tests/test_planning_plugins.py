@@ -10,7 +10,7 @@ from linhai.plugin.planning import (
 )
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import UserMessage, Answer
 
@@ -20,8 +20,8 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = PlanningStatusReminderPlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = PlanningStatusReminderPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
         self.status_file = self.temp_dir / "STATUS.md"
@@ -59,7 +59,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
             else:
                 return None
 
-        self.group_chat.get_member_typechecked.side_effect = side_effect
+        self.registry.get_member_typechecked.side_effect = side_effect
 
     def tearDown(self):
         """清理测试环境。"""
@@ -337,8 +337,8 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境。"""
-        self.group_chat = MagicMock(spec=GroupChat)
-        self.plugin = UserInputRuntimeMessagePlugin(self.group_chat)
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = UserInputRuntimeMessagePlugin(self.registry)
 
         self.mock_agent = AsyncMock()
         self.mock_agent.planning = True
@@ -346,7 +346,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.message_processor.add_new_message = AsyncMock()
         self.mock_agent.message_processor.get_messages = MagicMock(return_value=[])
 
-        self.group_chat.get_member_typechecked.return_value = self.mock_agent
+        self.registry.get_member_typechecked.return_value = self.mock_agent
 
     async def test_plugin_inherits_from_base_class(self):
         """测试插件继承自Plugin基类。"""
@@ -398,7 +398,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_action_when_agent_not_found(self):
         """测试找不到agent时不执行任何操作。"""
-        self.group_chat.get_member_typechecked.return_value = None
+        self.registry.get_member_typechecked.return_value = None
 
         await self.plugin.after_message_generation(
             parsed_answer=MagicMock(),

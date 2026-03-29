@@ -13,7 +13,7 @@ from linhai.agent.create import (
     _create_pinned_messages,
 )
 from linhai.agent.create import create_agent_build_context
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import AgentConfig
 
 
@@ -22,7 +22,7 @@ class TestCreateAgent(unittest.TestCase):
 
     def setUp(self):
         """测试前置设置"""
-        self.group_chat = Mock(spec=GroupChat)
+        self.registry = Mock(spec=Registry)
         self.config_path = Path("test_config.toml")
 
     @patch("linhai.agent.create._create_llm_instances")
@@ -104,7 +104,7 @@ class TestCreateAgent(unittest.TestCase):
         )
 
         context = create_agent_build_context(
-            group_chat=self.group_chat,
+            registry=self.registry,
             config=mock_config,
             config_basedir=Path("."),
             llm_name="test_llm",
@@ -212,7 +212,7 @@ class TestCreateAgent(unittest.TestCase):
             )
 
             context = create_agent_build_context(
-                group_chat=self.group_chat,
+                registry=self.registry,
                 config=mock_config,
                 config_basedir=Path("."),
                 llm_name="llm1",
@@ -246,10 +246,10 @@ class TestCreateLLMInstances(unittest.TestCase):
         from linhai.llm import OpenAi
         from linhai.llm_manager import LlmManager
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         context = {
             "config": Mock(llm=llm_configs),
-            "group_chat": mock_group_chat,
+            "registry": mock_registry,
             "llm_name": "test-llm",
             "config_basedir": Path("."),
             "checklist_path": None,
@@ -269,7 +269,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "linhai.agent.create._create_llm_instances", new_callable=AsyncMock
         ) as mock_create_llm:
             llm_manager = LlmManager(
-                group_chat=mock_group_chat,
+                registry=mock_registry,
                 llms=[mock_llm],
                 default_llm_name="test-llm",
                 llm_fallback_map={"test-llm": None},
@@ -328,14 +328,14 @@ class TestCreateToolManager(unittest.TestCase):
 
     def test_create_tool_manager(self):
         """测试创建ToolManager"""
-        group_chat = Mock()
+        registry = Mock()
         config = Mock()
         config.secret.config_path = ""
         config.agent = Mock(mcp=[])
         config.tools = config
 
         context = {
-            "group_chat": group_chat,
+            "registry": registry,
             "config": config,
             "config_basedir": Path("."),
             "llm_name": "test-llm",
@@ -401,7 +401,7 @@ class TestCreatePinnedMessages(unittest.TestCase):
         self, mock_path, mock_system_message, mock_global_prompt
     ):
         """测试创建初始化消息"""
-        group_chat = Mock()
+        registry = Mock()
         prompt_file_path = Path("prompt.md")
 
         mock_path.return_value.exists.return_value = True
@@ -416,7 +416,7 @@ class TestCreatePinnedMessages(unittest.TestCase):
         mock_cli_args.file = None
 
         context = {
-            "group_chat": group_chat,
+            "registry": registry,
             "config": Mock(user_prompt=Mock(file_path=str(prompt_file_path))),
             "config_basedir": Path("."),
             "llm_name": "test-llm",

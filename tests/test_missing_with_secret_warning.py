@@ -7,12 +7,12 @@ from linhai.utils import CliRuntimeNotice
 
 class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.group_chat = Mock()
-        self.group_chat.send_if_exists = AsyncMock(return_value=None)
-        self.plugin = MissingWithSecretWarningPlugin(self.group_chat)
+        self.registry = Mock()
+        self.registry.send_if_exists = AsyncMock(return_value=None)
+        self.plugin = MissingWithSecretWarningPlugin(self.registry)
         self.agent = Mock()
         self.agent.message_processor = AsyncMock()
-        self.group_chat.get_member_typechecked = Mock(
+        self.registry.get_member_typechecked = Mock(
             side_effect=lambda name, t: self.agent
         )
 

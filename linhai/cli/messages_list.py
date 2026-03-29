@@ -8,7 +8,7 @@ from textual.widgets import Static
 from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import CLIConfig
 from linhai.parsed_message import ParsedAnswer
 from linhai.utils import CliRuntimeNotice
@@ -29,7 +29,7 @@ class MessagesList(VerticalScroll):
 
     def __init__(
         self,
-        group_chat: GroupChat,
+        registry: Registry,
         cli_config: CLIConfig,
         theme: str,
         lifecycle: Lifecycle,
@@ -38,7 +38,7 @@ class MessagesList(VerticalScroll):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.group_chat = group_chat
+        self.registry = registry
         self.cli_config = cli_config
         self.theme = theme
         self.get_refresh_interval = get_refresh_interval
@@ -48,9 +48,9 @@ class MessagesList(VerticalScroll):
         self.current_message_generation_widget: Optional[MessageGenerationWidget] = None
         self.is_user_scroll_to_end = True
 
-        self.group_chat.register_queue("parsed_agent_answer")
-        self.group_chat.register_queue("ui_log")
-        group_chat.register_member("messages_list", self)
+        self.registry.register_queue("parsed_agent_answer")
+        self.registry.register_queue("ui_log")
+        registry.register_member("messages_list", self)
         lifecycle.register_after_message_generation(self.after_message_generation)
 
     async def start_listening(self):
@@ -70,7 +70,7 @@ class MessagesList(VerticalScroll):
                     theme=self.theme,
                 )
             )
-            await self.group_chat.send("user_message", user_msg)
+            await self.registry.send("user_message", user_msg)
 
             widget = UserMessageWidget(
                 user_msg.message, sender_name="user", theme=self.theme
@@ -88,7 +88,7 @@ class MessagesList(VerticalScroll):
                 theme=self.theme,
             )
         )
-        await self.group_chat.send("user_message", user_msg)
+        await self.registry.send("user_message", user_msg)
 
         widget = UserMessageWidget(
             user_msg.message, sender_name="user", theme=self.theme
@@ -100,7 +100,7 @@ class MessagesList(VerticalScroll):
 
     @work(exclusive=False)
     async def _handle_single_parsed_answer(self, parsed_answer: ParsedAnswer) -> None:
-        agent = self.group_chat.get_member_typechecked("agent", Agent)
+        agent = self.registry.get_member_typechecked("agent", Agent)
         llm_name, _llm = agent.get_current_llm_info()
 
         generation_widget = MessageGenerationWidget()
@@ -126,7 +126,7 @@ class MessagesList(VerticalScroll):
     @work(exclusive=False)
     async def watch_parsed_agent_answer_queue(self) -> None:
         while True:
-            output = await self.group_chat.receive("parsed_agent_answer")
+            output = await self.registry.receive("parsed_agent_answer")
             if isinstance(output, ParsedAnswer):
                 self._handle_single_parsed_answer(output)
             else:
@@ -137,7 +137,7 @@ class MessagesList(VerticalScroll):
     @work(exclusive=False)
     async def watch_ui_log_queue(self) -> None:
         while True:
-            output = await self.group_chat.receive("ui_log")
+            output = await self.registry.receive("ui_log")
 
             if isinstance(output, CliRuntimeNotice):
                 widget = RuntimeMessageWidget(

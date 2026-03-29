@@ -5,7 +5,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 from pathlib import Path
 
 from linhai.agent import Agent
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import UserMessage, AssistantMessage, AnswerToken
 from linhai.agent.base import RuntimeMessage
 
@@ -59,7 +59,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """设置测试环境"""
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
         from linhai.tool.main import ToolManager
         from linhai.tool.base import utils_tools
@@ -67,7 +67,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             toolsets=[utils_tools, terminal_toolset],
             config=ToolConfig(),
             mcp_connector=None,
@@ -91,7 +91,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         from linhai.llm_manager import LlmManager
 
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=self.config["llms"],
             default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
@@ -99,14 +99,14 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=self.config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=self.pinned_messages,
         )
 
         # 注册conversation_folder，因为AgentMessage._save_context需要它
         from linhai.agent.conversation import register_conversation_folder
 
-        register_conversation_folder(self.group_chat)
+        register_conversation_folder(self.registry)
 
     async def test_queue_message_handling(self):
         """测试/queue消息的处理逻辑"""

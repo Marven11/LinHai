@@ -77,14 +77,14 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             "compress_threshold": 800,
         }
 
-        self.group_chat = MagicMock()
-        self.group_chat.register_queue = MagicMock()
-        self.group_chat.register_member = MagicMock()
-        self.group_chat.receive = AsyncMock()
-        self.group_chat.send = AsyncMock()
-        self.group_chat.send_if_exists = AsyncMock()
-        self.group_chat.is_empty = MagicMock(return_value=True)
-        self.group_chat.get_member_typechecked = MagicMock()
+        self.registry = MagicMock()
+        self.registry.register_queue = MagicMock()
+        self.registry.register_member = MagicMock()
+        self.registry.receive = AsyncMock()
+        self.registry.send = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
+        self.registry.is_empty = MagicMock(return_value=True)
+        self.registry.get_member_typechecked = MagicMock()
 
         self.tool_manager = MagicMock()
         self.tool_manager.get_tools_info.return_value = []
@@ -138,20 +138,20 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.token_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_member_typechecked.side_effect = (
+        self.registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
 
         pinned_messages = [
             SystemMessage(
-                group_chat=self.group_chat,
+                registry=self.registry,
             )
         ]
 
         from linhai.llm_manager import LlmManager
 
         llm_manager = LlmManager(
-            group_chat=self.group_chat,
+            registry=self.registry,
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"test-llm": None},
@@ -165,11 +165,11 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.agent = Agent(
             llm_manager=llm_manager,
             compress_threshold=config["compress_threshold"],
-            group_chat=self.group_chat,
+            registry=self.registry,
             pinned_messages=pinned_messages,
         )
 
-        plugin = WaitingUserPlugin(self.group_chat)
+        plugin = WaitingUserPlugin(self.registry)
         plugin.register(self.agent.lifecycle)
 
     async def test_marker_not_in_last_line(self):

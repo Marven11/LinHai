@@ -8,7 +8,7 @@ import unittest
 import asyncio
 
 from linhai.agent.create import _create_pinned_messages
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.agent.base import GlobalPrompt
 
 
@@ -26,7 +26,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
         self.original_cwd = os.getcwd()
         os.chdir(self.temp_dir)
 
-        self.group_chat = GroupChat()
+        self.registry = Registry()
 
         from linhai.tool.main import ToolManager
         from unittest.mock import Mock
@@ -34,13 +34,13 @@ class TestGlobalPromptConfig(unittest.TestCase):
 
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
-        self.group_chat.register_member("tool_manager", mock_tool_manager)
+        self.registry.register_member("tool_manager", mock_tool_manager)
 
         self.mock_cli_args = argparse.Namespace()
         self.mock_cli_args.message = None
         self.mock_cli_args.file = None
         self.mock_cli_args.claw = False
-        self.group_chat.register_member("cli_args", self.mock_cli_args)
+        self.registry.register_member("cli_args", self.mock_cli_args)
 
     def tearDown(self):
         """测试后清理"""
@@ -64,7 +64,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
             mock_config.user_prompt = mock_prompt
 
             context = {
-                "group_chat": self.group_chat,
+                "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": prompt_file.parent,
                 "llm_name": None,
@@ -106,7 +106,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
             mock_config.user_prompt = mock_prompt
 
             context = {
-                "group_chat": self.group_chat,
+                "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": Path(".").absolute(),
                 "llm_name": None,
@@ -149,7 +149,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
             mock_config.user_prompt = None
 
             context = {
-                "group_chat": self.group_chat,
+                "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": None,
                 "llm_name": None,
@@ -196,7 +196,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 mock_config.user_prompt = None
 
                 context = {
-                    "group_chat": self.group_chat,
+                    "registry": self.registry,
                     "config": mock_config,
                     "config_basedir": Path(".").absolute(),
                     "llm_name": None,

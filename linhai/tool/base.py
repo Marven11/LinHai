@@ -225,7 +225,7 @@ class ToolCallResultMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
         if data["result"]["type"] == "success":
             result = ToolResultSuccess(content=data["result"]["content"])

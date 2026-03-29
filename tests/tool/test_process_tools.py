@@ -11,7 +11,7 @@ from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.machine_control import MachineControl
 from linhai.tool.main import ToolManager
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import ToolConfig
 
 
@@ -57,9 +57,9 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_machine_control.target_machine = "master_host"
         mock_machine_control_class.return_value = mock_machine_control
 
-        # 创建模拟的GroupChat
-        mock_group_chat = MagicMock()
-        mock_group_chat.get_member_typechecked = MagicMock(
+        # 创建模拟的Registry
+        mock_registry = MagicMock()
+        mock_registry.get_member_typechecked = MagicMock(
             side_effect=lambda name, t: mock_machine_control
         )
 
@@ -78,7 +78,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.main import MachineControlToolSet
         from unittest.mock import Mock
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -103,7 +103,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.main import MachineControlToolSet
         from unittest.mock import Mock
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -133,7 +133,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.main import MachineControlToolSet
         from unittest.mock import Mock
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -163,7 +163,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.main import MachineControlToolSet
         from unittest.mock import Mock
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -187,7 +187,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         from linhai.machine_control.main import MachineControlToolSet
         from unittest.mock import Mock
 
-        mock_group_chat = Mock()
+        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
@@ -215,19 +215,19 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
     async def test_tool_manager_on_machine_switching(self, mock_mcp_connector):
         """测试ToolManager中on_machine参数切换机器"""
         # 创建模拟对象
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         mock_machine_control = MagicMock(spec=MachineControl)
         mock_machine_control.machines = {"master_host": "mock1", "ssh_host": "mock2"}
         mock_machine_control.target_machine = "master_host"
 
-        # 模拟GroupChat返回MachineControl
+        # 模拟Registry返回MachineControl
         def get_member_typechecked(name, cls):
             if name == "machine_control" and cls == MachineControl:
                 return mock_machine_control
             raise KeyError(f"No member: {name}")
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.get_member_typechecked.side_effect = get_member_typechecked
+        mock_registry.send_if_exists = AsyncMock()
 
         # 创建模拟的toolset实例
         mock_toolset_instance = MagicMock()
@@ -238,7 +238,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
         # 创建ToolManager实例
         tool_manager = ToolManager(
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             toolsets=[mock_toolset_instance],
             config=ToolConfig(),
             mcp_config=[],
@@ -261,7 +261,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 由于我们模拟了MachineControl，可以检查target_machine是否被设置
         # 注意：实际实现中，ToolManager会切换机器，然后恢复
         # 这里我们验证send_if_exists被调用来记录切换信息
-        mock_group_chat.send_if_exists.assert_any_call(
+        mock_registry.send_if_exists.assert_any_call(
             "ui_log", unittest.mock.ANY  # CliRuntimeNotice
         )
 
@@ -275,7 +275,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
     async def test_tool_manager_on_machine_invalid(self, mock_mcp_connector):
         """测试ToolManager中on_machine参数指定无效机器"""
         # 创建模拟对象
-        mock_group_chat = MagicMock(spec=GroupChat)
+        mock_registry = MagicMock(spec=Registry)
         mock_machine_control = MagicMock(spec=MachineControl)
         mock_machine_control.machines = {"master_host": "mock1"}  # 只有master_host
         mock_machine_control.target_machine = "master_host"
@@ -285,15 +285,15 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
                 return mock_machine_control
             raise KeyError(f"No member: {name}")
 
-        mock_group_chat.get_member_typechecked.side_effect = get_member_typechecked
-        mock_group_chat.send_if_exists = AsyncMock()
+        mock_registry.get_member_typechecked.side_effect = get_member_typechecked
+        mock_registry.send_if_exists = AsyncMock()
 
         # 创建模拟的toolset实例
         mock_toolset_instance = MagicMock()
 
         # 创建ToolManager实例
         tool_manager = ToolManager(
-            group_chat=mock_group_chat,
+            registry=mock_registry,
             toolsets=[mock_toolset_instance],
             config=ToolConfig(),
             mcp_config=[],
@@ -322,7 +322,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_toolset_instance.get_tool.assert_not_called()
 
         # 验证send_if_exists被调用以记录错误（现在代码中已经添加了日志）
-        mock_group_chat.send_if_exists.assert_any_call(
+        mock_registry.send_if_exists.assert_any_call(
             "ui_log", unittest.mock.ANY  # CliRuntimeNotice
         )
 

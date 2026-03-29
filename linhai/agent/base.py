@@ -69,7 +69,7 @@ class MessagesListSummerizeMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         data = json.loads(json_str)
         instance = cls(
             messages_summerization=data["messages_summerization"],
@@ -101,7 +101,7 @@ class RuntimeMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
 
         data = json.loads(json_str)
         return cls(message=data["message"])
@@ -155,13 +155,13 @@ class GlobalPrompt(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """
         从JSON字符串反序列化全局指导对象。
 
         参数:
             json_str: JSON格式的字符串
-            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
+            registry: Registry实例（未使用，但为接口兼容性保留）
 
         返回:
             GlobalPrompt: 反序列化的全局指导对象
@@ -208,17 +208,17 @@ class ChecklistMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """
         从JSON字符串反序列化检查清单对象。
         参数:
             json_str: JSON格式的字符串
-            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
+            registry: Registry实例（未使用，但为接口兼容性保留）
 
         返回:
             ChecklistMessage: 反序列化的检查清单对象
         """
-        del group_chat  # 未使用，但为接口兼容性保留
+        del registry  # 未使用，但为接口兼容性保留
         data = json.loads(json_str)
         return cls(filepath=Path(data["filepath"]))
 
@@ -261,13 +261,13 @@ class PathPrompt(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """
         从JSON字符串反序列化路径指导对象。
 
         参数:
             json_str: JSON格式的字符串
-            group_chat: GroupChat实例（未使用，但为接口兼容性保留）
+            registry: Registry实例（未使用，但为接口兼容性保留）
 
         返回:
             PathPrompt: 反序列化的路径指导对象
@@ -316,7 +316,7 @@ class FileContentMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
         return cls(
@@ -395,7 +395,7 @@ class DynamicFileContentMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
         return cls(
@@ -431,7 +431,7 @@ class PreviousReasoningMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
         return cls(reasoning_contents=data["reasoning_contents"])
@@ -478,7 +478,7 @@ class SpoofedReasoningMessage(Message):
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, json_str: str, group_chat: "linhai.group_chat.GroupChat"):
+    def from_json(cls, json_str: str, registry: "linhai.registry.Registry"):
         """从JSON字符串创建实例。"""
         data = json.loads(json_str)
         return cls(reasoning_contents=data["reasoning_contents"])

@@ -5,7 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch
 import asyncio
 
 from linhai.cli.app import CLIApp
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.config import CLIConfig
 from linhai.cli.messages_list import MessagesList
 
@@ -15,8 +15,8 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         """设置测试环境。"""
-        self.group_chat = GroupChat()
-        self.group_chat.register_queue("user_message")
+        self.registry = Registry()
+        self.registry.register_queue("user_message")
 
         # 创建模拟agent
         from linhai.agent.main import Agent
@@ -32,12 +32,12 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_orchestration.large_messages = {}
         self.mock_lifecycle = Mock(spec=Lifecycle)
 
-        self.group_chat.register_member("agent", self.mock_agent)
-        self.group_chat.register_member("agent_message", self.mock_agent_message)
-        self.group_chat.register_member(
+        self.registry.register_member("agent", self.mock_agent)
+        self.registry.register_member("agent_message", self.mock_agent_message)
+        self.registry.register_member(
             "agent_context_orchestration", self.mock_orchestration
         )
-        self.group_chat.register_member("lifecycle", self.mock_lifecycle)
+        self.registry.register_member("lifecycle", self.mock_lifecycle)
 
         # 模拟cli_args
         import argparse
@@ -45,7 +45,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
         mock_cli_args.file = None
-        self.group_chat.register_member("cli_args", mock_cli_args)
+        self.registry.register_member("cli_args", mock_cli_args)
 
         # 模拟token_manager
         from linhai.token_manager import TokenManager
@@ -77,7 +77,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.llm_manager = self.mock_llm_manager
 
         # 创建app
-        self.app = CLIApp(group_chat=self.group_chat, cli_config=CLIConfig())
+        self.app = CLIApp(registry=self.registry, cli_config=CLIConfig())
 
         # 模拟messages_list（不验证调用，只确保测试运行）
         self.mock_messages_list = AsyncMock(spec=MessagesList)

@@ -17,7 +17,7 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.get_messages = MagicMock(return_value=[])
         self.agent.message_processor.add_new_message = MagicMock()
-        self.group_chat = MagicMock()
+        self.registry = MagicMock()
 
         self.mock_machine_control = MagicMock()
         self.mock_machine_control.target_machine = "master_host"
@@ -29,11 +29,11 @@ class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):
                 return self.mock_machine_control
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.group_chat.get_member_typechecked = MagicMock(
+        self.registry.get_member_typechecked = MagicMock(
             side_effect=get_member_typechecked_side_effect
         )
-        self.group_chat.send_if_exists = AsyncMock()
-        self.plugin = UnnecessaryRunCommandPlugin(self.group_chat)
+        self.registry.send_if_exists = AsyncMock()
+        self.plugin = UnnecessaryRunCommandPlugin(self.registry)
 
     async def test_register(self):
         """测试插件注册。"""

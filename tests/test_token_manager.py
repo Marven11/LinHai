@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from linhai.token_manager import TokenManager
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import AnswerTokenUsage
 
 
@@ -12,8 +12,8 @@ class TestTokenManager(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.group_chat = GroupChat()
-        self.token_manager = TokenManager(self.group_chat)
+        self.registry = Registry()
+        self.token_manager = TokenManager(self.registry)
 
     def test_get_token_display_pieces_returns_list(self):
         """Test that get_token_display_pieces returns a list of strings."""

@@ -6,15 +6,15 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from linhai.group_chat import GroupChat
+from linhai.registry import Registry
 from linhai.llm import Message
 
 
-def register_conversation_folder(group_chat: GroupChat) -> Path:
-    """注册conversation_folder到group_chat，创建并返回对话目录路径。
+def register_conversation_folder(registry: Registry) -> Path:
+    """注册conversation_folder到registry，创建并返回对话目录路径。
 
     Args:
-        group_chat: GroupChat实例
+        registry: Registry实例
 
     Returns:
         创建的对话目录路径
@@ -30,7 +30,7 @@ def register_conversation_folder(group_chat: GroupChat) -> Path:
     (conversation_dir / "long_toolcall").mkdir(exist_ok=True)
     (conversation_dir / "secret_intercepted").mkdir(exist_ok=True)
 
-    group_chat.register_member("conversation_folder", conversation_dir)
+    registry.register_member("conversation_folder", conversation_dir)
     return conversation_dir
 
 
