@@ -41,7 +41,7 @@ jobs:
           cp config-example.toml /root/.config/linhai/config.toml
           ls -la /root/.config/linhai/config.toml
 
-      - name: Check PR for missing tests (issue #46)
+      - name: Check PR for missing tests (issue 46)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking if PR modifies linhai/ without adding tests..."
@@ -52,8 +52,8 @@ jobs:
           PYTHONPATH: $PWD
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          echo "Running unittest discover -s . -p 'test_*.py' -v"
-          uv run python -m unittest discover -s . -p 'test_*.py'
+          echo "Running unittest discover -s . -p 'test_*.py'"
+          uv run python -m unittest discover -s . -p 'test_*.py' 2> /tmp/unittest_stderr.txt
 
       - name: Run pyright
         run: |
@@ -76,7 +76,14 @@ jobs:
             echo "No Python files changed in this PR, skipping black check"
           fi
 
-      - name: Check for cast function calls (issue #457)
+      - name: Check for unittest warnings
+        run: |
+          if grep -P ' [A-Za-z0-9_]+Warning' stderr.txt; then
+            echo "Warnings found in unittest stderr, please fix it"
+            exit 1
+          fi
+
+      - name: Check for cast function calls (issue 457)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for cast/typing.cast function calls in Python files..."
@@ -96,31 +103,31 @@ jobs:
           echo "Checking for garbage code patterns (hasattr/getattr/setattr/try except)..."
           bash .gitea/scripts/check_git_diff.sh
 
-      - name: Check for black overformatting (issue #101)
+      - name: Check for black overformatting (issue 101)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking if black is overformatting files..."
           uv run python .gitea/scripts/check_black_overformat.py
 
-      - name: Check commit count (issue #51)
+      - name: Check commit count (issue 51)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking if commit count is reasonable..."
           bash .gitea/scripts/check_commit_count.sh
 
-      - name: Check for emoji in commit messages (issue #99)
+      - name: Check for emoji in commit messages (issue 99)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for emoji in commit messages..."
           uv run python .gitea/scripts/check_emoji.py
 
-      - name: Check for emoji in changed code files (issue #33)
+      - name: Check for emoji in changed code files (issue 33)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for emoji in changed Python code files..."
           uv run python .gitea/scripts/check_code_emoji.py
 
-      - name: Check for browser MCP snapshot documents (issue #113)
+      - name: Check for browser MCP snapshot documents (issue 113)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           echo "Checking for browser MCP snapshot documents..."
