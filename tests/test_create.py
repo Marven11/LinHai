@@ -56,6 +56,7 @@ class TestCreateAgent(unittest.TestCase):
 
         mock_config.llm = [mock_llm_config]
         mock_config.agent = Mock()
+        mock_config.agent.override_toolsets = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -156,6 +157,7 @@ class TestCreateAgent(unittest.TestCase):
 
         mock_config.llm = [mock_llm_config1, mock_llm_config2]
         mock_config.agent = Mock()
+        mock_config.agent.override_toolsets = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -332,6 +334,7 @@ class TestCreateToolManager(unittest.TestCase):
         config = Mock()
         config.secret.config_path = ""
         config.agent = Mock(mcp=[])
+        config.agent.override_toolsets = None
         config.tools = config
 
         context = {

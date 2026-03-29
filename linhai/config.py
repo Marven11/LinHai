@@ -121,6 +121,9 @@ class AgentConfig(BaseModel):
     max_toolcall_for_llm: dict[str, int] = Field(
         default_factory=dict, description="每个LLM的最大工具调用次数限制。"
     )
+    override_toolsets: Optional[list[str]] = Field(
+        default=None, description="覆盖tools.toolsets的设置。"
+    )
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument

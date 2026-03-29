@@ -112,7 +112,11 @@ async def create_agent_from_config(
     )
 
     toolsets_config = context["config"].tools.toolsets
-    if toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
+    override_toolsets = context["config"].agent.override_toolsets
+
+    if override_toolsets is not None:
+        enabled_toolsets = list(override_toolsets)
+    elif toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
         enabled_toolsets = list(AVAILABLE_TOOLSETS)
     else:
         enabled_toolsets = list(toolsets_config)
@@ -253,10 +257,13 @@ def _build_toolsets_from_config(
     from linhai.machine_control.main import register_machine_control_tools
     from linhai.tool.general import generate_sleep_toolset
 
-    toolsets_config = context["config"].tools.toolsets
     registry = context["registry"]
+    toolsets_config = context["config"].tools.toolsets
+    override_toolsets = context["config"].agent.override_toolsets
 
-    if toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
+    if override_toolsets is not None:
+        enabled_toolsets = list(override_toolsets)
+    elif toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
         enabled_toolsets = list(AVAILABLE_TOOLSETS)
     else:
         enabled_toolsets = list(toolsets_config)
