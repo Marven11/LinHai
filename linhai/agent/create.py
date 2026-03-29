@@ -40,7 +40,7 @@ class AgentBuildContext(TypedDict):
     config: Config
     config_basedir: Optional[Path]
     llm_name: str
-    max_toolcall_token_in_round: int
+    max_toolcall_token_in_round: int | float
     checklist_path: Optional[Path]
     planning: bool
     cli_args: argparse.Namespace
@@ -76,7 +76,7 @@ def create_agent_build_context(
     max_toolcall_token = (
         config.tools.max_toolcall_token_in_round
         if config.tools.max_toolcall_token_in_round is not None
-        else 30000
+        else 0.3
     )
 
     return {

@@ -41,14 +41,22 @@ def _extract_text_content(content: Any) -> str:
 class AgentToolcall:
     """工具调用处理器，负责管理工具注册、调用和结果处理。"""
 
-    def __init__(self, agent: "Agent", max_toolcall_token_in_round: int = 30000):
+    def __init__(self, agent: "Agent", max_toolcall_token_in_round: int | float = 0.3):
         self.agent = agent
         self.registry = agent.registry
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
         self.current_round_token_count = 0
-        self.max_token_limit = max_toolcall_token_in_round
+
+        if isinstance(max_toolcall_token_in_round, float):
+            current_llm = self.agent.get_current_model()
+            token_limit = current_llm.get_token_limit()
+            if token_limit is None:
+                token_limit = 65536
+            self.max_token_limit = int(max_toolcall_token_in_round * token_limit)
+        else:
+            self.max_token_limit = max_toolcall_token_in_round
 
     def _check_tool_conflict(self, tool_name: str) -> str | None:
         """检查工具调用冲突，返回冲突工具的名字，没有冲突返回None

@@ -185,7 +185,7 @@ model = "test_model"
             self.assertEqual(config.user_prompt.file_path, "")
             # tools现在有默认值，不再是None
             self.assertIsNotNone(config.tools)
-            self.assertEqual(config.tools.max_toolcall_token_in_round, 30000)
+            self.assertEqual(config.tools.max_toolcall_token_in_round, 0.3)
         finally:
             os.unlink(temp_file)
 

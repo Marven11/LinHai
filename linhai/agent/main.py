@@ -40,7 +40,7 @@ class Agent:
         compress_threshold: int | float,
         registry: Registry,
         pinned_messages: list[Message],
-        max_toolcall_token_in_round: int = 30000,
+        max_toolcall_token_in_round: int | float = 0.3,
     ):
         self.llm_manager = llm_manager
 

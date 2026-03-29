@@ -195,10 +195,26 @@ class ToolConfig(BaseModel):
     secret: SecretSubConfig = Field(
         default_factory=SecretSubConfig, description="Secret子配置"
     )
-    max_toolcall_token_in_round: int = Field(
-        default=30000, ge=1, description="单轮工具调用中允许的最大token数"
+    max_toolcall_token_in_round: Union[int, float] = Field(
+        default=0.3,
+        description="单轮工具调用中允许的最大token数。int为静态限制，float为相对于token_limit的比例",
     )
     toolsets: Union[Literal["defaults"], list[str]] = Field(default="defaults")
+
+    @field_validator("max_toolcall_token_in_round")
+    def validate_max_toolcall_token_in_round(cls, v):
+        """验证max_toolcall_token_in_round值：如果是float，应在0.0到1.0之间；如果是int，应大于0。"""
+        if isinstance(v, float):
+            if not 0.0 < v <= 1.0:
+                raise ValueError(
+                    "如果为float类型，max_toolcall_token_in_round应在0.0到1.0之间"
+                )
+        elif isinstance(v, int):
+            if v <= 0:
+                raise ValueError("如果为int类型，max_toolcall_token_in_round应大于0")
+        else:
+            raise TypeError("max_toolcall_token_in_round必须是int或float类型")
+        return v
 
     @field_validator("toolsets")
     def validate_toolsets(cls, v):

@@ -35,8 +35,10 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         mock_llm_manager = Mock()
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
+        mock_llm.get_token_limit = Mock(return_value=65536)
         mock_llm_manager.llms = [mock_llm]
         mock_agent.llm_manager = mock_llm_manager
+        mock_agent.get_current_model = Mock(return_value=mock_llm)
 
         toolcall = AgentToolcall(mock_agent)
         toolcall.registry = self.mock_registry

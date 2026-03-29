@@ -41,9 +41,11 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         # 创建模拟的LLM对象
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
+        mock_llm.get_token_limit = Mock(return_value=65536)
         self.mock_llm_manager.llms = [mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         self.mock_agent.llm_manager = self.mock_llm_manager
+        self.mock_agent.get_current_model = Mock(return_value=mock_llm)
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
