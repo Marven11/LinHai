@@ -133,11 +133,6 @@ Screen {
 
         return errors
 
-    def on_key(self, event) -> None:
-        """Handle key press events."""
-        if event.key == "ctrl+c":
-            self.exit(0)
-
     async def on_button_pressed(self, event) -> None:
         """Handle button press events."""
         button_id = event.button.id

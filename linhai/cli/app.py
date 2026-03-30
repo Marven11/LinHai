@@ -285,10 +285,6 @@ class CLIApp(App):
             input_element = self.query_one("#input", ExtendedTextArea)
             input_element.insert("\n")
 
-        if event.key == "ctrl+c":
-            close_all_terminals()
-            self.app.exit()
-
     async def _handle_regular_message(self, message_text: str) -> None:
         await self.messages_list.add_user_message(message_text)
 

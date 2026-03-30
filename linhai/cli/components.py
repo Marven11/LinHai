@@ -1,5 +1,6 @@
 """CLI UI components for LinHai agent."""
 
+import asyncio
 import colorsys
 import json
 import re
@@ -13,7 +14,7 @@ from rich.text import Text
 from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
-from textual.widgets import Static, TextArea
+from textual.widgets import Markdown, Static, TextArea
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
@@ -302,7 +303,7 @@ class RuntimeMessageWidget(Static):
         )
 
 
-class ToolCallWidget(Static):
+class ToolCallWidget(Markdown):
     """工具调用显示组件，流式显示键值对表格"""
 
     DEFAULT_CSS = """
@@ -325,6 +326,17 @@ class ToolCallWidget(Static):
         text-overflow: ellipsis;
         text-wrap: nowrap;
     }
+
+    ToolCallWidget MarkdownFence {
+        margin: 0;
+    }
+
+    ToolCallWidget.collapsed MarkdownFence {
+        background: black 0%;
+        & > Label {
+            padding: 0;
+        }
+    }
     """
 
     def __init__(
@@ -346,34 +358,37 @@ class ToolCallWidget(Static):
         self.has_error = False
         self.error_message = ""
         self.is_collapsed = False
-        self.collapse_timer: Timer | None = None
         self.get_refresh_interval = get_refresh_interval
 
         self.border_title = "tool call"
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        refresh_interval = self.get_refresh_interval()
-        self.timer = self.set_interval(refresh_interval, self.update_display)
+        self.update_display_work()
 
-    def update_display(self) -> None:
+    @work(exclusive=False)
+    async def update_display_work(self):
+        while True:
+            start_time = time.perf_counter()
+            await self.update_display()
+            if self._segment["is_finished"]:
+                break
+
+            duration = time.perf_counter() - start_time
+            sleep_sec = self.get_refresh_interval() - duration
+            if sleep_sec > 0:
+                await asyncio.sleep(sleep_sec)
+
+        await self.update_display()
+        await self._collapse()
+        self.is_collapsed = True
+
+    async def update_display(self) -> None:
         if self.has_error:
-            self.update(
-                Syntax(
-                    self.json_str,
-                    lexer="markdown",
-                    theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
-                )
-            )
+            self.update(self.json_str)
             self.border_title = "tool call (error)"
             self.add_class("error")
             return
-
-        if self._segment["is_finished"] and self.timer:
-            self.timer.stop()
-            self._start_collapse_timer()
 
         segment_content = self._segment["content"]
         if segment_content != self.json_str:
@@ -390,7 +405,7 @@ class ToolCallWidget(Static):
             if value.index_key != self.current_key:
                 self.current_key = value.index_key
                 self.content_before_current_value = self.current_content
-                self.current_content += f"{self.current_key}: `"
+                self.current_content += f"- {self.current_key}: `"
 
             if isinstance(value, Value):
                 final_value = (
@@ -403,12 +418,12 @@ class ToolCallWidget(Static):
                     backticks = "`" * self.get_backtick_count(final_value)
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
+                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}: `{final_value}`\n"
+                        + f"- {self.current_key}: `{final_value}`\n"
                     )
 
                 new_guessed_type = self._guess_content_type(final_value)
@@ -424,23 +439,15 @@ class ToolCallWidget(Static):
                     backticks = "`" * backtick_count
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
+                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}: `{self.current_value}`"
+                        + f"- {self.current_key}: `{self.current_value}`"
                     )
 
-            self.update(
-                Syntax(
-                    self.current_content.strip(),
-                    lexer="markdown",
-                    theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
-                )
-            )
+            await self.update(self.current_content.strip())
 
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
@@ -462,7 +469,7 @@ class ToolCallWidget(Static):
 
         return ""
 
-    def _collapse(self) -> None:
+    async def _collapse(self) -> None:
         """折叠widget，显示简化内容"""
         if self.is_collapsed:
             return
@@ -473,17 +480,9 @@ class ToolCallWidget(Static):
         simplified = "<bad toolcall>"
         if not self.has_error:
             simplified = parse_and_simplify_toolcall(self.json_str)
-        self.update(
-            Syntax(
-                simplified,
-                lexer="python",
-                theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
-            )
-        )
+        await self.update(f"```python\n{simplified}\n```")
 
-    def _expand(self) -> None:
+    async def _expand(self) -> None:
         """展开widget，显示完整内容"""
         if not self.is_collapsed:
             return
@@ -492,28 +491,14 @@ class ToolCallWidget(Static):
         self.remove_class("collapsed")
         self.border_title = "tool call [点击隐藏]"
 
-        self.update(
-            Syntax(
-                self.current_content.strip(),
-                lexer="markdown",
-                theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
-            )
-        )
+        await self.update(self.current_content.strip())
 
-    def _start_collapse_timer(self) -> None:
-        if self.collapse_timer:
-            self.collapse_timer.stop()
-
-        self.collapse_timer = self.set_timer(0.2, self._collapse)
-
-    def on_click(self) -> None:
+    async def on_click(self) -> None:
         """点击事件，切换折叠状态"""
         if self.is_collapsed:
-            self._expand()
+            await self._expand()
         else:
-            self._collapse()
+            await self._collapse()
 
 
 class ReasoningContentWidget(Static):
@@ -611,7 +596,7 @@ class ReasoningContentWidget(Static):
         self.update(renderable)
 
 
-class UserMessageWidget(Static):
+class UserMessageWidget(Markdown):
     """用户消息显示组件"""
 
     DEFAULT_CSS = """
@@ -632,30 +617,16 @@ class UserMessageWidget(Static):
         self.content_str = content
         self.display_name = sender_name
         self.timer: Timer | None = None
-        self._content_static: Static | None = None
         self.border_title = self.display_name
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
-        self._content_static = Static("")
-        self.mount(self._content_static)
-
         self.update_display()
 
     def update_display(self) -> None:
         """更新普通消息显示，按字符换行"""
         content_to_display = self.content_str.strip()
-
-        if self._content_static is not None:
-            self._content_static.update(
-                Syntax(
-                    content_to_display,
-                    lexer="markdown",
-                    theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
-                )
-            )
+        self.update(content_to_display)
 
 
 class SpaceWidget(Static):
@@ -669,7 +640,7 @@ class SpaceWidget(Static):
     """
 
 
-class NormalContentWidget(Static):
+class NormalContentWidget(Markdown):
     """普通消息显示组件，按字符换行"""
 
     DEFAULT_CSS = """
@@ -719,15 +690,7 @@ class NormalContentWidget(Static):
 
         content_to_display = self.content_str.strip()
 
-        self.update(
-            Syntax(
-                content_to_display,
-                lexer="markdown",
-                theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
-            )
-        )
+        self.update(content_to_display)
 
     def content_is_empty(self) -> bool:
         """检查内容是否为空或只包含空白字符"""
