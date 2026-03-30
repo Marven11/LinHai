@@ -36,6 +36,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
+        cli_args.telegram = False
 
         context = create_agent_build_context(
             registry=registry,
@@ -97,6 +98,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
+        cli_args.telegram = False
 
         context = create_agent_build_context(
             registry=registry,

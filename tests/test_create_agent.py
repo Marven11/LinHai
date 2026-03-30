@@ -39,6 +39,7 @@ class TestCreateAgent(unittest.TestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
+        cli_args.telegram = False
         registry.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
@@ -84,6 +85,7 @@ class TestCreateAgent(unittest.TestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
+        cli_args.telegram = False
         registry.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 

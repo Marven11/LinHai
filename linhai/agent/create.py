@@ -62,6 +62,9 @@ class AgentBuildContext(TypedDict):
     mcp_configs: list["MCPConfig"]
     tool_config: "ToolConfig"
     secret_config_path: Optional[str]
+    rss: list[str]
+    telegram: bool
+    disable_waiting_marker: bool
 
 
 def create_agent_build_context(
@@ -140,6 +143,9 @@ def create_agent_build_context(
         "secret_config_path": (
             config.tools.secret.config_path if config.tools.secret else None
         ),
+        "rss": cli_args.rss,
+        "telegram": cli_args.telegram,
+        "disable_waiting_marker": cli_args.disable_waiting_marker,
     }
 
 
@@ -211,15 +217,15 @@ async def create_agent_from_config(
 
     MachineControlIntroductionPlugin(context["registry"]).register(agent.lifecycle)
 
-    if context["cli_args"].rss:
+    if context["rss"]:
         RssPlugin(
             context["registry"],
-            context["cli_args"].rss,
+            context["rss"],
             30,
         ).register(agent.lifecycle)
 
     telegram_config = context["telegram_config"]
-    if telegram_config and context["cli_args"].telegram:
+    if telegram_config and context["telegram"]:
         from linhai.plugin.telegram import TelegramPlugin
 
         TelegramPlugin(context["registry"], telegram_config).register(agent.lifecycle)
@@ -238,7 +244,7 @@ async def create_agent_from_config(
 
         ClawPlugin(context["registry"], context["cli_args"]).register(agent.lifecycle)
 
-    if not context["cli_args"].disable_waiting_marker:
+    if not context["disable_waiting_marker"]:
         from linhai.plugin.message_checkers import WaitingUserPlugin
 
         WaitingUserPlugin(context["registry"]).register(agent.lifecycle)

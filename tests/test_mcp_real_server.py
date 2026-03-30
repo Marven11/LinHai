@@ -28,6 +28,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.claw = False
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
+        cli_args.telegram = False
         self.registry.register_member("cli_args", cli_args)
         self.cli_args = cli_args
 
@@ -91,6 +92,9 @@ server_script_path = "{server_path}"
             "secret_config_path": (
                 config.tools.secret.config_path if config.tools.secret else None
             ),
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

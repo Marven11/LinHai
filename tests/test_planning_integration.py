@@ -177,6 +177,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent.allowed_commands,
             "telegram_config": None,
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -262,6 +265,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent.allowed_commands,
             "telegram_config": None,
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
         }
 
         # 创建模拟的Lifecycle对象
