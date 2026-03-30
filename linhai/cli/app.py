@@ -10,6 +10,7 @@ from textual import events, work
 from linhai.agent import Agent, Lifecycle
 from linhai.config import CLIConfig
 from linhai.registry import Registry
+from linhai.task_supervisor import TextualTaskSupervisor
 from linhai.tool.base import ToolSet, ToolArgInfo
 from linhai.machine_control.master_host import close_all_terminals
 from linhai.tool.mcp_connector import MCPConnector
@@ -98,6 +99,7 @@ class CLIApp(App):
         self.registry = registry
         self.registry.register_queue("exit_signal")
         registry.register_member("cli_app", self)
+        registry.register_member("task_supervisor", TextualTaskSupervisor(self))
 
         cli_args = registry.get_member_typechecked("cli_args", argparse.Namespace)
         self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
