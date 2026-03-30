@@ -32,6 +32,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.cli_args.claw = False
         self.cli_args.claw_folder = None
         self.cli_args.disable_waiting_marker = False
+        self.cli_args.afk = False
         self.cli_args.rss = []
         self.cli_args.telegram = False
         self.registry.register_member("cli_args", self.cli_args)
@@ -103,6 +104,7 @@ server_script_path = "{server_script_path}"
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "afk": False,
             "claw_enabled": False,
             "claw_folder": None,
             "message": [],
@@ -158,6 +160,7 @@ compress_threshold = 80000
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "afk": False,
             "claw_enabled": False,
             "claw_folder": None,
             "message": [],

@@ -103,6 +103,7 @@ class TestCreateAgent(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
         )
 
         context = create_agent_build_context(
@@ -213,6 +214,7 @@ class TestCreateAgent(unittest.TestCase):
                 rss=[],
                 telegram=False,
                 disable_waiting_marker=False,
+                afk=False,
             )
 
             context = create_agent_build_context(
@@ -268,7 +270,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
             "cli_args": argparse.Namespace(
-                message=None, file=None, claw=False, claw_folder=None
+                message=None, file=None, claw=False, claw_folder=None, afk=False
             ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
@@ -377,7 +379,7 @@ class TestCreateToolManager(unittest.TestCase):
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
             "cli_args": argparse.Namespace(
-                message=None, file=None, claw=False, claw_folder=None
+                message=None, file=None, claw=False, claw_folder=None, afk=False
             ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
@@ -461,7 +463,7 @@ class TestCreatePinnedMessages(unittest.TestCase):
         import asyncio
         import argparse
 
-        mock_cli_args = argparse.Namespace()
+        mock_cli_args = argparse.Namespace(afk=False)
         mock_cli_args.message = None
         mock_cli_args.file = None
 
@@ -541,6 +543,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
         )
 
         context = create_agent_build_context(
@@ -571,6 +574,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
         )
 
         context = create_agent_build_context(
@@ -600,6 +604,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             claw_folder=None,
             rss=[],
             telegram=False,
+            afk=False,
         )
 
         with self.assertRaises(ValueError) as context:
@@ -631,6 +636,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
         )
 
         context = create_agent_build_context(

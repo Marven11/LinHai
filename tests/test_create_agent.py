@@ -31,7 +31,7 @@ class TestCreateAgent(unittest.TestCase):
         registry = Registry()
         import argparse
 
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
 
         cli_args.checklist = None
         cli_args.message = []
@@ -78,7 +78,7 @@ class TestCreateAgent(unittest.TestCase):
         registry = Registry()
         import argparse
 
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
 
         cli_args.checklist = None
         cli_args.message = []
@@ -112,7 +112,7 @@ class TestCreateAgent(unittest.TestCase):
         registry = Registry()
         import argparse
 
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
 
         cli_args.checklist = None
         cli_args.message = []

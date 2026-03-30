@@ -184,6 +184,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "afk": False,
             "claw_enabled": False,
             "claw_folder": None,
         }
@@ -274,6 +275,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "afk": False,
             "claw_enabled": False,
             "claw_folder": None,
             "message": [],

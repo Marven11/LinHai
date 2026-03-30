@@ -1,5 +1,3 @@
-import argparse
-
 from typing import TYPE_CHECKING
 from linhai.agent.base import RuntimeMessage
 from linhai.utils import CliRuntimeNotice
@@ -11,17 +9,20 @@ if TYPE_CHECKING:
 
 
 class AfkPlugin(Plugin):
+    def __init__(self, registry, afk: bool):
+        super().__init__(registry)
+        self._afk = afk
+
     async def before_waiting_user(self, agent: "Agent"):
-        cli_args = self.registry.get_member_typechecked("cli_args", argparse.Namespace)
-        if not cli_args.afk:
+        if not self._afk:
             return
 
         agent.state = "working"
 
         await agent.message_processor.add_new_message(
             RuntimeMessage(
-                f"当前等待用户的功能已经失效，因为用户使用了--afk参数。"
-                f"这说明用户禁止你等待用户输入并离开了电脑"
+                "当前等待用户的功能已经失效，因为用户使用了--afk参数。"
+                "这说明用户禁止你等待用户输入并离开了电脑"
             )
         )
 

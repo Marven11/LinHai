@@ -1,4 +1,4 @@
-"""测试AgentBuildContext中rss/telegram/disable_waiting_marker的传递"""
+"""测试AgentBuildContext中rss/telegram/disable_waiting_marker/afk的传递"""
 
 import unittest
 from pathlib import Path
@@ -53,6 +53,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             rss=["http://example.com/rss1", "http://example.com/rss2"],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
             message=None,
             file=None,
             claw=False,
@@ -69,6 +70,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(
             context["rss"], ["http://example.com/rss1", "http://example.com/rss2"]
         )
+        self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
 
@@ -78,6 +80,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             rss=[],
             telegram=True,
             disable_waiting_marker=False,
+            afk=False,
             message=None,
             file=None,
             claw=False,
@@ -101,6 +104,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=True,
+            afk=False,
             message=None,
             file=None,
             claw=False,
@@ -118,12 +122,35 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
 
+    def test_agent_build_context_with_afk(self):
+        """测试afk参数从cli_args传递到AgentBuildContext"""
+        cli_args = argparse.Namespace(
+            rss=[],
+            telegram=False,
+            disable_waiting_marker=False,
+            afk=True,
+            message=None,
+            file=None,
+            claw=False,
+            claw_folder=None,
+        )
+
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=self.config,
+            config_basedir=Path("."),
+            cli_args=cli_args,
+        )
+
+        self.assertEqual(context["afk"], True)
+
     def test_agent_build_context_with_all_parameters(self):
         """测试所有参数同时传递"""
         cli_args = argparse.Namespace(
             rss=["http://example.com/rss"],
             telegram=True,
             disable_waiting_marker=True,
+            afk=True,
             message=None,
             file=None,
             claw=True,
@@ -140,6 +167,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["rss"], ["http://example.com/rss"])
         self.assertEqual(context["telegram"], True)
         self.assertEqual(context["disable_waiting_marker"], True)
+        self.assertEqual(context["afk"], True)
         self.assertEqual(context["claw_enabled"], True)
         self.assertEqual(context["claw_folder"], "/custom/claw/path")
 
@@ -149,6 +177,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             rss=[],
             telegram=False,
             disable_waiting_marker=False,
+            afk=False,
             message=None,
             file=None,
             claw=False,
@@ -165,6 +194,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["rss"], [])
         self.assertEqual(context["telegram"], False)
         self.assertEqual(context["disable_waiting_marker"], False)
+        self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
 

@@ -32,7 +32,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
         cli_args.claw = False
         cli_args.claw_folder = None
         cli_args.message = []
@@ -97,7 +97,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
         cli_args.claw = False
         cli_args.claw_folder = None
         cli_args.message = []

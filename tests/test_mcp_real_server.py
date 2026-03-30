@@ -20,7 +20,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.registry = Registry()
         # Register cli_args required by create_agent_from_config
-        cli_args = argparse.Namespace()
+        cli_args = argparse.Namespace(afk=False)
 
         cli_args.checklist = False
         cli_args.message = []
@@ -28,6 +28,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
         cli_args.claw = False
         cli_args.claw_folder = None
         cli_args.disable_waiting_marker = False
+        cli_args.afk = False
         cli_args.rss = []
         cli_args.telegram = False
         self.registry.register_member("cli_args", cli_args)
@@ -96,6 +97,7 @@ server_script_path = "{server_path}"
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "afk": False,
             "claw_enabled": False,
             "claw_folder": None,
             "message": [],

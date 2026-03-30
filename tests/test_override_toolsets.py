@@ -130,6 +130,7 @@ override_toolsets = ["utils", "sleep"]
             disable_waiting_marker=False,
             rss=[],
             telegram=False,
+            afk=False,
         )
 
         context = create_agent_build_context(
@@ -221,6 +222,7 @@ override_toolsets = ["utils", "sleep"]
             disable_waiting_marker=False,
             rss=[],
             telegram=False,
+            afk=False,
         )
 
         context = create_agent_build_context(

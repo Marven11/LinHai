@@ -65,6 +65,7 @@ class AgentBuildContext(TypedDict):
     rss: list[str]
     telegram: bool
     disable_waiting_marker: bool
+    afk: bool
     claw_enabled: bool
     claw_folder: Optional[Path]
     message: list[str]
@@ -150,6 +151,7 @@ def create_agent_build_context(
         "rss": cli_args.rss,
         "telegram": cli_args.telegram,
         "disable_waiting_marker": cli_args.disable_waiting_marker,
+        "afk": cli_args.afk,
         "claw_enabled": cli_args.claw,
         "claw_folder": cli_args.claw_folder,
         "message": cli_args.message,
@@ -253,6 +255,11 @@ async def create_agent_from_config(
         ClawPlugin(context["registry"], context["claw_folder"]).register(
             agent.lifecycle
         )
+
+    if context["afk"]:
+        from linhai.plugin import AfkPlugin
+
+        AfkPlugin(context["registry"], afk=True).register(agent.lifecycle)
 
     if not context["disable_waiting_marker"]:
         from linhai.plugin.message_checkers import WaitingUserPlugin
@@ -486,7 +493,6 @@ def _register_default_plugins(lifecycle):
         GlmInsultMaskPlugin,
         MissingWithSecretWarningPlugin,
         TodolistCheckerPlugin,
-        AfkPlugin,
         VolcanoDeepseekFixPlugin,
         ProcessArgvCheckerPlugin,
         SudoStdioCheckerPlugin,
@@ -513,7 +519,6 @@ def _register_default_plugins(lifecycle):
         GlmToolCallPlugin(lifecycle.registry),
         GlmInsultMaskPlugin(lifecycle.registry),
         MissingWithSecretWarningPlugin(lifecycle.registry),
-        AfkPlugin(lifecycle.registry),
         VolcanoDeepseekFixPlugin(lifecycle.registry),
         ProcessArgvCheckerPlugin(lifecycle.registry),
         SudoStdioCheckerPlugin(lifecycle.registry),
