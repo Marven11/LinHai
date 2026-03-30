@@ -34,6 +34,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config_basedir = Path("/tmp")
         cli_args = argparse.Namespace()
         cli_args.claw = False
+        cli_args.claw_folder = None
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
         cli_args.telegram = False
@@ -96,6 +97,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         config_basedir = Path("/tmp")
         cli_args = argparse.Namespace()
         cli_args.claw = False
+        cli_args.claw_folder = None
         cli_args.disable_waiting_marker = False
         cli_args.rss = []
         cli_args.telegram = False

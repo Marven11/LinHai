@@ -65,6 +65,8 @@ class AgentBuildContext(TypedDict):
     rss: list[str]
     telegram: bool
     disable_waiting_marker: bool
+    claw_enabled: bool
+    claw_folder: Optional[Path]
 
 
 def create_agent_build_context(
@@ -146,6 +148,8 @@ def create_agent_build_context(
         "rss": cli_args.rss,
         "telegram": cli_args.telegram,
         "disable_waiting_marker": cli_args.disable_waiting_marker,
+        "claw_enabled": cli_args.claw,
+        "claw_folder": cli_args.claw_folder,
     }
 
 
@@ -239,10 +243,12 @@ async def create_agent_from_config(
         PlanningStatusReminderPlugin(context["registry"]).register(agent.lifecycle)
         UserInputRuntimeMessagePlugin(context["registry"]).register(agent.lifecycle)
 
-    if context["cli_args"].claw:
+    if context["claw_enabled"]:
         from linhai.plugin.claw import ClawPlugin
 
-        ClawPlugin(context["registry"], context["cli_args"]).register(agent.lifecycle)
+        ClawPlugin(context["registry"], context["claw_folder"]).register(
+            agent.lifecycle
+        )
 
     if not context["disable_waiting_marker"]:
         from linhai.plugin.message_checkers import WaitingUserPlugin

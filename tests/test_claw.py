@@ -23,9 +23,7 @@ class TestClawInitialization(unittest.TestCase):
             claw_dir.mkdir(parents=True, exist_ok=True)
 
             mock_registry = Mock()
-            mock_cli_args = Mock()
-            mock_cli_args.claw_folder = str(claw_dir)
-            plugin = ClawPlugin(mock_registry, mock_cli_args)
+            plugin = ClawPlugin(mock_registry, claw_dir)
             plugin._initialize_claw_files()
 
             self.assertTrue((claw_dir / "AGENTS.md").exists())
@@ -44,9 +42,7 @@ class TestClawInitialization(unittest.TestCase):
             claw_dir.mkdir(parents=True, exist_ok=True)
 
             mock_registry = Mock()
-            mock_cli_args = Mock()
-            mock_cli_args.claw_folder = str(claw_dir)
-            plugin = ClawPlugin(mock_registry, mock_cli_args)
+            plugin = ClawPlugin(mock_registry, claw_dir)
 
             plugin._initialize_claw_files()
 
@@ -83,7 +79,7 @@ class TestClawPinnedMessages(unittest.TestCase):
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "cli_args": Mock(claw=claw, message=None, file=None),
+            "cli_args": Mock(claw=claw, claw_folder=None, message=None, file=None),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
@@ -94,6 +90,11 @@ class TestClawPinnedMessages(unittest.TestCase):
             "mcp_configs": [],
             "tool_config": mock_config,
             "secret_config_path": None,
+            "claw_enabled": claw,
+            "claw_folder": None,
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
         }
         context = cast(AgentBuildContext, mock_context_dict)
 

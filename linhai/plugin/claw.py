@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage, FileContentMessage
@@ -22,11 +22,10 @@ if TYPE_CHECKING:
 class ClawPlugin(Plugin):
     """CLAW模式插件：在启用--claw时添加系统提示和固定消息。"""
 
-    def __init__(self, registry: Registry, cli_args):
+    def __init__(self, registry: Registry, claw_folder: Optional[Path] = None):
         super().__init__(registry)
-        self.cli_args = cli_args
-        if cli_args.claw_folder is not None:
-            self.claw_dir = Path(cli_args.claw_folder).expanduser()
+        if claw_folder is not None:
+            self.claw_dir = claw_folder.expanduser()
         else:
             self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
         self.reminder_plugin = ReminderPlugin(registry, self.claw_dir)

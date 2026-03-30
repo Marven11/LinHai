@@ -180,6 +180,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "claw_enabled": False,
+            "claw_folder": None,
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -268,6 +270,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "claw_enabled": False,
+            "claw_folder": None,
         }
 
         # 创建模拟的Lifecycle对象

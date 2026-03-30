@@ -99,9 +99,10 @@ class TestCreateAgent(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
-            disable_waiting_marker=False,
+            claw_folder=None,
             rss=[],
             telegram=False,
+            disable_waiting_marker=False,
         )
 
         context = create_agent_build_context(
@@ -208,9 +209,10 @@ class TestCreateAgent(unittest.TestCase):
                 message=None,
                 file=None,
                 claw=False,
-                disable_waiting_marker=False,
+                claw_folder=None,
                 rss=[],
                 telegram=False,
+                disable_waiting_marker=False,
             )
 
             context = create_agent_build_context(
@@ -265,7 +267,9 @@ class TestCreateLLMInstances(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "cli_args": argparse.Namespace(message=None, file=None, claw=False),
+            "cli_args": argparse.Namespace(
+                message=None, file=None, claw=False, claw_folder=None
+            ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
@@ -370,7 +374,9 @@ class TestCreateToolManager(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "cli_args": argparse.Namespace(message=None, file=None, claw=False),
+            "cli_args": argparse.Namespace(
+                message=None, file=None, claw=False, claw_folder=None
+            ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
@@ -525,9 +531,10 @@ class TestDefaultLlmConfig(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
-            disable_waiting_marker=False,
+            claw_folder=None,
             rss=[],
             telegram=False,
+            disable_waiting_marker=False,
         )
 
         context = create_agent_build_context(
@@ -554,9 +561,10 @@ class TestDefaultLlmConfig(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
-            disable_waiting_marker=False,
+            claw_folder=None,
             rss=[],
             telegram=False,
+            disable_waiting_marker=False,
         )
 
         context = create_agent_build_context(
@@ -583,7 +591,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
-            disable_waiting_marker=False,
+            claw_folder=None,
             rss=[],
             telegram=False,
         )
@@ -613,9 +621,10 @@ class TestDefaultLlmConfig(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
-            disable_waiting_marker=False,
+            claw_folder=None,
             rss=[],
             telegram=False,
+            disable_waiting_marker=False,
         )
 
         context = create_agent_build_context(

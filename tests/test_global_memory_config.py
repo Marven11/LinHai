@@ -40,6 +40,7 @@ class TestGlobalPromptConfig(unittest.TestCase):
         self.mock_cli_args.message = None
         self.mock_cli_args.file = None
         self.mock_cli_args.claw = False
+        self.mock_cli_args.claw_folder = None
         self.registry.register_member("cli_args", self.mock_cli_args)
 
     def tearDown(self):

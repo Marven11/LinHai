@@ -56,6 +56,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
+            claw_folder=None,
         )
 
         context = create_agent_build_context(
@@ -68,6 +69,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(
             context["rss"], ["http://example.com/rss1", "http://example.com/rss2"]
         )
+        self.assertEqual(context["claw_enabled"], False)
+        self.assertEqual(context["claw_folder"], None)
 
     def test_agent_build_context_with_telegram(self):
         """测试telegram参数从cli_args传递到AgentBuildContext"""
@@ -78,6 +81,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
+            claw_folder=None,
         )
 
         context = create_agent_build_context(
@@ -88,6 +92,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         )
 
         self.assertEqual(context["telegram"], True)
+        self.assertEqual(context["claw_enabled"], False)
+        self.assertEqual(context["claw_folder"], None)
 
     def test_agent_build_context_with_disable_waiting_marker(self):
         """测试disable_waiting_marker参数从cli_args传递到AgentBuildContext"""
@@ -98,6 +104,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
+            claw_folder=None,
         )
 
         context = create_agent_build_context(
@@ -108,6 +115,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         )
 
         self.assertEqual(context["disable_waiting_marker"], True)
+        self.assertEqual(context["claw_enabled"], False)
+        self.assertEqual(context["claw_folder"], None)
 
     def test_agent_build_context_with_all_parameters(self):
         """测试所有参数同时传递"""
@@ -117,7 +126,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             disable_waiting_marker=True,
             message=None,
             file=None,
-            claw=False,
+            claw=True,
+            claw_folder="/custom/claw/path",
         )
 
         context = create_agent_build_context(
@@ -130,6 +140,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["rss"], ["http://example.com/rss"])
         self.assertEqual(context["telegram"], True)
         self.assertEqual(context["disable_waiting_marker"], True)
+        self.assertEqual(context["claw_enabled"], True)
+        self.assertEqual(context["claw_folder"], "/custom/claw/path")
 
     def test_agent_build_context_with_default_values(self):
         """测试默认值"""
@@ -140,6 +152,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
             message=None,
             file=None,
             claw=False,
+            claw_folder=None,
         )
 
         context = create_agent_build_context(
@@ -152,6 +165,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["rss"], [])
         self.assertEqual(context["telegram"], False)
         self.assertEqual(context["disable_waiting_marker"], False)
+        self.assertEqual(context["claw_enabled"], False)
+        self.assertEqual(context["claw_folder"], None)
 
 
 if __name__ == "__main__":

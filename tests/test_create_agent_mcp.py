@@ -30,6 +30,7 @@ class TestCreateAgentMCP(unittest.TestCase):
         self.cli_args.message = []
         self.cli_args.file = []
         self.cli_args.claw = False
+        self.cli_args.claw_folder = None
         self.cli_args.disable_waiting_marker = False
         self.cli_args.rss = []
         self.cli_args.telegram = False
@@ -102,6 +103,8 @@ server_script_path = "{server_script_path}"
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "claw_enabled": False,
+            "claw_folder": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 
@@ -153,6 +156,8 @@ compress_threshold = 80000
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "claw_enabled": False,
+            "claw_folder": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 
