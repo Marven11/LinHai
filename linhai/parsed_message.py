@@ -1,8 +1,11 @@
-from typing import Literal, TypedDict, Tuple
+from typing import Literal, TypedDict, Tuple, TYPE_CHECKING
 import asyncio
 from .llm import Answer
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
+
+if TYPE_CHECKING:
+    from .registry import Registry
 
 
 class Segment(TypedDict):
@@ -12,12 +15,15 @@ class Segment(TypedDict):
 
 
 class ParsedAnswer:
-    def __init__(self, answer: Answer, lifecycle: Lifecycle, agent):
+    def __init__(
+        self, answer: Answer, lifecycle: Lifecycle, agent, registry: "Registry"
+    ):
         self._answer = answer
         self.lifecycle = lifecycle
         self.agent = agent
+        self.registry = registry
         self.segment_queue: asyncio.Queue[Segment] = asyncio.Queue()
-        self.parsing_task = None
+        self._parsing_task_name: str = f"parsed_answer_parsing_{id(self)}"
         self.interrupted = False
         from .cli.token_parser import TokenParser
 
@@ -25,7 +31,14 @@ class ParsedAnswer:
         self.current_segment = None
 
     async def start_parsing(self):
-        self.parsing_task = asyncio.create_task(self._parse_answer())
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+        task_supervisor.create_supervised_task(
+            self._parsing_task_name, self._parse_answer
+        )
 
     async def _process_token(self, parsed_token):
         token_type = parsed_token["token_type"]
@@ -85,8 +98,12 @@ class ParsedAnswer:
         await self.lifecycle.trigger_after_parsing(self)
 
     async def wait_parsing(self):
-        if self.parsing_task:
-            await self.parsing_task
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+        await task_supervisor.wait(self._parsing_task_name)
         return not self.interrupted
 
     def interrupt(self):

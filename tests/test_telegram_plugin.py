@@ -30,7 +30,6 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertIsNone(plugin._application)
         self.assertFalse(plugin._running)
         self.assertIsNotNone(plugin.send_queue)
-        self.assertIsNone(plugin._send_task)
 
     def test_after_segment_finished_normal(self):
         """测试处理normal segment，将消息加入队列。"""

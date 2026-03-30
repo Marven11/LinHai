@@ -32,7 +32,6 @@ class TelegramPlugin(Plugin):
         self._application = None
         self._running = False
         self.send_queue: deque[Segment] = deque()
-        self._send_task = None
 
     async def after_segment_finished(self, _parsed_answer, segment: Segment):
         """在segment完成后将消息加入发送队列。"""
@@ -184,14 +183,23 @@ class TelegramPlugin(Plugin):
         self._bot = self._application.bot
 
         self._running = True
-        self._send_task = asyncio.create_task(self._send_loop())
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+        task_supervisor.create_supervised_task("telegram_send_loop", self._send_loop)
 
     async def shutdown(self):
         """关闭telegram bot和发送任务。"""
         if self._application and self._running:
             self._running = False
-            if self._send_task:
-                self._send_task.cancel()
+            from linhai.task_supervisor import TaskSupervisor
+
+            task_supervisor = self.registry.get_member_typechecked(
+                "task_supervisor", TaskSupervisor
+            )
+            task_supervisor.cancel("telegram_send_loop")
             await self._application.stop()
             await self._application.shutdown()
 

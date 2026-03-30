@@ -136,6 +136,12 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return llm_manager
             elif member_type == "token_manager":
                 return self.token_manager
+            elif member_type == "task_supervisor":
+                if not hasattr(self, "_task_supervisor"):
+                    from linhai.task_supervisor import PlainTaskSupervisor
+
+                    self._task_supervisor = PlainTaskSupervisor()
+                return self._task_supervisor
             raise RuntimeError(f"{member_type!r} not exists")
 
         self.registry.get_member_typechecked.side_effect = (

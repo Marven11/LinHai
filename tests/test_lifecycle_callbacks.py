@@ -54,7 +54,7 @@ class TestAfterNewParsedAnswerCallback(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer()
         agent = MagicMock()
 
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
 
         # Callback should be triggered by the caller (main.py), not in __init__
         # This simulates what main.py does
@@ -82,7 +82,7 @@ class TestCallbackOrder(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer()
         agent = MagicMock()
 
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
 
         # Simulate what main.py does
         await lifecycle.trigger_after_new_parsed_answer(parsed)

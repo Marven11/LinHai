@@ -3,6 +3,7 @@ import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.rss import RssPlugin, RssMessage, parse_rss
+from linhai.task_supervisor import PlainTaskSupervisor
 
 
 TEST_RSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -31,11 +32,19 @@ class TestRssPlugin(unittest.TestCase):
 
     def setUp(self):
         self.registry = Mock()
-        self.registry.get_member_typechecked = Mock()
+        self.task_supervisor = Mock(spec=PlainTaskSupervisor)
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked.return_value = self.agent
+
+        def get_member_typechecked_side_effect(name, cls):
+            if name == "task_supervisor":
+                return self.task_supervisor
+            return self.agent
+
+        self.registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
 
     def test_plugin_initialization(self):
         """测试插件初始化。"""
@@ -157,36 +166,19 @@ class TestRssPlugin(unittest.TestCase):
         mock_agent = Mock()
         mock_lifecycle = Mock()
 
-        with patch("asyncio.create_task") as mock_create_task:
-            mock_task = Mock()
-            mock_create_task.return_value = mock_task
+        with patch("linhai.rss.httpx.AsyncClient"):
+            asyncio.run(plugin.before_agent_loop(mock_agent))
 
-            def create_task_side_effect(coroutine, **kwargs):
-                # 调用coroutine.close()来避免warning
-                try:
-                    coroutine.close()
-                except:
-                    pass
-                # 返回一个mock task
-                mock_task.done.return_value = True
-                return mock_task
-
-            mock_create_task.side_effect = create_task_side_effect
-
-            with patch("linhai.rss.httpx.AsyncClient"):
-                result = asyncio.run(plugin.before_agent_loop(mock_agent))
-
-            mock_create_task.assert_called_once()
+        self.task_supervisor.create_supervised_task.assert_called_once()
 
     def test_before_agent_loop_without_urls(self):
         """测试无RSS URL时不启动轮询。"""
         plugin = RssPlugin(self.registry, [], 300)
         mock_agent = Mock()
 
-        with patch("asyncio.create_task") as mock_create_task:
-            asyncio.run(plugin.before_agent_loop(mock_agent))
+        asyncio.run(plugin.before_agent_loop(mock_agent))
 
-            mock_create_task.assert_not_called()
+        self.task_supervisor.create_supervised_task.assert_not_called()
 
     def test_register(self):
         """测试注册到Lifecycle。"""

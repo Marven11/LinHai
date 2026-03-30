@@ -60,7 +60,9 @@ class AgentLlm:
 
         self.current_answer = answer
 
-        parsed_answer = ParsedAnswer(answer, lifecycle, agent=agent)
+        parsed_answer = ParsedAnswer(
+            answer, lifecycle, agent=agent, registry=self.registry
+        )
         await parsed_answer.start_parsing()
         await lifecycle.trigger_after_new_parsed_answer(parsed_answer)
         await self.registry.send("parsed_agent_answer", parsed_answer)

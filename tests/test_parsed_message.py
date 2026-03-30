@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 from linhai.parsed_message import ParsedAnswer, Segment
 from linhai.llm import Answer
 from linhai.agent.lifecycle import Lifecycle
+from linhai.registry import Registry
+from linhai.task_supervisor import PlainTaskSupervisor
 
 
 class MockAnswer(Answer):
@@ -50,6 +52,8 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle.trigger_after_parsing = AsyncMock()
         lifecycle.trigger_after_segment_finished = AsyncMock()
 
+        registry = Registry()
+        registry.register_member("task_supervisor", PlainTaskSupervisor())
         agent = MagicMock()
 
         # Simulate tokens: two normal tokens, one toolcall, then another normal
@@ -71,7 +75,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         # For simplicity, we'll directly use the parser and assume it works
         # In real test, we might need to mock it differently
 
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
         # Replace token_parser with a mock that returns controlled parsed tokens
         parsed.token_parser = MagicMock()
         # Simulate parsed tokens: first two are "normal", third is "toolcall", fourth is "normal"
@@ -126,8 +130,10 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             AnswerToken(reasoning_content=None, content="First"),
             AnswerToken(reasoning_content=None, content="Second"),
         ]
+        registry = Registry()
+        registry.register_member("task_supervisor", PlainTaskSupervisor())
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
         parsed.token_parser = MagicMock()
         parsed.token_parser.receive_token = MagicMock(
             return_value=[{"token_type": "normal", "content": "First"}]
@@ -171,8 +177,10 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             AnswerToken(reasoning_content=None, content="Toolcall start"),
             AnswerToken(reasoning_content=None, content="Normal2"),
         ]
+        registry = Registry()
+        registry.register_member("task_supervisor", PlainTaskSupervisor())
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
         parsed.token_parser = MagicMock()
         parsed.token_parser.receive_token = MagicMock(
             side_effect=[
@@ -250,7 +258,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             ),
         ]
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
         tool_calls, errors = parsed.get_toolcalls()
 
@@ -279,7 +287,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             ),
         ]
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
         tool_calls, errors = parsed.get_toolcalls()
 
@@ -308,7 +316,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             ),
         ]
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
         tool_calls, errors = parsed.get_toolcalls()
 
@@ -332,7 +340,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             )
         ]
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
         tool_calls, errors = parsed.get_toolcalls()
 
@@ -354,7 +362,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
             ),
         ]
         answer = MockAnswer(tokens)
-        parsed = ParsedAnswer(answer, lifecycle, agent)
+        parsed = ParsedAnswer(answer, lifecycle, agent, registry=MagicMock())
 
         tool_calls, errors = parsed.get_toolcalls()
 

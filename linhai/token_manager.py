@@ -22,7 +22,6 @@ class TokenManager:
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
-        self._watch_task = None
 
     @property
     def current_token_usage(self) -> Optional[AnswerTokenUsage]:
@@ -44,8 +43,14 @@ class TokenManager:
                 )
 
     def start_watching(self) -> None:
-        """启动token_usage队列监听"""
-        self._watch_task = asyncio.create_task(self.watch_token_usage_queue())
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+        task_supervisor.create_supervised_task(
+            "token_usage_watcher", self.watch_token_usage_queue
+        )
 
     def update_cumulative_usage(self, token_usage: AnswerTokenUsage) -> None:
         """更新累计token使用量"""

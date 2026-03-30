@@ -57,7 +57,7 @@ class RssMessage(Message):
             guid=data["guid"],
         )
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other) -> bool:
         """比较两个RssMessage是否相同。"""
         if not isinstance(other, RssMessage):
             return False
@@ -121,7 +121,7 @@ class RssPlugin:
         self.rss_urls = rss_urls
         self.poll_interval = poll_interval
         self.processed_guids = set()
-        self._polling_task = None
+
         self._initialized = False
 
     async def start_rss_polling(self):
@@ -195,7 +195,12 @@ class RssPlugin:
         if not self.rss_urls:
             return
         await self._initialize_processed_guids()
-        self._polling_task = asyncio.create_task(self.start_rss_polling())
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+        task_supervisor.create_supervised_task("rss_polling", self.start_rss_polling)
 
     def register(self, lifecycle) -> None:
         """注册到Lifecycle。"""

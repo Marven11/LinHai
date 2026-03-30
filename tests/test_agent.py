@@ -15,6 +15,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
 from linhai.llm import SystemMessage, OpenAi
 from linhai.cli.components import RuntimeMessageWidget
+from linhai.task_supervisor import PlainTaskSupervisor
 
 
 class MockAnswerToken(TypedDict):
@@ -71,6 +72,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.registry = Registry()
+        self.registry.register_member("task_supervisor", PlainTaskSupervisor())
 
         self.registry.register_queue("parsed_agent_answer")
 
