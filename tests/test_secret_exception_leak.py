@@ -148,7 +148,8 @@ class TestSecretExceptionLeak(unittest.TestCase):
                 "secret插件应该拦截包含secret的结果（没有指定with_secret）",
             )
             plugin_result_str = str(plugin_result)
-            self.assertIn("本插件拦截", plugin_result_str, "应该显示拦截消息")
+            self.assertIn("secret键的内容", plugin_result_str, "应该显示包含的secret键")
+            self.assertIn("TEST_SECRET", plugin_result_str, "应该提示具体的secret键名")
             self.assertNotIn(
                 "super-secret-password-123",
                 plugin_result_str,

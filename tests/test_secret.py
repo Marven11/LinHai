@@ -10,6 +10,7 @@ from linhai.secret import (
     replace_secrets_in_object,
     mask_secrets_in_object,
     get_available_secrets_message,
+    find_matching_secret_keys,
     SecretInfo,
 )
 from linhai.agent.base import RuntimeMessage
@@ -329,8 +330,58 @@ TEST_KEY = { value = "test-value", description = "Test key" }
 
     def test_get_available_secrets_message_empty(self):
         """测试生成可用secret消息时字典为空"""
-        # 测试空字典
         self.assertEqual(get_available_secrets_message({}), "无可用secret键")
+
+    def test_find_matching_secret_keys_string(self):
+        """测试在字符串中查找匹配的secret键"""
+        secrets_dict: dict[str, SecretInfo] = {
+            "KEY1": {
+                "value": "secret-1",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+            "KEY2": {
+                "value": "secret-2",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+        }
+
+        self.assertEqual(
+            find_matching_secret_keys("has secret-1 here", secrets_dict), ["KEY1"]
+        )
+        self.assertEqual(
+            find_matching_secret_keys("has secret-1 and secret-2", secrets_dict),
+            ["KEY1", "KEY2"],
+        )
+        self.assertEqual(find_matching_secret_keys("no secret here", secrets_dict), [])
+
+    def test_find_matching_secret_keys_nested(self):
+        """测试在嵌套结构中查找匹配的secret键"""
+        secrets_dict: dict[str, SecretInfo] = {
+            "KEY1": {
+                "value": "val1",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+        }
+
+        obj = {"a": ["val1", {"b": "val1"}]}
+        self.assertEqual(find_matching_secret_keys(obj, secrets_dict), ["KEY1"])
+
+    def test_find_matching_secret_keys_dedup(self):
+        """测试find_matching_secret_keys去重"""
+        secrets_dict: dict[str, SecretInfo] = {
+            "KEY": {
+                "value": "val",
+                "description": "",
+                "disabled_in_toolcall_argument": False,
+            },
+        }
+
+        obj = ["val", {"a": "val"}]
+        result = find_matching_secret_keys(obj, secrets_dict)
+        self.assertEqual(result, ["KEY"])
 
 
 class MockRegistry:
@@ -405,7 +456,8 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
-        self.assertIn("本插件拦截", result_str)
+        self.assertIn("secret键的内容", result_str)
+        self.assertIn("SECRET1", result_str)
         self.assertNotIn("secret-value-1", result_str)
 
     def test_no_intercept_when_no_with_secret_and_no_secret(self):
@@ -494,7 +546,8 @@ class TestSecretInterceptorPlugin(unittest.TestCase):
 
         self.assertIsNotNone(result, "结果应该被拦截")
         result_str = str(result)
-        self.assertIn("本插件拦截", result_str)
+        self.assertIn("secret键的内容", result_str)
+        self.assertIn("SECRET2", result_str)
         self.assertNotIn("secret-value-2", result_str)
 
     def test_mask_when_incomplete_with_secret_and_no_unlisted_secret(self):

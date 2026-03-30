@@ -1,7 +1,7 @@
 """Secret management module for LinHai agent."""
 
 import re
-from typing import TypedDict, Literal, Union, TypeVar, cast, TYPE_CHECKING
+from typing import Any, TypedDict, Literal, Union, TypeVar, TYPE_CHECKING, overload
 
 import tomllib
 from pathlib import Path
@@ -96,21 +96,27 @@ def filter_secrets_by_keys(
 T = TypeVar("T")
 
 
-def recursive_string_replace(obj: T, replace_map: dict[str, str]) -> T:
+@overload
+def recursive_string_replace(obj: str, replace_map: dict[str, str]) -> str: ...
+
+
+@overload
+def recursive_string_replace(obj: T, replace_map: dict[str, str]) -> T: ...
+
+
+def recursive_string_replace(obj: T, replace_map: dict[str, str]) -> Any:
     """递归替换字符串、字典或列表中的模式，用于secret值的替换和掩码。"""
     if isinstance(obj, str):
         result = obj
         for pattern, replacement in replace_map.items():
             result = result.replace(pattern, replacement)
-        return cast(T, result)
+        return result
 
     elif isinstance(obj, dict):
-        return cast(
-            T, {k: recursive_string_replace(v, replace_map) for k, v in obj.items()}
-        )
+        return {k: recursive_string_replace(v, replace_map) for k, v in obj.items()}
 
     elif isinstance(obj, list):
-        return cast(T, [recursive_string_replace(item, replace_map) for item in obj])
+        return [recursive_string_replace(item, replace_map) for item in obj]
 
     else:
         return obj
@@ -154,7 +160,30 @@ def get_available_secrets_message(secrets_dict: dict[str, SecretInfo]) -> str:
     return "当前可用secret键: " + "; ".join(items)
 
 
-def contains_any_secret(obj: object, secrets_dict: dict[str, SecretInfo]) -> bool:
+def find_matching_secret_keys(obj: T, secrets_dict: dict[str, SecretInfo]) -> list[str]:
+    if isinstance(obj, str):
+        return [
+            key
+            for key, secret_info in secrets_dict.items()
+            if secret_info["value"] in obj
+        ]
+
+    elif isinstance(obj, dict):
+        keys: list[str] = []
+        for value in obj.values():
+            keys.extend(find_matching_secret_keys(value, secrets_dict))
+        return list(dict.fromkeys(keys))
+
+    elif isinstance(obj, list):
+        keys_list: list[str] = []
+        for item in obj:
+            keys_list.extend(find_matching_secret_keys(item, secrets_dict))
+        return list(dict.fromkeys(keys_list))
+
+    return []
+
+
+def contains_any_secret(obj: T, secrets_dict: dict[str, SecretInfo]) -> bool:
     secret_values = {secret_info["value"] for secret_info in secrets_dict.values()}
 
     if isinstance(obj, str):
@@ -211,7 +240,8 @@ class SecretInterceptorPlugin:
                     result_content, self.secrets_dict, with_secret
                 )
 
-            if contains_any_secret(result_content, self.secrets_dict):
+            matched_keys = find_matching_secret_keys(result_content, self.secrets_dict)
+            if matched_keys:
                 conversation_dir = self.registry.get_member_typechecked(
                     "conversation_folder", Path
                 )
@@ -219,9 +249,11 @@ class SecretInterceptorPlugin:
                     conversation_dir, str(result_content), tool_name
                 )
 
+                keys_str = ", ".join(matched_keys)
                 return_message = (
-                    f"您没有选择使用with_secret遮盖可能存在的secret，因此系统试图返回原始内容。"
-                    f"但被本插件拦截，原始内容已保存到文件，请指定正确的with_secret查看: {filepath}"
+                    f"工具结果中包含以下secret键的内容: {keys_str}。"
+                    f"请将以上secret键添加到with_secret字段中以查看掩码后的结果。"
+                    f"原始内容已保存到文件: {filepath}"
                 )
                 return RuntimeMessage(return_message)
 
