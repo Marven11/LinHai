@@ -55,14 +55,18 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         """清理测试环境。"""
         self.exists_patcher.stop()
 
-    def create_context(self, prompt_config=None, checklist_path=None):
+    def create_context(self, prompt_config=None, checklist_path=None, user_prompt=None):
         """创建AgentBuildContext。"""
         context = {
             "registry": self.registry,
             "config": self.config,
             "config_basedir": self.config_basedir,
+            "llms": [],
             "cli_args": self.cli_args,
             "checklist_path": checklist_path,
+            "user_prompt": user_prompt,
+            "max_toolcall_token_in_round": 0.3,
+            "planning": False,
         }
         if prompt_config:
             self.config.user_prompt = prompt_config
@@ -90,7 +94,10 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         prompt_config.file_path = "custom_prompt.md"
         self.config.user_prompt = prompt_config
 
-        context = self.create_context(prompt_config=prompt_config)
+        user_prompt = str(self.config_basedir / "custom_prompt.md")
+        context = self.create_context(
+            prompt_config=prompt_config, user_prompt=user_prompt
+        )
 
         pinned_messages = await _create_pinned_messages(context)
 

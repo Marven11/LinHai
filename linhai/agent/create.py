@@ -5,7 +5,7 @@ from typing import TypedDict, Optional, Tuple
 import argparse
 from datetime import datetime
 
-from linhai.config import Config
+from linhai.config import Config, LLMConfig
 from linhai.registry import Registry
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
@@ -39,9 +39,11 @@ class AgentBuildContext(TypedDict):
     registry: Registry
     config: Config
     config_basedir: Optional[Path]
+    llms: list[LLMConfig]
     llm_name: str
     max_toolcall_token_in_round: int | float
     checklist_path: Optional[Path]
+    user_prompt: Optional[str]
     planning: bool
     cli_args: argparse.Namespace
 
@@ -79,13 +81,21 @@ def create_agent_build_context(
         else 0.3
     )
 
+    user_prompt: Optional[str] = None
+    if config.user_prompt and config.user_prompt.file_path:
+        if config_basedir is None:
+            raise ValueError("User prompt file需要config_basedir")
+        user_prompt = str((config_basedir / config.user_prompt.file_path).absolute())
+
     return {
         "registry": registry,
         "config": config,
         "config_basedir": config_basedir,
+        "llms": config.llm,
         "llm_name": resolved_llm_name,
         "max_toolcall_token_in_round": max_toolcall_token,
         "checklist_path": checklist_path,
+        "user_prompt": user_prompt,
         "planning": planning,
         "cli_args": cli_args,
     }
@@ -218,7 +228,7 @@ def _build_explicit_cache_info(llm_config):
 async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 
     llms = []
-    for llm_config in context["config"].llm:
+    for llm_config in context["llms"]:
         llm = OpenAi(
             registry=context["registry"],
             api_key=llm_config.api_key,
@@ -235,7 +245,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
         llms.append(llm)
 
     llm_fallback_map = {}
-    for llm_config in context["config"].llm:
+    for llm_config in context["llms"]:
         if llm_config.fallback is not None:
             llm_fallback_map[llm_config.name] = llm_config.fallback
         else:
@@ -341,13 +351,8 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
 
     cli_args = context["cli_args"]
 
-    if context["config"].user_prompt and context["config"].user_prompt.file_path:
-        if context["config_basedir"] is None:
-            raise ValueError("User prompt文件需要config_basedir")
-        prompt_file_path = (
-            context["config_basedir"] / context["config"].user_prompt.file_path
-        )
-        pinned_messages.append(GlobalPrompt(Path(prompt_file_path).absolute()))
+    if context["user_prompt"] is not None:
+        pinned_messages.append(GlobalPrompt(Path(context["user_prompt"])))
     else:
         pinned_messages.append(
             GlobalPrompt(Path("~/.config/linhai/AGENTS.md").expanduser())

@@ -78,9 +78,11 @@ class TestClawPinnedMessages(unittest.TestCase):
             "registry": Mock(),
             "config": mock_config,
             "config_basedir": None,
+            "llms": [],
             "llm_name": "test-llm",
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
+            "user_prompt": None,
             "planning": False,
             "cli_args": Mock(claw=claw, message=None, file=None),
         }

@@ -80,9 +80,12 @@ server_script_path = "{server_script_path}"
             "registry": self.registry,
             "config": config,
             "config_basedir": Path("."),
+            "llms": config.llm,
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
+            "user_prompt": None,
+            "planning": False,
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))
@@ -114,9 +117,12 @@ compress_threshold = 80000
             "registry": self.registry,
             "config": config,
             "config_basedir": Path("."),
+            "llms": config.llm,
             "llm_name": None,
             "max_toolcall_token_in_round": 30000,
             "checklist_path": None,
+            "user_prompt": None,
+            "planning": False,
             "cli_args": self.cli_args,
         }
         result = asyncio.run(create_agent_from_config(context))

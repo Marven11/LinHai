@@ -87,7 +87,11 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
+            "llms": self.mock_config.llm,
             "checklist_path": None,
+            "user_prompt": None,
+            "max_toolcall_token_in_round": 0.3,
+            "llm_name": None,
         }
 
         # 模拟agent.message_processor.messages
@@ -131,7 +135,11 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
+            "llms": self.mock_config.llm,
             "checklist_path": None,
+            "user_prompt": None,
+            "max_toolcall_token_in_round": 0.3,
+            "llm_name": None,
         }
 
         pinned_messages = await _create_pinned_messages(context)
@@ -154,7 +162,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
+            "llms": self.mock_config.llm,
             "checklist_path": None,
+            "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
         }
@@ -230,7 +240,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
+            "llms": self.mock_config.llm,
             "checklist_path": None,
+            "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
         }

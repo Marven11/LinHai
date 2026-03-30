@@ -67,9 +67,13 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": prompt_file.parent,
+                "llms": [],
                 "llm_name": None,
                 "checklist_path": None,
                 "cli_args": self.mock_cli_args,
+                "user_prompt": prompt_file,
+                "max_toolcall_token_in_round": 0.3,
+                "planning": False,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -109,9 +113,13 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": Path(".").absolute(),
+                "llms": [],
                 "llm_name": None,
                 "checklist_path": None,
                 "cli_args": self.mock_cli_args,
+                "user_prompt": str(Path("./").absolute() / "test_relative_prompt.md"),
+                "max_toolcall_token_in_round": 0.3,
+                "planning": False,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -152,9 +160,13 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "registry": self.registry,
                 "config": mock_config,
                 "config_basedir": None,
+                "llms": [],
                 "llm_name": None,
                 "checklist_path": None,
                 "cli_args": self.mock_cli_args,
+                "user_prompt": None,
+                "max_toolcall_token_in_round": 0.3,
+                "planning": False,
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -199,11 +211,13 @@ class TestGlobalPromptConfig(unittest.TestCase):
                     "registry": self.registry,
                     "config": mock_config,
                     "config_basedir": Path(".").absolute(),
+                    "llms": [],
                     "llm_name": None,
                     "checklist_path": None,
-                    "git_diff_reviewer": False,
-                    "violation_checker": False,
                     "cli_args": self.mock_cli_args,
+                    "user_prompt": None,
+                    "max_toolcall_token_in_round": 0.3,
+                    "planning": False,
                 }
                 init_messages = loop.run_until_complete(
                     _create_pinned_messages(context)

@@ -245,6 +245,7 @@ class TestCreateLLMInstances(unittest.TestCase):
         ]
 
         import asyncio
+        import argparse
         from linhai.llm import OpenAi
         from linhai.llm_manager import LlmManager
 
@@ -252,9 +253,14 @@ class TestCreateLLMInstances(unittest.TestCase):
         context = {
             "config": Mock(llm=llm_configs),
             "registry": mock_registry,
+            "llms": llm_configs,
             "llm_name": "test-llm",
             "config_basedir": Path("."),
             "checklist_path": None,
+            "user_prompt": None,
+            "max_toolcall_token_in_round": 0.3,
+            "planning": False,
+            "cli_args": argparse.Namespace(message=None, file=None, claw=False),
         }
 
         # 创建一个模拟的OpenAi实例，确保get_name返回字符串
@@ -330,6 +336,8 @@ class TestCreateToolManager(unittest.TestCase):
 
     def test_create_tool_manager(self):
         """测试创建ToolManager"""
+        import argparse
+
         registry = Mock()
         config = Mock()
         config.secret.config_path = ""
@@ -341,9 +349,14 @@ class TestCreateToolManager(unittest.TestCase):
             "registry": registry,
             "config": config,
             "config_basedir": Path("."),
+            "llms": [],
             "llm_name": "test-llm",
             "checklist_path": None,
             "tools_config": config,
+            "user_prompt": None,
+            "max_toolcall_token_in_round": 0.3,
+            "planning": False,
+            "cli_args": argparse.Namespace(message=None, file=None, claw=False),
         }
 
         from linhai.tool.main import ToolSet
@@ -422,9 +435,13 @@ class TestCreatePinnedMessages(unittest.TestCase):
             "registry": registry,
             "config": Mock(user_prompt=Mock(file_path=str(prompt_file_path))),
             "config_basedir": Path("."),
+            "llms": [],
             "llm_name": "test-llm",
             "checklist_path": None,
             "cli_args": mock_cli_args,
+            "user_prompt": None,
+            "max_toolcall_token_in_round": 0.3,
+            "planning": False,
         }
         result = asyncio.run(_create_pinned_messages(context))
 
