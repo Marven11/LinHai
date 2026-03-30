@@ -112,10 +112,9 @@ class MissingWithSecretWarningPlugin(Plugin):
 class CommandWhitelistPlugin(Plugin):
     """命令白名单插件，检查process_create命令是否在配置的允许列表中。"""
 
-    def __init__(self, registry, config):
+    def __init__(self, registry, allowed_commands: list[list[str]]):
         super().__init__(registry)
-        self.config = config
-        self.allowed_commands = config.agent.allowed_commands
+        self.allowed_commands = allowed_commands
 
     def register(self, lifecycle: "Lifecycle"):
         lifecycle.register_before_message_generation(self.before_message_generation)

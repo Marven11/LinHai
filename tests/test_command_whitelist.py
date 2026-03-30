@@ -49,11 +49,9 @@ class TestCommandWhitelistConfig(unittest.TestCase):
 
 class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_plugin_allows_whitelisted_command(self):
-        config = Mock()
-        config.agent = Mock()
-        config.agent.allowed_commands = [["ls"]]
+        allowed_commands = [["ls"]]
         registry = Mock()
-        plugin = CommandWhitelistPlugin(registry, config)
+        plugin = CommandWhitelistPlugin(registry, allowed_commands)
 
         agent = Mock()
         context = {}
@@ -66,11 +64,9 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_plugin_blocks_non_whitelisted_command(self):
-        config = Mock()
-        config.agent = Mock()
-        config.agent.allowed_commands = [["ls"]]
+        allowed_commands = [["ls"]]
         registry = Mock()
-        plugin = CommandWhitelistPlugin(registry, config)
+        plugin = CommandWhitelistPlugin(registry, allowed_commands)
 
         agent = Mock()
         context = {}
@@ -84,11 +80,9 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("不在白名单中", result.content)
 
     async def test_plugin_ignores_other_tools(self):
-        config = Mock()
-        config.agent = Mock()
-        config.agent.allowed_commands = [["ls"]]
+        allowed_commands = [["ls"]]
         registry = Mock()
-        plugin = CommandWhitelistPlugin(registry, config)
+        plugin = CommandWhitelistPlugin(registry, allowed_commands)
 
         agent = Mock()
         context = {}
@@ -102,11 +96,9 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_plugin_rejects_non_list_argv(self):
         """测试argv不是列表类型时返回错误"""
-        config = Mock()
-        config.agent = Mock()
-        config.agent.allowed_commands = [["ls"]]
+        allowed_commands = [["ls"]]
         registry = Mock()
-        plugin = CommandWhitelistPlugin(registry, config)
+        plugin = CommandWhitelistPlugin(registry, allowed_commands)
 
         # argv是字符串
         result = await plugin.before_tool_call(
@@ -137,11 +129,9 @@ class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_plugin_rejects_non_string_elements(self):
         """测试argv包含非字符串元素时返回错误"""
-        config = Mock()
-        config.agent = Mock()
-        config.agent.allowed_commands = [["ls"]]
+        allowed_commands = [["ls"]]
         registry = Mock()
-        plugin = CommandWhitelistPlugin(registry, config)
+        plugin = CommandWhitelistPlugin(registry, allowed_commands)
 
         # argv包含数字
         result = await plugin.before_tool_call(

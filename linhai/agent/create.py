@@ -49,6 +49,9 @@ class AgentBuildContext(TypedDict):
     toolsets_config: Union[Literal["defaults"], list[str]]
     override_toolsets: Optional[list[str]]
     compress_threshold: Union[int, float]
+    enable_directory_change_detection: bool
+    max_toolcall_for_llm: dict[str, int]
+    allowed_commands: list[list[str]]
 
 
 def create_agent_build_context(
@@ -104,6 +107,9 @@ def create_agent_build_context(
         "toolsets_config": config.tools.toolsets,
         "override_toolsets": config.agent.override_toolsets,
         "compress_threshold": config.agent.compress_threshold,
+        "enable_directory_change_detection": config.agent.enable_directory_change_detection,
+        "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
+        "allowed_commands": config.agent.allowed_commands,
     }
 
 
@@ -158,17 +164,17 @@ async def create_agent_from_config(
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()
 
-    if context["config"].agent.enable_directory_change_detection:
+    if context["enable_directory_change_detection"]:
         from linhai.plugin import DirectoryChangePlugin
 
         DirectoryChangePlugin(context["registry"]).register(agent.lifecycle)
 
-    if context["config"].agent.allowed_commands:
+    if context["allowed_commands"]:
         from linhai.plugin import CommandWhitelistPlugin
 
-        CommandWhitelistPlugin(context["registry"], context["config"]).register(
-            agent.lifecycle
-        )
+        CommandWhitelistPlugin(
+            context["registry"], context["allowed_commands"]
+        ).register(agent.lifecycle)
 
     from linhai.plugin import MachineControlIntroductionPlugin
     from linhai.rss import RssPlugin
@@ -207,11 +213,11 @@ async def create_agent_from_config(
 
         WaitingUserPlugin(context["registry"]).register(agent.lifecycle)
 
-    if context["config"].agent.max_toolcall_for_llm:
+    if context["max_toolcall_for_llm"]:
         from linhai.plugin import PromptFastAgentPlugin
 
         plugin = PromptFastAgentPlugin(
-            context["registry"], context["config"].agent.max_toolcall_for_llm
+            context["registry"], context["max_toolcall_for_llm"]
         )
         plugin.register(agent.lifecycle)
 

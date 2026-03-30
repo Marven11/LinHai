@@ -83,6 +83,9 @@ server_script_path = "{server_path}"
             "toolsets_config": config.tools.toolsets,
             "override_toolsets": config.agent.override_toolsets,
             "compress_threshold": config.agent.compress_threshold,
+            "enable_directory_change_detection": config.agent.enable_directory_change_detection,
+            "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
+            "allowed_commands": config.agent.allowed_commands,
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

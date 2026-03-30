@@ -170,6 +170,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "toolsets_config": self.mock_config.tools.toolsets,
             "override_toolsets": self.mock_config.agent.override_toolsets,
             "compress_threshold": self.mock_config.agent.compress_threshold,
+            "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": self.mock_config.agent.allowed_commands,
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -251,6 +254,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "toolsets_config": self.mock_config.tools.toolsets,
             "override_toolsets": self.mock_config.agent.override_toolsets,
             "compress_threshold": self.mock_config.agent.compress_threshold,
+            "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": self.mock_config.agent.allowed_commands,
         }
 
         # 创建模拟的Lifecycle对象
