@@ -9,7 +9,7 @@ from telegram.ext import Application, MessageHandler, filters
 
 if TYPE_CHECKING:
     from linhai.agent import Agent as AgentType
-    from linhai.config import TelegramConfig
+    from linhai.agent.create import TelegramContext
 
 from linhai.parsed_message import Segment
 from linhai.agent.base import WAITING_USER_MARKER
@@ -25,7 +25,7 @@ DRAFT_INTERVAL = 1
 class TelegramPlugin(Plugin):
     """Telegram bot插件，实现通过telegram远程控制Agent。"""
 
-    def __init__(self, registry: Registry, telegram_config: "TelegramConfig"):
+    def __init__(self, registry: Registry, telegram_config: "TelegramContext"):
         super().__init__(registry)
         self.config = telegram_config
         self._bot = None
@@ -59,7 +59,7 @@ class TelegramPlugin(Plugin):
                 start_time = time.time()
                 result = await asyncio.gather(
                     self._bot.send_message_draft(
-                        chat_id=int(self.config.default_chat_id),
+                        chat_id=int(self.config["default_chat_id"]),
                         draft_id=draft_id,
                         text=segment["content"],
                     ),
@@ -78,7 +78,7 @@ class TelegramPlugin(Plugin):
             while self._running:
                 result = await asyncio.gather(
                     self._bot.send_message(
-                        chat_id=int(self.config.default_chat_id),
+                        chat_id=int(self.config["default_chat_id"]),
                         text=final_content,
                     ),
                     return_exceptions=True,
@@ -104,7 +104,7 @@ class TelegramPlugin(Plugin):
             return
 
         chat_id = str(update.message.chat_id)
-        if chat_id != self.config.default_chat_id:
+        if chat_id != self.config["default_chat_id"]:
             return
 
         content = update.message.text
@@ -137,7 +137,7 @@ class TelegramPlugin(Plugin):
             return
 
         chat_id = str(update.message.chat_id)
-        if chat_id != self.config.default_chat_id:
+        if chat_id != self.config["default_chat_id"]:
             return
 
         if not update.message.sticker:
@@ -165,7 +165,9 @@ class TelegramPlugin(Plugin):
         if self._running:
             return
 
-        self._application = Application.builder().token(self.config.bot_token).build()
+        self._application = (
+            Application.builder().token(self.config["bot_token"]).build()
+        )
         self._application.add_handler(
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self._handle_telegram_message

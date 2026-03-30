@@ -3,7 +3,7 @@ import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.plugin.telegram import TelegramPlugin
-from linhai.config import TelegramConfig
+from linhai.agent.create import TelegramContext
 from linhai.telegram import TelegramMessage
 
 
@@ -18,7 +18,7 @@ class TestTelegramPlugin(unittest.TestCase):
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.registry.get_member_typechecked.return_value = self.agent
-        self.telegram_config = TelegramConfig(
+        self.telegram_config = TelegramContext(
             bot_token="test_token", default_chat_id="test_chat_id"
         )
 

@@ -30,6 +30,13 @@ from .main import Agent
 from .orchestration import AgentContextOrchestration
 
 
+class TelegramContext(TypedDict):
+    """Telegram配置上下文。"""
+
+    bot_token: str
+    default_chat_id: str
+
+
 class AgentBuildContext(TypedDict):
     """Agent构建上下文，封装所有初始化Agent所需的数据。
 
@@ -52,6 +59,7 @@ class AgentBuildContext(TypedDict):
     enable_directory_change_detection: bool
     max_toolcall_for_llm: dict[str, int]
     allowed_commands: list[list[str]]
+    telegram_config: Optional[TelegramContext]
 
 
 def create_agent_build_context(
@@ -93,6 +101,13 @@ def create_agent_build_context(
             raise ValueError("User prompt file需要config_basedir")
         user_prompt = str((config_basedir / config.user_prompt.file_path).absolute())
 
+    telegram_config: Optional[TelegramContext] = None
+    if config.remote_control.telegram:
+        telegram_config = TelegramContext(
+            bot_token=config.remote_control.telegram.bot_token,
+            default_chat_id=config.remote_control.telegram.default_chat_id,
+        )
+
     return {
         "registry": registry,
         "config": config,
@@ -110,6 +125,7 @@ def create_agent_build_context(
         "enable_directory_change_detection": config.agent.enable_directory_change_detection,
         "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
         "allowed_commands": config.agent.allowed_commands,
+        "telegram_config": telegram_config,
     }
 
 
@@ -188,7 +204,7 @@ async def create_agent_from_config(
             30,
         ).register(agent.lifecycle)
 
-    telegram_config = context["config"].remote_control.telegram
+    telegram_config = context["telegram_config"]
     if telegram_config and context["cli_args"].telegram:
         from linhai.plugin.telegram import TelegramPlugin
 

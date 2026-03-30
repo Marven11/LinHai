@@ -92,6 +92,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "llm_name": None,
+            "telegram_config": None,
         }
 
         # 模拟agent.message_processor.messages
@@ -140,6 +141,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "llm_name": None,
+            "telegram_config": None,
         }
 
         pinned_messages = await _create_pinned_messages(context)
@@ -173,6 +175,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent.allowed_commands,
+            "telegram_config": None,
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -257,6 +260,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
             "max_toolcall_for_llm": {},
             "allowed_commands": self.mock_config.agent.allowed_commands,
+            "telegram_config": None,
         }
 
         # 创建模拟的Lifecycle对象

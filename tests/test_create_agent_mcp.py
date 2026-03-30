@@ -93,6 +93,7 @@ server_script_path = "{server_script_path}"
             "enable_directory_change_detection": config.agent.enable_directory_change_detection,
             "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
             "allowed_commands": config.agent.allowed_commands,
+            "telegram_config": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 
@@ -136,6 +137,7 @@ compress_threshold = 80000
             "enable_directory_change_detection": config.agent.enable_directory_change_detection,
             "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
             "allowed_commands": config.agent.allowed_commands,
+            "telegram_config": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 
