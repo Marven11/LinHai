@@ -167,6 +167,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
+            "toolsets_config": self.mock_config.tools.toolsets,
+            "override_toolsets": self.mock_config.agent.override_toolsets,
+            "compress_threshold": self.mock_config.agent.compress_threshold,
         }
 
         # 模拟LLM实例，确保get_name方法返回正确的名称
@@ -245,6 +248,9 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
+            "toolsets_config": self.mock_config.tools.toolsets,
+            "override_toolsets": self.mock_config.agent.override_toolsets,
+            "compress_threshold": self.mock_config.agent.compress_threshold,
         }
 
         # 创建模拟的Lifecycle对象

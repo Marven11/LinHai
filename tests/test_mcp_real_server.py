@@ -80,6 +80,9 @@ server_script_path = "{server_path}"
             "user_prompt": None,
             "planning": False,
             "cli_args": self.cli_args,
+            "toolsets_config": config.tools.toolsets,
+            "override_toolsets": config.agent.override_toolsets,
+            "compress_threshold": config.agent.compress_threshold,
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

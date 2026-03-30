@@ -1,7 +1,7 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
 from pathlib import Path
-from typing import TypedDict, Optional, Tuple
+from typing import TypedDict, Optional, Tuple, Union, Literal
 import argparse
 from datetime import datetime
 
@@ -46,6 +46,9 @@ class AgentBuildContext(TypedDict):
     user_prompt: Optional[str]
     planning: bool
     cli_args: argparse.Namespace
+    toolsets_config: Union[Literal["defaults"], list[str]]
+    override_toolsets: Optional[list[str]]
+    compress_threshold: Union[int, float]
 
 
 def create_agent_build_context(
@@ -98,6 +101,9 @@ def create_agent_build_context(
         "user_prompt": user_prompt,
         "planning": planning,
         "cli_args": cli_args,
+        "toolsets_config": config.tools.toolsets,
+        "override_toolsets": config.agent.override_toolsets,
+        "compress_threshold": config.agent.compress_threshold,
     }
 
 
@@ -121,8 +127,8 @@ async def create_agent_from_config(
         context, multimodal_manager.toolset
     )
 
-    toolsets_config = context["config"].tools.toolsets
-    override_toolsets = context["config"].agent.override_toolsets
+    toolsets_config = context["toolsets_config"]
+    override_toolsets = context["override_toolsets"]
 
     if override_toolsets is not None:
         enabled_toolsets = list(override_toolsets)
@@ -135,7 +141,7 @@ async def create_agent_from_config(
 
     agent = Agent(
         llm_manager=llm_manager,
-        compress_threshold=context["config"].agent.compress_threshold,
+        compress_threshold=context["compress_threshold"],
         registry=context["registry"],
         pinned_messages=await _create_pinned_messages(context),
         max_toolcall_token_in_round=context["max_toolcall_token_in_round"],
@@ -268,8 +274,8 @@ def _build_toolsets_from_config(
     from linhai.tool.general import generate_sleep_toolset
 
     registry = context["registry"]
-    toolsets_config = context["config"].tools.toolsets
-    override_toolsets = context["config"].agent.override_toolsets
+    toolsets_config = context["toolsets_config"]
+    override_toolsets = context["override_toolsets"]
 
     if override_toolsets is not None:
         enabled_toolsets = list(override_toolsets)

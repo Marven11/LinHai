@@ -357,6 +357,9 @@ class TestCreateToolManager(unittest.TestCase):
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
             "cli_args": argparse.Namespace(message=None, file=None, claw=False),
+            "toolsets_config": "defaults",
+            "override_toolsets": None,
+            "compress_threshold": 0.8,
         }
 
         from linhai.tool.main import ToolSet
