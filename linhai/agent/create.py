@@ -5,7 +5,7 @@ from typing import TypedDict, Optional, Tuple, Union, Literal
 import argparse
 from datetime import datetime
 
-from linhai.config import Config, LLMConfig
+from linhai.config import Config, LLMConfig, MCPConfig, ToolConfig
 from linhai.registry import Registry
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
@@ -44,7 +44,6 @@ class AgentBuildContext(TypedDict):
     """
 
     registry: Registry
-    config: Config
     config_basedir: Optional[Path]
     llms: list[LLMConfig]
     llm_name: str
@@ -60,6 +59,9 @@ class AgentBuildContext(TypedDict):
     max_toolcall_for_llm: dict[str, int]
     allowed_commands: list[list[str]]
     telegram_config: Optional[TelegramContext]
+    mcp_configs: list["MCPConfig"]
+    tool_config: "ToolConfig"
+    secret_config_path: Optional[str]
 
 
 def create_agent_build_context(
@@ -110,7 +112,6 @@ def create_agent_build_context(
 
     return {
         "registry": registry,
-        "config": config,
         "config_basedir": config_basedir,
         "llms": config.llm,
         "llm_name": resolved_llm_name,
@@ -126,6 +127,11 @@ def create_agent_build_context(
         "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
         "allowed_commands": config.agent.allowed_commands,
         "telegram_config": telegram_config,
+        "mcp_configs": config.agent.mcp,
+        "tool_config": config.tools,
+        "secret_config_path": (
+            config.tools.secret.config_path if config.tools.secret else None
+        ),
     }
 
 
@@ -333,10 +339,10 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
     toolsets, machine_control = _build_toolsets_from_config(context, multimodal_toolset)
 
     mcp_connector = MCPConnector(context["registry"])
-    if context["config"].agent.mcp and context["config_basedir"] is not None:
+    if context["mcp_configs"] and context["config_basedir"] is not None:
         from contextlib import AsyncExitStack
 
-        for mcp_config in context["config"].agent.mcp:
+        for mcp_config in context["mcp_configs"]:
             server_script_path = (
                 context["config_basedir"] / mcp_config.server_script_path
             )
@@ -348,14 +354,14 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
     tool_manager = ToolManager(
         registry=context["registry"],
         toolsets=toolsets,
-        config=context["config"].tools,
+        config=context["tool_config"],
         mcp_connector=mcp_connector,
     )
 
-    if context["config"].tools.secret.config_path:
+    if context["secret_config_path"]:
         initialize_secret_system(
             registry=context["registry"],
-            secret_config_path=context["config"].tools.secret.config_path,
+            secret_config_path=context["secret_config_path"],
             config_basedir=context["config_basedir"],
         )
 
@@ -407,8 +413,6 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     for filepath in project_prompt_filepaths:
         if filepath.exists():
             pinned_messages.append(PathPrompt(filepath))
-
-    from linhai.agent.base import FileContentMessage
 
     if context.get("planning", False):
         from .planning import setup_planning_for_agent

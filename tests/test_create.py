@@ -250,8 +250,13 @@ class TestCreateLLMInstances(unittest.TestCase):
         from linhai.llm_manager import LlmManager
 
         mock_registry = Mock()
+        mock_config = Mock()
+        mock_config.agent = Mock()
+        mock_config.agent.mcp = []
+        mock_config.tools = Mock()
+        mock_config.tools.secret = Mock()
+        mock_config.tools.secret.config_path = None
         context = {
-            "config": Mock(llm=llm_configs),
             "registry": mock_registry,
             "llms": llm_configs,
             "llm_name": "test-llm",
@@ -261,6 +266,16 @@ class TestCreateLLMInstances(unittest.TestCase):
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
             "cli_args": argparse.Namespace(message=None, file=None, claw=False),
+            "toolsets_config": "defaults",
+            "override_toolsets": None,
+            "compress_threshold": 0.8,
+            "enable_directory_change_detection": False,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": [],
+            "telegram_config": None,
+            "mcp_configs": mock_config.agent.mcp,
+            "tool_config": mock_config.tools,
+            "secret_config_path": mock_config.tools.secret.config_path,
         }
 
         # 创建一个模拟的OpenAi实例，确保get_name返回字符串
@@ -347,7 +362,6 @@ class TestCreateToolManager(unittest.TestCase):
 
         context = {
             "registry": registry,
-            "config": config,
             "config_basedir": Path("."),
             "llms": [],
             "llm_name": "test-llm",
@@ -360,6 +374,13 @@ class TestCreateToolManager(unittest.TestCase):
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
+            "enable_directory_change_detection": False,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": [],
+            "telegram_config": None,
+            "mcp_configs": config.agent.mcp,
+            "tool_config": config.tools,
+            "secret_config_path": config.tools.secret.config_path,
         }
 
         from linhai.tool.main import ToolSet

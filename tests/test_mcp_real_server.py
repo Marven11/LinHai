@@ -71,7 +71,6 @@ server_script_path = "{server_path}"
 
         context = {
             "registry": self.registry,
-            "config": config,
             "config_basedir": Path("."),
             "llms": config.llm,
             "llm_name": None,
@@ -87,6 +86,11 @@ server_script_path = "{server_path}"
             "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
             "allowed_commands": config.agent.allowed_commands,
             "telegram_config": None,
+            "mcp_configs": config.agent.mcp,
+            "tool_config": config.tools,
+            "secret_config_path": (
+                config.tools.secret.config_path if config.tools.secret else None
+            ),
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

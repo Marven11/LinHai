@@ -76,7 +76,6 @@ class TestClawPinnedMessages(unittest.TestCase):
 
         mock_context_dict = {
             "registry": Mock(),
-            "config": mock_config,
             "config_basedir": None,
             "llms": [],
             "llm_name": "test-llm",
@@ -85,6 +84,16 @@ class TestClawPinnedMessages(unittest.TestCase):
             "user_prompt": None,
             "planning": False,
             "cli_args": Mock(claw=claw, message=None, file=None),
+            "toolsets_config": "defaults",
+            "override_toolsets": None,
+            "compress_threshold": 0.8,
+            "enable_directory_change_detection": False,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": [],
+            "telegram_config": None,
+            "mcp_configs": [],
+            "tool_config": mock_config,
+            "secret_config_path": None,
         }
         context = cast(AgentBuildContext, mock_context_dict)
 

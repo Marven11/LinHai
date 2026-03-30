@@ -59,7 +59,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         """创建AgentBuildContext。"""
         context = {
             "registry": self.registry,
-            "config": self.config,
             "config_basedir": self.config_basedir,
             "llms": [],
             "cli_args": self.cli_args,
@@ -67,6 +66,20 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "user_prompt": user_prompt,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
+            "toolsets_config": "defaults",
+            "override_toolsets": None,
+            "compress_threshold": 0.8,
+            "enable_directory_change_detection": False,
+            "max_toolcall_for_llm": {},
+            "allowed_commands": [],
+            "telegram_config": None,
+            "mcp_configs": self.config.agent.mcp,
+            "tool_config": self.config.tools,
+            "secret_config_path": (
+                self.config.tools.secret.config_path
+                if self.config.tools.secret
+                else None
+            ),
         }
         if prompt_config:
             self.config.user_prompt = prompt_config

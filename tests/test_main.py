@@ -52,7 +52,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
         self.assertIn("cli_args", context)  # cli_args应该在context中
 
         mock_cli_app.assert_called_once()
@@ -94,7 +94,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
@@ -139,7 +139,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
@@ -184,7 +184,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
@@ -281,7 +281,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
         context = call_args[0][0]
         self.assertEqual(
             context.get("llm_name"), "test_llm"
@@ -338,7 +338,7 @@ class TestMainCommandLine(unittest.TestCase):
         self.assertEqual(
             context["registry"], mock_registry_instance
         )  # context字典中的registry
-        self.assertIsInstance(context["config"], Config)  # context字典中的config
+        self.assertIn("config_basedir", context)  # config_basedir应该在context中
         context = call_args[0][0]
         self.assertEqual(
             context.get("llm_name"), "test_llm"
