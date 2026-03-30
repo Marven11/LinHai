@@ -318,7 +318,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         workflow_names = [tool["function"]["name"] for tool in tools_info]
         self.assertIn("context_forget_range_step1", workflow_names)
         self.assertIn("context_forget_range_step2", workflow_names)
-        self.assertTrue(any("safe_calculator" in name for name in workflow_names))
+        self.assertTrue(any("quickjs_calculator" in name for name in workflow_names))
 
     async def test_context_forget_range_step1_tool_structure(self):
         """Test that context_forget_range_step1 tool has correct structure."""

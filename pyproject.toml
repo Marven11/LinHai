@@ -30,6 +30,7 @@ dependencies = [
     "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
     "feedparser",
     "python-telegram-bot>=22.7",
+    "quickjs-ng",
 ]
 requires-python = ">=3.10"
 

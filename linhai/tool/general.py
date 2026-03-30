@@ -2,11 +2,12 @@
 
 from datetime import datetime
 import asyncio
-import re
 import shutil
 import subprocess
 import tempfile
 from typing import Optional, TypedDict, List, Dict
+
+import quickjs
 
 import chardet
 import httpx
@@ -249,33 +250,9 @@ async def search_web(query: str, max_results: int = 5) -> str:
         return f"搜索过程中发生错误: {str(e)}"
 
 
-def safe_calculator(expression: str) -> str:
-    """安全计算数学表达式。只允许安全字符，避免代码执行。
-
-    Args:
-        expression: 数学表达式字符串
-
-    Returns:
-        计算结果字符串或错误消息
-    """
-    safe_pattern = r"^[0-9+\-*/().%><\s]+$"
-    if not re.match(safe_pattern, expression):
-        return "错误: 表达式包含不安全字符。只允许数字、加减乘除(+ - * /)、乘方(**)、取模(%)、大于小于(> <)、括号和空格。"
-
-    if not expression.strip():
-        return "错误: 表达式不能为空。"
-
-    try:
-        result = eval(expression, {"__builtins__": {}}, {})
-        return str(result)
-    except (ValueError, ZeroDivisionError, SyntaxError) as e:
-        return f"错误: 计算失败 - {str(e)}"
-
-
-# 注册计算器工具
 @utils_tools.register_tool(
-    name="safe_calculator",
-    desc="安全计算数学表达式。表达式只能包含数字、加减乘除符号(+ - * /)、乘方(**)、取模(%)、大于小于(> <)和空格。建议在计算任何数字时优先使用此工具。",
+    name="quickjs_calculator",
+    desc="使用quickjs计算数学表达式。直接eval JavaScript表达式。建议在计算任何数字时优先使用此工具。",
     args={
         "expression": ToolArgInfo(
             desc="数学表达式，例如 '2 + 3 * 4' 或 '10 % 3'", type="str"
@@ -283,8 +260,9 @@ def safe_calculator(expression: str) -> str:
     },
     required_args=["expression"],
 )
-def registered_safe_calculator(expression: str) -> str:
-    return safe_calculator(expression)
+def quickjs_calculator(expression: str) -> str:
+    ctx = quickjs.Context()
+    return str(ctx.eval(expression))
 
 
 def generate_sleep_toolset(registry: Registry) -> ToolSet:

@@ -6,8 +6,7 @@
 from .general import (
     fetch_article,
     search_web,
-    safe_calculator,
-    registered_safe_calculator,
+    quickjs_calculator,
 )
 
 from .base import (
@@ -32,6 +31,5 @@ __all__ = [
     "MCPConnector",
     "fetch_article",
     "search_web",
-    "safe_calculator",
-    "registered_safe_calculator",
+    "quickjs_calculator",
 ]

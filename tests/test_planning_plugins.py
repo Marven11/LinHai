@@ -295,7 +295,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
                     "name": "write_file",
                     "arguments": {"filepath": str(self.status_file)},
                 },
-                {"name": "safe_calculator", "arguments": {"expression": "1+1"}},
+                {"name": "quickjs_calculator", "arguments": {"expression": "1+1"}},
             ],
         )
 

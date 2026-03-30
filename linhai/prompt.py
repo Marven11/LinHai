@@ -357,13 +357,13 @@ EXAMPLES_TOOL_CALL = """
 现在调用工具计算114+514，等待工具结果
 
 ```json toolcall
-{"name":"safe_calculator","arguments":{"expression":"114+514"}}
+{"name":"quickjs_calculator","arguments":{"expression":"114+514"}}
 ```
 
 然后是114*514，计算这个算式不需要等待114+514的结果，设置assert_success=false以避免第一个工具失败时影响第二个工具的调用
 
 ```json toolcall
-{"name":"safe_calculator","arguments":{"expression":"114*514"}, "assert_success": false}
+{"name":"quickjs_calculator","arguments":{"expression":"114*514"}, "assert_success": false}
 ```
 
 我们需要等待这两个算式的结果

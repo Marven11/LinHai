@@ -50,6 +50,37 @@
 
           dependencies = [ pkgs.python3Packages.httpx ];
         };
+
+        quickjs-src = pkgs.fetchFromGitHub {
+          owner = "quickjs-ng";
+          repo = "quickjs";
+          rev = "v0.13.0";
+          hash = "sha256-t1GvD1iBRfJwzZHoLxMbE2Gh1Ow8v0ZASxCVnOT7ST4=";
+        };
+
+        quickjs-ng' = pkgs.python3Packages.buildPythonPackage rec {
+          pname = "quickjs-ng";
+          version = "0.12.1.1";
+          pyproject = true;
+
+          src = pkgs.fetchFromGitHub {
+            owner = "genotrance";
+            repo = "quickjs-ng";
+            tag = "v${version}";
+            hash = "sha256-1kmBzeEkx1xQWK+LJzigj5n3TAmw71S26WJXBSLixRk=";
+          };
+
+          postPatch = ''
+            rm -rf upstream-quickjs
+            cp -r ${quickjs-src} upstream-quickjs
+          '';
+
+          build-system = [
+            pkgs.python3Packages.setuptools
+          ];
+
+          pythonImportsCheck = [ "quickjs" ];
+        };
       in
       {
         packages.default =
@@ -84,6 +115,7 @@
               tomli-w
               feedparser
               python-telegram-bot'
+              quickjs-ng'
             ];
 
             src = ./.;
