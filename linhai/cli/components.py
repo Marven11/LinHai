@@ -303,7 +303,7 @@ class RuntimeMessageWidget(Static):
         )
 
 
-class ToolCallWidget(Markdown):
+class ToolCallWidget(Static):
     """工具调用显示组件，流式显示键值对表格"""
 
     DEFAULT_CSS = """
@@ -326,17 +326,6 @@ class ToolCallWidget(Markdown):
         text-overflow: ellipsis;
         text-wrap: nowrap;
     }
-
-    ToolCallWidget MarkdownFence {
-        margin: 0;
-    }
-
-    ToolCallWidget.collapsed MarkdownFence {
-        background: black 0%;
-        & > Label {
-            padding: 0;
-        }
-    }
     """
 
     def __init__(
@@ -358,37 +347,34 @@ class ToolCallWidget(Markdown):
         self.has_error = False
         self.error_message = ""
         self.is_collapsed = False
+        self.collapse_timer: Timer | None = None
         self.get_refresh_interval = get_refresh_interval
 
         self.border_title = "tool call"
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
-        self.update_display_work()
+        refresh_interval = self.get_refresh_interval()
+        self.timer = self.set_interval(refresh_interval, self.update_display)
 
-    @work(exclusive=False)
-    async def update_display_work(self):
-        while True:
-            start_time = time.perf_counter()
-            await self.update_display()
-            if self._segment["is_finished"]:
-                break
-
-            duration = time.perf_counter() - start_time
-            sleep_sec = self.get_refresh_interval() - duration
-            if sleep_sec > 0:
-                await asyncio.sleep(sleep_sec)
-
-        await self.update_display()
-        await self._collapse()
-        self.is_collapsed = True
-
-    async def update_display(self) -> None:
+    def update_display(self) -> None:
         if self.has_error:
-            self.update(self.json_str)
+            self.update(
+                Syntax(
+                    self.json_str,
+                    lexer="markdown",
+                    theme=self.theme,
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
+            )
             self.border_title = "tool call (error)"
             self.add_class("error")
             return
+
+        if self._segment["is_finished"] and self.timer:
+            self.timer.stop()
+            self._start_collapse_timer()
 
         segment_content = self._segment["content"]
         if segment_content != self.json_str:
@@ -405,7 +391,7 @@ class ToolCallWidget(Markdown):
             if value.index_key != self.current_key:
                 self.current_key = value.index_key
                 self.content_before_current_value = self.current_content
-                self.current_content += f"- {self.current_key}: `"
+                self.current_content += f"{self.current_key}: `"
 
             if isinstance(value, Value):
                 final_value = (
@@ -418,12 +404,12 @@ class ToolCallWidget(Markdown):
                     backticks = "`" * self.get_backtick_count(final_value)
                     self.current_content = (
                         self.content_before_current_value
-                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
+                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"- {self.current_key}: `{final_value}`\n"
+                        + f"{self.current_key}: `{final_value}`\n"
                     )
 
                 new_guessed_type = self._guess_content_type(final_value)
@@ -439,15 +425,23 @@ class ToolCallWidget(Markdown):
                     backticks = "`" * backtick_count
                     self.current_content = (
                         self.content_before_current_value
-                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
+                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"- {self.current_key}: `{self.current_value}`"
+                        + f"{self.current_key}: `{self.current_value}`"
                     )
 
-            await self.update(self.current_content.strip())
+            self.update(
+                Syntax(
+                    self.current_content.strip(),
+                    lexer="markdown",
+                    theme=self.theme,
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
+            )
 
     def get_backtick_count(self, text: str) -> int:
         """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
@@ -469,7 +463,7 @@ class ToolCallWidget(Markdown):
 
         return ""
 
-    async def _collapse(self) -> None:
+    def _collapse(self) -> None:
         """折叠widget，显示简化内容"""
         if self.is_collapsed:
             return
@@ -480,9 +474,17 @@ class ToolCallWidget(Markdown):
         simplified = "<bad toolcall>"
         if not self.has_error:
             simplified = parse_and_simplify_toolcall(self.json_str)
-        await self.update(f"```python\n{simplified}\n```")
+        self.update(
+            Syntax(
+                simplified,
+                lexer="python",
+                theme=self.theme,
+                background_color="#2E3440",
+                word_wrap=True,
+            )
+        )
 
-    async def _expand(self) -> None:
+    def _expand(self) -> None:
         """展开widget，显示完整内容"""
         if not self.is_collapsed:
             return
@@ -491,14 +493,28 @@ class ToolCallWidget(Markdown):
         self.remove_class("collapsed")
         self.border_title = "tool call [点击隐藏]"
 
-        await self.update(self.current_content.strip())
+        self.update(
+            Syntax(
+                self.current_content.strip(),
+                lexer="markdown",
+                theme=self.theme,
+                background_color="#2E3440",
+                word_wrap=True,
+            )
+        )
 
-    async def on_click(self) -> None:
+    def _start_collapse_timer(self) -> None:
+        if self.collapse_timer:
+            self.collapse_timer.stop()
+
+        self.collapse_timer = self.set_timer(0.2, self._collapse)
+
+    def on_click(self) -> None:
         """点击事件，切换折叠状态"""
         if self.is_collapsed:
-            await self._expand()
+            self._expand()
         else:
-            await self._collapse()
+            self._collapse()
 
 
 class ReasoningContentWidget(Static):
