@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static, Sparkline, ListView, ListItem
+from textual.widgets import Static
 
 # 导入AnswerTokenUsage用于token用量显示
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
@@ -178,39 +178,11 @@ class ContextTabWidget(Static):
         return 0, 0.0
 
     def _build_message_statistics_section(
-        self,
-        grid: Table,
-        messages: list[Message],
-        message_count: int,
-        orchestration: AgentContextOrchestration,
+        self, grid: Table, messages: list[Message], message_count: int
     ) -> None:
         """Build message statistics section."""
         grid.add_row(Text("消息统计", style="bold yellow"))
         grid.add_row("")
-
-        message_lengths = [len(str(msg)) for msg in messages]
-
-        sparkline_grid = Table.grid(padding=(0, 1))
-        sparkline_grid.add_column(style="bold cyan")
-        sparkline_grid.add_column()
-        sparkline_grid.add_row("消息长度分布:", "")
-
-        sparkline_grid.add_row(
-            "", f"Sparkline will show {len(message_lengths)} messages"
-        )
-
-        if message_lengths:
-            max_len = max(message_lengths)
-            avg_len = sum(message_lengths) / len(message_lengths)
-            sparkline_grid.add_row("最大长度:", f"{max_len} 字符")
-            sparkline_grid.add_row("平均长度:", f"{avg_len:.1f} 字符")
-
-        grid.add_row(sparkline_grid)
-        grid.add_row("")
-
-        stats_grid = Table.grid(padding=(0, 1))
-        stats_grid.add_column(style="bold cyan")
-        stats_grid.add_column()
 
         type_counts, total_chars, max_length, max_length_msg = (
             self._count_message_types(messages)
@@ -218,19 +190,22 @@ class ContextTabWidget(Static):
 
         avg_length = total_chars / message_count if message_count > 0 else 0
 
-        stats_grid.add_row("总消息数:", f"{message_count}")
-        stats_grid.add_row("用户消息:", f"{type_counts['user']}")
-        stats_grid.add_row("助手消息:", f"{type_counts['assistant']}")
-        stats_grid.add_row("系统消息:", f"{type_counts['system']}")
-        stats_grid.add_row("运行时消息:", f"{type_counts['runtime']}")
-        stats_grid.add_row("其他消息:", f"{type_counts['other']}")
-        stats_grid.add_row("平均长度:", f"{avg_length:.1f} 字符")
-        stats_grid.add_row(
-            "最长消息:", f"{max_length} 字符" if max_length_msg else "无"
-        )
-        stats_grid.add_row("大消息数量:", f"{len(orchestration.large_messages)}")
+        grid.add_row("总消息数:", f"{message_count}")
+        grid.add_row("用户消息:", f"{type_counts['user']}")
+        grid.add_row("助手消息:", f"{type_counts['assistant']}")
+        grid.add_row("系统消息:", f"{type_counts['system']}")
+        grid.add_row("运行时消息:", f"{type_counts['runtime']}")
+        grid.add_row("其他消息:", f"{type_counts['other']}")
+        grid.add_row("平均长度:", f"{avg_length:.1f} 字符")
 
-        grid.add_row(stats_grid)
+        # Longest message with expand/collapse support
+        if max_length_msg:
+            max_content = reprobj.repr(str(max_length_msg))
+            grid.add_row("最长消息:", f"{max_length} 字符")
+            grid.add_row("最长内容:", f"{max_content}")
+        else:
+            grid.add_row("最长消息:", "无")
+
         grid.add_row("")
 
     def _build_token_usage_section(self, grid: Table, agent: Agent) -> None:
@@ -287,6 +262,7 @@ class ContextTabWidget(Static):
         large_messages = orchestration.large_messages
         garbage_ids = set()  # garbage_message_ids已删除
 
+        grid.add_row("大消息数量:", f"{len(large_messages)}")
         grid.add_row("垃圾消息数量:", f"{len(garbage_ids)}")
 
         # 显示大消息repr列表
@@ -358,9 +334,7 @@ class ContextTabWidget(Static):
         messages = agent_message.messages
         message_count = len(messages)
 
-        self._build_message_statistics_section(
-            grid, messages, message_count, orchestration
-        )
+        self._build_message_statistics_section(grid, messages, message_count)
         self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)

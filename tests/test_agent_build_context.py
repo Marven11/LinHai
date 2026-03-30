@@ -37,7 +37,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.agent.max_toolcall_for_llm = {}
         self.config.agent.allowed_commands = []
         self.config.agent.mcp = []
-        self.config.agent.default_llm = None
         self.config.tools = Mock()
         self.config.tools.toolsets = "defaults"
         self.config.tools.max_toolcall_token_in_round = 0.3
