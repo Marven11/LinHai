@@ -474,5 +474,160 @@ class TestCreatePinnedMessages(unittest.TestCase):
         mock_global_prompt.assert_called()
 
 
+class TestDefaultLlmConfig(unittest.TestCase):
+    """测试agent.default_llm配置功能"""
+
+    def setUp(self):
+        """测试前置设置"""
+        self.registry = Mock(spec=Registry)
+
+    def _create_mock_llm_config(self, name):
+        """创建模拟的LLM配置"""
+        mock_llm_config = Mock()
+        mock_llm_config.name = name
+        mock_llm_config.base_url = f"http://{name}.com"
+        mock_llm_config.api_key = f"test_key_{name}"
+        mock_llm_config.model = f"test-model-{name}"
+        mock_llm_config.model_dump.return_value = {
+            "client_options": {},
+            "completion_options": {},
+            "token_limit": 1000,
+            "compatibility": "openai",
+        }
+        return mock_llm_config
+
+    def _create_mock_config(self, llm_configs, default_llm=None):
+        """创建模拟的配置"""
+        mock_config = Mock()
+        mock_config.llm = llm_configs
+        mock_config.agent = Mock()
+        mock_config.agent.override_toolsets = None
+        mock_config.agent.default_llm = default_llm
+        mock_config.tools = Mock()
+        mock_config.tools.secret.config_path = ""
+        mock_config.user_prompt = Mock()()()
+        mock_config.user_prompt.file_path = "prompt.md"
+        mock_config.subagent = Mock()
+        mock_config.cli = Mock()
+        return mock_config
+
+    def test_default_llm_config_not_set_uses_first_llm(self):
+        """测试agent.default_llm未配置时使用第一个LLM"""
+        mock_llm_config1 = self._create_mock_llm_config("llm1")
+        mock_llm_config2 = self._create_mock_llm_config("llm2")
+        mock_config = self._create_mock_config(
+            [mock_llm_config1, mock_llm_config2], default_llm=None
+        )
+
+        import argparse
+
+        cli_args = argparse.Namespace(
+            message=None,
+            file=None,
+            claw=False,
+            disable_waiting_marker=False,
+            rss=[],
+            telegram=False,
+        )
+
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=mock_config,
+            config_basedir=Path("."),
+            llm_name=None,
+            cli_args=cli_args,
+            checklist_path=None,
+        )
+        self.assertEqual(context["llm_name"], "llm1")
+
+    def test_default_llm_config_set_uses_configured_llm(self):
+        """测试agent.default_llm配置存在时使用配置的LLM"""
+        mock_llm_config1 = self._create_mock_llm_config("llm1")
+        mock_llm_config2 = self._create_mock_llm_config("llm2")
+        mock_config = self._create_mock_config(
+            [mock_llm_config1, mock_llm_config2], default_llm="llm2"
+        )
+
+        import argparse
+
+        cli_args = argparse.Namespace(
+            message=None,
+            file=None,
+            claw=False,
+            disable_waiting_marker=False,
+            rss=[],
+            telegram=False,
+        )
+
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=mock_config,
+            config_basedir=Path("."),
+            llm_name=None,
+            cli_args=cli_args,
+            checklist_path=None,
+        )
+        self.assertEqual(context["llm_name"], "llm2")
+
+    def test_default_llm_config_invalid_raises_error(self):
+        """测试agent.default_llm配置不存在的LLM时抛出异常"""
+        mock_llm_config1 = self._create_mock_llm_config("llm1")
+        mock_llm_config2 = self._create_mock_llm_config("llm2")
+        mock_config = self._create_mock_config(
+            [mock_llm_config1, mock_llm_config2], default_llm="invalid_llm"
+        )
+
+        import argparse
+
+        cli_args = argparse.Namespace(
+            message=None,
+            file=None,
+            claw=False,
+            disable_waiting_marker=False,
+            rss=[],
+            telegram=False,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            create_agent_build_context(
+                registry=self.registry,
+                config=mock_config,
+                config_basedir=Path("."),
+                llm_name=None,
+                cli_args=cli_args,
+                checklist_path=None,
+            )
+        self.assertIn("agent.default_llm", str(context.exception))
+
+    def test_cli_llm_name_overrides_default_llm_config(self):
+        """测试命令行参数LLM名称覆盖agent.default_llm配置"""
+        mock_llm_config1 = self._create_mock_llm_config("llm1")
+        mock_llm_config2 = self._create_mock_llm_config("llm2")
+        mock_config = self._create_mock_config(
+            [mock_llm_config1, mock_llm_config2], default_llm="llm1"
+        )
+
+        import argparse
+
+        cli_args = argparse.Namespace(
+            message=None,
+            file=None,
+            claw=False,
+            disable_waiting_marker=False,
+            rss=[],
+            telegram=False,
+        )
+
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=mock_config,
+            config_basedir=Path("."),
+            llm_name="llm2",
+            cli_args=cli_args,
+            checklist_path=None,
+        )
+        self.assertEqual(context["llm_name"], "llm2")
+
+
 if __name__ == "__main__":
     unittest.main()

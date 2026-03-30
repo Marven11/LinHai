@@ -124,6 +124,9 @@ class AgentConfig(BaseModel):
     override_toolsets: Optional[list[str]] = Field(
         default=None, description="覆盖tools.toolsets的设置。"
     )
+    default_llm: Optional[str] = Field(
+        default=None, description="默认使用的LLM名称，优先级高于命令行参数。"
+    )
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument

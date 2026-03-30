@@ -79,10 +79,18 @@ def create_agent_build_context(
     llm_config_names = [llm_config.name for llm_config in llm_configs]
 
     if llm_name is None:
-
-        if not llm_config_names:
-            raise ValueError("配置中没有可用的LLM")
-        resolved_llm_name = llm_config_names[0]
+        config_default_llm = config.agent.default_llm
+        if config_default_llm is not None:
+            if config_default_llm not in llm_config_names:
+                available_llms = ", ".join(llm_config_names)
+                raise ValueError(
+                    f"agent.default_llm配置的LLM名称 '{config_default_llm}' 不存在。可用的LLM包括: {available_llms}"
+                )
+            resolved_llm_name = config_default_llm
+        else:
+            if not llm_config_names:
+                raise ValueError("配置中没有可用的LLM")
+            resolved_llm_name = llm_config_names[0]
     elif llm_name not in llm_config_names:
         available_llms = ", ".join(llm_config_names)
         raise ValueError(

@@ -27,6 +27,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.mock_config.agent.enable_directory_change_detection = False
         self.mock_config.agent.allowed_commands = None
         self.mock_config.agent.mcp = MagicMock()
+        self.mock_config.agent.default_llm = None
         self.mock_config_basedir = Path("/tmp/test_config")
         self.mock_cli_args = MagicMock()
         self.mock_cli_args.planning = False
