@@ -62,12 +62,13 @@ class TestRssPlugin(unittest.TestCase):
         )
         self.assertEqual(plugin.poll_interval, 300)
 
-    async def test_fetch_and_process_rss_success(self):
+    def test_fetch_and_process_rss_success(self):
         """测试成功获取和处理RSS。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
 
         with patch("linhai.rss.httpx.AsyncClient") as mock_client:
@@ -77,19 +78,22 @@ class TestRssPlugin(unittest.TestCase):
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            asyncio.run(
+                plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            )
 
             self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
             self.assertIn("guid-1", plugin.processed_guids)
             self.assertIn("guid-2", plugin.processed_guids)
 
-    async def test_fetch_and_process_rss_duplicate(self):
+    def test_fetch_and_process_rss_duplicate(self):
         """测试RSS条目去重。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
         plugin.processed_guids.add("guid-1")
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
 
         with patch("linhai.rss.httpx.AsyncClient") as mock_client:
@@ -99,13 +103,15 @@ class TestRssPlugin(unittest.TestCase):
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            asyncio.run(
+                plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            )
 
             self.assertEqual(self.agent.message_processor.add_new_message.call_count, 1)
             self.assertIn("guid-1", plugin.processed_guids)
             self.assertIn("guid-2", plugin.processed_guids)
 
-    async def test_fetch_and_process_rss_network_error(self):
+    def test_fetch_and_process_rss_network_error(self):
         """测试网络错误处理。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
@@ -116,11 +122,15 @@ class TestRssPlugin(unittest.TestCase):
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            with self.assertRaises(Exception) as context:
+                asyncio.run(
+                    plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+                )
 
+            self.assertIn("Network error", str(context.exception))
             self.agent.message_processor.add_new_message.assert_not_called()
 
-    async def test_fetch_and_process_rss_parse_error(self):
+    def test_fetch_and_process_rss_parse_error(self):
         """测试RSS解析错误处理。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
@@ -135,11 +145,13 @@ class TestRssPlugin(unittest.TestCase):
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            asyncio.run(
+                plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            )
 
             self.agent.message_processor.add_new_message.assert_not_called()
 
-    async def test_before_agent_loop_with_urls(self):
+    def test_before_agent_loop_with_urls(self):
         """测试Agent循环开始时启动轮询。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 1)
         mock_agent = Mock()
@@ -149,17 +161,30 @@ class TestRssPlugin(unittest.TestCase):
             mock_task = Mock()
             mock_create_task.return_value = mock_task
 
-            await plugin.before_agent_loop(mock_agent)
+            def create_task_side_effect(coroutine, **kwargs):
+                # 调用coroutine.close()来避免warning
+                try:
+                    coroutine.close()
+                except:
+                    pass
+                # 返回一个mock task
+                mock_task.done.return_value = True
+                return mock_task
+
+            mock_create_task.side_effect = create_task_side_effect
+
+            with patch("linhai.rss.httpx.AsyncClient"):
+                result = asyncio.run(plugin.before_agent_loop(mock_agent))
 
             mock_create_task.assert_called_once()
 
-    async def test_before_agent_loop_without_urls(self):
+    def test_before_agent_loop_without_urls(self):
         """测试无RSS URL时不启动轮询。"""
         plugin = RssPlugin(self.registry, [], 300)
         mock_agent = Mock()
 
         with patch("asyncio.create_task") as mock_create_task:
-            await plugin.before_agent_loop(mock_agent)
+            asyncio.run(plugin.before_agent_loop(mock_agent))
 
             mock_create_task.assert_not_called()
 
@@ -174,12 +199,13 @@ class TestRssPlugin(unittest.TestCase):
             plugin.before_agent_loop
         )
 
-    async def test_poll_rss_sources(self):
+    def test_poll_rss_sources(self):
         """测试轮询RSS源的功能。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
 
         with patch("linhai.rss.httpx.AsyncClient") as mock_client:
@@ -189,7 +215,7 @@ class TestRssPlugin(unittest.TestCase):
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await plugin._poll_rss_sources()
+            asyncio.run(plugin._poll_rss_sources())
 
             self.assertEqual(self.agent.message_processor.add_new_message.call_count, 2)
             self.assertIn("guid-1", plugin.processed_guids)
