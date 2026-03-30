@@ -151,14 +151,12 @@ class TestContextTab(unittest.TestCase):
         """测试update_display功能"""
         registry = Registry()
 
-        # 创建模拟组件
         from linhai.agent.main import Agent
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
         mock_agent = Mock(spec=Agent)
 
-        # 设置模拟数据
         from linhai.llm import UserMessage, AssistantMessage, AnswerTokenUsage
         from linhai.agent.base import RuntimeMessage
 
@@ -176,7 +174,6 @@ class TestContextTab(unittest.TestCase):
         }
         mock_orchestration.get_large_message_reprs = Mock(return_value=[])
 
-        # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
@@ -194,7 +191,6 @@ class TestContextTab(unittest.TestCase):
         mock_agent.last_token_usage = mock_token_usage
         mock_agent.last_token_usage_object = None
 
-        # 设置token_manager的current_token_usage
         from linhai.token_manager import TokenManager
 
         mock_token_usage = AnswerTokenUsage(
@@ -206,30 +202,39 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
 
-        # 注册所有必需的组件
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
         registry.register_member("agent", mock_agent)
         registry.register_member("token_manager", mock_token_manager)
 
-        # 创建widget并测试
         widget = ContextTabWidget(registry)
 
-        # 模拟query_one
-        from textual.widgets import Static
+        from textual.widgets import Sparkline, Static
 
-        mock_static = Mock(spec=Static)
-        widget.query_one = Mock(return_value=mock_static)
+        mock_sparkline = Mock(spec=Sparkline)
+        mock_stats_text = Mock(spec=Static)
+        mock_content = Mock(spec=Static)
 
-        # 调用update_display
+        def _mock_query_one(selector, expect_type=None):
+            if selector == "#msg-stats-sparkline":
+                return mock_sparkline
+            if selector == "#msg-stats-text":
+                return mock_stats_text
+            return mock_content
+
+        widget.query_one = Mock(side_effect=_mock_query_one)
+
         widget.update_display()
 
-        # 验证update被调用
-        mock_static.update.assert_called_once()
+        self.assertEqual(
+            mock_sparkline.data, [float(len(str(msg))) for msg in mock_messages]
+        )
+        mock_stats_text.update.assert_called_once()
+        mock_content.update.assert_called_once()
 
-        # 验证内容包含预期的信息
-        call_args = mock_static.update.call_args[0][0]
-        self.assertIsNotNone(call_args)
+        stats_call_args = mock_stats_text.update.call_args[0][0]
+        self.assertIn("总消息数: 3", stats_call_args)
+        self.assertIn("大消息数量: 2", stats_call_args)
 
     def test_update_display_without_components(self):
         """测试在没有组件时的update_display"""

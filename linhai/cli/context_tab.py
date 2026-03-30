@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Static
+from textual.widgets import Collapsible, Sparkline, Static
 
 # 导入AnswerTokenUsage用于token用量显示
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
@@ -43,6 +43,10 @@ class ContextTabWidget(Static):
         height: 100%;
         background: #2E3440;
     }
+
+    ContextTabWidget #msg-stats-sparkline {
+        height: 3;
+    }
     """
 
     def __init__(self, registry: Registry) -> None:
@@ -51,8 +55,12 @@ class ContextTabWidget(Static):
         self.refresh_interval = 1.0  # seconds
 
     def compose(self) -> ComposeResult:
-        """Compose the widget with vertical scroll."""
         with VerticalScroll():
+            with Collapsible(
+                title="消息统计", id="msg-stats-collapsible", collapsed=False
+            ):
+                yield Sparkline(id="msg-stats-sparkline", summary_function=max)
+                yield Static(id="msg-stats-text")
             yield Static(id="context-content")
 
     def on_mount(self) -> None:
@@ -177,36 +185,23 @@ class ContextTabWidget(Static):
 
         return 0, 0.0
 
-    def _build_message_statistics_section(
-        self, grid: Table, messages: list[Message], message_count: int
+    def _update_message_statistics(
+        self, messages: list[Message], large_message_count: int
     ) -> None:
-        """Build message statistics section."""
-        grid.add_row(Text("消息统计", style="bold yellow"))
-        grid.add_row("")
+        sparkline = self.query_one("#msg-stats-sparkline", Sparkline)
+        sparkline.data = [float(len(str(msg))) for msg in messages]
 
-        type_counts, total_chars, max_length, max_length_msg = (
-            self._count_message_types(messages)
-        )
-
+        message_count = len(messages)
+        _, total_chars, max_length, _ = self._count_message_types(messages)
         avg_length = total_chars / message_count if message_count > 0 else 0
 
-        grid.add_row("总消息数:", f"{message_count}")
-        grid.add_row("用户消息:", f"{type_counts['user']}")
-        grid.add_row("助手消息:", f"{type_counts['assistant']}")
-        grid.add_row("系统消息:", f"{type_counts['system']}")
-        grid.add_row("运行时消息:", f"{type_counts['runtime']}")
-        grid.add_row("其他消息:", f"{type_counts['other']}")
-        grid.add_row("平均长度:", f"{avg_length:.1f} 字符")
-
-        # Longest message with expand/collapse support
-        if max_length_msg:
-            max_content = reprobj.repr(str(max_length_msg))
-            grid.add_row("最长消息:", f"{max_length} 字符")
-            grid.add_row("最长内容:", f"{max_content}")
-        else:
-            grid.add_row("最长消息:", "无")
-
-        grid.add_row("")
+        stats_text = self.query_one("#msg-stats-text", Static)
+        stats_text.update(
+            "总消息数: " + str(message_count) + "\n"
+            "消息平均长度: " + f"{avg_length:.1f}" + " 字符\n"
+            "最长消息长度: " + str(max_length) + " 字符\n"
+            "大消息数量: " + str(large_message_count)
+        )
 
     def _build_token_usage_section(self, grid: Table, agent: Agent) -> None:
         """Build token usage section."""
@@ -260,10 +255,6 @@ class ContextTabWidget(Static):
         grid.add_row("")
 
         large_messages = orchestration.large_messages
-        garbage_ids = set()  # garbage_message_ids已删除
-
-        grid.add_row("大消息数量:", f"{len(large_messages)}")
-        grid.add_row("垃圾消息数量:", f"{len(garbage_ids)}")
 
         # 显示大消息repr列表
         if large_messages:
@@ -327,14 +318,14 @@ class ContextTabWidget(Static):
         )
         agent: Agent = self.registry.get_member_typechecked("agent", Agent)
 
+        messages = agent_message.messages
+
+        self._update_message_statistics(messages, len(orchestration.large_messages))
+
         grid = Table.grid(padding=(0, 1))
         grid.add_column(style="bold cyan")
         grid.add_column()
 
-        messages = agent_message.messages
-        message_count = len(messages)
-
-        self._build_message_statistics_section(grid, messages, message_count)
         self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)
