@@ -31,6 +31,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
 
         self.config.llm = [mock_llm_config]
         self.config.agent = Mock()
+        self.config.agent.default_llm = "test_llm"
         self.config.agent.override_toolsets = None
         self.config.agent.compress_threshold = 0.8
         self.config.agent.enable_directory_change_detection = False
