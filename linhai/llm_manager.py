@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Sequence
+import random
 import asyncio
 from datetime import datetime, timedelta
 from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
@@ -193,13 +194,16 @@ class LlmManager:
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
                     if fallback_llm is not None:
-                        disabled_until = datetime.now() + timedelta(minutes=5)
+                        disabled_duration = timedelta(
+                            minutes=1, seconds=random.randint(0, 30)
+                        )
+                        disabled_until = datetime.now() + disabled_duration
                         self.llm_stack.append((fallback_llm, disabled_until))
                         await self.registry.send_if_exists(
                             "ui_log",
                             CliRuntimeNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，5分钟后恢复",
+                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，{disabled_duration.seconds}s后恢复",
                             ),
                         )
                     else:
