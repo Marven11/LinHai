@@ -345,18 +345,29 @@ class SshMachineControl:
                     raise RuntimeError(f"上传块失败: {result.content}")
                 return (chunk_index, chunk_path)
 
-        chunk_paths = []
-        tasks = []
+        from linhai.task_supervisor import TaskSupervisor
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+
+        chunk_results: dict[int, str] = {}
+
         for i in range(num_chunks):
             start = i * chunk_size
             end = min((i + 1) * chunk_size, len(data))
             chunk_data = data[start:end]
-            task = asyncio.create_task(upload_chunk(i, chunk_data))
-            tasks.append(task)
 
-        for task in tasks:
-            chunk_index, chunk_path = await task
-            chunk_paths.append((chunk_index, chunk_path))
+            async def _upload_wrapper(idx: int = i, cd: bytes = chunk_data) -> None:
+                result = await upload_chunk(idx, cd)
+                chunk_results[idx] = result[1]
+
+            task_supervisor.create_supervised_task(f"upload_chunk_{i}", _upload_wrapper)
+
+        for i in range(num_chunks):
+            await task_supervisor.wait(f"upload_chunk_{i}")
+
+        chunk_paths = [(i, chunk_results[i]) for i in range(num_chunks)]
 
         chunk_paths.sort(key=lambda x: x[0])
         chunk_paths_sorted = [path for _, path in chunk_paths]
@@ -419,15 +430,28 @@ class SshMachineControl:
                     )
                 return chunk_data
 
-        chunks: list[bytes] = []
-        tasks = []
-        for i in range(num_chunks):
-            task = asyncio.create_task(download_chunk(i))
-            tasks.append(task)
+        from linhai.task_supervisor import TaskSupervisor
 
-        for task in tasks:
-            chunk_data = await task
-            chunks.append(chunk_data)
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+
+        chunk_results: dict[int, bytes] = {}
+
+        for i in range(num_chunks):
+
+            async def _download_wrapper(idx: int = i) -> None:
+                result = await download_chunk(idx)
+                chunk_results[idx] = result
+
+            task_supervisor.create_supervised_task(
+                f"download_chunk_{i}", _download_wrapper
+            )
+
+        for i in range(num_chunks):
+            await task_supervisor.wait(f"download_chunk_{i}")
+
+        chunks = [chunk_results[i] for i in range(num_chunks)]
 
         with open(local_path, "wb") as f:
             for chunk_data in chunks:
