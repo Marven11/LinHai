@@ -26,7 +26,7 @@ def get_any_aliases(tree: ast.AST) -> Set[str]:
             for alias in node.names:
                 if alias.name == "typing" or alias.name.startswith("typing."):
                     typing_module_names.add(alias.asname or alias.name)
-
+    print(aliases)
     return aliases
 
 
@@ -40,7 +40,7 @@ def get_changed_python_files(base_ref: str = "origin/main") -> List[str]:
             "git",
             "diff",
             "--name-only",
-            "--diff-filter=d",
+            "--diff-filter=ACMR",
             base_ref,
             "HEAD",
             "--",
