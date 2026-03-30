@@ -42,7 +42,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         # 模拟cli_args
         import argparse
 
-        mock_cli_args = argparse.Namespace(message=None, file=None, planning=False)
+        mock_cli_args = argparse.Namespace(planning=False)
         self.registry.register_member("cli_args", mock_cli_args)
 
         # 模拟token_manager
@@ -75,7 +75,12 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.llm_manager = self.mock_llm_manager
 
         # 创建app
-        self.app = CLIApp(registry=self.registry, cli_config=CLIConfig())
+        self.app = CLIApp(
+            registry=self.registry,
+            cli_config=CLIConfig(),
+            init_messages=[],
+            init_files=[],
+        )
 
         # 模拟messages_list（不验证调用，只确保测试运行）
         self.mock_messages_list = AsyncMock(spec=MessagesList)

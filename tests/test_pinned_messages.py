@@ -40,8 +40,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟cli_args
         self.cli_args = argparse.Namespace()
-        self.cli_args.message = []
-        self.cli_args.file = []
         self.cli_args.claw = False
 
         # 基础目录
@@ -80,6 +78,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
                 if self.config.tools.secret
                 else None
             ),
+            "message": [],
+            "file": [],
         }
         if prompt_config:
             self.config.user_prompt = prompt_config
@@ -124,8 +124,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
     async def test_pinned_messages_with_user_messages(self):
         """测试通过-m参数添加用户消息。"""
-        self.cli_args.message = ["Hello", "World"]
         context = self.create_context()
+        context["message"] = ["Hello", "World"]
 
         pinned_messages = await _create_pinned_messages(context)
 
@@ -151,6 +151,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         try:
             self.cli_args.file = [temp_file_path]
             context = self.create_context()
+            context["file"] = [temp_file_path]
 
             pinned_messages = await _create_pinned_messages(context)
 

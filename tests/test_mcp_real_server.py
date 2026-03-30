@@ -98,6 +98,8 @@ server_script_path = "{server_path}"
             "disable_waiting_marker": False,
             "claw_enabled": False,
             "claw_folder": None,
+            "message": [],
+            "file": [],
         }
         agent = await create_agent_from_config(context)
         self.assertIsInstance(agent, Agent)

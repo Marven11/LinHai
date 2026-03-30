@@ -105,6 +105,8 @@ server_script_path = "{server_script_path}"
             "disable_waiting_marker": False,
             "claw_enabled": False,
             "claw_folder": None,
+            "message": [],
+            "file": [],
         }
         result = asyncio.run(create_agent_from_config(context))
 
@@ -158,6 +160,8 @@ compress_threshold = 80000
             "disable_waiting_marker": False,
             "claw_enabled": False,
             "claw_folder": None,
+            "message": [],
+            "file": [],
         }
         result = asyncio.run(create_agent_from_config(context))
 

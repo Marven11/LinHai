@@ -77,7 +77,7 @@ class TestContextTab(unittest.TestCase):
         # 注册cli_args模拟对象
         import argparse
 
-        mock_cli_args = argparse.Namespace(message=None, file=None, planning=False)
+        mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
         from linhai.llm import AnswerTokenUsage
 
@@ -120,7 +120,12 @@ class TestContextTab(unittest.TestCase):
             # 直接注册token_manager到registry，这样ContextTabWidget就不会抛出RuntimeError
             registry.register_member("token_manager", mock_token_manager)
 
-            app = CLIApp(registry=registry, cli_config=CLIConfig())
+            app = CLIApp(
+                registry=registry,
+                cli_config=CLIConfig(),
+                init_messages=[],
+                init_files=[],
+            )
 
         async def _run_test():
             async with app.run_test() as pilot:

@@ -92,6 +92,8 @@ class TestClawPinnedMessages(unittest.TestCase):
             "secret_config_path": None,
             "claw_enabled": claw,
             "claw_folder": None,
+            "message": [],
+            "file": [],
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,

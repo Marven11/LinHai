@@ -73,6 +73,8 @@ async def run(args):
     app = CLIApp(
         registry=registry,
         cli_config=config.cli,
+        init_messages=context["message"],
+        init_files=context["file"],
     )
 
     registry.call_postinit()

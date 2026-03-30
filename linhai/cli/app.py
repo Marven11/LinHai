@@ -1,5 +1,6 @@
 """Command-line interface for LinHai agent."""
 
+from pathlib import Path
 import argparse
 
 from textual.app import App, ComposeResult
@@ -94,6 +95,8 @@ class CLIApp(App):
         self,
         registry: Registry,
         cli_config: CLIConfig,
+        init_messages: list[str],
+        init_files: list[Path],
     ):
         super().__init__()
         self.theme = cli_config.theme
@@ -102,11 +105,10 @@ class CLIApp(App):
         registry.register_member("cli_app", self)
         registry.register_member("task_supervisor", TextualTaskSupervisor(self))
 
-        cli_args = registry.get_member_typechecked("cli_args", argparse.Namespace)
-        self.init_messages = list(cli_args.message.copy() if cli_args.message else [])
-        if cli_args.file:
+        self.init_messages = list(init_messages)
+        if init_files:
             self.init_messages += [
-                f"[{file_path.name}]({file_path})" for file_path in cli_args.file
+                f"[{file_path.name}]({file_path})" for file_path in init_files
             ]
 
         self.current_response_buffer = ""

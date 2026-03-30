@@ -37,8 +37,6 @@ class TestGlobalPromptConfig(unittest.TestCase):
         self.registry.register_member("tool_manager", mock_tool_manager)
 
         self.mock_cli_args = argparse.Namespace()
-        self.mock_cli_args.message = None
-        self.mock_cli_args.file = None
         self.mock_cli_args.claw = False
         self.mock_cli_args.claw_folder = None
         self.registry.register_member("cli_args", self.mock_cli_args)
@@ -75,6 +73,8 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "user_prompt": prompt_file,
                 "max_toolcall_token_in_round": 0.3,
                 "planning": False,
+                "message": [],
+                "file": [],
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -121,6 +121,8 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "user_prompt": str(Path("./").absolute() / "test_relative_prompt.md"),
                 "max_toolcall_token_in_round": 0.3,
                 "planning": False,
+                "message": [],
+                "file": [],
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -168,6 +170,8 @@ class TestGlobalPromptConfig(unittest.TestCase):
                 "user_prompt": None,
                 "max_toolcall_token_in_round": 0.3,
                 "planning": False,
+                "message": [],
+                "file": [],
             }
             init_messages = loop.run_until_complete(_create_pinned_messages(context))
 
@@ -219,6 +223,8 @@ class TestGlobalPromptConfig(unittest.TestCase):
                     "user_prompt": None,
                     "max_toolcall_token_in_round": 0.3,
                     "planning": False,
+                    "message": [],
+                    "file": [],
                 }
                 init_messages = loop.run_until_complete(
                     _create_pinned_messages(context)

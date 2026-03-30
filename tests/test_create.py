@@ -280,6 +280,8 @@ class TestCreateLLMInstances(unittest.TestCase):
             "mcp_configs": mock_config.agent.mcp,
             "tool_config": mock_config.tools,
             "secret_config_path": mock_config.tools.secret.config_path,
+            "message": [],
+            "file": [],
         }
 
         # 创建一个模拟的OpenAi实例，确保get_name返回字符串
@@ -387,6 +389,8 @@ class TestCreateToolManager(unittest.TestCase):
             "mcp_configs": config.agent.mcp,
             "tool_config": config.tools,
             "secret_config_path": config.tools.secret.config_path,
+            "message": [],
+            "file": [],
         }
 
         from linhai.tool.main import ToolSet
@@ -472,6 +476,8 @@ class TestCreatePinnedMessages(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
+            "message": [],
+            "file": [],
         }
         result = asyncio.run(_create_pinned_messages(context))
 

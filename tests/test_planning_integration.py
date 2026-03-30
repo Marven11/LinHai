@@ -94,6 +94,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_token_in_round": 0.3,
             "llm_name": None,
             "telegram_config": None,
+            "message": [],
+            "file": [],
         }
 
         # 模拟agent.message_processor.messages
@@ -143,6 +145,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_token_in_round": 0.3,
             "llm_name": None,
             "telegram_config": None,
+            "message": [],
+            "file": [],
         }
 
         pinned_messages = await _create_pinned_messages(context)
@@ -272,6 +276,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "disable_waiting_marker": False,
             "claw_enabled": False,
             "claw_folder": None,
+            "message": [],
+            "file": [],
         }
 
         # 创建模拟的Lifecycle对象

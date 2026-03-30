@@ -169,7 +169,9 @@ class TestPlanningTabInApp(unittest.TestCase):
 
         from linhai.config import CLIConfig
 
-        app = CLIApp(registry=registry, cli_config=CLIConfig())
+        app = CLIApp(
+            registry=registry, cli_config=CLIConfig(), init_messages=[], init_files=[]
+        )
 
         async def _run_test():
             async with app.run_test() as pilot:
@@ -227,7 +229,12 @@ class TestPlanningTabInApp(unittest.TestCase):
 
             from linhai.config import CLIConfig
 
-            app = CLIApp(registry=registry, cli_config=CLIConfig())
+            app = CLIApp(
+                registry=registry,
+                cli_config=CLIConfig(),
+                init_messages=[],
+                init_files=[],
+            )
 
             async def _run_test():
                 async with app.run_test() as pilot:
@@ -297,7 +304,12 @@ class TestPlanningTabInApp(unittest.TestCase):
 
             from linhai.config import CLIConfig
 
-            app = CLIApp(registry=registry, cli_config=CLIConfig())
+            app = CLIApp(
+                registry=registry,
+                cli_config=CLIConfig(),
+                init_messages=[],
+                init_files=[],
+            )
 
             async def _run_test():
                 async with app.run_test() as pilot:

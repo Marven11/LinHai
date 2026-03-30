@@ -67,6 +67,8 @@ class AgentBuildContext(TypedDict):
     disable_waiting_marker: bool
     claw_enabled: bool
     claw_folder: Optional[Path]
+    message: list[str]
+    file: list[Path]
 
 
 def create_agent_build_context(
@@ -150,6 +152,8 @@ def create_agent_build_context(
         "disable_waiting_marker": cli_args.disable_waiting_marker,
         "claw_enabled": cli_args.claw,
         "claw_folder": cli_args.claw_folder,
+        "message": cli_args.message,
+        "file": cli_args.file,
     }
 
 
@@ -440,14 +444,14 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         planning_message = setup_planning_for_agent(context)
         pinned_messages.append(planning_message)
 
-    if cli_args.message:
-        for msg in cli_args.message:
+    if context["message"]:
+        for msg in context["message"]:
             pinned_messages.append(UserMessage(msg))
 
-    if cli_args.file:
+    if context["file"]:
         from linhai.agent.base import FileContentMessage
 
-        for file_path in cli_args.file:
+        for file_path in context["file"]:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 pinned_messages.append(

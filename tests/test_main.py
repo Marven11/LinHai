@@ -58,7 +58,8 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args
         self.assertEqual(cli_call_args.kwargs.get("registry"), mock_registry_instance)
-        # 不再检查init_messages参数，因为现在它在CLIApp内部构建
+        self.assertEqual(cli_call_args.kwargs.get("init_messages"), ["测试消息"])
+        self.assertEqual(cli_call_args.kwargs.get("init_files"), [])
 
         mock_app.run_async.assert_called_once()
 
@@ -264,6 +265,8 @@ class TestMainCommandLine(unittest.TestCase):
             "checklist_path": None,
             "git_diff_reviewer": False,
             "violation_checker": False,
+            "message": [],
+            "file": [],
         }
         mock_create_context.return_value = mock_context
 
@@ -321,6 +324,8 @@ class TestMainCommandLine(unittest.TestCase):
             "checklist_path": None,
             "git_diff_reviewer": False,
             "violation_checker": False,
+            "message": [],
+            "file": [],
         }
         mock_create_context.return_value = mock_context
 
@@ -376,6 +381,8 @@ class TestMainCommandLine(unittest.TestCase):
             "config_basedir": Path("."),
             "llm_name": None,
             "checklist_path": Path("requirements.txt"),
+            "message": [],
+            "file": [],
         }
         mock_create_context.return_value = mock_context
 

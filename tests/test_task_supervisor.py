@@ -117,7 +117,7 @@ class TestCLIAppRegistersTaskSupervisor(unittest.IsolatedAsyncioTestCase):
         cli_args = argparse.Namespace(message=None, file=None)
         registry.register_member("cli_args", cli_args)
         cli_config = CLIConfig()
-        CLIApp(registry, cli_config)
+        CLIApp(registry, cli_config, init_messages=[], init_files=[])
         supervisor = registry.get_member_typechecked("task_supervisor", TaskSupervisor)
         self.assertIsInstance(supervisor, TextualTaskSupervisor)
 
