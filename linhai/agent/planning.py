@@ -65,6 +65,8 @@ def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
     planning_folder = init_planning_folder(conversation_folder)
     create_planning_files(planning_folder)
 
+    context["registry"].register_member("planning_folder", planning_folder)
+
     def register_system_message():
         from ..llm import SystemMessage
 

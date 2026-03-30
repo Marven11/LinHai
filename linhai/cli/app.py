@@ -22,6 +22,7 @@ from .components import (
     ExtendedTextArea,
 )
 from .context_tab import ContextTabWidget
+from .planning_tab import PlanningTabWidget
 from ..token_manager import TokenManager
 from .command_handler import CommandHandler
 from .messages_list import MessagesList
@@ -163,6 +164,13 @@ class CLIApp(App):
 
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.registry)
+
+            cli_args = self.registry.get_member_typechecked(
+                "cli_args", argparse.Namespace
+            )
+            if cli_args.planning:
+                with TabPane("Planning", id="planning-tab"):
+                    yield PlanningTabWidget(self.registry)
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         token_usage = parsed_answer._answer.get_token_usage()

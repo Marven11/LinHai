@@ -55,9 +55,7 @@ class TestCLITabs(unittest.TestCase):
         # 注册cli_args模拟对象
         import argparse
 
-        mock_cli_args = argparse.Namespace()
-        mock_cli_args.message = None
-        mock_cli_args.file = None
+        mock_cli_args = argparse.Namespace(message=None, file=None, planning=False)
         registry.register_member("cli_args", mock_cli_args)
 
         app = CLIApp(registry=registry, cli_config=CLIConfig())
@@ -119,9 +117,7 @@ class TestCLITabs(unittest.TestCase):
         # 注册cli_args模拟对象
         import argparse
 
-        mock_cli_args = argparse.Namespace()
-        mock_cli_args.message = None
-        mock_cli_args.file = None
+        mock_cli_args = argparse.Namespace(message=None, file=None, planning=False)
         registry.register_member("cli_args", mock_cli_args)
 
         app = CLIApp(registry=registry, cli_config=CLIConfig())
