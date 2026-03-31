@@ -116,6 +116,7 @@
               feedparser
               python-telegram-bot'
               quickjs-ng'
+              jinja2
             ];
 
             src = ./.;
