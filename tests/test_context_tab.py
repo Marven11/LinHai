@@ -28,12 +28,9 @@ class TestContextTab(unittest.TestCase):
         registry = Registry()
         widget = ContextTabWidget(registry)
 
-        # 模拟mount
         widget.on_mount()
 
-        # 验证update_display被调用
         mock_update_display.assert_called_once()
-        # 验证set_interval被调用
         mock_set_interval.assert_called_once_with(1.0, widget.update_display)
 
     @patch("linhai.cli.app.CLIApp.on_mount")
@@ -43,10 +40,6 @@ class TestContextTab(unittest.TestCase):
 
         registry = Registry()
 
-        # 避免token_manager重复注册
-        # TokenManager会在CLIApp初始化时自动注册，这里不需要手动注册
-
-        # 注册所有必需的组件
         from linhai.agent.main import Agent
 
         mock_agent = Mock(spec=Agent)
@@ -66,7 +59,6 @@ class TestContextTab(unittest.TestCase):
 
         mock_orchestration.large_messages = {}
 
-        # 返回ThresholdInfo字典
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
             "used_tokens": 6000,
@@ -74,7 +66,10 @@ class TestContextTab(unittest.TestCase):
             "usage_ratio": 0.75,
         }
 
-        # 注册cli_args模拟对象
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
+
         import argparse
 
         mock_cli_args = argparse.Namespace(planning=False)
@@ -90,9 +85,6 @@ class TestContextTab(unittest.TestCase):
         mock_agent.last_token_usage = mock_token_usage
         mock_agent.last_token_usage_object = None
 
-        # 设置token_manager的current_token_usage
-        from linhai.llm import AnswerTokenUsage
-
         mock_token_usage = AnswerTokenUsage(
             input_tokens=1000,
             output_tokens=200,
@@ -100,7 +92,6 @@ class TestContextTab(unittest.TestCase):
             cached_input_tokens=500,
         )
 
-        # 对于Mock对象，需要设置spec
         from linhai.token_manager import TokenManager
 
         mock_token_manager = Mock(spec=TokenManager)
@@ -109,15 +100,11 @@ class TestContextTab(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
         registry.register_member("lifecycle", mock_lifecycle)
-        # 注意：这里不注册token_manager，因为CLIApp会创建并注册
-        # 使用patch来模拟TokenManager的创建，避免重复注册
         with patch("linhai.cli.app.TokenManager", return_value=mock_token_manager):
-            # 直接注册token_manager到registry，这样ContextTabWidget就不会抛出RuntimeError
             registry.register_member("token_manager", mock_token_manager)
 
             app = CLIApp(
@@ -129,35 +116,31 @@ class TestContextTab(unittest.TestCase):
 
         async def _run_test():
             async with app.run_test() as pilot:
-                # 验证tab存在
                 tabbed_content = pilot.app.query_one("#main-tabs")
                 self.assertIsNotNone(tabbed_content)
 
-                # 验证各个tab
                 agent_tab = pilot.app.query_one("#agent-tab")
-
                 context_tab = pilot.app.query_one("#context-tab")
 
                 self.assertIsNotNone(agent_tab)
                 self.assertIsNotNone(context_tab)
 
-                # 验证ContextTabWidget在context-tab中
                 context_widgets = context_tab.query(ContextTabWidget)
                 self.assertEqual(len(context_widgets), 1)
 
         asyncio.run(_run_test())
 
-    def test_update_display_with_mocks(self):
-        """测试update_display功能"""
-        registry = Registry()
-
-        from linhai.agent.main import Agent
+    def _create_mock_registry(self, registry: Registry, mock_agent: Mock) -> list:
+        """Helper to set up mock registry members for update_display tests."""
+        from linhai.llm import AnswerTokenUsage
+        from linhai.token_manager import TokenManager
+        from linhai.agent.message import AgentMessage
+        from linhai.agent.orchestration import AgentContextOrchestration
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_agent = Mock(spec=Agent)
 
-        from linhai.llm import UserMessage, AssistantMessage, AnswerTokenUsage
+        from linhai.llm import UserMessage, AssistantMessage
         from linhai.agent.base import RuntimeMessage
 
         mock_messages = [
@@ -168,11 +151,7 @@ class TestContextTab(unittest.TestCase):
         mock_agent_message.messages = mock_messages
         mock_agent_message.notification_messages = {}
 
-        mock_orchestration.large_messages = {
-            "largemessage_1": mock_messages[0],
-            "largemessage_2": mock_messages[1],
-        }
-        mock_orchestration.get_large_message_reprs = Mock(return_value=[])
+        mock_orchestration.large_messages = {}
 
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
@@ -180,18 +159,10 @@ class TestContextTab(unittest.TestCase):
             "remaining_tokens": 2000,
             "usage_ratio": 0.75,
         }
-        from linhai.llm import AnswerTokenUsage
 
-        mock_token_usage = AnswerTokenUsage(
-            input_tokens=1000,
-            output_tokens=200,
-            total_tokens=1200,
-            cached_input_tokens=500,
-        )
-        mock_agent.last_token_usage = mock_token_usage
-        mock_agent.last_token_usage_object = None
-
-        from linhai.token_manager import TokenManager
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
 
         mock_token_usage = AnswerTokenUsage(
             input_tokens=1000,
@@ -207,50 +178,237 @@ class TestContextTab(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("token_manager", mock_token_manager)
 
+        return mock_messages
+
+    def test_update_display_with_mocks(self):
+        """测试update_display功能"""
+        from unittest.mock import MagicMock
+
+        registry = Registry()
         widget = ContextTabWidget(registry)
 
-        from textual.widgets import Sparkline, Static
+        from linhai.agent.main import Agent
+
+        mock_agent = Mock(spec=Agent)
+        mock_messages = self._create_mock_registry(registry, mock_agent)
+
+        from textual.widgets import ProgressBar, Sparkline, Static
 
         mock_sparkline = Mock(spec=Sparkline)
         mock_stats_text = Mock(spec=Static)
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
         mock_content = Mock(spec=Static)
 
         def _mock_query_one(selector, expect_type=None):
-            if selector == "#msg-stats-sparkline":
-                return mock_sparkline
-            if selector == "#msg-stats-text":
-                return mock_stats_text
-            return mock_content
+            mapping = {
+                "#msg-stats-sparkline": mock_sparkline,
+                "#msg-stats-text": mock_stats_text,
+                "#pb-hard-limit": mock_pb_hard,
+                "#pb-model-limit": mock_pb_model,
+                "#token-stats-text": mock_token_stats_text,
+                "#context-content": mock_content,
+            }
+            return mapping[selector]
 
         widget.query_one = Mock(side_effect=_mock_query_one)
 
         widget.update_display()
 
         self.assertEqual(
-            mock_sparkline.data, [float(len(str(msg))) for msg in mock_messages]
+            mock_sparkline.data,
+            [float(len(str(msg))) for msg in mock_messages],
         )
         mock_stats_text.update.assert_called_once()
+        mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=6000.0)
+        mock_pb_model.update.assert_called_once_with(total=128000.0, progress=6000.0)
+        mock_token_stats_text.update.assert_called_once()
         mock_content.update.assert_called_once()
 
         stats_call_args = mock_stats_text.update.call_args[0][0]
         self.assertIn("总消息数: 3", stats_call_args)
-        self.assertIn("大消息数量: 2", stats_call_args)
+        self.assertIn("大消息数量: 0", stats_call_args)
+
+        token_stats_args = mock_token_stats_text.update.call_args[0][0]
+        self.assertIn("当前用量: 6000", token_stats_args)
+        self.assertIn("Token限制: 128000", token_stats_args)
+        self.assertIn("缓存比例", token_stats_args)
+
+    def test_update_token_usage_no_agent(self):
+        """测试Agent未初始化时的token用量显示"""
+        registry = Registry()
+        widget = ContextTabWidget(registry)
+
+        from textual.widgets import ProgressBar, Static
+
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
+
+        def _mock_query_one(selector, expect_type=None):
+            mapping = {
+                "#pb-hard-limit": mock_pb_hard,
+                "#pb-model-limit": mock_pb_model,
+                "#token-stats-text": mock_token_stats_text,
+            }
+            return mapping[selector]
+
+        widget.query_one = Mock(side_effect=_mock_query_one)
+
+        widget._update_token_usage(None)
+
+        mock_token_stats_text.update.assert_called_once_with("Agent未初始化")
+
+    def test_update_token_usage_no_threshold(self):
+        """测试threshold_info不可用时的token用量显示"""
+        from linhai.agent.main import Agent
+
+        registry = Registry()
+        mock_agent = Mock(spec=Agent)
+        mock_agent.get_threshold_info.return_value = None
+
+        widget = ContextTabWidget(registry)
+
+        from textual.widgets import ProgressBar, Static
+
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
+
+        def _mock_query_one(selector, expect_type=None):
+            mapping = {
+                "#pb-hard-limit": mock_pb_hard,
+                "#pb-model-limit": mock_pb_model,
+                "#token-stats-text": mock_token_stats_text,
+            }
+            return mapping[selector]
+
+        widget.query_one = Mock(side_effect=_mock_query_one)
+
+        widget._update_token_usage(mock_agent)
+
+        mock_token_stats_text.update.assert_called_once_with("不可用")
+
+    def test_update_token_usage_with_no_cache(self):
+        """测试无缓存时的token用量显示"""
+        from linhai.agent.main import Agent
+        from linhai.llm import AnswerTokenUsage
+        from linhai.token_manager import TokenManager
+
+        registry = Registry()
+        mock_agent = Mock(spec=Agent)
+        mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 3000,
+            "remaining_tokens": 5000,
+            "usage_ratio": 0.375,
+        }
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
+
+        mock_token_usage = AnswerTokenUsage(
+            input_tokens=3000,
+            output_tokens=0,
+            total_tokens=3000,
+            cached_input_tokens=None,
+        )
+        mock_token_manager = Mock(spec=TokenManager)
+        mock_token_manager.current_token_usage = mock_token_usage
+        registry.register_member("token_manager", mock_token_manager)
+
+        widget = ContextTabWidget(registry)
+
+        from textual.widgets import ProgressBar, Static
+
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
+
+        def _mock_query_one(selector, expect_type=None):
+            mapping = {
+                "#pb-hard-limit": mock_pb_hard,
+                "#pb-model-limit": mock_pb_model,
+                "#token-stats-text": mock_token_stats_text,
+            }
+            return mapping[selector]
+
+        widget.query_one = Mock(side_effect=_mock_query_one)
+
+        widget._update_token_usage(mock_agent)
+
+        mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=3000.0)
+        mock_pb_model.update.assert_called_once_with(total=128000.0, progress=3000.0)
+
+        token_stats_args = mock_token_stats_text.update.call_args[0][0]
+        self.assertIn("当前用量: 3000", token_stats_args)
+        self.assertIn("Token限制: 128000", token_stats_args)
+        self.assertNotIn("缓存比例", token_stats_args)
+
+    def test_update_token_usage_no_token_limit(self):
+        """测试token_limit为None时的回退行为"""
+        from linhai.agent.main import Agent
+        from linhai.llm import AnswerTokenUsage
+        from linhai.token_manager import TokenManager
+
+        registry = Registry()
+        mock_agent = Mock(spec=Agent)
+        mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 5000,
+            "remaining_tokens": 3000,
+            "usage_ratio": 0.625,
+        }
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = None
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
+
+        mock_token_usage = AnswerTokenUsage(
+            input_tokens=5000,
+            output_tokens=0,
+            total_tokens=5000,
+            cached_input_tokens=None,
+        )
+        mock_token_manager = Mock(spec=TokenManager)
+        mock_token_manager.current_token_usage = mock_token_usage
+        registry.register_member("token_manager", mock_token_manager)
+
+        widget = ContextTabWidget(registry)
+
+        from textual.widgets import ProgressBar, Static
+
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
+
+        def _mock_query_one(selector, expect_type=None):
+            mapping = {
+                "#pb-hard-limit": mock_pb_hard,
+                "#pb-model-limit": mock_pb_model,
+                "#token-stats-text": mock_token_stats_text,
+            }
+            return mapping[selector]
+
+        widget.query_one = Mock(side_effect=_mock_query_one)
+
+        widget._update_token_usage(mock_agent)
+
+        mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=5000.0)
+        mock_pb_model.update.assert_called_once_with(total=100.0, progress=100.0)
 
     def test_update_display_without_components(self):
         """测试在没有组件时的update_display"""
         registry = Registry()
         widget = ContextTabWidget(registry)
 
-        # 模拟query_one
         from textual.widgets import Static
 
         mock_static = Mock(spec=Static)
         widget.query_one = Mock(return_value=mock_static)
 
-        # 直接调用_show_waiting_message方法（因为update_display在没有组件时会失败）
         widget._show_waiting_message()
 
-        # 验证显示等待消息
         mock_static.update.assert_called_once_with("等待组件初始化...")
 
 

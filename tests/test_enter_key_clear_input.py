@@ -67,7 +67,9 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
             total_tokens=1200,
             cached_input_tokens=500,
         )
-        self.mock_agent.get_current_llm_info.return_value = ("test-llm", Mock())
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 8000
+        self.mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
 
         # 模拟llm_manager
         self.mock_llm_manager = Mock()

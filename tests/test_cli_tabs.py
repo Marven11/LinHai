@@ -29,6 +29,9 @@ class TestCLITabs(unittest.TestCase):
             "used_tokens": 6000,
             "usage_ratio": 0.75,
         }
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
         mock_agent.last_token_usage = AnswerTokenUsage(
             input_tokens=1000,
             output_tokens=200,
@@ -46,13 +49,11 @@ class TestCLITabs(unittest.TestCase):
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
 
-        # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
         registry.register_member("lifecycle", mock_lifecycle)
 
-        # 注册cli_args模拟对象
         import argparse
 
         mock_cli_args = argparse.Namespace(planning=False)
@@ -93,6 +94,9 @@ class TestCLITabs(unittest.TestCase):
             "used_tokens": 6000,
             "usage_ratio": 0.75,
         }
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
         mock_agent.last_token_usage = AnswerTokenUsage(
             input_tokens=1000,
             output_tokens=200,
@@ -110,13 +114,11 @@ class TestCLITabs(unittest.TestCase):
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
 
-        # 注册lifecycle模拟对象
         from linhai.agent.lifecycle import Lifecycle
 
         mock_lifecycle = Mock(spec=Lifecycle)
         registry.register_member("lifecycle", mock_lifecycle)
 
-        # 注册cli_args模拟对象
         import argparse
 
         mock_cli_args = argparse.Namespace(planning=False)

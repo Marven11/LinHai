@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Collapsible, Sparkline, Static
+from textual.widgets import Collapsible, Label, ProgressBar, Sparkline, Static
 
 # 导入AnswerTokenUsage用于token用量显示
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
@@ -48,6 +48,19 @@ class ContextTabWidget(Static):
     ContextTabWidget #msg-stats-sparkline {
         height: 3;
     }
+
+    ContextTabWidget #token-usage-collapsible {
+        height: auto;
+    }
+
+    ContextTabWidget .token-usage-label {
+        height: 1;
+        color: $text-muted;
+    }
+
+    ContextTabWidget #token-stats-text {
+        height: auto;
+    }
     """
 
     def __init__(self, registry: Registry) -> None:
@@ -62,6 +75,14 @@ class ContextTabWidget(Static):
             ):
                 yield Sparkline(id="msg-stats-sparkline", summary_function=max)
                 yield Static(id="msg-stats-text")
+            with Collapsible(
+                title="上下文Token用量", id="token-usage-collapsible", collapsed=False
+            ):
+                yield Label("相对硬限制", classes="token-usage-label")
+                yield ProgressBar(id="pb-hard-limit", show_eta=False)
+                yield Label("相对模型限制", classes="token-usage-label")
+                yield ProgressBar(id="pb-model-limit", show_eta=False)
+                yield Static(id="token-stats-text")
             yield Static(id="context-content")
 
     def on_mount(self) -> None:
@@ -128,27 +149,6 @@ class ContextTabWidget(Static):
 
         return type_counts, total_chars, max_length, max_length_msg
 
-    def _create_progress_bar(self, percentage: float) -> str:
-        """Create a text progress bar using block characters.
-
-        Args:
-            percentage: Percentage value (0-100)
-
-        Returns:
-            String representation of progress bar
-        """
-        # Use block characters for simple yet effective progress bar
-        # This is appropriate for text display in Static widget
-        bar_width = 30
-        filled_width = int(bar_width * percentage / 100)
-        empty_width = bar_width - filled_width
-
-        # Use block characters for better visual
-        filled = "█" * filled_width
-        empty = "░" * empty_width
-
-        return f"[{filled}{empty}] {percentage:.1f}%"
-
     def _get_token_cache_info(self, used: int) -> tuple[int, float]:
         """Get cached token information from token manager.
 
@@ -160,8 +160,6 @@ class ContextTabWidget(Static):
         """
         if not self.registry.has_member("token_manager"):
             raise RuntimeError("token_manager should be registered in registry")
-
-        from linhai.token_manager import TokenManager
 
         token_manager = self.registry.get_member_typechecked(
             "token_manager", TokenManager
@@ -210,49 +208,42 @@ class ContextTabWidget(Static):
             "大消息数量: " + str(large_message_count)
         )
 
-    def _build_token_usage_section(self, grid: Table, agent: Agent) -> None:
-        """Build token usage section."""
-        grid.add_row(Text("Token用量", style="bold yellow"))
-        grid.add_row("")
+    def _update_token_usage(self, agent: Agent) -> None:
+        pb_hard = self.query_one("#pb-hard-limit", ProgressBar)
+        pb_model = self.query_one("#pb-model-limit", ProgressBar)
+        token_stats_text = self.query_one("#token-stats-text", Static)
 
         if not agent:
-            grid.add_row("Token信息:", "Agent未初始化")
-            grid.add_row("")
+            token_stats_text.update("Agent未初始化")
             return
 
         threshold_info = agent.get_threshold_info()
         if not threshold_info:
-            grid.add_row("Token信息:", "不可用")
-            grid.add_row("")
+            token_stats_text.update("不可用")
             return
 
-        # threshold_info是ThresholdInfo类型的字典
         hard = threshold_info["hard_limit"]
         used = threshold_info["used_tokens"]
-        taken = threshold_info["usage_ratio"]
-        percentage = taken * 100
 
-        # Create proper progress bar using Rich
-        progress_bar_text = self._create_progress_bar(float(percentage))
+        pb_hard.update(total=float(hard), progress=float(used))
 
-        grid.add_row("当前用量:", f"{used}")
-        grid.add_row("硬限制:", f"{hard}")
-        grid.add_row("使用率:", progress_bar_text)
+        _, current_llm = agent.get_current_llm_info()
+        token_limit = current_llm.get_token_limit()
 
-        token_manager = self.registry.get_member_typechecked(
-            "token_manager", TokenManager
-        )
-        if token_manager.current_token_usage is not None:
-            token_usage = token_manager.current_token_usage
-            grid.add_row("输入token:", f"{token_usage.input_tokens}")
-            grid.add_row("输出token:", f"{token_usage.output_tokens}")
-            grid.add_row("总token:", f"{token_usage.total_tokens}")
+        if token_limit is not None and token_limit > 0:
+            pb_model.update(total=float(token_limit), progress=float(used))
+        else:
+            pb_model.update(total=100.0, progress=float(min(used, 100)))
 
         cached, cache_percentage = self._get_token_cache_info(int(used))
-        if cached > 0:
-            grid.add_row("缓存token:", f"{cached} (~{cache_percentage:.1f}%)")
 
-        grid.add_row("")
+        lines = [
+            f"当前用量: {used}",
+            f"Token限制: {token_limit}",
+        ]
+        if cached > 0:
+            lines.append(f"缓存比例: {cached} (~{cache_percentage:.1f}%)")
+        token_stats_text.update("\n".join(lines))
 
     def _build_orchestration_section(
         self, grid: Table, orchestration: AgentContextOrchestration
@@ -318,7 +309,6 @@ class ContextTabWidget(Static):
         agent_message: AgentMessage = self.registry.get_member_typechecked(
             "agent_message", AgentMessage
         )
-        from linhai.agent.orchestration import AgentContextOrchestration
 
         orchestration: AgentContextOrchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
@@ -328,12 +318,12 @@ class ContextTabWidget(Static):
         messages = agent_message.messages
 
         self._update_message_statistics(messages, len(orchestration.large_messages))
+        self._update_token_usage(agent)
 
         grid = Table.grid(padding=(0, 1))
         grid.add_column(style="bold cyan")
         grid.add_column()
 
-        self._build_token_usage_section(grid, agent)
         self._build_orchestration_section(grid, orchestration)
         self._build_recent_messages_section(grid, messages)
         self._build_notification_messages_section(
