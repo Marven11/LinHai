@@ -602,6 +602,46 @@ class GlmToolCallPlugin(Plugin):
         lifecycle.register_after_message_generation(self.after_message_generation)
 
 
+class MisplacedToolCallPlugin(Plugin):
+    """检测```json toolcall不在行首的插件。"""
+
+    MARKER = "```json toolcall"
+
+    async def after_message_generation(
+        self,
+        parsed_answer,
+        full_response: str,
+        _tool_calls: list,
+    ):
+        agent = self.registry.get_member_typechecked("agent", Agent)
+
+        misplaced_lines: list[str] = []
+        for line in full_response.split("\n"):
+            if self.MARKER in line and not line.lstrip().startswith(self.MARKER):
+                misplaced_lines.append(line.strip())
+
+        if not misplaced_lines:
+            return
+
+        warning_msg = (
+            "警告：检测到```json toolcall不在一行的开头。"
+            "工具调用的```json toolcall必须在行首，前面不能有其他文字。\n"
+            "错误示例：一些文字```json toolcall\n"
+            "正确示例：\n```json toolcall\n"
+        )
+        await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
+        await self.registry.send_if_exists(
+            "ui_log",
+            CliRuntimeNotice(
+                level="WARNING",
+                content=f"检测到```json toolcall不在行首：共{len(misplaced_lines)}处，已提醒agent",
+            ),
+        )
+
+    def register(self, lifecycle: "Lifecycle"):
+        lifecycle.register_after_message_generation(self.after_message_generation)
+
+
 class GlmInsultMaskPlugin(Plugin):
     """GLM脏话检查插件，屏蔽脏话为拼音。"""
 

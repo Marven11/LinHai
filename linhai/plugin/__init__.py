@@ -14,6 +14,7 @@ from .message_checkers import (
     VolcanoDeepseekFixPlugin,
     GlmToolCallPlugin,
     GlmInsultMaskPlugin,
+    MisplacedToolCallPlugin,
 )
 
 from .tool_call_managers import (
@@ -67,6 +68,7 @@ __all__ = [
     "RuntimeImitationPlugin",
     "GlmToolCallPlugin",
     "GlmInsultMaskPlugin",
+    "MisplacedToolCallPlugin",
     "PromptFastAgentPlugin",
     "SlowStartPlugin",
     "WeirdTokenPlugin",
