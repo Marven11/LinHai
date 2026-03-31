@@ -25,6 +25,7 @@ from mcp.client.stdio import stdio_client
 
 from .base import ToolArgInfo, ToolSet, ToolResultSuccess, ToolResultFailed
 from ..registry import Registry
+from ..sandbox import ProcessSandboxProtocol, NoSandbox
 
 
 class MCPConnector:
@@ -130,6 +131,12 @@ class MCPConnector:
             ],
         )
         async def connect_mcp_server(name: str, command: str):
+            sandbox = self.registry.get_member_typechecked(
+                "process_sandbox", ProcessSandboxProtocol
+            )
+            if not isinstance(sandbox, NoSandbox):
+                return ToolResultFailed(content="当前开启了沙箱，无法启动MCP服务器进程")
+
             exit_stack = AsyncExitStack()
             try:
                 _, _, toolset = await self.connect_mcp_server(name, command, exit_stack)

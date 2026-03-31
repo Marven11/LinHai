@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 
 
 class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
@@ -204,6 +205,7 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         """Set up test fixtures."""
         self.registry = Registry()
+        self.registry.register_member("process_sandbox", NoSandbox())
         self.connector = MCPConnector(self.registry)
 
     @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
@@ -235,6 +237,57 @@ class TestMCPConnectorTools(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("连接'test.py'失败", result.content)
         self.assertIn("Connection failed", result.content)
+
+
+class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
+    """Test cases for MCP sandbox blocking."""
+
+    async def asyncSetUp(self):
+        self.registry = Registry()
+        self.connector = MCPConnector(self.registry)
+
+    async def test_connect_blocked_with_sandbox(self):
+        self.registry.register_member(
+            "process_sandbox", MagicMock(spec=ProcessSandboxProtocol)
+        )
+        result = await self.connector.connector_toolset.call_tool(
+            "connect_mcp_server",
+            {"name": "test_server", "command": "test.py"},
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("沙箱", result.content)
+
+    @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
+    async def test_connect_allowed_with_no_sandbox(self, mock_connect):
+        self.registry.register_member("process_sandbox", NoSandbox())
+        mock_toolset = MagicMock()
+        mock_toolset.tools.keys.return_value = ["tool1"]
+        mock_connect.return_value = (AsyncMock(), AsyncMock(), mock_toolset)
+
+        result = await self.connector.connector_toolset.call_tool(
+            "connect_mcp_server",
+            {"name": "test_server", "command": "test.py"},
+        )
+        self.assertIsInstance(result, ToolResultSuccess)
+
+    async def test_disconnect_not_blocked_by_sandbox(self):
+        self.registry.register_member(
+            "process_sandbox", MagicMock(spec=ProcessSandboxProtocol)
+        )
+        result = await self.connector.connector_toolset.call_tool(
+            "disconnect_mcp_server", {"name": "nonexistent"}
+        )
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertNotIn("沙箱", result.content)
+
+    async def test_list_not_blocked_by_sandbox(self):
+        self.registry.register_member(
+            "process_sandbox", MagicMock(spec=ProcessSandboxProtocol)
+        )
+        result = await self.connector.connector_toolset.call_tool(
+            "list_mcp_servers", {}
+        )
+        self.assertIsInstance(result, ToolResultSuccess)
 
 
 if __name__ == "__main__":
