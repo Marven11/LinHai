@@ -10,8 +10,10 @@ class TestFileValidation(unittest.TestCase):
 
     def setUp(self):
         from linhai.tool.base import ToolSet
+        from linhai.sandbox import NoSandbox
 
         self.toolset = ToolSet()
+        sandbox = NoSandbox()
         from linhai.machine_control.master_host.file import (
             read_file,
             write_file,
@@ -56,7 +58,11 @@ class TestFileValidation(unittest.TestCase):
                 "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
             required_args=["filepath", "expression"],
-        )(read_file_with_sed)
+        )(
+            lambda expression, filepath: read_file_with_sed(
+                expression, filepath, sandbox.wrap_argv
+            )
+        )
 
         self.toolset.register_tool(
             name="modify_file_with_sed",
@@ -66,7 +72,11 @@ class TestFileValidation(unittest.TestCase):
                 "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
             required_args=["filepath", "expression"],
-        )(modify_file_with_sed)
+        )(
+            lambda expression, filepath: modify_file_with_sed(
+                expression, filepath, sandbox.wrap_argv
+            )
+        )
 
     def test_read_file_rejects_binary_file(self):
         """测试read_file拒绝二进制文件"""

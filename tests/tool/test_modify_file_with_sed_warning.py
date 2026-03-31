@@ -11,8 +11,10 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
 
     def setUp(self):
         from linhai.tool.base import ToolSet
+        from linhai.sandbox import NoSandbox
 
         self.toolset = ToolSet()
+        sandbox = NoSandbox()
         from linhai.machine_control.master_host.file import modify_file_with_sed
 
         self.toolset.register_tool(
@@ -23,7 +25,11 @@ class TestModifyFileWithSedLineNumberWarning(unittest.TestCase):
                 "expression": ToolArgInfo(desc="sed表达式", type="str"),
             },
             required_args=["filepath", "expression"],
-        )(modify_file_with_sed)
+        )(
+            lambda expression, filepath: modify_file_with_sed(
+                expression, filepath, sandbox.wrap_argv
+            )
+        )
 
     @unittest.mock.patch("linhai.machine_control.master_host.file.Path")
     @unittest.mock.patch("linhai.machine_control.master_host.file.platform.system")

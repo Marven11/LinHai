@@ -402,13 +402,23 @@ class MasterHostControl:
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
         """执行sed表达式并返回输出"""
-        return await asyncio.to_thread(read_file_with_sed, expression, filepath)
+        sandbox = self._registry.get_member_typechecked(
+            "process_sandbox", ProcessSandboxProtocol
+        )
+        return await asyncio.to_thread(
+            read_file_with_sed, expression, filepath, sandbox.wrap_argv
+        )
 
     async def modify_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
         """使用sed表达式修改文件"""
-        return await asyncio.to_thread(modify_file_with_sed, expression, filepath)
+        sandbox = self._registry.get_member_typechecked(
+            "process_sandbox", ProcessSandboxProtocol
+        )
+        return await asyncio.to_thread(
+            modify_file_with_sed, expression, filepath, sandbox.wrap_argv
+        )
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
         """获取所有终端列表"""

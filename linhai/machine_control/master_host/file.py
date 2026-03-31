@@ -1,6 +1,7 @@
 """文件操作工具模块，提供文件读写、内容替换等功能。"""
 
 from pathlib import Path
+from typing import Callable
 import difflib
 import json
 import platform
@@ -360,13 +361,16 @@ def _check_small_file(file_path: Path) -> str | None:
 
 
 def read_file_with_sed(
-    expression: str, filepath: str
+    expression: str,
+    filepath: str,
+    wrap_argv: Callable[[list[str]], list[str]],
 ) -> ToolResultSuccess | ToolResultFailed:
     """执行sed表达式并返回输出，不修改文件。
 
     Args:
         expression: sed表达式
         filepath: 文件路径
+        wrap_argv: 将argv用沙箱包裹的回调函数
 
     Returns:
         sed命令输出或错误消息
@@ -382,7 +386,7 @@ def read_file_with_sed(
 
     try:
         result = subprocess.run(
-            ["sed", "-n", expression, file_path.as_posix()],
+            wrap_argv(["sed", "-n", expression, file_path.as_posix()]),
             capture_output=True,
             text=True,
             check=True,
@@ -405,13 +409,16 @@ def read_file_with_sed(
 
 
 def modify_file_with_sed(
-    expression: str, filepath: str
+    expression: str,
+    filepath: str,
+    wrap_argv: Callable[[list[str]], list[str]],
 ) -> ToolResultSuccess | ToolResultFailed:
     """使用sed表达式修改文件。
 
     Args:
         expression: sed表达式
         filepath: 文件路径
+        wrap_argv: 将argv用沙箱包裹的回调函数
 
     Returns:
         成功或错误消息
@@ -427,7 +434,7 @@ def modify_file_with_sed(
             cmd = ["sed", "-i", "", expression, file_path.as_posix()]
         else:
             cmd = ["sed", "-i", expression, file_path.as_posix()]
-        _ = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        _ = subprocess.run(wrap_argv(cmd), capture_output=True, text=True, check=True)
 
         line_number_pattern = r"^\d+"
         result_text = f"文件{file_path.as_posix()!r}已使用sed表达式修改"
