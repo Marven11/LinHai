@@ -15,6 +15,7 @@ from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
 from textual.widgets import Markdown, Static, TextArea
+from textual.widgets.markdown import MarkdownBlock
 
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
@@ -76,6 +77,15 @@ EXTENSION_TO_TYPE = {
     ".log": "text",
 }
 
+class MarkdownParagraphWithoutNewLine(MarkdownBlock):
+    """类似MarkdownParagraph但是删掉了_update_from_block函数，应该只会有性能上的影响"""
+
+    SCOPED_CSS = False
+    DEFAULT_CSS = """
+    Markdown > MarkdownParagraphWithoutNewLine {
+         margin: 0;
+    }
+    """
 
 class RainbowAsciiArt(Static):
     """显示斜向彩虹渐变色ASCII艺术的组件"""
@@ -615,6 +625,7 @@ class ReasoningContentWidget(Static):
 class UserMessageWidget(Markdown):
     """用户消息显示组件"""
 
+    SCOPED_CSS = False
     DEFAULT_CSS = """
     UserMessageWidget {
         width: 100%;
@@ -626,6 +637,12 @@ class UserMessageWidget(Markdown):
         border-left: heavy #A3BE8C;
     }
     """
+
+    def get_block_class(self, block_name: str) -> type[MarkdownBlock]:
+        """去除每个消息后的空行"""
+        if block_name == "paragraph_open":
+            return MarkdownParagraphWithoutNewLine
+        return Markdown.BLOCKS[block_name]
 
     def __init__(self, content: str, sender_name: str, theme: str):
         super().__init__()
@@ -689,6 +706,12 @@ class NormalContentWidget(Markdown):
         self.get_refresh_interval = get_refresh_interval
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
+
+    def get_block_class(self, block_name: str) -> type[MarkdownBlock]:
+        """去除每个消息后的空行"""
+        if block_name == "paragraph_open":
+            return MarkdownParagraphWithoutNewLine
+        return Markdown.BLOCKS[block_name]
 
     def on_mount(self) -> None:
         """组件挂载时开始显示"""
