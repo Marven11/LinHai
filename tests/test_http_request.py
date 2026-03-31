@@ -9,6 +9,8 @@ from unittest.mock import Mock, patch, AsyncMock
 import httpx
 
 from linhai.machine_control.master_host.master_host import MasterHostControl
+from linhai.registry import Registry
+from linhai.sandbox import NoSandbox
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
@@ -16,7 +18,9 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
     """测试http_request工具"""
 
     def setUp(self):
-        self.host_control = MasterHostControl()
+        registry = Registry()
+        registry.register_member("process_sandbox", NoSandbox())
+        self.host_control = MasterHostControl(registry)
 
     def extract_content_parts(self, content: str) -> dict:
         """解析<<>>格式的内容为字典"""

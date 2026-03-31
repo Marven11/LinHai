@@ -29,6 +29,10 @@ from .file import (
 )
 
 
+from linhai.registry import Registry
+from linhai.sandbox import ProcessSandboxProtocol
+
+
 class MasterHostControl:
     """本地主机控制类，负责提供本地机器工具的实现。
 
@@ -36,7 +40,8 @@ class MasterHostControl:
     工具定义由MachineControl统一管理。
     """
 
-    def __init__(self):
+    def __init__(self, registry: Registry):
+        self._registry = registry
         self._processes: dict[str, asyncio.subprocess.Process] = {}
 
     async def http_request(
@@ -75,8 +80,12 @@ class MasterHostControl:
     ) -> ToolResultSuccess | ToolResultFailed:
         """创建一个进程，等待一段时间后检查状态"""
         try:
+            sandbox = self._registry.get_member_typechecked(
+                "process_sandbox", ProcessSandboxProtocol
+            )
+            wrapped_argv = sandbox.wrap_argv(argv)
             process = await asyncio.create_subprocess_exec(
-                *argv,
+                *wrapped_argv,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -316,7 +325,11 @@ class MasterHostControl:
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:
-        result = await terminal_create(columns, lines)
+        sandbox = self._registry.get_member_typechecked(
+            "process_sandbox", ProcessSandboxProtocol
+        )
+        bash_argv = sandbox.wrap_argv(["/usr/bin/env", "bash"])
+        result = await terminal_create(columns, lines, bash_argv)
         if result.startswith("创建终端失败"):
             return ToolResultFailed(content=result)
         return ToolResultSuccess(content=result)

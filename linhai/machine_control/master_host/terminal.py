@@ -56,7 +56,12 @@ KEY_MAPPINGS = {
 class PyteTerminal:
     """基于pyte的虚拟终端类"""
 
-    def __init__(self, columns: int = 80, lines: int = 24):
+    def __init__(
+        self,
+        columns: int = 80,
+        lines: int = 24,
+        bash_argv: list[str] | None = None,
+    ):
         self.screen = pyte.Screen(columns, lines)
         self.stream = pyte.Stream()
         self.stream.attach(self.screen)
@@ -68,8 +73,11 @@ class PyteTerminal:
         env["COLUMNS"] = str(columns)
         env["LINES"] = str(lines)
 
+        if bash_argv is None:
+            bash_argv = ["/usr/bin/env", "bash"]
+
         self.process = subprocess.Popen(
-            ["/usr/bin/env", "bash"],
+            bash_argv,
             stdin=self.slave,
             stdout=self.slave,
             stderr=self.slave,
@@ -135,19 +143,24 @@ class PyteTerminal:
             pass
 
 
-async def terminal_create(columns: int = 80, lines: int = 24) -> str:
+async def terminal_create(
+    columns: int = 80,
+    lines: int = 24,
+    bash_argv: list[str] | None = None,
+) -> str:
     """新建虚拟终端
 
     Args:
         columns: 终端列数
         lines: 终端行数
+        bash_argv: bash启动命令的argv，为None时使用默认值
 
     Returns:
         终端对应的ID
     """
     try:
         term_id = generate_id("terminal")
-        terminal = PyteTerminal(columns=columns, lines=lines)
+        terminal = PyteTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
         terminals[term_id] = terminal
         await terminal.start_reading()
         return term_id

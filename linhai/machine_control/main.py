@@ -641,7 +641,7 @@ class MachineControl:
         self.registry = registry
         self.target_machine = "master_host"
         self.machines: Dict[str, HostControl] = {
-            "master_host": MasterHostControl(),
+            "master_host": MasterHostControl(registry),
         }
         self.machine_descriptions: Dict[str, str] = {
             "master_host": "本地主机",

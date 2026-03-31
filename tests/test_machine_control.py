@@ -113,12 +113,20 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(callable(call_args[0][0]))
 
 
+def _create_host_control() -> MasterHostControl:
+    from linhai.sandbox import NoSandbox
+
+    registry = Registry()
+    registry.register_member("process_sandbox", NoSandbox())
+    return MasterHostControl(registry)
+
+
 class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
     """MasterHostControl测试类"""
 
     def setUp(self):
         """测试前准备"""
-        self.host_control = MasterHostControl()
+        self.host_control = _create_host_control()
 
     def tearDown(self):
         """测试后清理，避免ResourceWarning"""
@@ -200,8 +208,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
     async def test_process_stdio_read_with_exited_process(self):
         """测试process_stdio_read - 进程已退出"""
-        # 创建一个模拟的MasterHostControl实例
-        host_control = MasterHostControl()
+        host_control = _create_host_control()
 
         # 模拟一个已退出的进程
         mock_process = AsyncMock()
@@ -227,7 +234,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
     async def test_process_stdio_read_with_running_process(self):
         """测试process_stdio_read - 进程仍在运行"""
-        host_control = MasterHostControl()
+        host_control = _create_host_control()
 
         mock_process = AsyncMock()
         mock_process.pid = 12348
@@ -486,7 +493,7 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
     """测试MasterHostControl的并发文件方法"""
 
     def setUp(self):
-        self.host_control = MasterHostControl()
+        self.host_control = _create_host_control()
 
     async def test_upload_file_concurrent_success(self):
         """测试upload_file_concurrent成功"""
