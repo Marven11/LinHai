@@ -57,6 +57,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.llm = [mock_llm_config]
         mock_config.agent = [Mock()]
         mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -64,33 +65,30 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.subagent = Mock()
         mock_config.cli = Mock()
 
+        mock_tool_manager_return = (Mock(), Mock())
+        mock_tool_manager.return_value = mock_tool_manager_return
+
         from linhai.llm import OpenAi
+        from linhai.llm_manager import LlmManager
 
         mock_llm = Mock(spec=OpenAi)
         mock_llm.model = "test-model"
         mock_llm.token_limit = 1000
         mock_llm.compatibility = "openai"
         mock_llm.get_name = Mock(return_value="test_llm")
-        from linhai.llm_manager import LlmManager
-
-        # 创建模拟的LlmManager
         mock_llm_manager = Mock(spec=LlmManager)
-        mock_llm = Mock()
-        mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm_manager.llms = [mock_llm]
         mock_llm_manager.llm_names = ["test_llm"]
         mock_llm_manager.current_llm_index = 0
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        mock_llm_instances.return_value = mock_llm_manager  # type: ignore
+        mock_llm_instances.return_value = mock_llm_manager
 
-        mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]
         mock_multimodal_toolset_manager.return_value = Mock()
         mock_register_conversation_folder.return_value = None
         mock_agent_instance = Mock()
-        mock_agent.return_value = mock_agent_instance
-        # 模拟Agent的llm_manager属性
         mock_agent_instance.llm_manager = mock_llm_manager
+        mock_agent.return_value = mock_agent_instance
 
         import asyncio
         import argparse
@@ -160,6 +158,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.llm = [mock_llm_config1, mock_llm_config2]
         mock_config.agent = [Mock()]
         mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -510,6 +509,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         mock_config.agent = [Mock()]
         mock_config.agent[0].override_toolsets = None
         mock_config.agent[0].default_llm = default_llm
+        mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()

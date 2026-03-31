@@ -110,6 +110,7 @@ server_script_path = "{server_script_path}"
             "claw_folder": None,
             "message": [],
             "file": [],
+            "process_sandbox": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 
@@ -167,6 +168,7 @@ compress_threshold = 80000
             "claw_folder": None,
             "message": [],
             "file": [],
+            "process_sandbox": None,
         }
         result = asyncio.run(create_agent_from_config(context))
 

@@ -35,6 +35,7 @@ from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
 
+from linhai.sandbox import BubbleWrapSandbox, MacOsSandbox, NoSandbox
 from .base import GlobalPrompt, PathPrompt
 
 from .main import Agent
@@ -321,6 +322,8 @@ async def create_agent_from_config(
         )
         plugin.register(agent.lifecycle)
 
+    _register_sandbox(context["registry"], context["process_sandbox"])
+
     _register_default_plugins(agent.lifecycle)
 
     return agent
@@ -515,6 +518,19 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
                 )
 
     return pinned_messages
+
+
+def _register_sandbox(
+    registry: Registry,
+    sandbox_config: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]],
+) -> None:
+    if sandbox_config is None:
+        sandbox = NoSandbox()
+    elif isinstance(sandbox_config, MacOsSandboxConfig):
+        sandbox = MacOsSandbox(sandbox_config.sandbox_profile)
+    else:
+        sandbox = BubbleWrapSandbox(sandbox_config.argv)
+    registry.register_member("process_sandbox", sandbox)
 
 
 def _register_default_plugins(lifecycle):
