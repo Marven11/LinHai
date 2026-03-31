@@ -1,10 +1,7 @@
 """Context tab widget for displaying message statistics and token usage."""
 
-import reprlib
 from typing import Optional, TypedDict
 
-from rich.table import Table
-from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Collapsible, Label, ProgressBar, Sparkline, Static
@@ -15,14 +12,11 @@ from linhai.agent.base import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 
 from linhai.registry import Registry
-from linhai.agent.message import AgentMessage, NotificationMessageEntry
+from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
 from linhai.token_manager import TokenManager
-
-
-reprobj = reprlib.Repr(maxstring=60)
 
 
 class MessageTypeCounts(TypedDict):
@@ -83,7 +77,6 @@ class ContextTabWidget(Static):
                 yield Label("相对模型限制", classes="token-usage-label")
                 yield ProgressBar(id="pb-model-limit", show_eta=False)
                 yield Static(id="token-stats-text")
-            yield Static(id="context-content")
 
     def on_mount(self) -> None:
         """Start periodic refresh."""
@@ -245,65 +238,6 @@ class ContextTabWidget(Static):
             lines.append(f"缓存比例: {cached} (~{cache_percentage:.1f}%)")
         token_stats_text.update("\n".join(lines))
 
-    def _build_orchestration_section(
-        self, grid: Table, orchestration: AgentContextOrchestration
-    ) -> None:
-        """Build orchestration status section."""
-        grid.add_row(Text("编排状态", style="bold yellow"))
-        grid.add_row("")
-
-        large_messages = orchestration.large_messages
-
-        # 显示大消息repr列表
-        if large_messages:
-            grid.add_row(Text(f"当前有{len(large_messages)}条大消息", style="bold"))
-            # 获取大消息的repr列表，最多显示3条
-            repr_list = []
-            for msg in list(orchestration.large_messages)[:3]:
-                repr_list.append(reprlib.Repr(maxstring=60).repr(str(msg)))
-            for i, repr_msg in enumerate(repr_list, 1):
-                grid.add_row(f"  {i}.", repr_msg)
-            if len(large_messages) > 3:
-                grid.add_row("提示:", f"... 还有{len(large_messages) - 3}条未显示")
-            grid.add_row(
-                "提示:", "调用context_forget_large_message可清理大消息（需≥5条）"
-            )
-
-        grid.add_row("")
-
-    def _build_recent_messages_section(
-        self, grid: Table, messages: list[Message]
-    ) -> None:
-        """Build recent messages section."""
-        grid.add_row(Text("最近消息 (最多5条)", style="bold yellow"))
-        grid.add_row("")
-
-        recent_messages = messages[-5:] if messages else []
-        for i, msg in enumerate(recent_messages, 1):
-            index = len(messages) - len(recent_messages) + i
-            msg_type = type(msg).__name__
-            preview = reprobj.repr(str(msg))[:50]
-            grid.add_row(f"{index}. {msg_type}:", preview)
-
-        grid.add_row("")
-
-    def _build_notification_messages_section(
-        self, grid: Table, notification_messages: dict[str, NotificationMessageEntry]
-    ) -> None:
-        """Build notification messages section."""
-        grid.add_row(Text("通知消息", style="bold yellow"))
-        grid.add_row("")
-
-        if not notification_messages:
-            grid.add_row("无通知消息")
-        else:
-            for source, entry in notification_messages.items():
-                msg = entry["message"]
-                msg_type = type(msg).__name__
-                preview = reprobj.repr(str(msg))[:80]  # Show more content
-                grid.add_row(f"{source} ({msg_type}):", preview)
-        grid.add_row("")
-
     def update_display(self) -> None:
         """Update the display with current context information."""
         agent_message: AgentMessage = self.registry.get_member_typechecked(
@@ -319,28 +253,3 @@ class ContextTabWidget(Static):
 
         self._update_message_statistics(messages, len(orchestration.large_messages))
         self._update_token_usage(agent)
-
-        grid = Table.grid(padding=(0, 1))
-        grid.add_column(style="bold cyan")
-        grid.add_column()
-
-        self._build_orchestration_section(grid, orchestration)
-        self._build_recent_messages_section(grid, messages)
-        self._build_notification_messages_section(
-            grid, agent_message.notification_messages
-        )
-
-        self._update_content_widget(grid)
-
-    def _show_waiting_message(self) -> None:
-        """Show waiting message during initialization."""
-        content = "等待组件初始化..."
-        content_widget = self.query_one("#context-content")
-        if isinstance(content_widget, Static):
-            content_widget.update(content)  # type: ignore[attr-defined]
-
-    def _update_content_widget(self, content: Table) -> None:
-        """Update the content widget with the given content."""
-        content_widget = self.query_one("#context-content")
-        if isinstance(content_widget, Static):
-            content_widget.update(content)  # type: ignore[attr-defined]

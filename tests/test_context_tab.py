@@ -199,7 +199,6 @@ class TestContextTab(unittest.TestCase):
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
-        mock_content = Mock(spec=Static)
 
         def _mock_query_one(selector, expect_type=None):
             mapping = {
@@ -208,7 +207,6 @@ class TestContextTab(unittest.TestCase):
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
                 "#token-stats-text": mock_token_stats_text,
-                "#context-content": mock_content,
             }
             return mapping[selector]
 
@@ -224,7 +222,6 @@ class TestContextTab(unittest.TestCase):
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=6000.0)
         mock_pb_model.update.assert_called_once_with(total=128000.0, progress=6000.0)
         mock_token_stats_text.update.assert_called_once()
-        mock_content.update.assert_called_once()
 
         stats_call_args = mock_stats_text.update.call_args[0][0]
         self.assertIn("总消息数: 3", stats_call_args)
@@ -396,20 +393,6 @@ class TestContextTab(unittest.TestCase):
 
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=5000.0)
         mock_pb_model.update.assert_called_once_with(total=100.0, progress=100.0)
-
-    def test_update_display_without_components(self):
-        """测试在没有组件时的update_display"""
-        registry = Registry()
-        widget = ContextTabWidget(registry)
-
-        from textual.widgets import Static
-
-        mock_static = Mock(spec=Static)
-        widget.query_one = Mock(return_value=mock_static)
-
-        widget._show_waiting_message()
-
-        mock_static.update.assert_called_once_with("等待组件初始化...")
 
 
 if __name__ == "__main__":
