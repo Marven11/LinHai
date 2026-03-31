@@ -5,10 +5,10 @@ from os import access, R_OK
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.base import RuntimeMessage, FileContentMessage
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
-from linhai.llm import Answer, UserMessage
+from linhai.llm import Answer, UserMessage, Message
 from linhai.plugin.file_operations import Plugin
 
 if TYPE_CHECKING:
@@ -120,9 +120,7 @@ class PlanningStatusReminderPlugin(Plugin):
             )
         elif self.status_counter >= 3:
             agent.message_processor.update_notification_message(
-                RuntimeMessage(
-                    "提醒：你应该更新STATUS.md以反应当前状态"
-                ),
+                RuntimeMessage("提醒：你应该更新STATUS.md以反应当前状态"),
                 source="planning_status_reminder",
                 sort_value=0,
             )
@@ -225,6 +223,90 @@ class TodolistCheckerPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.register_before_waiting_user(self.before_waiting_user)
+
+
+class DesignMdReminderPlugin(Plugin):
+    """在消息清理后提醒重新读取DESIGN.md，重新读取后提醒调整计划的插件。"""
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
+        self._design_notification_active = False
+        self._design_reminded = False
+        self.planning_folder: Optional[Path] = None
+
+    def _get_planning_folder(self) -> Optional[Path]:
+        if self.planning_folder is not None:
+            return self.planning_folder
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if agent is None:
+            return None
+
+        for msg in agent.message_processor.get_messages():
+            if isinstance(msg, PlanningPromptMessage):
+                self.planning_folder = msg.planning_folder
+                return self.planning_folder
+
+        return None
+
+    def _is_design_in_messages(self, messages: list[Message]) -> bool:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return True
+
+        design_resolved = (planning_folder / "DESIGN.md").resolve()
+        for msg in messages:
+            if isinstance(msg, FileContentMessage):
+                if Path(msg.filepath).resolve() == design_resolved:
+                    return True
+        return False
+
+    async def after_cache_invalidate(
+        self, agent: "linhai_agent", messages: list[Message]
+    ) -> None:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return
+
+        all_messages = agent.message_processor.get_messages()
+        if not self._is_design_in_messages(all_messages):
+            self._design_notification_active = True
+            self._design_reminded = False
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(
+                    "当前没有查看DESIGN.md的内容，你应该重新读取再继续任务吗？"
+                    "你应该如何修改DESIGN.md以符合任务的最新要求？"
+                ),
+                source="planning_design_reminder",
+                sort_value=0,
+            )
+
+    async def before_message_generation(self) -> None:
+        if not self._design_notification_active or self._design_reminded:
+            return
+
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        if agent is None:
+            return
+
+        all_messages = agent.message_processor.get_messages()
+        if self._is_design_in_messages(all_messages):
+            self._design_notification_active = False
+            self._design_reminded = True
+            agent.message_processor.update_notification_message(
+                None, source="planning_design_reminder", sort_value=0
+            )
+            await agent.message_processor.add_new_message(
+                RuntimeMessage(
+                    "你重新查看了DESIGN.md的内容，你应该如何调整计划？"
+                    "当前内容是否需要补充或者修改？"
+                )
+            )
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.register_after_cache_invalidate(self.after_cache_invalidate)
+        lifecycle.register_before_message_generation(self.before_message_generation)
 
 
 class UserInputRuntimeMessagePlugin(Plugin):

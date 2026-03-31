@@ -7,6 +7,7 @@ from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from linhai.plugin.planning import (
     PlanningStatusReminderPlugin,
     UserInputRuntimeMessagePlugin,
+    DesignMdReminderPlugin,
 )
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
@@ -405,6 +406,142 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
             _full_response="Test response",
             _tool_calls=[],
         )
+
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+
+class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试DesignMdReminderPlugin插件。"""
+
+    def setUp(self):
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = DesignMdReminderPlugin(self.registry)
+
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.design_file = self.temp_dir / "DESIGN.md"
+        self.design_file.write_text("# Design\n")
+
+        self.mock_agent = MagicMock()
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
+        self.mock_agent.message_processor.update_notification_message = MagicMock()
+
+        from linhai.agent.planning import PlanningPromptMessage
+
+        self.mock_planning_message = MagicMock(spec=PlanningPromptMessage)
+        self.mock_planning_message.planning_folder = self.temp_dir
+
+        self.mock_agent.message_processor.get_messages.return_value = [
+            self.mock_planning_message
+        ]
+
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+
+    def tearDown(self):
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    async def test_register_method(self):
+        mock_lifecycle = MagicMock(spec=Lifecycle)
+        self.plugin.register(mock_lifecycle)
+        mock_lifecycle.register_after_cache_invalidate.assert_called_once_with(
+            self.plugin.after_cache_invalidate
+        )
+        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+            self.plugin.before_message_generation
+        )
+
+    async def test_notification_added_after_cache_invalidate_without_design(self):
+        self.mock_agent.message_processor.get_messages.return_value = [
+            self.mock_planning_message
+        ]
+
+        await self.plugin.after_cache_invalidate(self.mock_agent, [])
+
+        self.assertTrue(self.plugin._design_notification_active)
+        self.assertFalse(self.plugin._design_reminded)
+        self.mock_agent.message_processor.update_notification_message.assert_called_once()
+        call_args = (
+            self.mock_agent.message_processor.update_notification_message.call_args
+        )
+        self.assertIsInstance(call_args[0][0], RuntimeMessage)
+        self.assertEqual(call_args[1]["source"], "planning_design_reminder")
+
+    async def test_no_notification_when_design_present(self):
+        from linhai.agent.base import FileContentMessage
+
+        design_msg = FileContentMessage(
+            filepath=str(self.design_file),
+            content="# Design\n",
+            show_line_numbers=False,
+        )
+        self.mock_agent.message_processor.get_messages.return_value = [
+            self.mock_planning_message,
+            design_msg,
+        ]
+
+        await self.plugin.after_cache_invalidate(self.mock_agent, [])
+
+        self.assertFalse(self.plugin._design_notification_active)
+        self.mock_agent.message_processor.update_notification_message.assert_not_called()
+
+    async def test_reminder_added_after_design_reread(self):
+        self.plugin._design_notification_active = True
+        self.plugin._design_reminded = False
+
+        from linhai.agent.base import FileContentMessage
+
+        design_msg = FileContentMessage(
+            filepath=str(self.design_file),
+            content="# Design\nUpdated\n",
+            show_line_numbers=False,
+        )
+        self.mock_agent.message_processor.get_messages.return_value = [
+            self.mock_planning_message,
+            design_msg,
+        ]
+
+        await self.plugin.before_message_generation()
+
+        self.assertFalse(self.plugin._design_notification_active)
+        self.assertTrue(self.plugin._design_reminded)
+        self.mock_agent.message_processor.update_notification_message.assert_called_once_with(
+            None, source="planning_design_reminder", sort_value=0
+        )
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+
+    async def test_no_duplicate_reminder(self):
+        self.plugin._design_notification_active = True
+        self.plugin._design_reminded = True
+
+        from linhai.agent.base import FileContentMessage
+
+        design_msg = FileContentMessage(
+            filepath=str(self.design_file),
+            content="# Design\nUpdated\n",
+            show_line_numbers=False,
+        )
+        self.mock_agent.message_processor.get_messages.return_value = [
+            self.mock_planning_message,
+            design_msg,
+        ]
+
+        await self.plugin.before_message_generation()
+
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_action_when_no_notification_active(self):
+        self.plugin._design_notification_active = False
+
+        await self.plugin.before_message_generation()
 
         self.mock_agent.message_processor.add_new_message.assert_not_called()
 
