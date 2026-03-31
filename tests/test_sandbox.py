@@ -232,10 +232,45 @@ class TestRegisterSandbox(unittest.TestCase):
         from linhai.registry import Registry
 
         registry = Registry()
-        config = BubblewrapConfig(argv=["bwrap"])
+        config = BubblewrapConfig(argv_template=["bwrap"])
         _register_sandbox(registry, config)
         sandbox = registry.get_member_typechecked("process_sandbox", BubbleWrapSandbox)
         self.assertIsInstance(sandbox, BubbleWrapSandbox)
+
+    @patch.object(Path, "home", return_value=Path("/home/testuser"))
+    def test_register_bubblewrap_renders_template(self, mock_home):
+        from linhai.agent.create import _register_sandbox
+        from linhai.config import BubblewrapConfig
+        from linhai.registry import Registry
+
+        with patch("os.getcwd", return_value="/workdir"):
+            registry = Registry()
+            config = BubblewrapConfig(
+                argv_template=[
+                    "bwrap",
+                    "--bind",
+                    "{pwd}",
+                    "/work",
+                    "--ro-bind",
+                    "{home}/.cache",
+                    "/cache",
+                ]
+            )
+            _register_sandbox(registry, config)
+
+        sandbox = registry.get_member_typechecked("process_sandbox", BubbleWrapSandbox)
+        self.assertEqual(
+            sandbox._bubblewrap_argv,
+            [
+                "bwrap",
+                "--bind",
+                "/workdir",
+                "/work",
+                "--ro-bind",
+                "/home/testuser/.cache",
+                "/cache",
+            ],
+        )
 
 
 if __name__ == "__main__":

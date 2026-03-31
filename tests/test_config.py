@@ -382,7 +382,7 @@ model = "test_model"
         self.assertIsNotNone(sandbox_fields["sandbox_profile"].description)
 
         bubblewrap_fields = BubblewrapConfig.model_fields
-        self.assertIsNotNone(bubblewrap_fields["argv"].description)
+        self.assertIsNotNone(bubblewrap_fields["argv_template"].description)
 
         process_sandbox_fields = ProcessSandboxConfig.model_fields
         self.assertIsNotNone(process_sandbox_fields["macos_sandbox"].description)
@@ -511,7 +511,7 @@ model = "test_model"
 
 [[agent]]
 [agent.process_sandbox.bubblewrap]
-argv = ["bwrap", "--ro-bind", "/", "/"]
+argv_template = ["bwrap", "--ro-bind", "/", "/"]
 """
         temp_file = create_temp_config(config_content)
         try:
@@ -521,7 +521,7 @@ argv = ["bwrap", "--ro-bind", "/", "/"]
             self.assertIsNone(config.agent[0].process_sandbox.macos_sandbox)
             self.assertIsNotNone(config.agent[0].process_sandbox.bubblewrap)
             self.assertEqual(
-                config.agent[0].process_sandbox.bubblewrap.argv,
+                config.agent[0].process_sandbox.bubblewrap.argv_template,
                 ["bwrap", "--ro-bind", "/", "/"],
             )
         finally:
@@ -539,7 +539,7 @@ model = "test_model"
 [agent.process_sandbox.macos_sandbox]
 sandbox_profile = "sandbox.sb"
 [agent.process_sandbox.bubblewrap]
-argv = ["bwrap", "--ro-bind", "/", "/"]
+argv_template = ["bwrap", "--ro-bind", "/", "/"]
 """
         temp_file = create_temp_config(config_content)
         try:

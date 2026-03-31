@@ -217,7 +217,7 @@ class TestResolveProcessSandbox(unittest.TestCase):
     @patch("linhai.agent.create.platform.system", return_value="Darwin")
     def test_macos_platform_selects_macos_sandbox(self, mock_system):
         macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
-        bubblewrap_config = BubblewrapConfig(argv=["bwrap"])
+        bubblewrap_config = BubblewrapConfig(argv_template=["bwrap"])
         sandbox = ProcessSandboxConfig(
             macos_sandbox=macos_config, bubblewrap=bubblewrap_config
         )
@@ -228,18 +228,18 @@ class TestResolveProcessSandbox(unittest.TestCase):
     @patch("linhai.agent.create.platform.system", return_value="Linux")
     def test_linux_platform_selects_bubblewrap(self, mock_system):
         macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
-        bubblewrap_config = BubblewrapConfig(argv=["bwrap"])
+        bubblewrap_config = BubblewrapConfig(argv_template=["bwrap"])
         sandbox = ProcessSandboxConfig(
             macos_sandbox=macos_config, bubblewrap=bubblewrap_config
         )
         result = _resolve_process_sandbox(sandbox)
         self.assertIsInstance(result, BubblewrapConfig)
-        self.assertEqual(result.argv, ["bwrap"])
+        self.assertEqual(result.argv_template, ["bwrap"])
 
     @patch("linhai.agent.create.platform.system", return_value="Darwin")
     def test_macos_platform_returns_none_when_no_macos_config(self, mock_system):
         sandbox = ProcessSandboxConfig(
-            macos_sandbox=None, bubblewrap=BubblewrapConfig(argv=["bwrap"])
+            macos_sandbox=None, bubblewrap=BubblewrapConfig(argv_template=["bwrap"])
         )
         result = _resolve_process_sandbox(sandbox)
         self.assertIsNone(result)
@@ -257,7 +257,7 @@ class TestResolveProcessSandbox(unittest.TestCase):
     def test_unknown_platform_returns_none(self, mock_system):
         sandbox = ProcessSandboxConfig(
             macos_sandbox=MacOsSandboxConfig(sandbox_profile="sandbox.sb"),
-            bubblewrap=BubblewrapConfig(argv=["bwrap"]),
+            bubblewrap=BubblewrapConfig(argv_template=["bwrap"]),
         )
         result = _resolve_process_sandbox(sandbox)
         self.assertIsNone(result)

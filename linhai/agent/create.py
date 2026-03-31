@@ -1,5 +1,6 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
+import os
 from pathlib import Path
 from typing import TypedDict, Optional, Tuple, Union, Literal
 import argparse
@@ -534,7 +535,11 @@ def _register_sandbox(
     elif isinstance(sandbox_config, MacOsSandboxConfig):
         sandbox = MacOsSandbox(sandbox_config.sandbox_profile)
     else:
-        sandbox = BubbleWrapSandbox(sandbox_config.argv)
+        rendered = [
+            s.format(pwd=os.getcwd(), home=str(Path.home()))
+            for s in sandbox_config.argv_template
+        ]
+        sandbox = BubbleWrapSandbox(rendered)
     registry.register_member("process_sandbox", sandbox)
 
 
