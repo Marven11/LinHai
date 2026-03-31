@@ -36,8 +36,9 @@ def simplify_value(value: str | int | float | bool | None | dict | list) -> str:
                     if len(value) > 40
                     else json_repr(value)
                 )
-            filename = os.path.basename(value)
-            return json_repr(".../" + filename)
+            filename = os.path.basename(value.rstrip("/"))
+            suffix = "/" if value.endswith("/") else ""
+            return json_repr(".../" + filename + suffix)
         if len(value) > 40:
             return json_repr(value[:37] + "...")
         return json_repr(value)

@@ -26,6 +26,16 @@ class TestToolCallCollapse(unittest.TestCase):
         result = simplify_value("/path/to/file.txt")
         self.assertEqual(result, '"/path/to/file.txt"')
 
+    def test_simplify_value_directory_path(self):
+        """测试目录路径（以/结尾）简化，应保留最后一个文件夹名"""
+        result = simplify_value("/home/linhai/LinHai-Agent-Worker1/tests/")
+        self.assertEqual(result, '".../tests/"')
+
+    def test_simplify_value_directory_path_no_trailing_slash(self):
+        """测试目录路径（不以/结尾）简化"""
+        result = simplify_value("/home/linhai/LinHai-Agent-Worker1/tests")
+        self.assertEqual(result, '".../tests"')
+
     def test_simplify_value_number(self):
         """测试数字参数简化"""
         result = simplify_value(123)
