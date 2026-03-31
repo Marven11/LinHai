@@ -7,9 +7,11 @@ import tempfile
 from pathlib import Path
 from PIL import Image
 from io import BytesIO
-from typing import cast, Literal
+from typing import Literal
 
-from linhai.llm import LanguageModelMessage, Message
+import math
+
+from linhai.llm import EstimateToken, LanguageModelMessage, Message
 
 if TYPE_CHECKING:
     from linhai.registry import Registry
@@ -49,10 +51,10 @@ class TelegramMessage(Message):
             message_id=data["message_id"],
         )
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other) -> bool:
         """比较两个TelegramMessage是否相同。"""
         if not isinstance(other, TelegramMessage):
-            return False
+            return NotImplemented
         return (
             self.chat_id == other.chat_id
             and self.content == other.content
@@ -139,13 +141,16 @@ class TelegramStickerMessage(Message):
             }
         else:
             temp_path = self.save_to_temp_file()
-            return cast(
-                LanguageModelMessage,
-                {
-                    "role": "user",
-                    "content": f"<<telegram>><<message>>用户向你发送了一张表情包<<message>><<telegram>>\n\n你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片：\n{temp_path}",
-                },
-            )
+            estimated_tokens = self.estimated_tokens()
+            return {
+                "role": "user",
+                "content": f"<<telegram>><<message>>用户向你发送了一张表情包<<message>><<telegram>>\n\n你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片（估算token用量: {estimated_tokens}）：\n{temp_path}",
+            }
+
+    def estimated_tokens(self) -> int:
+        tokens_h = math.ceil(self.height / 32)
+        tokens_w = math.ceil(self.width / 32)
+        return tokens_h * tokens_w
 
     def get_content(self) -> None:
         return None

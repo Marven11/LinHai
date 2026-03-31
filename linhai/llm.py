@@ -5,7 +5,6 @@ from typing import (
     Sequence,
     Protocol,
     AsyncIterator,
-    cast,
     runtime_checkable,
 )
 import asyncio
@@ -16,7 +15,11 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 from openai import OpenAIError
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
-from linhai.type_hints import LanguageModelMessage
+from linhai.type_hints import (
+    LanguageModelMessage,
+    UserMessage as UserMsgType,
+    AssistantMessage as AsstMsgType,
+)
 from linhai.utils import CliRuntimeNotice
 import linhai
 
@@ -54,6 +57,14 @@ class Message(Protocol):
         cls, json_str: str, registry: "linhai.registry.Registry"
     ) -> "Message":
         """从JSON字符串创建消息实例。"""
+        raise NotImplementedError()
+
+
+@runtime_checkable
+class EstimateToken(Protocol):
+    """可估算token数量的消息协议。"""
+
+    def estimated_tokens(self) -> int:
         raise NotImplementedError()
 
 
@@ -170,7 +181,7 @@ class SystemMessage:
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
         prompt = self.get_content()
-        return cast(LanguageModelMessage, {"role": "system", "content": prompt})
+        return {"role": "system", "content": prompt}
 
     def __repr__(self) -> str:
         """返回消息的字符串表示。"""
@@ -207,8 +218,7 @@ class UserMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        msg = {"role": "user", "content": self.get_content()}
-        return cast(LanguageModelMessage, msg)
+        return UserMsgType(role="user", content=self.get_content())
 
     def get_content(self) -> str:
         """获取消息的文本内容。"""
@@ -250,14 +260,13 @@ class AssistantMessage:
 
     def to_llm_message(self) -> LanguageModelMessage:
         """转换为LLM消息格式。"""
-        msg = {
-            "role": "assistant",
-            "content": self.get_content(),
-            "reasoning_content": self.reasoning_message,
-        }
-        if not msg["reasoning_content"]:
-            del msg["reasoning_content"]
-        return cast(LanguageModelMessage, msg)
+        if self.reasoning_message:
+            return AsstMsgType(
+                role="assistant",
+                content=self.get_content(),
+                reasoning_content=self.reasoning_message,
+            )
+        return AsstMsgType(role="assistant", content=self.get_content())
 
     def get_content(self) -> str:
         """获取消息的文本内容。"""
@@ -471,7 +480,7 @@ class OpenAiAnswer:
 
         try:
 
-            chunk = cast(ChatCompletionChunk, await self.stream.__anext__())
+            chunk = await self.stream.__anext__()
 
             if self.interrupted:
                 await self.stream.close()
@@ -862,9 +871,7 @@ class OpenAi:
         """
         if not history:
             raise ValueError("history is empty")
-        messages = [
-            cast(ChatCompletionMessageParam, msg.to_llm_message()) for msg in history
-        ]
+        messages = [msg.to_llm_message() for msg in history]
 
         estimated_cached_input_tokens = 0
         if self.previous_input_tokens is not None:

@@ -174,10 +174,60 @@ class TestTelegramStickerMessageToLlmMessage(TestCase):
         self.assertIsInstance(result["content"], str)
         self.assertIn("不支持查看图片", result["content"])
         self.assertIn("/tmp/test_image.png", result["content"])
+        self.assertIn("估算token用量", result["content"])
         self.assertIn(
             "<<telegram>><<message>>用户向你发送了一张表情包<<message>><<telegram>>",
             result["content"],
         )
+
+
+class TestTelegramStickerMessageEstimatedTokens(TestCase):
+    """Test TelegramStickerMessage.estimated_tokens method."""
+
+    def test_estimated_tokens_square(self):
+        msg = TelegramStickerMessage(
+            image_bytes=b"data",
+            mime_type="image/png",
+            registry=MagicMock(),
+            width=32,
+            height=32,
+        )
+        self.assertEqual(msg.estimated_tokens(), 1)
+
+    def test_estimated_tokens_non_divisible(self):
+        msg = TelegramStickerMessage(
+            image_bytes=b"data",
+            mime_type="image/png",
+            registry=MagicMock(),
+            width=100,
+            height=100,
+        )
+        import math
+
+        expected = math.ceil(100 / 32) * math.ceil(100 / 32)
+        self.assertEqual(msg.estimated_tokens(), expected)
+
+    def test_estimated_tokens_zero_dimensions(self):
+        msg = TelegramStickerMessage(
+            image_bytes=b"data",
+            mime_type="image/png",
+            registry=MagicMock(),
+            width=0,
+            height=0,
+        )
+        self.assertEqual(msg.estimated_tokens(), 0)
+
+    def test_satisfies_estimate_token_protocol(self):
+        from linhai.llm import EstimateToken
+
+        msg = TelegramStickerMessage(
+            image_bytes=b"data",
+            mime_type="image/png",
+            registry=MagicMock(),
+            width=100,
+            height=100,
+        )
+        self.assertIsInstance(msg, EstimateToken)
 
 
 class TestLoadSticker(TestCase):
