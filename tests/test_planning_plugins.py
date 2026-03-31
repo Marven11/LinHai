@@ -8,6 +8,7 @@ from linhai.plugin.planning import (
     PlanningStatusReminderPlugin,
     UserInputRuntimeMessagePlugin,
     DesignMdReminderPlugin,
+    PlanningInitOverridePlugin,
 )
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
@@ -544,6 +545,42 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         await self.plugin.before_message_generation()
 
         self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+
+class TestPlanningInitOverridePlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PlanningInitOverridePlugin插件。"""
+
+    def setUp(self):
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = PlanningInitOverridePlugin(self.registry)
+
+        self.mock_agent = MagicMock()
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
+
+    async def test_plugin_inherits_from_base_class(self):
+        self.assertIsInstance(self.plugin, Plugin)
+
+    async def test_register_method_adds_callback(self):
+        mock_lifecycle = MagicMock(spec=Lifecycle)
+        self.plugin.register(mock_lifecycle)
+        mock_lifecycle.register_before_agent_loop.assert_called_once_with(
+            self.plugin.before_agent_loop
+        )
+
+    async def test_before_agent_loop_adds_runtime_message(self):
+        await self.plugin.before_agent_loop(self.mock_agent)
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("override=true", call_args.message)
+
+    async def test_message_content_mentions_planning_files(self):
+        await self.plugin.before_agent_loop(self.mock_agent)
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        self.assertIn("STATUS.md", call_args.message)
+        self.assertIn("TODOLIST.md", call_args.message)
+        self.assertIn("DESIGN.md", call_args.message)
 
 
 if __name__ == "__main__":

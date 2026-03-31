@@ -309,6 +309,25 @@ class DesignMdReminderPlugin(Plugin):
         lifecycle.register_before_message_generation(self.before_message_generation)
 
 
+class PlanningInitOverridePlugin(Plugin):
+    """在agent循环开始前提醒使用override=true初始化规划文件的插件。"""
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
+
+    async def before_agent_loop(self, agent: "linhai_agent") -> None:
+        await agent.message_processor.add_new_message(
+            RuntimeMessage(
+                "重要提醒：在初始化STATUS.md、TODOLIST.md、DESIGN.md等规划文件时，"
+                "必须使用override=true参数覆盖已有文件，否则写入会因文件已存在而失败。"
+            )
+        )
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.register_before_agent_loop(self.before_agent_loop)
+
+
 class UserInputRuntimeMessagePlugin(Plugin):
     """在用户输入消息后添加RuntimeMessage的插件。"""
 

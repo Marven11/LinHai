@@ -297,11 +297,13 @@ async def create_agent_from_config(
             PlanningStatusReminderPlugin,
             UserInputRuntimeMessagePlugin,
             DesignMdReminderPlugin,
+            PlanningInitOverridePlugin,
         )
 
         PlanningStatusReminderPlugin(context["registry"]).register(agent.lifecycle)
         UserInputRuntimeMessagePlugin(context["registry"]).register(agent.lifecycle)
         DesignMdReminderPlugin(context["registry"]).register(agent.lifecycle)
+        PlanningInitOverridePlugin(context["registry"]).register(agent.lifecycle)
 
     if context["claw_enabled"]:
         from linhai.plugin.claw import ClawPlugin
