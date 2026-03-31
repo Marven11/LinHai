@@ -17,6 +17,7 @@ from textual.timer import Timer
 from textual.widgets import Markdown, Static, TextArea
 from textual.widgets.markdown import MarkdownBlock
 
+from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
 from linhai.utils import parse_and_simplify_toolcall
@@ -77,6 +78,7 @@ EXTENSION_TO_TYPE = {
     ".log": "text",
 }
 
+
 class MarkdownParagraphWithoutNewLine(MarkdownBlock):
     """类似MarkdownParagraph但是删掉了_update_from_block函数，应该只会有性能上的影响"""
 
@@ -86,6 +88,7 @@ class MarkdownParagraphWithoutNewLine(MarkdownBlock):
          margin: 0;
     }
     """
+
 
 class RainbowAsciiArt(Static):
     """显示斜向彩虹渐变色ASCII艺术的组件"""
@@ -872,6 +875,13 @@ class FooterWidget(Static):
         token_pieces = self.token_manager.get_token_display_pieces(
             agent, self.current_answer_token, self.use_nerd_font
         )
+
+        sandbox = self.registry.get_member_typechecked(
+            "process_sandbox", ProcessSandboxProtocol
+        )
+        if not isinstance(sandbox, NoSandbox):
+            sandbox_icon = "\uf132" if self.use_nerd_font else "◭"
+            token_pieces.append(sandbox_icon)
 
         llm_name = self._get_current_llm_name()
         if self.use_nerd_font:

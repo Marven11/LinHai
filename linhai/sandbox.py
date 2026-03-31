@@ -1,9 +1,10 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class ProcessSandboxProtocol(Protocol):
     def wrap_argv(self, argv: list[str]) -> list[str]: ...
 
