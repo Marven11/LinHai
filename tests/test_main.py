@@ -53,7 +53,6 @@ class TestMainCommandLine(unittest.TestCase):
             context["registry"], mock_registry_instance
         )  # context字典中的registry
         self.assertIn("config_basedir", context)  # config_basedir应该在context中
-        self.assertIn("cli_args", context)  # cli_args应该在context中
 
         mock_cli_app.assert_called_once()
         cli_call_args = mock_cli_app.call_args

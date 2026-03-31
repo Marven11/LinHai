@@ -85,7 +85,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         context = {
             "planning": True,
             "registry": self.mock_registry,
-            "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
             "llms": self.mock_config.llm,
@@ -136,7 +135,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         context = {
             "planning": False,
             "registry": self.mock_registry,
-            "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
             "llms": self.mock_config.llm,
@@ -166,7 +164,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         context = {
             "planning": True,
             "registry": self.mock_registry,
-            "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
             "llms": self.mock_config.llm,
@@ -257,7 +254,6 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         context = {
             "planning": False,
             "registry": self.mock_registry,
-            "cli_args": self.mock_cli_args,
             "config": self.mock_config,
             "config_basedir": self.mock_config_basedir,
             "llms": self.mock_config.llm,

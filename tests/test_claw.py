@@ -79,7 +79,6 @@ class TestClawPinnedMessages(unittest.TestCase):
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "cli_args": Mock(claw=claw, claw_folder=None, message=None, file=None),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,

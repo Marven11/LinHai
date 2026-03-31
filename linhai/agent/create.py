@@ -51,7 +51,6 @@ class AgentBuildContext(TypedDict):
     checklist_path: Optional[Path]
     user_prompt: Optional[str]
     planning: bool
-    cli_args: argparse.Namespace
     toolsets_config: Union[Literal["defaults"], list[str]]
     override_toolsets: Optional[list[str]]
     compress_threshold: Union[int, float]
@@ -135,7 +134,6 @@ def create_agent_build_context(
         "checklist_path": checklist_path,
         "user_prompt": user_prompt,
         "planning": planning,
-        "cli_args": cli_args,
         "toolsets_config": config.tools.toolsets,
         "override_toolsets": config.agent.override_toolsets,
         "compress_threshold": config.agent.compress_threshold,
@@ -413,8 +411,6 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     pinned_messages: list[Message] = [SystemMessage(context["registry"])]
     startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pinned_messages.append(RuntimeMessage(f"Agent启动时间: {startup_time}"))
-
-    cli_args = context["cli_args"]
 
     if context["user_prompt"] is not None:
         pinned_messages.append(GlobalPrompt(Path(context["user_prompt"])))

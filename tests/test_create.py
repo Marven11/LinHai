@@ -269,9 +269,6 @@ class TestCreateLLMInstances(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "cli_args": argparse.Namespace(
-                message=None, file=None, claw=False, claw_folder=None, afk=False
-            ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
@@ -378,9 +375,6 @@ class TestCreateToolManager(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "cli_args": argparse.Namespace(
-                message=None, file=None, claw=False, claw_folder=None, afk=False
-            ),
             "toolsets_config": "defaults",
             "override_toolsets": None,
             "compress_threshold": 0.8,
@@ -474,7 +468,6 @@ class TestCreatePinnedMessages(unittest.TestCase):
             "llms": [],
             "llm_name": "test-llm",
             "checklist_path": None,
-            "cli_args": mock_cli_args,
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,

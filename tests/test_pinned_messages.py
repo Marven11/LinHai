@@ -59,7 +59,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "registry": self.registry,
             "config_basedir": self.config_basedir,
             "llms": [],
-            "cli_args": self.cli_args,
             "checklist_path": checklist_path,
             "user_prompt": user_prompt,
             "max_toolcall_token_in_round": 0.3,

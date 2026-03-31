@@ -81,7 +81,6 @@ server_script_path = "{server_path}"
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "cli_args": self.cli_args,
             "toolsets_config": config.tools.toolsets,
             "override_toolsets": config.agent.override_toolsets,
             "compress_threshold": config.agent.compress_threshold,
