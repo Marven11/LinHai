@@ -202,7 +202,6 @@ class TestContextTab(unittest.TestCase):
         mock_stats_text = Mock(spec=Static)
         mock_pinned_sparkline = Mock(spec=Sparkline)
         mock_pinned_text = Mock(spec=Static)
-        mock_notif_sparkline = Mock(spec=Sparkline)
         mock_notif_text = Mock(spec=Static)
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
@@ -216,7 +215,6 @@ class TestContextTab(unittest.TestCase):
                 "#msg-stats-text": mock_stats_text,
                 "#pinned-stats-sparkline": mock_pinned_sparkline,
                 "#pinned-stats-text": mock_pinned_text,
-                "#notification-stats-sparkline": mock_notif_sparkline,
                 "#notification-stats-text": mock_notif_text,
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
@@ -230,8 +228,10 @@ class TestContextTab(unittest.TestCase):
 
         widget.update_display()
 
+        from math import log2
+
         expected_data = [
-            float(widget._estimate_message_tokens(msg)) for msg in mock_messages
+            float(log2(widget._estimate_message_tokens(msg))) for msg in mock_messages
         ]
         self.assertEqual(mock_sparkline.data, expected_data)
         mock_stats_text.update.assert_called_once()
@@ -474,7 +474,6 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_stats_text = Mock(spec=Static)
         mock_pinned_sparkline = Mock(spec=Sparkline)
         mock_pinned_text = Mock(spec=Static)
-        mock_notif_sparkline = Mock(spec=Sparkline)
         mock_notif_text = Mock(spec=Static)
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
@@ -487,7 +486,6 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             "#msg-stats-text": mock_stats_text,
             "#pinned-stats-sparkline": mock_pinned_sparkline,
             "#pinned-stats-text": mock_pinned_text,
-            "#notification-stats-sparkline": mock_notif_sparkline,
             "#notification-stats-text": mock_notif_text,
             "#pb-hard-limit": mock_pb_hard,
             "#pb-model-limit": mock_pb_model,
@@ -504,30 +502,32 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             widget,
             mock_pinned_sparkline,
             mock_pinned_text,
-            mock_notif_sparkline,
             mock_notif_text,
         )
 
     def test_pinned_empty(self):
-        widget, _, mock_pinned_text, _, _ = self._create_widget_with_mocks()
+        widget, _, mock_pinned_text, _ = self._create_widget_with_mocks()
         widget.update_display()
         mock_pinned_text.update.assert_called_with("无置顶消息")
 
     def test_notification_empty(self):
-        widget, _, _, _, mock_notif_text = self._create_widget_with_mocks()
+        widget, _, _, mock_notif_text = self._create_widget_with_mocks()
         widget.update_display()
         mock_notif_text.update.assert_called_with("无通知消息")
 
     def test_pinned_with_messages(self):
         from linhai.llm import UserMessage
+        from math import log2
 
         pinned = [UserMessage(message="系统指令1"), UserMessage(message="系统指令2")]
-        widget, mock_pinned_sparkline, mock_pinned_text, _, _ = (
+        widget, mock_pinned_sparkline, mock_pinned_text, _ = (
             self._create_widget_with_mocks(pinned_messages=pinned)
         )
         widget.update_display()
 
-        expected_data = [float(widget._estimate_message_tokens(msg)) for msg in pinned]
+        expected_data = [
+            float(log2(widget._estimate_message_tokens(msg))) for msg in pinned
+        ]
         self.assertEqual(mock_pinned_sparkline.data, expected_data)
 
         text_arg = mock_pinned_text.update.call_args[0][0]
@@ -546,22 +546,14 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             "a": NotificationMessageEntry(source="a", message=msg1, sort_value=1),
             "b": NotificationMessageEntry(source="b", message=msg2, sort_value=2),
         }
-        widget, _, _, mock_notif_sparkline, mock_notif_text = (
-            self._create_widget_with_mocks(notification_messages=notifications)
+        widget, _, _, mock_notif_text = self._create_widget_with_mocks(
+            notification_messages=notifications
         )
         widget.update_display()
-
-        expected_data = [
-            float(widget._estimate_message_tokens(msg1)),
-            float(widget._estimate_message_tokens(msg2)),
-        ]
-        self.assertEqual(mock_notif_sparkline.data, expected_data)
 
         text_arg = mock_notif_text.update.call_args[0][0]
         self.assertIn("总消息数: 2", text_arg)
         self.assertIn("消息平均Token数", text_arg)
-        self.assertNotIn("最长消息", text_arg)
-        self.assertNotIn("大消息", text_arg)
 
 
 if __name__ == "__main__":

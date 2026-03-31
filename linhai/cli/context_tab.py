@@ -1,6 +1,7 @@
 """Context tab widget for displaying message statistics and token usage."""
 
 from functools import lru_cache
+from math import log2
 from typing import Optional, TypedDict
 
 import tiktoken
@@ -108,7 +109,6 @@ class ContextTabWidget(Static):
                 yield Sparkline(id="pinned-stats-sparkline", summary_function=max)
                 yield Static(id="pinned-stats-text")
                 yield Label("通知消息", classes="title")
-                yield Sparkline(id="notification-stats-sparkline", summary_function=max)
                 yield Static(id="notification-stats-text")
             with Collapsible(
                 title="上下文Token用量", id="token-usage-collapsible", collapsed=False
@@ -223,7 +223,9 @@ class ContextTabWidget(Static):
         self, messages: list[Message], large_message_count: int
     ) -> None:
         sparkline = self.query_one("#msg-stats-sparkline", Sparkline)
-        sparkline.data = [float(self._estimate_message_tokens(msg)) for msg in messages]
+        sparkline.data = [
+            float(log2(self._estimate_message_tokens(msg))) for msg in messages
+        ]
 
         message_count = len(messages)
         _, total_tokens, max_tokens, max_tokens_msg = self._count_message_types(
@@ -248,7 +250,7 @@ class ContextTabWidget(Static):
     def _update_pinned_message_statistics(self, pinned_messages: list[Message]) -> None:
         sparkline = self.query_one("#pinned-stats-sparkline", Sparkline)
         sparkline.data = [
-            float(self._estimate_message_tokens(msg)) for msg in pinned_messages
+            float(log2(self._estimate_message_tokens(msg))) for msg in pinned_messages
         ]
 
         message_count = len(pinned_messages)
@@ -271,11 +273,6 @@ class ContextTabWidget(Static):
     def _update_notification_message_statistics(
         self, notification_entries: list[Message]
     ) -> None:
-        sparkline = self.query_one("#notification-stats-sparkline", Sparkline)
-        sparkline.data = [
-            float(self._estimate_message_tokens(msg)) for msg in notification_entries
-        ]
-
         message_count = len(notification_entries)
         if message_count == 0:
             stats_text = self.query_one("#notification-stats-text", Static)
