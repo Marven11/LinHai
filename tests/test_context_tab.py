@@ -220,10 +220,10 @@ class TestContextTab(unittest.TestCase):
 
         widget.update_display()
 
-        self.assertEqual(
-            mock_sparkline.data,
-            [float(len(str(msg))) for msg in mock_messages],
-        )
+        expected_data = [
+            float(widget._estimate_message_tokens(msg)) for msg in mock_messages
+        ]
+        self.assertEqual(mock_sparkline.data, expected_data)
         mock_stats_text.update.assert_called_once()
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=6000.0)
         mock_pb_model.update.assert_called_once_with(total=128000.0, progress=6000.0)
@@ -231,6 +231,8 @@ class TestContextTab(unittest.TestCase):
 
         stats_call_args = mock_stats_text.update.call_args[0][0]
         self.assertIn("总消息数: 3", stats_call_args)
+        self.assertIn("消息平均Token数", stats_call_args)
+        self.assertIn("最长消息Token数", stats_call_args)
         self.assertIn("大消息数量: 0", stats_call_args)
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]

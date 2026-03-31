@@ -1,13 +1,20 @@
 """Context tab widget for displaying message statistics and token usage."""
 
+from functools import lru_cache
 from typing import Optional, TypedDict
 
+import tiktoken
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Collapsible, Label, ProgressBar, Sparkline, Static
 
-# 导入AnswerTokenUsage用于token用量显示
-from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
+from linhai.llm import (
+    AnswerTokenUsage,
+    EstimateToken,
+    UserMessage,
+    AssistantMessage,
+    SystemMessage,
+)
 from linhai.agent.base import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 
@@ -17,6 +24,20 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
 from linhai.token_manager import TokenManager
+
+_tokenizer: tiktoken.Encoding | None = None
+
+
+def _get_tokenizer() -> tiktoken.Encoding:
+    global _tokenizer
+    if _tokenizer is None:
+        _tokenizer = tiktoken.get_encoding("cl100k_base")
+    return _tokenizer
+
+
+@lru_cache(maxsize=1000)
+def _count_tokens_cached(text: str) -> int:
+    return len(_get_tokenizer().encode(text))
 
 
 class MessageTypeCounts(TypedDict):
@@ -104,19 +125,17 @@ class ContextTabWidget(Static):
         """Clean up resources when unmounted."""
         # No resources to clean up with simple progress bar implementation
 
+    def _estimate_message_tokens(self, msg: Message) -> int:
+        if isinstance(msg, EstimateToken):
+            return msg.estimated_tokens()
+        content = msg.get_content()
+        if isinstance(content, str):
+            return _count_tokens_cached(content)
+        return 0
+
     def _count_message_types(
         self, messages: list[Message]
     ) -> tuple[MessageTypeCounts, int, int, Optional[Message]]:
-        """Count message types and calculate statistics.
-
-        Args:
-            messages: List of messages
-
-        Returns:
-            Tuple of (type_counts, total_chars, max_length, max_length_msg)
-        """
-
-        # Define message type mapping to avoid hardcoded keys
         type_mapping: list[tuple[type, str]] = [
             (UserMessage, "user"),
             (AssistantMessage, "assistant"),
@@ -131,19 +150,17 @@ class ContextTabWidget(Static):
             "runtime": 0,
             "other": 0,
         }
-        total_chars = 0
-        max_length_msg: Optional[Message] = None
-        max_length = 0
+        total_tokens = 0
+        max_tokens_msg: Optional[Message] = None
+        max_tokens = 0
 
         for msg in messages:
-            content = str(msg)
-            length = len(content)
-            total_chars += length
-            if length > max_length:
-                max_length = length
-                max_length_msg = msg
+            tokens = self._estimate_message_tokens(msg)
+            total_tokens += tokens
+            if tokens > max_tokens:
+                max_tokens = tokens
+                max_tokens_msg = msg
 
-            # Simplified type checking using next() with generator
             matching_type = next(
                 (
                     type_key
@@ -157,7 +174,7 @@ class ContextTabWidget(Static):
             else:
                 type_counts["other"] += 1
 
-        return type_counts, total_chars, max_length, max_length_msg
+        return type_counts, total_tokens, max_tokens, max_tokens_msg
 
     def _get_token_cache_info(self, used: int) -> tuple[int, float]:
         """Get cached token information from token manager.
@@ -198,23 +215,25 @@ class ContextTabWidget(Static):
         self, messages: list[Message], large_message_count: int
     ) -> None:
         sparkline = self.query_one("#msg-stats-sparkline", Sparkline)
-        sparkline.data = [float(len(str(msg))) for msg in messages]
+        sparkline.data = [float(self._estimate_message_tokens(msg)) for msg in messages]
 
         message_count = len(messages)
-        _, total_chars, max_length, max_length_msg = self._count_message_types(messages)
-        avg_length = total_chars / message_count if message_count > 0 else 0
+        _, total_tokens, max_tokens, max_tokens_msg = self._count_message_types(
+            messages
+        )
+        avg_tokens = total_tokens / message_count if message_count > 0 else 0
 
         type_display = "未知"
-        if max_length_msg is not None:
-            type_display = type(max_length_msg).__name__
-            if isinstance(max_length_msg, ToolCallResultMessage):
-                type_display += f", 来自{max_length_msg.tool_name}"
+        if max_tokens_msg is not None:
+            type_display = type(max_tokens_msg).__name__
+            if isinstance(max_tokens_msg, ToolCallResultMessage):
+                type_display += f", 来自{max_tokens_msg.tool_name}"
 
         stats_text = self.query_one("#msg-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均长度: " + f"{avg_length:.1f}" + " 字符\n"
-            "最长消息长度: " + str(max_length) + " 字符 (" + type_display + ")\n"
+            "消息平均Token数: " + f"{avg_tokens:.1f}" + "\n"
+            "最长消息Token数: " + str(max_tokens) + " (" + type_display + ")\n"
             "大消息数量: " + str(large_message_count)
         )
 
