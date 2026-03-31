@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from linhai.sandbox import (
+    DEFAULT_MACOS_PROFILE_TEMPLATE,
     BubbleWrapSandbox,
     MacOsSandbox,
     NoSandbox,
@@ -24,8 +25,14 @@ class TestProcessSandboxProtocol(unittest.TestCase):
         def accept_sandbox(sandbox: ProcessSandboxProtocol) -> None:
             pass
 
-        with patch.object(Path, "home", return_value=Path("/home/test")):
-            accept_sandbox(MacOsSandbox("sandbox.sb"))
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".sb", delete=False) as f:
+            f.write(DEFAULT_MACOS_PROFILE_TEMPLATE)
+            profile_path = f.name
+        try:
+            with patch.object(Path, "home", return_value=Path("/home/test")):
+                accept_sandbox(MacOsSandbox(profile_path))
+        finally:
+            os.unlink(profile_path)
 
     def test_bubblewrap_sandbox_satisfies_protocol(self):
         def accept_sandbox(sandbox: ProcessSandboxProtocol) -> None:
@@ -53,25 +60,40 @@ class TestNoSandbox(unittest.TestCase):
         self.assertEqual(sandbox.wrap_argv([]), [])
 
 
+def _create_profile_file() -> str:
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".sb", delete=False)
+    f.write(DEFAULT_MACOS_PROFILE_TEMPLATE)
+    f.close()
+    return f.name
+
+
 class TestMacOsSandbox(unittest.TestCase):
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
     def test_renders_template_and_saves_to_tempfile(self, mock_home):
         with patch("os.getcwd", return_value="/workdir"):
-            sandbox = MacOsSandbox("sandbox.sb")
+            profile_path = _create_profile_file()
+            try:
+                sandbox = MacOsSandbox(profile_path)
+            finally:
+                os.unlink(profile_path)
 
-        profile_path = sandbox._profile_path
-        self.assertTrue(os.path.exists(profile_path))
-        with open(profile_path) as f:
+        rendered_path = sandbox._profile_path
+        self.assertTrue(os.path.exists(rendered_path))
+        with open(rendered_path) as f:
             content = f.read()
         self.assertIn("/workdir", content)
         self.assertIn("/home/testuser/.cache", content)
         self.assertIn("/home/testuser/.local/share/linhai", content)
-        os.unlink(profile_path)
+        os.unlink(rendered_path)
 
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
     def test_wrap_argv_prepends_sandbox_exec(self, mock_home):
         with patch("os.getcwd", return_value="/workdir"):
-            sandbox = MacOsSandbox("sandbox.sb")
+            profile_path = _create_profile_file()
+            try:
+                sandbox = MacOsSandbox(profile_path)
+            finally:
+                os.unlink(profile_path)
         result = sandbox.wrap_argv(["python", "-c", "print(1)"])
         self.assertEqual(result[0], "sandbox-exec")
         self.assertEqual(result[1], "-f")
@@ -82,13 +104,37 @@ class TestMacOsSandbox(unittest.TestCase):
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
     def test_profile_contains_required_sections(self, mock_home):
         with patch("os.getcwd", return_value="/workdir"):
-            sandbox = MacOsSandbox("sandbox.sb")
+            profile_path = _create_profile_file()
+            try:
+                sandbox = MacOsSandbox(profile_path)
+            finally:
+                os.unlink(profile_path)
         with open(sandbox._profile_path) as f:
             content = f.read()
         self.assertIn("(deny file-write*)", content)
         self.assertIn("(allow file-read*)", content)
         self.assertIn("(allow process-fork)", content)
         self.assertIn("(allow process-exec)", content)
+        os.unlink(sandbox._profile_path)
+
+    @patch.object(Path, "home", return_value=Path("/home/testuser"))
+    def test_uses_passed_profile_content(self, mock_home):
+        custom_template = (
+            '(version 1)\n(deny default)\n(allow file-read* (subpath "{pwd}"))\n'
+        )
+        with patch("os.getcwd", return_value="/custom/workdir"):
+            f = tempfile.NamedTemporaryFile(mode="w", suffix=".sb", delete=False)
+            f.write(custom_template)
+            f.close()
+            try:
+                sandbox = MacOsSandbox(f.name)
+            finally:
+                os.unlink(f.name)
+        with open(sandbox._profile_path) as f:
+            content = f.read()
+        self.assertIn("/custom/workdir", content)
+        self.assertNotIn("{pwd}", content)
+        self.assertIn("(deny default)", content)
         os.unlink(sandbox._profile_path)
 
 
@@ -140,18 +186,54 @@ class TestRegisterSandbox(unittest.TestCase):
         self.assertIsInstance(sandbox, NoSandbox)
 
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
-    def test_register_macos_creates_macos_sandbox(self, mock_home):
+    def test_register_macos_creates_profile_if_not_exists(self, mock_home):
         from linhai.agent.create import _register_sandbox
         from linhai.config import MacOsSandboxConfig
         from linhai.registry import Registry
 
-        with patch("os.getcwd", return_value="/workdir"):
-            registry = Registry()
-            config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
-            _register_sandbox(registry, config)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = os.path.join(tmpdir, "sandbox.sb")
+            self.assertFalse(os.path.exists(profile_path))
+
+            with patch("os.getcwd", return_value="/workdir"):
+                registry = Registry()
+                config = MacOsSandboxConfig(sandbox_profile=profile_path)
+                _register_sandbox(registry, config)
+
+            self.assertTrue(os.path.exists(profile_path))
+            with open(profile_path) as f:
+                content = f.read()
+            self.assertEqual(content, DEFAULT_MACOS_PROFILE_TEMPLATE)
+
             sandbox = registry.get_member_typechecked("process_sandbox", MacOsSandbox)
             self.assertIsInstance(sandbox, MacOsSandbox)
             os.unlink(sandbox._profile_path)
+
+    @patch.object(Path, "home", return_value=Path("/home/testuser"))
+    def test_register_macos_uses_existing_profile(self, mock_home):
+        from linhai.agent.create import _register_sandbox
+        from linhai.config import MacOsSandboxConfig
+        from linhai.registry import Registry
+
+        custom_template = "(version 1)\n(deny default)\n"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".sb", delete=False) as f:
+            f.write(custom_template)
+            profile_path = f.name
+
+        try:
+            with patch("os.getcwd", return_value="/workdir"):
+                registry = Registry()
+                config = MacOsSandboxConfig(sandbox_profile=profile_path)
+                _register_sandbox(registry, config)
+
+            sandbox = registry.get_member_typechecked("process_sandbox", MacOsSandbox)
+            self.assertIsInstance(sandbox, MacOsSandbox)
+            with open(sandbox._profile_path) as f:
+                content = f.read()
+            self.assertIn("(deny default)", content)
+            os.unlink(sandbox._profile_path)
+        finally:
+            os.unlink(profile_path)
 
     def test_register_bubblewrap_creates_bubblewrap_sandbox(self):
         from linhai.agent.create import _register_sandbox

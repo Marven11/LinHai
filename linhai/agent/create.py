@@ -35,7 +35,12 @@ from .conversation import register_conversation_folder
 from linhai.utils import CliRuntimeNotice
 from linhai.secret import initialize_secret_system
 
-from linhai.sandbox import BubbleWrapSandbox, MacOsSandbox, NoSandbox
+from linhai.sandbox import (
+    DEFAULT_MACOS_PROFILE_TEMPLATE,
+    BubbleWrapSandbox,
+    MacOsSandbox,
+    NoSandbox,
+)
 from .base import GlobalPrompt, PathPrompt
 
 from .main import Agent
@@ -527,6 +532,10 @@ def _register_sandbox(
     if sandbox_config is None:
         sandbox = NoSandbox()
     elif isinstance(sandbox_config, MacOsSandboxConfig):
+        profile_path = Path(sandbox_config.sandbox_profile)
+        if not profile_path.exists():
+            profile_path.parent.mkdir(parents=True, exist_ok=True)
+            profile_path.write_text(DEFAULT_MACOS_PROFILE_TEMPLATE)
         sandbox = MacOsSandbox(sandbox_config.sandbox_profile)
     else:
         sandbox = BubbleWrapSandbox(sandbox_config.argv)
