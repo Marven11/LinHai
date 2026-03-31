@@ -89,6 +89,12 @@ jobs:
           echo "Checking for cast/typing.cast function calls in Python files..."
           uv run python .gitea/scripts/check_cast_usage.py
 
+      - name: Check for asyncio.create_task usage (issue 508)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for asyncio.create_task usage in Python files..."
+          uv run python .gitea/scripts/check_create_task_usage.py
+
       - name: Check for Any/object type annotations (issue #461)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
