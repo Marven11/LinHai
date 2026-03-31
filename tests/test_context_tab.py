@@ -55,6 +55,7 @@ class TestContextTab(unittest.TestCase):
             RuntimeMessage("测试运行时消息"),
         ]
         mock_agent_message.messages = mock_messages
+        mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
 
         mock_orchestration.large_messages = {}
@@ -150,6 +151,7 @@ class TestContextTab(unittest.TestCase):
             RuntimeMessage("测试运行时消息"),
         ]
         mock_agent_message.messages = mock_messages
+        mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
 
         mock_orchestration.large_messages = {}
@@ -198,6 +200,10 @@ class TestContextTab(unittest.TestCase):
 
         mock_sparkline = Mock(spec=Sparkline)
         mock_stats_text = Mock(spec=Static)
+        mock_pinned_sparkline = Mock(spec=Sparkline)
+        mock_pinned_text = Mock(spec=Static)
+        mock_notif_sparkline = Mock(spec=Sparkline)
+        mock_notif_text = Mock(spec=Static)
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
@@ -208,6 +214,10 @@ class TestContextTab(unittest.TestCase):
             mapping = {
                 "#msg-stats-sparkline": mock_sparkline,
                 "#msg-stats-text": mock_stats_text,
+                "#pinned-stats-sparkline": mock_pinned_sparkline,
+                "#pinned-stats-text": mock_pinned_text,
+                "#notification-stats-sparkline": mock_notif_sparkline,
+                "#notification-stats-text": mock_notif_text,
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
                 "#token-stats-text": mock_token_stats_text,
@@ -401,6 +411,157 @@ class TestContextTab(unittest.TestCase):
 
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=5000.0)
         mock_pb_model.update.assert_called_once_with(total=100.0, progress=100.0)
+
+
+class TestPinnedAndNotificationStats(unittest.TestCase):
+    """测试置顶消息和通知消息统计功能"""
+
+    def _create_widget_with_mocks(
+        self, pinned_messages=None, notification_messages=None
+    ):
+        from textual.widgets import Sparkline, Static, ProgressBar
+        from linhai.agent.main import Agent
+        from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage
+        from linhai.token_manager import TokenManager
+        from linhai.agent.message import AgentMessage, NotificationMessageEntry
+        from linhai.agent.orchestration import AgentContextOrchestration
+
+        registry = Registry()
+        widget = ContextTabWidget(registry)
+
+        mock_agent = Mock(spec=Agent)
+        mock_agent.get_threshold_info.return_value = {
+            "hard_limit": 8000,
+            "used_tokens": 6000,
+            "remaining_tokens": 2000,
+            "usage_ratio": 0.75,
+        }
+        mock_llm = Mock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
+
+        mock_agent_message = Mock(spec=AgentMessage)
+        mock_agent_message.messages = [
+            UserMessage(message="用户消息"),
+            AssistantMessage(message="助手消息"),
+        ]
+        mock_agent_message.pinned_messages = (
+            pinned_messages if pinned_messages is not None else []
+        )
+        mock_agent_message.notification_messages = (
+            notification_messages if notification_messages is not None else {}
+        )
+
+        mock_orchestration = Mock(spec=AgentContextOrchestration)
+        mock_orchestration.large_messages = {}
+
+        mock_token_usage = AnswerTokenUsage(
+            input_tokens=1000,
+            output_tokens=200,
+            total_tokens=1200,
+            cached_input_tokens=500,
+        )
+        mock_token_manager = Mock(spec=TokenManager)
+        mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_manager.cumulative_token_usage = None
+
+        registry.register_member("agent_message", mock_agent_message)
+        registry.register_member("agent_context_orchestration", mock_orchestration)
+        registry.register_member("agent", mock_agent)
+        registry.register_member("token_manager", mock_token_manager)
+
+        mock_sparkline = Mock(spec=Sparkline)
+        mock_stats_text = Mock(spec=Static)
+        mock_pinned_sparkline = Mock(spec=Sparkline)
+        mock_pinned_text = Mock(spec=Static)
+        mock_notif_sparkline = Mock(spec=Sparkline)
+        mock_notif_text = Mock(spec=Static)
+        mock_pb_hard = Mock(spec=ProgressBar)
+        mock_pb_model = Mock(spec=ProgressBar)
+        mock_token_stats_text = Mock(spec=Static)
+        mock_pb_cache = Mock(spec=ProgressBar)
+        mock_cache_stats_text = Mock(spec=Static)
+
+        mock_query_map = {
+            "#msg-stats-sparkline": mock_sparkline,
+            "#msg-stats-text": mock_stats_text,
+            "#pinned-stats-sparkline": mock_pinned_sparkline,
+            "#pinned-stats-text": mock_pinned_text,
+            "#notification-stats-sparkline": mock_notif_sparkline,
+            "#notification-stats-text": mock_notif_text,
+            "#pb-hard-limit": mock_pb_hard,
+            "#pb-model-limit": mock_pb_model,
+            "#token-stats-text": mock_token_stats_text,
+            "#pb-cache-ratio": mock_pb_cache,
+            "#cache-stats-text": mock_cache_stats_text,
+        }
+
+        widget.query_one = Mock(
+            side_effect=lambda sel, tp=None, **kw: mock_query_map[sel]
+        )
+
+        return (
+            widget,
+            mock_pinned_sparkline,
+            mock_pinned_text,
+            mock_notif_sparkline,
+            mock_notif_text,
+        )
+
+    def test_pinned_empty(self):
+        widget, _, mock_pinned_text, _, _ = self._create_widget_with_mocks()
+        widget.update_display()
+        mock_pinned_text.update.assert_called_with("无置顶消息")
+
+    def test_notification_empty(self):
+        widget, _, _, _, mock_notif_text = self._create_widget_with_mocks()
+        widget.update_display()
+        mock_notif_text.update.assert_called_with("无通知消息")
+
+    def test_pinned_with_messages(self):
+        from linhai.llm import UserMessage
+
+        pinned = [UserMessage(message="系统指令1"), UserMessage(message="系统指令2")]
+        widget, mock_pinned_sparkline, mock_pinned_text, _, _ = (
+            self._create_widget_with_mocks(pinned_messages=pinned)
+        )
+        widget.update_display()
+
+        expected_data = [float(widget._estimate_message_tokens(msg)) for msg in pinned]
+        self.assertEqual(mock_pinned_sparkline.data, expected_data)
+
+        text_arg = mock_pinned_text.update.call_args[0][0]
+        self.assertIn("总消息数: 2", text_arg)
+        self.assertIn("消息平均Token数", text_arg)
+        self.assertNotIn("最长消息", text_arg)
+        self.assertNotIn("大消息", text_arg)
+
+    def test_notification_with_messages(self):
+        from linhai.llm import UserMessage
+        from linhai.agent.message import NotificationMessageEntry
+
+        msg1 = UserMessage(message="通知1")
+        msg2 = UserMessage(message="通知2")
+        notifications = {
+            "a": NotificationMessageEntry(source="a", message=msg1, sort_value=1),
+            "b": NotificationMessageEntry(source="b", message=msg2, sort_value=2),
+        }
+        widget, _, _, mock_notif_sparkline, mock_notif_text = (
+            self._create_widget_with_mocks(notification_messages=notifications)
+        )
+        widget.update_display()
+
+        expected_data = [
+            float(widget._estimate_message_tokens(msg1)),
+            float(widget._estimate_message_tokens(msg2)),
+        ]
+        self.assertEqual(mock_notif_sparkline.data, expected_data)
+
+        text_arg = mock_notif_text.update.call_args[0][0]
+        self.assertIn("总消息数: 2", text_arg)
+        self.assertIn("消息平均Token数", text_arg)
+        self.assertNotIn("最长消息", text_arg)
+        self.assertNotIn("大消息", text_arg)
 
 
 if __name__ == "__main__":

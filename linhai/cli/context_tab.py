@@ -68,6 +68,14 @@ class ContextTabWidget(Static):
         height: 3;
     }
 
+    ContextTabWidget #pinned-stats-sparkline {
+        height: 3;
+    }
+
+    ContextTabWidget #notification-stats-sparkline {
+        height: 3;
+    }
+
     ContextTabWidget #token-usage-collapsible {
         height: auto;
     }
@@ -100,8 +108,15 @@ class ContextTabWidget(Static):
             with Collapsible(
                 title="消息统计", id="msg-stats-collapsible", collapsed=False
             ):
+                yield Label("普通消息")
                 yield Sparkline(id="msg-stats-sparkline", summary_function=max)
                 yield Static(id="msg-stats-text")
+                yield Label("置顶消息")
+                yield Sparkline(id="pinned-stats-sparkline", summary_function=max)
+                yield Static(id="pinned-stats-text")
+                yield Label("通知消息")
+                yield Sparkline(id="notification-stats-sparkline", summary_function=max)
+                yield Static(id="notification-stats-text")
             with Collapsible(
                 title="上下文Token用量", id="token-usage-collapsible", collapsed=False
             ):
@@ -378,7 +393,13 @@ class ContextTabWidget(Static):
         agent: Agent = self.registry.get_member_typechecked("agent", Agent)
 
         messages = agent_message.messages
+        pinned_messages = agent_message.pinned_messages
+        notification_entries = list(
+            entry["message"] for entry in agent_message.notification_messages.values()
+        )
 
         self._update_message_statistics(messages, len(orchestration.large_messages))
+        self._update_pinned_message_statistics(pinned_messages)
+        self._update_notification_message_statistics(notification_entries)
         self._update_token_usage(agent)
         self._update_cache_status()
