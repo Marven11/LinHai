@@ -69,18 +69,6 @@ class ContextTabWidget(Static):
         text-style: bold;
     }
 
-    ContextTabWidget #msg-stats-sparkline {
-        height: 3;
-    }
-
-    ContextTabWidget #pinned-stats-sparkline {
-        height: 3;
-    }
-
-    ContextTabWidget #notification-stats-sparkline {
-        height: 3;
-    }
-
     ContextTabWidget #token-usage-collapsible {
         height: auto;
     }
