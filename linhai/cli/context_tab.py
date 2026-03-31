@@ -59,6 +59,14 @@ class ContextTabWidget(Static):
     ContextTabWidget #token-stats-text {
         height: auto;
     }
+
+    ContextTabWidget #cache-status-collapsible {
+        height: auto;
+    }
+
+    ContextTabWidget #cache-stats-text {
+        height: auto;
+    }
     """
 
     def __init__(self, registry: Registry) -> None:
@@ -81,6 +89,11 @@ class ContextTabWidget(Static):
                 yield Label("相对模型限制", classes="token-usage-label")
                 yield ProgressBar(id="pb-model-limit", show_eta=False)
                 yield Static(id="token-stats-text")
+            with Collapsible(
+                title="缓存状态", id="cache-status-collapsible", collapsed=False
+            ):
+                yield ProgressBar(id="pb-cache-ratio", show_eta=False)
+                yield Static(id="cache-stats-text")
 
     def on_mount(self) -> None:
         """Start periodic refresh."""
@@ -205,6 +218,48 @@ class ContextTabWidget(Static):
             "大消息数量: " + str(large_message_count)
         )
 
+    def _update_cache_status(self) -> None:
+        pb_cache = self.query_one("#pb-cache-ratio", ProgressBar)
+        cache_stats_text = self.query_one("#cache-stats-text", Static)
+
+        if not self.registry.has_member("token_manager"):
+            cache_stats_text.update("TokenManager未注册")
+            return
+
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        cumulative = token_manager.cumulative_token_usage
+
+        if cumulative is None:
+            cache_stats_text.update("暂无数据")
+            return
+
+        message_count = cumulative["message_count"]
+        if message_count == 0:
+            cache_stats_text.update("暂无数据")
+            return
+
+        avg_input = cumulative["input_tokens"] / message_count
+        avg_output = cumulative["output_tokens"] / message_count
+        avg_cached = cumulative["cached_input_tokens"] / message_count
+        avg_cache_creation = cumulative["cache_creation_input_tokens"] / message_count
+
+        if avg_input > 0:
+            cache_percentage = avg_cached / avg_input * 100
+        else:
+            cache_percentage = 0.0
+
+        pb_cache.update(total=100.0, progress=cache_percentage)
+
+        cache_stats_text.update(
+            f"平均缓存比例: {cache_percentage:.1f}%\n"
+            f"平均输入Token: {avg_input:.0f}\n"
+            f"平均输出Token: {avg_output:.0f}\n"
+            f"平均缓存Token: {avg_cached:.0f}\n"
+            f"平均缓存创建Token: {avg_cache_creation:.0f}"
+        )
+
     def _update_token_usage(self, agent: Agent) -> None:
         pb_hard = self.query_one("#pb-hard-limit", ProgressBar)
         pb_model = self.query_one("#pb-model-limit", ProgressBar)
@@ -239,7 +294,9 @@ class ContextTabWidget(Static):
             f"Token限制: {token_limit}",
         ]
         if cached > 0:
-            lines.append(f"缓存比例: {cached} (~{cache_percentage:.1f}%)")
+            lines.append(
+                f"当前消息估算缓存Token数: {cached} (~{cache_percentage:.1f}%)"
+            )
         token_stats_text.update("\n".join(lines))
 
     def update_display(self) -> None:
@@ -257,3 +314,4 @@ class ContextTabWidget(Static):
 
         self._update_message_statistics(messages, len(orchestration.large_messages))
         self._update_token_usage(agent)
+        self._update_cache_status()

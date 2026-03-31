@@ -96,6 +96,7 @@ class TestContextTab(unittest.TestCase):
 
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_manager.cumulative_token_usage = None
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -172,6 +173,7 @@ class TestContextTab(unittest.TestCase):
         )
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_manager.cumulative_token_usage = None
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
@@ -199,6 +201,8 @@ class TestContextTab(unittest.TestCase):
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
+        mock_pb_cache = Mock(spec=ProgressBar)
+        mock_cache_stats_text = Mock(spec=Static)
 
         def _mock_query_one(selector, expect_type=None):
             mapping = {
@@ -207,6 +211,8 @@ class TestContextTab(unittest.TestCase):
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
                 "#token-stats-text": mock_token_stats_text,
+                "#pb-cache-ratio": mock_pb_cache,
+                "#cache-stats-text": mock_cache_stats_text,
             }
             return mapping[selector]
 
@@ -230,7 +236,7 @@ class TestContextTab(unittest.TestCase):
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
         self.assertIn("当前用量: 6000", token_stats_args)
         self.assertIn("Token限制: 128000", token_stats_args)
-        self.assertIn("缓存比例", token_stats_args)
+        self.assertIn("当前消息估算缓存Token数", token_stats_args)
 
     def test_update_token_usage_no_agent(self):
         """测试Agent未初始化时的token用量显示"""
