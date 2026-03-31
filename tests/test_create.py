@@ -55,8 +55,8 @@ class TestCreateAgent(unittest.TestCase):
         }
 
         mock_config.llm = [mock_llm_config]
-        mock_config.agent = Mock()
-        mock_config.agent.override_toolsets = None
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].override_toolsets = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -158,8 +158,8 @@ class TestCreateAgent(unittest.TestCase):
         }
 
         mock_config.llm = [mock_llm_config1, mock_llm_config2]
-        mock_config.agent = Mock()
-        mock_config.agent.override_toolsets = None
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].override_toolsets = None
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
@@ -255,8 +255,8 @@ class TestCreateLLMInstances(unittest.TestCase):
 
         mock_registry = Mock()
         mock_config = Mock()
-        mock_config.agent = Mock()
-        mock_config.agent.mcp = []
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].mcp = []
         mock_config.tools = Mock()
         mock_config.tools.secret = Mock()
         mock_config.tools.secret.config_path = None
@@ -276,7 +276,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": [],
             "telegram_config": None,
-            "mcp_configs": mock_config.agent.mcp,
+            "mcp_configs": mock_config.agent[0].mcp,
             "tool_config": mock_config.tools,
             "secret_config_path": mock_config.tools.secret.config_path,
             "message": [],
@@ -361,8 +361,8 @@ class TestCreateToolManager(unittest.TestCase):
         registry = Mock()
         config = Mock()
         config.secret.config_path = ""
-        config.agent = Mock(mcp=[])
-        config.agent.override_toolsets = None
+        config.agent = [Mock(mcp=[])]
+        config.agent[0].override_toolsets = None
         config.tools = config
 
         context = {
@@ -382,7 +382,7 @@ class TestCreateToolManager(unittest.TestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": [],
             "telegram_config": None,
-            "mcp_configs": config.agent.mcp,
+            "mcp_configs": config.agent[0].mcp,
             "tool_config": config.tools,
             "secret_config_path": config.tools.secret.config_path,
             "message": [],
@@ -507,9 +507,9 @@ class TestDefaultLlmConfig(unittest.TestCase):
         """创建模拟的配置"""
         mock_config = Mock()
         mock_config.llm = llm_configs
-        mock_config.agent = Mock()
-        mock_config.agent.override_toolsets = None
-        mock_config.agent.default_llm = default_llm
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].default_llm = default_llm
         mock_config.tools = Mock()
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()

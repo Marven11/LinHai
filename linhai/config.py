@@ -105,6 +105,11 @@ class MCPConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
+    name: str = Field(
+        default="",
+        min_length=0,
+        description="Agent profile名称，用于在列表中标识和选择",
+    )
     compress_threshold: Union[int, float] = Field(
         default=0.8, ge=0.0, description="上下文压缩阈值。"
     )
@@ -253,7 +258,9 @@ class Config(BaseModel):
     """主配置类型定义。"""
 
     llm: list[LLMConfig] = Field(description="LLM配置列表")
-    agent: AgentConfig = Field(default_factory=AgentConfig, description="Agent行为配置")
+    agent: list[AgentConfig] = Field(
+        default_factory=list, description="Agent行为配置列表，支持多个profile"
+    )
     user_prompt: UserPromptConfig = Field(
         default_factory=lambda: UserPromptConfig(file_path=""),
         description="用户提示配置",
@@ -267,7 +274,8 @@ class Config(BaseModel):
     def __str__(self) -> str:
         """返回主配置的字符串表示"""
         llm_names = [llm.name for llm in self.llm]
-        return f"Config(llms={llm_names}, agent={self.agent}, user_prompt={self.user_prompt}, tools={self.tools})"
+        agent_names = [a.name for a in self.agent]
+        return f"Config(llms={llm_names}, agents={agent_names}, user_prompt={self.user_prompt}, tools={self.tools})"
 
 
 def load_config(config_path: Union[str, Path]) -> Config:
@@ -284,10 +292,11 @@ def load_config(config_path: Union[str, Path]) -> Config:
     config = Config(**config_data)
 
     config_dir = config_path.parent
-    for mcp_config in config.agent.mcp:  # type: ignore  # pylint: disable=no-member
-        if not os.path.isabs(mcp_config.server_script_path):
-            mcp_config.server_script_path = str(
-                config_dir / mcp_config.server_script_path
-            )
+    for agent_config in config.agent:
+        for mcp_config in agent_config.mcp:
+            if not os.path.isabs(mcp_config.server_script_path):
+                mcp_config.server_script_path = str(
+                    config_dir / mcp_config.server_script_path
+                )
 
     return config

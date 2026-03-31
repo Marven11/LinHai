@@ -22,12 +22,13 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         mock_tools.secret = mock_secret
         self.mock_config.tools = mock_tools
         # 模拟agent.compress_threshold
-        self.mock_config.agent = MagicMock()
-        self.mock_config.agent.compress_threshold = 0.9
-        self.mock_config.agent.enable_directory_change_detection = False
-        self.mock_config.agent.allowed_commands = None
-        self.mock_config.agent.mcp = MagicMock()
-        self.mock_config.agent.default_llm = None
+        self.mock_config.agent = [MagicMock()]
+        self.mock_config.agent[0].compress_threshold = 0.9
+        self.mock_config.agent[0].enable_directory_change_detection = False
+        self.mock_config.agent[0].allowed_commands = None
+        self.mock_config.agent[0].mcp = MagicMock()
+        self.mock_config.agent[0].default_llm = None
+        self.mock_config.agent[0].override_toolsets = None
         self.mock_config_basedir = Path("/tmp/test_config")
         self.mock_cli_args = MagicMock()
         self.mock_cli_args.planning = False
@@ -172,11 +173,13 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
             "toolsets_config": self.mock_config.tools.toolsets,
-            "override_toolsets": self.mock_config.agent.override_toolsets,
-            "compress_threshold": self.mock_config.agent.compress_threshold,
-            "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
+            "override_toolsets": self.mock_config.agent[0].override_toolsets,
+            "compress_threshold": self.mock_config.agent[0].compress_threshold,
+            "enable_directory_change_detection": self.mock_config.agent[
+                0
+            ].enable_directory_change_detection,
             "max_toolcall_for_llm": {},
-            "allowed_commands": self.mock_config.agent.allowed_commands,
+            "allowed_commands": self.mock_config.agent[0].allowed_commands,
             "telegram_config": None,
             "rss": [],
             "telegram": False,
@@ -262,11 +265,13 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
             "toolsets_config": self.mock_config.tools.toolsets,
-            "override_toolsets": self.mock_config.agent.override_toolsets,
-            "compress_threshold": self.mock_config.agent.compress_threshold,
-            "enable_directory_change_detection": self.mock_config.agent.enable_directory_change_detection,
+            "override_toolsets": self.mock_config.agent[0].override_toolsets,
+            "compress_threshold": self.mock_config.agent[0].compress_threshold,
+            "enable_directory_change_detection": self.mock_config.agent[
+                0
+            ].enable_directory_change_detection,
             "max_toolcall_for_llm": {},
-            "allowed_commands": self.mock_config.agent.allowed_commands,
+            "allowed_commands": self.mock_config.agent[0].allowed_commands,
             "telegram_config": None,
             "rss": [],
             "telegram": False,

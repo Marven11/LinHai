@@ -25,10 +25,12 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
                     "model": "model",
                 }
             ],
-            "agent": {
-                "allowed_commands": [["ls"], ["git", "status"]],
-                "compress_threshold": 0.8,
-            },
+            "agent": [
+                {
+                    "allowed_commands": [["ls"], ["git", "status"]],
+                    "compress_threshold": 0.8,
+                }
+            ],
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")
@@ -91,9 +93,11 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
                     "model": "model",
                 }
             ],
-            "agent": {
-                "compress_threshold": 0.8,
-            },
+            "agent": [
+                {
+                    "compress_threshold": 0.8,
+                }
+            ],
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")

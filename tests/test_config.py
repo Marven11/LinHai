@@ -94,7 +94,7 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
-[agent]
+[[agent]]
 compress_threshold = 60000
 
 [user_prompt]
@@ -109,8 +109,8 @@ max_toolcall_token_in_round = 2000
             self.assertIsInstance(config, Config)
             self.assertEqual(config.llm[0].base_url, "https://api.example.com")
             self.assertIsNotNone(config.agent)
-            assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold, 60000)
+            self.assertEqual(len(config.agent), 1)
+            self.assertEqual(config.agent[0].compress_threshold, 60000)
             self.assertIsNotNone(config.user_prompt)
             assert config.user_prompt is not None
             self.assertEqual(config.user_prompt.file_path, "./test_prompt.md")
@@ -128,7 +128,7 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
-[agent]
+[[agent]]
 compress_threshold = 60000
 """
         temp_file = create_temp_config(config_content)
@@ -136,8 +136,8 @@ compress_threshold = 60000
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertIsNotNone(config.agent)
-            assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold, 60000)
+            self.assertEqual(len(config.agent), 1)
+            self.assertEqual(config.agent[0].compress_threshold, 60000)
         finally:
             os.unlink(temp_file)
 
@@ -149,7 +149,7 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
-[agent]
+[[agent]]
 compress_threshold = 0.8
 """
         temp_file = create_temp_config(config_content)
@@ -157,8 +157,8 @@ compress_threshold = 0.8
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
             self.assertIsNotNone(config.agent)
-            assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold, 0.8)
+            self.assertEqual(len(config.agent), 1)
+            self.assertEqual(config.agent[0].compress_threshold, 0.8)
         finally:
             os.unlink(temp_file)
 
@@ -174,12 +174,8 @@ model = "test_model"
         try:
             config = load_config(temp_file)
             self.assertIsInstance(config, Config)
-            # agent现在有默认值，不再是None
             self.assertIsNotNone(config.agent)
-            self.assertEqual(config.agent.compress_threshold, 0.8)
-            self.assertEqual(config.agent.mcp, [])
-            self.assertFalse(config.agent.enable_directory_change_detection)
-            self.assertFalse(config.agent.enable_task_planning)
+            self.assertEqual(config.agent, [])
             # user_prompt现在有默认值，检查默认值
             self.assertIsNotNone(config.user_prompt)
             self.assertEqual(config.user_prompt.file_path, "")
@@ -235,7 +231,7 @@ base_url = "https://api.example.org"
 api_key = "test_key_2"
 model = "test_model_2"
 
-[agent]
+[[agent]]
 compress_threshold = 0.8
 
 [user_prompt]
@@ -254,8 +250,8 @@ max_toolcall_token_in_round = 2000
             self.assertEqual(config.llm[1].name, "backup")
 
             self.assertIsNotNone(config.agent)
-            assert config.agent is not None
-            self.assertEqual(config.agent.compress_threshold, 0.8)
+            self.assertEqual(len(config.agent), 1)
+            self.assertEqual(config.agent[0].compress_threshold, 0.8)
             self.assertIsNotNone(config.user_prompt)
             assert config.user_prompt is not None
             self.assertEqual(config.user_prompt.file_path, "./test_prompt.md")
@@ -455,7 +451,9 @@ model = "test_model"
         """Test that Config class fields have descriptions."""
         config_fields = Config.model_fields
         self.assertEqual(config_fields["llm"].description, "LLM配置列表")
-        self.assertEqual(config_fields["agent"].description, "Agent行为配置")
+        self.assertEqual(
+            config_fields["agent"].description, "Agent行为配置列表，支持多个profile"
+        )
         self.assertEqual(config_fields["user_prompt"].description, "用户提示配置")
         self.assertEqual(config_fields["tools"].description, "工具相关配置")
         self.assertEqual(config_fields["cli"].description, "CLI界面配置")

@@ -8,5 +8,8 @@ model = "deepseek-reasoner"
 [memory]
 file_path = "./AGENTS.md"
 
+[[agent]]
+compress_threshold = 0.8
+
 [tools]
 max_toolcall_token_in_round = 30000

@@ -34,9 +34,9 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
 
         # 创建模拟配置
         self.config = MagicMock()
-        self.config.agent = MagicMock()
+        self.config.agent = [MagicMock()]
         self.config.tools = MagicMock()
-        self.config.agent.mcp = MagicMock()
+        self.config.agent[0].mcp = MagicMock()
 
         # 创建模拟cli_args
         self.cli_args = argparse.Namespace()
@@ -70,7 +70,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "max_toolcall_for_llm": {},
             "allowed_commands": [],
             "telegram_config": None,
-            "mcp_configs": self.config.agent.mcp,
+            "mcp_configs": self.config.agent[0].mcp,
             "tool_config": self.config.tools,
             "secret_config_path": (
                 self.config.tools.secret.config_path

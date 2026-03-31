@@ -30,14 +30,14 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         }
 
         self.config.llm = [mock_llm_config]
-        self.config.agent = Mock()
-        self.config.agent.default_llm = "test_llm"
-        self.config.agent.override_toolsets = None
-        self.config.agent.compress_threshold = 0.8
-        self.config.agent.enable_directory_change_detection = False
-        self.config.agent.max_toolcall_for_llm = {}
-        self.config.agent.allowed_commands = []
-        self.config.agent.mcp = []
+        self.config.agent = [Mock()]
+        self.config.agent[0].default_llm = "test_llm"
+        self.config.agent[0].override_toolsets = None
+        self.config.agent[0].compress_threshold = 0.8
+        self.config.agent[0].enable_directory_change_detection = False
+        self.config.agent[0].max_toolcall_for_llm = {}
+        self.config.agent[0].allowed_commands = []
+        self.config.agent[0].mcp = []
         self.config.tools = Mock()
         self.config.tools.toolsets = "defaults"
         self.config.tools.max_toolcall_token_in_round = 0.3

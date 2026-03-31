@@ -60,7 +60,7 @@ base_url = "https://example.com"
 api_key = "test-key"
 model = "test-model"
 
-[agent]
+[[agent]]
 compress_threshold = 80000
 
 [[agent.mcp]]
@@ -82,13 +82,15 @@ server_script_path = "{server_path}"
             "user_prompt": None,
             "planning": False,
             "toolsets_config": config.tools.toolsets,
-            "override_toolsets": config.agent.override_toolsets,
-            "compress_threshold": config.agent.compress_threshold,
-            "enable_directory_change_detection": config.agent.enable_directory_change_detection,
-            "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
-            "allowed_commands": config.agent.allowed_commands,
+            "override_toolsets": config.agent[0].override_toolsets,
+            "compress_threshold": config.agent[0].compress_threshold,
+            "enable_directory_change_detection": config.agent[
+                0
+            ].enable_directory_change_detection,
+            "max_toolcall_for_llm": config.agent[0].max_toolcall_for_llm,
+            "allowed_commands": config.agent[0].allowed_commands,
             "telegram_config": None,
-            "mcp_configs": config.agent.mcp,
+            "mcp_configs": config.agent[0].mcp,
             "tool_config": config.tools,
             "secret_config_path": (
                 config.tools.secret.config_path if config.tools.secret else None

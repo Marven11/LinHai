@@ -67,6 +67,7 @@ async def run(args):
         planning=args.planning,
         llm_name=args.llm,
         checklist_path=args.checklist,
+        profile_name=args.profile,
     )
     _agent = await create_agent_from_config(context)
 
@@ -106,6 +107,12 @@ def main():
     )
 
     parser.add_argument("--llm", type=str, help="强制指定使用的LLM名称")
+    parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        help="指定使用的Agent profile名称（默认使用第一个profile）",
+    )
     parser.add_argument(
         "--checklist",
         type=Path,

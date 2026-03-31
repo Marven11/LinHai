@@ -20,17 +20,19 @@ class TestCommandWhitelistConfig(unittest.TestCase):
                     "model": "model",
                 }
             ],
-            "agent": {
-                "allowed_commands": [
-                    ["ls"],
-                    ["git", "status"],
-                ]
-            },
+            "agent": [
+                {
+                    "allowed_commands": [
+                        ["ls"],
+                        ["git", "status"],
+                    ]
+                }
+            ],
         }
         config = Config(**config_data)
-        self.assertEqual(len(config.agent.allowed_commands), 2)
-        self.assertEqual(config.agent.allowed_commands[0], ["ls"])
-        self.assertEqual(config.agent.allowed_commands[1], ["git", "status"])
+        self.assertEqual(len(config.agent[0].allowed_commands), 2)
+        self.assertEqual(config.agent[0].allowed_commands[0], ["ls"])
+        self.assertEqual(config.agent[0].allowed_commands[1], ["git", "status"])
 
     def test_config_without_allowed_commands(self):
         config_data = {
@@ -44,7 +46,7 @@ class TestCommandWhitelistConfig(unittest.TestCase):
             ],
         }
         config = Config(**config_data)
-        self.assertEqual(config.agent.allowed_commands, [])
+        self.assertEqual(len(config.agent), 0)
 
 
 class TestCommandWhitelistPlugin(unittest.IsolatedAsyncioTestCase):

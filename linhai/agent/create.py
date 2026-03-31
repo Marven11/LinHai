@@ -5,7 +5,7 @@ from typing import TypedDict, Optional, Tuple, Union, Literal
 import argparse
 from datetime import datetime
 
-from linhai.config import Config, LLMConfig, MCPConfig, ToolConfig
+from linhai.config import AgentConfig, Config, LLMConfig, MCPConfig, ToolConfig
 from linhai.registry import Registry
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
@@ -71,6 +71,24 @@ class AgentBuildContext(TypedDict):
     file: list[Path]
 
 
+def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
+    """根据profile名称解析并返回对应的AgentConfig。"""
+    if not config.agent:
+        raise ValueError("配置中没有定义任何agent profile")
+
+    if profile_name is None:
+        return config.agent[0]
+
+    for agent_config in config.agent:
+        if agent_config.name == profile_name:
+            return agent_config
+
+    available_profiles = ", ".join(a.name for a in config.agent)
+    raise ValueError(
+        f"Agent profile '{profile_name}' 不存在。可用的profile包括: {available_profiles}"
+    )
+
+
 def create_agent_build_context(
     registry: Registry,
     config: Config,
@@ -79,14 +97,17 @@ def create_agent_build_context(
     planning: bool = False,
     llm_name: Optional[str] = None,
     checklist_path: Optional[Path] = None,
+    profile_name: Optional[str] = None,
 ) -> AgentBuildContext:
     """创建Agent构建上下文，包含验证逻辑。"""
+
+    agent_config = _resolve_agent_profile(config, profile_name)
 
     llm_configs = config.llm
     llm_config_names = [llm_config.name for llm_config in llm_configs]
 
     if llm_name is None:
-        config_default_llm = config.agent.default_llm
+        config_default_llm = agent_config.default_llm
         if config_default_llm is not None:
             if config_default_llm not in llm_config_names:
                 available_llms = ", ".join(llm_config_names)
@@ -135,13 +156,13 @@ def create_agent_build_context(
         "user_prompt": user_prompt,
         "planning": planning,
         "toolsets_config": config.tools.toolsets,
-        "override_toolsets": config.agent.override_toolsets,
-        "compress_threshold": config.agent.compress_threshold,
-        "enable_directory_change_detection": config.agent.enable_directory_change_detection,
-        "max_toolcall_for_llm": config.agent.max_toolcall_for_llm,
-        "allowed_commands": config.agent.allowed_commands,
+        "override_toolsets": agent_config.override_toolsets,
+        "compress_threshold": agent_config.compress_threshold,
+        "enable_directory_change_detection": agent_config.enable_directory_change_detection,
+        "max_toolcall_for_llm": agent_config.max_toolcall_for_llm,
+        "allowed_commands": agent_config.allowed_commands,
         "telegram_config": telegram_config,
-        "mcp_configs": config.agent.mcp,
+        "mcp_configs": agent_config.mcp,
         "tool_config": config.tools,
         "secret_config_path": (
             config.tools.secret.config_path if config.tools.secret else None

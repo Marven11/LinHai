@@ -111,9 +111,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 )
             ],
             user_prompt=UserPromptConfig(file_path="./prompt.md"),
-            agent=AgentConfig(
-                compress_threshold=60000,
-            ),
+            agent=[
+                AgentConfig(
+                    compress_threshold=60000,
+                )
+            ],
             tools=ToolConfig(max_output_length=1000),
         )
         from linhai.registry import Registry
@@ -164,9 +166,11 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 )
             ],
             user_prompt=UserPromptConfig(file_path="./prompt.md"),
-            agent=AgentConfig(
-                compress_threshold=60000,
-            ),
+            agent=[
+                AgentConfig(
+                    compress_threshold=60000,
+                )
+            ],
         )
         from linhai.registry import Registry
 

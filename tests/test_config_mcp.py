@@ -36,7 +36,7 @@ base_url = "https://example.com"
 api_key = "test-key"
 model = "test-model"
 
-[agent]
+[[agent]]
 compress_threshold = 80000
 
 [[agent.mcp]]
@@ -52,7 +52,7 @@ server_script_path = "../another_server.py"
         config = load_config(config_path)
 
         assert config.agent is not None
-        agent = config.agent
+        agent = config.agent[0]
         self.assertEqual(len(agent.mcp), 2)
 
         calculator_path = agent.mcp[0].server_script_path
@@ -78,7 +78,7 @@ base_url = "https://example.com"
 api_key = "test-key"
 model = "test-model"
 
-[agent]
+[[agent]]
 compress_threshold = 80000
 
 [[agent.mcp]]
@@ -90,7 +90,7 @@ server_script_path = "{absolute_path}"
         config = load_config(config_path)
 
         assert config.agent is not None
-        agent = config.agent
+        agent = config.agent[0]
         self.assertEqual(len(agent.mcp), 1)
         self.assertEqual(agent.mcp[0].server_script_path, absolute_path)
 
@@ -103,7 +103,7 @@ base_url = "https://example.com"
 api_key = "test-key"
 model = "test-model"
 
-[agent]
+[[agent]]
 compress_threshold = 80000
 """
         config_path = self.create_test_config(config_content)
@@ -111,7 +111,7 @@ compress_threshold = 80000
         config = load_config(config_path)
 
         assert config.agent is not None
-        agent = config.agent
+        agent = config.agent[0]
         self.assertEqual(len(agent.mcp), 0)
 
     def test_mcp_config_invalid_name(self):
@@ -123,7 +123,7 @@ base_url = "https://example.com"
 api_key = "test-key"
 model = "test-model"
 
-[agent]
+[[agent]]
 compress_threshold = 80000
 
 [[agent.mcp]]
@@ -148,7 +148,8 @@ model = "test-model"
 
         config = load_config(config_path)
 
-        self.assertIsNotNone(config.agent)  # 现在有默认值，不再为None
+        self.assertIsNotNone(config.agent)  # 现在有默认值
+        self.assertEqual(config.agent, [])
 
 
 if __name__ == "__main__":

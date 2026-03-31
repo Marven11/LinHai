@@ -4,6 +4,9 @@ api_key = "test-key"
 base_url = "https://api.openai.com/v1"
 model = "gpt-3.5-turbo"
 
+[[agent]]
+compress_threshold = 0.8
+
 [tools]
 max_output_length = 50000
 

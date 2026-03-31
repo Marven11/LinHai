@@ -34,7 +34,7 @@ base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
 
-[agent]
+[[agent]]
 override_toolsets = ["utils", "sleep"]
 """
         import tempfile
@@ -49,7 +49,7 @@ override_toolsets = ["utils", "sleep"]
 
             config = load_config(temp_file)
             self.assertIsNotNone(config.agent)
-            self.assertEqual(config.agent.override_toolsets, ["utils", "sleep"])
+            self.assertEqual(config.agent[0].override_toolsets, ["utils", "sleep"])
         finally:
             os.unlink(temp_file)
 
@@ -83,8 +83,8 @@ override_toolsets = ["utils", "sleep"]
         }
 
         mock_config.llm = [mock_llm_config]
-        mock_config.agent = Mock()
-        mock_config.agent.override_toolsets = ["utils", "sleep"]
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].override_toolsets = ["utils", "sleep"]
         mock_config.tools = Mock()
         mock_config.tools.toolsets = ["machine_control"]
         mock_config.tools.secret.config_path = ""
@@ -175,8 +175,8 @@ override_toolsets = ["utils", "sleep"]
         }
 
         mock_config.llm = [mock_llm_config]
-        mock_config.agent = Mock()
-        mock_config.agent.override_toolsets = None
+        mock_config.agent = [Mock()]
+        mock_config.agent[0].override_toolsets = None
         mock_config.tools = Mock()
         mock_config.tools.toolsets = ["utils", "sleep"]
         mock_config.tools.secret.config_path = ""

@@ -22,23 +22,25 @@ class TestCreateIntegration(unittest.TestCase):
                     "model": "model",
                 }
             ],
-            "agent": {
-                "allowed_commands": [["ls"], ["git", "status"]],
-                "compress_threshold": 0.8,
-            },
+            "agent": [
+                {
+                    "allowed_commands": [["ls"], ["git", "status"]],
+                    "compress_threshold": 0.8,
+                }
+            ],
         }
 
         # 测试配置解析
         config = Config(**config_data)
 
         # 验证配置结构
-        self.assertEqual(len(config.agent.allowed_commands), 2)
-        self.assertEqual(config.agent.allowed_commands[0], ["ls"])
-        self.assertEqual(config.agent.allowed_commands[1], ["git", "status"])
+        self.assertEqual(len(config.agent[0].allowed_commands), 2)
+        self.assertEqual(config.agent[0].allowed_commands[0], ["ls"])
+        self.assertEqual(config.agent[0].allowed_commands[1], ["git", "status"])
 
         # 验证配置字段类型
-        self.assertIsInstance(config.agent.allowed_commands, list)
-        for cmd in config.agent.allowed_commands:
+        self.assertIsInstance(config.agent[0].allowed_commands, list)
+        for cmd in config.agent[0].allowed_commands:
             self.assertIsInstance(cmd, list)
             for arg in cmd:
                 self.assertIsInstance(arg, str)
@@ -54,16 +56,18 @@ class TestCreateIntegration(unittest.TestCase):
                     "model": "model",
                 }
             ],
-            "agent": {
-                "compress_threshold": 0.8,
-            },
+            "agent": [
+                {
+                    "compress_threshold": 0.8,
+                }
+            ],
         }
 
         config = Config(**config_data)
 
         # 验证allowed_commands默认为空列表
-        self.assertEqual(config.agent.allowed_commands, [])
-        self.assertIsInstance(config.agent.allowed_commands, list)
+        self.assertEqual(config.agent[0].allowed_commands, [])
+        self.assertIsInstance(config.agent[0].allowed_commands, list)
 
 
 if __name__ == "__main__":

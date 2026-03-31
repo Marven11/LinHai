@@ -63,7 +63,7 @@ class TestGlobalPromptPathSelection(unittest.TestCase):
                 compress_threshold=60000,
             )
             _ = Config(
-                llm=[mock_llm_config], agent=mock_agent_config
+                llm=[mock_llm_config], agent=[mock_agent_config]
             )  # pylint: disable=unused-variable
 
             global_prompt = GlobalPrompt(Path("AGENTS.md"))
