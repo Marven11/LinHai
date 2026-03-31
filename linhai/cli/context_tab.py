@@ -64,6 +64,11 @@ class ContextTabWidget(Static):
         padding-right: 1;
     }
 
+    ContextTabWidget .title {
+        margin: 1 0;
+        text-style: bold;
+    }
+
     ContextTabWidget #msg-stats-sparkline {
         height: 3;
     }
@@ -108,13 +113,13 @@ class ContextTabWidget(Static):
             with Collapsible(
                 title="消息统计", id="msg-stats-collapsible", collapsed=False
             ):
-                yield Label("普通消息")
+                yield Label("普通消息", classes="title")
                 yield Sparkline(id="msg-stats-sparkline", summary_function=max)
                 yield Static(id="msg-stats-text")
-                yield Label("置顶消息")
+                yield Label("置顶消息", classes="title")
                 yield Sparkline(id="pinned-stats-sparkline", summary_function=max)
                 yield Static(id="pinned-stats-text")
-                yield Label("通知消息")
+                yield Label("通知消息", classes="title")
                 yield Sparkline(id="notification-stats-sparkline", summary_function=max)
                 yield Static(id="notification-stats-text")
             with Collapsible(
