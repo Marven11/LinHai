@@ -12,6 +12,7 @@ from textual.widgets import Collapsible, Sparkline, Static
 # 导入AnswerTokenUsage用于token用量显示
 from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.base import RuntimeMessage
+from linhai.tool.base import ToolCallResultMessage
 
 from linhai.registry import Registry
 from linhai.agent.message import AgentMessage, NotificationMessageEntry
@@ -192,14 +193,20 @@ class ContextTabWidget(Static):
         sparkline.data = [float(len(str(msg))) for msg in messages]
 
         message_count = len(messages)
-        _, total_chars, max_length, _ = self._count_message_types(messages)
+        _, total_chars, max_length, max_length_msg = self._count_message_types(messages)
         avg_length = total_chars / message_count if message_count > 0 else 0
+
+        type_display = "未知"
+        if max_length_msg is not None:
+            type_display = type(max_length_msg).__name__
+            if isinstance(max_length_msg, ToolCallResultMessage):
+                type_display += f", 来自{max_length_msg.tool_name}"
 
         stats_text = self.query_one("#msg-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
             "消息平均长度: " + f"{avg_length:.1f}" + " 字符\n"
-            "最长消息长度: " + str(max_length) + " 字符\n"
+            "最长消息长度: " + str(max_length) + " 字符 (" + type_display + ")\n"
             "大消息数量: " + str(large_message_count)
         )
 
