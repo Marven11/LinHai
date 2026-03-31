@@ -11,7 +11,6 @@ from .terminal import (
     terminal_read_screen,
     terminal_close,
     close_all_terminals,
-    terminal_toolset,
     terminals,
     PyteTerminal,
 )
@@ -45,5 +44,4 @@ __all__ = [
     "MasterHostControl",
     "PyteTerminal",
     "terminals",
-    "terminal_toolset",
 ]

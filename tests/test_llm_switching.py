@@ -36,12 +36,11 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         MachineControl(self.registry)
 
-        from linhai.machine_control.master_host import terminal_toolset
         from linhai.config import ToolConfig
 
         self.tool_manager = ToolManager(
             registry=self.registry,
-            toolsets=[utils_tools, terminal_toolset],
+            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
         )

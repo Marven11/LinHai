@@ -316,32 +316,44 @@ class MasterHostControl:
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:
-        """新建虚拟终端"""
-        return await terminal_create(columns, lines)
+        result = await terminal_create(columns, lines)
+        if result.startswith("创建终端失败"):
+            return ToolResultFailed(content=result)
+        return ToolResultSuccess(content=result)
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
     ) -> ToolResultSuccess | ToolResultFailed:
-        """发送按键列表到终端"""
-        return await terminal_send_keys(terminal_id, keys)
+        result = await terminal_send_keys(terminal_id, keys)
+        if result.startswith("错误") or result.startswith("未知按键"):
+            return ToolResultFailed(content=result)
+        return ToolResultSuccess(content=result)
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> ToolResultSuccess | ToolResultFailed:
-        """发送命令等字符串到终端"""
-        return await terminal_send_string(terminal_id, string, with_enter, wait_seconds)
+        result = await terminal_send_string(
+            terminal_id, string, with_enter, wait_seconds
+        )
+        if result.startswith("错误"):
+            return ToolResultFailed(content=result)
+        return ToolResultSuccess(content=result)
 
     async def terminal_read_screen(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """读取终端屏幕内容"""
-        return await terminal_read_screen(terminal_id)
+        result = await terminal_read_screen(terminal_id)
+        if result.startswith("错误"):
+            return ToolResultFailed(content=result)
+        return ToolResultSuccess(content=result)
 
     async def terminal_close(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """关闭终端"""
-        return await terminal_close(terminal_id)
+        result = await terminal_close(terminal_id)
+        if result.startswith("错误"):
+            return ToolResultFailed(content=result)
+        return ToolResultSuccess(content=result)
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
