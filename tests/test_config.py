@@ -369,9 +369,25 @@ model = "test_model"
 
     def test_field_descriptions(self):
         """Test that field descriptions are correctly set for config classes."""
-        from linhai.config import AgentConfig, UserPromptConfig, SecretSubConfig
+        from linhai.config import (
+            AgentConfig,
+            UserPromptConfig,
+            SecretSubConfig,
+            MacOsSandboxConfig,
+            BubblewrapConfig,
+            ProcessSandboxConfig,
+        )
 
-        # Test AgentConfig field descriptions
+        sandbox_fields = MacOsSandboxConfig.model_fields
+        self.assertIsNotNone(sandbox_fields["sandbox_profile"].description)
+
+        bubblewrap_fields = BubblewrapConfig.model_fields
+        self.assertIsNotNone(bubblewrap_fields["argv"].description)
+
+        process_sandbox_fields = ProcessSandboxConfig.model_fields
+        self.assertIsNotNone(process_sandbox_fields["macos_sandbox"].description)
+        self.assertIsNotNone(process_sandbox_fields["bubblewrap"].description)
+
         agent_fields = AgentConfig.model_fields
         self.assertEqual(
             agent_fields["compress_threshold"].description, "上下文压缩阈值。"
@@ -458,6 +474,100 @@ model = "test_model"
         self.assertEqual(config_fields["tools"].description, "工具相关配置")
         self.assertEqual(config_fields["cli"].description, "CLI界面配置")
         self.assertEqual(config_fields["remote_control"].description, "远程控制配置")
+
+    def test_load_config_with_process_sandbox_macos(self):
+        """Test loading a config with macOS sandbox configuration."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+[agent.process_sandbox.macos_sandbox]
+sandbox_profile = "sandbox.sb"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNotNone(config.agent[0].process_sandbox)
+            assert config.agent[0].process_sandbox is not None
+            self.assertIsNotNone(config.agent[0].process_sandbox.macos_sandbox)
+            self.assertEqual(
+                config.agent[0].process_sandbox.macos_sandbox.sandbox_profile,
+                "sandbox.sb",
+            )
+            self.assertIsNone(config.agent[0].process_sandbox.bubblewrap)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_process_sandbox_bubblewrap(self):
+        """Test loading a config with Linux bubblewrap configuration."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+[agent.process_sandbox.bubblewrap]
+argv = ["bwrap", "--ro-bind", "/", "/"]
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNotNone(config.agent[0].process_sandbox)
+            assert config.agent[0].process_sandbox is not None
+            self.assertIsNone(config.agent[0].process_sandbox.macos_sandbox)
+            self.assertIsNotNone(config.agent[0].process_sandbox.bubblewrap)
+            self.assertEqual(
+                config.agent[0].process_sandbox.bubblewrap.argv,
+                ["bwrap", "--ro-bind", "/", "/"],
+            )
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_process_sandbox_both(self):
+        """Test loading a config with both platform sandbox configurations."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+[agent.process_sandbox.macos_sandbox]
+sandbox_profile = "sandbox.sb"
+[agent.process_sandbox.bubblewrap]
+argv = ["bwrap", "--ro-bind", "/", "/"]
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNotNone(config.agent[0].process_sandbox)
+            assert config.agent[0].process_sandbox is not None
+            self.assertIsNotNone(config.agent[0].process_sandbox.macos_sandbox)
+            self.assertIsNotNone(config.agent[0].process_sandbox.bubblewrap)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_process_sandbox_none(self):
+        """Test loading a config without sandbox configuration."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+compress_threshold = 0.8
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNone(config.agent[0].process_sandbox)
+        finally:
+            os.unlink(temp_file)
 
 
 if __name__ == "__main__":

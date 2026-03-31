@@ -5,7 +5,18 @@ from typing import TypedDict, Optional, Tuple, Union, Literal
 import argparse
 from datetime import datetime
 
-from linhai.config import AgentConfig, Config, LLMConfig, MCPConfig, ToolConfig
+import platform
+
+from linhai.config import (
+    AgentConfig,
+    BubblewrapConfig,
+    Config,
+    LLMConfig,
+    MacOsSandboxConfig,
+    MCPConfig,
+    ProcessSandboxConfig,
+    ToolConfig,
+)
 from linhai.registry import Registry
 from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
 from linhai.llm_manager import LlmManager
@@ -69,6 +80,7 @@ class AgentBuildContext(TypedDict):
     claw_folder: Optional[Path]
     message: list[str]
     file: list[Path]
+    process_sandbox: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]]
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -87,6 +99,19 @@ def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> Agent
     raise ValueError(
         f"Agent profile '{profile_name}' 不存在。可用的profile包括: {available_profiles}"
     )
+
+
+def _resolve_process_sandbox(
+    process_sandbox: Optional[ProcessSandboxConfig],
+) -> Optional[Union[MacOsSandboxConfig, BubblewrapConfig]]:
+    if process_sandbox is None:
+        return None
+    system = platform.system()
+    if system == "Darwin" and process_sandbox.macos_sandbox is not None:
+        return process_sandbox.macos_sandbox
+    if system == "Linux" and process_sandbox.bubblewrap is not None:
+        return process_sandbox.bubblewrap
+    return None
 
 
 def create_agent_build_context(
@@ -175,6 +200,7 @@ def create_agent_build_context(
         "claw_folder": cli_args.claw_folder,
         "message": cli_args.message,
         "file": cli_args.file,
+        "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
     }
 
 

@@ -102,6 +102,29 @@ class MCPConfig(BaseModel):
         )
 
 
+class MacOsSandboxConfig(BaseModel):
+    """MacOS sandbox-exec沙箱配置。"""
+
+    sandbox_profile: str = Field(description="sandbox-exec的profile文件路径")
+
+
+class BubblewrapConfig(BaseModel):
+    """Linux bubblewrap沙箱配置。"""
+
+    argv: list[str] = Field(description="bubblewrap的argv参数列表")
+
+
+class ProcessSandboxConfig(BaseModel):
+    """进程沙箱配置，包含各平台的沙箱设置。"""
+
+    macos_sandbox: Optional[MacOsSandboxConfig] = Field(
+        default=None, description="MacOS sandbox-exec配置"
+    )
+    bubblewrap: Optional[BubblewrapConfig] = Field(
+        default=None, description="Linux bubblewrap配置"
+    )
+
+
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
@@ -131,6 +154,9 @@ class AgentConfig(BaseModel):
     )
     default_llm: Optional[str] = Field(
         default=None, description="默认使用的LLM名称，优先级高于命令行参数。"
+    )
+    process_sandbox: Optional[ProcessSandboxConfig] = Field(
+        default=None, description="进程沙箱配置。"
     )
 
     @field_validator("compress_threshold")

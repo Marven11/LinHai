@@ -5,7 +5,12 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import argparse
 
-from linhai.agent.create import create_agent_build_context
+from linhai.agent.create import create_agent_build_context, _resolve_process_sandbox
+from linhai.config import (
+    BubblewrapConfig,
+    MacOsSandboxConfig,
+    ProcessSandboxConfig,
+)
 from linhai.registry import Registry
 
 
@@ -46,6 +51,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.user_prompt = None
         self.config.remote_control = Mock()
         self.config.remote_control.telegram = None
+        self.config.agent[0].process_sandbox = None
 
     def test_agent_build_context_with_rss(self):
         """测试rss参数从cli_args传递到AgentBuildContext"""
@@ -73,6 +79,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
+        self.assertIsNone(context["process_sandbox"])
 
     def test_agent_build_context_with_telegram(self):
         """测试telegram参数从cli_args传递到AgentBuildContext"""
@@ -97,6 +104,7 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["telegram"], True)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
+        self.assertIsNone(context["process_sandbox"])
 
     def test_agent_build_context_with_disable_waiting_marker(self):
         """测试disable_waiting_marker参数从cli_args传递到AgentBuildContext"""
@@ -197,6 +205,62 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
+
+
+class TestResolveProcessSandbox(unittest.TestCase):
+    """测试_resolve_process_sandbox平台选择逻辑"""
+
+    def test_none_input_returns_none(self):
+        result = _resolve_process_sandbox(None)
+        self.assertIsNone(result)
+
+    @patch("linhai.agent.create.platform.system", return_value="Darwin")
+    def test_macos_platform_selects_macos_sandbox(self, mock_system):
+        macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
+        bubblewrap_config = BubblewrapConfig(argv=["bwrap"])
+        sandbox = ProcessSandboxConfig(
+            macos_sandbox=macos_config, bubblewrap=bubblewrap_config
+        )
+        result = _resolve_process_sandbox(sandbox)
+        self.assertIsInstance(result, MacOsSandboxConfig)
+        self.assertEqual(result.sandbox_profile, "sandbox.sb")
+
+    @patch("linhai.agent.create.platform.system", return_value="Linux")
+    def test_linux_platform_selects_bubblewrap(self, mock_system):
+        macos_config = MacOsSandboxConfig(sandbox_profile="sandbox.sb")
+        bubblewrap_config = BubblewrapConfig(argv=["bwrap"])
+        sandbox = ProcessSandboxConfig(
+            macos_sandbox=macos_config, bubblewrap=bubblewrap_config
+        )
+        result = _resolve_process_sandbox(sandbox)
+        self.assertIsInstance(result, BubblewrapConfig)
+        self.assertEqual(result.argv, ["bwrap"])
+
+    @patch("linhai.agent.create.platform.system", return_value="Darwin")
+    def test_macos_platform_returns_none_when_no_macos_config(self, mock_system):
+        sandbox = ProcessSandboxConfig(
+            macos_sandbox=None, bubblewrap=BubblewrapConfig(argv=["bwrap"])
+        )
+        result = _resolve_process_sandbox(sandbox)
+        self.assertIsNone(result)
+
+    @patch("linhai.agent.create.platform.system", return_value="Linux")
+    def test_linux_platform_returns_none_when_no_bubblewrap_config(self, mock_system):
+        sandbox = ProcessSandboxConfig(
+            macos_sandbox=MacOsSandboxConfig(sandbox_profile="sandbox.sb"),
+            bubblewrap=None,
+        )
+        result = _resolve_process_sandbox(sandbox)
+        self.assertIsNone(result)
+
+    @patch("linhai.agent.create.platform.system", return_value="Windows")
+    def test_unknown_platform_returns_none(self, mock_system):
+        sandbox = ProcessSandboxConfig(
+            macos_sandbox=MacOsSandboxConfig(sandbox_profile="sandbox.sb"),
+            bubblewrap=BubblewrapConfig(argv=["bwrap"]),
+        )
+        result = _resolve_process_sandbox(sandbox)
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":
