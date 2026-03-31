@@ -117,6 +117,7 @@ class CumulativeTokenUsage(TypedDict):
     total_tokens: int
     cached_input_tokens: int
     cache_creation_input_tokens: int
+    message_count: int
 
 
 __all__ = [

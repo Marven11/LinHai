@@ -37,6 +37,7 @@ class TokenManager:
             output = await self.registry.receive("token_usage")
             if isinstance(output, AnswerTokenUsage):
                 self._current_token_usage = output
+                self.update_cumulative_usage(output)
             else:
                 raise RuntimeError(
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
@@ -66,6 +67,7 @@ class TokenManager:
                     if token_usage.cache_creation_input_tokens
                     else 0
                 ),
+                "message_count": 1,
             }
         else:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens
@@ -77,6 +79,7 @@ class TokenManager:
             self.cumulative_token_usage["cache_creation_input_tokens"] += (
                 token_usage.cache_creation_input_tokens or 0
             )
+            self.cumulative_token_usage["message_count"] += 1
             if token_usage.cached_input_tokens is not None:
                 self.explicit_cache_tokens = token_usage.cached_input_tokens
 

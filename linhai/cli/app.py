@@ -176,15 +176,7 @@ class CLIApp(App):
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         token_usage = parsed_answer._answer.get_token_usage()
-        if token_usage is not None and all(
-            tool_call.get("name")
-            not in [
-                "context_forget_range_step2",
-                "context_forget_large_message",
-            ]
-            for tool_call in tool_calls
-        ):
-            self.token_manager.update_cumulative_usage(token_usage)
+        if token_usage is not None:
             self.update_token_display(token_usage.total_tokens)
 
     @work(exclusive=False)
