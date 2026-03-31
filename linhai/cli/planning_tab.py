@@ -24,6 +24,10 @@ class PlanningTabWidget(Static):
         height: 100%;
         background: #2E3440;
     }
+
+    PlanningTabWidget VerticalScroll {
+        padding-right: 1;
+    }
     """
 
     def __init__(self, registry: Registry) -> None:

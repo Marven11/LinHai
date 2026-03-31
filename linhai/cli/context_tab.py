@@ -39,6 +39,10 @@ class ContextTabWidget(Static):
         background: #2E3440;
     }
 
+    ContextTabWidget VerticalScroll {
+        padding-right: 1;
+    }
+
     ContextTabWidget #msg-stats-sparkline {
         height: 3;
     }
