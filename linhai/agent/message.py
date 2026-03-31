@@ -280,6 +280,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages = messages
+        await self._trigger_after_cache_invalidate()
         self._save_context()
 
     async def insert_message(self, index: int, message: Message) -> None:
@@ -291,6 +292,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages.insert(index, message)
+        await self._trigger_after_cache_invalidate()
         self._save_context()
 
     async def delete_message_range(self, start: int, end: int) -> List[Message]:
@@ -306,6 +308,7 @@ class AgentMessage:
         await self.count_invalidate_cache()
         deleted = self.messages[start : end + 1]
         self.messages[start : end + 1] = []
+        await self._trigger_after_cache_invalidate()
         self._save_context()
         return deleted
 
@@ -317,6 +320,7 @@ class AgentMessage:
         """
         await self.count_invalidate_cache()
         self.messages = [msg for msg in self.messages if condition(msg)]
+        await self._trigger_after_cache_invalidate()
         self._save_context()
 
     async def replace_message(self, old_message: Message, new_message: Message) -> None:
@@ -336,6 +340,7 @@ class AgentMessage:
                 new_message
             )
             self.messages[index] = processed_message
+            await self._trigger_after_cache_invalidate()
             self._save_context()
 
     def update_notification_message(
@@ -366,6 +371,14 @@ class AgentMessage:
             msg: 排队消息
         """
         self.queued_messages.append(msg)
+
+    async def _trigger_after_cache_invalidate(self) -> None:
+        from .lifecycle import Lifecycle
+        from .main import Agent
+
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        agent = self.registry.get_member_typechecked("agent", Agent)
+        await lifecycle.trigger_after_cache_invalidate(agent, self.messages)
 
     def _save_context(self) -> None:
         """保存当前上下文到文件。"""

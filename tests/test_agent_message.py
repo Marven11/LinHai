@@ -37,7 +37,15 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
 
         mock_lifecycle = create_autospec(Lifecycle, instance=True)
         mock_lifecycle.trigger_before_add_new_message = AsyncMock(return_value=None)
+        mock_lifecycle.trigger_before_cache_invalidate = AsyncMock(return_value=None)
+        mock_lifecycle.trigger_after_cache_invalidate = AsyncMock(return_value=None)
         registry.register_member("lifecycle", mock_lifecycle)
+
+        # 注册agent（mock），用于_trigger_after_cache_invalidate中的回调
+        from linhai.agent.main import Agent
+
+        mock_agent = create_autospec(Agent, instance=True)
+        registry.register_member("agent", mock_agent)
 
         # 注册token_manager（mock），用于replace_message中的count_invalidate_cache
         mock_token_manager = AsyncMock()

@@ -26,7 +26,14 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         mock_lifecycle.trigger_before_add_new_message = AsyncMock(
             side_effect=lambda msg: msg
         )
+        mock_lifecycle.trigger_before_cache_invalidate = AsyncMock(return_value=None)
+        mock_lifecycle.trigger_after_cache_invalidate = AsyncMock(return_value=None)
         self.registry.register_member("lifecycle", mock_lifecycle)
+
+        from linhai.agent.main import Agent
+
+        mock_agent = Mock(spec=Agent)
+        self.registry.register_member("agent", mock_agent)
 
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
