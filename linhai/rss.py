@@ -7,6 +7,7 @@ import feedparser
 import httpx
 
 from linhai.llm import LanguageModelMessage, Message
+from linhai.utils import CliRuntimeNotice
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
@@ -140,9 +141,16 @@ class RssPlugin:
         agent = self.registry.get_member_typechecked("agent", AgentType)
         if not agent:
             return
-
-        for rss_url in self.rss_urls:
-            await self._fetch_and_process_rss(rss_url, agent)
+        coros = await asyncio.gather(
+            *[self._fetch_and_process_rss(rss_url, agent) for rss_url in self.rss_urls],
+            return_exceptions=True,
+        )
+        for rss_url, result in zip(self.rss_urls, coros):
+            if isinstance(result, Exception):
+                await self.registry.send_if_exists(
+                    "ui_log",
+                    CliRuntimeNotice(level="INFO", content=f"获取rss失败: {rss_url}"),
+                )
 
     async def _fetch_and_process_rss(self, rss_url, agent, send_to_agent=True):
         """获取并处理单个RSS源。"""
