@@ -186,7 +186,7 @@ class TestRegisterSandbox(unittest.TestCase):
         self.assertIsInstance(sandbox, NoSandbox)
 
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
-    def test_register_macos_creates_profile_if_not_exists(self, mock_home):
+    def test_register_macos_raises_if_profile_not_exists(self, mock_home):
         from linhai.agent.create import _register_sandbox
         from linhai.config import MacOsSandboxConfig
         from linhai.registry import Registry
@@ -195,19 +195,10 @@ class TestRegisterSandbox(unittest.TestCase):
             profile_path = os.path.join(tmpdir, "sandbox.sb")
             self.assertFalse(os.path.exists(profile_path))
 
-            with patch("os.getcwd", return_value="/workdir"):
-                registry = Registry()
-                config = MacOsSandboxConfig(sandbox_profile=profile_path)
+            registry = Registry()
+            config = MacOsSandboxConfig(sandbox_profile=profile_path)
+            with self.assertRaises(FileNotFoundError):
                 _register_sandbox(registry, config)
-
-            self.assertTrue(os.path.exists(profile_path))
-            with open(profile_path) as f:
-                content = f.read()
-            self.assertEqual(content, DEFAULT_MACOS_PROFILE_TEMPLATE)
-
-            sandbox = registry.get_member_typechecked("process_sandbox", MacOsSandbox)
-            self.assertIsInstance(sandbox, MacOsSandbox)
-            os.unlink(sandbox._profile_path)
 
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
     def test_register_macos_uses_existing_profile(self, mock_home):
