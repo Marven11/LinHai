@@ -237,6 +237,54 @@ class ContextTabWidget(Static):
             "大消息数量: " + str(large_message_count)
         )
 
+    def _update_pinned_message_statistics(self, pinned_messages: list[Message]) -> None:
+        sparkline = self.query_one("#pinned-stats-sparkline", Sparkline)
+        sparkline.data = [
+            float(self._estimate_message_tokens(msg)) for msg in pinned_messages
+        ]
+
+        message_count = len(pinned_messages)
+        if message_count == 0:
+            stats_text = self.query_one("#pinned-stats-text", Static)
+            stats_text.update("无置顶消息")
+            return
+
+        total_tokens = sum(
+            self._estimate_message_tokens(msg) for msg in pinned_messages
+        )
+        avg_tokens = total_tokens / message_count
+
+        stats_text = self.query_one("#pinned-stats-text", Static)
+        stats_text.update(
+            "总消息数: " + str(message_count) + "\n"
+            "消息平均Token数: " + f"{avg_tokens:.1f}"
+        )
+
+    def _update_notification_message_statistics(
+        self, notification_entries: list[Message]
+    ) -> None:
+        sparkline = self.query_one("#notification-stats-sparkline", Sparkline)
+        sparkline.data = [
+            float(self._estimate_message_tokens(msg)) for msg in notification_entries
+        ]
+
+        message_count = len(notification_entries)
+        if message_count == 0:
+            stats_text = self.query_one("#notification-stats-text", Static)
+            stats_text.update("无通知消息")
+            return
+
+        total_tokens = sum(
+            self._estimate_message_tokens(msg) for msg in notification_entries
+        )
+        avg_tokens = total_tokens / message_count
+
+        stats_text = self.query_one("#notification-stats-text", Static)
+        stats_text.update(
+            "总消息数: " + str(message_count) + "\n"
+            "消息平均Token数: " + f"{avg_tokens:.1f}"
+        )
+
     def _update_cache_status(self) -> None:
         pb_cache = self.query_one("#pb-cache-ratio", ProgressBar)
         cache_stats_text = self.query_one("#cache-stats-text", Static)
