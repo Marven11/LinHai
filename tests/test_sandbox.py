@@ -181,7 +181,7 @@ class TestRegisterSandbox(unittest.TestCase):
         from linhai.registry import Registry
 
         registry = Registry()
-        _register_sandbox(registry, None)
+        _register_sandbox(None, registry, None)
         sandbox = registry.get_member_typechecked("process_sandbox", NoSandbox)
         self.assertIsInstance(sandbox, NoSandbox)
 
@@ -198,7 +198,7 @@ class TestRegisterSandbox(unittest.TestCase):
             registry = Registry()
             config = MacOsSandboxConfig(sandbox_profile=profile_path)
             with self.assertRaises(FileNotFoundError):
-                _register_sandbox(registry, config)
+                _register_sandbox(None, registry, config)
 
     @patch.object(Path, "home", return_value=Path("/home/testuser"))
     def test_register_macos_uses_existing_profile(self, mock_home):
@@ -215,7 +215,7 @@ class TestRegisterSandbox(unittest.TestCase):
             with patch("os.getcwd", return_value="/workdir"):
                 registry = Registry()
                 config = MacOsSandboxConfig(sandbox_profile=profile_path)
-                _register_sandbox(registry, config)
+                _register_sandbox(None, registry, config)
 
             sandbox = registry.get_member_typechecked("process_sandbox", MacOsSandbox)
             self.assertIsInstance(sandbox, MacOsSandbox)
@@ -233,7 +233,7 @@ class TestRegisterSandbox(unittest.TestCase):
 
         registry = Registry()
         config = BubblewrapConfig(argv_template=["bwrap"])
-        _register_sandbox(registry, config)
+        _register_sandbox(None, registry, config)
         sandbox = registry.get_member_typechecked("process_sandbox", BubbleWrapSandbox)
         self.assertIsInstance(sandbox, BubbleWrapSandbox)
 
@@ -256,7 +256,7 @@ class TestRegisterSandbox(unittest.TestCase):
                     "/cache",
                 ]
             )
-            _register_sandbox(registry, config)
+            _register_sandbox(None, registry, config)
 
         sandbox = registry.get_member_typechecked("process_sandbox", BubbleWrapSandbox)
         self.assertEqual(

@@ -330,7 +330,7 @@ async def create_agent_from_config(
         )
         plugin.register(agent.lifecycle)
 
-    _register_sandbox(context["registry"], context["process_sandbox"])
+    _register_sandbox(context["config_basedir"], context["registry"], context["process_sandbox"])
 
     _register_default_plugins(agent.lifecycle)
 
@@ -529,13 +529,19 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
 
 
 def _register_sandbox(
+    basedir: Path | None,
     registry: Registry,
     sandbox_config: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]],
 ) -> None:
     if sandbox_config is None:
         sandbox = NoSandbox()
     elif isinstance(sandbox_config, MacOsSandboxConfig):
-        sandbox = MacOsSandbox(sandbox_config.sandbox_profile)
+        sandbox_profile = Path(sandbox_config.sandbox_profile)
+        if sandbox_profile.is_absolute():
+            sandbox = MacOsSandbox(sandbox_profile)
+        else:
+            assert basedir is not None, "Sandbox profile is relative when basedir is None"
+            sandbox = MacOsSandbox(basedir / sandbox_config.sandbox_profile)
     else:
         rendered = [
             s.format(pwd=os.getcwd(), home=str(Path.home()))

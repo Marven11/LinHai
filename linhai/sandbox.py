@@ -37,7 +37,7 @@ DEFAULT_MACOS_PROFILE_TEMPLATE = """(version 1)
 
 
 class MacOsSandbox:
-    def __init__(self, sandbox_profile: str) -> None:
+    def __init__(self, sandbox_profile: Path | str) -> None:
         template = Path(sandbox_profile).read_text()
         rendered = template.format(
             pwd=os.getcwd(),
