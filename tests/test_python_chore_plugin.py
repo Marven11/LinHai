@@ -1,20 +1,23 @@
+import os
+import tempfile
 import tokenize
 import unittest
-from unittest.mock import MagicMock, AsyncMock
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
-from linhai.plugin.python_chore import (
-    PythonCommentCheckerPlugin,
-    _extract_comments,
-    _get_context_contents,
-)
 from linhai.agent.base import (
     FileContentMessage,
     GlobalPrompt,
     PathPrompt,
     RuntimeMessage,
 )
-from linhai.llm import UserMessage, SystemMessage, AssistantMessage
+from linhai.llm import AssistantMessage, SystemMessage, UserMessage
+from linhai.plugin.python_chore import (
+    PythonCommentCheckerPlugin,
+    _extract_comments,
+    _get_context_contents,
+    _read_file_content,
+)
 
 
 class TestExtractComments(unittest.TestCase):
@@ -34,6 +37,7 @@ class TestExtractComments(unittest.TestCase):
         source = 'doc = """\n# Heading\nSome text\n"""\nx = 1  # real comment'
         comments = _extract_comments(source)
         self.assertEqual(comments, ["# real comment"])
+
 
 class TestGetContextContents(unittest.TestCase):
     def test_extracts_user_message(self):
@@ -184,35 +188,84 @@ class TestMixedCommentsOnlyWarnAgentOnes(_BasePluginTest):
         self.assertIn("# agent_comment", msg.message)
         self.assertNotIn("# user_comment", msg.message)
 
-"""
-Need to be rewritten
+
+class TestReadFileContent(unittest.TestCase):
+    def test_reads_existing_file(self):
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+            f.write("x = 1")
+            f.flush()
+            content = _read_file_content(f.name)
+        os.unlink(f.name)
+        self.assertEqual(content, "x = 1")
+
+    def test_returns_none_for_missing_file(self):
+        content = _read_file_content("/nonexistent/path/test.py")
+        self.assertIsNone(content)
+
+
 class TestReplaceFileContent(_BasePluginTest):
     async def test_warns_on_new_comment_in_replace(self):
-        result = await self._call_after_toolcall(
-            "replace_file_content",
-            {
-                "filepath": "test.py",
-                "old": "x = 1",
-                "new": "x = 1  # added",
-            },
-        )
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+            f.write("x = 1  # added")
+            f.flush()
+            filepath = f.name
+        try:
+            result = await self._call_after_toolcall(
+                "replace_file_content",
+                {"filepath": filepath, "old": "x = 1", "new": "x = 1  # added"},
+            )
+        finally:
+            os.unlink(filepath)
         self.assertIsNone(result)
         self.agent.message_processor.add_new_message.assert_called_once()
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIn("# added", call_args[0].message)
 
     async def test_no_warn_when_comment_already_in_old(self):
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+            f.write("x = 1  # kept")
+            f.flush()
+            filepath = f.name
+        try:
+            result = await self._call_after_toolcall(
+                "replace_file_content",
+                {"filepath": filepath, "old": "x = 1  # kept", "new": "x = 1  # kept"},
+            )
+        finally:
+            os.unlink(filepath)
+        self.assertIsNone(result)
+        self.agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_warn_for_multiline_string_hash(self):
+        source = 'MARKDOWN = """\n# Example Markdown\n\nLorem Ipsum\n"""\n'
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+            f.write(source)
+            f.flush()
+            filepath = f.name
+        try:
+            old = 'MARKDOWN = """\n# Example Markdown'
+            new = 'MARKDOWN = """\n# Example Markdown Containing Lorem Ipsum'
+            result = await self._call_after_toolcall(
+                "replace_file_content",
+                {"filepath": filepath, "old": old, "new": new},
+            )
+        finally:
+            os.unlink(filepath)
+        self.assertIsNone(result)
+        self.agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_warn_when_file_missing(self):
         result = await self._call_after_toolcall(
             "replace_file_content",
             {
-                "filepath": "test.py",
-                "old": "x = 1  # kept",
-                "new": "x = 1  # kept",
+                "filepath": "/nonexistent/test.py",
+                "old": "x = 1",
+                "new": "x = 1  # added",
             },
         )
         self.assertIsNone(result)
         self.agent.message_processor.add_new_message.assert_not_called()
-"""
+
 
 class TestNotMasterHost(_BasePluginTest):
     async def test_skips_on_non_master_host(self):

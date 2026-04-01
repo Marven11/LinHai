@@ -2,6 +2,7 @@
 
 import io
 import tokenize
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union
 
 from linhai.agent import Agent
@@ -31,6 +32,14 @@ def _extract_comments(source: str) -> list[str] | None:
         return comments
     except tokenize.TokenError:
         return None
+
+
+def _read_file_content(filepath: str) -> str | None:
+    file_path = Path(filepath)
+    if not file_path.exists() or not file_path.is_file():
+        return None
+    return file_path.read_text(encoding="utf-8")
+
 
 def _get_context_contents(agent: "linhai_agent") -> list[str]:
     """从上下文消息中获取文本内容，用于过滤外部指定的注释。"""
@@ -93,12 +102,13 @@ class PythonCommentCheckerPlugin:
         else:
             old = toolcall_arguments.get("old", "")
             new = toolcall_arguments.get("new", "")
-            old_comments = _extract_comments(old)
-            new_comments = _extract_comments(new)
-            if not new_comments or not old_comments:
+            file_content = _read_file_content(filepath)
+            if file_content is None:
                 return None
-            old_comments = set(old_comments)
-            new_comments = [c for c in new_comments if c not in old_comments]
+            file_comments = _extract_comments(file_content)
+            if not file_comments:
+                return None
+            new_comments = [c for c in file_comments if c not in old and c in new]
 
         if not new_comments:
             return None
