@@ -54,6 +54,7 @@ class ContextTabWidget(Static):
 
     ContextTabWidget VerticalScroll {
         padding-right: 1;
+        scrollbar-size-vertical: 1;
     }
 
     ContextTabWidget .title {

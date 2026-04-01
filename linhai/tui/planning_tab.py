@@ -27,6 +27,7 @@ class PlanningTabWidget(Static):
 
     PlanningTabWidget VerticalScroll {
         padding-right: 1;
+        scrollbar-size-vertical: 1;
     }
     """
 
