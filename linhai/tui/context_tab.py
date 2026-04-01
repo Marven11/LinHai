@@ -210,6 +210,17 @@ class ContextTabWidget(Static):
 
         return 0, 0.0
 
+    @staticmethod
+    def _format_longest_message(
+        max_tokens_msg: Optional[Message], max_tokens: int
+    ) -> str:
+        type_display = "未知"
+        if max_tokens_msg is not None:
+            type_display = type(max_tokens_msg).__name__
+            if isinstance(max_tokens_msg, ToolCallResultMessage):
+                type_display += f", 来自{max_tokens_msg.tool_name}"
+        return f"最长消息: {type_display}, {max_tokens} token"
+
     def _update_message_statistics(
         self, messages: list[Message], large_message_count: int
     ) -> None:
@@ -224,17 +235,14 @@ class ContextTabWidget(Static):
         )
         avg_tokens = total_tokens / message_count if message_count > 0 else 0
 
-        type_display = "未知"
-        if max_tokens_msg is not None:
-            type_display = type(max_tokens_msg).__name__
-            if isinstance(max_tokens_msg, ToolCallResultMessage):
-                type_display += f", 来自{max_tokens_msg.tool_name}"
-
         stats_text = self.query_one("#msg-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均Token数: " + f"{avg_tokens:.1f}" + "\n"
-            "最长消息Token数: " + str(max_tokens) + " (" + type_display + ")\n"
+            "消息平均Token数: "
+            + f"{avg_tokens:.1f}"
+            + "\n"
+            + self._format_longest_message(max_tokens_msg, max_tokens)
+            + "\n"
             "大消息数量: " + str(large_message_count)
         )
 
@@ -270,15 +278,18 @@ class ContextTabWidget(Static):
             stats_text.update("无通知消息")
             return
 
-        total_tokens = sum(
-            self._estimate_message_tokens(msg) for msg in notification_entries
+        _, total_tokens, max_tokens, max_tokens_msg = self._count_message_types(
+            notification_entries
         )
         avg_tokens = total_tokens / message_count
 
         stats_text = self.query_one("#notification-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均Token数: " + f"{avg_tokens:.1f}"
+            "消息平均Token数: "
+            + f"{avg_tokens:.1f}"
+            + "\n"
+            + self._format_longest_message(max_tokens_msg, max_tokens)
         )
 
     def _update_cache_status(self) -> None:

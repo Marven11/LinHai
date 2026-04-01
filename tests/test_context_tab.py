@@ -242,7 +242,7 @@ class TestContextTab(unittest.TestCase):
         stats_call_args = mock_stats_text.update.call_args[0][0]
         self.assertIn("总消息数: 3", stats_call_args)
         self.assertIn("消息平均Token数", stats_call_args)
-        self.assertIn("最长消息Token数", stats_call_args)
+        self.assertIn("最长消息", stats_call_args)
         self.assertIn("大消息数量: 0", stats_call_args)
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
@@ -554,6 +554,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         text_arg = mock_notif_text.update.call_args[0][0]
         self.assertIn("总消息数: 2", text_arg)
         self.assertIn("消息平均Token数", text_arg)
+        self.assertIn("最长消息", text_arg)
 
 
 if __name__ == "__main__":
