@@ -30,7 +30,7 @@ def _extract_comments(source: str) -> list[str] | None:
             if tok.type == tokenize.COMMENT:
                 comments.append(tok.string)
         return comments
-    except tokenize.TokenError:
+    except (tokenize.TokenError, IndentationError):
         return None
 
 
