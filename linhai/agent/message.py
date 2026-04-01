@@ -63,7 +63,7 @@ class AgentMessage:
         """初始化基础消息管理器。
 
         Args:
-            pinned_messages: 固化的初始消息列表，不会被历史压缩删除
+            pinned_messages: 固化的置顶消息列表，不会被历史压缩删除
         """
         self.registry = registry
         self.registry.register_member("agent_message", self)
@@ -174,10 +174,10 @@ class AgentMessage:
             self.explicit_cache_anchors = []
 
     async def add_pinned_message(self, msg: Message) -> None:
-        """添加pinned消息。
+        """添加置顶消息。
 
         Args:
-            msg: 要添加的pinned消息
+            msg: 要添加的置顶消息
         """
         from .lifecycle import Lifecycle
 
@@ -189,12 +189,12 @@ class AgentMessage:
         self._save_context()
 
     async def add_new_message(self, msg: Message) -> None:
-        """添加消息到队列。
+        """添加普通消息到队列。
 
-        新消息插入在普通消息后，notification_messages前。
+        新消息插入在普通消息后，通知消息（notification_messages）前。
 
         Args:
-            msg: 要添加的消息
+            msg: 要添加的普通消息
         """
         from .lifecycle import Lifecycle
 
@@ -346,7 +346,7 @@ class AgentMessage:
     def update_notification_message(
         self, message: Message | None, source: str, sort_value: int
     ) -> None:
-        """更新或移除notification message。
+        """更新或移除通知消息（notification message）。
 
         Args:
             message: 消息内容，如果为None则移除对应source的消息

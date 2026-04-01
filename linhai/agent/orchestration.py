@@ -403,7 +403,7 @@ class AgentContextOrchestration:
         else:
             content = message.get_content()
             if content is not None:
-                token_count = len(self.tokenizer.encode(content))
+                token_count = len(self.tokenizer.encode(content, disallowed_special=()))
                 if token_count > 800:
                     self.large_messages.add(message)
 

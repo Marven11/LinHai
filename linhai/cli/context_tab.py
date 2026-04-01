@@ -38,7 +38,7 @@ def _get_tokenizer() -> tiktoken.Encoding:
 
 @lru_cache(maxsize=1000)
 def _count_tokens_cached(text: str) -> int:
-    return len(_get_tokenizer().encode(text))
+    return len(_get_tokenizer().encode(text, disallowed_special=()))
 
 
 class MessageTypeCounts(TypedDict):

@@ -195,7 +195,7 @@ class AgentToolcall:
         long_toolcall_dir.mkdir(exist_ok=True)
 
         tokenizer = tiktoken.get_encoding("cl100k_base")
-        tokens = tokenizer.encode(result_content)
+        tokens = tokenizer.encode(result_content, disallowed_special=())
         parts = []
         total_tokens = len(tokens)
         chunk_size = total_tokens // 3
@@ -353,7 +353,7 @@ class AgentToolcall:
             result_content = str(tool_result)
 
         tokenizer = tiktoken.get_encoding("cl100k_base")
-        token_count = len(tokenizer.encode(_extract_text_content(result_content)))
+        token_count = len(tokenizer.encode(_extract_text_content(result_content), disallowed_special=()))
 
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:
