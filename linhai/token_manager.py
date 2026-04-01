@@ -137,7 +137,7 @@ class TokenManager:
             in_symbol = "\uf063 "
             out_symbol = "\uf062 "
         else:
-            cache_symbol = "⛁ "
+            cache_symbol = "↻ "
             in_symbol = "↓ "
             out_symbol = "↑ "
 

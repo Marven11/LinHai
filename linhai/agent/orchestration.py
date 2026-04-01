@@ -295,9 +295,9 @@ class AgentContextOrchestration:
             if large_count > 0:
                 pieces.append(f"\uf1c0 {large_count}")
         else:
-            pieces.append(f"⎕ {message_count}")
+            pieces.append(f"❐ {message_count}")
             if large_count > 0:
-                pieces.append(f"▣ {large_count}")
+                pieces.append(f"■ {large_count}")
 
         return pieces
 
