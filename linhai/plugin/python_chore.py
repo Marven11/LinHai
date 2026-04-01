@@ -20,15 +20,17 @@ if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
 
 
-def _extract_comments(source: str) -> list[str]:
-    """使用tokenize提取Python源代码中的#注释。"""
+def _extract_comments(source: str) -> list[str] | None:
+    """使用tokenize提取Python源代码中的#注释。在语法错误时返回None"""
     comments = []
     tokens = tokenize.generate_tokens(io.StringIO(source).readline)
-    for tok in tokens:
-        if tok.type == tokenize.COMMENT:
-            comments.append(tok.string)
-    return comments
-
+    try:
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT:
+                comments.append(tok.string)
+        return comments
+    except tokenize.TokenError:
+        return None
 
 def _get_context_contents(agent: "linhai_agent") -> list[str]:
     """从上下文消息中获取文本内容，用于过滤外部指定的注释。"""
@@ -91,8 +93,12 @@ class PythonCommentCheckerPlugin:
         else:
             old = toolcall_arguments.get("old", "")
             new = toolcall_arguments.get("new", "")
-            old_comments = set(_extract_comments(old))
-            new_comments = [c for c in _extract_comments(new) if c not in old_comments]
+            old_comments = _extract_comments(old)
+            new_comments = _extract_comments(new)
+            if not new_comments or not old_comments:
+                return None
+            old_comments = set(old_comments)
+            new_comments = [c for c in new_comments if c not in old_comments]
 
         if not new_comments:
             return None
