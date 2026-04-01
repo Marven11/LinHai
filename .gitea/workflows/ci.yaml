@@ -164,5 +164,15 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
+      - name: Create config file for nix unittests
+        run: |
+          mkdir -p /root/.config/linhai/
+          cp config-example.toml /root/.config/linhai/config.toml
+
+      - name: Run unittests in nix develop
+        env:
+          PYTHONPATH: $PWD
+        run: nix develop --command python -m unittest discover -s . -p 'test_*.py'
+
       - name: Build with Nix
         run: nix build

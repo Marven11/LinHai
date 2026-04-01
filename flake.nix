@@ -82,12 +82,36 @@
           pythonImportsCheck = [ "quickjs" ];
         };
       in
+      let
+        pythonDeps =
+          with pkgs.python3Packages;
+          [
+            etherGhost.packages.${system}.default
+            openai
+            httpx
+            beautifulsoup4
+            mistune
+            textual
+            selenium
+            mcp
+            pyte
+            pydantic
+            chardet
+            bashlex
+            tiktoken
+            pillow
+            tomli-w
+            feedparser
+            python-telegram-bot'
+            quickjs-ng'
+            jinja2
+          ];
+      in
       {
         packages.default =
           with pkgs.python3Packages;
           buildPythonPackage rec {
             pname = "linhai";
-            # it takes minutes
             doCheck = false;
             pyproject = true;
 
@@ -97,31 +121,23 @@
               hatchling
             ];
 
-            dependencies = [
-              etherGhost.packages.${system}.default
-              openai
-              httpx
-              beautifulsoup4
-              mistune
-              textual
-              selenium
-              mcp
-              pyte
-              pydantic
-              chardet
-              bashlex
-              tiktoken
-              pillow
-              tomli-w
-              feedparser
-              python-telegram-bot'
-              quickjs-ng'
-              jinja2
-            ];
+            dependencies = pythonDeps;
 
             src = ./.;
             version = "0.1.0";
           };
+
+        devShells.default = pkgs.mkShell {
+          packages =
+            with pkgs;
+            [
+              (python3.withPackages (
+                ps: pythonDeps ++ (with ps; [ pylint black ])
+              ))
+              pyright
+              uv
+            ];
+        };
       }
     );
 }
