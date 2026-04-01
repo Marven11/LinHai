@@ -1,7 +1,10 @@
 """TaskSupervisor模块，提供异步任务生命周期管理。"""
 
 import asyncio
-from typing import Protocol, Callable, Coroutine, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Callable, Coroutine, runtime_checkable
+
+if TYPE_CHECKING:
+    from linhai.registry import Registry
 
 from textual.app import App
 from textual.worker import Worker
@@ -40,9 +43,10 @@ class PlainTaskSupervisor:
 
 
 class TextualTaskSupervisor:
-    def __init__(self, app: App) -> None:
+    def __init__(self, app: App, registry: "Registry") -> None:
         self.app = app
         self.workers: dict[str, Worker[None]] = {}
+        registry.register_member("task_supervisor", self)
 
     def create_supervised_task(
         self, name: str, fn: Callable[[], Coroutine[None, None, None]]

@@ -2,6 +2,7 @@ import asyncio
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
+from linhai.registry import Registry
 from linhai.task_supervisor import (
     TaskSupervisor,
     PlainTaskSupervisor,
@@ -65,7 +66,8 @@ class TestTextualTaskSupervisor(unittest.IsolatedAsyncioTestCase):
             return mock_worker
 
         mock_app.run_worker = run_worker_consume
-        supervisor = TextualTaskSupervisor(mock_app)
+        mock_registry = MagicMock()
+        supervisor = TextualTaskSupervisor(mock_app, mock_registry)
 
         async def work():
             pass
@@ -83,7 +85,8 @@ class TestTextualTaskSupervisor(unittest.IsolatedAsyncioTestCase):
             return mock_worker
 
         mock_app.run_worker = run_worker_consume
-        supervisor = TextualTaskSupervisor(mock_app)
+        mock_registry = MagicMock()
+        supervisor = TextualTaskSupervisor(mock_app, mock_registry)
 
         async def work():
             pass
@@ -94,13 +97,15 @@ class TestTextualTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
     async def test_wait_nonexistent_raises(self):
         mock_app = MagicMock()
-        supervisor = TextualTaskSupervisor(mock_app)
+        mock_registry = MagicMock()
+        supervisor = TextualTaskSupervisor(mock_app, mock_registry)
         with self.assertRaises(RuntimeError):
             await supervisor.wait("nonexistent")
 
     async def test_cancel_nonexistent_raises(self):
         mock_app = MagicMock()
-        supervisor = TextualTaskSupervisor(mock_app)
+        mock_registry = MagicMock()
+        supervisor = TextualTaskSupervisor(mock_app, mock_registry)
         with self.assertRaises(RuntimeError):
             supervisor.cancel("nonexistent")
 

@@ -102,8 +102,7 @@ class TUIApp(App):
         self.theme = tui_config.theme
         self.registry = registry
         self.registry.register_queue("exit_signal")
-        registry.register_member("tui_app", self)
-        registry.register_member("task_supervisor", TextualTaskSupervisor(self))
+        TextualTaskSupervisor(self, registry)
 
         self.init_messages = list(init_messages)
         if init_files:

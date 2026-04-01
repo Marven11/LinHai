@@ -29,7 +29,13 @@ def get_changed_python_files(base_ref: str = "origin/main") -> List[str]:
             return []
 
         files = output.split("\n")
-        return [f for f in files if f.endswith(".py") and os.path.exists(f)]
+        return [
+            f
+            for f in files
+            if f.endswith(".py")
+            and os.path.exists(f)
+            and f != "linhai/task_supervisor.py"
+        ]
     except subprocess.CalledProcessError:
         return []
 

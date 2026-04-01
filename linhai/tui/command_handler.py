@@ -1,8 +1,8 @@
 """Command handler for TUI commands that should not be sent to agent."""
 
-from linhai.registry import Registry
+from typing import Literal
 
-from linhai.tui.components import RuntimeMessageWidget
+from linhai.registry import Registry
 from linhai.utils import UiNotice
 from linhai.input_parser import parse_user_input
 
@@ -47,15 +47,12 @@ class CommandHandler:
     async def _show_success_message(self, content: str) -> None:
         await self._show_runtime_message("INFO", content)
 
-    async def _show_runtime_message(self, level: str, content: str) -> None:
-        from linhai.tui.app import TUIApp
-
-        tui_app = self.registry.get_member_typechecked("tui_app", TUIApp)
-        assert tui_app is not None
-
-        container = tui_app.query_one("#chat-container")
-        widget = RuntimeMessageWidget(level=level, content=content)
-        container.mount(widget)
+    async def _show_runtime_message(
+        self, level: Literal["INFO", "WARNING", "ERROR"], content: str
+    ) -> None:
+        await self.registry.send_if_exists(
+            "ui_log", UiNotice(level=level, content=content)
+        )
 
     async def _handle_queue_command(self, message_text: str) -> tuple[bool, bool]:
         """处理/queue命令,将消息加入排队列表."""
