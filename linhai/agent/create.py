@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from linhai.machine_control import MachineControl
 
 from .conversation import register_conversation_folder
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.secret import initialize_secret_system
 
 from linhai.sandbox import (
@@ -488,7 +488,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         pinned_messages.append(ChecklistMessage(context["checklist_path"]))
         await context["registry"].send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"已加载检查清单文件: {context["checklist_path"]}",
             ),

@@ -1,18 +1,18 @@
-"""测试CLI的标签页功能"""
+"""测试TUI的标签页功能"""
 
 import unittest
 from unittest.mock import patch, Mock
 import asyncio
-from linhai.cli.app import CLIApp
+from linhai.tui.app import TUIApp
 from linhai.registry import Registry
-from linhai.config import CLIConfig
+from linhai.config import TUIConfig
 from linhai.agent.main import Agent
 
 
-class TestCLITabs(unittest.TestCase):
-    """测试CLI的标签页功能"""
+class TestTUITabs(unittest.TestCase):
+    """测试TUI的标签页功能"""
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     def test_tabs_display(self, mock_on_mount):
         """测试标签页是否正确显示"""
         mock_on_mount.return_value = None
@@ -60,8 +60,8 @@ class TestCLITabs(unittest.TestCase):
         mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
 
-        app = CLIApp(
-            registry=registry, cli_config=CLIConfig(), init_messages=[], init_files=[]
+        app = TUIApp(
+            registry=registry, tui_config=TUIConfig(), init_messages=[], init_files=[]
         )
 
         async def _run_test():
@@ -78,7 +78,7 @@ class TestCLITabs(unittest.TestCase):
         """测试标签页功能"""
         asyncio.run(self._test_tabs_functionality())
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def _test_tabs_functionality(self, mock_on_mount):
         """异步测试标签页切换功能"""
         mock_on_mount.return_value = None
@@ -126,8 +126,8 @@ class TestCLITabs(unittest.TestCase):
         mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
 
-        app = CLIApp(
-            registry=registry, cli_config=CLIConfig(), init_messages=[], init_files=[]
+        app = TUIApp(
+            registry=registry, tui_config=TUIConfig(), init_messages=[], init_files=[]
         )
 
         async with app.run_test() as pilot:

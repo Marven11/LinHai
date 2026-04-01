@@ -13,7 +13,7 @@ import sys
 
 from linhai.init import InitApp
 from linhai.config import get_default_config_path
-from linhai.cli import CLIApp
+from linhai.tui import TUIApp
 from linhai.agent.base import Message
 from linhai.registry import Registry
 
@@ -71,9 +71,9 @@ async def run(args):
     )
     _agent = await create_agent_from_config(context)
 
-    app = CLIApp(
+    app = TUIApp(
         registry=registry,
-        cli_config=config.cli,
+        tui_config=config.tui,
         init_messages=context["message"],
         init_files=context["file"],
     )

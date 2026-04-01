@@ -17,7 +17,7 @@ from linhai.agent.base import (
 from linhai.tool.base import ToolCallResultMessage
 from linhai.registry import Registry
 from linhai.machine_control import MachineControl
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.llm import Message
 
 from .helpers import (
@@ -107,7 +107,7 @@ class DuplicateFileReadPlugin(Plugin):
                 if self.counter == 1:
                     await self.registry.send_if_exists(
                         "ui_log",
-                        CliRuntimeNotice(
+                        UiNotice(
                             level="WARNING",
                             content="模型第一次重复读取相同文件，已警告",
                         ),
@@ -125,7 +125,7 @@ class DuplicateFileReadPlugin(Plugin):
                 else:
                     await self.registry.send_if_exists(
                         "ui_log",
-                        CliRuntimeNotice(
+                        UiNotice(
                             level="WARNING",
                             content="模型第二次重复读取相同文件，已阻止",
                         ),
@@ -202,7 +202,7 @@ class UnnecessarySedReadPlugin(Plugin):
         if self.warning_count >= 3:
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="模型多次小块读取代码文件，已阻止",
                 ),
@@ -216,7 +216,7 @@ class UnnecessarySedReadPlugin(Plugin):
         else:
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="模型多次小块读取代码文件，已警告",
                 ),
@@ -286,7 +286,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
                 if self.warning_count >= 3:
                     await self.registry.send_if_exists(
                         "ui_log",
-                        CliRuntimeNotice(
+                        UiNotice(
                             level="WARNING",
                             content="模型多次使用process_create读取已读文件，已阻止",
                         ),
@@ -300,7 +300,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
                 else:
                     await self.registry.send_if_exists(
                         "ui_log",
-                        CliRuntimeNotice(
+                        UiNotice(
                             level="WARNING",
                             content=f"模型使用process_create读取已读文件，已警告（第{self.warning_count}次）",
                         ),
@@ -380,7 +380,7 @@ class FileReadWriteConflictPlugin(Plugin):
             if abs_path in self.read_files:
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="WARNING",
                         content=f"检测到读写文件冲突：在读取文件后立即尝试写入同一文件 {filepath}，已警告",
                     ),

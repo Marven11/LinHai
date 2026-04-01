@@ -6,7 +6,7 @@ from linhai.plugin import OnlyReasoningPlugin
 from linhai.registry import Registry
 from linhai.llm import Answer, OpenAi
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
@@ -59,7 +59,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
         ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
-        self.assertIsInstance(ui_call_args[0][1], CliRuntimeNotice)
+        self.assertIsInstance(ui_call_args[0][1], UiNotice)
         self.assertEqual(ui_call_args[0][1].level, "WARNING")
         self.assertIn("只思考不输出", ui_call_args[0][1].content)
 

@@ -262,7 +262,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 注意：实际实现中，ToolManager会切换机器，然后恢复
         # 这里我们验证send_if_exists被调用来记录切换信息
         mock_registry.send_if_exists.assert_any_call(
-            "ui_log", unittest.mock.ANY  # CliRuntimeNotice
+            "ui_log", unittest.mock.ANY  # UiNotice
         )
 
         # 验证结果是成功的

@@ -105,19 +105,19 @@ class TestTextualTaskSupervisor(unittest.IsolatedAsyncioTestCase):
             supervisor.cancel("nonexistent")
 
 
-class TestCLIAppRegistersTaskSupervisor(unittest.IsolatedAsyncioTestCase):
+class TestTUIAppRegistersTaskSupervisor(unittest.IsolatedAsyncioTestCase):
     async def test_cli_app_registers_textual_task_supervisor(self):
         import argparse
 
-        from linhai.cli.app import CLIApp
-        from linhai.config import CLIConfig
+        from linhai.tui.app import TUIApp
+        from linhai.config import TUIConfig
         from linhai.registry import Registry
 
         registry = Registry()
         cli_args = argparse.Namespace(message=None, file=None)
         registry.register_member("cli_args", cli_args)
-        cli_config = CLIConfig()
-        CLIApp(registry, cli_config, init_messages=[], init_files=[])
+        tui_config = TUIConfig()
+        TUIApp(registry, tui_config, init_messages=[], init_files=[])
         supervisor = registry.get_member_typechecked("task_supervisor", TaskSupervisor)
         self.assertIsInstance(supervisor, TextualTaskSupervisor)
 

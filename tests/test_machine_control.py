@@ -11,7 +11,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
 from linhai.machine_control.main import MachineControlPlugin
 from linhai.llm import ToolCallMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class TestMachineControl(unittest.IsolatedAsyncioTestCase):
@@ -342,15 +342,6 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsNone(result)  # 应该返回None，因为插件返回None
-        # 插件应该发送了提示，但新接口下可能需要在success状态时处理，或者保持原逻辑
-        # 这里暂时注释掉检查，因为新接口逻辑可能已改变
-        # mock_send.assert_called_once_with(
-        #     "ui_log",
-        #     CliRuntimeNotice(
-        #         level="INFO",
-        #         content="正在切换到机器 other_machine 执行工具 test_tool",
-        #     ),
-        # )
 
     async def test_before_tool_call_with_same_machine(self):
         """测试before_tool_call，当on_machine与当前机器相同时不发送提示"""
@@ -440,7 +431,7 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         # 检查是否发送了警告
         mock_send.assert_called_once_with(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="WARNING",
                 content="连续3次工具调用都指定了相同的on_machine 'master_host'，且未切换机器。请确认是否需要频繁指定。",
             ),

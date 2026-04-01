@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, Mock, MagicMock
 
-from linhai.cli.command_handler import CommandHandler
+from linhai.tui.command_handler import CommandHandler
 from linhai.registry import Registry
 
 
@@ -38,15 +38,15 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.queued_messages = []
         self.registry.get_member_typechecked.return_value = mock_agent
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
-            "cli_app": mock_cli_app,
+            "tui_app": mock_tui_app,
             "messages_list": mock_messages_list,
         }[name]
 
@@ -71,12 +71,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         """Test /quit command."""
         self.registry.send = AsyncMock()
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "cli_app": mock_cli_app
+            "tui_app": mock_tui_app
         }[name]
 
         handled, should_interrupt = await self.handler.handle_command("/quit")
@@ -88,12 +88,12 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         """Test /exit command."""
         self.registry.send = AsyncMock()
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "cli_app": mock_cli_app
+            "tui_app": mock_tui_app
         }[name]
 
         handled, should_interrupt = await self.handler.handle_command("/exit")
@@ -103,11 +103,11 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_handle_help_command(self):
         """Test /help command."""
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.return_value = mock_cli_app
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
+        self.registry.get_member_typechecked.return_value = mock_tui_app
 
         handled, should_interrupt = await self.handler.handle_command("/help")
         self.assertTrue(handled)
@@ -120,15 +120,15 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.get_threshold_info.return_value = None
         self.registry.get_member_typechecked.return_value = mock_agent
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
-            "cli_app": mock_cli_app,
+            "tui_app": mock_tui_app,
             "messages_list": mock_messages_list,
         }[name]
 
@@ -139,11 +139,11 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_handle_unknown_command(self):
         """Test unknown command."""
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.return_value = mock_cli_app
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
+        self.registry.get_member_typechecked.return_value = mock_tui_app
 
         handled, should_interrupt = await self.handler.handle_command("/unknown")
         self.assertFalse(handled)
@@ -168,15 +168,15 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.add_new_message = AsyncMock()
         self.registry.get_member_typechecked.return_value = mock_agent
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
-            "cli_app": mock_cli_app,
+            "tui_app": mock_tui_app,
             "messages_list": mock_messages_list,
         }[name]
 
@@ -202,15 +202,15 @@ class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
         mock_agent.message_processor.add_new_message = AsyncMock()
         self.registry.get_member_typechecked.return_value = mock_agent
 
-        mock_cli_app = Mock()
+        mock_tui_app = Mock()
         mock_container = Mock()
-        mock_cli_app.query_one.return_value = mock_container
-        mock_cli_app.should_auto_scroll.return_value = True
+        mock_tui_app.query_one.return_value = mock_container
+        mock_tui_app.should_auto_scroll.return_value = True
         mock_messages_list = Mock()
         mock_messages_list.add_runtime_message = Mock()
         self.registry.get_member_typechecked.side_effect = lambda name, cls: {
             "agent": mock_agent,
-            "cli_app": mock_cli_app,
+            "tui_app": mock_tui_app,
             "messages_list": mock_messages_list,
         }[name]
 

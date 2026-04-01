@@ -21,7 +21,7 @@ from linhai.type_hints import (
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
 )
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 import linhai
 
 
@@ -927,7 +927,7 @@ class OpenAi:
             if not self._minimax_warning_sent:
                 await self.registry.send(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="INFO",
                         content="minimax的api在开启stream时不返回usage，导致兼容问题，已关闭stream",
                     ),

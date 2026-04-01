@@ -14,7 +14,7 @@ from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
 from linhai.llm import SystemMessage, OpenAi
-from linhai.cli.components import RuntimeMessageWidget
+from linhai.tui.components import RuntimeMessageWidget
 from linhai.task_supervisor import PlainTaskSupervisor
 
 
@@ -85,14 +85,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         conversation_dir = Path(self.temp_dir.name)
         self.registry.register_member("conversation_folder", conversation_dir)
 
-        from linhai.cli.app import CLIApp
-        from linhai.cli.messages_list import MessagesList
+        from linhai.tui.app import TUIApp
+        from linhai.tui.messages_list import MessagesList
 
-        mock_cli_app = MagicMock(spec=CLIApp)
+        mock_cli_app = MagicMock(spec=TUIApp)
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
-        # should_auto_scroll现在在MessagesList中，CLIApp不再有这个方法
-        self.registry.register_member("cli_app", mock_cli_app)
+        # should_auto_scroll现在在MessagesList中，TUIApp不再有这个方法
+        self.registry.register_member("tui_app", mock_cli_app)
 
         # 创建一个mock的MessagesList
         mock_messages_list = MagicMock(spec=MessagesList)
@@ -353,14 +353,14 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""
         new_registry = Registry()
 
-        from linhai.cli.app import CLIApp
-        from linhai.cli.messages_list import MessagesList
+        from linhai.tui.app import TUIApp
+        from linhai.tui.messages_list import MessagesList
 
-        mock_cli_app = MagicMock(spec=CLIApp)
+        mock_cli_app = MagicMock(spec=TUIApp)
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
-        # should_auto_scroll现在在MessagesList中，CLIApp不再有这个方法
-        new_registry.register_member("cli_app", mock_cli_app)
+        # should_auto_scroll现在在MessagesList中，TUIApp不再有这个方法
+        new_registry.register_member("tui_app", mock_cli_app)
 
         # 创建一个mock的MessagesList
         mock_messages_list = MagicMock(spec=MessagesList)
@@ -444,7 +444,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm1)
 
-        # 现在MessagesList管理消息列表，CLIApp不再需要query_one和mount
+        # 现在MessagesList管理消息列表，TUIApp不再需要query_one和mount
         # 所以我们不再断言这些调用，而是验证agent行为
         pass
 

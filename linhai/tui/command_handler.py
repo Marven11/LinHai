@@ -1,14 +1,14 @@
-"""Command handler for CLI commands that should not be sent to agent."""
+"""Command handler for TUI commands that should not be sent to agent."""
 
 from linhai.registry import Registry
 
-from linhai.cli.components import RuntimeMessageWidget
-from linhai.utils import CliRuntimeNotice
+from linhai.tui.components import RuntimeMessageWidget
+from linhai.utils import UiNotice
 from linhai.input_parser import parse_user_input
 
 
 class CommandHandler:
-    """处理CLI命令,这些命令不会发送给agent."""
+    """处理`/`和`@`命令,这些命令不会发送给agent."""
 
     def __init__(self, registry: Registry):
         self.registry = registry
@@ -48,12 +48,12 @@ class CommandHandler:
         await self._show_runtime_message("INFO", content)
 
     async def _show_runtime_message(self, level: str, content: str) -> None:
-        from linhai.cli.app import CLIApp
+        from linhai.tui.app import TUIApp
 
-        cli_app = self.registry.get_member_typechecked("cli_app", CLIApp)
-        assert cli_app is not None
+        tui_app = self.registry.get_member_typechecked("tui_app", TUIApp)
+        assert tui_app is not None
 
-        container = cli_app.query_one("#chat-container")
+        container = tui_app.query_one("#chat-container")
         widget = RuntimeMessageWidget(level=level, content=content)
         container.mount(widget)
 
@@ -202,7 +202,7 @@ class CommandHandler:
 
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="INFO",
                     content=f"上下文工具命令执行成功: {parsed_input.command}",
                 ),

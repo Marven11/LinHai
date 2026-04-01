@@ -63,7 +63,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
-        mock_config.cli = Mock()
+        mock_config.tui = Mock()
 
         mock_tool_manager_return = (Mock(), Mock())
         mock_tool_manager.return_value = mock_tool_manager_return
@@ -164,7 +164,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
-        mock_config.cli = Mock()
+        mock_config.tui = Mock()
 
         with (
             patch("linhai.agent.create._create_llm_instances") as mock_llm_instances,
@@ -515,7 +515,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
-        mock_config.cli = Mock()
+        mock_config.tui = Mock()
         return mock_config
 
     def test_default_llm_config_not_set_uses_first_llm(self):

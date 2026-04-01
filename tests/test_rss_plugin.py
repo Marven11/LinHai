@@ -59,7 +59,7 @@ class TestRssPlugin(unittest.TestCase):
         self.assertEqual(plugin.rss_urls, [])
 
     def test_plugin_from_cli_args(self):
-        """测试从CLI args获取RSS URL。"""
+        """测试从TUI args获取RSS URL。"""
         import argparse
 
         mock_cli_args = argparse.Namespace()

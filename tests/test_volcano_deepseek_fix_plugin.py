@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.plugin import VolcanoDeepseekFixPlugin
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
@@ -77,7 +77,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.registry.send_if_exists.assert_called_once()
         ui_call = self.registry.send_if_exists.call_args[0]
-        self.assertIsInstance(ui_call[1], CliRuntimeNotice)
+        self.assertIsInstance(ui_call[1], UiNotice)
         self.assertIn("已提醒 agent 并显示上下文", ui_call[1].content)
 
     async def test_after_message_generation_with_multiple_abnormal_markers(self):

@@ -14,7 +14,7 @@ from linhai.llm import (
     UserMessage,
 )
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.utils import CliRuntimeNotice, generate_id
+from linhai.utils import UiNotice, generate_id
 from pathlib import Path
 from .conversation import save_cleaned_messages
 
@@ -152,7 +152,7 @@ async def context_forget_range_step1(
     current_message_count = len(agent.message_processor.messages)
     await registry.send_if_exists(
         "ui_log",
-        CliRuntimeNotice(
+        UiNotice(
             level="INFO",
             content=f"启动历史压缩第一步，当前共有{current_message_count}条消息",
         ),

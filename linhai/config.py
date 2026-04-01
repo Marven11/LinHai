@@ -271,15 +271,15 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, toolsets={self.toolsets}, secret={self.secret})"
 
 
-class CLIConfig(BaseModel):
-    """CLI配置类型定义。"""
+class TUIConfig(BaseModel):
+    """TUI配置类型定义。"""
 
     use_nerd_font: bool = Field(default=False, description="是否使用Nerd Font图标")
-    theme: str = Field(default="nord", description="CLI主题名称")
+    theme: str = Field(default="nord", description="TUI主题名称")
 
     def __str__(self) -> str:
-        """返回CLI配置的字符串表示"""
-        return f"CLIConfig(use_nerd_font={self.use_nerd_font}, theme={self.theme})"
+        """返回TUI配置的字符串表示"""
+        return f"TUIConfig(use_nerd_font={self.use_nerd_font}, theme={self.theme})"
 
 
 class Config(BaseModel):
@@ -294,7 +294,7 @@ class Config(BaseModel):
         description="用户提示配置",
     )
     tools: ToolConfig = Field(default_factory=ToolConfig, description="工具相关配置")
-    cli: CLIConfig = Field(default_factory=CLIConfig, description="CLI界面配置")
+    tui: TUIConfig = Field(default_factory=TUIConfig, description="TUI界面配置")
     remote_control: RemoteControlConfig = Field(
         default_factory=RemoteControlConfig, description="远程控制配置"
     )

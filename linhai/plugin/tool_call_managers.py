@@ -11,7 +11,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import Answer, OpenAi
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 from .helpers import JsonValue
 
@@ -96,7 +96,7 @@ class PromptFastAgentPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content=f"针对性优化: 阻止{model_name}调用巨量工具",
                 ),
@@ -131,7 +131,7 @@ class SlowStartPlugin(Plugin):
             self.enabled = False
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(level="WARNING", content="过量工具调用，已打断"),
+                UiNotice(level="WARNING", content="过量工具调用，已打断"),
             )
             answer.truncate()
             return False
@@ -288,7 +288,7 @@ class ToolCallInReasoningPlugin(Plugin):
         )
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(level="WARNING", content=ui_warning_message),
+            UiNotice(level="WARNING", content=ui_warning_message),
         )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -329,7 +329,7 @@ class LoadImageUrlWarningPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="load_image工具的参数为URL，已警告agent",
                 ),

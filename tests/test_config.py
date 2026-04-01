@@ -426,7 +426,7 @@ model = "test_model"
             TelegramConfig,
             RemoteControlConfig,
             ToolConfig,
-            CLIConfig,
+            TUIConfig,
         )
 
         telegram_fields = TelegramConfig.model_fields
@@ -454,7 +454,7 @@ model = "test_model"
             "max_toolcall_token_in_round should have a description",
         )
 
-        cli_fields = CLIConfig.model_fields
+        cli_fields = TUIConfig.model_fields
         self.assertIsNotNone(
             cli_fields["use_nerd_font"].description,
             "use_nerd_font should have a description",
@@ -472,7 +472,7 @@ model = "test_model"
         )
         self.assertEqual(config_fields["user_prompt"].description, "用户提示配置")
         self.assertEqual(config_fields["tools"].description, "工具相关配置")
-        self.assertEqual(config_fields["cli"].description, "CLI界面配置")
+        self.assertEqual(config_fields["tui"].description, "TUI界面配置")
         self.assertEqual(config_fields["remote_control"].description, "远程控制配置")
 
     def test_load_config_with_process_sandbox_macos(self):

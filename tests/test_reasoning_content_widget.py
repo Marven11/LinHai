@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import Mock, patch
-from linhai.cli.components import ReasoningContentWidget
+from linhai.tui.components import ReasoningContentWidget
 
 
 class TestReasoningContentWidget(unittest.TestCase):
@@ -167,7 +167,7 @@ class TestReasoningContentWidget(unittest.TestCase):
 
         self.assertEqual(len(rendered_content), 1)
 
-    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
+    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
     def test_stop_method(self, mock_set_timer):
         """Test that finish_streaming method stops the timer."""
         mock_segment = {
@@ -204,7 +204,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
+    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
     def test_stop_method_actual_timer(self, mock_set_timer):
         """Test finish_streaming method with actual timer behavior."""
         mock_segment = {
@@ -242,7 +242,7 @@ class TestReasoningContentWidget(unittest.TestCase):
         mock_timer.stop.assert_called_once()
         self.assertIsNone(widget.timer)
 
-    @patch("linhai.cli.components.ReasoningContentWidget.set_timer")
+    @patch("linhai.tui.components.ReasoningContentWidget.set_timer")
     def test_stop_method_without_timer(self, mock_set_timer):
         """Test finish_streaming method when there is no timer."""
         mock_segment = {

@@ -122,7 +122,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["source"], "threshold_notification")
 
     async def test_cli_token_usage_receiving(self):
-        """测试CLI接收token usage的基本逻辑。"""
+        """测试TUI接收token usage的基本逻辑。"""
         from linhai.registry import Registry
         from linhai.llm import AnswerTokenUsage
 

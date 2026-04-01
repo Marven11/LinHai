@@ -1,4 +1,4 @@
-"""Token management logic for CLI."""
+"""Token management logic for TUI."""
 
 from __future__ import annotations
 import asyncio

@@ -12,7 +12,7 @@ class TestMainCommandLine(unittest.TestCase):
     """测试main.py的命令行参数"""
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_message_option(
         self, mock_registry, mock_cli_app, mock_create_agent
@@ -63,7 +63,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_without_message_option(
         self, mock_registry, mock_cli_app, mock_create_agent
@@ -103,7 +103,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     @patch("builtins.open")
     def test_agent_command_with_file_option(
@@ -148,7 +148,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     @patch("builtins.open")
     def test_agent_command_with_both_message_and_file_options(
@@ -193,7 +193,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     def test_agent_command_with_file_option_file_not_found(
         self, mock_cli_app, mock_create_agent
     ):
@@ -215,7 +215,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_not_called()
 
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     def test_agent_command_with_file_option_read_error(
         self, mock_cli_app, mock_create_agent
     ):
@@ -238,7 +238,7 @@ class TestMainCommandLine(unittest.TestCase):
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_llm_option(
         self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
@@ -297,7 +297,7 @@ class TestMainCommandLine(unittest.TestCase):
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_llm_and_message_options(
         self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context
@@ -356,7 +356,7 @@ class TestMainCommandLine(unittest.TestCase):
 
     @patch("linhai.agent.create.create_agent_build_context")
     @patch("linhai.agent.create.create_agent_from_config")
-    @patch("linhai.main.CLIApp")
+    @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_checklist_option(
         self, mock_registry, mock_cli_app, mock_create_agent, mock_create_context

@@ -12,7 +12,7 @@ from linhai.tool.base import (
 from linhai.tokenizer import get_cl100k_base_tokenizer
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:
@@ -266,7 +266,7 @@ class AgentToolcall:
             await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content=msg,
                 ),
@@ -279,7 +279,7 @@ class AgentToolcall:
 
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR",
                     content=f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool}",
                 ),

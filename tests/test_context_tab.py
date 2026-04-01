@@ -3,10 +3,10 @@
 import unittest
 from unittest.mock import patch, Mock
 import asyncio
-from linhai.cli.app import CLIApp
-from linhai.cli.context_tab import ContextTabWidget
+from linhai.tui.app import TUIApp
+from linhai.tui.context_tab import ContextTabWidget
 from linhai.registry import Registry
-from linhai.config import CLIConfig
+from linhai.config import TUIConfig
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
 
@@ -21,8 +21,8 @@ class TestContextTab(unittest.TestCase):
         self.assertIsNotNone(widget)
         self.assertEqual(widget.refresh_interval, 1.0)
 
-    @patch("linhai.cli.context_tab.ContextTabWidget.update_display")
-    @patch("linhai.cli.context_tab.ContextTabWidget.set_interval")
+    @patch("linhai.tui.context_tab.ContextTabWidget.update_display")
+    @patch("linhai.tui.context_tab.ContextTabWidget.set_interval")
     def test_on_mount(self, mock_set_interval, mock_update_display):
         """测试组件挂载"""
         registry = Registry()
@@ -33,7 +33,7 @@ class TestContextTab(unittest.TestCase):
         mock_update_display.assert_called_once()
         mock_set_interval.assert_called_once_with(1.0, widget.update_display)
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     def test_context_tab_in_app(self, mock_on_mount):
         """测试Context tab是否在应用中正确显示"""
         mock_on_mount.return_value = None
@@ -106,12 +106,12 @@ class TestContextTab(unittest.TestCase):
 
         mock_lifecycle = Mock(spec=Lifecycle)
         registry.register_member("lifecycle", mock_lifecycle)
-        with patch("linhai.cli.app.TokenManager", return_value=mock_token_manager):
+        with patch("linhai.tui.app.TokenManager", return_value=mock_token_manager):
             registry.register_member("token_manager", mock_token_manager)
 
-            app = CLIApp(
+            app = TUIApp(
                 registry=registry,
-                cli_config=CLIConfig(),
+                tui_config=TUIConfig(),
                 init_messages=[],
                 init_files=[],
             )

@@ -92,7 +92,7 @@ override_toolsets = ["utils", "sleep"]
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
-        mock_config.cli = Mock()
+        mock_config.tui = Mock()
 
         from linhai.llm import OpenAi
 
@@ -185,7 +185,7 @@ override_toolsets = ["utils", "sleep"]
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
-        mock_config.cli = Mock()
+        mock_config.tui = Mock()
 
         from linhai.llm import OpenAi
 

@@ -7,7 +7,7 @@ import feedparser
 import httpx
 
 from linhai.llm import LanguageModelMessage, Message
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
@@ -149,7 +149,7 @@ class RssPlugin:
             if isinstance(result, Exception):
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(level="INFO", content=f"获取rss失败: {rss_url}"),
+                    UiNotice(level="INFO", content=f"获取rss失败: {rss_url}"),
                 )
 
     async def _fetch_and_process_rss(self, rss_url, agent, send_to_agent=True):

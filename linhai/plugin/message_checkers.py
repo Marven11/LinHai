@@ -16,7 +16,7 @@ from linhai.agent.base import (
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import Answer, AssistantMessage, OpenAi, Message
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 from .helpers import JsonValue
 
@@ -52,7 +52,7 @@ class WaitingUserPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING", content="已警告agent：工具调用和等待用户冲突"
                 ),
             )
@@ -76,7 +76,7 @@ class WaitingUserPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="已警告agent：既没有调用工具也没有等待用户",
                 ),
@@ -198,7 +198,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="WARNING",
                 content=f"检测到火山平台 deepseek 异常输出标记：共{len(positions)}处，已提醒 agent 并显示上下文",
             ),
@@ -236,7 +236,7 @@ class OnlyReasoningPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING", content="模型只思考不输出，已提醒模型"
                 ),
             )
@@ -307,7 +307,7 @@ class JsonCodeBlockPlugin(Plugin):
 
             await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
             await self.registry.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="WARNING", content=ui_msg)
+                "ui_log", UiNotice(level="WARNING", content=ui_msg)
             )
 
     def register(self, lifecycle: "Lifecycle"):
@@ -375,7 +375,7 @@ class KimiK25ToolCallPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
                 ),
@@ -399,7 +399,7 @@ class KimiK25ToolCallPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到kimi k2.5特殊工具调用格式，已提醒模型",
                 ),
@@ -471,7 +471,7 @@ class MinimaxToolCallPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到minimax m2.5错误工具调用格式，已提醒模型",
                 ),
@@ -492,7 +492,7 @@ class MinimaxToolCallPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到minimax特殊工具调用格式，已提醒模型",
                 ),
@@ -516,7 +516,7 @@ class MinimaxToolCallPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到minimax特殊工具调用格式，已提醒模型",
                 ),
@@ -591,7 +591,7 @@ class GlmToolCallPlugin(Plugin):
             await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="WARNING",
                     content="检测到GLM错误工具调用格式，已提醒模型",
                 ),
@@ -632,7 +632,7 @@ class MisplacedToolCallPlugin(Plugin):
         await agent.message_processor.add_new_message(RuntimeMessage(warning_msg))
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="WARNING",
                 content=f"检测到```json toolcall不在行首：共{len(misplaced_lines)}处，已提醒agent",
             ),

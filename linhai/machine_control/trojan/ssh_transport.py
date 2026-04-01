@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from .transport import TrojanTransport
 
 
@@ -46,7 +46,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR", content=f"检查远程Python版本失败: {error_msg}"
                 ),
             )
@@ -72,7 +72,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR", content=f"创建远程临时文件失败: {error_msg}"
                 ),
             )
@@ -94,7 +94,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR", content=f"写入远程文件失败: {error_msg}"
                 ),
             )
@@ -140,7 +140,7 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
             ),
         )
@@ -154,7 +154,7 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"检查远程机器Python版本: {self.host}:{self.port}",
             ),
@@ -163,7 +163,7 @@ class SshTrojanTransport:
         if not await self._check_python_version(ssh_cmd):
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR",
                     content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
                 ),
@@ -174,14 +174,14 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
             ),
         )
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"复制控制程序到远程机器: {self.host}:{self.port}",
             ),
@@ -192,7 +192,7 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"控制程序已复制到远程机器: {self.host}:{self.port}",
             ),
@@ -200,7 +200,7 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
             ),
         )
@@ -214,7 +214,7 @@ class SshTrojanTransport:
         ):
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR",
                     content=f"启动远程控制程序失败: {self.host}:{self.port}",
                 ),
@@ -225,7 +225,7 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"远程控制程序启动成功: {self.host}:{self.port}",
             ),

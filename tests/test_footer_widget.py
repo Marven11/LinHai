@@ -17,7 +17,7 @@ class TestFooterWidget(unittest.TestCase):
 
     def test_footer_widget_init(self):
         """Test FooterWidget initialization."""
-        from linhai.cli.components import FooterWidget
+        from linhai.tui.components import FooterWidget
 
         widget = FooterWidget(
             registry=self.registry,
@@ -31,7 +31,7 @@ class TestFooterWidget(unittest.TestCase):
 
     def test_footer_widget_with_nerd_font(self):
         """Test FooterWidget with nerd font enabled."""
-        from linhai.cli.components import FooterWidget
+        from linhai.tui.components import FooterWidget
 
         widget = FooterWidget(
             registry=self.registry,
@@ -44,7 +44,7 @@ class TestFooterWidget(unittest.TestCase):
 
 class TestFooterWidgetSandboxIcon(unittest.TestCase):
     def _make_widget(self, sandbox, use_nerd_font=False):
-        from linhai.cli.components import FooterWidget
+        from linhai.tui.components import FooterWidget
 
         registry = Registry()
         token_manager = TokenManager(registry)

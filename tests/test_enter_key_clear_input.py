@@ -4,10 +4,10 @@ import unittest
 from unittest.mock import Mock, AsyncMock, patch
 import asyncio
 
-from linhai.cli.app import CLIApp
+from linhai.tui.app import TUIApp
 from linhai.registry import Registry
-from linhai.config import CLIConfig
-from linhai.cli.messages_list import MessagesList
+from linhai.config import TUIConfig
+from linhai.tui.messages_list import MessagesList
 
 
 class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
@@ -78,9 +78,9 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_agent.llm_manager = self.mock_llm_manager
 
         # 创建app
-        self.app = CLIApp(
+        self.app = TUIApp(
             registry=self.registry,
-            cli_config=CLIConfig(),
+            tui_config=TUIConfig(),
             init_messages=[],
             init_files=[],
         )
@@ -98,7 +98,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_footer = Mock()
         self.mock_footer.update_token_info = Mock()
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def test_enter_key_clears_input_text(self, mock_on_mount):
         """测试按下回车键后输入框文本被清空。"""
         mock_on_mount.return_value = None
@@ -117,7 +117,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
             # 验证输入框是否被清空
             self.assertEqual(input_element.text, "", "输入框应在回车发送后被清空")
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def test_empty_input_not_sent(self, mock_on_mount):
         """测试空输入不会被发送。"""
         mock_on_mount.return_value = None
@@ -135,7 +135,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
             # 输入框应保持为空
             self.assertEqual(input_element.text, "")
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def test_input_with_whitespace_not_sent(self, mock_on_mount):
         """测试仅包含空白字符的输入不会被发送。"""
         mock_on_mount.return_value = None
@@ -153,7 +153,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
             # 输入框应被清空
             self.assertEqual(input_element.text, "", "仅包含空白字符的输入应被清空")
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def test_enter_key_clears_multiline_input(self, mock_on_mount):
         """测试按下回车键后多行输入被清空。"""
         mock_on_mount.return_value = None
@@ -174,7 +174,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
                 input_element.text.count("\n"), 0, "输入框不应有任何遗留的换行符"
             )
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     async def test_enter_key_clears_input_with_cursor_at_end(self, mock_on_mount):
         """测试按下回车键后光标在末尾时输入框被清空。"""
         mock_on_mount.return_value = None

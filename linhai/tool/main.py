@@ -21,7 +21,7 @@ from linhai.tool.base import (
     ToolResultFailed,
 )
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class ToolManager:
@@ -103,7 +103,7 @@ class ToolManager:
             if tool_call.on_machine not in machine_control.machines:
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="ERROR", content=f"机器未找到: {tool_call.on_machine}"
                     ),
                 )
@@ -126,7 +126,7 @@ class ToolManager:
         if target_toolset is None:
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR", content=f"未找到工具: {tool_call.function_name}"
                 ),
             )
@@ -152,7 +152,7 @@ class ToolManager:
             if isinstance(result, ToolResultFailed):
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="ERROR",
                         content=f"工具执行失败: {tool_call.function_name}",
                     ),
@@ -231,7 +231,7 @@ class ToolManager:
 
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR",
                     content=f"工具执行失败: {tool_call.function_name} - {error_msg}",
                 ),

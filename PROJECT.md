@@ -8,7 +8,7 @@
 - [x] 完成LLM对接部分
 - [x] 完成Agent逻辑
 - [x] 使用浏览器拉取微信公众号/知乎回答/...等文章并自动转为markdown
-- [x] 改进CLI
+- [x] 改进TUI
 - [ ] 编写webui
 
 # Agent设计

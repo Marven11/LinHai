@@ -9,7 +9,7 @@ from textual.widgets import TabbedContent, TabPane
 from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
-from linhai.config import CLIConfig
+from linhai.config import TUIConfig
 from linhai.registry import Registry
 from linhai.task_supervisor import TextualTaskSupervisor
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -47,8 +47,8 @@ ASCII_ART_SMALL = r"""
 ░░░░ ░░░░ ░░   ░░░░  ░░ ░░  ░░ ░░░░"""
 
 
-class CLIApp(App):
-    """Textual-based CLI application for LinHai agent interaction."""
+class TUIApp(App):
+    """Textual-based TUI application for LinHai agent interaction."""
 
     CSS = """
     Screen {
@@ -94,15 +94,15 @@ class CLIApp(App):
     def __init__(
         self,
         registry: Registry,
-        cli_config: CLIConfig,
+        tui_config: TUIConfig,
         init_messages: list[str],
         init_files: list[Path],
     ):
         super().__init__()
-        self.theme = cli_config.theme
+        self.theme = tui_config.theme
         self.registry = registry
         self.registry.register_queue("exit_signal")
-        registry.register_member("cli_app", self)
+        registry.register_member("tui_app", self)
         registry.register_member("task_supervisor", TextualTaskSupervisor(self))
 
         self.init_messages = list(init_messages)
@@ -118,7 +118,7 @@ class CLIApp(App):
         self.completions = []
         self.autocomplete = None
 
-        self.cli_config = cli_config
+        self.tui_config = tui_config
         self.command_handler = CommandHandler(self.registry)
 
         self.registry.add_postinit(self.postinit)
@@ -143,7 +143,7 @@ class CLIApp(App):
                 lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
                 self.messages_list = MessagesList(
                     registry=self.registry,
-                    cli_config=self.cli_config,
+                    tui_config=self.tui_config,
                     theme=self.theme,
                     lifecycle=lifecycle,
                     get_refresh_interval=self.get_refresh_interval,
@@ -161,7 +161,7 @@ class CLIApp(App):
                 yield FooterWidget(
                     self.registry,
                     self.token_manager,
-                    use_nerd_font=self.cli_config.use_nerd_font,
+                    use_nerd_font=self.tui_config.use_nerd_font,
                 )
 
             with TabPane("Context", id="context-tab"):

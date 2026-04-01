@@ -6,7 +6,7 @@ import os
 from pydantic import BaseModel
 
 
-class CliRuntimeNotice(BaseModel):
+class UiNotice(BaseModel):
     """运行时消息数据模型"""
 
     level: Literal["INFO", "WARNING", "ERROR"]

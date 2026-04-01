@@ -7,7 +7,7 @@ from typing import List, Optional, Sequence, TypedDict
 from linhai.registry import Registry
 from linhai.input_parser import parse_user_input
 from linhai.llm import UserMessage, Answer
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 
@@ -136,7 +136,7 @@ class AgentMessage:
                 self.explicit_cache_anchors = self.explicit_cache_anchors[-4:]
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="INFO",
                     content="新增显式缓存",
                 ),
@@ -169,7 +169,7 @@ class AgentMessage:
         await lifecycle.trigger_before_cache_invalidate()
         if self.explicit_cache_anchors:
             await self.registry.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="WARNING", content="上下文缓存失效！")
+                "ui_log", UiNotice(level="WARNING", content="上下文缓存失效！")
             )
             self.explicit_cache_anchors = []
 
@@ -203,7 +203,7 @@ class AgentMessage:
             if anchor is not None:
                 self.explicit_cache_anchors.append(anchor)
                 await self.registry.send_if_exists(
-                    "ui_log", CliRuntimeNotice(level="INFO", content="刷新显式缓存")
+                    "ui_log", UiNotice(level="INFO", content="刷新显式缓存")
                 )
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)

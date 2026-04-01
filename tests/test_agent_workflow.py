@@ -587,9 +587,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         call_args = mock_registry.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
         ui_message = call_args[0][1]
-        from linhai.utils import CliRuntimeNotice
+        from linhai.utils import UiNotice
 
-        self.assertIsInstance(ui_message, CliRuntimeNotice)
+        self.assertIsInstance(ui_message, UiNotice)
         self.assertEqual(ui_message.level, "INFO")
         self.assertIn("启动历史压缩", ui_message.content)
         self.assertIn("当前共有4条消息", ui_message.content)

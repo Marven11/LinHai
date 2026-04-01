@@ -1,4 +1,4 @@
-"""Messages list management for CLI."""
+"""Messages list management for TUI."""
 
 import asyncio
 from typing import List, Optional, Union
@@ -9,9 +9,9 @@ from textual import events, work
 
 from linhai.agent import Agent, Lifecycle
 from linhai.registry import Registry
-from linhai.config import CLIConfig
+from linhai.config import TUIConfig
 from linhai.parsed_message import ParsedAnswer
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.llm import AnswerTokenUsage, UserMessage
 
 from .components import (
@@ -30,7 +30,7 @@ class MessagesList(VerticalScroll):
     def __init__(
         self,
         registry: Registry,
-        cli_config: CLIConfig,
+        tui_config: TUIConfig,
         theme: str,
         lifecycle: Lifecycle,
         get_refresh_interval,
@@ -39,7 +39,7 @@ class MessagesList(VerticalScroll):
     ):
         super().__init__(*args, **kwargs)
         self.registry = registry
-        self.cli_config = cli_config
+        self.tui_config = tui_config
         self.theme = theme
         self.get_refresh_interval = get_refresh_interval
         self.messages: List[
@@ -139,7 +139,7 @@ class MessagesList(VerticalScroll):
         while True:
             output = await self.registry.receive("ui_log")
 
-            if isinstance(output, CliRuntimeNotice):
+            if isinstance(output, UiNotice):
                 widget = RuntimeMessageWidget(
                     level=output.level, content=output.content
                 )

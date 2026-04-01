@@ -6,8 +6,8 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from linhai.cli.planning_tab import PlanningTabWidget, FILE_NAMES
-from linhai.cli.app import CLIApp
+from linhai.tui.planning_tab import PlanningTabWidget, FILE_NAMES
+from linhai.tui.app import TUIApp
 from linhai.registry import Registry
 
 
@@ -37,8 +37,8 @@ class TestPlanningTabWidget(unittest.TestCase):
         result = widget._get_planning_folder()
         self.assertEqual(result, path)
 
-    @patch("linhai.cli.planning_tab.PlanningTabWidget.update_display")
-    @patch("linhai.cli.planning_tab.PlanningTabWidget.set_interval")
+    @patch("linhai.tui.planning_tab.PlanningTabWidget.update_display")
+    @patch("linhai.tui.planning_tab.PlanningTabWidget.set_interval")
     def test_on_mount(self, mock_set_interval, mock_update_display):
         """测试组件挂载"""
         registry = Registry()
@@ -124,7 +124,7 @@ class TestPlanningTabWidget(unittest.TestCase):
 class TestPlanningTabInApp(unittest.TestCase):
     """测试Planning tab在应用中的条件显示"""
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     def test_planning_tab_not_shown_without_planning(self, mock_on_mount):
         """测试不开启planning模式时没有Planning tab"""
         mock_on_mount.return_value = None
@@ -171,10 +171,10 @@ class TestPlanningTabInApp(unittest.TestCase):
         mock_cli_args.planning = False
         registry.register_member("cli_args", mock_cli_args)
 
-        from linhai.config import CLIConfig
+        from linhai.config import TUIConfig
 
-        app = CLIApp(
-            registry=registry, cli_config=CLIConfig(), init_messages=[], init_files=[]
+        app = TUIApp(
+            registry=registry, tui_config=TUIConfig(), init_messages=[], init_files=[]
         )
 
         async def _run_test():
@@ -184,7 +184,7 @@ class TestPlanningTabInApp(unittest.TestCase):
 
         asyncio.run(_run_test())
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     def test_planning_tab_shown_with_planning(self, mock_on_mount):
         """测试开启planning模式时显示Planning tab"""
         mock_on_mount.return_value = None
@@ -235,11 +235,11 @@ class TestPlanningTabInApp(unittest.TestCase):
             planning_folder = Path(tmpdir)
             registry.register_member("planning_folder", planning_folder)
 
-            from linhai.config import CLIConfig
+            from linhai.config import TUIConfig
 
-            app = CLIApp(
+            app = TUIApp(
                 registry=registry,
-                cli_config=CLIConfig(),
+                tui_config=TUIConfig(),
                 init_messages=[],
                 init_files=[],
             )
@@ -254,7 +254,7 @@ class TestPlanningTabInApp(unittest.TestCase):
 
             asyncio.run(_run_test())
 
-    @patch("linhai.cli.app.CLIApp.on_mount")
+    @patch("linhai.tui.app.TUIApp.on_mount")
     def test_collapsible_shows_content_after_collapse(self, mock_on_mount):
         """测试折叠STATUS.md后可以看到TODOLIST.md的内容"""
         mock_on_mount.return_value = None
@@ -314,11 +314,11 @@ class TestPlanningTabInApp(unittest.TestCase):
             )
             registry.register_member("planning_folder", planning_folder)
 
-            from linhai.config import CLIConfig
+            from linhai.config import TUIConfig
 
-            app = CLIApp(
+            app = TUIApp(
                 registry=registry,
-                cli_config=CLIConfig(),
+                tui_config=TUIConfig(),
                 init_messages=[],
                 init_files=[],
             )

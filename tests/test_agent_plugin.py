@@ -10,7 +10,7 @@ from linhai.plugin import (
 )
 from linhai.agent.base import RuntimeMessage
 from linhai.llm import OpenAi, UserMessage, AssistantMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 import pathlib
 
 

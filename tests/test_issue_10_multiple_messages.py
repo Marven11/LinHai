@@ -8,7 +8,7 @@ from linhai.agent.main import Agent
 from linhai.registry import Registry
 from linhai.llm import UserMessage
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
@@ -148,7 +148,7 @@ class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):
                 await self.agent.message_processor.add_new_message(
                     RuntimeMessage("当前所有工具调用全部被忽略，请重新调用")
                 )
-            interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
+            interrupt_msg = UiNotice(level="WARNING", content=ui_notice)
             await self.registry.send_if_exists("ui_log", interrupt_msg)
             self.agent.state = "working"
             # 处理排队消息

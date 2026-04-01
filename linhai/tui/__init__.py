@@ -1,4 +1,4 @@
-"""CLI interface for LinHai agent."""
+"""TUI interface for LinHai agent."""
 
 from .components import (
     RainbowAsciiArt,
@@ -8,7 +8,7 @@ from .components import (
 )
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
-from .app import CLIApp
+from .app import TUIApp
 
 __all__ = [
     "RainbowAsciiArt",
@@ -17,5 +17,5 @@ __all__ = [
     "MessageWidget",
     "ContextTabWidget",
     "PlanningTabWidget",
-    "CLIApp",
+    "TUIApp",
 ]

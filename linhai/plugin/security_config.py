@@ -8,7 +8,7 @@ from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
 
@@ -48,7 +48,7 @@ class WithSecretParameterPositionPlugin(Plugin):
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(level="WARNING", content="检测到with_secret参数位置错误"),
+            UiNotice(level="WARNING", content="检测到with_secret参数位置错误"),
         )
         return RuntimeMessage(
             "错误：with_secret参数应该在工具调用的顶层，与name、arguments平级，而不是在arguments内部！\n"
@@ -98,7 +98,7 @@ class MissingWithSecretWarningPlugin(Plugin):
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO", content="检测到可能忘记使用with_secret的工具调用"
             ),
         )

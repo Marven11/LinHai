@@ -68,7 +68,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         answer = MockAnswer(tokens)
 
         # Mock token parser to return parsed tokens
-        from linhai.cli.token_parser import TokenParser
+        from linhai.tui.token_parser import TokenParser
 
         parser = TokenParser()
         # We'll mock the receive_token to return appropriate parsed tokens

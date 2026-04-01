@@ -32,7 +32,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         )
 
         def get_member_typechecked_side_effect(name, cls):
-            if name == "cli_app":
+            if name == "tui_app":
                 return self.mock_cli_app
             elif name == "agent":
                 return self.agent

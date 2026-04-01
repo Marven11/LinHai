@@ -21,7 +21,7 @@ from linhai.multimodal import ImageMessage
 from linhai.tokenizer import get_cl100k_base_tokenizer
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from .base import Message, RuntimeMessage
@@ -150,7 +150,7 @@ class AgentContextOrchestration:
         result = f"清理了{len(removed_messages)}条大消息，保存到: {saved_path}"
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"已清理{len(removed_messages)}条大消息",
             ),
@@ -278,7 +278,7 @@ class AgentContextOrchestration:
         }
 
     def get_status_display_pieces(self, use_nerd_font: bool = False) -> list[str]:
-        """获取状态显示片段列表，用于CLI底栏。
+        """获取状态显示片段列表，用于TUI底栏。
 
         Args:
             use_nerd_font: 是否使用nerd font符号
@@ -479,7 +479,7 @@ class RedStateToolBlockPlugin:
 
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(
+                UiNotice(
                     level="ERROR",
                     content=ui_msg,
                 ),

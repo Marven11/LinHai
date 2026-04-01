@@ -1,7 +1,7 @@
 """测试toolcall解析错误处理"""
 
 import unittest
-from linhai.cli.components import ToolCallWidget
+from linhai.tui.components import ToolCallWidget
 from typing import TypedDict, Literal
 
 

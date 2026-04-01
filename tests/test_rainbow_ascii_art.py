@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
-from linhai.cli.components import RainbowAsciiArt
+from linhai.tui.components import RainbowAsciiArt
 
 
 class TestRainbowAsciiArt(unittest.TestCase):

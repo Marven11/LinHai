@@ -8,7 +8,7 @@ from linhai.plugin.message_checkers import WaitingUserPlugin
 from linhai.plugin.afk_plugin import AfkPlugin
 from linhai.agent.main import Agent
 from linhai.registry import Registry
-from linhai.config import CLIConfig
+from linhai.config import TUIConfig
 from linhai.agent.base import RuntimeMessage
 
 

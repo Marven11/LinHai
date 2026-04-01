@@ -19,7 +19,7 @@ from linhai.agent.orchestration import (
     NotificationMessagePlugin,
     AgentContextOrchestration,
 )
-from linhai.cli.app import CLIApp
+from linhai.tui.app import TUIApp
 from linhai.token_manager import TokenManager
 
 
@@ -173,13 +173,13 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["source"], "threshold_notification")
 
     async def test_cli_token_usage_queue_handling(self):
-        """测试CLI app正确处理token_usage队列。"""
+        """测试TUI app正确处理token_usage队列。"""
         # 创建TokenManager
         token_manager = TokenManager(self.registry)
 
-        # 模拟CLIApp的watch_token_usage_queue方法
-        cli_app = MagicMock(spec=CLIApp)
-        cli_app.token_manager = token_manager
+        # 模拟TUIApp的watch_token_usage_queue方法
+        tui_app = MagicMock(spec=TUIApp)
+        tui_app.token_manager = token_manager
 
         # 发送token_usage消息
         token_usage = AnswerTokenUsage(

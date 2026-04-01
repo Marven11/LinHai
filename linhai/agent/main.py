@@ -27,7 +27,7 @@ from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.input_parser import parse_user_input
 
 
@@ -157,14 +157,14 @@ class Agent:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(level="INFO", content="Agent正在等待用户"),
+            UiNotice(level="INFO", content="Agent正在等待用户"),
         )
         while self.registry.is_empty("user_message") and self.state == "waiting_user":
             await asyncio.sleep(0.01)
         if self.state != "waiting_user":
             await self.registry.send_if_exists(
                 "ui_log",
-                CliRuntimeNotice(level="INFO", content="Agent在等待用户时被切换状态"),
+                UiNotice(level="INFO", content="Agent在等待用户时被切换状态"),
             )
             return
         await self.receive_one_user_message()
@@ -204,7 +204,7 @@ class Agent:
 
         content = msg.message.strip()
 
-        from linhai.cli.command_handler import CommandHandler
+        from linhai.tui.command_handler import CommandHandler
 
         handler = CommandHandler(self.registry)
         handled, should_interrupt = await handler.handle_command(content)
@@ -237,7 +237,7 @@ class Agent:
         """
         if self.queued_messages:
             await self.registry.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+                "ui_log", UiNotice(level="INFO", content="排队消息被处理")
             )
             await self.message_processor.add_new_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
@@ -274,7 +274,7 @@ class Agent:
 
         if self.queued_messages:
             await self.registry.send_if_exists(
-                "ui_log", CliRuntimeNotice(level="INFO", content="排队消息被处理")
+                "ui_log", UiNotice(level="INFO", content="排队消息被处理")
             )
             await self.message_processor.add_new_message(
                 RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")

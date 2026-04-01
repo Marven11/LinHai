@@ -5,7 +5,7 @@ import asyncio
 from datetime import datetime, timedelta
 from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
 from linhai.registry import Registry
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class LlmManagerError(Exception):
@@ -119,7 +119,7 @@ class LlmManager:
             )
         self.llm_stack = [(name, None)]
         await self.registry.send_if_exists(
-            "ui_log", CliRuntimeNotice(level="INFO", content=f"已切换到LLM: {name}")
+            "ui_log", UiNotice(level="INFO", content=f"已切换到LLM: {name}")
         )
 
     def _record_error(self, llm_name: str, error_type: str) -> None:
@@ -179,7 +179,7 @@ class LlmManager:
                 delay = min(5 * 1.5**retry_count, 300)
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="WARNING",
                         content=f"LLM '{current_llm_name}' 超时，将在 {delay:.1f} 秒后重试",
                     ),
@@ -201,7 +201,7 @@ class LlmManager:
                         self.llm_stack.append((fallback_llm, disabled_until))
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="WARNING",
                                 content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，{disabled_duration.seconds}s后恢复",
                             ),
@@ -210,7 +210,7 @@ class LlmManager:
                         delay = min(5 * 1.5**retry_count, 300)
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="WARNING",
                                 content=f"LLM '{current_llm_name}' 速率限制，将在 {delay:.1f} 秒后重试",
                             ),
@@ -224,7 +224,7 @@ class LlmManager:
                         self.llm_stack.append((fallback_llm, disabled_until))
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="WARNING",
                                 content=f"LLM '{current_llm_name}' 网络错误，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
                             ),
@@ -233,7 +233,7 @@ class LlmManager:
                         delay = min(5 * 1.5**retry_count, 300)
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="WARNING",
                                 content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
                             ),
@@ -248,7 +248,7 @@ class LlmManager:
                             self.llm_stack.append((fallback_llm, disabled_until))
                             await self.registry.send_if_exists(
                                 "ui_log",
-                                CliRuntimeNotice(
+                                UiNotice(
                                     level="WARNING",
                                     content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
                                 ),
@@ -257,7 +257,7 @@ class LlmManager:
                             delay = min(5 * 1.5**retry_count, 300)
                             await self.registry.send_if_exists(
                                 "ui_log",
-                                CliRuntimeNotice(
+                                UiNotice(
                                     level="WARNING",
                                     content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
                                 ),

@@ -17,7 +17,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 DRAFT_INTERVAL = 1
 
@@ -92,7 +92,7 @@ class TelegramPlugin(Plugin):
         """处理来自telegram的消息。"""
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content="收到Telegram消息",
             ),
@@ -125,7 +125,7 @@ class TelegramPlugin(Plugin):
         """处理来自telegram的表情包消息。"""
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content="收到Telegram表情包",
             ),

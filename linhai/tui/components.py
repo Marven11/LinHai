@@ -1,4 +1,4 @@
-"""CLI UI components for LinHai agent."""
+"""TUI UI components for LinHai agent."""
 
 import asyncio
 import colorsys
@@ -823,7 +823,7 @@ class MessageWidget(Static):
 
 
 class FooterWidget(Static):
-    """CLI底栏组件，自动刷新显示token和消息统计信息"""
+    """底栏组件，自动刷新显示token和消息统计信息"""
 
     DEFAULT_CSS = """
     FooterWidget {

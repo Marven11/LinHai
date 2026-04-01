@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from .message_checkers import Plugin
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ class AfkPlugin(Plugin):
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(level="INFO", content="AFK模式激活，已阻止等待用户功能"),
+            UiNotice(level="INFO", content="AFK模式激活，已阻止等待用户功能"),
         )
 
     def register(self, lifecycle: "Lifecycle") -> None:

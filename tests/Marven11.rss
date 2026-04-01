@@ -257,8 +257,8 @@ fix(ci): filter out deleted files in black check]]></content:encoded>
     <item>
       <title>Marven11 closed pull request &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/151&#34;&gt;Marven11/LinHai#151&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/151#issuecomment-1126</link>
-      <description>fix(utils): prevent sed expressions from being mistaken as paths in CLI folding</description>
-      <content:encoded><![CDATA[fix(utils): prevent sed expressions from being mistaken as paths in CLI folding]]></content:encoded>
+      <description>fix(utils): prevent sed expressions from being mistaken as paths in TUI folding</description>
+      <content:encoded><![CDATA[fix(utils): prevent sed expressions from being mistaken as paths in TUI folding]]></content:encoded>
       <author>Marven11</author>
       <guid isPermaLink="false">1478: http://localhost:3000/Marven11/LinHai/pulls/151#issuecomment-1126</guid>
       <pubDate>Sat, 21 Mar 2026 15:59:12 +0800</pubDate>
@@ -266,8 +266,8 @@ fix(ci): filter out deleted files in black check]]></content:encoded>
     <item>
       <title>Marven11 commented on pull request &lt;a href=&#34;http://localhost:3000/Marven11/LinHai/pulls/151&#34;&gt;Marven11/LinHai#151&lt;/a&gt;</title>
       <link>http://localhost:3000/Marven11/LinHai/pulls/151#issuecomment-1125</link>
-      <description>fix(utils): prevent sed expressions from being mistaken as paths in CLI folding&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;谁让你重新打开的？？你没看到branch都没了？？&lt;/p&gt;&#xA;</description>
-      <content:encoded><![CDATA[fix(utils): prevent sed expressions from being mistaken as paths in CLI folding
+      <description>fix(utils): prevent sed expressions from being mistaken as paths in TUI folding&#xA;&#xA;&lt;p dir=&#34;auto&#34;&gt;谁让你重新打开的？？你没看到branch都没了？？&lt;/p&gt;&#xA;</description>
+      <content:encoded><![CDATA[fix(utils): prevent sed expressions from being mistaken as paths in TUI folding
 
 <p dir="auto">谁让你重新打开的？？你没看到branch都没了？？</p>
 ]]></content:encoded>

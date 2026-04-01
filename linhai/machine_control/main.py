@@ -12,7 +12,7 @@ from linhai.tool.base import (
     ToolResultFailed,
     ToolSet,
 )
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
 
@@ -659,7 +659,7 @@ class MachineControl:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO", content=f"已切换机器: {old_machine_id} -> {machine_id}"
             ),
         )
@@ -692,7 +692,7 @@ class MachineControl:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {username}",
             ),
@@ -727,7 +727,7 @@ class MachineControl:
 
         await self.registry.send_if_exists(
             "ui_log",
-            CliRuntimeNotice(
+            UiNotice(
                 level="INFO",
                 content=f"EtherGhost连接成功: 已连接到远程机器 {machine_id} (session类型: {session_type})",
             ),
@@ -881,7 +881,7 @@ class MachineControlPlugin:
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """处理工具调用的结果，合并了原来的before_tool_call和after_tool_call功能。"""
-        from linhai.utils import CliRuntimeNotice
+        from linhai.utils import UiNotice
 
         if status == "skipped":
 
@@ -892,7 +892,7 @@ class MachineControlPlugin:
                     if on_machine != current_machine:
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="INFO",
                                 content=f"正在切换到机器 {on_machine} 执行工具 {tool_name}",
                             ),
@@ -920,7 +920,7 @@ class MachineControlPlugin:
                     if self.consecutive_same_on_machine_count >= 3:
                         await self.registry.send_if_exists(
                             "ui_log",
-                            CliRuntimeNotice(
+                            UiNotice(
                                 level="WARNING",
                                 content=f"连续{self.consecutive_same_on_machine_count}次工具调用都指定了相同的on_machine '{on_machine}'，且未切换机器。请确认是否需要频繁指定。",
                             ),

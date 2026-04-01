@@ -6,7 +6,7 @@ from linhai.parsed_message import ParsedAnswer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage
 
 if TYPE_CHECKING:
@@ -89,9 +89,9 @@ class AgentLlm:
             await message_processor.add_new_message(RuntimeMessage(agent_message))
 
             if ui_notice is not None:
-                interrupt_msg = CliRuntimeNotice(level="WARNING", content=ui_notice)
+                interrupt_msg = UiNotice(level="WARNING", content=ui_notice)
             else:
-                interrupt_msg = CliRuntimeNotice(level="WARNING", content="Agent被打断")
+                interrupt_msg = UiNotice(level="WARNING", content="Agent被打断")
 
             current_content = self._current_parsed_answer._answer.get_current_content()
             if "```json toolcall" in current_content:

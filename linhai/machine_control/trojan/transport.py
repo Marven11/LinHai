@@ -5,7 +5,7 @@ from asyncio.subprocess import Process
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
-from linhai.utils import CliRuntimeNotice
+from linhai.utils import UiNotice
 
 
 class JsonRpcResponse(Dict[str, Any]):
@@ -119,7 +119,7 @@ class TrojanTransport:
             except Exception as e:
                 await self.registry.send_if_exists(
                     "ui_log",
-                    CliRuntimeNotice(
+                    UiNotice(
                         level="ERROR",
                         content=f"读取响应时出错: {e}",
                     ),
