@@ -1,6 +1,6 @@
 """Custom widgets for LinHai init TUI."""
 
-from textual.widgets import Input, Static, Button
+from textual.widgets import Input, Static, Button, Checkbox
 from textual.containers import Vertical, Horizontal
 
 
@@ -80,6 +80,14 @@ class ConfigForm(Static):
                 value="gpt-4o-mini",
                 id="input-model",
             )
+            yield Checkbox(
+                "初始化为猫娘",
+                value=False,
+                id="checkbox-cat-mode",
+            )
+
+    def get_cat_mode(self) -> bool:
+        return self.query_one("#checkbox-cat-mode", Checkbox).value
 
     def get_values(self) -> dict[str, str]:
         """Get all form values."""

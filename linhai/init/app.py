@@ -8,7 +8,7 @@ from textual.widgets import Static, Header, Footer
 from textual.reactive import reactive
 
 from .widgets import ConfigForm, ButtonBar
-from .config_writer import write_llm_config
+from .config_writer import write_llm_config, write_agents_md
 
 
 class InitApp(App):
@@ -162,6 +162,8 @@ Screen {
                 config_path=self.config_path,
                 overwrite=True,
             )
+            cat_mode = form.get_cat_mode()
+            write_agents_md(self.config_path.parent, cat_mode=cat_mode)
             self.status_message = f"配置已保存到 {self.config_path}"
             self.status_class = "status-success"
             self.exit(0)

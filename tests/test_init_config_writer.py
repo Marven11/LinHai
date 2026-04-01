@@ -8,7 +8,7 @@ import tomllib
 
 from unittest.mock import patch
 
-from linhai.init.config_writer import write_llm_config
+from linhai.init.config_writer import write_llm_config, write_agents_md
 
 
 class TestWriteLLMConfig(unittest.TestCase):
@@ -92,6 +92,35 @@ class TestConfigLoadable(unittest.TestCase):
             self.assertEqual(loaded_config.llm[0].base_url, "https://api.test.com/v1")
             self.assertEqual(loaded_config.llm[0].api_key, "test-key")
             self.assertEqual(loaded_config.llm[0].model, "test-model")
+
+
+class TestWriteAgentsMd(unittest.TestCase):
+
+    def test_write_agents_md_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            agents_path = write_agents_md(config_dir, cat_mode=False)
+            self.assertTrue(agents_path.exists())
+            self.assertEqual(agents_path, config_dir / "AGENTS.md")
+            content = agents_path.read_text()
+            self.assertIn("AI Agent", content)
+            self.assertNotIn("猫娘", content)
+
+    def test_write_agents_md_cat_mode(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            agents_path = write_agents_md(config_dir, cat_mode=True)
+            self.assertTrue(agents_path.exists())
+            content = agents_path.read_text()
+            self.assertIn("猫娘", content)
+
+    def test_write_agents_md_overwrite(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            write_agents_md(config_dir, cat_mode=False)
+            write_agents_md(config_dir, cat_mode=True)
+            content = (config_dir / "AGENTS.md").read_text()
+            self.assertIn("猫娘", content)
 
 
 class TestSandboxInit(unittest.TestCase):

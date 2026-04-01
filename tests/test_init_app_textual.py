@@ -2,7 +2,7 @@
 
 import unittest
 
-from textual.widgets import Button, Static
+from textual.widgets import Button, Static, Checkbox
 
 from linhai.init.app import InitApp
 from linhai.init.widgets import ButtonBar, LabeledInput
@@ -30,6 +30,14 @@ class TestInitAppWithPilot(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("Save", str(save_btn.label))
             self.assertIn("Cancel", str(cancel_btn.label))
+
+    async def test_checkbox_exists(self):
+        """Test that cat mode checkbox exists."""
+        app = InitApp()
+        async with app.run_test() as pilot:
+            checkbox = pilot.app.query_one("#checkbox-cat-mode", Checkbox)
+            self.assertIsNotNone(checkbox)
+            self.assertFalse(checkbox.value)
 
     async def test_save_button_triggers_validation(self):
         """Test that clicking Save button triggers form validation."""
