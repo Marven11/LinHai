@@ -92,6 +92,12 @@ class ContextTabWidget(Static):
     def compose(self) -> ComposeResult:
         with VerticalScroll():
             with Collapsible(
+                title="Token用量状态",
+                id="cumulative-token-collapsible",
+                collapsed=False,
+            ):
+                yield Static(id="cumulative-token-stats-text")
+            with Collapsible(
                 title="消息统计", id="msg-stats-collapsible", collapsed=False
             ):
                 yield Label("普通消息", classes="title")
@@ -239,8 +245,8 @@ class ContextTabWidget(Static):
         stats_text = self.query_one("#msg-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均Token数: "
-            + f"{avg_tokens:.1f}"
+            "平均长度: "
+            + f"{avg_tokens:.1f} token"
             + "\n"
             + self._format_longest_message(max_tokens_msg, max_tokens)
             + "\n"
@@ -267,7 +273,7 @@ class ContextTabWidget(Static):
         stats_text = self.query_one("#pinned-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均Token数: " + f"{avg_tokens:.1f}"
+            "平均长度: " + f"{avg_tokens:.1f} token"
         )
 
     def _update_notification_message_statistics(
@@ -287,8 +293,8 @@ class ContextTabWidget(Static):
         stats_text = self.query_one("#notification-stats-text", Static)
         stats_text.update(
             "总消息数: " + str(message_count) + "\n"
-            "消息平均Token数: "
-            + f"{avg_tokens:.1f}"
+            "平均长度: "
+            + f"{avg_tokens:.1f} token"
             + "\n"
             + self._format_longest_message(max_tokens_msg, max_tokens)
         )
@@ -370,9 +376,32 @@ class ContextTabWidget(Static):
         ]
         if cached > 0:
             lines.append(
-                f"当前消息估算缓存Token数: {cached} (~{cache_percentage:.1f}%)"
+                f"当前消息缓存状态（估算）: {cached} token ({cache_percentage:.1f}%)"
             )
         token_stats_text.update("\n".join(lines))
+
+    def _update_cumulative_token_usage(self) -> None:
+        cumulative_stats_text = self.query_one("#cumulative-token-stats-text", Static)
+
+        if not self.registry.has_member("token_manager"):
+            cumulative_stats_text.update("TokenManager未注册")
+            return
+
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        cumulative = token_manager.cumulative_token_usage
+
+        if cumulative is None:
+            cumulative_stats_text.update("暂无数据")
+            return
+
+        cumulative_stats_text.update(
+            f"累计Token用量: {cumulative['total_tokens']}\n"
+            f"累计输入Token用量: {cumulative['input_tokens']}\n"
+            f"累计输出Token用量: {cumulative['output_tokens']}\n"
+            f"缓存失效次数: {cumulative['cache_miss_count']}"
+        )
 
     def update_display(self) -> None:
         """Update the display with current context information."""
@@ -391,6 +420,7 @@ class ContextTabWidget(Static):
             entry["message"] for entry in agent_message.notification_messages.values()
         )
 
+        self._update_cumulative_token_usage()
         self._update_message_statistics(messages, len(orchestration.large_messages))
         self._update_pinned_message_statistics(pinned_messages)
         self._update_notification_message_statistics(notification_entries)

@@ -198,6 +198,7 @@ class TestContextTab(unittest.TestCase):
 
         from textual.widgets import ProgressBar, Sparkline, Static
 
+        mock_cumulative_stats_text = Mock(spec=Static)
         mock_sparkline = Mock(spec=Sparkline)
         mock_stats_text = Mock(spec=Static)
         mock_pinned_sparkline = Mock(spec=Sparkline)
@@ -211,6 +212,7 @@ class TestContextTab(unittest.TestCase):
 
         def _mock_query_one(selector, expect_type=None):
             mapping = {
+                "#cumulative-token-stats-text": mock_cumulative_stats_text,
                 "#msg-stats-sparkline": mock_sparkline,
                 "#msg-stats-text": mock_stats_text,
                 "#pinned-stats-sparkline": mock_pinned_sparkline,
@@ -241,14 +243,16 @@ class TestContextTab(unittest.TestCase):
 
         stats_call_args = mock_stats_text.update.call_args[0][0]
         self.assertIn("总消息数: 3", stats_call_args)
-        self.assertIn("消息平均Token数", stats_call_args)
+        self.assertIn("平均长度", stats_call_args)
+        self.assertNotIn("消息平均Token数", stats_call_args)
         self.assertIn("最长消息", stats_call_args)
         self.assertIn("大消息数量: 0", stats_call_args)
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
         self.assertIn("当前用量: 6000", token_stats_args)
         self.assertIn("Token限制: 128000", token_stats_args)
-        self.assertIn("当前消息估算缓存Token数", token_stats_args)
+        self.assertIn("当前消息缓存状态（估算）", token_stats_args)
+        self.assertNotIn("当前消息估算缓存Token数", token_stats_args)
 
     def test_update_token_usage_no_agent(self):
         """测试Agent未初始化时的token用量显示"""
@@ -470,6 +474,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("token_manager", mock_token_manager)
 
+        mock_cumulative_stats_text = Mock(spec=Static)
         mock_sparkline = Mock(spec=Sparkline)
         mock_stats_text = Mock(spec=Static)
         mock_pinned_sparkline = Mock(spec=Sparkline)
@@ -482,6 +487,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_cache_stats_text = Mock(spec=Static)
 
         mock_query_map = {
+            "#cumulative-token-stats-text": mock_cumulative_stats_text,
             "#msg-stats-sparkline": mock_sparkline,
             "#msg-stats-text": mock_stats_text,
             "#pinned-stats-sparkline": mock_pinned_sparkline,
@@ -532,7 +538,8 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
 
         text_arg = mock_pinned_text.update.call_args[0][0]
         self.assertIn("总消息数: 2", text_arg)
-        self.assertIn("消息平均Token数", text_arg)
+        self.assertIn("平均长度", text_arg)
+        self.assertNotIn("消息平均Token数", text_arg)
         self.assertNotIn("最长消息", text_arg)
         self.assertNotIn("大消息", text_arg)
 
@@ -553,7 +560,8 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
 
         text_arg = mock_notif_text.update.call_args[0][0]
         self.assertIn("总消息数: 2", text_arg)
-        self.assertIn("消息平均Token数", text_arg)
+        self.assertIn("平均长度", text_arg)
+        self.assertNotIn("消息平均Token数", text_arg)
         self.assertIn("最长消息", text_arg)
 
 

@@ -30,6 +30,8 @@ class TokenManager:
     def mark_dirty(self) -> None:
         """标记token用量为失效状态，由上下文清理工具调用"""
         self.is_dirty = True
+        if self.cumulative_token_usage is not None:
+            self.cumulative_token_usage["cache_miss_count"] += 1
 
     async def watch_token_usage_queue(self) -> None:
         """监听token_usage队列并处理token使用信息"""
@@ -68,6 +70,7 @@ class TokenManager:
                     else 0
                 ),
                 "message_count": 1,
+                "cache_miss_count": 0,
             }
         else:
             self.cumulative_token_usage["input_tokens"] += token_usage.input_tokens

@@ -29,6 +29,10 @@ class TestTokenManager(unittest.TestCase):
             "input_tokens": 100,
             "output_tokens": 50,
             "cached_input_tokens": 25,
+            "total_tokens": 150,
+            "cache_creation_input_tokens": 0,
+            "message_count": 1,
+            "cache_miss_count": 0,
         }
 
         # Call the method
