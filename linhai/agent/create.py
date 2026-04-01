@@ -330,7 +330,9 @@ async def create_agent_from_config(
         )
         plugin.register(agent.lifecycle)
 
-    _register_sandbox(context["config_basedir"], context["registry"], context["process_sandbox"])
+    _register_sandbox(
+        context["config_basedir"], context["registry"], context["process_sandbox"]
+    )
 
     _register_default_plugins(agent.lifecycle)
 
@@ -540,7 +542,9 @@ def _register_sandbox(
         if sandbox_profile.is_absolute():
             sandbox = MacOsSandbox(sandbox_profile)
         else:
-            assert basedir is not None, "Sandbox profile is relative when basedir is None"
+            assert (
+                basedir is not None
+            ), "Sandbox profile is relative when basedir is None"
             sandbox = MacOsSandbox(basedir / sandbox_config.sandbox_profile)
     else:
         rendered = [
@@ -576,6 +580,7 @@ def _register_default_plugins(lifecycle):
         VolcanoDeepseekFixPlugin,
         ProcessArgvCheckerPlugin,
         SudoStdioCheckerPlugin,
+        PythonCommentCheckerPlugin,
     )
     from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -604,6 +609,7 @@ def _register_default_plugins(lifecycle):
         ProcessArgvCheckerPlugin(lifecycle.registry),
         SudoStdioCheckerPlugin(lifecycle.registry),
         TodolistCheckerPlugin(lifecycle.registry),
+        PythonCommentCheckerPlugin(lifecycle.registry),
     ]
 
     for plugin in plugins:

@@ -46,6 +46,7 @@ from .afk_plugin import AfkPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
 from .planning import TodolistCheckerPlugin
 from .reminder import ReminderPlugin
+from .python_chore import PythonCommentCheckerPlugin
 
 from .helpers import (
     is_small_file,
@@ -93,4 +94,5 @@ __all__ = [
     "is_existing_file",
     "JsonValue",
     "READ_FILE_COMMANDS",
+    "PythonCommentCheckerPlugin",
 ]
