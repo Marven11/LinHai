@@ -43,6 +43,7 @@ from .security_config import (
 from .sudo_stdio_checker import SudoStdioCheckerPlugin
 
 from .afk_plugin import AfkPlugin
+from .claw import ClawHeartbeatPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
 from .planning import TodolistCheckerPlugin
 from .reminder import ReminderPlugin
@@ -85,6 +86,7 @@ __all__ = [
     "CommandWhitelistPlugin",
     "ProcessArgvCheckerPlugin",
     "AfkPlugin",
+    "ClawHeartbeatPlugin",
     "VolcanoDeepseekFixPlugin",
     "MachineControlIntroductionPlugin",
     "TodolistCheckerPlugin",

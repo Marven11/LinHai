@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
@@ -93,3 +94,31 @@ class ClawPlugin(Plugin):
     def register(self, lifecycle: Lifecycle):
         self.reminder_plugin.register(lifecycle)
         lifecycle.register_before_agent_loop(self.before_agent_loop)
+
+
+class ClawHeartbeatPlugin(Plugin):
+    """CLAW模式心跳插件：当agent等待用户超过10分钟时自动唤醒。"""
+
+    HEARTBEAT_INTERVAL = 600
+
+    async def before_waiting_user(self, agent: "linhai_agent") -> None:
+        from linhai.task_supervisor import TaskSupervisor
+
+        ts = self.registry.get_member_typechecked("task_supervisor", TaskSupervisor)
+        ts.create_supervised_task("claw_heartbeat", lambda: self._heartbeat(agent))
+
+    async def _heartbeat(self, agent: "linhai_agent") -> None:
+        await asyncio.sleep(self.HEARTBEAT_INTERVAL)
+        if agent.state != "waiting_user":
+            return
+        agent.state = "working"
+        await agent.message_processor.add_new_message(
+            RuntimeMessage(
+                "十分钟过去了，用户仍然没有回复。"
+                "你应该诚实地更新claw记忆等文档，记录当前状态，"
+                "重新诚实地反思用户交代的任务是否真正完成"
+            )
+        )
+
+    def register(self, lifecycle: Lifecycle) -> None:
+        lifecycle.register_before_waiting_user(self.before_waiting_user)

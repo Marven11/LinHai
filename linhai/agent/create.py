@@ -306,11 +306,12 @@ async def create_agent_from_config(
         PlanningInitOverridePlugin(context["registry"]).register(agent.lifecycle)
 
     if context["claw_enabled"]:
-        from linhai.plugin.claw import ClawPlugin
+        from linhai.plugin.claw import ClawPlugin, ClawHeartbeatPlugin
 
         ClawPlugin(context["registry"], context["claw_folder"]).register(
             agent.lifecycle
         )
+        ClawHeartbeatPlugin(context["registry"]).register(agent.lifecycle)
 
     if context["afk"]:
         from linhai.plugin import AfkPlugin
