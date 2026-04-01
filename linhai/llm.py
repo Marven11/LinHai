@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import (
+    Any,
     Sequence,
     Protocol,
     AsyncIterator,
@@ -341,6 +342,55 @@ class AnswerTokenUsage(BaseModel):
     cache_creation_input_tokens: int | None = None
 
 
+def extract_usage(usage_dict: dict[str, Any]) -> AnswerTokenUsage | None:
+    prompt_tokens = usage_dict.get("prompt_tokens")
+    completion_tokens = usage_dict.get("completion_tokens")
+    total_tokens = usage_dict.get("total_tokens")
+    if prompt_tokens is None or completion_tokens is None or total_tokens is None:
+        return None
+    if "prompt_cache_hit_tokens" in usage_dict:
+        return AnswerTokenUsage(
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            cached_input_tokens=usage_dict["prompt_cache_hit_tokens"],
+            cache_creation_input_tokens=None,
+        )
+    if "cached_tokens" in usage_dict:
+        return AnswerTokenUsage(
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            cached_input_tokens=usage_dict["cached_tokens"],
+            cache_creation_input_tokens=None,
+        )
+    prompt_tokens_details = usage_dict.get("prompt_tokens_details")
+    if prompt_tokens_details is not None:
+        details_dict = (
+            prompt_tokens_details
+            if isinstance(prompt_tokens_details, dict)
+            else prompt_tokens_details.__dict__
+        )
+        if "cached_tokens" in details_dict:
+            cache_creation = details_dict.get("cache_creation_input_tokens")
+            if cache_creation is None:
+                cache_creation = details_dict.get("cache_write_tokens")
+            return AnswerTokenUsage(
+                input_tokens=prompt_tokens,
+                output_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                cached_input_tokens=details_dict["cached_tokens"],
+                cache_creation_input_tokens=cache_creation,
+            )
+    return AnswerTokenUsage(
+        input_tokens=prompt_tokens,
+        output_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        cached_input_tokens=None,
+        cache_creation_input_tokens=None,
+    )
+
+
 @runtime_checkable
 class Answer(Protocol):
     """
@@ -488,43 +538,25 @@ class OpenAiAnswer:
                 raise StopAsyncIteration
 
             if hasattr(chunk, "usage") and chunk.usage:
-                usage = chunk.usage
-                usage_dict = usage.__dict__
-
-                self.input_tokens = usage_dict.get("prompt_tokens", 0)
-
-                prompt_tokens_details = usage_dict.get("prompt_tokens_details")
-                if prompt_tokens_details:
-                    details_dict = prompt_tokens_details.__dict__
-                    cached_input_tokens = details_dict.get("cached_tokens")
-                    cache_creation_input_tokens = details_dict.get(
-                        "cache_creation_input_tokens"
+                usage_result = extract_usage(chunk.usage.__dict__)
+                if usage_result is not None:
+                    self.input_tokens = usage_result.input_tokens
+                    self.output_tokens = usage_result.output_tokens
+                    self.total_tokens = usage_result.total_tokens
+                    if usage_result.cached_input_tokens is not None:
+                        self.cached_input_tokens = usage_result.cached_input_tokens
+                    if self.llm_instance is not None and self.input_tokens > 0:
+                        self.llm_instance.previous_input_tokens = self.input_tokens
+                    await self.registry.send(
+                        "token_usage",
+                        AnswerTokenUsage(
+                            input_tokens=self.input_tokens,
+                            output_tokens=self.output_tokens,
+                            total_tokens=self.total_tokens,
+                            cached_input_tokens=self.cached_input_tokens,
+                            cache_creation_input_tokens=usage_result.cache_creation_input_tokens,
+                        ),
                     )
-                    if cache_creation_input_tokens is None:
-                        cache_creation_input_tokens = details_dict.get(
-                            "cache_write_tokens"
-                        )
-                else:
-                    cached_input_tokens = None
-                    cache_creation_input_tokens = None
-                if cached_input_tokens:
-                    self.cached_input_tokens = cached_input_tokens
-
-                self.output_tokens = usage_dict.get("completion_tokens", 0)
-                self.total_tokens = usage_dict.get("total_tokens", 0)
-                if self.llm_instance is not None and self.input_tokens > 0:
-                    self.llm_instance.previous_input_tokens = self.input_tokens
-                # Send token usage directly to CLI queue instead of through agent
-                await self.registry.send(
-                    "token_usage",
-                    AnswerTokenUsage(
-                        input_tokens=self.input_tokens,
-                        output_tokens=self.output_tokens,
-                        total_tokens=self.total_tokens,
-                        cached_input_tokens=self.cached_input_tokens,
-                        cache_creation_input_tokens=cache_creation_input_tokens,
-                    ),
-                )
             if len(chunk.choices) == 0:
                 return
             delta = chunk.choices[0].delta
@@ -646,18 +678,20 @@ class MinimaxAnswer:
         self.tokens = []
         self.interrupted = False
         self.truncated = False
-        if usage:
-            usage_dict = usage.__dict__
-            self.total_tokens = usage_dict.get("total_tokens", 0)
-            self.input_tokens = usage_dict.get("prompt_tokens", 0)
-            self.output_tokens = usage_dict.get("completion_tokens", 0)
-        else:
-            self.total_tokens = 0
-            self.input_tokens = 0
-            self.output_tokens = 0
+        self.total_tokens = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
         self.registry = registry
         self.cached_input_tokens = cached_input_tokens
         self.llm_instance = llm_instance
+        if usage:
+            usage_result = extract_usage(usage.__dict__)
+            if usage_result is not None:
+                self.total_tokens = usage_result.total_tokens
+                self.input_tokens = usage_result.input_tokens
+                self.output_tokens = usage_result.output_tokens
+                if usage_result.cached_input_tokens is not None:
+                    self.cached_input_tokens = usage_result.cached_input_tokens
         self.toyield: list[AnswerToken] = []
 
         # 如果llm_instance存在，更新previous_input_tokens
@@ -910,15 +944,21 @@ class OpenAi:
             response = await self.openai.chat.completions.create(**params)
             usage = response.__dict__.get("usage", None)
             if usage:
-                await self.registry.send(
-                    "token_usage",
-                    AnswerTokenUsage(
-                        input_tokens=usage.__dict__.get("prompt_tokens", 0),
-                        output_tokens=usage.__dict__.get("completion_tokens", 0),
-                        total_tokens=usage.__dict__.get("total_tokens", 0),
-                        cached_input_tokens=estimated_cached_input_tokens,
-                    ),
-                )
+                usage_result = extract_usage(usage.__dict__)
+                if usage_result is not None:
+                    cached = usage_result.cached_input_tokens
+                    if cached is None:
+                        cached = estimated_cached_input_tokens
+                    await self.registry.send(
+                        "token_usage",
+                        AnswerTokenUsage(
+                            input_tokens=usage_result.input_tokens,
+                            output_tokens=usage_result.output_tokens,
+                            total_tokens=usage_result.total_tokens,
+                            cached_input_tokens=cached,
+                            cache_creation_input_tokens=usage_result.cache_creation_input_tokens,
+                        ),
+                    )
             answer = MinimaxAnswer(
                 response,
                 registry=self.registry,
