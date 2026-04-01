@@ -92,12 +92,6 @@ class ContextTabWidget(Static):
     def compose(self) -> ComposeResult:
         with VerticalScroll():
             with Collapsible(
-                title="Token用量状态",
-                id="cumulative-token-collapsible",
-                collapsed=False,
-            ):
-                yield Static(id="cumulative-token-stats-text")
-            with Collapsible(
                 title="消息统计", id="msg-stats-collapsible", collapsed=False
             ):
                 yield Label("普通消息", classes="title")
@@ -121,6 +115,12 @@ class ContextTabWidget(Static):
             ):
                 yield ProgressBar(id="pb-cache-ratio", show_eta=False)
                 yield Static(id="cache-stats-text")
+            with Collapsible(
+                title="Token用量状态",
+                id="cumulative-token-collapsible",
+                collapsed=False,
+            ):
+                yield Static(id="cumulative-token-stats-text")
 
     def on_mount(self) -> None:
         """Start periodic refresh."""
