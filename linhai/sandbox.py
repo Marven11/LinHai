@@ -14,23 +14,42 @@ class NoSandbox:
         return list(argv)
 
 
-DEFAULT_MACOS_PROFILE_TEMPLATE = """(version 1)
+DEFAULT_MACOS_PROFILE_TEMPLATE = """
+(version 1)
+
+;; files
 
 (deny file-write*)
 
 (allow file-write* (subpath "{pwd}"))
 (allow file-write* (subpath "{home}/.cache"))
 (allow file-write* (subpath "{home}/.local/share/linhai"))
+(allow file-write* (subpath "/private/tmp"))
 (allow file-write* (subpath "/tmp"))
 
 (allow file-read*)
 
+;; process
+
 (allow process-fork)
 (allow process-exec)
+
+;; network
+
+(allow network-outbound)
+
+;; terminal support
+
+(allow pseudo-tty)
+(allow signal)
+(allow file-ioctl (literal "/dev/ptmx"))
+
+;; others
 
 (allow sysctl-read)
 
 (allow file-read* (subpath "/dev"))
+(allow file-write* (subpath "/dev"))
 
 (allow mach-lookup)
 """

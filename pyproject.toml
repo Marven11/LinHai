@@ -31,7 +31,6 @@ dependencies = [
     "feedparser",
     "python-telegram-bot>=22.7",
     "quickjs-ng",
-    "jinja2>=3.1.6",
 ]
 requires-python = ">=3.10"
 

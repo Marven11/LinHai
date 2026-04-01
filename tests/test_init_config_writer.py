@@ -187,10 +187,8 @@ class TestSandboxInit(unittest.TestCase):
                 model="test-model",
                 config_path=config_path,
             )
-            profile_path = Path(tmpdir) / "sandbox_profile.sb"
+            profile_path = Path(tmpdir) / "sandbox_profile.template.sb"
             self.assertTrue(profile_path.exists())
-            content = profile_path.read_text()
-            self.assertIn("/workdir", content)
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
             sandbox = config["agent"][0]["process_sandbox"]["macos_sandbox"]

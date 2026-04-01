@@ -112,12 +112,8 @@ def _generate_fhs_bwrap_argv() -> list[str]:
 def _generate_sandbox_config(config_dir: Path) -> dict | None:
     system = platform.system()
     if system == "Darwin":
-        profile_path = config_dir / "sandbox_profile.sb"
-        rendered = DEFAULT_MACOS_PROFILE_TEMPLATE.format(
-            pwd=os.getcwd(),
-            home=str(Path.home()),
-        )
-        profile_path.write_text(rendered)
+        profile_path = config_dir / "sandbox_profile.template.sb"
+        profile_path.write_text(DEFAULT_MACOS_PROFILE_TEMPLATE)
         return {"macos_sandbox": {"sandbox_profile": str(profile_path)}}
     if system == "Linux" and shutil.which("bwrap") is not None:
         if Path("/etc/NIXOS").exists():

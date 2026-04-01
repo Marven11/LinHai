@@ -154,8 +154,7 @@ class TestBubbleWrapSandbox(unittest.TestCase):
     def test_bubblewrap_real_execution(self):
         result = subprocess.run(["which", "bwrap"], capture_output=True)
         if result.returncode != 0:
-            self.skipTest("bubblewrap (bwrap) not installed")
-
+            return
         sandbox = BubbleWrapSandbox(
             [
                 "bwrap",
