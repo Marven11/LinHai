@@ -1,8 +1,7 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
-import tiktoken
 import time
-from typing import TYPE_CHECKING, cast, Any
+from typing import TYPE_CHECKING, cast
 from pathlib import Path
 from linhai.tool.base import (
     ToolSet,
@@ -10,6 +9,7 @@ from linhai.tool.base import (
     ToolCallResultMessage,
     ToolResultFailed,
 )
+from linhai.tokenizer import get_cl100k_base_tokenizer
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
 from linhai.utils import CliRuntimeNotice
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .main import Agent
 
 
-def _extract_text_content(content: Any) -> str:
+def _extract_text_content(content: str | list) -> str:
     """从可能是字符串或列表的内容中提取纯文本。
 
     处理OpenAI API返回的多模态内容，将列表格式的内容转换为纯文本。
@@ -194,7 +194,7 @@ class AgentToolcall:
         long_toolcall_dir = conversation_dir / "long_toolcall"
         long_toolcall_dir.mkdir(exist_ok=True)
 
-        tokenizer = tiktoken.get_encoding("cl100k_base")
+        tokenizer = get_cl100k_base_tokenizer()
         tokens = tokenizer.encode(result_content, disallowed_special=())
         parts = []
         total_tokens = len(tokens)
@@ -352,8 +352,12 @@ class AgentToolcall:
         else:
             result_content = str(tool_result)
 
-        tokenizer = tiktoken.get_encoding("cl100k_base")
-        token_count = len(tokenizer.encode(_extract_text_content(result_content), disallowed_special=()))
+        tokenizer = get_cl100k_base_tokenizer()
+        token_count = len(
+            tokenizer.encode(
+                _extract_text_content(result_content), disallowed_special=()
+            )
+        )
 
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:

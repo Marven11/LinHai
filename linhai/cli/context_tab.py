@@ -4,7 +4,6 @@ from functools import lru_cache
 from math import log2
 from typing import Optional, TypedDict
 
-import tiktoken
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Collapsible, Label, ProgressBar, Sparkline, Static
@@ -25,20 +24,12 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
 from linhai.token_manager import TokenManager
-
-_tokenizer: tiktoken.Encoding | None = None
-
-
-def _get_tokenizer() -> tiktoken.Encoding:
-    global _tokenizer
-    if _tokenizer is None:
-        _tokenizer = tiktoken.get_encoding("cl100k_base")
-    return _tokenizer
+from linhai.tokenizer import get_cl100k_base_tokenizer
 
 
 @lru_cache(maxsize=1000)
 def _count_tokens_cached(text: str) -> int:
-    return len(_get_tokenizer().encode(text, disallowed_special=()))
+    return len(get_cl100k_base_tokenizer().encode(text, disallowed_special=()))
 
 
 class MessageTypeCounts(TypedDict):

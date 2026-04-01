@@ -3,7 +3,6 @@
 """
 
 from __future__ import annotations
-import tiktoken
 import random
 from pathlib import Path
 import time
@@ -19,6 +18,7 @@ from .lifecycle import Lifecycle
 from linhai.llm import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
+from linhai.tokenizer import get_cl100k_base_tokenizer
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils import CliRuntimeNotice
@@ -98,7 +98,7 @@ class AgentContextOrchestration:
 
         self.large_messages: set[Message] = set()
         self.cleaned_messages: dict[str, float] = {}
-        self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        self.tokenizer = get_cl100k_base_tokenizer()
         self.consecutive_red_block_count: int = 0
 
         self._register_lifecycle_callbacks()
