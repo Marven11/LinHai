@@ -143,9 +143,13 @@ class TestSandboxInit(unittest.TestCase):
             )
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
-            argv = config["agent"][0]["process_sandbox"]["bubblewrap"]["argv"]
-            self.assertEqual(argv[0], "bwrap")
-            self.assertIn("/nix", argv)
+            argv_template = config["agent"][0]["process_sandbox"]["bubblewrap"][
+                "argv_template"
+            ]
+            self.assertEqual(argv_template[0], "bwrap")
+            self.assertIn("/nix", argv_template)
+            self.assertIn("{pwd}", argv_template)
+            self.assertIn("--", argv_template)
 
     @patch("linhai.init.config_writer.platform.system", return_value="Linux")
     @patch("linhai.init.config_writer.shutil.which", return_value="/usr/bin/bwrap")
@@ -162,10 +166,14 @@ class TestSandboxInit(unittest.TestCase):
             )
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
-            argv = config["agent"][0]["process_sandbox"]["bubblewrap"]["argv"]
-            self.assertEqual(argv[0], "bwrap")
-            self.assertIn("/usr", argv)
-            self.assertNotIn("/nix", argv)
+            argv_template = config["agent"][0]["process_sandbox"]["bubblewrap"][
+                "argv_template"
+            ]
+            self.assertEqual(argv_template[0], "bwrap")
+            self.assertIn("/usr", argv_template)
+            self.assertNotIn("/nix", argv_template)
+            self.assertIn("{pwd}", argv_template)
+            self.assertIn("--", argv_template)
 
     @patch("linhai.init.config_writer.platform.system", return_value="Darwin")
     @patch("os.getcwd", return_value="/workdir")

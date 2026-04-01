@@ -22,8 +22,6 @@ def remove_none_values(obj):
 
 
 def _generate_nixos_bwrap_argv() -> list[str]:
-    pwd = os.getcwd()
-    home = str(Path.home())
     return [
         "bwrap",
         "--ro-bind",
@@ -35,33 +33,39 @@ def _generate_nixos_bwrap_argv() -> list[str]:
         "--ro-bind",
         "/run",
         "/run",
+        "--symlink",
+        "/usr/bin",
+        "/usr/bin",
+        "--symlink",
+        "/usr/lib",
+        "/usr/lib",
+        "--symlink",
+        "/usr/lib64",
+        "/usr/lib64",
         "--proc",
         "/proc",
         "--dev",
         "/dev",
         "--bind",
-        pwd,
-        pwd,
+        "{pwd}",
+        "{pwd}",
         "--bind",
-        f"{home}/.cache",
-        f"{home}/.cache",
+        "{home}/.cache",
+        "{home}/.cache",
         "--bind",
-        f"{home}/.local/share/linhai",
-        f"{home}/.local/share/linhai",
+        "{home}/.local/share/linhai",
+        "{home}/.local/share/linhai",
         "--bind",
         "/tmp",
         "/tmp",
-        "--chdir",
-        pwd,
         "--unshare-all",
         "--new-session",
         "--share-net",
+        "--",
     ]
 
 
 def _generate_fhs_bwrap_argv() -> list[str]:
-    pwd = os.getcwd()
-    home = str(Path.home())
     return [
         "bwrap",
         "--ro-bind",
@@ -84,25 +88,24 @@ def _generate_fhs_bwrap_argv() -> list[str]:
         "--dev",
         "/dev",
         "--bind",
-        pwd,
-        pwd,
+        "{pwd}",
+        "{pwd}",
         "--bind",
-        f"{home}/.cache",
-        f"{home}/.cache",
+        "{home}/.cache",
+        "{home}/.cache",
         "--bind",
-        f"{home}/.local/share/linhai",
-        f"{home}/.local/share/linhai",
+        "{home}/.local/share/linhai",
+        "{home}/.local/share/linhai",
         "--bind",
         "/tmp",
         "/tmp",
         "--bind",
         "/var",
         "/var",
-        "--chdir",
-        pwd,
         "--unshare-all",
         "--new-session",
         "--share-net",
+        "--",
     ]
 
 
@@ -121,7 +124,7 @@ def _generate_sandbox_config(config_dir: Path) -> dict | None:
             argv = _generate_nixos_bwrap_argv()
         else:
             argv = _generate_fhs_bwrap_argv()
-        return {"bubblewrap": {"argv": argv}}
+        return {"bubblewrap": {"argv_template": argv}}
     return None
 
 
