@@ -29,18 +29,6 @@ class ReminderPlugin(Plugin):
                 RuntimeMessage(content), source="reminder", sort_value=1000
             )
 
-        if self.soul_file.exists():
-            content = self.soul_file.read_text(encoding="utf-8").strip()
-            agent.message_processor.update_notification_message(
-                FileContentMessage(
-                    filepath=str(self.soul_file),
-                    content=content,
-                    show_line_numbers=False,
-                ),
-                source="soul",
-                sort_value=2000,
-            )
-
     def register(self, lifecycle: Lifecycle):
         """注册到before_message_generation回调。"""
         lifecycle.register_before_message_generation(self.before_message_generation)
