@@ -375,9 +375,16 @@ class ContextTabWidget(Static):
 
         cached, cache_percentage = self._get_token_cache_info(int(used))
 
+        if self.registry.has_member("token_manager"):
+            tm = self.registry.get_member_typechecked("token_manager", TokenManager)
+            generation_line = f"回答生成次数: {tm.generation_count}"
+        else:
+            generation_line = "回答生成次数: 不可用"
+
         lines = [
             f"当前用量: {used}",
             f"Token限制: {token_limit}",
+            generation_line,
         ]
         if cached > 0:
             lines.append(

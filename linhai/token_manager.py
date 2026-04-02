@@ -22,6 +22,7 @@ class TokenManager:
         self.cumulative_token_usage: Optional[CumulativeTokenUsage] = None
         self.explicit_cache_tokens: int = 0
         self.is_dirty: bool = False
+        self.generation_count: int = 0
 
     @property
     def current_token_usage(self) -> Optional[AnswerTokenUsage]:
@@ -45,8 +46,15 @@ class TokenManager:
                     f"Unknown Type in token_usage: {type(output)=} {output=}"
                 )
 
+    async def _on_before_message_generation(self) -> None:
+        self.generation_count += 1
+
     def start_watching(self) -> None:
         from linhai.task_supervisor import TaskSupervisor
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle.register_before_message_generation(self._on_before_message_generation)
 
         task_supervisor = self.registry.get_member_typechecked(
             "task_supervisor", TaskSupervisor

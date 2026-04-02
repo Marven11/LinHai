@@ -98,6 +98,7 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
+        mock_token_manager.generation_count = 0
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -176,6 +177,7 @@ class TestContextTab(unittest.TestCase):
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
+        mock_token_manager.generation_count = 0
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
@@ -335,6 +337,7 @@ class TestContextTab(unittest.TestCase):
         )
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_manager.generation_count = 0
         registry.register_member("token_manager", mock_token_manager)
 
         widget = ContextTabWidget(registry)
@@ -391,6 +394,7 @@ class TestContextTab(unittest.TestCase):
         )
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
+        mock_token_manager.generation_count = 0
         registry.register_member("token_manager", mock_token_manager)
 
         widget = ContextTabWidget(registry)
@@ -468,6 +472,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_token_manager = Mock(spec=TokenManager)
         mock_token_manager.current_token_usage = mock_token_usage
         mock_token_manager.cumulative_token_usage = None
+        mock_token_manager.generation_count = 0
 
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
