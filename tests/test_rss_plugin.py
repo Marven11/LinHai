@@ -180,6 +180,85 @@ class TestRssPlugin(unittest.TestCase):
 
         self.task_supervisor.create_supervised_task.assert_not_called()
 
+    def test_fetch_and_process_rss_interrupts_agent(self):
+        """测试RSS新消息会打断agent的sleeping状态。"""
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
+
+        self.agent.state = "sleeping"
+        self.agent.sleeping_since = "fake"
+        self.agent.sleeping_deadline = "fake"
+        self.agent.interrupt_to_working = Mock()
+
+        mock_response = Mock()
+        mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
+        mock_response.raise_for_status = Mock()
+
+        with patch("linhai.rss.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get.return_value = mock_response
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            asyncio.run(
+                plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            )
+
+            self.agent.interrupt_to_working.assert_called_once()
+
+    def test_fetch_and_process_rss_no_interrupt_without_new_messages(self):
+        """测试无新RSS消息时不打断agent。"""
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
+        plugin.processed_guids.add("guid-1")
+        plugin.processed_guids.add("guid-2")
+
+        self.agent.interrupt_to_working = Mock()
+
+        mock_response = Mock()
+        mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
+        mock_response.raise_for_status = Mock()
+
+        with patch("linhai.rss.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get.return_value = mock_response
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            asyncio.run(
+                plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
+            )
+
+            self.agent.interrupt_to_working.assert_not_called()
+
+    def test_fetch_and_process_rss_no_interrupt_when_not_sending(self):
+        """测试send_to_agent=False时不打断agent。"""
+        plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
+
+        self.agent.interrupt_to_working = Mock()
+
+        mock_response = Mock()
+        mock_response.text = TEST_RSS_XML
+        mock_response.status_code = 200
+        mock_response.raise_for_status = Mock()
+
+        with patch("linhai.rss.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get.return_value = mock_response
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            asyncio.run(
+                plugin._fetch_and_process_rss(
+                    "http://example.com/feed", self.agent, send_to_agent=False
+                )
+            )
+
+            self.agent.interrupt_to_working.assert_not_called()
+
     def test_register(self):
         """测试注册到Lifecycle。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)

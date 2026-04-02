@@ -175,6 +175,8 @@ class RssPlugin:
             self.processed_guids.add(msg.guid)
             if send_to_agent:
                 await agent.message_processor.add_new_message(msg)
+        if send_to_agent and new_messages:
+            agent.interrupt_to_working()
 
     async def _initialize_processed_guids(self):
         """初始化时获取所有已存在的RSS消息的guid，不发送给agent。"""

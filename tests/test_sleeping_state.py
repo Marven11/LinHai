@@ -140,6 +140,36 @@ class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_count, 1)
 
 
+class TestInterruptToWorking(unittest.IsolatedAsyncioTestCase):
+    async def test_interrupt_from_sleeping(self):
+        agent = _create_agent()
+        agent.state = "sleeping"
+        agent.sleeping_since = datetime.now()
+        agent.sleeping_deadline = datetime.now() + timedelta(seconds=100)
+
+        agent.interrupt_to_working()
+
+        self.assertEqual(agent.state, "working")
+        self.assertIsNone(agent.sleeping_since)
+        self.assertIsNone(agent.sleeping_deadline)
+
+    async def test_interrupt_from_waiting_user(self):
+        agent = _create_agent()
+        agent.state = "waiting_user"
+
+        agent.interrupt_to_working()
+
+        self.assertEqual(agent.state, "working")
+
+    async def test_interrupt_from_working_is_idempotent(self):
+        agent = _create_agent()
+        agent.state = "working"
+
+        agent.interrupt_to_working()
+
+        self.assertEqual(agent.state, "working")
+
+
 class TestAgentStateType(unittest.TestCase):
     def test_sleeping_is_valid_state(self):
         from linhai.type_hints import AgentState

@@ -86,6 +86,17 @@ class Agent:
 
         self.lifecycle.register_after_token_generation(self.after_token_generation)
 
+    def interrupt_to_working(self) -> None:
+        """打断当前状态，将Agent切换到working状态。
+
+        用于RSS等异步消息源需要在agent处于sleeping/waiting_user时
+        打断agent并让其处理新消息。
+        """
+        if self.state == "sleeping":
+            self.sleeping_since = None
+            self.sleeping_deadline = None
+        self.state = "working"
+
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
 
