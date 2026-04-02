@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Union, Optional, Iterable, TypedDict, Literal
 from typing_extensions import Required, TypeAlias, NotRequired
 
-AgentState = Literal["waiting_user", "working"]
+AgentState = Literal["waiting_user", "working", "sleeping"]
 
 
 class ChatCompletionContentPartTextParam(TypedDict):

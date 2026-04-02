@@ -1,5 +1,6 @@
 """Agent核心模块，负责处理消息、调用工具和管理状态。"""
 
+from datetime import datetime
 from typing import (
     Sequence,
 )
@@ -26,6 +27,11 @@ from linhai.llm import (
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.type_hints import AgentState, ThresholdInfo
+from linhai.tool.base import (
+    ToolArgInfo,
+    ToolSet,
+    ToolResultSuccess,
+)
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
 from linhai.utils.input_parser import parse_user_input
@@ -53,6 +59,8 @@ class Agent:
         self.mcp_connector: MCPConnector | None = None
 
         self.state: AgentState = "waiting_user"
+        self.sleeping_since: datetime | None = None
+        self.sleeping_deadline: datetime | None = None
 
         self.lifecycle = Lifecycle(registry)
         self.message_processor = AgentMessage(registry, pinned_messages)
@@ -170,6 +178,42 @@ class Agent:
         await self.receive_one_user_message()
 
         await self.generate_response()
+
+    async def state_sleeping(self):
+        """处理睡眠状态。
+
+        在这个状态下，Agent每秒检查是否到达截止时间或有新用户消息，
+        满足任一条件则退出sleeping状态。
+        """
+        assert self.sleeping_since is not None
+        assert self.sleeping_deadline is not None
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(level="INFO", content="Agent开始睡眠"),
+        )
+
+        while True:
+            now = datetime.now()
+            if now >= self.sleeping_deadline:
+                break
+            if self.state != "sleeping":
+                return
+            remaining = (self.sleeping_deadline - now).total_seconds()
+            sleep_time = min(1.0, remaining)
+            await asyncio.sleep(sleep_time)
+
+        since = self.sleeping_since
+        deadline = self.sleeping_deadline
+        elapsed = (datetime.now() - since).total_seconds()
+
+        self.sleeping_since = None
+        self.sleeping_deadline = None
+        self.state = "working"
+
+        result_msg = f"睡眠完成，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+        await self.message_processor.add_new_message(RuntimeMessage(result_msg))
 
     async def state_working(self):
         """
@@ -322,6 +366,29 @@ class Agent:
         llm_name = current_llm.get_name()
         return llm_name, llm_instance
 
+    def generate_sleep_toolset(self) -> ToolSet:
+        from datetime import timedelta
+
+        agent = self
+        sleep_toolset = ToolSet()
+
+        @sleep_toolset.register_tool(
+            name="sleep",
+            desc="睡眠X秒，返回开始和结束时间",
+            args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
+            required_args=["seconds"],
+        )
+        async def sleep_tool(seconds: float) -> ToolResultSuccess:
+            start = datetime.now()
+            agent.sleeping_since = start
+            agent.sleeping_deadline = start + timedelta(seconds=seconds)
+            agent.state = "sleeping"
+            return ToolResultSuccess(
+                content=f"开始睡眠{seconds}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+        return sleep_toolset
+
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。
@@ -345,6 +412,8 @@ class Agent:
                     await self.state_waiting_user()
                 elif self.state == "working":
                     await self.state_working()
+                elif self.state == "sleeping":
+                    await self.state_sleeping()
                 else:
 
                     break

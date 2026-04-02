@@ -257,6 +257,8 @@ async def create_agent_from_config(
         tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
     if "llm" in enabled_toolsets:
         tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
+    if "sleep" in enabled_toolsets:
+        tool_manager.add_toolset(agent.generate_sleep_toolset())
     if machine_control is not None:
         machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
@@ -391,7 +393,6 @@ def _build_toolsets_from_config(
 ) -> Tuple[list, Optional["MachineControl"]]:
     """根据配置构建toolsets列表"""
     from linhai.machine_control.main import register_machine_control_tools
-    from linhai.tool.general import generate_sleep_toolset
 
     registry = context["registry"]
     toolsets_config = context["toolsets_config"]
@@ -409,9 +410,6 @@ def _build_toolsets_from_config(
 
     if "utils" in enabled_toolsets:
         toolsets.append(utils_tools)
-
-    if "sleep" in enabled_toolsets:
-        toolsets.append(generate_sleep_toolset(registry))
 
     if "machine_control" in enabled_toolsets:
         from linhai.machine_control import MachineControl
