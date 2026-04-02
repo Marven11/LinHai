@@ -62,8 +62,13 @@ class ContextTabWidget(Static):
         text-style: bold;
     }
 
-    ContextTabWidget #token-usage-collapsible {
-        height: auto;
+    ContextTabWidget Collapsible {
+        padding-right: 3;
+        padding-bottom: 1;
+    }
+
+    ContextTabWidget Sparkline {
+        margin-bottom: 1;
     }
 
     ContextTabWidget .token-usage-label {
@@ -103,7 +108,7 @@ class ContextTabWidget(Static):
                 yield Label("通知消息", classes="title")
                 yield Static(id="notification-stats-text")
             with Collapsible(
-                title="上下文Token用量", id="token-usage-collapsible", collapsed=False
+                title="上下文占用", id="token-usage-collapsible", collapsed=False
             ):
                 yield Label("相对硬限制", classes="token-usage-label")
                 yield ProgressBar(id="pb-hard-limit", show_eta=False)
