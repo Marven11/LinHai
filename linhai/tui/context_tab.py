@@ -238,7 +238,7 @@ class ContextTabWidget(Static):
     ) -> None:
         sparkline = self.query_one("#msg-stats-sparkline", Sparkline)
         sparkline.data = [
-            float(log2(self._estimate_message_tokens(msg))) for msg in messages
+            float(log2(self._estimate_message_tokens(msg) + 1)) for msg in messages
         ]
 
         message_count = len(messages)
@@ -261,7 +261,7 @@ class ContextTabWidget(Static):
     def _update_pinned_message_statistics(self, pinned_messages: list[Message]) -> None:
         sparkline = self.query_one("#pinned-stats-sparkline", Sparkline)
         sparkline.data = [
-            float(log2(self._estimate_message_tokens(msg))) for msg in pinned_messages
+            float(log2(self._estimate_message_tokens(msg) + 1 )) for msg in pinned_messages
         ]
 
         message_count = len(pinned_messages)
