@@ -6,7 +6,7 @@ from linhai.parsed_message import ParsedAnswer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage
 
 if TYPE_CHECKING:

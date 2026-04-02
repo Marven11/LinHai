@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from .transport import TrojanTransport
 
 
@@ -46,9 +46,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(
-                    level="ERROR", content=f"检查远程Python版本失败: {error_msg}"
-                ),
+                UiNotice(level="ERROR", content=f"检查远程Python版本失败: {error_msg}"),
             )
             return False
         return True
@@ -72,9 +70,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(
-                    level="ERROR", content=f"创建远程临时文件失败: {error_msg}"
-                ),
+                UiNotice(level="ERROR", content=f"创建远程临时文件失败: {error_msg}"),
             )
             raise RuntimeError(f"创建远程临时文件失败: {error_msg}")
 
@@ -94,9 +90,7 @@ class SshTrojanTransport:
             error_msg = stderr.decode()
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(
-                    level="ERROR", content=f"写入远程文件失败: {error_msg}"
-                ),
+                UiNotice(level="ERROR", content=f"写入远程文件失败: {error_msg}"),
             )
             cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
             cleanup_process = await asyncio.create_subprocess_exec(

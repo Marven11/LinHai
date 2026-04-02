@@ -27,8 +27,8 @@ from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.type_hints import AgentState, ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.utils import UiNotice
-from linhai.input_parser import parse_user_input
+from linhai.utils.common import UiNotice
+from linhai.utils.input_parser import parse_user_input
 
 
 class Agent:
@@ -204,7 +204,7 @@ class Agent:
 
         content = msg.message.strip()
 
-        from linhai.tui.command_handler import CommandHandler
+        from linhai.utils.command_handler import CommandHandler
 
         handler = CommandHandler(self.registry)
         handled, should_interrupt = await handler.handle_command(content)

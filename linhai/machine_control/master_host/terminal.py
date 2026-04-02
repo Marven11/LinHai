@@ -9,7 +9,7 @@ from typing import List
 
 import pyte
 
-from linhai.utils import generate_id
+from linhai.utils.common import generate_id
 
 terminals = {}
 

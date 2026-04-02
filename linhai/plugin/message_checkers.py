@@ -16,7 +16,7 @@ from linhai.agent.base import (
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.llm import Answer, AssistantMessage, OpenAi, Message
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 from .helpers import JsonValue
 
@@ -236,9 +236,7 @@ class OnlyReasoningPlugin(Plugin):
             )
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(
-                    level="WARNING", content="模型只思考不输出，已提醒模型"
-                ),
+                UiNotice(level="WARNING", content="模型只思考不输出，已提醒模型"),
             )
         else:
             agent.message_processor.update_notification_message(

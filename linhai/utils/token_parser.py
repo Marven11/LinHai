@@ -4,23 +4,17 @@ import random
 
 class ParsedToken(TypedDict):
     token_type: Literal["normal", "toolcall", "reasoning"]
-    # reasoning/content -> 内容的一小部分; toolcall -> 工具调用json的一小部分
     content: str
-
-
-# ["a", "\n", "```", "json toolcall", "\n"] -> ["a", "\n", "```json toolcall\n"]
 
 
 class GatherLine:
     """将token按照行整合，但是将非`开头的行分开"""
 
     def __init__(self):
-        # 空字符串表示开始拦截（新行开始），None表示不需要拦截，有字符表示正在拦截
         self.intercepted_line: str | None = ""
 
     def parse_token(self, token: str) -> list[str]:
 
-        # 如果token不含"\n"或者"`"则不可能造成状态切换，原样返回
         if "\n" not in token and "`" not in token and self.intercepted_line is None:
             return [token]
 
@@ -76,8 +70,6 @@ class TokenParser:
 
     def receive_token(self, token: str, is_reasoning: bool):
         parsed: list[ParsedToken] = []
-
-        # 先根据状态判断是否需要清空gatherer
 
         if (is_reasoning and self.state in ["normal", "toolcall"]) or (
             (not is_reasoning) and self.state == "reasoning"
@@ -153,7 +145,6 @@ The calculator returns 5 although I don't agree.
             token, paragraph = paragraph[:split_index], paragraph[split_index:]
             pieces = parser.receive_token(token, is_reasoning)
             for piece in pieces:
-                # print(piece, is_reasoning)
                 if current != piece["token_type"]:
                     current = piece["token_type"]
                     print()

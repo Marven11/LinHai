@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import List, Optional, Sequence, TypedDict
 
 from linhai.registry import Registry
-from linhai.input_parser import parse_user_input
+from linhai.utils.input_parser import parse_user_input
 from linhai.llm import UserMessage, Answer
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 

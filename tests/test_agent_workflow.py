@@ -587,7 +587,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         call_args = mock_registry.send_if_exists.call_args
         self.assertEqual(call_args[0][0], "ui_log")
         ui_message = call_args[0][1]
-        from linhai.utils import UiNotice
+        from linhai.utils.common import UiNotice
 
         self.assertIsInstance(ui_message, UiNotice)
         self.assertEqual(ui_message.level, "INFO")

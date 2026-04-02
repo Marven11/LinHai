@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from .message_checkers import Plugin
 
 if TYPE_CHECKING:

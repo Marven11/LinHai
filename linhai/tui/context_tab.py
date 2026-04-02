@@ -24,7 +24,7 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
 from linhai.token_manager import TokenManager
-from linhai.tokenizer import get_cl100k_base_tokenizer
+from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 
 
 @lru_cache(maxsize=1000)
@@ -108,7 +108,7 @@ class ContextTabWidget(Static):
                 yield Label("通知消息", classes="title")
                 yield Static(id="notification-stats-text")
             with Collapsible(
-                title="上下文占用", id="token-usage-collapsible", collapsed=False
+                title="上下文Token用量", id="token-usage-collapsible", collapsed=False
             ):
                 yield Label("相对硬限制", classes="token-usage-label")
                 yield ProgressBar(id="pb-hard-limit", show_eta=False)

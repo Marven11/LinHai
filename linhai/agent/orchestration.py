@@ -18,10 +18,10 @@ from .lifecycle import Lifecycle
 from linhai.llm import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
-from linhai.tokenizer import get_cl100k_base_tokenizer
+from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from .base import Message, RuntimeMessage

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from linhai.machine_control import MachineControl
 
 from .conversation import register_conversation_folder
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.secret import initialize_secret_system
 
 from linhai.sandbox import (

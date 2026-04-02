@@ -3,7 +3,7 @@
 import unittest
 import re
 import json
-from linhai.utils import generate_id, simplify_toolcall_json
+from linhai.utils.common import generate_id, simplify_toolcall_json
 
 
 class TestUtils(unittest.TestCase):

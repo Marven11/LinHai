@@ -12,7 +12,7 @@ from linhai.tool.base import (
     ToolResultFailed,
     ToolSet,
 )
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
 
@@ -881,7 +881,7 @@ class MachineControlPlugin:
         is_tool_failed_duplicated_error: bool,
     ) -> Union[None, bool, RuntimeMessage]:
         """处理工具调用的结果，合并了原来的before_tool_call和after_tool_call功能。"""
-        from linhai.utils import UiNotice
+        from linhai.utils.common import UiNotice
 
         if status == "skipped":
 

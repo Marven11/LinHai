@@ -9,10 +9,10 @@ from linhai.tool.base import (
     ToolCallResultMessage,
     ToolResultFailed,
 )
-from linhai.tokenizer import get_cl100k_base_tokenizer
+from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 from linhai.tool.main import ToolManager
 from linhai.llm import ToolCallMessage, Message
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from .base import RuntimeMessage
 
 if TYPE_CHECKING:

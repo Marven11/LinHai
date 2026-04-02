@@ -11,7 +11,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
 from linhai.machine_control.main import MachineControlPlugin
 from linhai.llm import ToolCallMessage
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class TestMachineControl(unittest.IsolatedAsyncioTestCase):

@@ -17,7 +17,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 DRAFT_INTERVAL = 1
 

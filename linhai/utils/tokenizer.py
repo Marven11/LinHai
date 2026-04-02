@@ -11,7 +11,7 @@ _cl100k_base_tokenizer: tiktoken.Encoding | None = None
 def get_cl100k_base_tokenizer() -> tiktoken.Encoding:
     global _cl100k_base_tokenizer
     if _cl100k_base_tokenizer is None:
-        tiktoken_path = str(Path(__file__).parent / "cl100k_base.tiktoken")
+        tiktoken_path = str(Path(__file__).parent.parent / "cl100k_base.tiktoken")
         ranks = load_tiktoken_bpe(tiktoken_path)
         _cl100k_base_tokenizer = tiktoken.Encoding(
             name="cl100k_base_local",

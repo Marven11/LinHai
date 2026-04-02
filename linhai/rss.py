@@ -7,7 +7,7 @@ import feedparser
 import httpx
 
 from linhai.llm import LanguageModelMessage, Message
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent

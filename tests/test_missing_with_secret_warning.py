@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock
 
 from linhai.plugin.security_config import MissingWithSecretWarningPlugin
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):

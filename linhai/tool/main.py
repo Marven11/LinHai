@@ -21,7 +21,7 @@ from linhai.tool.base import (
     ToolResultFailed,
 )
 from linhai.tool.mcp_connector import MCPConnector
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class ToolManager:

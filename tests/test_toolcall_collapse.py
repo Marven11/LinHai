@@ -1,6 +1,6 @@
 import unittest
 import json
-from linhai.utils import (
+from linhai.utils.common import (
     simplify_value,
     simplify_toolcall_json,
     parse_and_simplify_toolcall,
@@ -104,8 +104,8 @@ class TestToolCallCollapse(unittest.TestCase):
 
     def test_parse_and_simplify_toolcall_invalid_json(self):
         json_str = '{"name": "read_file", "arguments": {'
-        simplified = parse_and_simplify_toolcall(json_str)
-        self.assertEqual(simplified, "<parse json error>")
+        with self.assertRaises(json.JSONDecodeError):
+            parse_and_simplify_toolcall(json_str)
 
     def test_parse_and_simplify_toolcall_empty_string(self):
         """测试解析空字符串"""

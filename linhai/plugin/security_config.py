@@ -8,7 +8,7 @@ from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
 
@@ -98,9 +98,7 @@ class MissingWithSecretWarningPlugin(Plugin):
 
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(
-                level="INFO", content="检测到可能忘记使用with_secret的工具调用"
-            ),
+            UiNotice(level="INFO", content="检测到可能忘记使用with_secret的工具调用"),
         )
         return None
 

@@ -17,7 +17,7 @@ from linhai.agent.base import (
 from linhai.tool.base import ToolCallResultMessage
 from linhai.registry import Registry
 from linhai.machine_control import MachineControl
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.llm import Message
 
 from .helpers import (

@@ -25,7 +25,7 @@ class ParsedAnswer:
         self.segment_queue: asyncio.Queue[Segment] = asyncio.Queue()
         self._parsing_task_name: str = f"parsed_answer_parsing_{id(self)}"
         self.interrupted = False
-        from .tui.token_parser import TokenParser
+        from .utils.token_parser import TokenParser
 
         self.token_parser = TokenParser()
         self.current_segment = None

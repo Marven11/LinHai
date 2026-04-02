@@ -21,7 +21,7 @@ from linhai.tool.base import (
     ToolResultSuccess,
 )
 from linhai.registry import Registry
-from linhai.utils import generate_id
+from linhai.utils.common import generate_id
 
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:

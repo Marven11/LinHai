@@ -20,7 +20,7 @@ from textual.widgets.markdown import MarkdownBlock
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
-from linhai.utils import parse_and_simplify_toolcall
+from linhai.utils.common import parse_and_simplify_toolcall
 
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"

@@ -11,7 +11,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import Answer, OpenAi
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 from .helpers import JsonValue
 

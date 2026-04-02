@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, Mock, MagicMock
 
-from linhai.tui.command_handler import CommandHandler
+from linhai.utils.command_handler import CommandHandler
 from linhai.registry import Registry
 
 

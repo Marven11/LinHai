@@ -8,7 +8,7 @@ from linhai.agent.main import Agent
 from linhai.registry import Registry
 from linhai.llm import UserMessage
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class TestIssue10MultipleMessages(unittest.IsolatedAsyncioTestCase):

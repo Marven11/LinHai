@@ -5,7 +5,7 @@ import asyncio
 from datetime import datetime, timedelta
 from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
 from linhai.registry import Registry
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class LlmManagerError(Exception):

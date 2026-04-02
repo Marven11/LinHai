@@ -3,8 +3,8 @@
 from typing import Literal
 
 from linhai.registry import Registry
-from linhai.utils import UiNotice
-from linhai.input_parser import parse_user_input
+from linhai.utils.common import UiNotice
+from linhai.utils.input_parser import parse_user_input
 
 
 class CommandHandler:

@@ -14,7 +14,7 @@ from linhai.llm import (
     UserMessage,
 )
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.utils import UiNotice, generate_id
+from linhai.utils.common import UiNotice, generate_id
 from pathlib import Path
 from .conversation import save_cleaned_messages
 

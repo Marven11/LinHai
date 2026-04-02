@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any
 
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from ..trojan.ssh_transport import SshTrojanTransport
 
 

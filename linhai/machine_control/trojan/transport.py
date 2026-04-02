@@ -5,7 +5,7 @@ from asyncio.subprocess import Process
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class JsonRpcResponse(Dict[str, Any]):

@@ -11,7 +11,7 @@ from linhai.agent import Agent, Lifecycle
 from linhai.registry import Registry
 from linhai.config import TUIConfig
 from linhai.parsed_message import ParsedAnswer
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 from linhai.llm import AnswerTokenUsage, UserMessage
 
 from .components import (

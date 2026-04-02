@@ -21,7 +21,7 @@ from linhai.type_hints import (
     UserMessage as UserMsgType,
     AssistantMessage as AsstMsgType,
 )
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 import linhai
 
 

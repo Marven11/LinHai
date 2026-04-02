@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.plugin import VolcanoDeepseekFixPlugin
 from linhai.agent.base import RuntimeMessage
-from linhai.utils import UiNotice
+from linhai.utils.common import UiNotice
 
 
 class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):

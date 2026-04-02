@@ -85,10 +85,10 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
 
 
 def parse_and_simplify_toolcall(json_str: str) -> str:
-    try:
-        toolcall_json = json.loads(json_str.strip())
-        if not isinstance(toolcall_json, dict):
-            return "<not a dict>"
-        return simplify_toolcall_json(toolcall_json)
-    except json.JSONDecodeError:
+    stripped = json_str.strip()
+    if not stripped or stripped[0] != "{":
         return "<parse json error>"
+    toolcall_json = json.loads(stripped)
+    if not isinstance(toolcall_json, dict):
+        return "<not a dict>"
+    return simplify_toolcall_json(toolcall_json)
