@@ -205,11 +205,11 @@ class Agent:
         )
 
         while True:
+            if self.state != "sleeping":
+                return
             now = datetime.now()
             if now >= self.sleeping_deadline:
                 break
-            if self.state != "sleeping":
-                return
             remaining = (self.sleeping_deadline - now).total_seconds()
             sleep_time = min(1.0, remaining)
             await asyncio.sleep(sleep_time)
