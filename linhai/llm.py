@@ -937,6 +937,20 @@ class OpenAi:
         if self.compatibility == "kimi":
             params["stream_options"] = {"include_usage": True}
 
+        if self.compatibility == "glm":
+            extra_body = params.get("extra_body", {})
+            if not isinstance(extra_body, dict):
+                extra_body = {}
+            thinking = extra_body.get("thinking", {})
+            if not isinstance(thinking, dict):
+                thinking = {}
+            if "type" not in thinking:
+                thinking["type"] = "enabled"
+            if thinking.get("type") == "enabled" and "clear_thinking" not in thinking:
+                thinking["clear_thinking"] = False
+            extra_body["thinking"] = thinking
+            params["extra_body"] = extra_body
+
         if self.tools:
             params["tools"] = self.tools
 
