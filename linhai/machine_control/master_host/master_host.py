@@ -105,16 +105,14 @@ class MasterHostControl:
 
             if process.returncode is not None:
                 del self._processes[pid]
-                stdout_data, stderr_data = b"", b""
-                if process.stdout:
-                    stdout_data = await process.stdout.read()
-                if process.stderr:
-                    stderr_data = await process.stderr.read()
-
-                stdout_str = stdout_data.decode("utf-8", errors="replace")
-                stderr_str = stderr_data.decode("utf-8", errors="replace")
+                stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
+                    process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
+                )
+                extra = ""
+                if timeout_msg:
+                    extra = f" (读取输出超时，可能存在子进程持有管道)"
                 return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<returncode>>{process.returncode}<<returncode>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
+                    content=f"<<pid>>{pid}<<pid>><<returncode>>{process.returncode}<<returncode>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>{extra}"
                 )
             else:
                 stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
