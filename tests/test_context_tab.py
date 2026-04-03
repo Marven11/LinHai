@@ -235,7 +235,7 @@ class TestContextTab(unittest.TestCase):
         from math import log2
 
         expected_data = [
-            float(log2(widget._estimate_message_tokens(msg))) for msg in mock_messages
+            float(log2(widget._estimate_message_tokens(msg) + 1)) for msg in mock_messages
         ]
         self.assertEqual(mock_sparkline.data, expected_data)
         mock_stats_text.update.assert_called_once()
@@ -537,7 +537,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         widget.update_display()
 
         expected_data = [
-            float(log2(widget._estimate_message_tokens(msg))) for msg in pinned
+            float(log2(widget._estimate_message_tokens(msg) + 1)) for msg in pinned
         ]
         self.assertEqual(mock_pinned_sparkline.data, expected_data)
 

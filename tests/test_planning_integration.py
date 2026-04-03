@@ -159,7 +159,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_plugin_registration_with_planning_true(self):
         # 测试planning为True时插件注册逻辑
-        from linhai.agent.create import create_agent_from_config
+        from linhai.agent.create import create_agent_from_context
 
         # 创建上下文配置，planning为True
         context = {
@@ -229,7 +229,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             mock_user_input_plugin_cls.return_value = mock_user_input_plugin_instance
 
             # 执行函数
-            await create_agent_from_config(context=context)
+            await create_agent_from_context(context=context)
 
             # 验证planning插件被实例化和注册
             from linhai.plugin.planning import (
@@ -252,7 +252,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_plugin_registration_with_planning_false(self):
         # 测试planning为False时插件不被注册
-        from linhai.agent.create import create_agent_from_config
+        from linhai.agent.create import create_agent_from_context
 
         # 创建上下文配置，planning为False
         context = {
@@ -321,7 +321,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         ):
 
             # 执行函数
-            await create_agent_from_config(context=context)
+            await create_agent_from_context(context=context)
 
             # 验证planning插件没有被实例化或注册
             from linhai.plugin.planning import (

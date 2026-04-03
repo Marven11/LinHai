@@ -11,7 +11,7 @@ from linhai.config import Config
 class TestMainCommandLine(unittest.TestCase):
     """测试main.py的命令行参数"""
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_message_option(
@@ -62,7 +62,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_without_message_option(
@@ -102,7 +102,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     @patch("builtins.open")
@@ -147,7 +147,7 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     @patch("builtins.open")
@@ -192,13 +192,13 @@ class TestMainCommandLine(unittest.TestCase):
 
         mock_app.run_async.assert_called_once()
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     def test_agent_command_with_file_option_file_not_found(
         self, mock_cli_app, mock_create_agent
     ):
         """测试使用-f选项时文件不存在的错误处理"""
-        # 模拟create_agent_from_config抛出FileNotFoundError
+        # 模拟create_agent_from_context抛出FileNotFoundError
         mock_create_agent.side_effect = FileNotFoundError("文件未找到")
         mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
@@ -214,13 +214,13 @@ class TestMainCommandLine(unittest.TestCase):
         mock_create_agent.assert_called_once()
         mock_cli_app.assert_not_called()
 
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     def test_agent_command_with_file_option_read_error(
         self, mock_cli_app, mock_create_agent
     ):
         """测试使用-f选项时文件读取错误的处理"""
-        # 模拟create_agent_from_config抛出Exception
+        # 模拟create_agent_from_context抛出Exception
         mock_create_agent.side_effect = Exception("读取错误")
         mock_app = AsyncMock()
         mock_app.run_async = AsyncMock(return_value=None)
@@ -237,7 +237,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_cli_app.assert_not_called()
 
     @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_llm_option(
@@ -296,7 +296,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_llm_and_message_options(
@@ -355,7 +355,7 @@ class TestMainCommandLine(unittest.TestCase):
         mock_app.run_async.assert_called_once()
 
     @patch("linhai.agent.create.create_agent_build_context")
-    @patch("linhai.agent.create.create_agent_from_config")
+    @patch("linhai.agent.create.create_agent_from_context")
     @patch("linhai.main.TUIApp")
     @patch("linhai.main.Registry")
     def test_agent_command_with_checklist_option(

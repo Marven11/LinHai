@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from linhai.agent.create import create_agent_from_config
+from linhai.agent.create import create_agent_from_context
 from linhai.agent import Agent
 from linhai.config import load_config
 from linhai.registry import Registry
@@ -19,7 +19,7 @@ class TestMCPRealServer(unittest.IsolatedAsyncioTestCase):
 
         self.temp_dir = tempfile.mkdtemp()
         self.registry = Registry()
-        # Register cli_args required by create_agent_from_config
+        # Register cli_args required by create_agent_from_context
         cli_args = argparse.Namespace(afk=False)
 
         cli_args.checklist = False
@@ -105,5 +105,5 @@ server_script_path = "{server_path}"
             "file": [],
             "process_sandbox": None,
         }
-        agent = await create_agent_from_config(context)
+        agent = await create_agent_from_context(context)
         self.assertIsInstance(agent, Agent)

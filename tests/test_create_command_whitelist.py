@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
 import argparse
-from linhai.agent.create import create_agent_build_context, create_agent_from_config
+from linhai.agent.create import create_agent_build_context, create_agent_from_context
 from linhai.config import Config
 from linhai.registry import Registry
 
@@ -72,7 +72,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
 
             with patch("linhai.agent.create.Agent", return_value=mock_agent):
 
-                await create_agent_from_config(context)
+                await create_agent_from_context(context)
 
                 from unittest.mock import ANY
 
@@ -139,7 +139,7 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
 
             with patch("linhai.agent.create.Agent", return_value=mock_agent):
 
-                await create_agent_from_config(context)
+                await create_agent_from_context(context)
 
                 from unittest.mock import ANY
 

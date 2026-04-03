@@ -46,7 +46,7 @@ async def run_init(config_path: Path | None = None):
 async def run(args):
     """运行LinHai应用"""
     from linhai.config import load_config
-    from linhai.agent.create import create_agent_from_config
+    from linhai.agent.create import create_agent_from_context
     from linhai.agent.create import create_agent_build_context
 
     registry = Registry()
@@ -69,7 +69,7 @@ async def run(args):
         checklist_path=args.checklist,
         profile_name=args.profile,
     )
-    _agent = await create_agent_from_config(context)
+    _agent = await create_agent_from_context(context)
 
     app = TUIApp(
         registry=registry,

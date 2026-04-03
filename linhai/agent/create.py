@@ -126,7 +126,7 @@ def create_agent_build_context(
     registry: Registry,
     config: Config,
     config_basedir: Optional[Path],
-    cli_args: argparse.Namespace,
+    cli_args: Optional[argparse.Namespace],
     planning: bool = False,
     llm_name: Optional[str] = None,
     checklist_path: Optional[Path] = None,
@@ -200,19 +200,19 @@ def create_agent_build_context(
         "secret_config_path": (
             config.tools.secret.config_path if config.tools.secret else None
         ),
-        "rss": cli_args.rss,
-        "telegram": cli_args.telegram,
-        "disable_waiting_marker": cli_args.disable_waiting_marker,
-        "afk": cli_args.afk,
-        "claw_enabled": cli_args.claw,
-        "claw_folder": cli_args.claw_folder,
-        "message": cli_args.message,
-        "file": cli_args.file,
+        "rss": cli_args.rss if cli_args else [],
+        "telegram": cli_args.telegram if cli_args else False,
+        "disable_waiting_marker": cli_args.disable_waiting_marker if cli_args else False,
+        "afk": cli_args.afk if cli_args else False,
+        "claw_enabled": cli_args.claw if cli_args else False,
+        "claw_folder": cli_args.claw_folder if cli_args else None,
+        "message": cli_args.message if cli_args else [],
+        "file": cli_args.file if cli_args else [],
         "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
     }
 
 
-async def create_agent_from_config(
+async def create_agent_from_context(
     context: AgentBuildContext,
 ) -> Agent:
     """创建Agent实例（从配置对象）

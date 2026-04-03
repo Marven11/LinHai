@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.registry import Registry
-from linhai.agent.create import create_agent_from_config
+from linhai.agent.create import create_agent_from_context
 from linhai.agent import Agent
 from linhai.config import load_config
 
@@ -112,7 +112,7 @@ server_script_path = "{server_script_path}"
             "file": [],
             "process_sandbox": None,
         }
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
 
         self.assertIsInstance(result, Agent)
 
@@ -170,7 +170,7 @@ compress_threshold = 80000
             "file": [],
             "process_sandbox": None,
         }
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
 
         self.assertIsInstance(result, Agent)
 

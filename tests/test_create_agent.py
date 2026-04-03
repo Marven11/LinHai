@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.registry import Registry
-from linhai.agent.create import create_agent_from_config
+from linhai.agent.create import create_agent_from_context
 from linhai.agent.create import create_agent_build_context
 from linhai.agent import Agent
 from linhai.tool.main import ToolManager
@@ -53,7 +53,7 @@ class TestCreateAgent(unittest.TestCase):
             cli_args=cli_args,
             checklist_path=None,
         )
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
         self.assertIsInstance(result, Agent)
 
         try:
@@ -100,7 +100,7 @@ class TestCreateAgent(unittest.TestCase):
             cli_args=cli_args,
             checklist_path=None,
         )
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
         self.assertIsInstance(result, Agent)
 
         agent = registry.get_member_typechecked("agent", Agent)
@@ -134,7 +134,7 @@ class TestCreateAgent(unittest.TestCase):
                 cli_args=cli_args,
                 checklist_path=None,
             )
-            asyncio.run(create_agent_from_config(context))
+            asyncio.run(create_agent_from_context(context))
 
         self.assertIn("LLM名称 'invalid_llm' 不存在", str(context_error.exception))
 

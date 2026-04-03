@@ -400,6 +400,20 @@ class Agent:
 
         return sleep_toolset
 
+    async def check_user_messages(self):
+        while not self.registry.is_empty("user_message"):
+            await self.receive_one_user_message()
+            self.state = "working"
+
+    async def tick(self):
+        await self.check_user_messages()
+        if self.state == "waiting_user":
+            return await self.state_waiting_user()
+        elif self.state == "working":
+            return await self.state_working()
+        elif self.state == "sleeping":
+            return await self.state_sleeping()
+
     async def run(self):
         """
         Agent主循环，负责状态机的管理和状态切换。
@@ -408,27 +422,11 @@ class Agent:
         并处理异常和取消事件。
         """
 
-        user_input_found = False
         await self.lifecycle.trigger_before_agent_loop(self)
-
-        while not self.registry.is_empty("user_message"):
-            await self.receive_one_user_message()
-            user_input_found = True
-        if user_input_found:
-            await self.generate_response()
 
         while True:
             try:
-                if self.state == "waiting_user":
-                    await self.state_waiting_user()
-                elif self.state == "working":
-                    await self.state_working()
-                elif self.state == "sleeping":
-                    await self.state_sleeping()
-                else:
-
-                    break
-
+                await self.tick()
             except asyncio.CancelledError:
                 break
             await asyncio.sleep(0)

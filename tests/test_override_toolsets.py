@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.config import Config, AgentConfig, ConfigValidationError
-from linhai.agent.create import create_agent_from_config, create_agent_build_context
+from linhai.agent.create import create_agent_from_context, create_agent_build_context
 
 
 class TestOverrideToolsetsConfig(unittest.TestCase):
@@ -142,7 +142,7 @@ override_toolsets = ["utils", "sleep"]
             cli_args=cli_args,
             checklist_path=None,
         )
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
 
         self.assertIsNotNone(result)
 
@@ -235,7 +235,7 @@ override_toolsets = ["utils", "sleep"]
             cli_args=cli_args,
             checklist_path=None,
         )
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
 
         self.assertIsNotNone(result)
 

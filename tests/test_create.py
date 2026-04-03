@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.agent.create import (
-    create_agent_from_config,
+    create_agent_from_context,
     _create_llm_instances,
     _create_tool_manager,
     _create_pinned_messages,
@@ -112,7 +112,7 @@ class TestCreateAgent(unittest.TestCase):
             cli_args=cli_args,
             checklist_path=None,
         )
-        result = asyncio.run(create_agent_from_config(context))
+        result = asyncio.run(create_agent_from_context(context))
 
         mock_llm_instances.assert_called_once()
         mock_tool_manager.assert_called_once()
@@ -224,7 +224,7 @@ class TestCreateAgent(unittest.TestCase):
                 cli_args=cli_args,
                 checklist_path=None,
             )
-            asyncio.run(create_agent_from_config(context))
+            asyncio.run(create_agent_from_context(context))
 
             # 不再检查_create_agent_context调用，因为函数已不存在
 
