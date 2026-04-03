@@ -112,7 +112,7 @@ class BubblewrapConfig(BaseModel):
     """Linux bubblewrap沙箱配置。"""
 
     argv_template: list[str] = Field(
-        description="bubblewrap的argv模板列表，支持{home}和{pwd}占位符"
+        description="bubblewrap的argv模板列表，支持{home}、{pwd}和{tmpdir}占位符"
     )
 
 

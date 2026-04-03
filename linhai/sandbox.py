@@ -24,6 +24,7 @@ DEFAULT_MACOS_PROFILE_TEMPLATE = """
 (allow file-write* (subpath "{pwd}"))
 (allow file-write* (subpath "{home}/.cache"))
 (allow file-write* (subpath "{home}/.local/share/linhai"))
+(allow file-write* (subpath "{tmpdir}"))
 (allow file-write* (subpath "/private/tmp"))
 (allow file-write* (subpath "/tmp"))
 
@@ -61,6 +62,7 @@ class MacOsSandbox:
         rendered = template.format(
             pwd=os.getcwd(),
             home=str(Path.home()),
+            tmpdir=tempfile.gettempdir(),
         )
         self._profile_file = tempfile.NamedTemporaryFile(
             mode="w", suffix=".sb", delete=False
