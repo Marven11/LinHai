@@ -1,4 +1,5 @@
 import unittest
+import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -90,18 +91,13 @@ class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
 
-        call_count = 0
+        async def interrupt_after_delay():
+            await asyncio.sleep(0.05)
+            agent.interrupt_to_working()
 
-        def is_empty_side_effect(queue_name):
-            nonlocal call_count
-            call_count += 1
-            if call_count > 1:
-                agent.state = "working"
-            return True
-
-        agent.registry.is_empty = MagicMock(side_effect=is_empty_side_effect)
-
+        task = asyncio.create_task(interrupt_after_delay())
         await agent.state_sleeping()
+        await task
 
         self.assertEqual(agent.state, "working")
         self.assertIsNone(agent.sleeping_since)
@@ -131,7 +127,7 @@ class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
         agent.state_working = AsyncMock()
 
         async def fake_state_waiting_user():
-            agent.state = "__exit__"
+            raise asyncio.CancelledError()
 
         agent.state_waiting_user = fake_state_waiting_user
 

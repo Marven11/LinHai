@@ -172,24 +172,24 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_count, 2)
 
     async def test_stack_cleanup_expired_llms(self):
-        future_time = datetime.now() + timedelta(seconds=1)
+        future_time = datetime.now() + timedelta(seconds=0.01)
         self.llm_manager.llm_stack.append(("llm2", future_time))
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
         self.llm_manager._cleanup_expired_llms()
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
-        await asyncio.sleep(1.1)
+        await asyncio.sleep(0.02)
         self.llm_manager._cleanup_expired_llms()
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
         self.assertEqual(self.llm_manager.llm_stack[0][0], "llm1")
 
     async def test_get_current_llm_after_cleanup(self):
-        future_time = datetime.now() + timedelta(seconds=1)
+        future_time = datetime.now() + timedelta(seconds=0.01)
         self.llm_manager.llm_stack.append(("llm2", future_time))
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
-        await asyncio.sleep(1.1)
+        await asyncio.sleep(0.02)
         current_llm = self.llm_manager.get_current_llm()
         self.assertEqual(current_llm, self.mock_llm1)
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
