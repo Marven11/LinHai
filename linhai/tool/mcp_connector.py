@@ -16,7 +16,6 @@ and `MCP Client` connects LLM to the middle layer.
 
 import asyncio
 import shlex
-from contextlib import AsyncExitStack
 from typing import Any
 from functools import partial
 
@@ -26,82 +25,109 @@ from mcp.client.stdio import stdio_client
 from .base import ToolArgInfo, ToolSet, ToolResultSuccess, ToolResultFailed
 from ..registry import Registry
 from ..sandbox import ProcessSandboxProtocol, NoSandbox
+from ..task_supervisor import PlainTaskSupervisor
+
+
+class MCPServerConnection:
+    def __init__(self, name: str, command: str, connector: "MCPConnector"):
+        self.name = name
+        self.command = command
+        self.connector = connector
+        self.toolset: ToolSet | None = None
+        self._ready_event = asyncio.Event()
+        self._close_event = asyncio.Event()
+        self._session: ClientSession | None = None
+        self._task_handle = PlainTaskSupervisor()
+
+    def start(self) -> None:
+        self._task_handle.create_supervised_task(f"mcp_{self.name}", self._run)
+
+    async def wait_ready(self, timeout: float = 30.0) -> None:
+        await asyncio.wait_for(self._ready_event.wait(), timeout=timeout)
+
+    async def _run(self) -> None:
+        command_lst = shlex.split(self.command)
+        server_params = StdioServerParameters(
+            command=command_lst[0], args=command_lst[1:], env=None
+        )
+        async with stdio_client(server_params) as (reader, writer):
+            async with ClientSession(reader, writer) as session:
+                self._session = session
+                await session.initialize()
+                await session.send_ping()
+                toolset = ToolSet()
+                resp = await session.list_tools()
+                for mcp_tool in resp.tools:
+                    func = partial(
+                        self.connector.call_tool_raw,
+                        server_name=self.name,
+                        tool_name=mcp_tool.name,
+                    )
+                    deco = toolset.register_tool(
+                        name=f"mcp_{self.name}_{mcp_tool.name}",
+                        desc=(
+                            mcp_tool.description
+                            if mcp_tool.description
+                            else "<No description>"
+                        ),
+                        args={
+                            "args": ToolArgInfo(
+                                desc="此MCP工具的参数，一个object，各个参数如以下json schema所示",
+                                type=mcp_tool.inputSchema,
+                            ),
+                        },
+                        required_args=["args"],
+                    )
+                    deco(func)
+                self.toolset = toolset
+                self._ready_event.set()
+                await self._close_event.wait()
+
+    async def close(self) -> None:
+        self._close_event.set()
+        await self._task_handle.wait(f"mcp_{self.name}")
 
 
 class MCPConnector:
     def __init__(self, registry: Registry):
         registry.register_member("mcp_connector", self)
         self.registry = registry
-        self.sessions: dict[str, tuple[ClientSession, AsyncExitStack, ToolSet]] = {}
+        self.sessions: dict[str, MCPServerConnection] = {}
         self.connector_toolset = self.init_connector_toolset()
 
     def get_toolsets(self) -> list[ToolSet]:
-        return [toolset for _, _, toolset in self.sessions.values()] + [
-            self.connector_toolset
-        ]
+        return [
+            conn.toolset for conn in self.sessions.values() if conn.toolset is not None
+        ] + [self.connector_toolset]
 
-    async def connect_mcp_server(
-        self, name: str, command: str, exit_stack: AsyncExitStack
-    ):
+    async def connect_mcp_server(self, name: str, command: str):
         if name in self.sessions:
             raise RuntimeError(f"Duplicate name: {name!r}")
 
-        command_lst = shlex.split(command)
-
-        server_params = StdioServerParameters(
-            command=command_lst[0], args=command_lst[1:], env=None
-        )
-
-        reader, writer = await exit_stack.enter_async_context(
-            stdio_client(server_params)
-        )
-        session = await exit_stack.enter_async_context(ClientSession(reader, writer))
-
-        await session.initialize()
-        await session.send_ping()
-
-        toolset = ToolSet()
-        resp = await session.list_tools()
-        for mcp_tool in resp.tools:
-            func = partial(
-                self.call_tool_raw, server_name=name, tool_name=mcp_tool.name
-            )
-            deco = toolset.register_tool(
-                name=f"mcp_{name}_{mcp_tool.name}",
-                desc=(
-                    mcp_tool.description if mcp_tool.description else "<No description>"
-                ),
-                args={
-                    "args": ToolArgInfo(
-                        desc="此MCP工具的参数，一个object，各个参数如以下json schema所示",
-                        type=mcp_tool.inputSchema,
-                    ),
-                },
-                required_args=["args"],
-            )
-            deco(func)
-
-        self.sessions[name] = (session, exit_stack, toolset)
-        return self.sessions[name]
+        conn = MCPServerConnection(name, command, self)
+        conn.start()
+        await conn.wait_ready()
+        self.sessions[name] = conn
+        return conn
 
     async def disconnect_mcp_server(self, name: str):
         if name not in self.sessions:
             raise RuntimeError(f"{name!r} not exists")
-        _, exit_stack, _ = self.sessions.pop(name)
-        await exit_stack.aclose()
+        conn = self.sessions.pop(name)
+        await conn.close()
 
     def get_server(self, name: str):
         if name not in self.sessions:
             raise RuntimeError(f"{name!r} not exists or not connected")
-        return self.sessions[name][0]
+        return self.sessions[name]
 
     async def call_tool_raw(
         self, server_name: str, tool_name: str, args: dict[str, Any]
     ):
         try:
-            data = await self.get_server(server_name).call_tool(
-                tool_name, arguments=args
-            )
+            conn = self.get_server(server_name)
+            assert conn._session is not None
+            data = await conn._session.call_tool(tool_name, arguments=args)
             result = f"{data.meta=}\n"
             for content in data.content:
                 if content.type == "text":
@@ -137,19 +163,18 @@ class MCPConnector:
             if not isinstance(sandbox, NoSandbox):
                 return ToolResultFailed(content="当前开启了沙箱，无法启动MCP服务器进程")
 
-            exit_stack = AsyncExitStack()
             try:
-                _, _, toolset = await self.connect_mcp_server(name, command, exit_stack)
+                conn = await self.connect_mcp_server(name, command)
+                assert conn.toolset is not None
                 return ToolResultSuccess(
                     content=f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "
-                    + ", ".join(name for name in toolset.tools.keys())
+                    + ", ".join(n for n in conn.toolset.tools.keys())
                     + "注意：为了避免工具名称冲突重命名了工具。"
                     + """示例调用: {"name": "xxx", "arguments": {"args": {...}}}"""
                 )
             except (
                 Exception
             ) as e:  # WHY: MCP SDK写得很差，抛出的错误类型很多且不确定，我们只能直接捕获Exception
-                await exit_stack.aclose()
                 return ToolResultFailed(content=f"连接{command!r}失败，错误: {e!r}")
 
         @connector_toolset.register_tool(

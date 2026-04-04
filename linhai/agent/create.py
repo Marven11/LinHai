@@ -202,7 +202,9 @@ def create_agent_build_context(
         ),
         "rss": cli_args.rss if cli_args else [],
         "telegram": cli_args.telegram if cli_args else False,
-        "disable_waiting_marker": cli_args.disable_waiting_marker if cli_args else False,
+        "disable_waiting_marker": (
+            cli_args.disable_waiting_marker if cli_args else False
+        ),
         "afk": cli_args.afk if cli_args else False,
         "claw_enabled": cli_args.claw if cli_args else False,
         "claw_folder": cli_args.claw_folder if cli_args else None,
@@ -431,15 +433,12 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
 
     mcp_connector = MCPConnector(context["registry"])
     if context["mcp_configs"] and context["config_basedir"] is not None:
-        from contextlib import AsyncExitStack
-
         for mcp_config in context["mcp_configs"]:
             server_script_path = (
                 context["config_basedir"] / mcp_config.server_script_path
             )
-            exit_stack = AsyncExitStack()
             await mcp_connector.connect_mcp_server(
-                mcp_config.name, server_script_path.absolute().as_posix(), exit_stack
+                mcp_config.name, server_script_path.absolute().as_posix()
             )
 
     tool_manager = ToolManager(

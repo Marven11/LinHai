@@ -83,6 +83,13 @@ jobs:
             exit 1
           fi
 
+      - name: Check for RuntimeError in unittest output (issue #686)
+        run: |
+          if grep -P 'RuntimeError.*cancel scope.*different task' /tmp/unittest_stderr.txt; then
+            echo "RuntimeError from exit stack found in unittest output, please fix it"
+            exit 1
+          fi
+
       - name: Check for cast function calls (issue 457)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
