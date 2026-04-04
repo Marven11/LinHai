@@ -190,9 +190,9 @@ class AgentContextOrchestration:
 
         usage_ratio = threshold_info["usage_ratio"]
         percentage = usage_ratio * 100
-        if percentage < 70:
+        if percentage < 80:
             current_state = "绿灯"
-        elif 70 <= percentage < 90:
+        elif 80 <= percentage < 90:
             current_state = "黄灯"
         else:
             current_state = "红灯"
@@ -261,9 +261,9 @@ class AgentContextOrchestration:
                         suggestion = "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文"
                 elif current_state == "黄灯":
                     suggestion = (
-                        "建议: 应该调用context_forget_large_message工具"
+                        "建议: 根据缓存比例判断是否需要使用context_forget_large_message工具"
                         if cleanable_count >= 5
-                        else "建议: 应该避免读取文件，直接开始修改文件"
+                        else ""
                     )
                 else:
                     suggestion = "建议: 不要担心消息限制，立即工作"

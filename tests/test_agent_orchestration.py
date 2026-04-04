@@ -222,9 +222,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
         threshold_info = {
             "hard_limit": 100000,
-            "used_tokens": 75000,
+            "used_tokens": 85000,
             "remaining_tokens": 25000,
-            "usage_ratio": 0.75,
+            "usage_ratio": 0.85,
         }
         context = self.orchestration.compute_orchestration_context("", threshold_info)
         self.assertEqual(context["current_state"], "黄灯")
@@ -393,12 +393,12 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     def test_yellow_state_allows_cleanup_tools(self):
         """测试黄灯状态下，清理工具应该被允许。"""
 
-        # 设置黄灯状态（使用率75%）
+        # 设置黄灯状态（使用率85%）
         threshold_info: ThresholdInfo = {
             "hard_limit": 100000,
-            "used_tokens": 75000,
+            "used_tokens": 85000,
             "remaining_tokens": 25000,
-            "usage_ratio": 0.75,
+            "usage_ratio": 0.85,
         }
 
         # 测试清理工具（如context_forget_large_message）应该不被阻塞
@@ -425,7 +425,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             msg = RuntimeMessage(f"message {i}")
             self.message_processor.messages.append(msg)
 
-        # 在第25, 50, 75, 100位置添加4个大消息（索引为24, 49, 74, 99）
+        # 在第25, 50, 85, 100位置添加4个大消息（索引为24, 49, 74, 99）
         large_msgs = []
         for pos in [24, 49, 74, 99]:
             large_msg = RuntimeMessage(f"Large content at position {pos}" + "x" * 1000)
