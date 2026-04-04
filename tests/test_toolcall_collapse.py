@@ -104,8 +104,8 @@ class TestToolCallCollapse(unittest.TestCase):
 
     def test_parse_and_simplify_toolcall_invalid_json(self):
         json_str = '{"name": "read_file", "arguments": {'
-        with self.assertRaises(json.JSONDecodeError):
-            parse_and_simplify_toolcall(json_str)
+        simplified = parse_and_simplify_toolcall(json_str)
+        self.assertEqual(simplified, "<parse json error>")
 
     def test_parse_and_simplify_toolcall_empty_string(self):
         """测试解析空字符串"""
