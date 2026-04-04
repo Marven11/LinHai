@@ -85,10 +85,16 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
 
 
 def parse_and_simplify_toolcall(json_str: str) -> str:
+    """简化工具调用格式
+    
+    即使streamjson没有抛出错误也不一定能保证json格式正确"""
     stripped = json_str.strip()
     if not stripped or stripped[0] != "{":
         return "<parse json error>"
-    toolcall_json = json.loads(stripped)
+    try:
+        toolcall_json = json.loads(stripped)
+    except json.JSONDecodeError:
+        return "<parse json error>"
     if not isinstance(toolcall_json, dict):
         return "<not a dict>"
     return simplify_toolcall_json(toolcall_json)
