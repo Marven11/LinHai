@@ -26,7 +26,7 @@ class TrojanTransport:
         self.stdout = stdout
         self.stderr = stderr
         self.process = process
-        self.results: Dict[str, Optional[JsonRpcResponse]] = {}
+        self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
         self._connection_valid = True
 
@@ -76,19 +76,15 @@ class TrojanTransport:
         self.stdin.write(request_json.encode())
         await self.stdin.drain()
 
-        self.results[request_id] = None
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[JsonRpcResponse] = loop.create_future()
+        self._pending_futures[request_id] = future
 
-        async def wait_for_response() -> JsonRpcResponse:
-            while self.results[request_id] is None:
-                if not self._connection_valid:
-                    raise ConnectionError("连接已失效")
-                await asyncio.sleep(0.01)
-            result = self.results.pop(request_id)
-            if result is None:
-                raise ConnectionError("未收到响应")
-            return result
-
-        return await asyncio.wait_for(wait_for_response(), timeout=60.0)
+        done, _ = await asyncio.wait({future}, timeout=60.0)
+        self._pending_futures.pop(request_id, None)
+        if not done:
+            raise ConnectionError("请求超时")
+        return next(iter(done)).result()
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -109,11 +105,14 @@ class TrojanTransport:
                 line = await self.stdout.readline()
                 if not line:
                     self._connection_valid = False
+                    self._fail_pending_futures()
                     break
                 response = json.loads(line.decode())
                 response_id = response.get("id")
                 if response_id is not None:
-                    self.results[response_id] = response
+                    future = self._pending_futures.pop(response_id, None)
+                    if future is not None and not future.done():
+                        future.set_result(response)
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -125,7 +124,14 @@ class TrojanTransport:
                     ),
                 )
                 self._connection_valid = False
+                self._fail_pending_futures()
                 break
+
+    def _fail_pending_futures(self) -> None:
+        for future in self._pending_futures.values():
+            if not future.done():
+                future.set_exception(ConnectionError("连接已失效"))
+        self._pending_futures.clear()
 
     async def disconnect(self):
         if self._reader_started:
@@ -145,6 +151,7 @@ class TrojanTransport:
             await asyncio.wait_for(self.process.wait(), timeout=60.0)
 
         self._connection_valid = False
+        self._fail_pending_futures()
 
     def is_connected(self) -> bool:
         return self._connection_valid

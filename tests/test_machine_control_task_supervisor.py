@@ -75,6 +75,85 @@ class TestTrojanTransportTaskSupervisor(unittest.IsolatedAsyncioTestCase):
         await transport.wait_for_disconnect()
 
 
+class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
+    async def test_read_responses_resolves_future(self):
+        registry = _make_registry()
+        transport = TrojanTransport(registry)
+        mock_stdin = AsyncMock()
+        transport.stdin = mock_stdin
+
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future = loop.create_future()
+        transport._pending_futures["test123"] = future
+
+        response_json = (
+            json.dumps({"jsonrpc": "2.0", "id": "test123", "result": 42}).encode()
+            + b"\n"
+        )
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = AsyncMock(
+            side_effect=[response_json, asyncio.CancelledError()]
+        )
+        transport.stdout = mock_stdout
+        transport.start_reading()
+
+        result = await asyncio.wait_for(future, timeout=5.0)
+        self.assertEqual(result["result"], 42)
+
+        task_supervisor = registry.get_member_typechecked(
+            "task_supervisor", PlainTaskSupervisor
+        )
+        task_supervisor.cancel("trojan_transport_reader")
+        await asyncio.sleep(0.05)
+
+    async def test_disconnect_fails_pending_futures(self):
+        registry = _make_registry()
+        transport = TrojanTransport(registry)
+        mock_stdin = AsyncMock()
+        transport.stdin = mock_stdin
+
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future = loop.create_future()
+        transport._pending_futures["pending_id"] = future
+
+        mock_stdout = AsyncMock()
+        mock_stdout.readline = AsyncMock(side_effect=asyncio.CancelledError)
+        transport.stdout = mock_stdout
+        transport.start_reading()
+
+        mock_process = MagicMock()
+        mock_process.wait = AsyncMock(return_value=None)
+        transport.process = mock_process
+
+        await transport.disconnect()
+        self.assertTrue(future.done())
+        with self.assertRaises(ConnectionError):
+            future.result()
+
+    async def test_fail_pending_futures(self):
+        registry = _make_registry()
+        transport = TrojanTransport(registry)
+
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future = loop.create_future()
+        transport._pending_futures["pending_id"] = future
+
+        transport._connection_valid = False
+        transport._fail_pending_futures()
+
+        self.assertTrue(future.done())
+        with self.assertRaises(ConnectionError):
+            future.result()
+
+    async def test_send_request_raises_when_disconnected(self):
+        registry = _make_registry()
+        transport = TrojanTransport(registry)
+        transport._connection_valid = False
+
+        with self.assertRaises(ConnectionError):
+            await transport._send_request("test_method", {})
+
+
 class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
     async def test_upload_uses_task_supervisor(self):
         registry = _make_registry()
