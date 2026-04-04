@@ -12,16 +12,15 @@ from typing import (
 from linhai.agent.base import RuntimeMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
-
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
     from linhai.parsed_message import ParsedAnswer, Segment
+    from linhai.agent.user_message_handler import ParsedUserMessage
 
 from linhai.llm import (
     Answer,
     Message,
 )
-
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
@@ -110,6 +109,11 @@ AfterCacheInvalidateCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+AfterParsedUserMessageCallback: TypeAlias = Callable[
+    ["ParsedUserMessage"],
+    Awaitable[bool | None],
+]
+
 
 class Lifecycle:
     """生命周期回调管理器，使用明确的参数传递。"""
@@ -140,6 +144,9 @@ class Lifecycle:
             []
         )
         self._after_cache_invalidate_callbacks: list[AfterCacheInvalidateCallback] = []
+        self._after_parsed_user_message_callbacks: list[
+            AfterParsedUserMessageCallback
+        ] = []
 
     def register_before_message_generation(
         self, callback: BeforeMessageGenerationCallback
@@ -208,6 +215,22 @@ class Lifecycle:
     def register_after_cache_invalidate(self, callback: AfterCacheInvalidateCallback):
         """注册缓存失效后的回调。"""
         self._after_cache_invalidate_callbacks.append(callback)
+
+    def register_after_parsed_user_message(
+        self, callback: AfterParsedUserMessageCallback
+    ):
+        """注册解析用户消息后的回调。"""
+        self._after_parsed_user_message_callbacks.append(callback)
+
+    async def trigger_after_parsed_user_message(
+        self, parsed: "ParsedUserMessage"
+    ) -> bool | None:
+        """触发解析用户消息后的事件，返回第一个非None结果。"""
+        for callback in self._after_parsed_user_message_callbacks:
+            result = await callback(parsed)
+            if result is not None:
+                return result
+        return None
 
     async def trigger_after_token_generation(
         self, agent: "Agent", answer: Answer, current_content: str

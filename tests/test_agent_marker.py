@@ -12,7 +12,6 @@ from linhai.plugin import WaitingUserPlugin
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 
-
 r = reprlib.Repr()
 r.maxstring = 200
 custom_repr = r.repr
@@ -184,7 +183,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
@@ -226,7 +225,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolResultSuccess(content="tool result")
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
@@ -258,7 +257,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
 
         self.agent.state = "working"
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
@@ -289,7 +288,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         self.assertEqual(
@@ -316,7 +315,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         tool_result = ToolResultSuccess(content="tool result")
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         self.assertEqual(
@@ -337,7 +336,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        await self.agent.handle_user_message(UserMessage(message="Test"))
+        await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
 
         self.assertEqual(

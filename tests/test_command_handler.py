@@ -1,223 +1,137 @@
-"""Unit tests for the CommandHandler module."""
-
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, Mock, MagicMock
 
-from linhai.utils.command_handler import CommandHandler
+from linhai.agent.command_callback import CommandCallback
+from linhai.agent.user_message_handler import ParsedUserMessage
+from linhai.llm import UserMessage
+from linhai.utils.input_parser import parse_user_input
 from linhai.registry import Registry
 
 
-class TestCommandHandler(unittest.IsolatedAsyncioTestCase):
-    """Test cases for the CommandHandler."""
+def make_parsed(msg_text: str) -> ParsedUserMessage:
+    msg = UserMessage(message=msg_text)
+    parsed_input = parse_user_input(msg_text.strip())
+    return ParsedUserMessage(raw_message=msg, parsed_input=parsed_input)
 
+
+class TestCommandCallback(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        """Set up test fixtures."""
         self.registry = Mock(spec=Registry)
-        self.handler = CommandHandler(self.registry)
+        self.callback = CommandCallback(self.registry)
 
-    def test_init(self):
-        """Test CommandHandler initialization."""
-        self.assertEqual(self.handler.registry, self.registry)
+    def test_get_command_completions(self):
+        completions = CommandCallback.get_command_completions()
+        self.assertIn("/queue", completions)
+        self.assertIn("/help", completions)
+        self.assertIn("/quit", completions)
 
-    async def test_handle_command_empty(self):
-        """Test handling empty input."""
-        handled, should_interrupt = await self.handler.handle_command("")
-        self.assertFalse(handled)
-        self.assertFalse(should_interrupt)
+    async def test_plain_message_returns_none(self):
+        parsed = make_parsed("Hello world")
+        result = await self.callback(parsed)
+        self.assertIsNone(result)
 
-    async def test_handle_command_not_a_command(self):
-        """Test handling non-command input."""
-        handled, should_interrupt = await self.handler.handle_command("Hello world")
-        self.assertFalse(handled)
-        self.assertFalse(should_interrupt)
+    async def test_unknown_command_returns_none(self):
+        parsed = make_parsed("/unknown")
+        result = await self.callback(parsed)
+        self.assertIsNone(result)
 
-    async def test_handle_queue_command(self):
-        """Test /queue command."""
+    async def test_queue_command(self):
         mock_agent = Mock()
         mock_agent.queued_messages = []
         self.registry.get_member_typechecked.return_value = mock_agent
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        mock_messages_list = Mock()
-        mock_messages_list.add_runtime_message = Mock()
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "agent": mock_agent,
-            "tui_app": mock_tui_app,
-            "messages_list": mock_messages_list,
-        }[name]
+        parsed = make_parsed("/queue Test message")
+        result = await self.callback(parsed)
 
-        # Mock _show_success_message to ensure it's not called
-        self.handler._show_success_message = AsyncMock()
-
-        handled, should_interrupt = await self.handler.handle_command(
-            "/queue Test message"
-        )
-        self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertFalse(result)
         self.assertEqual(len(mock_agent.queued_messages), 1)
-        # Verify that no success message was shown (which would interrupt agent)
-        self.handler._show_success_message.assert_not_called()
-        # Verify the queued message content
-        queued_msg = mock_agent.queued_messages[0]
-        self.assertEqual(queued_msg.message, "Test message")
-        # Verify that add_runtime_message was not called (no interrupt)
-        mock_messages_list.add_runtime_message.assert_not_called()
+        self.assertEqual(mock_agent.queued_messages[0].message, "Test message")
 
-    async def test_handle_quit_command(self):
-        """Test /quit command."""
+    async def test_queue_command_empty(self):
+        self.registry.send_if_exists = AsyncMock()
+
+        parsed = make_parsed("/queue")
+        result = await self.callback(parsed)
+
+        self.assertFalse(result)
+
+    async def test_quit_command(self):
         self.registry.send = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "tui_app": mock_tui_app
-        }[name]
+        parsed = make_parsed("/quit")
+        result = await self.callback(parsed)
 
-        handled, should_interrupt = await self.handler.handle_command("/quit")
-        self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertFalse(result)
         self.registry.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
-    async def test_handle_exit_command(self):
-        """Test /exit command."""
+    async def test_exit_command(self):
         self.registry.send = AsyncMock()
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "tui_app": mock_tui_app
-        }[name]
+        parsed = make_parsed("/exit")
+        result = await self.callback(parsed)
 
-        handled, should_interrupt = await self.handler.handle_command("/exit")
-        self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertFalse(result)
         self.registry.send.assert_called_once_with("exit_signal", {"return_code": 0})
 
-    async def test_handle_help_command(self):
-        """Test /help command."""
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.return_value = mock_tui_app
+    async def test_help_command(self):
+        self.registry.send_if_exists = AsyncMock()
 
-        handled, should_interrupt = await self.handler.handle_command("/help")
-        self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        parsed = make_parsed("/help")
+        result = await self.callback(parsed)
 
-    async def test_handle_status_command(self):
-        """Test /status command."""
+        self.assertFalse(result)
+
+    async def test_status_command(self):
         mock_agent = Mock()
         mock_agent.get_current_llm_info.return_value = ("test-llm", Mock())
         mock_agent.get_threshold_info.return_value = None
+        mock_agent.state = "working"
         self.registry.get_member_typechecked.return_value = mock_agent
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        mock_messages_list = Mock()
-        mock_messages_list.add_runtime_message = Mock()
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "agent": mock_agent,
-            "tui_app": mock_tui_app,
-            "messages_list": mock_messages_list,
-        }[name]
+        parsed = make_parsed("/status")
+        result = await self.callback(parsed)
 
-        handled, should_interrupt = await self.handler.handle_command("/status")
-        self.assertTrue(handled)
-        self.assertFalse(should_interrupt)
+        self.assertFalse(result)
         mock_agent.get_current_llm_info.assert_called_once()
 
-    async def test_handle_unknown_command(self):
-        """Test unknown command."""
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        self.registry.get_member_typechecked.return_value = mock_tui_app
-
-        handled, should_interrupt = await self.handler.handle_command("/unknown")
-        self.assertFalse(handled)
-        self.assertFalse(should_interrupt)
-
-    async def test_handle_switch_model_command(self):
-        """Test @model_name command."""
+    async def test_switch_model(self):
         mock_agent = Mock()
         mock_llm_manager = Mock()
-        # 创建模拟LLM对象
-        mock_llm1 = Mock()
-        mock_llm1.get_name = Mock(return_value="test-llm")
-        mock_llm2 = Mock()
-        mock_llm2.get_name = Mock(return_value="another-llm")
-        mock_llm_manager.llms = [mock_llm1, mock_llm2]
         mock_llm_manager.llm_names = ["test-llm", "another-llm"]
         mock_llm_manager.switch_to_llm = AsyncMock()
-        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm1)
         mock_llm_manager.default_llm_name = "test-llm"
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
         self.registry.get_member_typechecked.return_value = mock_agent
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        mock_messages_list = Mock()
-        mock_messages_list.add_runtime_message = Mock()
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "agent": mock_agent,
-            "tui_app": mock_tui_app,
-            "messages_list": mock_messages_list,
-        }[name]
+        parsed = make_parsed("@test-llm hello")
+        result = await self.callback(parsed)
 
-        handled, should_interrupt = await self.handler.handle_command("@test-llm")
-        self.assertTrue(handled)
-        self.assertTrue(should_interrupt)
+        self.assertTrue(result)
         mock_llm_manager.switch_to_llm.assert_called_once_with("test-llm")
         mock_agent.message_processor.add_new_message.assert_called_once()
 
-    async def test_handle_switch_model_invalid(self):
-        """Test @invalid_model_name command."""
+    async def test_switch_model_invalid(self):
         mock_agent = Mock()
         mock_llm_manager = Mock()
-        # 创建模拟LLM对象
-        mock_llm = Mock()
-        mock_llm.get_name = Mock(return_value="test-llm")
-        mock_llm_manager.llms = [mock_llm]
         mock_llm_manager.llm_names = ["test-llm"]
-        mock_llm_manager.current_llm_index = 0
-        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         mock_agent.llm_manager = mock_llm_manager
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
         self.registry.get_member_typechecked.return_value = mock_agent
+        self.registry.send_if_exists = AsyncMock()
 
-        mock_tui_app = Mock()
-        mock_container = Mock()
-        mock_tui_app.query_one.return_value = mock_container
-        mock_tui_app.should_auto_scroll.return_value = True
-        mock_messages_list = Mock()
-        mock_messages_list.add_runtime_message = Mock()
-        self.registry.get_member_typechecked.side_effect = lambda name, cls: {
-            "agent": mock_agent,
-            "tui_app": mock_tui_app,
-            "messages_list": mock_messages_list,
-        }[name]
+        parsed = make_parsed("@invalid hello")
+        result = await self.callback(parsed)
 
-        handled, should_interrupt = await self.handler.handle_command("@invalid")
-        self.assertTrue(handled)
-        self.assertTrue(should_interrupt)
-        self.assertEqual(mock_agent.llm_manager.current_llm_index, 0)
+        self.assertTrue(result)
         mock_agent.message_processor.add_new_message.assert_called_once()
 
 

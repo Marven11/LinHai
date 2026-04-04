@@ -171,7 +171,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        await self.agent.handle_user_message(test_msg)
+        await self.agent.message_processor.add_new_message(test_msg)
         await self.agent.generate_response()
 
         parsed_answer = None
@@ -210,7 +210,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        await self.agent.handle_user_message(user_msg)
+        await self.agent.message_processor.add_new_message(user_msg)
         await self.agent.generate_response()
 
         messages = self.agent.message_processor.get_messages()
@@ -281,7 +281,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         test_msg = UserMessage(message="Error test", name="user")
 
         with self.assertRaises(RuntimeError) as cm:
-            await self.agent.handle_user_message(test_msg)
+            await self.agent.message_processor.add_new_message(test_msg)
             await self.agent.generate_response()
 
         self.assertEqual(str(cm.exception), "Test error")
@@ -339,7 +339,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        await self.agent.handle_user_message(UserMessage(message="Calculate 2+2"))
+        await self.agent.message_processor.add_new_message(
+            UserMessage(message="Calculate 2+2")
+        )
         await self.agent.generate_response()
 
         self.tool_manager.process_tool_call.assert_called_once()
@@ -359,10 +361,8 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         mock_cli_app = MagicMock(spec=TUIApp)
         mock_container = MagicMock()
         mock_cli_app.query_one.return_value = mock_container
-        # should_auto_scroll现在在MessagesList中，TUIApp不再有这个方法
         new_registry.register_member("tui_app", mock_cli_app)
 
-        # 创建一个mock的MessagesList
         mock_messages_list = MagicMock(spec=MessagesList)
         mock_messages_list.should_auto_scroll.return_value = True
         new_registry.register_member("messages_list", mock_messages_list)
@@ -377,13 +377,11 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
         from linhai.tool.main import ToolManager
         from linhai.config import ToolConfig
-        from pathlib import Path
 
         mock_tool_manager = MagicMock(spec=ToolManager)
         mock_tool_manager.registry = new_registry
         new_registry.register_member("tool_manager", mock_tool_manager)
 
-        # 在测试结束时清理临时目录
         self.addCleanup(temp_dir.cleanup)
 
         mock_llm1 = MagicMock(spec=OpenAi)
@@ -416,7 +414,6 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         from linhai.agent import Agent
         from linhai.llm_manager import LlmManager
 
-        # 创建LlmManager实例
         llm_manager = LlmManager(
             registry=new_registry,
             llms=[mock_llm1, mock_llm2],
@@ -431,45 +428,55 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             pinned_messages=[],
         )
 
-        await agent.handle_user_message(UserMessage(message="@qwen Hello"))
+        async def dispatch(msg: UserMessage):
+            await new_registry.send("user_message", msg)
+            handler = new_registry.get_member_typechecked(
+                "user_message_handler", UserMessageHandler
+            )
+            await handler.receive_and_dispatch()
+
+        from linhai.agent.user_message_handler import UserMessageHandler
+
+        await dispatch(UserMessage(message="@qwen Hello"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm2)
-        self.assertEqual(agent.llm_manager.llm_names[1], "qwen")
 
         mock_cli_app.reset_mock()
         mock_container.reset_mock()
 
         await agent.llm_manager.switch_to_llm("deepseek-reasoning")
-        await agent.handle_user_message(UserMessage(message="@invalid command"))
+        await dispatch(UserMessage(message="@invalid command"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm1)
-
-        # 现在MessagesList管理消息列表，TUIApp不再需要query_one和mount
-        # 所以我们不再断言这些调用，而是验证agent行为
-        pass
 
         agent.llm_manager.current_llm_index = 0
-        await agent.handle_user_message(UserMessage(message="Hello world"))
+        await dispatch(UserMessage(message="Hello world"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm1)
 
-        await agent.handle_user_message(UserMessage(message="@qwen first"))
+        await dispatch(UserMessage(message="@qwen first"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm2)
 
-        await agent.handle_user_message(UserMessage(message="Normal message"))
+        await dispatch(UserMessage(message="Normal message"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm2)
 
-        await agent.handle_user_message(
-            UserMessage(message="@deepseek-reasoning second")
-        )
+        await dispatch(UserMessage(message="@deepseek-reasoning second"))
         current_llm = agent.llm_manager.get_current_llm()
         self.assertEqual(current_llm, mock_llm1)
 
     async def test_queue_command(self):
         """测试/queue命令，将消息加入排队列表。"""
-        await self.agent.handle_user_message(UserMessage(message="/queue 等下需要实现"))
+        from linhai.agent.user_message_handler import UserMessageHandler
+
+        handler = self.registry.get_member_typechecked(
+            "user_message_handler", UserMessageHandler
+        )
+        await self.registry.send(
+            "user_message", UserMessage(message="/queue 等下需要实现")
+        )
+        await handler.receive_and_dispatch()
         self.assertEqual(len(self.agent.queued_messages), 1)
         self.assertEqual(self.agent.queued_messages[0].message, "等下需要实现")
 

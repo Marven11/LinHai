@@ -72,7 +72,6 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         """测试在等待用户状态下接收到消息后直接转为working状态。"""
         self.agent.is_last_message_user = MagicMock(return_value=False)
 
-        self.agent.receive_one_user_message = AsyncMock()
         self.agent.generate_response = AsyncMock()
 
         self.assertEqual(self.agent.state, "waiting_user")

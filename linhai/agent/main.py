@@ -34,7 +34,8 @@ from linhai.tool.base import (
 )
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
-from linhai.utils.input_parser import parse_user_input
+from .user_message_handler import UserMessageHandler
+from .command_callback import CommandCallback
 
 
 class Agent:
@@ -84,6 +85,9 @@ class Agent:
 
         self.queued_messages: list = []
 
+        self.user_message_handler = UserMessageHandler(registry)
+        command_callback = CommandCallback(registry)
+        self.lifecycle.register_after_parsed_user_message(command_callback)
         self.lifecycle.register_after_token_generation(self.after_token_generation)
 
     def interrupt_to_working(self) -> None:
@@ -143,24 +147,15 @@ class Agent:
         self, agent: "Agent", answer, current_content
     ) -> bool:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
-        if not agent.registry.is_empty("user_message"):
-            should_interrupt = await self.receive_one_user_message()
+        if self.user_message_handler.has_message():
+            should_interrupt = await self.user_message_handler.receive_and_dispatch()
+            self.state = "working"
             if should_interrupt and agent.agent_llm:
                 await agent.agent_llm.interrupt(
                     "用户发来新的消息打断了你的输出", "Agent已被打断"
                 )
                 return True
         return False
-
-    async def receive_one_user_message(self) -> bool:
-        """接收并处理一条用户消息，返回是否需要打断agent."""
-        msg = await self.registry.receive("user_message")
-        from linhai.llm import UserMessage
-
-        assert isinstance(msg, UserMessage)
-        should_interrupt = await self.handle_user_message(msg)
-        self.state = "working"
-        return should_interrupt
 
     async def state_waiting_user(self):
         """
@@ -178,7 +173,9 @@ class Agent:
             "ui_log",
             UiNotice(level="INFO", content="Agent正在等待用户"),
         )
-        while self.registry.is_empty("user_message") and self.state == "waiting_user":
+        while (
+            not self.user_message_handler.has_message() and self.state == "waiting_user"
+        ):
             await asyncio.sleep(0.01)
         if self.state != "waiting_user":
             await self.registry.send_if_exists(
@@ -186,7 +183,8 @@ class Agent:
                 UiNotice(level="INFO", content="Agent在等待用户时被切换状态"),
             )
             return
-        await self.receive_one_user_message()
+        await self.user_message_handler.receive_and_dispatch()
+        self.state = "working"
 
         await self.generate_response()
 
@@ -227,21 +225,7 @@ class Agent:
         await self.message_processor.add_new_message(RuntimeMessage(result_msg))
 
     async def state_working(self):
-        """
-        处理自动运行状态。
-
-        在这个状态下，Agent会自动处理消息并生成响应，
-        同时监控token使用量并在需要时触发压缩。
-        """
-
-        if not self.registry.is_empty("user_message"):
-            try:
-                await self.receive_one_user_message()
-                await self.generate_response()
-            except RuntimeError as e:
-                raise RuntimeError("处理消息时出错") from e
-        else:
-            await self.generate_response()
+        await self.generate_response()
 
     def is_last_message_user(self) -> bool:
         if not self.message_processor.get_messages():
@@ -250,25 +234,6 @@ class Agent:
         from linhai.llm import UserMessage
 
         return isinstance(msg, UserMessage)
-
-    async def handle_user_message(self, msg: "Message") -> bool:
-        """处理并加入用户的消息，返回是否需要打断agent."""
-        from linhai.llm import UserMessage
-
-        assert isinstance(msg, UserMessage)
-
-        content = msg.message.strip()
-
-        from linhai.utils.command_handler import CommandHandler
-
-        handler = CommandHandler(self.registry)
-        handled, should_interrupt = await handler.handle_command(content)
-
-        if not handled:
-            await self.message_processor.add_new_message(msg)
-            return True
-
-        return should_interrupt
 
     def get_current_model(self) -> LanguageModel:
         """
@@ -400,13 +365,10 @@ class Agent:
 
         return sleep_toolset
 
-    async def check_user_messages(self):
-        while not self.registry.is_empty("user_message"):
-            await self.receive_one_user_message()
-            self.state = "working"
-
     async def tick(self):
-        await self.check_user_messages()
+        while self.user_message_handler.has_message():
+            await self.user_message_handler.receive_and_dispatch()
+            self.state = "working"
         if self.state == "waiting_user":
             return await self.state_waiting_user()
         elif self.state == "working":

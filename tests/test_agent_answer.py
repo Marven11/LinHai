@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent import AgentLlm, Lifecycle
+from linhai.agent.user_message_handler import UserMessageHandler
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
 
@@ -67,6 +68,20 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         self.agent_llm._current_parsed_answer = parsed_answer_mock
         self.mock_agent.state = "working"
 
+        mock_handler = MagicMock(spec=UserMessageHandler)
+        mock_handler.has_message = MagicMock(return_value=False)
+
+        def get_member_typechecked(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            if name == "user_message_handler":
+                return mock_handler
+            return None
+
+        self.registry.get_member_typechecked = MagicMock(
+            side_effect=get_member_typechecked
+        )
+
         await self.agent_llm.interrupt("agent message", "ui notice")
 
         parsed_answer_mock.interrupt.assert_called_once()
@@ -79,12 +94,20 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         parsed_answer_mock._answer = answer_mock
         self.agent_llm._current_parsed_answer = parsed_answer_mock
 
-        self.registry.is_empty.side_effect = [False, True, True]
+        mock_handler = MagicMock(spec=UserMessageHandler)
+        mock_handler.has_message = MagicMock(side_effect=[True, False])
+        mock_handler.receive_and_dispatch = AsyncMock(return_value=True)
 
-        # 模拟receive返回UserMessage
-        mock_user_msg = MagicMock(spec=UserMessage)
-        self.registry.receive = AsyncMock(return_value=mock_user_msg)
-        self.mock_agent.handle_user_message = AsyncMock()
+        def get_member_typechecked(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            if name == "user_message_handler":
+                return mock_handler
+            return None
+
+        self.registry.get_member_typechecked = MagicMock(
+            side_effect=get_member_typechecked
+        )
 
         await self.agent_llm.interrupt("agent message", "ui notice")
 
@@ -98,6 +121,20 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         answer_mock.get_current_content.return_value = r"""\n```json toolcall\n{}\\```
 """
         self.agent_llm._current_parsed_answer = parsed_answer_mock
+
+        mock_handler = MagicMock(spec=UserMessageHandler)
+        mock_handler.has_message = MagicMock(return_value=False)
+
+        def get_member_typechecked(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            if name == "user_message_handler":
+                return mock_handler
+            return None
+
+        self.registry.get_member_typechecked = MagicMock(
+            side_effect=get_member_typechecked
+        )
 
         await self.agent_llm.interrupt("agent message", "ui notice")
 

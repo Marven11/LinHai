@@ -8,6 +8,7 @@ from linhai.agent.base import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage
+from linhai.agent.user_message_handler import UserMessageHandler
 
 if TYPE_CHECKING:
     from linhai.agent.toolcall import AgentToolcall
@@ -106,7 +107,8 @@ class AgentLlm:
             agent = self.registry.get_member_typechecked("agent", Agent)
             agent.state = "working"
 
-            while not self.registry.is_empty("user_message"):
-                msg = await self.registry.receive("user_message")
-                assert isinstance(msg, UserMessage)
-                await agent.handle_user_message(msg)
+            user_message_handler = self.registry.get_member_typechecked(
+                "user_message_handler", UserMessageHandler
+            )
+            while user_message_handler.has_message():
+                await user_message_handler.receive_and_dispatch()

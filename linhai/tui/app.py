@@ -25,7 +25,6 @@ from .components import (
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
 from ..token_manager import TokenManager
-from linhai.utils.command_handler import CommandHandler
 from .messages_list import MessagesList
 
 ASCII_ART = r"""
@@ -118,7 +117,6 @@ class TUIApp(App):
         self.autocomplete = None
 
         self.tui_config = tui_config
-        self.command_handler = CommandHandler(self.registry)
 
         self.registry.add_postinit(self.postinit)
 

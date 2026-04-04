@@ -5,9 +5,6 @@ from pathlib import Path
 from typing import List, Optional, Sequence, TypedDict
 
 from linhai.registry import Registry
-from linhai.utils.input_parser import parse_user_input
-from linhai.llm import UserMessage, Answer
-from linhai.utils.common import UiNotice
 from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 
@@ -17,6 +14,9 @@ from .base import (
     RuntimeMessage,
     LanguageModelMessage,
 )
+
+from linhai.llm import UserMessage
+from linhai.utils.common import UiNotice
 
 
 class NotificationMessageEntry(TypedDict):
@@ -141,23 +141,6 @@ class AgentMessage:
                     content="新增显式缓存",
                 ),
             )
-
-    async def handle_user_message(self, msg: UserMessage) -> None:
-        """处理用户消息。
-
-        Args:
-            msg: 用户消息
-        """
-        assert isinstance(msg, UserMessage)
-
-        content = msg.message.strip()
-        parsed_input = parse_user_input(content)
-
-        if parsed_input.switch_model:
-            await self.add_new_message(msg)
-            return
-
-        await self.add_new_message(msg)
 
     async def count_invalidate_cache(self):
         """标记当前缓存失效

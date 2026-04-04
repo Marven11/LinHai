@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, MagicMock
 
 from linhai.agent import Agent
+from linhai.agent.command_callback import CommandCallback
 from linhai.registry import Registry
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.base import RuntimeMessage
@@ -23,12 +24,19 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         # 创建lifecycle的mock，用于add_new_message中的回调
         self.lifecycle_mock = Mock()
 
-        # 创建一个协程函数，确保asyncio.run可以调用
         async def trigger_before_add_new_message_coroutine(msg):
             return None
 
         self.lifecycle_mock.trigger_before_add_new_message = (
             trigger_before_add_new_message_coroutine
+        )
+        self.command_callback = CommandCallback(self.registry)
+
+        async def trigger_after_parsed_user_message_side_effect(parsed):
+            return await self.command_callback(parsed)
+
+        self.lifecycle_mock.trigger_after_parsed_user_message = AsyncMock(
+            side_effect=trigger_after_parsed_user_message_side_effect
         )
 
         def get_member_typechecked_side_effect(name, cls):
@@ -117,7 +125,8 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_system_valid(self):
         """测试有效的@系统调用。"""
         user_message = UserMessage(message="@qwen 你好")
-        await self.agent.handle_user_message(user_message)
+        self.registry.receive = AsyncMock(return_value=user_message)
+        await self.agent.user_message_handler.receive_and_dispatch()
 
         selected_model = self.agent.get_current_model()
 
@@ -126,7 +135,8 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
     async def testget_current_model_with_at_system_invalid(self):
         """测试无效的@系统调用。"""
         user_message = UserMessage(message="@invalid_llm 你好")
-        await self.agent.handle_user_message(user_message)
+        self.registry.receive = AsyncMock(return_value=user_message)
+        await self.agent.user_message_handler.receive_and_dispatch()
 
         selected_model = self.agent.get_current_model()
 

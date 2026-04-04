@@ -82,28 +82,13 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.message_processor.messages, [])
         self.assertEqual(self.message_processor.queued_messages, [])
 
-    async def test_handle_user_message(self):
-        """测试处理用户消息。"""
+    async def test_add_new_message_user(self):
+        """测试添加用户消息。"""
         user_msg = UserMessage(message="Hello")
-        await self.message_processor.handle_user_message(user_msg)
+        await self.message_processor.add_new_message(user_msg)
 
-        # messages列表应包含1条普通消息
         self.assertEqual(len(self.message_processor.messages), 1)
-        # get_messages()应返回pinned_messages + messages，总数为3
         self.assertEqual(len(self.message_processor.get_messages()), 3)
-        # 最后一条消息应该是添加的用户消息
-        self.assertEqual(self.message_processor.get_messages()[-1], user_msg)
-
-    async def test_handle_user_message_with_switch_model(self):
-        """测试处理带@切换模型的消息。"""
-        user_msg = UserMessage(message="@qwen Hello")
-        await self.message_processor.handle_user_message(user_msg)
-
-        # messages列表应包含1条普通消息
-        self.assertEqual(len(self.message_processor.messages), 1)
-        # get_messages()应返回pinned_messages + messages，总数为3
-        self.assertEqual(len(self.message_processor.get_messages()), 3)
-        # 最后一条消息应该是添加的用户消息
         self.assertEqual(self.message_processor.get_messages()[-1], user_msg)
 
     async def test_add_new_message(self):
