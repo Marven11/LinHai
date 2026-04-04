@@ -130,6 +130,10 @@ class SshTrojanTransport:
             "StrictHostKeyChecking=no",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
         ]
 
         await self.registry.send_if_exists(
