@@ -73,7 +73,12 @@ class TestSshTerminal(unittest.TestCase):
             # 验证call_tool被正确调用
             self.mock_call_tool.assert_called_once_with(
                 "terminal_send_string",
-                {"term_id": "term_123", "string": "echo hello", "with_enter": True},
+                {
+                    "term_id": "term_123",
+                    "string": "echo hello",
+                    "with_enter": True,
+                    "wait_seconds": 0.3,
+                },
             )
 
         self.loop.run_until_complete(test())

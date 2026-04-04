@@ -389,7 +389,11 @@ class Trojan:
         return {"message": f"已发送按键: {keys}"}
 
     async def terminal_send_string(
-        self, term_id: str, string: str, with_enter: bool = False
+        self,
+        term_id: str,
+        string: str,
+        with_enter: bool = False,
+        wait_seconds: float = 0.3,
     ) -> TrojanResult:
         assert term_id in self.terminals, f"终端不存在: {term_id}"
         assert len(string) > 0, "字符串不能为空"
@@ -400,6 +404,8 @@ class Trojan:
         os.write(master, string.encode())
         if with_enter:
             os.write(master, b"\r")
+
+        await asyncio.sleep(wait_seconds)
 
         return {"message": f"已发送字符串: {string}"}
 
@@ -548,7 +554,9 @@ class Trojan:
             request_data, request_id = request
             method = request_data.get("method")
             params = request_data.get("params", {})
-            task = asyncio.create_task(self._handle_request(method, params, request_id))
+            task = asyncio.get_running_loop().create_task(
+                self._handle_request(method, params, request_id)
+            )
             self.active_tasks.add(task)
             task.add_done_callback(self._remove_task)
 
@@ -584,9 +592,10 @@ class Trojan:
 
 async def main():
     trojan = Trojan()
-    reader_task = asyncio.create_task(trojan.read_input())
-    processor_task = asyncio.create_task(trojan.process_requests())
-    writer_task = asyncio.create_task(trojan.write_responses())
+    loop = asyncio.get_running_loop()
+    reader_task = loop.create_task(trojan.read_input())
+    processor_task = loop.create_task(trojan.process_requests())
+    writer_task = loop.create_task(trojan.write_responses())
     try:
         await asyncio.gather(reader_task, processor_task, writer_task)
     except asyncio.CancelledError:

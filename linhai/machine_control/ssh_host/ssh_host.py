@@ -217,7 +217,12 @@ class SshMachineControl:
         """发送字符串到远程终端"""
         return await self.call_tool(
             "terminal_send_string",
-            {"term_id": terminal_id, "string": string, "with_enter": with_enter},
+            {
+                "term_id": terminal_id,
+                "string": string,
+                "with_enter": with_enter,
+                "wait_seconds": wait_seconds,
+            },
         )
 
     async def terminal_read_screen(
