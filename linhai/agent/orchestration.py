@@ -250,7 +250,7 @@ class AgentContextOrchestration:
                     cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
 
             if is_dirty:
-                base_info = f"当前为失效状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}, token用量信息已失效{cache_ratio_text}"
+                base_info = f"当前上下文占用量失效, 总大消息数: {total_large_count}, 可清理: {cleanable_count}, token用量信息已失效{cache_ratio_text}"
                 suggestion = "建议: 继续，在上下文实际长度更新之后runtime会另行通知"
             else:
                 base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}{cache_ratio_text}"
