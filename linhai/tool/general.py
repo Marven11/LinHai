@@ -12,7 +12,8 @@ import quickjs
 import chardet
 import httpx
 from bs4 import BeautifulSoup
-from selenium import webdriver
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.webdriver import WebDriver as Firefox
 
 from linhai.tool.base import (
     utils_tools,
@@ -53,8 +54,8 @@ def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[s
 
 def _download_with_selenium(url: str) -> str:
     """使用selenium下载网页内容"""
-    options = webdriver.FirefoxOptions()
-    with webdriver.Firefox(options=options) as driver:
+    options = FirefoxOptions()
+    with Firefox(options=options) as driver:
         driver.get(url)
         return driver.page_source
 
