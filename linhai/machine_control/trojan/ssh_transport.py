@@ -1,7 +1,6 @@
 import asyncio
 import tempfile
 import base64
-from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -107,7 +106,7 @@ class SshTrojanTransport:
 
     async def _start_trojan_process(
         self, ssh_cmd: list[str], remote_trojan_path: str
-    ) -> Optional[Process]:
+    ) -> Optional[TrojanTransport]:
         ssh_trojan_cmd = ssh_cmd + [f"/usr/bin/env python3 {remote_trojan_path}"]
         process = await asyncio.create_subprocess_exec(
             *ssh_trojan_cmd,
@@ -117,8 +116,45 @@ class SshTrojanTransport:
             start_new_session=True,
         )
 
-        await asyncio.sleep(1)
-        return process
+        if process.stdin is None or process.stdout is None or process.stderr is None:
+            process.terminate()
+            return None
+
+        transport = TrojanTransport(
+            registry=self.registry,
+            stdin=process.stdin,
+            stdout=process.stdout,
+            stderr=process.stderr,
+            process=process,
+        )
+        transport.start_reading()
+
+        ping_task = asyncio.ensure_future(transport.send_request("ping", {}))
+        done, pending = await asyncio.wait({ping_task}, timeout=15.0)
+
+        if pending or any(t.exception() is not None for t in done):
+            for p in pending:
+                p.cancel()
+            await self.registry.send_if_exists(
+                "ui_log",
+                UiNotice(
+                    level="ERROR",
+                    content=f"远程控制程序就绪验证失败: {self.host}:{self.port}",
+                ),
+            )
+            process.terminate()
+            wait_done, wait_pending = await asyncio.wait(
+                {asyncio.ensure_future(process.wait())}, timeout=5.0
+            )
+            if wait_pending:
+                process.kill()
+                for wp in wait_pending:
+                    wp.cancel()
+            for wd in wait_done:
+                wd.exception()
+            return None
+
+        return transport
 
     async def connect(self) -> bool:
         ssh_cmd = [
@@ -203,13 +239,8 @@ class SshTrojanTransport:
             ),
         )
 
-        process = await self._start_trojan_process(ssh_cmd, remote_trojan_path)
-        if (
-            process is None
-            or process.stdin is None
-            or process.stdout is None
-            or process.stderr is None
-        ):
+        transport = await self._start_trojan_process(ssh_cmd, remote_trojan_path)
+        if transport is None:
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -229,14 +260,7 @@ class SshTrojanTransport:
             ),
         )
 
-        self._trojan_transport = TrojanTransport(
-            registry=self.registry,
-            stdin=process.stdin,
-            stdout=process.stdout,
-            stderr=process.stderr,
-            process=process,
-        )
-        self._trojan_transport.start_reading()
+        self._trojan_transport = transport
         return True
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:

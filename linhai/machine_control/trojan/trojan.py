@@ -47,6 +47,9 @@ class Trojan:
         self.semaphore = Semaphore(32)
         self.active_tasks: Set[asyncio.Task] = set()
 
+    async def ping(self):
+        return {"message": "pong"}
+
     async def process_create(self, argv, wait_second=1.0):
         process = await asyncio.create_subprocess_exec(
             *argv,
