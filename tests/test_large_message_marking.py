@@ -4,7 +4,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent.message import AgentMessage
 from linhai.registry import Registry
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed

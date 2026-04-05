@@ -7,7 +7,7 @@ from typing import TypedDict, Any
 
 from linhai.agent import Lifecycle
 from linhai.llm import UserMessage, AssistantMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class MockAnswerToken(TypedDict):

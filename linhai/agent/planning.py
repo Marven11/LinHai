@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
-from .base import RuntimeMessage
+from .messages import RuntimeMessage
 from linhai import prompt
 from ..prompt import INTRODUCTION_PLANNING_MODE, EXAMPLES_PLANNING_MODE
 

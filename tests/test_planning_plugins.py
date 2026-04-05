@@ -13,7 +13,7 @@ from linhai.plugin.planning import (
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import UserMessage, Answer
 
 
@@ -475,7 +475,7 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["source"], "planning_design_reminder")
 
     async def test_no_notification_when_design_present(self):
-        from linhai.agent.base import FileContentMessage
+        from linhai.agent.messages import FileContentMessage
 
         design_msg = FileContentMessage(
             filepath=str(self.design_file),
@@ -496,7 +496,7 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin._design_notification_active = True
         self.plugin._design_reminded = False
 
-        from linhai.agent.base import FileContentMessage
+        from linhai.agent.messages import FileContentMessage
 
         design_msg = FileContentMessage(
             filepath=str(self.design_file),
@@ -523,7 +523,7 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin._design_notification_active = True
         self.plugin._design_reminded = True
 
-        from linhai.agent.base import FileContentMessage
+        from linhai.agent.messages import FileContentMessage
 
         design_msg = FileContentMessage(
             filepath=str(self.design_file),

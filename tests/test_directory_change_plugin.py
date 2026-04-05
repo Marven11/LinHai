@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 from linhai.plugin import DirectoryChangePlugin
-from linhai.agent.base import PathPrompt, GlobalPrompt
+from linhai.agent.messages import PathPrompt, GlobalPrompt
 from linhai.registry import Registry
 
 

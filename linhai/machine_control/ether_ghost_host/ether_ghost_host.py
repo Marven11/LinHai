@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any, Union
 
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.agent.base import FileContentMessage
+from linhai.agent.messages import FileContentMessage
 from ..main import HostControl
 
 

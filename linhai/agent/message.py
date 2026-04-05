@@ -9,11 +9,8 @@ from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 
 
-from .base import (
-    Message,
-    RuntimeMessage,
-    LanguageModelMessage,
-)
+from linhai.llm import Message, LanguageModelMessage
+from .messages import RuntimeMessage
 
 from linhai.llm import UserMessage
 from linhai.utils.common import UiNotice

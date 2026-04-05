@@ -6,7 +6,7 @@ import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 from linhai.agent import Agent
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.agent.workflow import (
     context_forget_range_step1,
     context_forget_range_step2,
@@ -86,7 +86,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_prepare_messages_excludes_last_50(self):
         """Test that _prepare_messages_for_compression excludes last 50 messages when total >= 50."""
         from linhai.agent.workflow import _prepare_messages_for_compression
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         mock_agent = MagicMock()
         mock_messages = [RuntimeMessage(f"Message {i}") for i in range(30)]
@@ -469,7 +469,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
     async def test_compress_range_system_message_protection(self):
         """Test that system messages are protected during compression range validation."""
         from linhai.agent.workflow import _validate_compression_range
-        from linhai.agent.base import GlobalPrompt
+        from linhai.agent.messages import GlobalPrompt
         from linhai.llm import SystemMessage
 
         mock_agent = MagicMock()

@@ -7,7 +7,7 @@ from typing import (
 
 import asyncio
 
-from .base import (
+from .messages import (
     RuntimeMessage,
 )
 from linhai.parsed_message import ParsedAnswer

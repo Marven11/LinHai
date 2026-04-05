@@ -8,7 +8,7 @@ from linhai.plugin import (
     DirectoryChangePlugin,
     PromptFastAgentPlugin,
 )
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import OpenAi, UserMessage, AssistantMessage
 from linhai.utils.common import UiNotice
 import pathlib
@@ -132,7 +132,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
 
         self.plugin.last_directory = pathlib.Path("/old/path")
 
-        from linhai.agent.base import PathPrompt
+        from linhai.agent.messages import PathPrompt
 
         existing_pathprompt = PathPrompt(pathlib.Path.cwd() / "AGENTS.md")
         self.agent.message_processor.get_messages.return_value = [existing_pathprompt]
@@ -771,7 +771,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_after_message_generation_spoofed_reasoning_message_format(self):
         """测试SpoofedReasoningMessage的格式符合预期。"""
-        from linhai.agent.base import SpoofedReasoningMessage
+        from linhai.agent.messages import SpoofedReasoningMessage
 
         # 创建SpoofedReasoningMessage实例
         reasoning_contents = ["reasoning1", "reasoning2", "reasoning3"]

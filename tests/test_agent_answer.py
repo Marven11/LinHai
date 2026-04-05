@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from linhai.agent import AgentLlm, Lifecycle
 from linhai.agent.user_message_handler import UserMessageHandler
 from linhai.llm import UserMessage, AssistantMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestAgentLlm(unittest.IsolatedAsyncioTestCase):

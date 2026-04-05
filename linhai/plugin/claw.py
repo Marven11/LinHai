@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.prompt import (

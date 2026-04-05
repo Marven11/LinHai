@@ -14,7 +14,7 @@ import sys
 from linhai.init import InitApp
 from linhai.config import get_default_config_path
 from linhai.tui import TUIApp
-from linhai.agent.base import Message
+from linhai.llm import Message
 from linhai.registry import Registry
 
 

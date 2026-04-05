@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from linhai.type_hints import LanguageModelMessage
 from reprlib import Repr
 import linhai
-from .base import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
+from .messages import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
 from linhai.llm import (
     AssistantMessage,
@@ -17,7 +17,6 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice, generate_id
 from pathlib import Path
 from .conversation import save_cleaned_messages
-
 
 repr_obj = Repr()
 repr_obj.maxstring = 100

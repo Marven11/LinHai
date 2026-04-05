@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from linhai.agent.create import TelegramContext
 
 from linhai.parsed_message import Segment
-from linhai.agent.base import WAITING_USER_MARKER
+from linhai.agent.messages import WAITING_USER_MARKER
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin

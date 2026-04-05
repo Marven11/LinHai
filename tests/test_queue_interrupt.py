@@ -7,7 +7,7 @@ from pathlib import Path
 from linhai.agent import Agent
 from linhai.registry import Registry
 from linhai.llm import UserMessage, AssistantMessage, AnswerToken
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class MockAnswer:

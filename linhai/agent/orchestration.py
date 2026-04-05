@@ -24,7 +24,8 @@ from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolA
 from linhai.utils.common import UiNotice
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
-from .base import Message, RuntimeMessage
+from linhai.llm import Message
+from .messages import RuntimeMessage
 from .message import AgentMessage
 from .conversation import save_cleaned_messages
 

@@ -5,7 +5,7 @@ from os import access, R_OK
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
 from linhai.llm import Answer, UserMessage, Message
@@ -212,7 +212,7 @@ class TodolistCheckerPlugin(Plugin):
             return
 
         if self._has_unfinished_tasks(todolist_path):
-            from linhai.agent.base import RuntimeMessage
+            from linhai.agent.messages import RuntimeMessage
 
             await agent.message_processor.add_new_message(
                 RuntimeMessage(

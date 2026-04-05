@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.agent.toolcall import AgentToolcall
 from linhai.config import MCPConfig, ToolConfig
 from linhai.llm import ToolCallMessage

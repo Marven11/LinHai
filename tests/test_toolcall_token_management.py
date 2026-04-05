@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from linhai.agent.toolcall import AgentToolcall
 from linhai.llm import ToolCallMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 
 

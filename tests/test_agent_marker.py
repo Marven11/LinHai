@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 
 from linhai.agent import Agent
-from linhai.agent.base import WAITING_USER_MARKER, RuntimeMessage
+from linhai.agent.messages import WAITING_USER_MARKER, RuntimeMessage
 from linhai.plugin import WaitingUserPlugin
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage

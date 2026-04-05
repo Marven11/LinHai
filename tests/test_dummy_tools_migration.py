@@ -7,7 +7,7 @@ from pathlib import Path
 
 from linhai.agent import Agent
 from linhai.llm import ToolCallMessage, SystemMessage, Message
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager

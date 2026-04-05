@@ -3,7 +3,7 @@
 import time
 from typing import TYPE_CHECKING, Union
 from linhai.agent import Agent
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultFailed, ToolResultSuccess

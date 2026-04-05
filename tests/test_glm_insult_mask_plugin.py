@@ -4,7 +4,7 @@ from unittest.mock import Mock, MagicMock
 from typing import cast
 
 from linhai.plugin.message_checkers import GlmInsultMaskPlugin
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import OpenAi
 
 

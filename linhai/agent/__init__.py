@@ -1,6 +1,6 @@
 """Agent module for LinHai."""
 
-from .base import DynamicFileContentMessage
+from .messages import DynamicFileContentMessage
 from .main import Agent
 from .lifecycle import Lifecycle
 from .workflow import context_forget_range_step1, context_forget_range_step2

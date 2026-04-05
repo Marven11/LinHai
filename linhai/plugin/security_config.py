@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
@@ -120,7 +120,7 @@ class CommandWhitelistPlugin(Plugin):
 
     async def before_message_generation(self) -> None:
         from linhai.agent import Agent
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         agent = self.registry.get_member_typechecked("agent", Agent)
         if agent and self.allowed_commands:
@@ -231,7 +231,7 @@ class ProcessArgvCheckerPlugin(Plugin):
 
             if warnings:
                 from linhai.agent import Agent
-                from linhai.agent.base import RuntimeMessage
+                from linhai.agent.messages import RuntimeMessage
 
                 warning_msg = (
                     "警告：process_create的argv参数中包含可能的bash语法操作符:"

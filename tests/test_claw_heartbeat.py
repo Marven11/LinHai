@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from linhai.plugin.claw import ClawHeartbeatPlugin
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 
 

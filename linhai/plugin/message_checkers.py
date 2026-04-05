@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Dict, List, Literal, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import (
+from linhai.agent.messages import (
     RuntimeMessage,
     WAITING_USER_MARKER,
     SpoofedReasoningMessage,

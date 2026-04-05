@@ -7,7 +7,7 @@ import time
 from typing import Optional, Union
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
-from linhai.agent.base import FileContentMessage
+from linhai.agent.messages import FileContentMessage
 
 from .http import http_request
 from .command import change_directory

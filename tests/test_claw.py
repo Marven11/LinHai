@@ -9,7 +9,7 @@ from typing import cast
 from unittest.mock import Mock, patch
 
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
-from linhai.agent.base import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.plugin.claw import ClawPlugin
 
 

@@ -43,7 +43,7 @@ from linhai.sandbox import (
     MacOsSandbox,
     NoSandbox,
 )
-from .base import GlobalPrompt, PathPrompt
+from .messages import GlobalPrompt, PathPrompt
 
 from .main import Agent
 from .orchestration import AgentContextOrchestration
@@ -467,7 +467,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
     Returns:
         固定消息列表
     """
-    from linhai.agent.base import RuntimeMessage
+    from linhai.agent.messages import RuntimeMessage
 
     pinned_messages: list[Message] = [SystemMessage(context["registry"])]
     startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -481,7 +481,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         )
 
     if context["checklist_path"]:
-        from .base import ChecklistMessage
+        from .messages import ChecklistMessage
 
         pinned_messages.append(ChecklistMessage(context["checklist_path"]))
         await context["registry"].send_if_exists(
@@ -513,7 +513,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
             pinned_messages.append(UserMessage(msg))
 
     if context["file"]:
-        from linhai.agent.base import FileContentMessage
+        from linhai.agent.messages import FileContentMessage
 
         for file_path in context["file"]:
             with open(file_path, "r", encoding="utf-8") as f:

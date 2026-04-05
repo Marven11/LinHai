@@ -60,7 +60,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         """测试NotificationMessagePlugin的基本集成。"""
         # 使用mock避免复杂导入
         from linhai.registry import Registry
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         registry = Registry()
 

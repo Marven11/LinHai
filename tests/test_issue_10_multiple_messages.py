@@ -6,7 +6,7 @@ from linhai.agent.main import Agent
 from linhai.agent.user_message_handler import UserMessageHandler
 from linhai.registry import Registry
 from linhai.llm import UserMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.utils.common import UiNotice
 
 

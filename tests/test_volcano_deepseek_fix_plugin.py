@@ -4,7 +4,7 @@ import re
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from linhai.plugin import VolcanoDeepseekFixPlugin
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.utils.common import UiNotice
 
 

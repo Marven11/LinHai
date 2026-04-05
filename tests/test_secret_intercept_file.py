@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, AsyncMock
 import asyncio
 
 from linhai.secret import SecretInterceptorPlugin, SecretInfo
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestSecretInterceptorPluginWithFileSaving(unittest.TestCase):

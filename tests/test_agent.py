@@ -7,7 +7,7 @@ from typing import TypedDict, Any
 from pathlib import Path
 
 from linhai.agent import Agent
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 from linhai.registry import Registry

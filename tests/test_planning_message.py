@@ -46,7 +46,7 @@ class TestPlanningPromptMessage(unittest.TestCase):
         self.assertIn("/tmp/test_planning", content)
 
     def test_inherits_from_runtime_message(self):
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         message = PlanningPromptMessage(self.test_folder)
 

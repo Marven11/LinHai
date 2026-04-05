@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-from linhai.agent.base import (
+from linhai.agent.messages import (
     FileContentMessage,
     GlobalPrompt,
     PathPrompt,

@@ -9,8 +9,8 @@ from pathlib import Path
 
 from linhai.plugin import UnnecessarySedReadPlugin
 from linhai.llm import ToolCallMessage
-from linhai.agent.base import FileContentMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import FileContentMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestUnnecessarySedReadPlugin(unittest.TestCase):
@@ -190,7 +190,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         # 结果很大，但插件仍然会警告
         self.assertIsNotNone(result)
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("警告：检测到不必要的sed读取", result.message)
@@ -232,7 +232,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         # 文件不存在，但插件仍然会警告
         self.assertIsNotNone(result)
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("警告：检测到不必要的sed读取", result.message)
@@ -351,7 +351,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         )
         # 新逻辑：第一次警告
         self.assertIsNotNone(result)
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         self.assertIsInstance(result, RuntimeMessage)
         self.assertIn("警告：检测到不必要的sed读取", result.message)
@@ -434,7 +434,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.agent.message_processor.get_messages.return_value = [file_content_message]
 
         # 模拟read_file工具调用，返回相同内容
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         new_file_content = FCM(
             absolute_path, "line1\nline2\nline3\n", show_line_numbers=False
@@ -481,7 +481,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         # 应该被阻止，因为内容相同且是第二次重复
         self.assertIsNotNone(result2)
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         self.assertIsInstance(result2, RuntimeMessage)
         self.assertIn("错误：你已经读取过文件", result2.message)
@@ -507,7 +507,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         self.agent.message_processor.get_messages.return_value = []
 
         # 模拟read_file工具调用
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         new_file_content = FCM(
             absolute_path, "line1\nline2\nline3\n", show_line_numbers=False
@@ -554,7 +554,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         # 模拟消息历史中包含FileContentMessage，内容为旧版本
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         old_file_content = FCM(
             absolute_path, "old line1\nold line2\nold line3\n", show_line_numbers=False
@@ -610,7 +610,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         # 模拟消息历史中包含FileContentMessage
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         old_file_content = FCM(
             absolute_path, "line1\nline2\nline3\n", show_line_numbers=False
@@ -666,7 +666,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         # 模拟多个历史消息，旧内容不同，最新内容相同
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         old_content1 = FCM(absolute_path, "old content", show_line_numbers=False)
         old_content2 = FCM(absolute_path, "different content", show_line_numbers=False)
@@ -748,7 +748,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.return_value = Path(absolute_path)
 
         # 模拟多个历史消息，旧内容相同，最新内容不同
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         old_content1 = FCM(
             absolute_path, "line1\nline2\nline3\n", show_line_numbers=False
@@ -810,7 +810,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.return_value.resolve.side_effect = OSError("Permission denied")
 
         # 模拟read_file工具调用
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         new_file_content = FCM(
             "/some/path/test.py", "line1\nline2\nline3\n", show_line_numbers=False
@@ -877,7 +877,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         mock_path.side_effect = path_side_effect
 
         # 模拟两个历史消息：一个坏路径（解析失败），一个好路径（内容与当前读取相同）
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         bad_message = MagicMock(spec=FCM)
         bad_message.filepath = "/bad/path"
@@ -1088,7 +1088,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
 
         mock_path.return_value.resolve.side_effect = ValueError("Invalid path")
 
-        from linhai.agent.base import FileContentMessage as FCM
+        from linhai.agent.messages import FileContentMessage as FCM
 
         new_file_content = FCM("/some/file.txt", "content", show_line_numbers=False)
 

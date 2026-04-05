@@ -9,7 +9,7 @@ from linhai.machine_control.ether_ghost_host.ether_ghost_host import (
     EtherGhostMachineControl,
 )
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.agent.base import FileContentMessage
+from linhai.agent.messages import FileContentMessage
 
 
 class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):

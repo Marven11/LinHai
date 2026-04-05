@@ -7,7 +7,7 @@ from linhai.agent import Agent
 from linhai.agent.command_callback import CommandCallback
 from linhai.registry import Registry
 from linhai.llm import UserMessage, AssistantMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):

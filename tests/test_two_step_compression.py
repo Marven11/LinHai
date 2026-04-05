@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 
 from linhai.agent import Agent
-from linhai.agent.base import RuntimeMessage, MessagesListSummerizeMessage
+from linhai.agent.messages import RuntimeMessage, MessagesListSummerizeMessage
 from linhai.agent.workflow import (
     context_forget_range_step1,
     context_forget_range_step2,
@@ -20,7 +20,7 @@ from linhai.llm import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
 from linhai.registry import Registry
-from linhai.agent.base import GlobalPrompt
+from linhai.agent.messages import GlobalPrompt
 
 
 class TestTwoStepCompressionBasic(unittest.IsolatedAsyncioTestCase):

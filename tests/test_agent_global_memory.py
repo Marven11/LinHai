@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from linhai.agent.base import GlobalPrompt
+from linhai.agent.messages import GlobalPrompt
 from linhai.config import Config, LLMConfig, AgentConfig
 
 

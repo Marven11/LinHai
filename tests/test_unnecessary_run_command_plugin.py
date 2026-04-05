@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
 from linhai.plugin import UnnecessaryRunCommandPlugin
-from linhai.agent.base import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.llm import ToolCallMessage
 
 

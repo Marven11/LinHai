@@ -9,7 +9,7 @@ from linhai.plugin.afk_plugin import AfkPlugin
 from linhai.agent.main import Agent
 from linhai.registry import Registry
 from linhai.config import TUIConfig
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestAfkParam(unittest.TestCase):

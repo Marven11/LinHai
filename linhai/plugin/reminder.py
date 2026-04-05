@@ -2,7 +2,7 @@ from pathlib import Path
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import FileContentMessage, RuntimeMessage
+from linhai.agent.messages import FileContentMessage, RuntimeMessage
 from linhai.plugin.message_checkers import Plugin
 from linhai.registry import Registry
 

@@ -13,7 +13,7 @@ from linhai.secret import (
     find_matching_secret_keys,
     SecretInfo,
 )
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestSecretFunctions(unittest.TestCase):

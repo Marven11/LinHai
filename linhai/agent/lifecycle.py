@@ -9,7 +9,7 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 if TYPE_CHECKING:

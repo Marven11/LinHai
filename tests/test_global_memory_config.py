@@ -9,7 +9,7 @@ import asyncio
 
 from linhai.agent.create import _create_pinned_messages
 from linhai.registry import Registry
-from linhai.agent.base import GlobalPrompt
+from linhai.agent.messages import GlobalPrompt
 
 
 class TestGlobalPromptConfig(unittest.TestCase):

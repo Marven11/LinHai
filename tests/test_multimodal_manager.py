@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, call
 
 from linhai.multimodal import MultimodalToolsetManager, load_image
 from linhai.tool.base import ToolSet
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestMultimodalToolsetManager(unittest.IsolatedAsyncioTestCase):

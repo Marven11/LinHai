@@ -3,7 +3,7 @@
 from typing import Dict, Optional, Protocol, Union, Any, Literal
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage, FileContentMessage
+from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.llm import Message
 from linhai.registry import Registry
 from linhai.tool.base import (

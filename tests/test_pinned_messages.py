@@ -9,14 +9,14 @@ import argparse
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
 from linhai.registry import Registry
 from linhai.llm import SystemMessage, UserMessage
-from linhai.agent.base import (
+from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,
     FileContentMessage,
     ChecklistMessage,
     RuntimeMessage,
 )
-from linhai.agent.base import MessagesListSummerizeMessage
+from linhai.agent.messages import MessagesListSummerizeMessage
 
 
 class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):

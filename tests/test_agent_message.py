@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from linhai.agent.message import AgentMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 
 
 class TestAgentMessage(unittest.IsolatedAsyncioTestCase):

@@ -8,7 +8,7 @@ from linhai.plugin.planning import TodolistCheckerPlugin
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.llm import UserMessage, Answer
 from linhai.agent.planning import PlanningPromptMessage
 

@@ -11,7 +11,7 @@ import subprocess
 import time
 
 
-from linhai.agent.base import FileContentMessage
+from linhai.agent.messages import FileContentMessage
 from linhai.tool.base import (
     ToolResultSuccess,
     ToolResultFailed,
@@ -305,12 +305,10 @@ def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         items.sort(key=lambda x: x.split()[-1])
 
         items_str = "\n".join(items)
-        return ToolResultSuccess(
-            content=f"""\
+        return ToolResultSuccess(content=f"""\
 文件夹路径: {dir_path.as_posix()}
 总用量 {len(items)}
-{items_str}"""
-        )
+{items_str}""")
     except OSError as exc:
         return ToolResultFailed(content=f"列出文件时发生错误: {exc!r}")
 

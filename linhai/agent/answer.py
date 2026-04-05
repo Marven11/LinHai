@@ -4,7 +4,7 @@ from linhai.llm import Answer, Message
 from linhai.llm_manager import LlmManager
 from linhai.parsed_message import ParsedAnswer
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage

@@ -11,7 +11,7 @@ from linhai.agent.orchestration import (
 )
 from linhai.agent.message import AgentMessage
 from linhai.llm import UserMessage, AssistantMessage, SystemMessage
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.agent.lifecycle import Lifecycle
 from linhai.tool.main import ToolManager
@@ -418,7 +418,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
 
     def test_get_cleanable_large_messages(self):
         """测试get_cleanable_large_messages函数。"""
-        from linhai.agent.base import Message
+        from linhai.llm import Message
 
         # 添加100条普通消息
         for i in range(100):

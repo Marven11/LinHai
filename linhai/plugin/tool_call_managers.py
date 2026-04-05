@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
 from linhai.llm import Answer, OpenAi

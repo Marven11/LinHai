@@ -15,7 +15,7 @@ from linhai.llm import (
     AssistantMessage,
     SystemMessage,
 )
-from linhai.agent.base import RuntimeMessage
+from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 
 from linhai.registry import Registry
@@ -261,7 +261,8 @@ class ContextTabWidget(Static):
     def _update_pinned_message_statistics(self, pinned_messages: list[Message]) -> None:
         sparkline = self.query_one("#pinned-stats-sparkline", Sparkline)
         sparkline.data = [
-            float(log2(self._estimate_message_tokens(msg) + 1 )) for msg in pinned_messages
+            float(log2(self._estimate_message_tokens(msg) + 1))
+            for msg in pinned_messages
         ]
 
         message_count = len(pinned_messages)

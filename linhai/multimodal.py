@@ -8,7 +8,7 @@ import base64
 import json
 import tempfile
 from pathlib import Path
-from typing import cast, Literal
+from typing import Literal
 from PIL import Image
 from io import BytesIO
 
@@ -95,7 +95,7 @@ class ImageMessage(Message):
             estimated_tokens = self.estimated_tokens()
             quality_desc = "原始分辨率" if self.quality == "raw" else "压缩后"
             content = f"<<image>><<message>>你不支持查看图片，图片内容已经自动转储到以下路径，用其他适当的方式间接查看这张图片（{quality_desc}，估算token用量: {estimated_tokens}）<<message>><<filepath>>{temp_path}<<filepath>><<image>>"
-            return cast(LanguageModelMessage, {"role": "user", "content": content})
+            return {"role": "user", "content": content}
 
     def get_content(self) -> None:
         return None
@@ -245,7 +245,7 @@ class MultimodalToolsetManager:
 
         if should_have and not has_tool:
             from linhai.agent.main import Agent
-            from linhai.agent.base import RuntimeMessage
+            from linhai.agent.messages import RuntimeMessage
 
             @self.toolset.register_tool(
                 name="load_image",
@@ -273,7 +273,7 @@ class MultimodalToolsetManager:
 
         elif not should_have and has_tool:
             from linhai.agent.main import Agent
-            from linhai.agent.base import RuntimeMessage
+            from linhai.agent.messages import RuntimeMessage
 
             del self.toolset.tools["load_image"]
 

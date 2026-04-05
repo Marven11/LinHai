@@ -47,7 +47,7 @@ class TestContextTab(unittest.TestCase):
         mock_orchestration = Mock(spec=AgentContextOrchestration)
 
         from linhai.llm import UserMessage, AssistantMessage
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         mock_messages = [
             UserMessage(message="测试用户消息"),
@@ -144,7 +144,7 @@ class TestContextTab(unittest.TestCase):
         mock_orchestration = Mock(spec=AgentContextOrchestration)
 
         from linhai.llm import UserMessage, AssistantMessage
-        from linhai.agent.base import RuntimeMessage
+        from linhai.agent.messages import RuntimeMessage
 
         mock_messages = [
             UserMessage(message="测试用户消息"),
@@ -235,7 +235,8 @@ class TestContextTab(unittest.TestCase):
         from math import log2
 
         expected_data = [
-            float(log2(widget._estimate_message_tokens(msg) + 1)) for msg in mock_messages
+            float(log2(widget._estimate_message_tokens(msg) + 1))
+            for msg in mock_messages
         ]
         self.assertEqual(mock_sparkline.data, expected_data)
         mock_stats_text.update.assert_called_once()

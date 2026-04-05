@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 
 from .exceptions import ConfigValidationError
-from .agent.base import RuntimeMessage
+from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
 from .llm import Message
 from .agent.lifecycle import Lifecycle

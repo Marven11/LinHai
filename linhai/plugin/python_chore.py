@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
-from linhai.agent.base import (
+from linhai.agent.messages import (
     FileContentMessage,
     GlobalPrompt,
     PathPrompt,

@@ -15,7 +15,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from linhai.agent.base import FileContentMessage
+from linhai.agent.messages import FileContentMessage
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
