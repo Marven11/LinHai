@@ -119,7 +119,8 @@ class TestLLMTokenUsage(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(message.input_tokens, 50)
                     self.assertEqual(message.output_tokens, 20)
                     self.assertEqual(message.total_tokens, 70)
-                    self.assertEqual(message.cached_input_tokens, 100)
+                    self.assertIsNone(message.cached_input_tokens)
+                    self.assertEqual(message.estimated_cached_input_tokens, 100)
                     break
 
             self.assertTrue(token_usage_sent, "应该发送token_usage消息")

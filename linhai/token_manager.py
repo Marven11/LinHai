@@ -71,7 +71,11 @@ class TokenManager:
                 "input_tokens": token_usage.input_tokens,
                 "output_tokens": token_usage.output_tokens,
                 "total_tokens": token_usage.total_tokens,
-                "cached_input_tokens": token_usage.cached_input_tokens or 0,
+                "cached_input_tokens": (
+                    token_usage.cached_input_tokens
+                    if token_usage.cached_input_tokens is not None
+                    else (token_usage.estimated_cached_input_tokens or 0)
+                ),
                 "cache_creation_input_tokens": (
                     token_usage.cache_creation_input_tokens
                     if token_usage.cache_creation_input_tokens
@@ -85,7 +89,9 @@ class TokenManager:
             self.cumulative_token_usage["output_tokens"] += token_usage.output_tokens
             self.cumulative_token_usage["total_tokens"] += token_usage.total_tokens
             self.cumulative_token_usage["cached_input_tokens"] += (
-                token_usage.cached_input_tokens or 0
+                token_usage.cached_input_tokens
+                if token_usage.cached_input_tokens is not None
+                else (token_usage.estimated_cached_input_tokens or 0)
             )
             self.cumulative_token_usage["cache_creation_input_tokens"] += (
                 token_usage.cache_creation_input_tokens or 0
@@ -133,7 +139,11 @@ class TokenManager:
         if self._current_token_usage is not None:
             input_tokens += self._current_token_usage.input_tokens
             output_tokens += self._current_token_usage.output_tokens
-            current_cache = self._current_token_usage.cached_input_tokens or 0
+            current_cache = (
+                self._current_token_usage.cached_input_tokens
+                if self._current_token_usage.cached_input_tokens is not None
+                else (self._current_token_usage.estimated_cached_input_tokens or 0)
+            )
             cached_input_tokens += current_cache
 
         token_limit = llm_instance.get_token_limit()

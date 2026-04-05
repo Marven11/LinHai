@@ -181,14 +181,14 @@ class ContextTabWidget(Static):
 
         return type_counts, total_tokens, max_tokens, max_tokens_msg
 
-    def _get_token_cache_info(self, used: int) -> tuple[int, float]:
+    def _get_token_cache_info(self, used: int) -> tuple[int, float, bool]:
         """Get cached token information from token manager.
 
         Args:
             used: Total tokens used (input + output)
 
         Returns:
-            Tuple of (cached_tokens: int, cache_percentage: float)
+            Tuple of (cached_tokens: int, cache_percentage: float, is_estimated: bool)
         """
         if not self.registry.has_member("token_manager"):
             raise RuntimeError("token_manager should be registered in registry")
@@ -200,7 +200,7 @@ class ContextTabWidget(Static):
         # Fail fast: token_usage must be AnswerTokenUsage or None
         token_usage = token_manager.current_token_usage
         if token_usage is None:
-            return 0, 0.0
+            return 0, 0.0, True
 
         # Fail fast: if not None, must be AnswerTokenUsage
         if not isinstance(token_usage, AnswerTokenUsage):
@@ -208,13 +208,19 @@ class ContextTabWidget(Static):
                 f"token_manager.current_token_usage should be AnswerTokenUsage or None, got {type(token_usage)}"
             )
 
-        cached = token_usage.cached_input_tokens or 0
+        actual = token_usage.cached_input_tokens
+        is_estimated = actual is None
+        cached = (
+            actual
+            if actual is not None
+            else (token_usage.estimated_cached_input_tokens or 0)
+        )
         if cached > 0 and used > 0:
-            return cached, (cached / used * 100)
+            return cached, (cached / used * 100), is_estimated
         elif cached > 0:
-            return cached, 0.0
+            return cached, 0.0, is_estimated
 
-        return 0, 0.0
+        return 0, 0.0, is_estimated
 
     @staticmethod
     def _format_longest_message(
@@ -368,7 +374,7 @@ class ContextTabWidget(Static):
         else:
             pb_model.update(total=100.0, progress=float(min(used, 100)))
 
-        cached, cache_percentage = self._get_token_cache_info(int(used))
+        cached, cache_percentage, is_estimated = self._get_token_cache_info(int(used))
 
         if self.registry.has_member("token_manager"):
             tm = self.registry.get_member_typechecked("token_manager", TokenManager)
@@ -382,8 +388,9 @@ class ContextTabWidget(Static):
             generation_line,
         ]
         if cached > 0:
+            label = "估算" if is_estimated else "实际"
             lines.append(
-                f"当前消息缓存状态（估算）: {cached} token ({cache_percentage:.1f}%)"
+                f"当前消息缓存状态（{label}）: {cached} token ({cache_percentage:.1f}%)"
             )
         token_stats_text.update("\n".join(lines))
 

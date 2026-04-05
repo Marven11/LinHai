@@ -340,6 +340,7 @@ class AnswerTokenUsage(BaseModel):
     total_tokens: int
     cached_input_tokens: int | None = None
     cache_creation_input_tokens: int | None = None
+    estimated_cached_input_tokens: int | None = None
 
 
 def extract_usage(usage_dict: dict[str, Any]) -> AnswerTokenUsage | None:
@@ -522,7 +523,8 @@ class OpenAiAnswer:
         self.input_tokens = 0
         self.output_tokens = 0
         self.registry = registry
-        self.cached_input_tokens = estimated_cached_input_tokens
+        self.estimated_cached_input_tokens = estimated_cached_input_tokens
+        self.cached_input_tokens: int | None = None
         self.llm_instance = llm_instance
         self.toyield: list[AnswerToken] = []
 
@@ -562,6 +564,7 @@ class OpenAiAnswer:
                             total_tokens=self.total_tokens,
                             cached_input_tokens=self.cached_input_tokens,
                             cache_creation_input_tokens=usage_result.cache_creation_input_tokens,
+                            estimated_cached_input_tokens=self.estimated_cached_input_tokens,
                         ),
                     )
             if len(chunk.choices) == 0:
@@ -652,6 +655,7 @@ class OpenAiAnswer:
             output_tokens=self.output_tokens,
             total_tokens=self.total_tokens,
             cached_input_tokens=self.cached_input_tokens,
+            estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
 
@@ -688,7 +692,8 @@ class MinimaxAnswer:
         self.input_tokens = 0
         self.output_tokens = 0
         self.registry = registry
-        self.cached_input_tokens = cached_input_tokens
+        self.estimated_cached_input_tokens = cached_input_tokens
+        self.cached_input_tokens: int | None = None
         self.llm_instance = llm_instance
         if usage:
             usage_result = extract_usage(usage.__dict__)
@@ -768,6 +773,7 @@ class MinimaxAnswer:
             output_tokens=self.output_tokens,
             total_tokens=self.total_tokens,
             cached_input_tokens=self.cached_input_tokens,
+            estimated_cached_input_tokens=self.estimated_cached_input_tokens,
         )
 
 
@@ -976,17 +982,15 @@ class OpenAi:
             if usage:
                 usage_result = extract_usage(usage.__dict__)
                 if usage_result is not None:
-                    cached = usage_result.cached_input_tokens
-                    if cached is None:
-                        cached = estimated_cached_input_tokens
                     await self.registry.send(
                         "token_usage",
                         AnswerTokenUsage(
                             input_tokens=usage_result.input_tokens,
                             output_tokens=usage_result.output_tokens,
                             total_tokens=usage_result.total_tokens,
-                            cached_input_tokens=cached,
+                            cached_input_tokens=usage_result.cached_input_tokens,
                             cache_creation_input_tokens=usage_result.cache_creation_input_tokens,
+                            estimated_cached_input_tokens=estimated_cached_input_tokens,
                         ),
                     )
             answer = MinimaxAnswer(

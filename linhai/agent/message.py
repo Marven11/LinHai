@@ -111,7 +111,9 @@ class AgentMessage:
         else:
             estimated_cache_refresh_factor = 5
         cached_input_tokens = (
-            token_usage.cached_input_tokens if token_usage.cached_input_tokens else 0
+            token_usage.cached_input_tokens
+            if token_usage.cached_input_tokens is not None
+            else (token_usage.estimated_cached_input_tokens or 0)
         )
         spending_with_old_cache = (
             cached_input_tokens * cache_info.cache_hit_price_ratio

@@ -254,7 +254,7 @@ class TestContextTab(unittest.TestCase):
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
         self.assertIn("当前用量: 6000", token_stats_args)
         self.assertIn("Token限制: 128000", token_stats_args)
-        self.assertIn("当前消息缓存状态（估算）", token_stats_args)
+        self.assertIn("当前消息缓存状态（实际）", token_stats_args)
         self.assertNotIn("当前消息估算缓存Token数", token_stats_args)
 
     def test_update_token_usage_no_agent(self):
