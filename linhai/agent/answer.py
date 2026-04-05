@@ -39,7 +39,6 @@ class AgentLlm:
         self.toolcall_processor = toolcall_processor
         self.message_processor = message_processor
         self._current_parsed_answer: ParsedAnswer | None = None
-        self._queued_messages: list = []
         self.current_answer: Answer | None = None
 
     async def call_and_wait_llm(self) -> Tuple[Answer, ParsedAnswer, bool]:

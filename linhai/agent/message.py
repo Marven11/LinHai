@@ -372,13 +372,17 @@ class AgentMessage:
 
     async def process_queued_messages(self) -> None:
         """处理所有排队消息。"""
-        if self.queued_messages:
-            self.messages.append(
-                RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
-            )
-            self.messages.extend(self.queued_messages)
-            self.queued_messages = []
-            self._save_context()
+        if not self.queued_messages:
+            return
+        await self.registry.send_if_exists(
+            "ui_log", UiNotice(level="INFO", content="排队消息被处理")
+        )
+        await self.add_new_message(
+            RuntimeMessage("用户在你回答的时候输出了以下排队消息，现在请处理：")
+        )
+        for msg in self.queued_messages:
+            await self.add_new_message(msg)
+        self.queued_messages = []
 
     def find_message(self, message: Message) -> int | None:
         """查找消息在messages列表中的索引。

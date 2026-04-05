@@ -37,17 +37,18 @@ class TestCommandCallback(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_queue_command(self):
-        mock_agent = Mock()
-        mock_agent.queued_messages = []
-        self.registry.get_member_typechecked.return_value = mock_agent
+        mock_agent_message = Mock()
+        mock_agent_message.add_queued_message = Mock()
+        self.registry.get_member_typechecked.return_value = mock_agent_message
         self.registry.send_if_exists = AsyncMock()
 
         parsed = make_parsed("/queue Test message")
         result = await self.callback(parsed)
 
         self.assertFalse(result)
-        self.assertEqual(len(mock_agent.queued_messages), 1)
-        self.assertEqual(mock_agent.queued_messages[0].message, "Test message")
+        mock_agent_message.add_queued_message.assert_called_once()
+        queued_msg = mock_agent_message.add_queued_message.call_args[0][0]
+        self.assertEqual(queued_msg.message, "Test message")
 
     async def test_queue_command_empty(self):
         self.registry.send_if_exists = AsyncMock()

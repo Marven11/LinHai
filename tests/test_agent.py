@@ -477,8 +477,10 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             "user_message", UserMessage(message="/queue 等下需要实现")
         )
         await handler.receive_and_dispatch()
-        self.assertEqual(len(self.agent.queued_messages), 1)
-        self.assertEqual(self.agent.queued_messages[0].message, "等下需要实现")
+        self.assertEqual(len(self.agent.message_processor.queued_messages), 1)
+        self.assertEqual(
+            self.agent.message_processor.queued_messages[0].message, "等下需要实现"
+        )
 
 
 if __name__ == "__main__":

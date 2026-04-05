@@ -120,6 +120,7 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
         self.agent.message_processor.get_message_count = MagicMock(return_value=0)
+        self.agent.message_processor.process_queued_messages = AsyncMock()
         self.agent.message_processor.lifecycle = mock_lifecycle
 
         # 调用generate_response

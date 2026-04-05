@@ -50,16 +50,18 @@ class CommandCallback:
         )
 
     async def _handle_queue_command(self, msg: UserMessage) -> bool:
-        from .main import Agent
+        from .message import AgentMessage
 
-        agent = self.registry.get_member_typechecked("agent", Agent)
+        agent_message = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
         queue_content = msg.message.removeprefix("/queue").strip()
         if not queue_content:
             await self._show_runtime_message("ERROR", "用法: /queue <消息内容>")
             return False
 
         queued_msg = UserMessage(message=queue_content)
-        agent.queued_messages.append(queued_msg)
+        agent_message.add_queued_message(queued_msg)
         return False
 
     async def _handle_quit_command(self) -> bool:
