@@ -166,6 +166,58 @@ class TestInterruptToWorking(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(agent.state, "working")
 
 
+class TestSleepingUserMessageInterrupt(unittest.IsolatedAsyncioTestCase):
+    async def test_user_message_interrupts_sleep(self):
+        agent = _create_agent()
+        agent.sleeping_since = datetime.now()
+        agent.sleeping_deadline = datetime.now() + timedelta(seconds=10)
+        agent.state = "sleeping"
+
+        agent.message_processor = MagicMock()
+        agent.message_processor.add_new_message = AsyncMock()
+
+        async def send_user_message_after_delay():
+            await asyncio.sleep(0.05)
+            agent.user_message_handler.has_message = MagicMock(return_value=True)
+            agent.user_message_handler.receive_and_dispatch = AsyncMock(
+                return_value=True
+            )
+
+        task = asyncio.create_task(send_user_message_after_delay())
+        await agent.state_sleeping()
+        await task
+
+        self.assertEqual(agent.state, "working")
+        self.assertIsNone(agent.sleeping_since)
+        self.assertIsNone(agent.sleeping_deadline)
+
+    async def test_non_interrupt_command_continues_sleep(self):
+        agent = _create_agent()
+        agent.sleeping_since = datetime.now()
+        agent.sleeping_deadline = datetime.now() + timedelta(seconds=0.2)
+        agent.state = "sleeping"
+
+        agent.message_processor = MagicMock()
+        agent.message_processor.add_new_message = AsyncMock()
+
+        has_message_calls = [True, False]
+
+        def has_message_side_effect():
+            if has_message_calls:
+                return has_message_calls.pop(0)
+            return False
+
+        agent.user_message_handler.has_message = MagicMock(
+            side_effect=has_message_side_effect
+        )
+        agent.user_message_handler.receive_and_dispatch = AsyncMock(return_value=False)
+
+        await agent.state_sleeping()
+
+        self.assertEqual(agent.state, "working")
+        agent.message_processor.add_new_message.assert_called_once()
+
+
 class TestAgentStateType(unittest.TestCase):
     def test_sleeping_is_valid_state(self):
         from linhai.type_hints import AgentState

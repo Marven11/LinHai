@@ -205,6 +205,15 @@ class Agent:
         while True:
             if self.state != "sleeping":
                 return
+            if self.user_message_handler.has_message():
+                should_interrupt = (
+                    await self.user_message_handler.receive_and_dispatch()
+                )
+                if should_interrupt:
+                    self.sleeping_since = None
+                    self.sleeping_deadline = None
+                    self.state = "working"
+                    return
             now = datetime.now()
             if now >= self.sleeping_deadline:
                 break
