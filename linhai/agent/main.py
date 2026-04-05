@@ -106,7 +106,11 @@ class Agent:
         if token_limit is None:
             token_limit = 65536
 
-        threshold_config = self.compress_threshold
+        llm_threshold = current_llm.get_compress_threshold()
+        if llm_threshold is not None:
+            threshold_config = llm_threshold
+        else:
+            threshold_config = self.compress_threshold
         hard_limit = (
             int(threshold_config * token_limit)
             if isinstance(threshold_config, float)

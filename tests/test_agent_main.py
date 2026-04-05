@@ -3,11 +3,12 @@
 """
 
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.agent.main import Agent
 from linhai.registry import Registry
 from linhai.parsed_message import ParsedAnswer
+from linhai.llm_manager import LlmManager
 
 
 class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
@@ -132,6 +133,98 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
         # 验证call_and_wait_llm被调用
         self.agent.agent_llm.call_and_wait_llm.assert_called_once()
+
+
+class TestGetThresholdInfo(unittest.TestCase):
+    """测试Agent.get_threshold_info的compress_threshold优先级。"""
+
+    def _create_agent(self, compress_threshold, llm_compress_threshold=None):
+        registry = MagicMock(spec=Registry)
+        registry.is_empty = MagicMock(return_value=False)
+        registry.receive = AsyncMock()
+        registry.send = AsyncMock()
+
+        mock_llm = MagicMock()
+        mock_llm.get_name = MagicMock(return_value="test-llm")
+        mock_llm.get_token_limit = MagicMock(return_value=100000)
+        mock_llm.get_compress_threshold = MagicMock(return_value=llm_compress_threshold)
+
+        llm_manager = LlmManager(
+            registry=registry,
+            llms=[mock_llm],
+            default_llm_name="test-llm",
+            llm_fallback_map={"test-llm": None},
+        )
+        agent = Agent(
+            llm_manager=llm_manager,
+            compress_threshold=compress_threshold,
+            registry=registry,
+            pinned_messages=[],
+        )
+        return agent, registry, mock_llm
+
+    def test_threshold_info_uses_agent_level_when_llm_none(self):
+        """当LLM级别compress_threshold为None时使用agent级别。"""
+        agent, registry, _ = self._create_agent(0.8, llm_compress_threshold=None)
+        from linhai.token_manager import TokenManager
+        from linhai.llm import AnswerTokenUsage
+
+        mock_tm = MagicMock(spec=TokenManager)
+        mock_tm.current_token_usage = AnswerTokenUsage(
+            input_tokens=50000, output_tokens=1000, total_tokens=51000
+        )
+        registry.get_member_typechecked = MagicMock(return_value=mock_tm)
+
+        result = agent.get_threshold_info()
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result["hard_limit"], 80000)
+
+    def test_threshold_info_prefers_llm_level_float(self):
+        """当LLM级别设置了float compress_threshold时优先使用。"""
+        agent, registry, _ = self._create_agent(0.8, llm_compress_threshold=0.5)
+        from linhai.token_manager import TokenManager
+        from linhai.llm import AnswerTokenUsage
+
+        mock_tm = MagicMock(spec=TokenManager)
+        mock_tm.current_token_usage = AnswerTokenUsage(
+            input_tokens=50000, output_tokens=1000, total_tokens=51000
+        )
+        registry.get_member_typechecked = MagicMock(return_value=mock_tm)
+
+        result = agent.get_threshold_info()
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result["hard_limit"], 50000)
+
+    def test_threshold_info_prefers_llm_level_int(self):
+        """当LLM级别设置了int compress_threshold时直接使用。"""
+        agent, registry, _ = self._create_agent(0.8, llm_compress_threshold=60000)
+        from linhai.token_manager import TokenManager
+        from linhai.llm import AnswerTokenUsage
+
+        mock_tm = MagicMock(spec=TokenManager)
+        mock_tm.current_token_usage = AnswerTokenUsage(
+            input_tokens=50000, output_tokens=1000, total_tokens=51000
+        )
+        registry.get_member_typechecked = MagicMock(return_value=mock_tm)
+
+        result = agent.get_threshold_info()
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result["hard_limit"], 60000)
+
+    def test_threshold_info_returns_none_when_no_usage(self):
+        """当没有token使用数据时返回None。"""
+        agent, registry, _ = self._create_agent(0.8)
+        from linhai.token_manager import TokenManager
+
+        mock_tm = MagicMock(spec=TokenManager)
+        mock_tm.current_token_usage = None
+        registry.get_member_typechecked = MagicMock(return_value=mock_tm)
+
+        result = agent.get_threshold_info()
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

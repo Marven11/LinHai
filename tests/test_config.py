@@ -20,14 +20,12 @@ class TestConfig(unittest.TestCase):
     def test_load_config_valid(self):
         """Test loading a valid config."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
-            f.write(
-                """[[llm]]
+            f.write("""[[llm]]
 name = "primary"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
-"""
-            )
+""")
             temp_file = f.name
 
         try:
@@ -548,6 +546,85 @@ argv_template = ["bwrap", "--ro-bind", "/", "/"]
             assert config.agent[0].process_sandbox is not None
             self.assertIsNotNone(config.agent[0].process_sandbox.macos_sandbox)
             self.assertIsNotNone(config.agent[0].process_sandbox.bubblewrap)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_llm_compress_threshold_float(self):
+        """Test loading LLM config with float compress_threshold."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+compress_threshold = 0.6
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.llm[0].compress_threshold, 0.6)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_llm_compress_threshold_int(self):
+        """Test loading LLM config with int compress_threshold."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+compress_threshold = 50000
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertEqual(config.llm[0].compress_threshold, 50000)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_llm_compress_threshold_default_none(self):
+        """Test LLM config compress_threshold defaults to None."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            config = load_config(temp_file)
+            self.assertIsNone(config.llm[0].compress_threshold)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_llm_compress_threshold_invalid_float(self):
+        """Test LLM config with invalid float compress_threshold."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+compress_threshold = 1.5
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(Exception):
+                load_config(temp_file)
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_config_with_llm_compress_threshold_invalid_int(self):
+        """Test LLM config with invalid int compress_threshold."""
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+compress_threshold = 0
+"""
+        temp_file = create_temp_config(config_content)
+        try:
+            with self.assertRaises(Exception):
+                load_config(temp_file)
         finally:
             os.unlink(temp_file)
 

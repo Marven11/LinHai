@@ -483,6 +483,14 @@ class LanguageModel(Protocol):
     def support_image(self) -> bool:
         raise NotImplementedError()
 
+    def get_compress_threshold(self) -> int | float | None:
+        """获取LLM级别的compress_threshold覆盖。
+
+        返回:
+            int | float | None: LLM级别的压缩阈值，如果没有配置则返回None
+        """
+        raise NotImplementedError()
+
     def get_description(self) -> str:
         """获取LLM的描述信息。
 
@@ -781,6 +789,7 @@ class OpenAi:
         explicit_cache_info: ExplicitCacheInfo | None,
         tools: list[dict] | None = None,
         token_limit: int | None = None,
+        compress_threshold: int | float | None = None,
         compatibility: str | None = None,
         name: str,
     ):
@@ -810,6 +819,7 @@ class OpenAi:
         self.tools = tools
         self.chat_completion_kwargs = chat_completion_kwargs
         self.token_limit = token_limit
+        self._compress_threshold = compress_threshold
         self.compatibility = compatibility
         self.name = name
         self.previous_history: Sequence[Message] | None = None
@@ -831,6 +841,14 @@ class OpenAi:
             int | None: token限制数量，如果没有配置则返回None
         """
         return self.token_limit
+
+    def get_compress_threshold(self) -> int | float | None:
+        """获取LLM级别的compress_threshold覆盖。
+
+        返回:
+            int | float | None: LLM级别的压缩阈值，如果没有配置则返回None
+        """
+        return self._compress_threshold
 
     def get_name(self) -> str:
         """获取当前LLM的名称。

@@ -377,6 +377,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
             openai_config=llm_config.client_options,
             chat_completion_kwargs=llm_config.completion_options,
             token_limit=llm_config.token_limit,
+            compress_threshold=llm_config.compress_threshold,
             compatibility=llm_config.compatibility,
             name=llm_config.name,
             support_image=llm_config.support_image,

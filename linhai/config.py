@@ -51,6 +51,10 @@ class LLMConfig(BaseModel):
     token_limit: int = Field(
         default=0, description="上下文窗口的token限制，0表示使用默认值"
     )
+    compress_threshold: Optional[Union[int, float]] = Field(
+        default=None,
+        description="上下文压缩阈值，覆盖agent级别的compress_threshold。float在0.0-1.0之间，int大于0",
+    )
     fallback: Optional[str] = Field(
         default=None, description="回退LLM的名称，当主LLM不可用时使用"
     )
@@ -62,6 +66,20 @@ class LLMConfig(BaseModel):
             raise ConfigValidationError(
                 "LLM name can only contain letters, numbers, hyphens, and underscores"
             )
+        return v
+
+    @field_validator("compress_threshold")
+    def validate_compress_threshold(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            if not 0.0 <= v <= 1.0:
+                raise ValueError("如果为float类型，compress_threshold应在0.0到1.0之间")
+        elif isinstance(v, int):
+            if v <= 0:
+                raise ValueError("如果为int类型，compress_threshold应大于0")
+        else:
+            raise TypeError("compress_threshold必须是int或float类型")
         return v
 
     @field_validator("base_url")
