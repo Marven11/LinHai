@@ -1,33 +1,42 @@
-"""测试agent.override_toolsets配置项功能"""
+"""测试agent级别工具集配置功能"""
 
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from linhai.config import Config, AgentConfig, ConfigValidationError
+from linhai.config import AgentConfig, ConfigValidationError
 from linhai.agent.create import create_agent_from_context, create_agent_build_context
 
 
-class TestOverrideToolsetsConfig(unittest.TestCase):
-    """测试override_toolsets配置功能"""
+class TestAgentToolsetConfig(unittest.TestCase):
+    """测试agent级别的enable_toolsets/disable_toolsets配置"""
 
-    def test_override_toolsets_none(self):
-        """测试override_toolsets为None时，使用默认的toolsets"""
+    def test_enable_toolsets_none(self):
         config = AgentConfig()
-        self.assertIsNone(config.override_toolsets)
+        self.assertIsNone(config.enable_toolsets)
+        self.assertIsNone(config.disable_toolsets)
 
-    def test_override_toolsets_with_list(self):
-        """测试override_toolsets为列表时，使用该列表"""
-        config = AgentConfig(override_toolsets=["utils", "sleep"])
-        self.assertEqual(config.override_toolsets, ["utils", "sleep"])
+    def test_enable_toolsets_with_list(self):
+        config = AgentConfig(enable_toolsets=["utils", "sleep"])
+        self.assertEqual(config.enable_toolsets, ["utils", "sleep"])
 
-    def test_override_toolsets_empty_list(self):
-        """测试override_toolsets为空列表时，使用空列表"""
-        config = AgentConfig(override_toolsets=[])
-        self.assertEqual(config.override_toolsets, [])
+    def test_disable_toolsets_with_list(self):
+        config = AgentConfig(disable_toolsets=["llm"])
+        self.assertEqual(config.disable_toolsets, ["llm"])
 
-    def test_override_toolsets_in_full_config(self):
-        """测试在完整配置中设置override_toolsets"""
+    def test_enable_and_disable_mutually_exclusive(self):
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(enable_toolsets=["utils"], disable_toolsets=["llm"])
+
+    def test_enable_toolsets_invalid(self):
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(enable_toolsets=["invalid"])
+
+    def test_disable_toolsets_invalid(self):
+        with self.assertRaises(ConfigValidationError):
+            AgentConfig(disable_toolsets=["invalid"])
+
+    def test_enable_toolsets_in_full_config(self):
         config_content = """[[llm]]
 name = "test_llm"
 base_url = "https://api.example.com"
@@ -35,7 +44,7 @@ api_key = "test_key"
 model = "test_model"
 
 [[agent]]
-override_toolsets = ["utils", "sleep"]
+enable_toolsets = ["utils", "sleep"]
 """
         import tempfile
         import os
@@ -48,8 +57,32 @@ override_toolsets = ["utils", "sleep"]
             from linhai.config import load_config
 
             config = load_config(temp_file)
-            self.assertIsNotNone(config.agent)
-            self.assertEqual(config.agent[0].override_toolsets, ["utils", "sleep"])
+            self.assertEqual(config.agent[0].enable_toolsets, ["utils", "sleep"])
+        finally:
+            os.unlink(temp_file)
+
+    def test_disable_toolsets_in_full_config(self):
+        config_content = """[[llm]]
+name = "test_llm"
+base_url = "https://api.example.com"
+api_key = "test_key"
+model = "test_model"
+
+[[agent]]
+disable_toolsets = ["llm"]
+"""
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(config_content)
+            temp_file = f.name
+
+        try:
+            from linhai.config import load_config
+
+            config = load_config(temp_file)
+            self.assertEqual(config.agent[0].disable_toolsets, ["llm"])
         finally:
             os.unlink(temp_file)
 
@@ -59,7 +92,7 @@ override_toolsets = ["utils", "sleep"]
     @patch("linhai.multimodal.MultimodalToolsetManager")
     @patch("linhai.agent.conversation.register_conversation_folder")
     @patch("linhai.agent.main.Agent")
-    def test_override_toolsets_applied_in_agent_creation(
+    def test_enable_toolsets_applied_in_agent_creation(
         self,
         mock_agent,
         mock_register_conversation_folder,
@@ -68,7 +101,6 @@ override_toolsets = ["utils", "sleep"]
         mock_tool_manager,
         mock_llm_instances,
     ):
-        """测试override_toolsets在agent创建时被正确应用"""
         mock_config = Mock()
         mock_llm_config = Mock()
         mock_llm_config.name = "test_llm"
@@ -84,10 +116,12 @@ override_toolsets = ["utils", "sleep"]
 
         mock_config.llm = [mock_llm_config]
         mock_config.agent = [Mock()]
-        mock_config.agent[0].override_toolsets = ["utils", "sleep"]
+        mock_config.agent[0].enable_toolsets = ["utils", "sleep"]
+        mock_config.agent[0].disable_toolsets = None
         mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
-        mock_config.tools.toolsets = ["machine_control"]
+        mock_config.tools.enable_toolsets = None
+        mock_config.tools.disable_toolsets = None
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
@@ -110,7 +144,7 @@ override_toolsets = ["utils", "sleep"]
         mock_llm_manager.llm_names = ["test_llm"]
         mock_llm_manager.current_llm_index = 0
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        mock_llm_instances.return_value = mock_llm_manager  # type: ignore
+        mock_llm_instances.return_value = mock_llm_manager
 
         mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]
@@ -152,7 +186,7 @@ override_toolsets = ["utils", "sleep"]
     @patch("linhai.multimodal.MultimodalToolsetManager")
     @patch("linhai.agent.conversation.register_conversation_folder")
     @patch("linhai.agent.main.Agent")
-    def test_no_override_toolsets_uses_default(
+    def test_default_uses_all_toolsets(
         self,
         mock_agent,
         mock_register_conversation_folder,
@@ -161,7 +195,6 @@ override_toolsets = ["utils", "sleep"]
         mock_tool_manager,
         mock_llm_instances,
     ):
-        """测试override_toolsets为None时，使用tools.toolsets"""
         mock_config = Mock()
         mock_llm_config = Mock()
         mock_llm_config.name = "test_llm"
@@ -177,10 +210,12 @@ override_toolsets = ["utils", "sleep"]
 
         mock_config.llm = [mock_llm_config]
         mock_config.agent = [Mock()]
-        mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].enable_toolsets = None
+        mock_config.agent[0].disable_toolsets = None
         mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
-        mock_config.tools.toolsets = ["utils", "sleep"]
+        mock_config.tools.enable_toolsets = None
+        mock_config.tools.disable_toolsets = None
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
@@ -203,7 +238,7 @@ override_toolsets = ["utils", "sleep"]
         mock_llm_manager.llm_names = ["test_llm"]
         mock_llm_manager.current_llm_index = 0
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        mock_llm_instances.return_value = mock_llm_manager  # type: ignore
+        mock_llm_instances.return_value = mock_llm_manager
 
         mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]

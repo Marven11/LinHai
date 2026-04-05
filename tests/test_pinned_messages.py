@@ -17,6 +17,7 @@ from linhai.agent.messages import (
     RuntimeMessage,
 )
 from linhai.agent.messages import MessagesListSummerizeMessage
+from linhai.config import AVAILABLE_TOOLSETS
 
 
 class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
@@ -63,8 +64,7 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "user_prompt": user_prompt,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "toolsets_config": "defaults",
-            "override_toolsets": None,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": 0.8,
             "enable_directory_change_detection": False,
             "max_toolcall_for_llm": {},

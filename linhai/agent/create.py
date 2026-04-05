@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 import tempfile
-from typing import TypedDict, Optional, Tuple, Union, Literal
+from typing import TypedDict, Optional, Tuple, Union
 import argparse
 from datetime import datetime
 
@@ -70,8 +70,7 @@ class AgentBuildContext(TypedDict):
     checklist_path: Optional[Path]
     user_prompt: Optional[str]
     planning: bool
-    toolsets_config: Union[Literal["defaults"], list[str]]
-    override_toolsets: Optional[list[str]]
+    enabled_toolsets: list[str]
     compress_threshold: Union[int, float]
     enable_directory_change_detection: bool
     max_toolcall_for_llm: dict[str, int]
@@ -188,8 +187,7 @@ def create_agent_build_context(
         "checklist_path": checklist_path,
         "user_prompt": user_prompt,
         "planning": planning,
-        "toolsets_config": config.tools.toolsets,
-        "override_toolsets": agent_config.override_toolsets,
+        "enabled_toolsets": _resolve_enabled_toolsets(config.tools, agent_config),
         "compress_threshold": agent_config.compress_threshold,
         "enable_directory_change_detection": agent_config.enable_directory_change_detection,
         "max_toolcall_for_llm": agent_config.max_toolcall_for_llm,
@@ -214,6 +212,20 @@ def create_agent_build_context(
     }
 
 
+def _resolve_enabled_toolsets(
+    tool_config: "ToolConfig", agent_config: "AgentConfig"
+) -> list[str]:
+    if agent_config.enable_toolsets is not None:
+        return list(agent_config.enable_toolsets)
+    if agent_config.disable_toolsets is not None:
+        return [t for t in AVAILABLE_TOOLSETS if t not in agent_config.disable_toolsets]
+    if tool_config.enable_toolsets is not None:
+        return list(tool_config.enable_toolsets)
+    if tool_config.disable_toolsets is not None:
+        return [t for t in AVAILABLE_TOOLSETS if t not in tool_config.disable_toolsets]
+    return list(AVAILABLE_TOOLSETS)
+
+
 async def create_agent_from_context(
     context: AgentBuildContext,
 ) -> Agent:
@@ -234,15 +246,7 @@ async def create_agent_from_context(
         context, multimodal_manager.toolset
     )
 
-    toolsets_config = context["toolsets_config"]
-    override_toolsets = context["override_toolsets"]
-
-    if override_toolsets is not None:
-        enabled_toolsets = list(override_toolsets)
-    elif toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
-        enabled_toolsets = list(AVAILABLE_TOOLSETS)
-    else:
-        enabled_toolsets = list(toolsets_config)
+    toolsets_config = context["enabled_toolsets"]
 
     register_conversation_folder(context["registry"])
 
@@ -256,11 +260,11 @@ async def create_agent_from_context(
     orchestration = context["registry"].get_member_typechecked(
         "agent_context_orchestration", AgentContextOrchestration
     )
-    if "context_cleaning" in enabled_toolsets:
+    if "context_cleaning" in toolsets_config:
         tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
-    if "llm" in enabled_toolsets:
+    if "llm" in toolsets_config:
         tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
-    if "sleep" in enabled_toolsets:
+    if "sleep" in toolsets_config:
         from .state_machine import AgentStateMachine
 
         state_machine = context["registry"].get_member_typechecked(
@@ -403,15 +407,7 @@ def _build_toolsets_from_config(
     from linhai.machine_control.main import register_machine_control_tools
 
     registry = context["registry"]
-    toolsets_config = context["toolsets_config"]
-    override_toolsets = context["override_toolsets"]
-
-    if override_toolsets is not None:
-        enabled_toolsets = list(override_toolsets)
-    elif toolsets_config == "defaults" or not isinstance(toolsets_config, (str, list)):
-        enabled_toolsets = list(AVAILABLE_TOOLSETS)
-    else:
-        enabled_toolsets = list(toolsets_config)
+    enabled_toolsets = context["enabled_toolsets"]
 
     toolsets = []
     machine_control = None

@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.config import AVAILABLE_TOOLSETS
 from linhai.plugin.claw import ClawPlugin
 
 
@@ -79,8 +80,7 @@ class TestClawPinnedMessages(unittest.TestCase):
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "toolsets_config": "defaults",
-            "override_toolsets": None,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": 0.8,
             "enable_directory_change_detection": False,
             "max_toolcall_for_llm": {},

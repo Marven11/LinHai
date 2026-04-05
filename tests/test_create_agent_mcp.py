@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from linhai.registry import Registry
 from linhai.agent.create import create_agent_from_context
 from linhai.agent import Agent
-from linhai.config import load_config
+from linhai.config import load_config, AVAILABLE_TOOLSETS
 
 
 class TestCreateAgentMCP(unittest.TestCase):
@@ -88,8 +88,7 @@ server_script_path = "{server_script_path}"
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "toolsets_config": config.tools.toolsets,
-            "override_toolsets": config.agent[0].override_toolsets,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": config.agent[0].compress_threshold,
             "enable_directory_change_detection": config.agent[
                 0
@@ -146,8 +145,7 @@ compress_threshold = 80000
             "checklist_path": None,
             "user_prompt": None,
             "planning": False,
-            "toolsets_config": config.tools.toolsets,
-            "override_toolsets": config.agent[0].override_toolsets,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": config.agent[0].compress_threshold,
             "enable_directory_change_detection": config.agent[
                 0

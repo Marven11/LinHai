@@ -5,6 +5,7 @@ import asyncio
 
 from linhai.agent.create import create_agent_build_context
 from linhai.agent.planning import PlanningPromptMessage
+from linhai.config import AVAILABLE_TOOLSETS
 
 
 class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
@@ -28,7 +29,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.mock_config.agent[0].allowed_commands = None
         self.mock_config.agent[0].mcp = MagicMock()
         self.mock_config.agent[0].default_llm = None
-        self.mock_config.agent[0].override_toolsets = None
+
         self.mock_config_basedir = Path("/tmp/test_config")
         self.mock_cli_args = MagicMock()
         self.mock_cli_args.planning = False
@@ -172,8 +173,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
-            "toolsets_config": self.mock_config.tools.toolsets,
-            "override_toolsets": self.mock_config.agent[0].override_toolsets,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": self.mock_config.agent[0].compress_threshold,
             "enable_directory_change_detection": self.mock_config.agent[
                 0
@@ -265,8 +265,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "user_prompt": None,
             "llm_name": "test_llm",
             "max_toolcall_token_in_round": 30000,
-            "toolsets_config": self.mock_config.tools.toolsets,
-            "override_toolsets": self.mock_config.agent[0].override_toolsets,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": self.mock_config.agent[0].compress_threshold,
             "enable_directory_change_detection": self.mock_config.agent[
                 0

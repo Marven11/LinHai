@@ -14,7 +14,7 @@ from linhai.agent.create import (
 )
 from linhai.agent.create import create_agent_build_context
 from linhai.registry import Registry
-from linhai.config import AgentConfig
+from linhai.config import AgentConfig, AVAILABLE_TOOLSETS
 
 
 class TestCreateAgent(unittest.TestCase):
@@ -56,9 +56,12 @@ class TestCreateAgent(unittest.TestCase):
 
         mock_config.llm = [mock_llm_config]
         mock_config.agent = [Mock()]
-        mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].enable_toolsets = None
+        mock_config.agent[0].disable_toolsets = None
         mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
+        mock_config.tools.enable_toolsets = None
+        mock_config.tools.disable_toolsets = None
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
@@ -157,9 +160,12 @@ class TestCreateAgent(unittest.TestCase):
 
         mock_config.llm = [mock_llm_config1, mock_llm_config2]
         mock_config.agent = [Mock()]
-        mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].enable_toolsets = None
+        mock_config.agent[0].disable_toolsets = None
         mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
+        mock_config.tools.enable_toolsets = None
+        mock_config.tools.disable_toolsets = None
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
@@ -268,8 +274,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "toolsets_config": "defaults",
-            "override_toolsets": None,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": 0.8,
             "enable_directory_change_detection": False,
             "max_toolcall_for_llm": {},
@@ -361,7 +366,8 @@ class TestCreateToolManager(unittest.TestCase):
         config = Mock()
         config.secret.config_path = ""
         config.agent = [Mock(mcp=[])]
-        config.agent[0].override_toolsets = None
+        config.agent[0].enable_toolsets = None
+        config.agent[0].disable_toolsets = None
         config.tools = config
 
         context = {
@@ -374,8 +380,7 @@ class TestCreateToolManager(unittest.TestCase):
             "user_prompt": None,
             "max_toolcall_token_in_round": 0.3,
             "planning": False,
-            "toolsets_config": "defaults",
-            "override_toolsets": None,
+            "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": 0.8,
             "enable_directory_change_detection": False,
             "max_toolcall_for_llm": {},
@@ -400,26 +405,48 @@ class TestCreateToolManager(unittest.TestCase):
 class TestToolsetsConfig(unittest.TestCase):
     """测试toolsets配置功能"""
 
-    def test_toolsets_defaults(self):
-        """测试toolsets配置为defaults时，使用所有toolset"""
+    def test_toolsets_default_all_enabled(self):
+        """测试默认情况下所有toolset启用"""
         from linhai.config import ToolConfig
 
         config = ToolConfig()
-        self.assertEqual(config.toolsets, "defaults")
+        self.assertIsNone(config.enable_toolsets)
+        self.assertIsNone(config.disable_toolsets)
 
-    def test_toolsets_list(self):
-        """测试toolsets配置为列表"""
+    def test_enable_toolsets(self):
+        """测试enable_toolsets配置"""
         from linhai.config import ToolConfig
 
-        config = ToolConfig(toolsets=["utils", "sleep"])
-        self.assertEqual(config.toolsets, ["utils", "sleep"])
+        config = ToolConfig(enable_toolsets=["utils", "sleep"])
+        self.assertEqual(config.enable_toolsets, ["utils", "sleep"])
 
-    def test_toolsets_invalid(self):
-        """测试无效的toolset名称"""
+    def test_disable_toolsets(self):
+        """测试disable_toolsets配置"""
+        from linhai.config import ToolConfig
+
+        config = ToolConfig(disable_toolsets=["llm"])
+        self.assertEqual(config.disable_toolsets, ["llm"])
+
+    def test_enable_toolsets_invalid(self):
+        """测试无效的enable_toolset名称"""
         from linhai.config import ToolConfig, ConfigValidationError
 
         with self.assertRaises(ConfigValidationError):
-            ToolConfig(toolsets=["invalid_toolset"])
+            ToolConfig(enable_toolsets=["invalid_toolset"])
+
+    def test_disable_toolsets_invalid(self):
+        """测试无效的disable_toolset名称"""
+        from linhai.config import ToolConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(disable_toolsets=["invalid_toolset"])
+
+    def test_enable_and_disable_mutually_exclusive(self):
+        """测试enable_toolsets和disable_toolsets不能同时设置"""
+        from linhai.config import ToolConfig, ConfigValidationError
+
+        with self.assertRaises(ConfigValidationError):
+            ToolConfig(enable_toolsets=["utils"], disable_toolsets=["llm"])
 
     def test_available_toolsets(self):
         """测试AVAILABLE_TOOLSETS包含所有预期toolset"""
@@ -507,10 +534,13 @@ class TestDefaultLlmConfig(unittest.TestCase):
         mock_config = Mock()
         mock_config.llm = llm_configs
         mock_config.agent = [Mock()]
-        mock_config.agent[0].override_toolsets = None
+        mock_config.agent[0].enable_toolsets = None
+        mock_config.agent[0].disable_toolsets = None
         mock_config.agent[0].default_llm = default_llm
         mock_config.agent[0].process_sandbox = None
         mock_config.tools = Mock()
+        mock_config.tools.enable_toolsets = None
+        mock_config.tools.disable_toolsets = None
         mock_config.tools.secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"

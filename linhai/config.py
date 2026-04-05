@@ -7,7 +7,7 @@ from typing import Optional, Union, Literal
 from urllib.parse import urlparse
 
 import tomllib
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .exceptions import ConfigValidationError
 
@@ -151,8 +151,11 @@ class AgentConfig(BaseModel):
     max_toolcall_for_llm: dict[str, int] = Field(
         default_factory=dict, description="每个LLM的最大工具调用次数限制。"
     )
-    override_toolsets: Optional[list[str]] = Field(
-        default=None, description="覆盖tools.toolsets的设置。"
+    enable_toolsets: Optional[list[str]] = Field(
+        default=None, description="启用指定工具集，设置后仅加载这些工具集。"
+    )
+    disable_toolsets: Optional[list[str]] = Field(
+        default=None, description="禁用指定工具集，设置后加载除这些外的所有工具集。"
     )
     default_llm: Optional[str] = Field(
         default=None, description="默认使用的LLM名称，优先级高于命令行参数。"
@@ -173,6 +176,37 @@ class AgentConfig(BaseModel):
         else:
             raise TypeError("compress_threshold必须是int或float类型")
         return v
+
+    @field_validator("enable_toolsets")
+    def validate_enable_toolsets(cls, v):
+        """验证enable_toolsets配置"""
+        if v is not None:
+            invalid = [t for t in v if t not in AVAILABLE_TOOLSETS]
+            if invalid:
+                raise ConfigValidationError(
+                    f"Invalid toolsets: {invalid}. Available: {list(AVAILABLE_TOOLSETS)}"
+                )
+        return v
+
+    @field_validator("disable_toolsets")
+    def validate_disable_toolsets(cls, v):
+        """验证disable_toolsets配置"""
+        if v is not None:
+            invalid = [t for t in v if t not in AVAILABLE_TOOLSETS]
+            if invalid:
+                raise ConfigValidationError(
+                    f"Invalid toolsets: {invalid}. Available: {list(AVAILABLE_TOOLSETS)}"
+                )
+        return v
+
+    @model_validator(mode="after")
+    def validate_toolsets_exclusive(self):
+        """enable_toolsets和disable_toolsets不能同时设置"""
+        if self.enable_toolsets is not None and self.disable_toolsets is not None:
+            raise ConfigValidationError(
+                "enable_toolsets and disable_toolsets cannot be set at the same time"
+            )
+        return self
 
     def __str__(self) -> str:
         """返回Agent配置的字符串表示"""
@@ -238,7 +272,14 @@ class ToolConfig(BaseModel):
         default=0.3,
         description="单轮工具调用中允许的最大token数。int为静态限制，float为相对于token_limit的比例",
     )
-    toolsets: Union[Literal["defaults"], list[str]] = Field(default="defaults")
+    enable_toolsets: Optional[list[str]] = Field(
+        default=None,
+        description="启用指定工具集，设置后仅加载这些工具集。",
+    )
+    disable_toolsets: Optional[list[str]] = Field(
+        default=None,
+        description="禁用指定工具集，设置后加载除这些外的所有工具集。",
+    )
 
     @field_validator("max_toolcall_token_in_round")
     def validate_max_toolcall_token_in_round(cls, v):
@@ -255,20 +296,40 @@ class ToolConfig(BaseModel):
             raise TypeError("max_toolcall_token_in_round必须是int或float类型")
         return v
 
-    @field_validator("toolsets")
-    def validate_toolsets(cls, v):
-        """验证toolsets配置：如果是列表，检查是否包含有效名称"""
-        if isinstance(v, list):
-            invalid_toolsets = [t for t in v if t not in AVAILABLE_TOOLSETS]
-            if invalid_toolsets:
+    @field_validator("enable_toolsets")
+    def validate_enable_toolsets(cls, v):
+        """验证enable_toolsets配置"""
+        if v is not None:
+            invalid = [t for t in v if t not in AVAILABLE_TOOLSETS]
+            if invalid:
                 raise ConfigValidationError(
-                    f"Invalid toolsets: {invalid_toolsets}. Available: {list(AVAILABLE_TOOLSETS)}"
+                    f"Invalid toolsets: {invalid}. Available: {list(AVAILABLE_TOOLSETS)}"
                 )
         return v
 
+    @field_validator("disable_toolsets")
+    def validate_disable_toolsets(cls, v):
+        """验证disable_toolsets配置"""
+        if v is not None:
+            invalid = [t for t in v if t not in AVAILABLE_TOOLSETS]
+            if invalid:
+                raise ConfigValidationError(
+                    f"Invalid toolsets: {invalid}. Available: {list(AVAILABLE_TOOLSETS)}"
+                )
+        return v
+
+    @model_validator(mode="after")
+    def validate_toolsets_exclusive(self):
+        """enable_toolsets和disable_toolsets不能同时设置"""
+        if self.enable_toolsets is not None and self.disable_toolsets is not None:
+            raise ConfigValidationError(
+                "enable_toolsets and disable_toolsets cannot be set at the same time"
+            )
+        return self
+
     def __str__(self) -> str:
         """返回工具配置的字符串表示"""
-        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, toolsets={self.toolsets}, secret={self.secret})"
+        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, enable_toolsets={self.enable_toolsets}, disable_toolsets={self.disable_toolsets}, secret={self.secret})"
 
 
 class TUIConfig(BaseModel):
