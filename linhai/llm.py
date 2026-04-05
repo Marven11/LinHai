@@ -512,7 +512,6 @@ class OpenAiAnswer:
         llm_instance=None,
     ):
         """初始化OpenAI回答。"""
-        self.tokens = []
         self.reasoning_content = None
         self.content = ""
         self.stream = stream
@@ -683,7 +682,6 @@ class MinimaxAnswer:
         self.content = message_dict.get("content") or ""
         usage = response_dict.get("usage")
 
-        self.tokens = []
         self.interrupted = False
         self.truncated = False
         self.total_tokens = 0
