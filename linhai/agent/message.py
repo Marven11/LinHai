@@ -166,7 +166,6 @@ class AgentMessage:
         if processed_message is None:
             processed_message = msg
         self.pinned_messages.append(processed_message)
-        self._save_context()
 
     async def add_new_message(self, msg: Message) -> None:
         """添加普通消息到队列。
@@ -191,7 +190,6 @@ class AgentMessage:
         if processed_message is None:
             processed_message = msg
         self.messages.append(processed_message)
-        self._save_context()
 
     def is_explicit_cache_enabled(self) -> bool:
         from ..llm_manager import LlmManager
@@ -261,7 +259,6 @@ class AgentMessage:
         await self.count_invalidate_cache()
         self.messages = messages
         await self._trigger_after_cache_invalidate()
-        self._save_context()
 
     async def insert_message(self, index: int, message: Message) -> None:
         """在指定位置插入消息。
@@ -273,7 +270,6 @@ class AgentMessage:
         await self.count_invalidate_cache()
         self.messages.insert(index, message)
         await self._trigger_after_cache_invalidate()
-        self._save_context()
 
     async def delete_message_range(self, start: int, end: int) -> List[Message]:
         """删除指定范围的消息。
@@ -289,7 +285,6 @@ class AgentMessage:
         deleted = self.messages[start : end + 1]
         self.messages[start : end + 1] = []
         await self._trigger_after_cache_invalidate()
-        self._save_context()
         return deleted
 
     async def filter_messages(self, condition) -> None:
@@ -301,7 +296,6 @@ class AgentMessage:
         await self.count_invalidate_cache()
         self.messages = [msg for msg in self.messages if condition(msg)]
         await self._trigger_after_cache_invalidate()
-        self._save_context()
 
     async def replace_message(self, old_message: Message, new_message: Message) -> None:
         """将普通消息列表中的指定消息替换为新消息。
@@ -321,7 +315,6 @@ class AgentMessage:
             )
             self.messages[index] = processed_message
             await self._trigger_after_cache_invalidate()
-            self._save_context()
 
     def update_notification_message(
         self, message: Message | None, source: str, sort_value: int

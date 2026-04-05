@@ -304,4 +304,5 @@ class Agent:
                 await self.tick()
             except asyncio.CancelledError:
                 break
+            await asyncio.to_thread(self.message_processor._save_context)
             await asyncio.sleep(0)
