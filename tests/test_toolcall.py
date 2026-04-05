@@ -13,14 +13,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.mock_agent = Mock()
-        self.mock_agent.registry = Mock()
-        self.mock_agent.registry.send_if_exists = AsyncMock()
-        self.mock_agent.context = {
-            "llms": [Mock()],
-            "llm_names": ["test_llm"],
-            "current_llm_index": 0,
-        }
-        self.mock_agent.large_messages = {}
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.add_new_message = AsyncMock()
         self.mock_agent.message_processor.get_messages.return_value = []
@@ -32,16 +24,13 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        # 模拟llm_manager
         self.mock_llm_manager = Mock()
-        # 创建模拟的LLM对象
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm.get_token_limit = Mock(return_value=65536)
         self.mock_llm_manager.llms = [mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         self.mock_agent.llm_manager = self.mock_llm_manager
-        self.mock_agent.get_current_model = Mock(return_value=mock_llm)
 
         self.mock_state_machine = Mock(spec=AgentStateMachine)
         self.mock_state_machine.state = "waiting_user"
@@ -50,19 +39,27 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_agent.state_machine = self.mock_state_machine
 
-        self.mock_tool_manager = Mock()
-        self.mock_tool_manager.toolsets = []
-        self.mock_agent.registry.get_member_typechecked.return_value = (
-            self.mock_tool_manager
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "tool_manager": self.mock_tool_manager,
+                "llm_manager": self.mock_llm_manager,
+                "state_machine": self.mock_state_machine,
+                "agent_message": self.mock_agent.message_processor,
+                "lifecycle": self.mock_agent.lifecycle,
+            }
+            return members[name]
+
+        self.mock_registry = Mock()
+        self.mock_registry.send_if_exists = AsyncMock()
+        self.mock_registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
         )
 
-        self.toolcall_processor = AgentToolcall(self.mock_agent)
+        self.toolcall_processor = AgentToolcall(self.mock_registry)
 
     def test_initialization(self):
         """测试AgentToolcall初始化。"""
-        self.assertEqual(self.toolcall_processor.agent, self.mock_agent)
-        self.assertEqual(self.toolcall_processor.registry, self.mock_agent.registry)
-        # context属性已移除，不再检查
+        self.assertEqual(self.toolcall_processor.registry, self.mock_registry)
 
     def test_calculate_llm_toolset(self):
         """测试calculate_llm_toolset方法返回正确的toolset。"""
@@ -388,7 +385,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
-        self.assertTrue(self.mock_agent.compress_tool_called_in_last_response)
+        self.assertTrue(self.toolcall_processor.compress_tool_called_in_last_response)
 
 
 if __name__ == "__main__":

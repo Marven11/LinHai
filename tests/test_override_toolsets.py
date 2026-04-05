@@ -146,6 +146,13 @@ disable_toolsets = ["llm"]
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         mock_llm_instances.return_value = mock_llm_manager
 
+        mock_registry = Mock()
+        mock_registry.get_member_typechecked = Mock(
+            side_effect=lambda name, cls=None: (
+                mock_llm_manager if name == "llm_manager" else Mock()
+            )
+        )
+
         mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]
         mock_multimodal_toolset_manager.return_value = Mock()
@@ -169,7 +176,7 @@ disable_toolsets = ["llm"]
         )
 
         context = create_agent_build_context(
-            registry=Mock(),
+            registry=mock_registry,
             config=mock_config,
             config_basedir=Path("."),
             llm_name="test_llm",
@@ -240,6 +247,13 @@ disable_toolsets = ["llm"]
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         mock_llm_instances.return_value = mock_llm_manager
 
+        mock_registry = Mock()
+        mock_registry.get_member_typechecked = Mock(
+            side_effect=lambda name, cls=None: (
+                mock_llm_manager if name == "llm_manager" else Mock()
+            )
+        )
+
         mock_tool_manager.return_value = (Mock(), Mock())
         mock_pinned_messages.return_value = [Mock()]
         mock_multimodal_toolset_manager.return_value = Mock()
@@ -263,7 +277,7 @@ disable_toolsets = ["llm"]
         )
 
         context = create_agent_build_context(
-            registry=Mock(),
+            registry=mock_registry,
             config=mock_config,
             config_basedir=Path("."),
             llm_name="test_llm",

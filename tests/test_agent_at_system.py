@@ -53,6 +53,8 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
                 return Path(self.temp_dir.name)
             elif name == "lifecycle":
                 return self.lifecycle_mock
+            elif name == "llm_manager":
+                return self.llm_manager
             else:
                 return Mock()
 

@@ -58,13 +58,12 @@ class Agent:
         self.state_machine = AgentStateMachine(registry)
 
         self.lifecycle = Lifecycle(registry)
+
         self.message_processor = AgentMessage(registry, pinned_messages)
         self.orchestration = AgentContextOrchestration(registry, self.message_processor)
-        self.toolcall_processor = AgentToolcall(self, max_toolcall_token_in_round)
+        self.toolcall_processor = AgentToolcall(registry, max_toolcall_token_in_round)
 
         self.range_clean_manager = RangeCleanManager(registry)
-
-        self.compress_tool_called_in_last_response = False
 
         from .answer import AgentLlm
 

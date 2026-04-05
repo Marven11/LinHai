@@ -94,6 +94,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = False
 
         self.lifecycle_mock = MagicMock()
+        self.lifecycle_mock.trigger_after_toolcall = AsyncMock(return_value=None)
+        self.lifecycle_mock.trigger_before_tool_call = AsyncMock(return_value=None)
 
         async def trigger_before_add_new_message_coroutine(msg):
             return None
@@ -116,6 +118,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.tool_manager
             elif member_type == "lifecycle":
                 return self.lifecycle_mock
+            elif member_type == "agent_message":
+                return self.agent.message_processor
             elif member_type == "agent_context_orchestration":
                 return self.agent.orchestration
             elif member_type == "state_machine":

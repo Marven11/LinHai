@@ -13,24 +13,35 @@ class TestDirectedToolConflict(unittest.TestCase):
     def setUp(self):
         """设置测试环境。"""
         self.agent = MagicMock()
-        self.agent.registry = MagicMock()
-        self.agent.context = MagicMock()
         self.agent.lifecycle = MagicMock()
         self.agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.compress_tool_called_in_last_response = False
-        self.agent.state = "working"
 
         self.tool_manager = MagicMock()
         self.tool_manager.toolsets = []
         self.tool_manager.process_tool_call = AsyncMock()
 
-        self.agent.registry.get_member_typechecked = MagicMock(
-            return_value=self.tool_manager
+        self.mock_llm_manager = MagicMock()
+        mock_llm = MagicMock()
+        mock_llm.get_name = MagicMock(return_value="test_llm")
+        mock_llm.get_token_limit = MagicMock(return_value=65536)
+        self.mock_llm_manager.llms = [mock_llm]
+        self.mock_llm_manager.get_current_llm = MagicMock(return_value=mock_llm)
+
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "tool_manager": self.tool_manager,
+                "llm_manager": self.mock_llm_manager,
+            }
+            return members[name]
+
+        self.mock_registry = MagicMock()
+        self.mock_registry.get_member_typechecked = MagicMock(
+            side_effect=get_member_typechecked_side_effect
         )
 
-        self.toolcall = AgentToolcall(self.agent)
+        self.toolcall = AgentToolcall(self.mock_registry)
 
         # 设置模拟工具定义
         self.read_file_tool = {

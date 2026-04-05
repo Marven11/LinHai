@@ -11,34 +11,33 @@ class TestToolConflict(unittest.TestCase):
     def setUp(self):
         """设置测试环境"""
         self.mock_agent = Mock()
-        self.mock_agent.state = "working"
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
-        self.mock_agent.compress_tool_called_in_last_response = False
 
-        # 模拟llm_manager
         self.mock_llm_manager = Mock()
-        # 创建模拟的LLM对象
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm.get_token_limit = Mock(return_value=65536)
         self.mock_llm_manager.llms = [mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        self.mock_agent.llm_manager = self.mock_llm_manager
-        self.mock_agent.get_current_model = Mock(return_value=mock_llm)
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
 
         self.mock_registry = Mock()
-        self.mock_registry.get_member_typechecked.return_value = self.mock_tool_manager
 
-        self.mock_context = {"llms": [], "llm_names": [], "current_llm_index": 0}
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "tool_manager": self.mock_tool_manager,
+                "llm_manager": self.mock_llm_manager,
+            }
+            return members[name]
 
-        self.mock_agent.registry = self.mock_registry
-        self.mock_agent.context = self.mock_context
+        self.mock_registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
 
-        self.toolcall_processor = AgentToolcall(self.mock_agent)
+        self.toolcall_processor = AgentToolcall(self.mock_registry)
 
     def test_start_new_tool_call_round(self):
         """测试开始新一轮工具调用"""

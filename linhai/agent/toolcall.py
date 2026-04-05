@@ -1,22 +1,26 @@
 """工具调用处理模块，负责工具注册、调用和结果管理。"""
 
 import time
-from typing import TYPE_CHECKING, cast
 from pathlib import Path
+from typing import cast
+
+from linhai.llm import ToolCallMessage, Message
+from linhai.llm_manager import LlmManager
+from linhai.registry import Registry
 from linhai.tool.base import (
-    ToolSet,
     ToolArgInfo,
     ToolCallResultMessage,
     ToolResultFailed,
+    ToolSet,
 )
-from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 from linhai.tool.main import ToolManager
-from linhai.llm import ToolCallMessage, Message
 from linhai.utils.common import UiNotice
-from .messages import RuntimeMessage
+from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 
-if TYPE_CHECKING:
-    from .main import Agent
+from .lifecycle import Lifecycle
+from .message import AgentMessage
+from .messages import RuntimeMessage
+from .state_machine import AgentStateMachine
 
 
 def _extract_text_content(content: str | list) -> str:
@@ -41,16 +45,19 @@ def _extract_text_content(content: str | list) -> str:
 class AgentToolcall:
     """工具调用处理器，负责管理工具注册、调用和结果处理。"""
 
-    def __init__(self, agent: "Agent", max_toolcall_token_in_round: int | float = 0.3):
-        self.agent = agent
-        self.registry = agent.registry
+    def __init__(
+        self, registry: Registry, max_toolcall_token_in_round: int | float = 0.3
+    ):
+        self.registry = registry
 
         self.called_tools_in_round: list[str] = []
         self.early_return = False
         self.current_round_token_count = 0
+        self.compress_tool_called_in_last_response = False
 
         if isinstance(max_toolcall_token_in_round, float):
-            current_llm = self.agent.get_current_model()
+            llm_manager = registry.get_member_typechecked("llm_manager", LlmManager)
+            current_llm = llm_manager.get_current_llm()
             token_limit = current_llm.get_token_limit()
             if token_limit is None:
                 token_limit = 65536
@@ -103,7 +110,7 @@ class AgentToolcall:
 
     def _register_llm_tools(self, toolset: ToolSet):
         """注册LLM切换工具到给定的toolset."""
-        llm_manager = self.agent.llm_manager
+        llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
         llm_names = [llm.get_name() for llm in llm_manager.llms]
 
         desc = "切换到指定的LLM。"
@@ -259,11 +266,17 @@ class AgentToolcall:
         返回:
             bool: 是否需要进行早期返回
         """
-        if self.agent.state_machine.state == "waiting_user":
-            self.agent.state_machine.transition_to_working()
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()
         if self.early_return:
             msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
-            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            message_processor = self.registry.get_member_typechecked(
+                "agent_message", AgentMessage
+            )
+            await message_processor.add_new_message(RuntimeMessage(msg))
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -285,7 +298,8 @@ class AgentToolcall:
                 ),
             )
 
-            await self.agent.lifecycle.trigger_after_toolcall(
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="failed",
@@ -297,9 +311,10 @@ class AgentToolcall:
                 is_tool_failed_duplicated_error=True,
             )
 
-            await self.agent.message_processor.add_new_message(
-                RuntimeMessage(conflict_msg)
+            message_processor = self.registry.get_member_typechecked(
+                "agent_message", AgentMessage
             )
+            await message_processor.add_new_message(RuntimeMessage(conflict_msg))
             self.early_return = True
             return True
         self.called_tools_in_round.append(tool_call.function_name)
@@ -310,11 +325,12 @@ class AgentToolcall:
             "context_forget_large_message",
             "mark_messages_as_garbage",
         ]
-        self.agent.compress_tool_called_in_last_response = (
+        self.compress_tool_called_in_last_response = (
             tool_call.function_name in compress_tools
         )
 
-        skip_result = await self.agent.lifecycle.trigger_after_toolcall(
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        skip_result = await lifecycle.trigger_after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="skipped",
@@ -369,7 +385,8 @@ class AgentToolcall:
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
-            replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            replacement_result = await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -392,7 +409,8 @@ class AgentToolcall:
             )
             runtime_message = RuntimeMessage(runtime_msg)
 
-            replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            replacement_result = await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -408,7 +426,8 @@ class AgentToolcall:
 
         self.current_round_token_count += token_count
 
-        replacement_result = await self.agent.lifecycle.trigger_after_toolcall(
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        replacement_result = await lifecycle.trigger_after_toolcall(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="success",
@@ -427,13 +446,15 @@ class AgentToolcall:
 
         from linhai.tool.base import ToolResultFailed
 
-        before_result = await self.agent.lifecycle.trigger_before_tool_call(
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        before_result = await lifecycle.trigger_before_tool_call(
             tool_name=tool_call.function_name,
             toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
         )
         if isinstance(before_result, ToolResultFailed):
-            await self.agent.lifecycle.trigger_after_toolcall(
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -443,7 +464,10 @@ class AgentToolcall:
                 is_tool_failed_duplicated_error=False,
             )
             msg = f"工具调用失败: {before_result.content}"
-            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            message_processor = self.registry.get_member_typechecked(
+                "agent_message", AgentMessage
+            )
+            await message_processor.add_new_message(RuntimeMessage(msg))
             return True
         elif isinstance(before_result, dict):
             tool_call.function_arguments = before_result
@@ -455,7 +479,8 @@ class AgentToolcall:
             if isinstance(tool_result, ToolCallResultMessage) and isinstance(
                 tool_result.result, ToolResultFailed
             ):
-                await self.agent.lifecycle.trigger_after_toolcall(
+                lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+                await lifecycle.trigger_after_toolcall(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
@@ -466,7 +491,10 @@ class AgentToolcall:
                 )
                 msg = f"工具调用失败: {tool_result.result.content}"
 
-                await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+                message_processor = self.registry.get_member_typechecked(
+                    "agent_message", AgentMessage
+                )
+                await message_processor.add_new_message(RuntimeMessage(msg))
                 if tool_call.assert_success:
                     return True
                 else:
@@ -484,7 +512,8 @@ class AgentToolcall:
             return False
         except (OSError, IOError) as e:
 
-            await self.agent.lifecycle.trigger_after_toolcall(
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            await lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -495,7 +524,10 @@ class AgentToolcall:
             )
             msg = f"工具调用失败: {str(e)} {repr(e)}"
 
-            await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
+            message_processor = self.registry.get_member_typechecked(
+                "agent_message", AgentMessage
+            )
+            await message_processor.add_new_message(RuntimeMessage(msg))
             return False
 
     async def _handle_tool_result(
@@ -503,6 +535,12 @@ class AgentToolcall:
     ):
         """处理工具调用结果。"""
 
-        await self.agent.message_processor.add_new_message(tool_result)
-        if self.agent.state_machine.state == "waiting_user":
-            self.agent.state_machine.transition_to_working()
+        message_processor = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+        await message_processor.add_new_message(tool_result)
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state == "waiting_user":
+            state_machine.transition_to_working()

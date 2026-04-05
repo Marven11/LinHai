@@ -30,18 +30,25 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         """创建AgentToolcall实例用于测试。"""
         from linhai.agent.toolcall import AgentToolcall
 
-        mock_agent = Mock()
-        mock_agent.registry = self.mock_registry
         mock_llm_manager = Mock()
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm.get_token_limit = Mock(return_value=65536)
         mock_llm_manager.llms = [mock_llm]
-        mock_agent.llm_manager = mock_llm_manager
-        mock_agent.get_current_model = Mock(return_value=mock_llm)
+        mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
 
-        toolcall = AgentToolcall(mock_agent)
-        toolcall.registry = self.mock_registry
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "conversation_folder": self.conversation_dir,
+                "llm_manager": mock_llm_manager,
+            }
+            return members[name]
+
+        self.mock_registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
+
+        toolcall = AgentToolcall(self.mock_registry)
         return toolcall
 
     def test_split_into_three_parts(self):

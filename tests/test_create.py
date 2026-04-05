@@ -86,6 +86,13 @@ class TestCreateAgent(unittest.TestCase):
         mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         mock_llm_instances.return_value = mock_llm_manager
 
+        def get_member_side_effect(name, cls=None):
+            if name == "llm_manager":
+                return mock_llm_manager
+            return Mock()
+
+        self.registry.get_member_typechecked = Mock(side_effect=get_member_side_effect)
+
         mock_pinned_messages.return_value = [Mock()]
         mock_multimodal_toolset_manager.return_value = Mock()
         mock_register_conversation_folder.return_value = None
@@ -201,6 +208,15 @@ class TestCreateAgent(unittest.TestCase):
             mock_llm_manager.current_llm_index = 0
             mock_llm_manager.get_current_llm = Mock(return_value=mock_llm1)
             mock_llm_instances.return_value = mock_llm_manager  # type: ignore
+
+            def get_member_side_effect(name, cls=None):
+                if name == "llm_manager":
+                    return mock_llm_manager
+                return Mock()
+
+            self.registry.get_member_typechecked = Mock(
+                side_effect=get_member_side_effect
+            )
 
             mock_tool_manager.return_value = (Mock(), Mock())
             mock_pinned_messages.return_value = [Mock()]

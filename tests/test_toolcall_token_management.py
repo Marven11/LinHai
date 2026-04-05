@@ -17,14 +17,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.mock_agent = Mock()
-        self.mock_agent.registry = Mock()
-        self.mock_agent.registry.send_if_exists = AsyncMock()
-        self.mock_agent.context = {
-            "llms": [Mock()],
-            "llm_names": ["test_llm"],
-            "current_llm_index": 0,
-        }
-        self.mock_agent.large_messages = {}
         self.mock_agent.message_processor = Mock()
         self.mock_agent.message_processor.get_messages.return_value = []
         self.mock_agent.lifecycle = Mock()
@@ -33,31 +25,38 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             return_value=None
         )
 
-        self.mock_agent.config = Mock()
-        self.mock_agent.config.tools = Mock()
-
-        # 模拟llm_manager
         self.mock_llm_manager = Mock()
-        # 创建模拟的LLM对象
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm.get_token_limit = Mock(return_value=65536)
         self.mock_llm_manager.llms = [mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        self.mock_agent.llm_manager = self.mock_llm_manager
-        self.mock_agent.get_current_model = Mock(return_value=mock_llm)
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.registry.get_member_typechecked.return_value = (
-            self.mock_tool_manager
-        )
-
-        self.toolcall_processor = AgentToolcall(self.mock_agent)
-        self.toolcall_processor.max_token_limit = 3000
-        self.toolcall_processor.current_round_token_count = 0
 
         self.temp_dir = tempfile.mkdtemp()
+
+        self.mock_registry = Mock()
+        self.mock_registry.send_if_exists = AsyncMock()
+
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "tool_manager": self.mock_tool_manager,
+                "llm_manager": self.mock_llm_manager,
+                "lifecycle": self.mock_agent.lifecycle,
+                "agent_message": self.mock_agent.message_processor,
+                "conversation_folder": Path(self.temp_dir),
+            }
+            return members[name]
+
+        self.mock_registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
+        )
+
+        self.toolcall_processor = AgentToolcall(self.mock_registry)
+        self.toolcall_processor.max_token_limit = 3000
+        self.toolcall_processor.current_round_token_count = 0
 
         self.mock_conversation = Mock()
         self.mock_conversation.conversation_dir = Path(self.temp_dir)
@@ -81,13 +80,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             function_arguments={},
             assert_success=False,
             with_secret=None,
-        )
-
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
         )
 
         result, skip_handle = (
@@ -115,13 +107,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             function_arguments={},
             assert_success=False,
             with_secret=None,
-        )
-
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
         )
 
         result, skip_handle = (
@@ -200,13 +185,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         """测试5个工具，每个输出都小于限制长度的1/5时正常返回。"""
         total_tokens = 0
 
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
-        )
-
         for i in range(5):
             content = "x" * 100
             tool_result = ToolCallResultMessage(
@@ -236,13 +214,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
-        )
-
         content1 = "x" * 100
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
@@ -264,13 +235,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
-        )
-
         for i in range(5):
             content = "x" * 100
             tool_result = ToolCallResultMessage(
@@ -300,13 +264,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
 
     async def test_three_tools_second_tool_long_output(self):
         """测试三个工具，只有第二个工具输出略大于限制长度的1/3。"""
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
-        )
-
         content1 = "x" * 100
         tool_result1 = ToolCallResultMessage(
             tool_name="test_tool1",
@@ -382,13 +339,6 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
         replacement_message = RuntimeMessage("替换消息")
         self.mock_agent.lifecycle.trigger_after_toolcall = AsyncMock(
             return_value=replacement_message
-        )
-
-        # 修改mock registry以返回conversation_folder
-        from pathlib import Path
-
-        self.mock_agent.registry.get_member_typechecked = Mock(
-            return_value=Path(self.temp_dir)
         )
 
         content = "x" * 100

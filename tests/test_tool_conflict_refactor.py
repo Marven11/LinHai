@@ -23,26 +23,26 @@ class TestToolConflictRefactor(unittest.TestCase):
         self._reset_called_tools()
 
     def _setup_agent_mock(self) -> None:
-        self.agent_mock = Mock()
-        self.agent_mock.registry = Mock()
-        # 模拟llm_manager
         self.mock_llm_manager = Mock()
-        # 创建模拟的LLM对象
         mock_llm = Mock()
         mock_llm.get_name = Mock(return_value="test_llm")
         mock_llm.get_token_limit = Mock(return_value=65536)
         self.mock_llm_manager.llms = [mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
-        self.agent_mock.llm_manager = self.mock_llm_manager
-        self.agent_mock.get_current_model = Mock(return_value=mock_llm)
-        self.agent_mock.context = {
-            "llms": [mock_llm],
-            "llm_names": ["test_llm"],
-            "current_llm_index": 0,
-        }
+
+        self.mock_registry = Mock()
+
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
+            if member_type == "llm_manager":
+                return self.mock_llm_manager
+            raise RuntimeError(f"{member_type!r} not exists")
+
+        self.mock_registry.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
     def _setup_toolcall(self) -> None:
-        self.toolcall = AgentToolcall(self.agent_mock)
+        self.toolcall = AgentToolcall(self.mock_registry)
 
     def _setup_tool_manager(self) -> None:
         config = ToolConfig()
@@ -50,7 +50,7 @@ class TestToolConflictRefactor(unittest.TestCase):
         mcp_basedir = Path(".")
 
         tool_manager = ToolManager(
-            registry=self.agent_mock.registry,
+            registry=self.mock_registry,
             toolsets=[],
             config=config,
             mcp_connector=None,
@@ -61,7 +61,7 @@ class TestToolConflictRefactor(unittest.TestCase):
                 return tool_manager
             raise RuntimeError(f"{member_type!r} not exists")
 
-        self.agent_mock.registry.get_member_typechecked.side_effect = (
+        self.mock_registry.get_member_typechecked.side_effect = (
             get_member_typechecked_side_effect
         )
         self.toolcall.tool_manager = tool_manager
@@ -137,15 +137,35 @@ class TestToolConflictRefactor(unittest.TestCase):
         self.assertIsNone(result)
 
     def _setup_async_mocks(self) -> None:
-        self.toolcall.agent.registry.send_if_exists = AsyncMock()
-        self.toolcall.agent.lifecycle = Mock()
-        self.toolcall.agent.lifecycle.trigger_after_toolcall = AsyncMock()
-        self.toolcall.agent.message_processor = Mock()
-        self.toolcall.agent.message_processor.add_new_message = AsyncMock()
+        self.mock_registry.send_if_exists = AsyncMock()
+        self.mock_lifecycle = Mock()
+        self.mock_lifecycle.trigger_after_toolcall = AsyncMock()
+        self.mock_message_processor = Mock()
+        self.mock_message_processor.add_new_message = AsyncMock()
+
+        self.mock_state_machine = Mock()
+        self.mock_state_machine.state = "working"
+        self.mock_state_machine.transition_to_working = Mock()
+
+        original_side_effect = self.mock_registry.get_member_typechecked.side_effect
+
+        def get_member_typechecked_side_effect(member_type, _member_class=None):
+            extra = {
+                "lifecycle": self.mock_lifecycle,
+                "agent_message": self.mock_message_processor,
+                "state_machine": self.mock_state_machine,
+            }
+            if member_type in extra:
+                return extra[member_type]
+            return original_side_effect(member_type, _member_class)
+
+        self.mock_registry.get_member_typechecked.side_effect = (
+            get_member_typechecked_side_effect
+        )
 
     def _verify_error_message_content(self) -> None:
         add_new_message_calls = (
-            self.toolcall.agent.message_processor.add_new_message.call_args_list
+            self.mock_message_processor.add_new_message.call_args_list
         )
         self.assertGreater(len(add_new_message_calls), 0)
 
@@ -185,7 +205,7 @@ class TestToolConflictRefactor(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(self.toolcall.early_return)
-        self.toolcall.agent.lifecycle.trigger_after_toolcall.assert_called_once()
+        self.mock_lifecycle.trigger_after_toolcall.assert_called_once()
         self._verify_error_message_content()
 
 

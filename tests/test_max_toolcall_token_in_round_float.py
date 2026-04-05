@@ -15,30 +15,27 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test environment."""
-        self.mock_agent = Mock()
-        self.mock_agent.registry = Mock()
-        self.mock_agent.registry.send_if_exists = AsyncMock()
-
-        self.mock_agent.message_processor = Mock()
-        self.mock_agent.message_processor.get_messages.return_value = []
-        self.mock_agent.lifecycle = Mock()
-        self.mock_agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
-        self.mock_agent.lifecycle.trigger_before_tool_call = AsyncMock(
-            return_value=None
-        )
-
         self.mock_llm_manager = Mock()
         self.mock_llm = Mock()
         self.mock_llm.get_name = Mock(return_value="test_llm")
         self.mock_llm_manager.llms = [self.mock_llm]
         self.mock_llm_manager.get_current_llm = Mock(return_value=self.mock_llm)
-        self.mock_agent.llm_manager = self.mock_llm_manager
-        self.mock_agent.get_current_model = Mock(return_value=self.mock_llm)
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
-        self.mock_agent.registry.get_member_typechecked.return_value = (
-            self.mock_tool_manager
+
+        self.mock_registry = Mock()
+        self.mock_registry.send_if_exists = AsyncMock()
+
+        def get_member_typechecked_side_effect(name, t):
+            members = {
+                "tool_manager": self.mock_tool_manager,
+                "llm_manager": self.mock_llm_manager,
+            }
+            return members[name]
+
+        self.mock_registry.get_member_typechecked = Mock(
+            side_effect=get_member_typechecked_side_effect
         )
 
         self.temp_dir = tempfile.mkdtemp()
@@ -52,7 +49,7 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_token_limit = Mock(return_value=10000)
 
         toolcall_processor = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=0.3
+            self.mock_registry, max_toolcall_token_in_round=0.3
         )
 
         self.assertEqual(toolcall_processor.max_token_limit, 3000)
@@ -62,7 +59,7 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_token_limit = Mock(return_value=200000)
 
         toolcall_processor = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=0.3
+            self.mock_registry, max_toolcall_token_in_round=0.3
         )
 
         self.assertEqual(toolcall_processor.max_token_limit, 60000)
@@ -72,7 +69,7 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_token_limit = Mock(return_value=100000)
 
         toolcall_processor = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=15000
+            self.mock_registry, max_toolcall_token_in_round=15000
         )
 
         self.assertEqual(toolcall_processor.max_token_limit, 15000)
@@ -81,14 +78,14 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         """Test that float max_toolcall_token_in_round scales with token_limit."""
         self.mock_llm.get_token_limit = Mock(return_value=10000)
         toolcall_processor_small = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=0.3
+            self.mock_registry, max_toolcall_token_in_round=0.3
         )
 
         self.assertEqual(toolcall_processor_small.max_token_limit, 3000)
 
         self.mock_llm.get_token_limit = Mock(return_value=200000)
         toolcall_processor_large = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=0.3
+            self.mock_registry, max_toolcall_token_in_round=0.3
         )
 
         self.assertEqual(toolcall_processor_large.max_token_limit, 60000)
@@ -101,7 +98,7 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         """Test that the default value is float (0.3)."""
         self.mock_llm.get_token_limit = Mock(return_value=100000)
 
-        toolcall_processor = AgentToolcall(self.mock_agent)
+        toolcall_processor = AgentToolcall(self.mock_registry)
 
         self.assertEqual(toolcall_processor.max_token_limit, 30000)
 
@@ -110,7 +107,7 @@ class TestMaxToolcallTokenInRoundFloat(unittest.IsolatedAsyncioTestCase):
         self.mock_llm.get_token_limit = Mock(return_value=None)
 
         toolcall_processor = AgentToolcall(
-            self.mock_agent, max_toolcall_token_in_round=0.5
+            self.mock_registry, max_toolcall_token_in_round=0.5
         )
 
         self.assertEqual(toolcall_processor.max_token_limit, 32768)
