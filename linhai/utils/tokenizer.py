@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 import tiktoken
@@ -26,3 +27,8 @@ def get_cl100k_base_tokenizer() -> tiktoken.Encoding:
             },
         )
     return _cl100k_base_tokenizer
+
+
+@lru_cache(maxsize=1000)
+def count_tokens(text: str) -> int:
+    return len(get_cl100k_base_tokenizer().encode(text, disallowed_special=()))

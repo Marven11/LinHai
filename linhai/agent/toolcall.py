@@ -15,7 +15,7 @@ from linhai.tool.base import (
 )
 from linhai.tool.main import ToolManager
 from linhai.utils.common import UiNotice
-from linhai.utils.tokenizer import get_cl100k_base_tokenizer
+from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 
 from .lifecycle import Lifecycle
 from .message import AgentMessage
@@ -368,12 +368,7 @@ class AgentToolcall:
         else:
             result_content = str(tool_result)
 
-        tokenizer = get_cl100k_base_tokenizer()
-        token_count = len(
-            tokenizer.encode(
-                _extract_text_content(result_content), disallowed_special=()
-            )
-        )
+        token_count = count_tokens(_extract_text_content(result_content))
 
         single_tool_limit = self.max_token_limit // 3
         if token_count > single_tool_limit:

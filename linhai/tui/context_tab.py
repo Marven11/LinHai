@@ -1,6 +1,5 @@
 """Context tab widget for displaying message statistics and token usage."""
 
-from functools import lru_cache
 from math import log2
 from typing import Optional, TypedDict
 
@@ -24,12 +23,7 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
 from linhai.llm import Message
 from linhai.token_manager import TokenManager
-from linhai.utils.tokenizer import get_cl100k_base_tokenizer
-
-
-@lru_cache(maxsize=1000)
-def _count_tokens_cached(text: str) -> int:
-    return len(get_cl100k_base_tokenizer().encode(text, disallowed_special=()))
+from linhai.utils.tokenizer import count_tokens
 
 
 class MessageTypeCounts(TypedDict):
@@ -141,7 +135,7 @@ class ContextTabWidget(Static):
             return msg.estimated_tokens()
         content = msg.get_content()
         if isinstance(content, str):
-            return _count_tokens_cached(content)
+            return count_tokens(content)
         return 0
 
     def _count_message_types(

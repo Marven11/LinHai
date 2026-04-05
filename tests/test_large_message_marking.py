@@ -65,13 +65,10 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
             UserMessage(message="Initial message"),
         ]
         self.message_processor = AgentMessage(self.registry, self.pinned_messages)
-        self.mock_tokenizer_patcher = patch(
-            "linhai.agent.orchestration.get_cl100k_base_tokenizer"
+        self.mock_count_tokens_patcher = patch(
+            "linhai.agent.orchestration.count_tokens"
         )
-        self.mock_tokenizer = self.mock_tokenizer_patcher.start()
-        self.mock_encoder = Mock()
-        self.mock_encoder.encode.return_value = []
-        self.mock_tokenizer.return_value = self.mock_encoder
+        self.mock_count_tokens = self.mock_count_tokens_patcher.start()
 
         self.orchestration = AgentContextOrchestration(
             self.registry, self.message_processor
@@ -79,13 +76,11 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
     def tearDown(self):
         """清理测试环境。"""
-        self.mock_tokenizer_patcher.stop()
+        self.mock_count_tokens_patcher.stop()
 
     async def test_mark_long_message(self):
         """测试长消息（token长度>800）被标记。"""
-        # 模拟tiktoken编码，让消息的token长度超过800
-        mock_encoder = self.mock_encoder
-        mock_encoder.encode.return_value = list(range(1000))  # 1000个token
+        self.mock_count_tokens.return_value = 1000
 
         # 创建一个长消息（内容长度不重要，因为编码被模拟）
         long_message = RuntimeMessage("A" * 10)  # 内容很短，但编码返回1000个token
@@ -99,7 +94,7 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
     async def test_do_not_mark_short_message(self):
         """测试短消息（token长度<=800）不被标记。"""
-        self.mock_encoder.encode.return_value = list(range(500))
+        self.mock_count_tokens.return_value = 500
 
         short_message = RuntimeMessage("Short message")
 
@@ -107,8 +102,6 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn(short_message, self.orchestration.large_messages)
         self.assertEqual(len(self.orchestration.large_messages), 0)
-
-        self.mock_encoder.encode.return_value = []
 
     async def test_delete_large_messages(self):
         """测试删除大消息时，消息从数组中移除且其余消息不变。"""

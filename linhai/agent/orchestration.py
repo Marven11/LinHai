@@ -18,7 +18,7 @@ from .lifecycle import Lifecycle
 from linhai.llm import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
-from linhai.utils.tokenizer import get_cl100k_base_tokenizer
+from linhai.utils.tokenizer import count_tokens
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils.common import UiNotice
@@ -99,7 +99,6 @@ class AgentContextOrchestration:
 
         self.large_messages: set[Message] = set()
         self.cleaned_messages: dict[str, float] = {}
-        self.tokenizer = get_cl100k_base_tokenizer()
         self.consecutive_red_block_count: int = 0
 
         self._register_lifecycle_callbacks()
@@ -404,7 +403,7 @@ class AgentContextOrchestration:
         else:
             content = message.get_content()
             if content is not None:
-                token_count = len(self.tokenizer.encode(content, disallowed_special=()))
+                token_count = count_tokens(content)
                 if token_count > 800:
                     self.large_messages.add(message)
 
