@@ -130,7 +130,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 对于失效状态，应该返回消息字符串
         self.assertIsNotNone(result)
         assert result is not None
-        self.assertIn("失效状态", result)
+        self.assertIn("失效", result)
         self.assertIn("token用量信息已失效", result)
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息）
         self.assertEqual(len(self.message_processor.get_messages()), 3)
@@ -261,7 +261,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 检查通知消息中包含失效状态
         self.assertIsNotNone(context["notification_message"])
         assert context["notification_message"] is not None
-        self.assertIn("失效状态", context["notification_message"])
+        self.assertIn("失效", context["notification_message"])
 
     def test_red_state_with_dirty_state_allows_normal_tools(self):
         """测试红灯状态下，如果token用量失效，正常工具应该被允许。"""

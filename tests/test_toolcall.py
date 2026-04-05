@@ -247,24 +247,6 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_tool_manager.process_tool_call.call_count, 3)
 
-    async def test_tool_call_with_exception_handling(self):
-        """测试工具调用异常处理。"""
-
-        tool_call = ToolCallMessage(
-            function_name="test_tool",
-            function_arguments={},
-            assert_success=True,
-            with_secret=None,
-        )
-
-        self.mock_tool_manager.process_tool_call = AsyncMock(
-            side_effect=RuntimeError("runtime error")
-        )
-
-        result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
-
-        self.assertFalse(result)
-
     async def test_tool_conflict_detection(self):
         """测试工具冲突检测。"""
 

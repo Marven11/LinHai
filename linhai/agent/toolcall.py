@@ -482,7 +482,7 @@ class AgentToolcall:
 
             await self._handle_tool_result(tool_call, processed_result)
             return False
-        except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
+        except (OSError, IOError) as e:
 
             await self.agent.lifecycle.trigger_after_toolcall(
                 tool_name=tool_call.function_name,
