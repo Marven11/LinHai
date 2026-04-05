@@ -19,11 +19,10 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         self.manager = ToolManager(
             registry=registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
+        self.manager.register_toolset("utils", utils_tools)
 
     async def test_successful_tool_call(self):
         """测试成功的工具调用"""
@@ -123,11 +122,10 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         manager_with_config = ToolManager(
             registry=registry,
-            toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
+        manager_with_config.register_toolset("utils", utils_tools)
 
         long_content = "A" * 1001  # 超过配置的1000字符限制
         mock_tool_call = ToolCallMessage(
@@ -177,11 +175,10 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         manager_with_config = ToolManager(
             registry=registry,
-            toolsets=[utils_tools],
             config=config.tools if config.tools else ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
+        manager_with_config.register_toolset("utils", utils_tools)
 
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(
@@ -213,11 +210,10 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         manager_without_config = ToolManager(
             registry=registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir=Path("/tmp"),
+            mcp_connector=None,
         )
+        manager_without_config.register_toolset("utils", utils_tools)
 
         long_content = "A" * 50001  # 超过默认的50000字符限制
         mock_tool_call = ToolCallMessage(

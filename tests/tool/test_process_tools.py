@@ -239,11 +239,10 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 创建ToolManager实例
         tool_manager = ToolManager(
             registry=mock_registry,
-            toolsets=[mock_toolset_instance],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir="/tmp",
+            mcp_connector=None,
         )
+        tool_manager.register_toolset("test", mock_toolset_instance)
 
         # 创建带有on_machine参数的工具调用
         tool_call = ToolCallMessage(
@@ -294,11 +293,10 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 创建ToolManager实例
         tool_manager = ToolManager(
             registry=mock_registry,
-            toolsets=[mock_toolset_instance],
             config=ToolConfig(),
-            mcp_config=[],
-            mcp_basedir="/tmp",
+            mcp_connector=None,
         )
+        tool_manager.register_toolset("test", mock_toolset_instance)
 
         # 创建带有无效on_machine参数的工具调用
         tool_call = ToolCallMessage(

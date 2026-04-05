@@ -259,9 +259,9 @@ class TUIApp(App):
 
         from linhai.tool.main import ToolManager
 
-        self.registry.get_member_typechecked("tool_manager", ToolManager).add_toolset(
-            cliapp_tool
-        )
+        self.registry.get_member_typechecked(
+            "tool_manager", ToolManager
+        ).register_toolset("tui", cliapp_tool)
 
     async def on_unmount(self) -> None:
         if hasattr(self, "messages_list"):

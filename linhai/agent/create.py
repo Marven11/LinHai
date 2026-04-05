@@ -260,17 +260,21 @@ async def create_agent_from_context(
     orchestration = context["registry"].get_member_typechecked(
         "agent_context_orchestration", AgentContextOrchestration
     )
-    if "context_cleaning" in toolsets_config:
-        tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
-    if "llm" in toolsets_config:
-        tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
-    if "sleep" in toolsets_config:
-        from .state_machine import AgentStateMachine
+    tool_manager.register_toolset(
+        "context_cleaning", orchestration.get_context_cleaning_toolset()
+    )
+    tool_manager.register_toolset(
+        "llm", agent.toolcall_processor.calculate_llm_toolset()
+    )
+    from .state_machine import AgentStateMachine
 
-        state_machine = context["registry"].get_member_typechecked(
-            "state_machine", AgentStateMachine
-        )
-        tool_manager.add_toolset(state_machine.generate_sleep_toolset())
+    state_machine = context["registry"].get_member_typechecked(
+        "state_machine", AgentStateMachine
+    )
+    tool_manager.register_toolset("sleep", state_machine.generate_sleep_toolset())
+
+    tool_manager.apply_toolset_config(toolsets_config)
+
     if machine_control is not None:
         machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
@@ -401,39 +405,14 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
     return llm_manager
 
 
-def _build_toolsets_from_config(
+async def _create_tool_manager(
     context: "AgentBuildContext", multimodal_toolset
-) -> Tuple[list, Optional["MachineControl"]]:
-    """根据配置构建toolsets列表"""
+) -> Tuple[ToolManager, Optional["MachineControl"]]:
     from linhai.machine_control.main import register_machine_control_tools
-
-    registry = context["registry"]
-    enabled_toolsets = context["enabled_toolsets"]
-
-    toolsets = []
-    machine_control = None
-
-    if "utils" in enabled_toolsets:
-        toolsets.append(utils_tools)
-
-    if "machine_control" in enabled_toolsets:
-        from linhai.machine_control import MachineControl
-
-        machine_control = MachineControl(registry)
-        toolsets.append(register_machine_control_tools(machine_control))
-
-    if "multimodal" in enabled_toolsets:
-        toolsets.append(multimodal_toolset)
-
-    return toolsets, machine_control
-
-
-async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset):
     from linhai.tool.mcp_connector import MCPConnector
 
-    toolsets, machine_control = _build_toolsets_from_config(context, multimodal_toolset)
-
-    mcp_connector = MCPConnector(context["registry"])
+    registry = context["registry"]
+    mcp_connector = MCPConnector(registry)
     if context["mcp_configs"] and context["config_basedir"] is not None:
         for mcp_config in context["mcp_configs"]:
             server_script_path = (
@@ -444,15 +423,26 @@ async def _create_tool_manager(context: "AgentBuildContext", multimodal_toolset)
             )
 
     tool_manager = ToolManager(
-        registry=context["registry"],
-        toolsets=toolsets,
+        registry=registry,
         config=context["tool_config"],
         mcp_connector=mcp_connector,
     )
 
+    machine_control = None
+    if "machine_control" in context["enabled_toolsets"]:
+        from linhai.machine_control import MachineControl
+
+        machine_control = MachineControl(registry)
+        tool_manager.register_toolset(
+            "machine_control", register_machine_control_tools(machine_control)
+        )
+
+    tool_manager.register_toolset("utils", utils_tools)
+    tool_manager.register_toolset("multimodal", multimodal_toolset)
+
     if context["secret_config_path"]:
         initialize_secret_system(
-            registry=context["registry"],
+            registry=registry,
             secret_config_path=context["secret_config_path"],
             config_basedir=context["config_basedir"],
         )

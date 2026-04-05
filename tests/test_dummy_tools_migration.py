@@ -40,10 +40,10 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             registry=self.registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
         )
+        self.tool_manager.register_toolset("utils", utils_tools)
 
     async def test_get_token_usage_tool_registered(self):
         """Test that get_token_usage tool is properly registered."""

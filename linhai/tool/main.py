@@ -6,7 +6,6 @@
 import asyncio
 import inspect
 import json
-from collections import Counter
 from pathlib import Path
 from typing import Awaitable, Optional
 
@@ -30,7 +29,6 @@ class ToolManager:
     def __init__(
         self,
         registry: Registry,
-        toolsets: list[ToolSet],
         config: ToolConfig,
         mcp_connector: MCPConnector,
     ):
@@ -44,33 +42,41 @@ class ToolManager:
         self.registry = registry
         self.config = config
         self.mcp_connector = mcp_connector
+        self._toolsets: dict[str, ToolSet] = {}
+        self._enabled: dict[str, bool] = {}
 
-        names = Counter(
-            [name for toolset in toolsets for name in toolset.get_tools().keys()]
-        )
-        if any(count >= 2 for count in names.values()):
-            raise ValueError(
-                f"Duplicate names: {[name for name, value in names.items() if value >= 2]}"
-            )
-        self._toolsets = toolsets
-
-    @property
-    def toolsets(self) -> list[ToolSet]:
-        toolsets = self._toolsets.copy()
-        if self.mcp_connector:
-            toolsets += self.mcp_connector.get_toolsets()
-        return toolsets
-
-    def add_toolset(self, toolset: ToolSet):
+    def register_toolset(
+        self, name: str, toolset: ToolSet, enabled: bool = True
+    ) -> None:
         existing_names = set(
-            name for toolset in self.toolsets for name in toolset.get_tools().keys()
+            name for ts in self._toolsets.values() for name in ts.get_tools().keys()
         )
         duplicate_names = [
             name for name in toolset.get_tools().keys() if name in existing_names
         ]
         if duplicate_names:
             raise ValueError(f"Duplicate names: {duplicate_names}")
-        self._toolsets.append(toolset)
+        self._toolsets[name] = toolset
+        self._enabled[name] = enabled
+
+    def set_toolset_enabled(self, name: str, enabled: bool) -> None:
+        if name not in self._toolsets:
+            raise ValueError(f"Toolset '{name}' not registered")
+        self._enabled[name] = enabled
+
+    def apply_toolset_config(self, enabled_names: list[str]) -> None:
+        for name in self._toolsets:
+            if name not in enabled_names:
+                self._enabled[name] = False
+
+    @property
+    def toolsets(self) -> list[ToolSet]:
+        toolsets = [
+            ts for name, ts in self._toolsets.items() if self._enabled.get(name, True)
+        ]
+        if self.mcp_connector:
+            toolsets += self.mcp_connector.get_toolsets()
+        return toolsets
 
     def get_tools_info(self) -> list[dict]:
         return [

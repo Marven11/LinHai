@@ -48,10 +48,10 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             registry=self.registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
         )
+        self.tool_manager.register_toolset("utils", utils_tools)
 
         from linhai.llm_manager import LlmManager
 
@@ -70,7 +70,9 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         orchestration = self.registry.get_member_typechecked(
             "agent_context_orchestration", AgentContextOrchestration
         )
-        self.tool_manager.add_toolset(orchestration.get_context_cleaning_toolset())
+        self.tool_manager.register_toolset(
+            "context_cleaning", orchestration.get_context_cleaning_toolset()
+        )
 
     async def test_workflow_as_regular_tool(self):
         """Test that context_forget_range_step1 and step2 are now regular tools, not workflows."""

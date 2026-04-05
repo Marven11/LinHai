@@ -67,10 +67,10 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             registry=self.registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
         )
+        self.tool_manager.register_toolset("utils", utils_tools)
 
         self.mock_llm = Mock()
 

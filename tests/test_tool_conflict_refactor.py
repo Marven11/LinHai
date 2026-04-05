@@ -51,7 +51,6 @@ class TestToolConflictRefactor(unittest.TestCase):
 
         tool_manager = ToolManager(
             registry=self.mock_registry,
-            toolsets=[],
             config=config,
             mcp_connector=None,
         )
@@ -100,8 +99,8 @@ class TestToolConflictRefactor(unittest.TestCase):
         return toolset
 
     def _add_toolsets(self, toolsets: list[ToolSet]) -> None:
-        for toolset in toolsets:
-            self.toolcall.tool_manager.add_toolset(toolset)
+        for i, toolset in enumerate(toolsets):
+            self.toolcall.tool_manager.register_toolset(f"test_{i}", toolset)
 
     def test_check_tool_conflict_returns_none_when_no_conflict(self) -> None:
         toolset = self._create_tool_a()

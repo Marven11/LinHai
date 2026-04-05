@@ -40,10 +40,10 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
 
         self.tool_manager = ToolManager(
             registry=self.registry,
-            toolsets=[utils_tools],
             config=ToolConfig(),
             mcp_connector=None,
         )
+        self.tool_manager.register_toolset("utils", utils_tools)
 
         init_messages = [
             SystemMessage(
@@ -73,8 +73,8 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             "tool_manager", ToolManager
         )
         # 显式注册LLM工具集
-        self.tool_manager.add_toolset(
-            self.agent.toolcall_processor.calculate_llm_toolset()
+        self.tool_manager.register_toolset(
+            "llm", self.agent.toolcall_processor.calculate_llm_toolset()
         )
 
     async def test_current_llm_tool(self):
