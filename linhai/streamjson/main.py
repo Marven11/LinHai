@@ -38,7 +38,7 @@ class ValuePiece:
     """字符串值的单个字符片段"""
 
     index_key: str
-    char: str
+    token: str
 
 
 @dataclass
@@ -73,15 +73,18 @@ class StreamJsonStringParser:
     def __init__(self):
         self.remains = ""
 
-    def feed_char(self, c: str):
-        """输入单个字符"""
-        assert len(c) == 1
-        self.remains += c
+    def feed_string(self, s: str):
+        self.remains += s
 
-    def get_escaped_char(self) -> str | bool:
+    def get_escaped_token(self) -> str | bool:
         """获取转义字符或判断字符串是否结束"""
         if not self.remains:
             return False
+
+        if all(c not in '"\\' for c in self.remains):
+            result = self.remains
+            self.remains = ""
+            return result
 
         c = self.remains[0]
         if c == '"':
@@ -259,23 +262,24 @@ class StreamJsonParser:
             if isinstance(key, int):
                 self.stack.append(key + 1)
             self.state = ParserState.OUTSIDE
-            self.feed_char(c)
+            self.feed_token(c)
         else:
             self.payload += c
 
-    def feed_char_string_value(self, c: str):
-        """处理字符串值状态字符"""
+    def feed_token_string_value(self, token: str):
+        """处理字符串值状态token, 和其他handler不同的是可以处理多个字符"""
+
         if self.payload_string_parser is None:
             self.payload_string_parser = StreamJsonStringParser()
 
-        self.payload_string_parser.feed_char(c)
-        self.payload += c
+        self.payload_string_parser.feed_string(token)
+        self.payload += token
 
         index_key = self.calculate_current_index_key()
-        parsed = self.payload_string_parser.get_escaped_char()
+        parsed = self.payload_string_parser.get_escaped_token()
 
         if isinstance(parsed, str):
-            self.toyield.append(ValuePiece(index_key=index_key, char=parsed))
+            self.toyield.append(ValuePiece(index_key=index_key, token=parsed))
             return
 
         is_string_ended: bool = parsed
@@ -289,14 +293,14 @@ class StreamJsonParser:
             self.payload_string_parser = None
             self.payload = ""
 
-    def feed_char(self, c: str):
+    def feed_token(self, c: str):
         """输入单个字符进行解析"""
         assert len(c) == 1
 
         state_handlers = {
             ParserState.OUTSIDE: self.feed_char_outside,
             ParserState.KEY: self.feed_char_key,
-            ParserState.STRING_VALUE: self.feed_char_string_value,
+            ParserState.STRING_VALUE: self.feed_token_string_value,
             ParserState.ATOMIC_VALUE: self.feed_char_atomic_value,
         }
 
@@ -307,8 +311,13 @@ class StreamJsonParser:
 
     def feed_string(self, s: str):
         """输入字符串进行解析"""
+
+        if self.state == ParserState.STRING_VALUE and all(c not in '"\\' for c in s):
+            self.feed_token_string_value(s)
+            return
+
         for c in s:
-            self.feed_char(c)
+            self.feed_token(c)
             if self.is_current_data_finished():
                 return
 
@@ -326,15 +335,10 @@ def example1():
     parser = StreamJsonParser()
     payload = """
 {
-    "name": "李田所",
-    "age": 24,
-    "preference": [
-        "王道征途",
-        "\\u6ce1\\u6ce1\\u6d74",
-    ],
-    "number_decode": {
-        "iiyo": 114,
-        "hato": 810
+    "name": "write_file",
+    "arguments": {
+        "filepath": "./example.py",
+        "content": "import os\\nos.system(\\\"whoami\\\")\\n# should print litiansuo114514"
     }
 }
 """
@@ -356,8 +360,8 @@ def example2():
                 print(f"{c.index_key} = ", end="", flush=True)
                 result[c.index_key] = ""
             if isinstance(c, ValuePiece):
-                result[c.index_key] += c.char
-                print(c.char, end="", flush=True)
+                result[c.index_key] += c.token
+                print(c.token, end="", flush=True)
             else:
                 if isinstance(c.value, str):
                     assert c.value == result[c.index_key]

@@ -432,7 +432,7 @@ class ToolCallWidget(Static):
                 self.current_value = ""
 
             elif isinstance(value, ValuePiece):
-                self.current_value += value.char
+                self.current_value += value.token
                 if "\n" in self.current_value:
                     backtick_count = self.get_backtick_count(self.current_value)
                     backticks = "`" * backtick_count
