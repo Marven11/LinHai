@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from linhai.agent.messages import RuntimeMessage
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.utils.common import UiNotice
 from .message_checkers import Plugin
 
@@ -17,7 +18,10 @@ class AfkPlugin(Plugin):
         if not self._afk:
             return
 
-        agent.state = "working"
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        state_machine.transition_to_working()
 
         await agent.message_processor.add_new_message(
             RuntimeMessage(

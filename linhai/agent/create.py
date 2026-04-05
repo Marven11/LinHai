@@ -261,7 +261,12 @@ async def create_agent_from_context(
     if "llm" in enabled_toolsets:
         tool_manager.add_toolset(agent.toolcall_processor.calculate_llm_toolset())
     if "sleep" in enabled_toolsets:
-        tool_manager.add_toolset(agent.generate_sleep_toolset())
+        from .state_machine import AgentStateMachine
+
+        state_machine = context["registry"].get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        tool_manager.add_toolset(state_machine.generate_sleep_toolset())
     if machine_control is not None:
         machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)

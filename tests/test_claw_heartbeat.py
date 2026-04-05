@@ -4,6 +4,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from linhai.plugin.claw import ClawHeartbeatPlugin
 from linhai.agent.messages import RuntimeMessage
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 
 
@@ -11,6 +12,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
     def setUp(self):
         self.registry = Registry()
+        self.state_machine = AgentStateMachine(self.registry)
         self.plugin = ClawHeartbeatPlugin(self.registry)
 
     def test_register(self):
@@ -26,7 +28,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
         ts = PlainTaskSupervisor()
         ts.create_supervised_task = Mock()
         mock_agent = Mock()
-        mock_agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -43,7 +45,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
     def test_heartbeat_wakes_after_interval(self):
         mock_agent = Mock()
-        mock_agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -53,7 +55,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
         asyncio.run(run_test())
 
-        self.assertEqual(mock_agent.state, "working")
+        self.assertEqual(self.state_machine.state, "working")
         mock_agent.message_processor.add_new_message.assert_called_once()
         call_args = mock_agent.message_processor.add_new_message.call_args
         msg = call_args[0][0]
@@ -62,7 +64,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
     def test_heartbeat_skips_if_not_waiting(self):
         mock_agent = Mock()
-        mock_agent.state = "working"
+        self.state_machine.state = "working"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -72,7 +74,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
         asyncio.run(run_test())
 
-        self.assertEqual(mock_agent.state, "working")
+        self.assertEqual(self.state_machine.state, "working")
         mock_agent.message_processor.add_new_message.assert_not_called()
 
     def test_heartbeat_uses_correct_interval(self):
@@ -83,6 +85,7 @@ class TestClawHeartbeatIntegration(unittest.TestCase):
 
     def test_heartbeat_sleeps_then_checks_state(self):
         registry = Registry()
+        state_machine = AgentStateMachine(registry)
         plugin = ClawHeartbeatPlugin(registry)
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
@@ -92,7 +95,7 @@ class TestClawHeartbeatIntegration(unittest.TestCase):
 
         async def fake_sleep(duration):
             sleep_durations.append(duration)
-            mock_agent.state = "waiting_user"
+            state_machine.state = "waiting_user"
 
         async def run_test():
             with patch("linhai.plugin.claw.asyncio.sleep", side_effect=fake_sleep):
@@ -101,7 +104,7 @@ class TestClawHeartbeatIntegration(unittest.TestCase):
         asyncio.run(run_test())
 
         self.assertEqual(sleep_durations, [600])
-        self.assertEqual(mock_agent.state, "working")
+        self.assertEqual(state_machine.state, "working")
 
 
 if __name__ == "__main__":

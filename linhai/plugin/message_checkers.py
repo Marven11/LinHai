@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Dict, List, Literal, Union
 
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.messages import (
     RuntimeMessage,
     WAITING_USER_MARKER,
@@ -57,8 +58,11 @@ class WaitingUserPlugin(Plugin):
                 ),
             )
             return
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
         if (
-            agent.state == "working"
+            state_machine.state == "working"
             and not tool_calls
             and not has_waiting_marker
             and full_response.strip()
@@ -92,7 +96,7 @@ class WaitingUserPlugin(Plugin):
                     )
                 )
             else:
-                agent.state = "waiting_user"
+                state_machine.transition_to_waiting_user()
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""

@@ -103,8 +103,12 @@ class AgentLlm:
 
             await self.registry.send_if_exists("ui_log", interrupt_msg)
 
-            agent = self.registry.get_member_typechecked("agent", Agent)
-            agent.state = "working"
+            from .state_machine import AgentStateMachine
+
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            state_machine.transition_to_working()
 
             user_message_handler = self.registry.get_member_typechecked(
                 "user_message_handler", UserMessageHandler

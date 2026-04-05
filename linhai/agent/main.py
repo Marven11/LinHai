@@ -26,16 +26,12 @@ from linhai.llm import (
 )
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
-from linhai.type_hints import AgentState, ThresholdInfo
-from linhai.tool.base import (
-    ToolArgInfo,
-    ToolSet,
-    ToolResultSuccess,
-)
+from linhai.type_hints import ThresholdInfo
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.utils.common import UiNotice
 from .user_message_handler import UserMessageHandler
 from .command_callback import CommandCallback
+from .state_machine import AgentStateMachine
 
 
 class Agent:
@@ -59,9 +55,7 @@ class Agent:
 
         self.mcp_connector: MCPConnector | None = None
 
-        self.state: AgentState = "waiting_user"
-        self.sleeping_since: datetime | None = None
-        self.sleeping_deadline: datetime | None = None
+        self.state_machine = AgentStateMachine(registry)
 
         self.lifecycle = Lifecycle(registry)
         self.message_processor = AgentMessage(registry, pinned_messages)
@@ -87,17 +81,6 @@ class Agent:
         command_callback = CommandCallback(registry)
         self.lifecycle.register_after_parsed_user_message(command_callback)
         self.lifecycle.register_after_token_generation(self.after_token_generation)
-
-    def interrupt_to_working(self) -> None:
-        """打断当前状态，将Agent切换到working状态。
-
-        用于RSS等异步消息源需要在agent处于sleeping/waiting_user时
-        打断agent并让其处理新消息。
-        """
-        if self.state == "sleeping":
-            self.sleeping_since = None
-            self.sleeping_deadline = None
-        self.state = "working"
 
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
@@ -147,7 +130,7 @@ class Agent:
         """after_token_generation回调，检查是否有用户消息需要打断当前回答。"""
         if self.user_message_handler.has_message():
             should_interrupt = await self.user_message_handler.receive_and_dispatch()
-            self.state = "working"
+            self.state_machine.transition_to_working()
             if should_interrupt and agent.agent_llm:
                 await agent.agent_llm.interrupt(
                     "用户发来新的消息打断了你的输出", "Agent已被打断"
@@ -156,13 +139,9 @@ class Agent:
         return False
 
     async def state_waiting_user(self):
-        """
-        处理等待用户状态。
-
-        在这个状态下，Agent会等待用户输入消息，然后处理这些消息。
-        """
+        """处理等待用户状态。"""
         if self.is_last_message_user():
-            self.state = "working"
+            self.state_machine.transition_to_working()
             return
 
         await self.lifecycle.trigger_before_waiting_user(self)
@@ -172,28 +151,25 @@ class Agent:
             UiNotice(level="INFO", content="Agent正在等待用户"),
         )
         while (
-            not self.user_message_handler.has_message() and self.state == "waiting_user"
+            not self.user_message_handler.has_message()
+            and self.state_machine.state == "waiting_user"
         ):
             await asyncio.sleep(0.01)
-        if self.state != "waiting_user":
+        if self.state_machine.state != "waiting_user":
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(level="INFO", content="Agent在等待用户时被切换状态"),
             )
             return
         await self.user_message_handler.receive_and_dispatch()
-        self.state = "working"
+        self.state_machine.transition_to_working()
 
         await self.generate_response()
 
     async def state_sleeping(self):
-        """处理睡眠状态。
-
-        在这个状态下，Agent每秒检查是否到达截止时间或有新用户消息，
-        满足任一条件则退出sleeping状态。
-        """
-        assert self.sleeping_since is not None
-        assert self.sleeping_deadline is not None
+        """处理睡眠状态。"""
+        assert self.state_machine.sleeping_since is not None
+        assert self.state_machine.sleeping_deadline is not None
 
         await self.registry.send_if_exists(
             "ui_log",
@@ -201,31 +177,26 @@ class Agent:
         )
 
         while True:
-            if self.state != "sleeping":
+            if self.state_machine.state != "sleeping":
                 return
             if self.user_message_handler.has_message():
                 should_interrupt = (
                     await self.user_message_handler.receive_and_dispatch()
                 )
                 if should_interrupt:
-                    self.sleeping_since = None
-                    self.sleeping_deadline = None
-                    self.state = "working"
+                    self.state_machine.finish_sleeping()
                     return
             now = datetime.now()
-            if now >= self.sleeping_deadline:
+            if now >= self.state_machine.sleeping_deadline:
                 break
-            remaining = (self.sleeping_deadline - now).total_seconds()
+            remaining = (self.state_machine.sleeping_deadline - now).total_seconds()
             sleep_time = min(1.0, remaining)
             await asyncio.sleep(sleep_time)
 
-        since = self.sleeping_since
-        deadline = self.sleeping_deadline
+        since = self.state_machine.sleeping_since
         elapsed = (datetime.now() - since).total_seconds()
 
-        self.sleeping_since = None
-        self.sleeping_deadline = None
-        self.state = "working"
+        self.state_machine.finish_sleeping()
 
         result_msg = f"睡眠完成，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
@@ -243,25 +214,9 @@ class Agent:
         return isinstance(msg, UserMessage)
 
     def get_current_model(self) -> LanguageModel:
-        """
-        根据当前LLM索引选择合适的模型。
-
-        返回:
-            LanguageModel: 选择的语言模型实例
-        """
         return self.llm_manager.get_current_llm()
 
     async def generate_response(self) -> ParsedAnswer:
-        """
-        生成回复并发送给用户。
-
-        参数:
-            enable_compress: 是否启用压缩功能
-            disable_waiting_user_warning: 是否禁用等待用户警告
-
-        返回:
-            Answer: 生成的回答对象
-        """
         await self.message_processor.process_queued_messages()
 
         if self.message_processor.get_message_count() > 0:
@@ -321,58 +276,24 @@ class Agent:
         return parsed_answer
 
     def get_current_llm_info(self) -> tuple[str, LanguageModel]:
-        """获取当前LLM的名称和实例。
-
-        返回:
-            tuple[str, LanguageModel]: (LLM名称, LLM实例)
-        """
         llm_instance = self.llm_manager.get_current_llm()
         current_llm = self.llm_manager.get_current_llm()
         llm_name = current_llm.get_name()
         return llm_name, llm_instance
 
-    def generate_sleep_toolset(self) -> ToolSet:
-        from datetime import timedelta
-
-        agent = self
-        sleep_toolset = ToolSet()
-
-        @sleep_toolset.register_tool(
-            name="sleep",
-            desc="睡眠X秒，返回开始和结束时间",
-            args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
-            required_args=["seconds"],
-        )
-        async def sleep_tool(seconds: float) -> ToolResultSuccess:
-            start = datetime.now()
-            agent.sleeping_since = start
-            agent.sleeping_deadline = start + timedelta(seconds=seconds)
-            agent.state = "sleeping"
-            return ToolResultSuccess(
-                content=f"开始睡眠{seconds}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-
-        return sleep_toolset
-
     async def tick(self):
         while self.user_message_handler.has_message():
             await self.user_message_handler.receive_and_dispatch()
-            self.state = "working"
-        if self.state == "waiting_user":
+            self.state_machine.transition_to_working()
+        if self.state_machine.state == "waiting_user":
             return await self.state_waiting_user()
-        elif self.state == "working":
+        elif self.state_machine.state == "working":
             return await self.state_working()
-        elif self.state == "sleeping":
+        elif self.state_machine.state == "sleeping":
             return await self.state_sleeping()
 
     async def run(self):
-        """
-        Agent主循环，负责状态机的管理和状态切换。
-
-        根据当前状态调用相应的状态处理函数，
-        并处理异常和取消事件。
-        """
-
+        """Agent主循环，负责状态机的管理和状态切换。"""
         await self.lifecycle.trigger_before_agent_loop(self)
 
         while True:

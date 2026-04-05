@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from linhai.parsed_message import Segment
 from linhai.agent.messages import WAITING_USER_MARKER
 from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
@@ -118,8 +119,11 @@ class TelegramPlugin(Plugin):
                 message_id=update.message.message_id,
             )
             await agent.message_processor.add_new_message(message)
-            if agent.state == "waiting_user":
-                agent.state = "working"
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            if state_machine.state == "waiting_user":
+                state_machine.transition_to_working()
 
     async def _handle_telegram_sticker(self, update: Update, _context):
         """处理来自telegram的表情包消息。"""
@@ -155,8 +159,11 @@ class TelegramPlugin(Plugin):
         agent = self.registry.get_member_typechecked("agent", AgentType)
         if agent:
             await agent.message_processor.add_new_message(message)
-            if agent.state == "waiting_user":
-                agent.state = "working"
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            if state_machine.state == "waiting_user":
+                state_machine.transition_to_working()
 
     async def before_agent_loop(self, _agent: "AgentType"):
         """在Agent循环开始前启动telegram bot和发送任务。"""

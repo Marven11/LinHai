@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 from linhai.agent.toolcall import AgentToolcall
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.llm import ToolCallMessage
 
 
@@ -41,6 +42,13 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         self.mock_llm_manager.get_current_llm = Mock(return_value=mock_llm)
         self.mock_agent.llm_manager = self.mock_llm_manager
         self.mock_agent.get_current_model = Mock(return_value=mock_llm)
+
+        self.mock_state_machine = Mock(spec=AgentStateMachine)
+        self.mock_state_machine.state = "waiting_user"
+        self.mock_state_machine.transition_to_working = Mock(
+            side_effect=lambda: setattr(self.mock_state_machine, "state", "working")
+        )
+        self.mock_agent.state_machine = self.mock_state_machine
 
         self.mock_tool_manager = Mock()
         self.mock_tool_manager.toolsets = []
@@ -168,7 +176,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
     async def test_call_tool_state_change(self):
         """测试工具调用时状态改变。"""
-        self.mock_agent.state = "waiting_user"
+        self.mock_state_machine.state = "waiting_user"
 
         tool_call = ToolCallMessage(
             function_name="test_tool",
@@ -182,7 +190,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
 
         await self.toolcall_processor.call_tool(tool_call, tool_index=1)
 
-        self.assertEqual(self.mock_agent.state, "working")
+        self.assertEqual(self.mock_state_machine.state, "working")
 
     async def test_multiple_tool_calls_with_mixed_results(self):
         """测试多个工具调用混合成功和失败的情况。"""

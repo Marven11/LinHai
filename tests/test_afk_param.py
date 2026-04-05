@@ -7,6 +7,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from linhai.plugin.message_checkers import WaitingUserPlugin
 from linhai.plugin.afk_plugin import AfkPlugin
 from linhai.agent.main import Agent
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.config import TUIConfig
 from linhai.agent.messages import RuntimeMessage
@@ -17,6 +18,7 @@ class TestAfkParam(unittest.TestCase):
 
     def setUp(self):
         self.registry = Registry()
+        self.state_machine = AgentStateMachine(self.registry)
 
     def test_waiting_user_plugin_afk_true(self):
         """测试afk=True时WaitingUserPlugin直接返回，不执行检查"""
@@ -34,6 +36,8 @@ class TestAfkParam(unittest.TestCase):
                 return cli_args
             elif name == "agent":
                 return mock_agent
+            elif name == "state_machine":
+                return self.state_machine
             else:
                 raise RuntimeError(f"Unexpected name: {name}")
 
@@ -57,7 +61,7 @@ class TestAfkParam(unittest.TestCase):
 
         mock_agent = Mock()
         mock_agent.current_disable_waiting_user_warning = False
-        mock_agent.state = "working"
+        self.state_machine.state = "working"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -68,6 +72,8 @@ class TestAfkParam(unittest.TestCase):
                 return cli_args
             elif name == "agent":
                 return mock_agent
+            elif name == "state_machine":
+                return self.state_machine
             else:
                 raise RuntimeError(f"Unexpected name: {name}")
 
@@ -136,7 +142,7 @@ class TestAfkParam(unittest.TestCase):
     def test_afk_plugin_afk_true(self):
         """测试afk=True时AfkPlugin正确设置working状态并发送消息"""
         mock_agent = Mock()
-        mock_agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -145,6 +151,8 @@ class TestAfkParam(unittest.TestCase):
         def get_member_typechecked_side_effect(name, t):
             if name == "agent":
                 return mock_agent
+            elif name == "state_machine":
+                return self.state_machine
             else:
                 raise RuntimeError(f"Unexpected name: {name}")
 
@@ -155,7 +163,7 @@ class TestAfkParam(unittest.TestCase):
         ):
             result = asyncio.run(plugin.before_waiting_user(mock_agent))
 
-        self.assertEqual(mock_agent.state, "working")
+        self.assertEqual(self.state_machine.state, "working")
         mock_agent.message_processor.add_new_message.assert_called_once()
         call_args = mock_agent.message_processor.add_new_message.call_args
         self.assertIsInstance(call_args[0][0], RuntimeMessage)
@@ -163,7 +171,7 @@ class TestAfkParam(unittest.TestCase):
     def test_afk_plugin_afk_false(self):
         """测试afk=False时AfkPlugin不执行任何操作"""
         mock_agent = Mock()
-        mock_agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
 
@@ -171,7 +179,7 @@ class TestAfkParam(unittest.TestCase):
 
         result = asyncio.run(plugin.before_waiting_user(mock_agent))
 
-        self.assertEqual(mock_agent.state, "waiting_user")
+        self.assertEqual(self.state_machine.state, "waiting_user")
         mock_agent.message_processor.add_new_message.assert_not_called()
 
     def test_afk_plugin_register(self):

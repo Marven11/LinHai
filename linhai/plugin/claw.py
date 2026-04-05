@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
 from linhai.prompt import (
@@ -109,9 +110,12 @@ class ClawHeartbeatPlugin(Plugin):
 
     async def _heartbeat(self, agent: "linhai_agent") -> None:
         await asyncio.sleep(self.HEARTBEAT_INTERVAL)
-        if agent.state != "waiting_user":
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        if state_machine.state != "waiting_user":
             return
-        agent.state = "working"
+        state_machine.transition_to_working()
         await agent.message_processor.add_new_message(
             RuntimeMessage(
                 "十分钟过去了，用户仍然没有回复。"

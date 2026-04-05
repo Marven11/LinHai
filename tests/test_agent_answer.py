@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent import AgentLlm, Lifecycle
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.user_message_handler import UserMessageHandler
 from linhai.llm import UserMessage, AssistantMessage
 from linhai.agent.messages import RuntimeMessage
@@ -67,6 +68,7 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         parsed_answer_mock._answer = answer_mock
         self.agent_llm._current_parsed_answer = parsed_answer_mock
         self.mock_agent.state = "working"
+        mock_state_machine = MagicMock(spec=AgentStateMachine)
 
         mock_handler = MagicMock(spec=UserMessageHandler)
         mock_handler.has_message = MagicMock(return_value=False)
@@ -76,6 +78,8 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             if name == "user_message_handler":
                 return mock_handler
+            if name == "state_machine":
+                return mock_state_machine
             return None
 
         self.registry.get_member_typechecked = MagicMock(
@@ -94,6 +98,8 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         parsed_answer_mock._answer = answer_mock
         self.agent_llm._current_parsed_answer = parsed_answer_mock
 
+        mock_state_machine = MagicMock(spec=AgentStateMachine)
+
         mock_handler = MagicMock(spec=UserMessageHandler)
         mock_handler.has_message = MagicMock(side_effect=[True, False])
         mock_handler.receive_and_dispatch = AsyncMock(return_value=True)
@@ -103,6 +109,8 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             if name == "user_message_handler":
                 return mock_handler
+            if name == "state_machine":
+                return mock_state_machine
             return None
 
         self.registry.get_member_typechecked = MagicMock(
@@ -122,6 +130,8 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
 """
         self.agent_llm._current_parsed_answer = parsed_answer_mock
 
+        mock_state_machine = MagicMock(spec=AgentStateMachine)
+
         mock_handler = MagicMock(spec=UserMessageHandler)
         mock_handler.has_message = MagicMock(return_value=False)
 
@@ -130,6 +140,8 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             if name == "user_message_handler":
                 return mock_handler
+            if name == "state_machine":
+                return mock_state_machine
             return None
 
         self.registry.get_member_typechecked = MagicMock(

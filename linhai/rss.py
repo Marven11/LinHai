@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from linhai.agent.main import Agent
     from linhai.agent import Agent as AgentType
 
+from linhai.agent.state_machine import AgentStateMachine
+
 
 class RssMessage(Message):
     """RSS消息，用于表示单个RSS条目。"""
@@ -176,7 +178,10 @@ class RssPlugin:
             if send_to_agent:
                 await agent.message_processor.add_new_message(msg)
         if send_to_agent and new_messages:
-            agent.interrupt_to_working()
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            state_machine.interrupt_to_working()
 
     async def _initialize_processed_guids(self):
         """初始化时获取所有已存在的RSS消息的guid，不发送给agent。"""

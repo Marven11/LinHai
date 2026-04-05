@@ -91,7 +91,12 @@ class CommandCallback:
         llm_name, _llm = agent.get_current_llm_info()
         threshold_info = agent.get_threshold_info()
 
-        status_lines = [f"当前LLM: {llm_name}", f"当前状态: {agent.state}"]
+        from .state_machine import AgentStateMachine
+
+        state_machine = self.registry.get_member_typechecked(
+            "state_machine", AgentStateMachine
+        )
+        status_lines = [f"当前LLM: {llm_name}", f"当前状态: {state_machine.state}"]
 
         if threshold_info:
             usage_percent = threshold_info["usage_ratio"] * 100

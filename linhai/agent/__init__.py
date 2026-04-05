@@ -7,6 +7,7 @@ from .workflow import context_forget_range_step1, context_forget_range_step2
 from .answer import AgentLlm
 from .user_message_handler import UserMessageHandler, ParsedUserMessage
 from .command_callback import CommandCallback
+from .state_machine import AgentStateMachine
 
 __all__ = [
     "Agent",
@@ -18,4 +19,5 @@ __all__ = [
     "UserMessageHandler",
     "ParsedUserMessage",
     "CommandCallback",
+    "AgentStateMachine",
 ]

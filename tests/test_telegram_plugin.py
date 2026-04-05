@@ -4,6 +4,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from linhai.plugin.telegram import TelegramPlugin
 from linhai.agent.create import TelegramContext
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.telegram import TelegramMessage
 
 
@@ -12,12 +13,22 @@ class TestTelegramPlugin(unittest.TestCase):
 
     def setUp(self):
         self.registry = Mock()
-        self.registry.get_member_typechecked = Mock()
         self.registry.send_if_exists = AsyncMock()
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
-        self.registry.get_member_typechecked.return_value = self.agent
+        self.state_machine = Mock(spec=AgentStateMachine)
+        self.state_machine.state = "waiting_user"
+        self.state_machine.transition_to_working = Mock(
+            side_effect=lambda: setattr(self.state_machine, "state", "working")
+        )
+
+        def get_member(name, cls):
+            if name == "state_machine":
+                return self.state_machine
+            return self.agent
+
+        self.registry.get_member_typechecked = Mock(side_effect=get_member)
         self.telegram_config = TelegramContext(
             bot_token="test_token", default_chat_id="test_chat_id"
         )
@@ -113,7 +124,7 @@ class TestTelegramPlugin(unittest.TestCase):
     def test_handle_telegram_message_state_switch(self):
         """测试telegram消息加入后agent状态从waiting_user切换到working。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
-        self.agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -123,12 +134,12 @@ class TestTelegramPlugin(unittest.TestCase):
 
         asyncio.run(plugin._handle_telegram_message(mock_update, None))
 
-        self.assertEqual(self.agent.state, "working")
+        self.state_machine.transition_to_working.assert_called_once()
 
     def test_handle_telegram_message_state_already_working(self):
         """测试agent已经在working状态时不会重复调用generate_response。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
-        self.agent.state = "working"
+        self.state_machine.state = "working"
         self.agent.generate_response = AsyncMock()
 
         mock_update = Mock()
@@ -139,8 +150,8 @@ class TestTelegramPlugin(unittest.TestCase):
 
         asyncio.run(plugin._handle_telegram_message(mock_update, None))
 
-        self.assertEqual(self.agent.state, "working")
-        self.agent.generate_response.assert_not_called()
+        self.assertEqual(self.state_machine.state, "working")
+        self.state_machine.transition_to_working.assert_not_called()
 
     def test_handle_telegram_message_invalid_chat_id(self):
         """测试处理来自未授权chat_id的消息。"""
@@ -228,7 +239,7 @@ class TestTelegramPlugin(unittest.TestCase):
             return_value=bytearray(b"fake_sticker_data")
         )
         plugin._bot.get_file = AsyncMock(return_value=mock_file)
-        self.agent.state = "waiting_user"
+        self.state_machine.state = "waiting_user"
 
         mock_update = Mock()
         mock_update.message = Mock()
@@ -241,7 +252,7 @@ class TestTelegramPlugin(unittest.TestCase):
             mock_load_sticker.return_value = mock_sticker_message
             asyncio.run(plugin._handle_telegram_sticker(mock_update, None))
 
-        self.assertEqual(self.agent.state, "working")
+        self.state_machine.transition_to_working.assert_called_once()
 
     def test_handle_telegram_sticker_invalid_chat_id(self):
         """测试处理来自未授权chat_id的sticker消息。"""

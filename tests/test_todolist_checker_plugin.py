@@ -7,6 +7,7 @@ from unittest.mock import Mock, MagicMock, AsyncMock
 from linhai.plugin.planning import TodolistCheckerPlugin
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
 from linhai.llm import UserMessage, Answer
@@ -19,6 +20,7 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.registry = MagicMock(spec=Registry)
+        self.state_machine = MagicMock(spec=AgentStateMachine)
         self.plugin = TodolistCheckerPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
@@ -35,6 +37,8 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         def side_effect(name, cls):
             if name == "agent" and cls.__name__ == "Agent":
                 return self.mock_agent
+            if name == "state_machine":
+                return self.state_machine
             return None
 
         self.registry.get_member_typechecked.side_effect = side_effect

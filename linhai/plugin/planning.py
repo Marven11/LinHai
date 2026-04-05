@@ -6,6 +6,7 @@ from os import access, R_OK
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
+from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
 from linhai.llm import Answer, UserMessage, Message
@@ -219,7 +220,10 @@ class TodolistCheckerPlugin(Plugin):
                     "错误：当前TODOLIST.md仍有未完成项，你是不是搞错什么了？"
                 )
             )
-            agent.state = "working"
+            state_machine = self.registry.get_member_typechecked(
+                "state_machine", AgentStateMachine
+            )
+            state_machine.transition_to_working()
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.register_before_waiting_user(self.before_waiting_user)

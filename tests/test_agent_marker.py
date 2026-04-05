@@ -118,6 +118,8 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
                 return self.lifecycle_mock
             elif member_type == "agent_context_orchestration":
                 return self.agent.orchestration
+            elif member_type == "state_machine":
+                return self.agent.state_machine
             elif member_type == "machine_control":
                 return self.mock_machine_control
             elif member_type == "conversation_folder":
@@ -206,7 +208,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(error_msg, RuntimeMessage)
         assert isinstance(error_msg, RuntimeMessage)  # satisfy pylint
         self.assertIn("不在最后一行", error_msg.message)
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
     async def test_both_tool_calls_and_marker(self):
         """Test agent adds error message when both tool calls and marker are present."""
@@ -255,7 +257,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        self.agent.state = "working"
+        self.agent.state_machine.state = "working"
 
         await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
         await self.agent.generate_response()
@@ -296,7 +298,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             3,  # System + user + assistant (conversation保存消息已移除)
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
         runtime_msgs = [
             msg
             for msg in self.agent.message_processor.get_messages()
@@ -344,7 +346,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             3,  # System + user + assistant
             format_messages_for_assert(self.agent.message_processor.get_messages()),
         )
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
         runtime_msgs = [
             msg
             for msg in self.agent.message_processor.get_messages()

@@ -5,7 +5,6 @@ from unittest.mock import Mock, AsyncMock, patch
 from linhai.rss import RssPlugin, RssMessage, parse_rss
 from linhai.task_supervisor import PlainTaskSupervisor
 
-
 TEST_RSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -33,6 +32,8 @@ class TestRssPlugin(unittest.TestCase):
     def setUp(self):
         self.registry = Mock()
         self.task_supervisor = Mock(spec=PlainTaskSupervisor)
+        self.state_machine = Mock()
+        self.state_machine.interrupt_to_working = Mock()
         self.agent = Mock()
         self.agent.message_processor = Mock()
         self.agent.message_processor.add_new_message = AsyncMock()
@@ -40,6 +41,8 @@ class TestRssPlugin(unittest.TestCase):
         def get_member_typechecked_side_effect(name, cls):
             if name == "task_supervisor":
                 return self.task_supervisor
+            if name == "state_machine":
+                return self.state_machine
             return self.agent
 
         self.registry.get_member_typechecked = Mock(
@@ -187,7 +190,6 @@ class TestRssPlugin(unittest.TestCase):
         self.agent.state = "sleeping"
         self.agent.sleeping_since = "fake"
         self.agent.sleeping_deadline = "fake"
-        self.agent.interrupt_to_working = Mock()
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
@@ -205,7 +207,7 @@ class TestRssPlugin(unittest.TestCase):
                 plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
             )
 
-            self.agent.interrupt_to_working.assert_called_once()
+            self.state_machine.interrupt_to_working.assert_called_once()
 
     def test_fetch_and_process_rss_no_interrupt_without_new_messages(self):
         """测试无新RSS消息时不打断agent。"""
@@ -213,7 +215,7 @@ class TestRssPlugin(unittest.TestCase):
         plugin.processed_guids.add("guid-1")
         plugin.processed_guids.add("guid-2")
 
-        self.agent.interrupt_to_working = Mock()
+        self.state_machine.interrupt_to_working.reset_mock()
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
@@ -231,13 +233,13 @@ class TestRssPlugin(unittest.TestCase):
                 plugin._fetch_and_process_rss("http://example.com/feed", self.agent)
             )
 
-            self.agent.interrupt_to_working.assert_not_called()
+            self.state_machine.interrupt_to_working.assert_not_called()
 
     def test_fetch_and_process_rss_no_interrupt_when_not_sending(self):
         """测试send_to_agent=False时不打断agent。"""
         plugin = RssPlugin(self.registry, ["http://example.com/feed"], 300)
 
-        self.agent.interrupt_to_working = Mock()
+        self.state_machine.interrupt_to_working.reset_mock()
 
         mock_response = Mock()
         mock_response.text = TEST_RSS_XML
@@ -257,7 +259,7 @@ class TestRssPlugin(unittest.TestCase):
                 )
             )
 
-            self.agent.interrupt_to_working.assert_not_called()
+            self.state_machine.interrupt_to_working.assert_not_called()
 
     def test_register(self):
         """测试注册到Lifecycle。"""

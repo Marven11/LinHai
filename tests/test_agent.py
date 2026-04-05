@@ -157,7 +157,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
 
     async def test_initial_state(self):
         """Test agent initial state."""
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
     async def test_handle_messages(self):
         """Test message handling functionality."""
@@ -189,9 +189,9 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         from linhai.llm import AssistantMessage
 
         content = "Hi there"
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
     async def test_message_processing(self):
         """Test message processing functionality."""
@@ -285,7 +285,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             await self.agent.generate_response()
 
         self.assertEqual(str(cm.exception), "Test error")
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
     async def test_run_loop(self):
         """Test agent run loop functionality."""
@@ -299,7 +299,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
                 task_ref.cancel()
 
         self.agent.state_waiting_user = AsyncMock(side_effect=mock_state_waiting_user)
-        self.agent.state = "waiting_user"
+        self.agent.state_machine.transition_to_waiting_user()
 
         task_ref = asyncio.create_task(self.agent.run())
 
@@ -349,7 +349,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tool_call.function_name, "add_numbers")
         self.assertEqual(tool_call.function_arguments, {"a": 2, "b": 2})
 
-        self.assertEqual(self.agent.state, "working")
+        self.assertEqual(self.agent.state_machine.state, "working")
 
     async def test_at_system_logic(self):
         """测试@系统逻辑，在接收到用户消息时更新LLM索引"""

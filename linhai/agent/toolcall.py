@@ -259,8 +259,8 @@ class AgentToolcall:
         返回:
             bool: 是否需要进行早期返回
         """
-        if self.agent.state == "waiting_user":
-            self.agent.state = "working"
+        if self.agent.state_machine.state == "waiting_user":
+            self.agent.state_machine.transition_to_working()
         if self.early_return:
             msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
             await self.agent.message_processor.add_new_message(RuntimeMessage(msg))
@@ -504,5 +504,5 @@ class AgentToolcall:
         """处理工具调用结果。"""
 
         await self.agent.message_processor.add_new_message(tool_result)
-        if self.agent.state == "waiting_user":
-            self.agent.state = "working"
+        if self.agent.state_machine.state == "waiting_user":
+            self.agent.state_machine.transition_to_working()

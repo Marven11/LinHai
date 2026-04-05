@@ -74,11 +74,11 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
         self.agent.generate_response = AsyncMock()
 
-        self.assertEqual(self.agent.state, "waiting_user")
+        self.assertEqual(self.agent.state_machine.state, "waiting_user")
 
-        self.agent.state = "working"
+        self.agent.state_machine.transition_to_working()
 
-        self.assertEqual(self.agent.state, "working")
+        self.assertEqual(self.agent.state_machine.state, "working")
 
     async def test_state_waiting_user_with_existing_user_message(self):
         """测试在等待用户状态下已经有用户消息时不改变状态。"""
@@ -86,11 +86,11 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
         self.agent.generate_response = AsyncMock()
 
-        self.agent.state = "waiting_user"
+        self.agent.state_machine.transition_to_waiting_user()
 
-        self.agent.state = "working"
+        self.agent.state_machine.transition_to_working()
 
-        self.assertEqual(self.agent.state, "working")
+        self.assertEqual(self.agent.state_machine.state, "working")
 
     async def test_generate_response_returns_parsed_answer(self):
         """测试generate_response函数返回ParsedAnswer类型。"""

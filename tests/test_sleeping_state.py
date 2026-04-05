@@ -40,22 +40,22 @@ def _create_agent() -> Agent:
 class TestSleepTool(unittest.IsolatedAsyncioTestCase):
     async def test_sleep_tool_sets_state_and_fields(self):
         agent = _create_agent()
-        toolset = agent.generate_sleep_toolset()
+        toolset = agent.state_machine.generate_sleep_toolset()
         sleep_fn = toolset.get_tool("sleep")
 
-        self.assertEqual(agent.state, "waiting_user")
-        self.assertIsNone(agent.sleeping_since)
-        self.assertIsNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "waiting_user")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
 
         result = await sleep_fn(seconds=5.0)
 
-        self.assertEqual(agent.state, "sleeping")
-        self.assertIsNotNone(agent.sleeping_since)
-        self.assertIsNotNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "sleeping")
+        self.assertIsNotNone(agent.state_machine.sleeping_since)
+        self.assertIsNotNone(agent.state_machine.sleeping_deadline)
 
-        expected_deadline = agent.sleeping_since + timedelta(seconds=5.0)
+        expected_deadline = agent.state_machine.sleeping_since + timedelta(seconds=5.0)
         self.assertAlmostEqual(
-            (agent.sleeping_deadline - expected_deadline).total_seconds(),
+            (agent.state_machine.sleeping_deadline - expected_deadline).total_seconds(),
             0.0,
             places=1,
         )
@@ -68,46 +68,46 @@ class TestSleepTool(unittest.IsolatedAsyncioTestCase):
 class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
     async def test_state_sleeping_completes(self):
         agent = _create_agent()
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=0.1)
-        agent.state = "sleeping"
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=0.1)
+        )
 
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
 
         await agent.state_sleeping()
 
-        self.assertEqual(agent.state, "working")
-        self.assertIsNone(agent.sleeping_since)
-        self.assertIsNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "working")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
         agent.message_processor.add_new_message.assert_called_once()
 
     async def test_state_sleeping_interrupted_by_state_change(self):
         agent = _create_agent()
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=10)
-        agent.state = "sleeping"
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=10)
+        )
 
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
 
         async def interrupt_after_delay():
             await asyncio.sleep(0.05)
-            agent.interrupt_to_working()
+            agent.state_machine.interrupt_to_working()
 
         task = asyncio.create_task(interrupt_after_delay())
         await agent.state_sleeping()
         await task
 
-        self.assertEqual(agent.state, "working")
-        self.assertIsNone(agent.sleeping_since)
-        self.assertIsNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "working")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
 
     async def test_run_handles_sleeping_state(self):
         agent = _create_agent()
-        agent.state = "sleeping"
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=0.1)
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=0.1)
+        )
 
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
@@ -117,9 +117,8 @@ class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
         async def fake_state_sleeping():
             nonlocal call_count
             call_count += 1
-            agent.sleeping_since = None
-            agent.sleeping_deadline = None
-            agent.state = "waiting_user"
+            agent.state_machine.finish_sleeping()
+            agent.state_machine.transition_to_waiting_user()
 
         agent.state_sleeping = fake_state_sleeping
 
@@ -139,39 +138,37 @@ class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
 class TestInterruptToWorking(unittest.IsolatedAsyncioTestCase):
     async def test_interrupt_from_sleeping(self):
         agent = _create_agent()
-        agent.state = "sleeping"
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=100)
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=100)
+        )
 
-        agent.interrupt_to_working()
+        agent.state_machine.interrupt_to_working()
 
-        self.assertEqual(agent.state, "working")
-        self.assertIsNone(agent.sleeping_since)
-        self.assertIsNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "working")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
 
     async def test_interrupt_from_waiting_user(self):
         agent = _create_agent()
-        agent.state = "waiting_user"
+        agent.state_machine.interrupt_to_working()
 
-        agent.interrupt_to_working()
-
-        self.assertEqual(agent.state, "working")
+        self.assertEqual(agent.state_machine.state, "working")
 
     async def test_interrupt_from_working_is_idempotent(self):
         agent = _create_agent()
-        agent.state = "working"
+        agent.state_machine.transition_to_working()
 
-        agent.interrupt_to_working()
+        agent.state_machine.interrupt_to_working()
 
-        self.assertEqual(agent.state, "working")
+        self.assertEqual(agent.state_machine.state, "working")
 
 
 class TestSleepingUserMessageInterrupt(unittest.IsolatedAsyncioTestCase):
     async def test_user_message_interrupts_sleep(self):
         agent = _create_agent()
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=10)
-        agent.state = "sleeping"
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=10)
+        )
 
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
@@ -187,15 +184,15 @@ class TestSleepingUserMessageInterrupt(unittest.IsolatedAsyncioTestCase):
         await agent.state_sleeping()
         await task
 
-        self.assertEqual(agent.state, "working")
-        self.assertIsNone(agent.sleeping_since)
-        self.assertIsNone(agent.sleeping_deadline)
+        self.assertEqual(agent.state_machine.state, "working")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
 
     async def test_non_interrupt_command_continues_sleep(self):
         agent = _create_agent()
-        agent.sleeping_since = datetime.now()
-        agent.sleeping_deadline = datetime.now() + timedelta(seconds=0.2)
-        agent.state = "sleeping"
+        agent.state_machine.transition_to_sleeping(
+            datetime.now(), datetime.now() + timedelta(seconds=0.2)
+        )
 
         agent.message_processor = MagicMock()
         agent.message_processor.add_new_message = AsyncMock()
@@ -214,7 +211,7 @@ class TestSleepingUserMessageInterrupt(unittest.IsolatedAsyncioTestCase):
 
         await agent.state_sleeping()
 
-        self.assertEqual(agent.state, "working")
+        self.assertEqual(agent.state_machine.state, "working")
         agent.message_processor.add_new_message.assert_called_once()
 
 
