@@ -77,7 +77,7 @@ class AgentMessage:
         from .lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
     async def after_message_generation(self, parsed_answer, full_response, tool_calls):
         is_anchor_updated = self.is_anchor_updated
@@ -148,7 +148,7 @@ class AgentMessage:
         from .lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        await lifecycle.trigger_before_cache_invalidate()
+        await lifecycle.before_cache_invalidate.trigger()
         if self.explicit_cache_anchors:
             await self.registry.send_if_exists(
                 "ui_log", UiNotice(level="WARNING", content="上下文缓存失效！")
@@ -164,7 +164,7 @@ class AgentMessage:
         from .lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        processed_message = await lifecycle.trigger_before_add_new_message(msg)
+        processed_message = await lifecycle.before_add_new_message.trigger(msg)
         if processed_message is None:
             processed_message = msg
         self.pinned_messages.append(processed_message)
@@ -188,7 +188,7 @@ class AgentMessage:
                 )
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        processed_message = await lifecycle.trigger_before_add_new_message(msg)
+        processed_message = await lifecycle.before_add_new_message.trigger(msg)
         if processed_message is None:
             processed_message = msg
         self.messages.append(processed_message)
@@ -312,7 +312,7 @@ class AgentMessage:
             from .lifecycle import Lifecycle
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            processed_message = await lifecycle.trigger_before_add_new_message(
+            processed_message = await lifecycle.before_add_new_message.trigger(
                 new_message
             )
             self.messages[index] = processed_message
@@ -353,7 +353,7 @@ class AgentMessage:
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         agent = self.registry.get_member_typechecked("agent", Agent)
-        await lifecycle.trigger_after_cache_invalidate(agent, self.messages)
+        await lifecycle.after_cache_invalidate.trigger(agent, self.messages)
 
     def _save_context(self) -> None:
         """保存当前上下文到文件。"""

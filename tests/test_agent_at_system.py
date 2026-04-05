@@ -27,7 +27,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         async def trigger_before_add_new_message_coroutine(msg):
             return None
 
-        self.lifecycle_mock.trigger_before_add_new_message = (
+        self.lifecycle_mock.before_add_new_message.trigger = (
             trigger_before_add_new_message_coroutine
         )
         self.command_callback = CommandCallback(self.registry)
@@ -35,7 +35,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
         async def trigger_after_parsed_user_message_side_effect(parsed):
             return await self.command_callback(parsed)
 
-        self.lifecycle_mock.trigger_after_parsed_user_message = AsyncMock(
+        self.lifecycle_mock.after_parsed_user_message.trigger = AsyncMock(
             side_effect=trigger_after_parsed_user_message_side_effect
         )
 

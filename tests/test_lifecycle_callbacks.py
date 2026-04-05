@@ -49,7 +49,7 @@ class TestAfterNewParsedAnswerCallback(unittest.IsolatedAsyncioTestCase):
             callback_called = True
             received_parsed_answer = parsed_answer
 
-        lifecycle.register_after_new_parsed_answer(callback)
+        lifecycle.after_new_parsed_answer.register(callback)
 
         answer = MockAnswer()
         agent = MagicMock()
@@ -58,7 +58,7 @@ class TestAfterNewParsedAnswerCallback(unittest.IsolatedAsyncioTestCase):
 
         # Callback should be triggered by the caller (main.py), not in __init__
         # This simulates what main.py does
-        await lifecycle.trigger_after_new_parsed_answer(parsed)
+        await lifecycle.after_new_parsed_answer.trigger(parsed)
 
         self.assertTrue(callback_called)
         self.assertIs(received_parsed_answer, parsed)
@@ -77,7 +77,7 @@ class TestCallbackOrder(unittest.IsolatedAsyncioTestCase):
         async def after_new_parsed_answer(parsed_answer):
             call_order.append("after_new_parsed_answer")
 
-        lifecycle.register_after_new_parsed_answer(after_new_parsed_answer)
+        lifecycle.after_new_parsed_answer.register(after_new_parsed_answer)
 
         answer = MockAnswer()
         agent = MagicMock()
@@ -85,7 +85,7 @@ class TestCallbackOrder(unittest.IsolatedAsyncioTestCase):
         parsed = ParsedAnswer(answer, lifecycle, agent, registry=registry)
 
         # Simulate what main.py does
-        await lifecycle.trigger_after_new_parsed_answer(parsed)
+        await lifecycle.after_new_parsed_answer.trigger(parsed)
 
         self.assertEqual(call_order[0], "after_new_parsed_answer")
 

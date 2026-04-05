@@ -54,7 +54,7 @@ class TokenManager:
         from linhai.agent.lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_before_message_generation(self._on_before_message_generation)
+        lifecycle.before_message_generation.register(self._on_before_message_generation)
 
         task_supervisor = self.registry.get_member_typechecked(
             "task_supervisor", TaskSupervisor

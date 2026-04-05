@@ -94,13 +94,13 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         self.issue_manager.has_unanswered_issues.return_value = False
 
         self.lifecycle_mock = MagicMock()
-        self.lifecycle_mock.trigger_after_toolcall = AsyncMock(return_value=None)
-        self.lifecycle_mock.trigger_before_tool_call = AsyncMock(return_value=None)
+        self.lifecycle_mock.after_toolcall.trigger = AsyncMock(return_value=None)
+        self.lifecycle_mock.before_tool_call.trigger = AsyncMock(return_value=None)
 
         async def trigger_before_add_new_message_coroutine(msg):
             return None
 
-        self.lifecycle_mock.trigger_before_add_new_message = (
+        self.lifecycle_mock.before_add_new_message.trigger = (
             trigger_before_add_new_message_coroutine
         )
 

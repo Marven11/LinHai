@@ -54,7 +54,7 @@ class TestUnnecessarySedReadPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_toolcall.assert_called_once_with(
+        lifecycle.after_toolcall.register.assert_called_once_with(
             self.plugin.after_toolcall
         )
 

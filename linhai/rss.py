@@ -219,4 +219,4 @@ class RssPlugin:
 
     def register(self, lifecycle) -> None:
         """注册到Lifecycle。"""
-        lifecycle.register_before_agent_loop(self.before_agent_loop)
+        lifecycle.before_agent_loop.register(self.before_agent_loop)

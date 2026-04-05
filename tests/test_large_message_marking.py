@@ -19,16 +19,9 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.registry = Registry()
 
-        # 注册必要的mock组件
         from linhai.agent.lifecycle import Lifecycle
 
-        mock_lifecycle = Mock(spec=Lifecycle)
-        mock_lifecycle.trigger_before_add_new_message = AsyncMock(
-            side_effect=lambda msg: msg
-        )
-        mock_lifecycle.trigger_before_cache_invalidate = AsyncMock(return_value=None)
-        mock_lifecycle.trigger_after_cache_invalidate = AsyncMock(return_value=None)
-        self.registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(self.registry)
 
         from linhai.agent.main import Agent
 

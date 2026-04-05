@@ -391,8 +391,8 @@ class AgentContextOrchestration:
         from .lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_before_add_new_message(self._before_add_new_message)
-        lifecycle.register_before_message_generation(self._before_message_generation)
+        lifecycle.before_add_new_message.register(self._before_add_new_message)
+        lifecycle.before_message_generation.register(self._before_message_generation)
 
     async def _before_add_new_message(self, message: "Message") -> None:
         """在添加新消息前检查是否为大消息。"""
@@ -494,7 +494,7 @@ class RedStateToolBlockPlugin:
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_before_tool_call(self.before_toolcall)
+        lifecycle.before_tool_call.register(self.before_toolcall)
 
 
 class NotificationMessagePlugin:
@@ -560,7 +560,7 @@ class NotificationMessagePlugin:
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)
 
 
 class LargeMessageCountPlugin:
@@ -604,4 +604,4 @@ class LargeMessageCountPlugin:
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)

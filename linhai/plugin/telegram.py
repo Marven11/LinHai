@@ -212,5 +212,5 @@ class TelegramPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle") -> None:
         """注册到Lifecycle。"""
-        lifecycle.register_after_segment(self.after_segment_finished)
-        lifecycle.register_before_agent_loop(self.before_agent_loop)
+        lifecycle.after_segment.register(self.after_segment_finished)
+        lifecycle.before_agent_loop.register(self.before_agent_loop)

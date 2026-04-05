@@ -1,7 +1,7 @@
 """测试Planning tab功能"""
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 import asyncio
 import tempfile
 from pathlib import Path
@@ -163,7 +163,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("lifecycle", Mock(spec=Lifecycle))
+        Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
@@ -223,7 +223,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("lifecycle", Mock(spec=Lifecycle))
+        Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None
@@ -293,7 +293,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
         registry.register_member("agent_context_orchestration", mock_orchestration)
-        registry.register_member("lifecycle", Mock(spec=Lifecycle))
+        Lifecycle(registry)
 
         mock_cli_args = argparse.Namespace()
         mock_cli_args.message = None

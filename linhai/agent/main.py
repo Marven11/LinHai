@@ -78,8 +78,8 @@ class Agent:
 
         self.user_message_handler = UserMessageHandler(registry)
         command_callback = CommandCallback(registry)
-        self.lifecycle.register_after_parsed_user_message(command_callback)
-        self.lifecycle.register_after_token_generation(self.after_token_generation)
+        self.lifecycle.after_parsed_user_message.register(command_callback)
+        self.lifecycle.after_token_generation.register(self.after_token_generation)
 
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
@@ -147,7 +147,7 @@ class Agent:
             self.state_machine.transition_to_working()
             return
 
-        await self.lifecycle.trigger_before_waiting_user(self)
+        await self.lifecycle.before_waiting_user.trigger(self)
 
         await self.registry.send_if_exists(
             "ui_log",
@@ -269,7 +269,7 @@ class Agent:
                 )
                 await self.toolcall_processor.call_tool(tool_call, tool_index=i)
 
-        await self.lifecycle.trigger_after_message_generation(
+        await self.lifecycle.after_message_generation.trigger(
             parsed_answer, full_response, tool_calls
         )
 
@@ -297,7 +297,7 @@ class Agent:
 
     async def run(self):
         """Agent主循环，负责状态机的管理和状态切换。"""
-        await self.lifecycle.trigger_before_agent_loop(self)
+        await self.lifecycle.before_agent_loop.trigger(self)
 
         while True:
             try:

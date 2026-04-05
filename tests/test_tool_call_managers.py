@@ -16,7 +16,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
         self.mock_agent = MagicMock(spec=Agent)
         self.mock_message_processor = MagicMock()
         self.mock_message_processor.add_new_message = AsyncMock()
-        self.mock_lifecycle = MagicMock(spec=Lifecycle)
+        self.mock_lifecycle = MagicMock()
 
         self.mock_agent.message_processor = self.mock_message_processor
         self.mock_registry.get_member_typechecked = MagicMock(
@@ -123,7 +123,7 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         """Test plugin registration."""
         self.plugin.register(self.mock_lifecycle)
-        self.mock_lifecycle.register_after_message_generation.assert_called_once_with(
+        self.mock_lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

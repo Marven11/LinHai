@@ -129,7 +129,7 @@ class TUIApp(App):
 
     def postinit(self):
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
         self.watch_exit_signal_queue()
         self.token_manager.start_watching()
 

@@ -224,7 +224,7 @@ class TestDirectoryChangePlugin(unittest.TestCase):
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+        mock_lifecycle.before_message_generation.register.assert_called_once_with(
             self.plugin.before_message_generation
         )
 

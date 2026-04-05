@@ -27,7 +27,7 @@ class UserMessageHandler:
         from .lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        result = await lifecycle.trigger_after_parsed_user_message(parsed)
+        result = await lifecycle.after_parsed_user_message.trigger(parsed)
         if result is not None:
             return result
 

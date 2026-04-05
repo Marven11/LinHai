@@ -87,7 +87,7 @@ class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):
 
         self.plugin.register(lifecycle)
 
-        lifecycle.register_after_token_generation.assert_called_once_with(
+        lifecycle.after_token_generation.register.assert_called_once_with(
             self.plugin.after_token_generation
         )
 

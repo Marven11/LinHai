@@ -57,7 +57,7 @@ class WithSecretParameterPositionPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
 
 class MissingWithSecretWarningPlugin(Plugin):
@@ -104,7 +104,7 @@ class MissingWithSecretWarningPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
 
 class CommandWhitelistPlugin(Plugin):
@@ -115,8 +115,8 @@ class CommandWhitelistPlugin(Plugin):
         self.allowed_commands = allowed_commands
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        lifecycle.before_message_generation.register(self.before_message_generation)
+        lifecycle.before_tool_call.register(self.before_tool_call)
 
     async def before_message_generation(self) -> None:
         from linhai.agent import Agent
@@ -197,7 +197,7 @@ class ProcessArgvCheckerPlugin(Plugin):
         super().__init__(registry)
 
     def register(self, lifecycle):
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        lifecycle.before_tool_call.register(self.before_tool_call)
 
     async def before_tool_call(
         self,

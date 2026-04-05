@@ -18,7 +18,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
     def test_register(self):
         mock_lifecycle = Mock()
         self.plugin.register(mock_lifecycle)
-        mock_lifecycle.register_before_waiting_user.assert_called_once_with(
+        mock_lifecycle.before_waiting_user.register.assert_called_once_with(
             self.plugin.before_waiting_user
         )
 

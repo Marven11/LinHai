@@ -25,8 +25,8 @@ class SudoStdioCheckerPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle) -> None:
         """注册到before_tool_call和after_toolcall回调。"""
-        lifecycle.register_before_tool_call(self.before_tool_call)
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.before_tool_call.register(self.before_tool_call)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def before_tool_call(
         self,

@@ -51,7 +51,7 @@ class TestNotificationMessagePlugin(unittest.IsolatedAsyncioTestCase):
         lifecycle = Mock()
         self.plugin.register(lifecycle)
 
-        lifecycle.register_before_message_generation.assert_called_once_with(
+        lifecycle.before_message_generation.register.assert_called_once_with(
             self.plugin.before_message_generation
         )
 

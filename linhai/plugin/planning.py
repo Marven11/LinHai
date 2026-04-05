@@ -172,7 +172,7 @@ class PlanningStatusReminderPlugin(Plugin):
         await self._update_notifications(current_state)
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class TodolistCheckerPlugin(Plugin):
@@ -226,7 +226,7 @@ class TodolistCheckerPlugin(Plugin):
             state_machine.transition_to_working()
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_before_waiting_user(self.before_waiting_user)
+        lifecycle.before_waiting_user.register(self.before_waiting_user)
 
 
 class DesignMdReminderPlugin(Plugin):
@@ -309,8 +309,8 @@ class DesignMdReminderPlugin(Plugin):
             )
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_after_cache_invalidate(self.after_cache_invalidate)
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.after_cache_invalidate.register(self.after_cache_invalidate)
+        lifecycle.before_message_generation.register(self.before_message_generation)
 
 
 class PlanningInitOverridePlugin(Plugin):
@@ -329,7 +329,7 @@ class PlanningInitOverridePlugin(Plugin):
         )
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_before_agent_loop(self.before_agent_loop)
+        lifecycle.before_agent_loop.register(self.before_agent_loop)
 
 
 class UserInputRuntimeMessagePlugin(Plugin):
@@ -364,4 +364,4 @@ class UserInputRuntimeMessagePlugin(Plugin):
         )
 
     def register(self, lifecycle: Lifecycle):
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)

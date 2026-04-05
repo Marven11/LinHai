@@ -102,7 +102,7 @@ class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

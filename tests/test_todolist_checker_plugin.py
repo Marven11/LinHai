@@ -55,11 +55,11 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_method_adds_callback(self):
         """测试register方法正确注册before_waiting_user回调。"""
-        mock_lifecycle = MagicMock(spec=Lifecycle)
+        mock_lifecycle = MagicMock()
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_waiting_user.assert_called_once_with(
+        mock_lifecycle.before_waiting_user.register.assert_called_once_with(
             self.plugin.before_waiting_user
         )
 

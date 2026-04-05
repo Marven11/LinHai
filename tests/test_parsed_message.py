@@ -45,12 +45,13 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     async def test_adjacent_token_merging(self):
         """Test that adjacent tokens of same type are merged."""
-        lifecycle = MagicMock(spec=Lifecycle)
-        lifecycle.trigger_before_parsing = AsyncMock()
-        lifecycle.trigger_after_segment = AsyncMock()
-        lifecycle.trigger_after_token_generation = AsyncMock(return_value=False)
-        lifecycle.trigger_after_parsing = AsyncMock()
-        lifecycle.trigger_after_segment_finished = AsyncMock()
+        lifecycle = MagicMock()
+        lifecycle.before_parsing.trigger = AsyncMock()
+        lifecycle.after_segment.trigger = AsyncMock()
+        lifecycle.after_token_generation.trigger = AsyncMock(return_value=False)
+        lifecycle.after_parsing.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
@@ -108,20 +109,21 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(segments[2]["content"], "After tool")
 
         # Verify lifecycle callbacks were called
-        lifecycle.trigger_before_parsing.assert_called_once_with(parsed)
-        self.assertEqual(lifecycle.trigger_after_segment.call_count, 3)
+        lifecycle.before_parsing.trigger.assert_called_once_with(parsed)
+        self.assertEqual(lifecycle.after_segment.trigger.call_count, 3)
         # trigger_after_segment_finished should be called 3 times: when first normal segment finishes (due to type change to toolcall), when toolcall segment finishes (due to type change to normal), and when parsing finishes (last normal segment)
-        self.assertEqual(lifecycle.trigger_after_segment_finished.call_count, 3)
-        lifecycle.trigger_after_parsing.assert_called_once_with(parsed)
+        self.assertEqual(lifecycle.after_segment_finished.trigger.call_count, 3)
+        lifecycle.after_parsing.trigger.assert_called_once_with(parsed)
 
     async def test_interrupt(self):
         """Test interrupt functionality."""
-        lifecycle = MagicMock(spec=Lifecycle)
-        lifecycle.trigger_before_parsing = AsyncMock()
-        lifecycle.trigger_after_segment = AsyncMock()
-        lifecycle.trigger_after_token_generation = AsyncMock(return_value=False)
-        lifecycle.trigger_after_parsing = AsyncMock()
-        lifecycle.trigger_after_segment_finished = AsyncMock()
+        lifecycle = MagicMock()
+        lifecycle.before_parsing.trigger = AsyncMock()
+        lifecycle.after_segment.trigger = AsyncMock()
+        lifecycle.after_token_generation.trigger = AsyncMock(return_value=False)
+        lifecycle.after_parsing.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
 
         agent = MagicMock()
         from linhai.llm import AnswerToken
@@ -161,12 +163,13 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     async def test_segment_finished_callbacks(self):
         """Test that trigger_after_segment_finished is called when segment type changes and when parsing finishes."""
-        lifecycle = MagicMock(spec=Lifecycle)
-        lifecycle.trigger_before_parsing = AsyncMock()
-        lifecycle.trigger_after_segment = AsyncMock()
-        lifecycle.trigger_after_token_generation = AsyncMock(return_value=False)
-        lifecycle.trigger_after_parsing = AsyncMock()
-        lifecycle.trigger_after_segment_finished = AsyncMock()
+        lifecycle = MagicMock()
+        lifecycle.before_parsing.trigger = AsyncMock()
+        lifecycle.after_segment.trigger = AsyncMock()
+        lifecycle.after_token_generation.trigger = AsyncMock(return_value=False)
+        lifecycle.after_parsing.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
+        lifecycle.after_segment_finished.trigger = AsyncMock()
 
         agent = MagicMock()
         from linhai.llm import AnswerToken
@@ -204,47 +207,47 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         # Should have 3 segments
         self.assertEqual(len(segments), 3)
         # Verify callback counts
-        self.assertEqual(lifecycle.trigger_after_segment.call_count, 3)
+        self.assertEqual(lifecycle.after_segment.trigger.call_count, 3)
         # trigger_after_segment_finished should be called 3 times: when normal segment finishes (due to type change to toolcall), when toolcall segment finishes (due to type change to normal), and when parsing finishes (last normal segment)
-        self.assertEqual(lifecycle.trigger_after_segment_finished.call_count, 3)
+        self.assertEqual(lifecycle.after_segment_finished.trigger.call_count, 3)
         # Additionally, verify that trigger_after_segment_finished was called with the correct arguments
         # We can check that it was called with parsed and segment objects
         # The first call should be for the first normal segment
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[0][0][0], parsed
+            lifecycle.after_segment_finished.trigger.call_args_list[0][0][0], parsed
         )
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[0][0][1][
+            lifecycle.after_segment_finished.trigger.call_args_list[0][0][1][
                 "segment_type"
             ],
             "normal",
         )
         # The second call should be for the toolcall segment
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[1][0][0], parsed
+            lifecycle.after_segment_finished.trigger.call_args_list[1][0][0], parsed
         )
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[1][0][1][
+            lifecycle.after_segment_finished.trigger.call_args_list[1][0][1][
                 "segment_type"
             ],
             "toolcall",
         )
         # The third call should be for the last normal segment (when parsing finishes)
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[2][0][0], parsed
+            lifecycle.after_segment_finished.trigger.call_args_list[2][0][0], parsed
         )
         self.assertEqual(
-            lifecycle.trigger_after_segment_finished.call_args_list[2][0][1][
+            lifecycle.after_segment_finished.trigger.call_args_list[2][0][1][
                 "segment_type"
             ],
             "normal",
         )
         # Also verify that trigger_after_parsing was called
-        lifecycle.trigger_after_parsing.assert_called_once_with(parsed)
+        lifecycle.after_parsing.trigger.assert_called_once_with(parsed)
 
     def test_get_toolcalls_normal(self):
         """Test get_toolcalls with valid tool calls."""
-        lifecycle = MagicMock(spec=Lifecycle)
+        lifecycle = MagicMock()
         agent = MagicMock()
 
         # Create mock answer with tool call content
@@ -269,7 +272,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     def test_get_toolcalls_multiple(self):
         """Test get_toolcalls with multiple tool calls."""
-        lifecycle = MagicMock(spec=Lifecycle)
+        lifecycle = MagicMock()
         agent = MagicMock()
 
         from linhai.llm import AnswerToken
@@ -298,7 +301,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     def test_get_toolcalls_with_errors(self):
         """Test get_toolcalls with invalid tool calls."""
-        lifecycle = MagicMock(spec=Lifecycle)
+        lifecycle = MagicMock()
         agent = MagicMock()
 
         from linhai.llm import AnswerToken
@@ -329,7 +332,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     def test_get_toolcalls_empty(self):
         """Test get_toolcalls with empty content."""
-        lifecycle = MagicMock(spec=Lifecycle)
+        lifecycle = MagicMock()
         agent = MagicMock()
 
         from linhai.llm import AnswerToken
@@ -349,7 +352,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
 
     def test_get_toolcalls_invalid_json(self):
         """Test get_toolcalls with invalid JSON syntax."""
-        lifecycle = MagicMock(spec=Lifecycle)
+        lifecycle = MagicMock()
         agent = MagicMock()
 
         from linhai.llm import AnswerToken

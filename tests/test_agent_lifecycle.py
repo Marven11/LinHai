@@ -147,10 +147,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        self.lifecycle.register_before_message_generation(callback1)
-        self.lifecycle.register_before_message_generation(callback2)
+        self.lifecycle.before_message_generation.register(callback1)
+        self.lifecycle.before_message_generation.register(callback2)
 
-        await self.lifecycle.trigger_before_message_generation()
+        await self.lifecycle.before_message_generation.trigger()
 
         callback1.assert_called_once_with()
         callback2.assert_called_once_with()
@@ -160,10 +160,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        self.lifecycle.register_after_message_generation(callback1)
-        self.lifecycle.register_after_message_generation(callback2)
+        self.lifecycle.after_message_generation.register(callback1)
+        self.lifecycle.after_message_generation.register(callback2)
 
-        await self.lifecycle.trigger_after_message_generation(
+        await self.lifecycle.after_message_generation.trigger(
             self.mock_answer, "test response", []
         )
 
@@ -175,11 +175,11 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock(return_value=None)
         callback2 = AsyncMock(return_value=None)
 
-        self.lifecycle.register_after_toolcall(callback1)
-        self.lifecycle.register_after_toolcall(callback2)
+        self.lifecycle.after_toolcall.register(callback1)
+        self.lifecycle.after_toolcall.register(callback2)
 
         # 测试status="skipped"情况
-        await self.lifecycle.trigger_after_toolcall(
+        await self.lifecycle.after_toolcall.trigger(
             tool_name="test_tool",
             tool_index=0,
             status="skipped",
@@ -198,11 +198,11 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock(return_value=None)
         callback2 = AsyncMock(return_value=None)
 
-        self.lifecycle.register_after_toolcall(callback1)
-        self.lifecycle.register_after_toolcall(callback2)
+        self.lifecycle.after_toolcall.register(callback1)
+        self.lifecycle.after_toolcall.register(callback2)
 
         # 测试status="success"情况
-        await self.lifecycle.trigger_after_toolcall(
+        await self.lifecycle.after_toolcall.trigger(
             tool_name="test_tool",
             tool_index=0,
             status="success",
@@ -225,10 +225,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         async def callback2():
             call_order.append(2)
 
-        self.lifecycle.register_before_message_generation(callback1)
-        self.lifecycle.register_before_message_generation(callback2)
+        self.lifecycle.before_message_generation.register(callback1)
+        self.lifecycle.before_message_generation.register(callback2)
 
-        await self.lifecycle.trigger_before_message_generation()
+        await self.lifecycle.before_message_generation.trigger()
 
         self.assertEqual(call_order, [1, 2])
 
@@ -241,21 +241,21 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         async def succeeding_callback():
             pass
 
-        self.lifecycle.register_before_message_generation(failing_callback)
-        self.lifecycle.register_before_message_generation(succeeding_callback)
+        self.lifecycle.before_message_generation.register(failing_callback)
+        self.lifecycle.before_message_generation.register(succeeding_callback)
 
         with self.assertRaises(RuntimeError) as cm:
-            await self.lifecycle.trigger_before_message_generation()
+            await self.lifecycle.before_message_generation.trigger()
         self.assertEqual(str(cm.exception), "Callback failed")
 
     async def test_empty_callbacks(self):
         """Test triggering when no callbacks are registered."""
         try:
-            await self.lifecycle.trigger_before_message_generation()
-            await self.lifecycle.trigger_after_message_generation(
+            await self.lifecycle.before_message_generation.trigger()
+            await self.lifecycle.after_message_generation.trigger(
                 self.mock_answer, "test response", []
             )
-            await self.lifecycle.trigger_after_toolcall(
+            await self.lifecycle.after_toolcall.trigger(
                 tool_name="test_tool",
                 tool_index=0,
                 status="skipped",
@@ -264,7 +264,7 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
                 with_secret=None,
                 is_tool_failed_duplicated_error=False,
             )
-            await self.lifecycle.trigger_before_waiting_user(self.mock_agent)
+            await self.lifecycle.before_waiting_user.trigger(self.mock_agent)
         except (RuntimeError, asyncio.CancelledError):
             self.fail("Triggering empty callbacks should not throw exceptions")
 
@@ -273,10 +273,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        self.lifecycle.register_before_waiting_user(callback1)
-        self.lifecycle.register_before_waiting_user(callback2)
+        self.lifecycle.before_waiting_user.register(callback1)
+        self.lifecycle.before_waiting_user.register(callback2)
 
-        await self.lifecycle.trigger_before_waiting_user(self.mock_agent)
+        await self.lifecycle.before_waiting_user.trigger(self.mock_agent)
 
         callback1.assert_called_once_with(self.mock_agent)
         callback2.assert_called_once_with(self.mock_agent)
@@ -286,10 +286,10 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        self.lifecycle.register_before_cache_invalidate(callback1)
-        self.lifecycle.register_before_cache_invalidate(callback2)
+        self.lifecycle.before_cache_invalidate.register(callback1)
+        self.lifecycle.before_cache_invalidate.register(callback2)
 
-        await self.lifecycle.trigger_before_cache_invalidate()
+        await self.lifecycle.before_cache_invalidate.trigger()
 
         callback1.assert_called_once_with()
         callback2.assert_called_once_with()
@@ -299,11 +299,11 @@ class TestLifecycle(unittest.IsolatedAsyncioTestCase):
         callback1 = AsyncMock()
         callback2 = AsyncMock()
 
-        self.lifecycle.register_after_cache_invalidate(callback1)
-        self.lifecycle.register_after_cache_invalidate(callback2)
+        self.lifecycle.after_cache_invalidate.register(callback1)
+        self.lifecycle.after_cache_invalidate.register(callback2)
 
         messages = [MagicMock()]
-        await self.lifecycle.trigger_after_cache_invalidate(self.mock_agent, messages)
+        await self.lifecycle.after_cache_invalidate.trigger(self.mock_agent, messages)
 
         callback1.assert_called_once_with(self.mock_agent, messages)
         callback2.assert_called_once_with(self.mock_agent, messages)

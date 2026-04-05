@@ -299,7 +299,7 @@ class AgentToolcall:
             )
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            await lifecycle.trigger_after_toolcall(
+            await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="failed",
@@ -330,7 +330,7 @@ class AgentToolcall:
         )
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        skip_result = await lifecycle.trigger_after_toolcall(
+        skip_result = await lifecycle.after_toolcall.trigger(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="skipped",
@@ -381,7 +381,7 @@ class AgentToolcall:
             runtime_message = RuntimeMessage(runtime_msg)
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            replacement_result = await lifecycle.trigger_after_toolcall(
+            replacement_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -405,7 +405,7 @@ class AgentToolcall:
             runtime_message = RuntimeMessage(runtime_msg)
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            replacement_result = await lifecycle.trigger_after_toolcall(
+            replacement_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="success",
@@ -422,7 +422,7 @@ class AgentToolcall:
         self.current_round_token_count += token_count
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        replacement_result = await lifecycle.trigger_after_toolcall(
+        replacement_result = await lifecycle.after_toolcall.trigger(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="success",
@@ -442,14 +442,14 @@ class AgentToolcall:
         from linhai.tool.base import ToolResultFailed
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        before_result = await lifecycle.trigger_before_tool_call(
-            tool_name=tool_call.function_name,
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
+        before_result = await lifecycle.before_tool_call.trigger(
+            tool_call.function_name,
+            tool_call.function_arguments,
+            tool_call.with_secret,
         )
         if isinstance(before_result, ToolResultFailed):
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            await lifecycle.trigger_after_toolcall(
+            await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -475,7 +475,7 @@ class AgentToolcall:
                 tool_result.result, ToolResultFailed
             ):
                 lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-                await lifecycle.trigger_after_toolcall(
+                await lifecycle.after_toolcall.trigger(
                     tool_name=tool_call.function_name,
                     tool_index=tool_index,
                     status="failed",
@@ -508,7 +508,7 @@ class AgentToolcall:
         except (OSError, IOError) as e:
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            await lifecycle.trigger_after_toolcall(
+            await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",

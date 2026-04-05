@@ -1,5 +1,3 @@
-"""Agent lifecycle management module for handling callback events during agent execution."""
-
 from typing import (
     Callable,
     Awaitable,
@@ -9,27 +7,30 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
-from linhai.agent.messages import RuntimeMessage
+from linhai.llm import (
+    Answer,
+    Message,
+)
+
+if TYPE_CHECKING:
+    from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.agent.callback_slot import (
+    BroadcastSlot,
+    ShortCircuitSlot,
+    InterruptSlot,
+    ChainSlot,
+)
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
     from linhai.parsed_message import ParsedAnswer, Segment
     from linhai.agent.user_message_handler import ParsedUserMessage
 
-from linhai.llm import (
-    Answer,
-    Message,
-)
-
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
 AfterMessageGenerationCallback: TypeAlias = Callable[
-    [
-        "ParsedAnswer",
-        str,
-        list[dict],
-    ],
+    ["ParsedAnswer", str, list[dict]],
     Awaitable[None],
 ]
 
@@ -89,11 +90,7 @@ BeforeWaitingUserCallback: TypeAlias = Callable[
 BeforeAgentLoopCallback: TypeAlias = Callable[["Agent"], Awaitable[None]]
 
 BeforeToolCallCallback: TypeAlias = Callable[
-    [
-        str,
-        dict,
-        list[str] | None,
-    ],
+    [str, dict, list[str] | None],
     Awaitable[Union[ToolResultSuccess, ToolResultFailed, dict, None]],
 ]
 
@@ -115,263 +112,34 @@ AfterParsedUserMessageCallback: TypeAlias = Callable[
 ]
 
 
+def _is_tool_result(value: ToolResultSuccess | ToolResultFailed | dict) -> bool:
+    return isinstance(value, (ToolResultSuccess, ToolResultFailed))
+
+
 class Lifecycle:
-    """生命周期回调管理器，使用明确的参数传递。"""
+    """生命周期回调管理器，使用CallbackSlot子类管理回调。"""
 
     def __init__(self, registry):
         self.registry = registry
         self.registry.register_member("lifecycle", self)
 
-        self._before_message_generation_callbacks: list[
-            BeforeMessageGenerationCallback
-        ] = []
-        self._after_message_generation_callbacks: list[
-            AfterMessageGenerationCallback
-        ] = []
-        self._after_toolcall_callbacks: list[AfterToolcallCallback] = []
-        self._after_token_generation_callbacks: list[AfterTokenGenerationCallback] = []
-        self._before_parsing_callbacks: list[BeforeParsingCallback] = []
-        self._after_segment_callbacks: list[AfterSegmentCallback] = []
-        self._after_parsing_callbacks: list[AfterParsingCallback] = []
-        self._after_new_parsed_answer_callbacks: list[AfterNewParsedAnswerCallback] = []
-        self._after_segment_finished_callbacks: list[AfterSegmentFinishedCallback] = []
-        self._parsing_error_callbacks: list[ParsingErrorCallback] = []
-        self._before_waiting_user_callbacks: list[BeforeWaitingUserCallback] = []
-        self._before_agent_loop_callbacks: list[BeforeAgentLoopCallback] = []
-        self._before_tool_call_callbacks: list[BeforeToolCallCallback] = []
-        self._before_add_new_message_callbacks: list[BeforeAddNewMessageCallback] = []
-        self._before_cache_invalidate_callbacks: list[BeforeCacheInvalidateCallback] = (
-            []
+        self.before_message_generation = BroadcastSlot()
+        self.after_message_generation = BroadcastSlot()
+        self.after_toolcall = ShortCircuitSlot()
+        self.after_token_generation = InterruptSlot()
+        self.before_parsing = BroadcastSlot()
+        self.after_segment = BroadcastSlot()
+        self.after_parsing = BroadcastSlot()
+        self.after_new_parsed_answer = BroadcastSlot()
+        self.after_segment_finished = BroadcastSlot()
+        self.parsing_error = BroadcastSlot()
+        self.before_waiting_user = BroadcastSlot()
+        self.before_agent_loop = BroadcastSlot()
+        self.before_tool_call = ChainSlot(
+            chain_arg=1,
+            should_stop=_is_tool_result,
         )
-        self._after_cache_invalidate_callbacks: list[AfterCacheInvalidateCallback] = []
-        self._after_parsed_user_message_callbacks: list[
-            AfterParsedUserMessageCallback
-        ] = []
-
-    def register_before_message_generation(
-        self, callback: BeforeMessageGenerationCallback
-    ):
-        """注册消息生成前的回调。"""
-        self._before_message_generation_callbacks.append(callback)
-
-    def register_after_message_generation(
-        self, callback: AfterMessageGenerationCallback
-    ):
-        """注册消息生成后的回调。"""
-        self._after_message_generation_callbacks.append(callback)
-
-    def register_after_toolcall(self, callback: AfterToolcallCallback):
-        """注册工具结果回调。"""
-        self._after_toolcall_callbacks.append(callback)
-
-    def register_after_token_generation(self, callback: AfterTokenGenerationCallback):
-        """注册token生成后的回调。"""
-        self._after_token_generation_callbacks.append(callback)
-
-    def register_before_waiting_user(self, callback: BeforeWaitingUserCallback):
-        """注册等待用户前的回调。"""
-        self._before_waiting_user_callbacks.append(callback)
-
-    def register_before_parsing(self, callback: BeforeParsingCallback):
-        """注册解析开始前的回调。"""
-        self._before_parsing_callbacks.append(callback)
-
-    def register_after_segment(self, callback: AfterSegmentCallback):
-        """注册segment生成后的回调。"""
-        self._after_segment_callbacks.append(callback)
-
-    def register_after_parsing(self, callback: AfterParsingCallback):
-        """注册解析完成后的回调。"""
-        self._after_parsing_callbacks.append(callback)
-
-    def register_after_new_parsed_answer(self, callback: AfterNewParsedAnswerCallback):
-        """注册ParsedAnswer创建后的回调。"""
-        self._after_new_parsed_answer_callbacks.append(callback)
-
-    def register_after_segment_finished(self, callback: AfterSegmentFinishedCallback):
-        """注册segment完成后的回调。"""
-        self._after_segment_finished_callbacks.append(callback)
-
-    def register_parsing_error(self, callback: ParsingErrorCallback):
-        """注册解析错误的回调。"""
-        self._parsing_error_callbacks.append(callback)
-
-    def register_before_agent_loop(self, callback: BeforeAgentLoopCallback):
-        """注册Agent循环开始前的回调。"""
-        self._before_agent_loop_callbacks.append(callback)
-
-    def register_before_tool_call(self, callback: BeforeToolCallCallback):
-        """注册工具调用前的回调。"""
-        self._before_tool_call_callbacks.append(callback)
-
-    def register_before_add_new_message(self, callback: BeforeAddNewMessageCallback):
-        """注册添加新消息前的回调。"""
-        self._before_add_new_message_callbacks.append(callback)
-
-    def register_before_cache_invalidate(self, callback: BeforeCacheInvalidateCallback):
-        """注册缓存失效前的回调。"""
-        self._before_cache_invalidate_callbacks.append(callback)
-
-    def register_after_cache_invalidate(self, callback: AfterCacheInvalidateCallback):
-        """注册缓存失效后的回调。"""
-        self._after_cache_invalidate_callbacks.append(callback)
-
-    def register_after_parsed_user_message(
-        self, callback: AfterParsedUserMessageCallback
-    ):
-        """注册解析用户消息后的回调。"""
-        self._after_parsed_user_message_callbacks.append(callback)
-
-    async def trigger_after_parsed_user_message(
-        self, parsed: "ParsedUserMessage"
-    ) -> bool | None:
-        """触发解析用户消息后的事件，返回第一个非None结果。"""
-        for callback in self._after_parsed_user_message_callbacks:
-            result = await callback(parsed)
-            if result is not None:
-                return result
-        return None
-
-    async def trigger_after_token_generation(
-        self, agent: "Agent", answer: Answer, current_content: str
-    ) -> bool:
-        """触发token生成后的事件。"""
-        should_interrupt = False
-        for callback in self._after_token_generation_callbacks:
-            result = await callback(agent, answer, current_content)
-            if result:
-                should_interrupt = True
-                break
-
-        return should_interrupt
-
-    async def trigger_before_message_generation(self):
-        """触发消息生成前的事件。"""
-        for callback in self._before_message_generation_callbacks:
-            await callback()
-
-    async def trigger_after_message_generation(
-        self,
-        parsed_answer: "ParsedAnswer",
-        full_response: str,
-        tool_calls: list[dict],
-    ):
-        """触发消息生成后的事件。"""
-        for callback in self._after_message_generation_callbacks:
-            await callback(parsed_answer, full_response, tool_calls)
-
-    async def trigger_after_toolcall(
-        self,
-        tool_name: str,
-        tool_index: int,
-        status: Literal["skipped", "success", "failed"],
-        message: Message | None,
-        toolcall_arguments: dict,
-        with_secret: list[str] | None,
-        is_tool_failed_duplicated_error: bool,
-    ) -> Union[None, bool, "RuntimeMessage"]:
-        """触发工具结果事件。
-
-        返回:
-            None: 没有特殊处理
-            bool: 仅当status为"skipped"时有效，True表示跳过工具调用
-            RuntimeMessage: 替换工具结果
-        """
-        for callback in self._after_toolcall_callbacks:
-            result = await callback(
-                tool_name,
-                tool_index,
-                status,
-                message,
-                toolcall_arguments,
-                with_secret,
-                is_tool_failed_duplicated_error,
-            )
-            if result is not None:
-                return result
-        return None
-
-    async def trigger_before_waiting_user(self, agent: "Agent"):
-        """触发等待用户前的事件。"""
-        for callback in self._before_waiting_user_callbacks:
-            await callback(agent)
-
-    async def trigger_before_parsing(self, parsed_answer: "ParsedAnswer"):
-        """触发解析开始前的事件。"""
-        for callback in self._before_parsing_callbacks:
-            await callback(parsed_answer)
-
-    async def trigger_after_segment(
-        self, parsed_answer: "ParsedAnswer", segment: "Segment"
-    ):
-        """触发segment生成后的事件。"""
-        for callback in self._after_segment_callbacks:
-            await callback(parsed_answer, segment)
-
-    async def trigger_after_parsing(self, parsed_answer: "ParsedAnswer"):
-        """触发解析完成后的事件。"""
-        for callback in self._after_parsing_callbacks:
-            await callback(parsed_answer)
-
-    async def trigger_after_new_parsed_answer(self, parsed_answer: "ParsedAnswer"):
-        """触发ParsedAnswer创建后的事件。"""
-        for callback in self._after_new_parsed_answer_callbacks:
-            await callback(parsed_answer)
-
-    async def trigger_after_segment_finished(
-        self, parsed_answer: "ParsedAnswer", segment: "Segment"
-    ):
-        """触发segment完成后的事件。"""
-        for callback in self._after_segment_finished_callbacks:
-            await callback(parsed_answer, segment)
-
-    async def trigger_parsing_error(
-        self, parsed_answer: "ParsedAnswer", error: Exception
-    ):
-        """触发解析错误事件。"""
-        for callback in self._parsing_error_callbacks:
-            await callback(parsed_answer, error)
-
-    async def trigger_before_tool_call(
-        self,
-        tool_name: str,
-        toolcall_arguments: dict,
-        with_secret: list[str] | None,
-    ) -> Union[ToolResultFailed, ToolResultSuccess, dict, None]:
-        """触发工具调用前的事件，返回修改后的参数或None。"""
-        modified_arguments = toolcall_arguments
-        for callback in self._before_tool_call_callbacks:
-            result = await callback(tool_name, modified_arguments, with_secret)
-            if isinstance(result, (ToolResultFailed, ToolResultSuccess)):
-                return result
-            elif isinstance(result, dict):
-                modified_arguments = result
-            else:
-                assert result is None
-        return modified_arguments
-
-    async def trigger_before_agent_loop(self, agent: "Agent"):
-        """触发Agent循环开始前事件。"""
-        for callback in self._before_agent_loop_callbacks:
-            await callback(agent)
-
-    async def trigger_before_add_new_message(self, message: "Message") -> "Message":
-        """触发添加新消息前的事件，返回可能被替换的消息。"""
-        current_message = message
-        for callback in self._before_add_new_message_callbacks:
-            result = await callback(current_message)
-            if result is not None:
-                current_message = result
-        return current_message
-
-    async def trigger_before_cache_invalidate(self):
-        """触发缓存失效前的事件。"""
-        for callback in self._before_cache_invalidate_callbacks:
-            await callback()
-
-    async def trigger_after_cache_invalidate(
-        self, agent: "Agent", messages: List["Message"]
-    ):
-        """触发缓存失效后的事件。"""
-        for callback in self._after_cache_invalidate_callbacks:
-            await callback(agent, messages)
+        self.before_add_new_message = ChainSlot()
+        self.before_cache_invalidate = BroadcastSlot()
+        self.after_cache_invalidate = BroadcastSlot()
+        self.after_parsed_user_message = ShortCircuitSlot()

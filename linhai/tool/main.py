@@ -225,7 +225,7 @@ class ToolManager:
             from linhai.agent.lifecycle import Lifecycle
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            processed_result = await lifecycle.trigger_after_toolcall(
+            processed_result = await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
@@ -256,7 +256,7 @@ class ToolManager:
         from linhai.agent.lifecycle import Lifecycle
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        lifecycle.register_before_message_generation(self.update_tools_definition)
+        lifecycle.before_message_generation.register(self.update_tools_definition)
 
     async def update_tools_definition(self):
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""

@@ -209,11 +209,11 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         """测试插件注册。"""
         mock_lifecycle = MagicMock()
-        mock_lifecycle.register_after_message_generation = MagicMock()
+        mock_lifecycle.after_message_generation.register = MagicMock()
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_after_message_generation.assert_called_once_with(
+        mock_lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

@@ -87,10 +87,10 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """Test plugin registration."""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_token_generation.assert_called_once_with(
+        lifecycle.after_token_generation.register.assert_called_once_with(
             self.plugin.after_token_generation
         )
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

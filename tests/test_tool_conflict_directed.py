@@ -14,7 +14,7 @@ class TestDirectedToolConflict(unittest.TestCase):
         """设置测试环境。"""
         self.agent = MagicMock()
         self.agent.lifecycle = MagicMock()
-        self.agent.lifecycle.trigger_after_toolcall = AsyncMock(return_value=None)
+        self.agent.lifecycle.after_toolcall.trigger = AsyncMock(return_value=None)
         self.agent.message_processor = MagicMock()
         self.agent.message_processor.add_new_message = AsyncMock()
 

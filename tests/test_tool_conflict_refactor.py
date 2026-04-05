@@ -138,7 +138,7 @@ class TestToolConflictRefactor(unittest.TestCase):
     def _setup_async_mocks(self) -> None:
         self.mock_registry.send_if_exists = AsyncMock()
         self.mock_lifecycle = Mock()
-        self.mock_lifecycle.trigger_after_toolcall = AsyncMock()
+        self.mock_lifecycle.after_toolcall.trigger = AsyncMock()
         self.mock_message_processor = Mock()
         self.mock_message_processor.add_new_message = AsyncMock()
 
@@ -204,7 +204,7 @@ class TestToolConflictRefactor(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(self.toolcall.early_return)
-        self.mock_lifecycle.trigger_after_toolcall.assert_called_once()
+        self.mock_lifecycle.after_toolcall.trigger.assert_called_once()
         self._verify_error_message_content()
 
 

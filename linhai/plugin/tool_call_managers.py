@@ -109,8 +109,8 @@ class PromptFastAgentPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册before_message_generation和after_token_generation回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_after_token_generation(self.after_token_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
 
 
 class SlowStartPlugin(Plugin):
@@ -146,8 +146,8 @@ class SlowStartPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册after_token_generation和after_message_generation回调。"""
-        lifecycle.register_after_token_generation(self.after_token_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class WeirdTokenPlugin(Plugin):
@@ -186,7 +186,7 @@ class WeirdTokenPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
-        lifecycle.register_after_token_generation(self.after_token_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
 
 
 class SingleToolCallReminderPlugin(Plugin):
@@ -237,7 +237,7 @@ class SingleToolCallReminderPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class ToolCallInReasoningPlugin(Plugin):
@@ -293,7 +293,7 @@ class ToolCallInReasoningPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class LoadImageUrlWarningPlugin(Plugin):
@@ -337,4 +337,4 @@ class LoadImageUrlWarningPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)

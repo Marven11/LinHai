@@ -113,8 +113,8 @@ class TestAgentStateTransition(unittest.IsolatedAsyncioTestCase):
 
         # mock lifecycle
         mock_lifecycle = MagicMock()
-        mock_lifecycle.trigger_before_add_new_message = AsyncMock()
-        mock_lifecycle.trigger_after_message_generation = AsyncMock()
+        mock_lifecycle.before_add_new_message.trigger = AsyncMock()
+        mock_lifecycle.after_message_generation.trigger = AsyncMock()
         self.agent.lifecycle = mock_lifecycle
 
         # mock message_processor以避免实际方法调用

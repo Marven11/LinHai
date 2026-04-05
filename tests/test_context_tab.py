@@ -1,7 +1,7 @@
 """测试Context tab功能"""
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 import asyncio
 from linhai.tui.app import TUIApp
 from linhai.tui.context_tab import ContextTabWidget
@@ -105,8 +105,7 @@ class TestContextTab(unittest.TestCase):
         registry.register_member("agent_context_orchestration", mock_orchestration)
         from linhai.agent.lifecycle import Lifecycle
 
-        mock_lifecycle = Mock(spec=Lifecycle)
-        registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(registry)
         with patch("linhai.tui.app.TokenManager", return_value=mock_token_manager):
             registry.register_member("token_manager", mock_token_manager)
 

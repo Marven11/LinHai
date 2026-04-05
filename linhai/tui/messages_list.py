@@ -51,7 +51,7 @@ class MessagesList(VerticalScroll):
         self.registry.register_queue("parsed_agent_answer")
         self.registry.register_queue("ui_log")
         registry.register_member("messages_list", self)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
     async def start_listening(self):
         """启动监听队列的任务."""

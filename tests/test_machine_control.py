@@ -103,11 +103,11 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
     def test_register_plugin(self):
         """测试注册插件"""
         mock_lifecycle = Mock()
-        mock_lifecycle.register_before_message_generation = Mock()
+        mock_lifecycle.before_message_generation.register = Mock()
         self.machine_control.register_plugin(mock_lifecycle)
-        mock_lifecycle.register_before_message_generation.assert_called_once()
+        mock_lifecycle.before_message_generation.register.assert_called_once()
         # 检查是否被调用了一次，并且参数是 callable
-        call_args = mock_lifecycle.register_before_message_generation.call_args
+        call_args = mock_lifecycle.before_message_generation.register.call_args
         self.assertIsNotNone(call_args)
         self.assertEqual(len(call_args[0]), 1)
         self.assertTrue(callable(call_args[0][0]))
@@ -442,10 +442,10 @@ class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
         mock_lifecycle = Mock()
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+        mock_lifecycle.before_message_generation.register.assert_called_once_with(
             self.plugin.before_message_generation
         )
-        mock_lifecycle.register_after_toolcall.assert_called_once_with(
+        mock_lifecycle.after_toolcall.register.assert_called_once_with(
             self.plugin.after_toolcall
         )
 

@@ -49,32 +49,32 @@ class ParsedAnswer:
                 segment_type=token_type, content=content, is_finished=False
             )
             await self.segment_queue.put(self.current_segment)
-            await self.lifecycle.trigger_after_segment(self, self.current_segment)
+            await self.lifecycle.after_segment.trigger(self, self.current_segment)
         elif self.current_segment["segment_type"] == token_type:
             # 类型相同，更新内容（队列中的segment是同一对象引用，会自动更新）
             self.current_segment["content"] += content
         else:
             # 类型变化：直接创建新segment并放入队列（丢掉前一个）
             self.current_segment["is_finished"] = True
-            await self.lifecycle.trigger_after_segment_finished(
+            await self.lifecycle.after_segment_finished.trigger(
                 self, self.current_segment
             )
             self.current_segment = Segment(
                 segment_type=token_type, content=content, is_finished=False
             )
-            await self.lifecycle.trigger_after_segment(self, self.current_segment)
+            await self.lifecycle.after_segment.trigger(self, self.current_segment)
             await self.segment_queue.put(self.current_segment)
 
     async def _finish_current_segment(self):
         if self.current_segment is not None:
             # 标记当前segment完成（队列中已有该对象，只需更新状态）
             self.current_segment["is_finished"] = True
-            await self.lifecycle.trigger_after_segment_finished(
+            await self.lifecycle.after_segment_finished.trigger(
                 self, self.current_segment
             )
 
     async def _parse_answer(self):
-        await self.lifecycle.trigger_before_parsing(self)
+        await self.lifecycle.before_parsing.trigger(self)
         async for token in self._answer:
             if self.interrupted:
                 break
@@ -86,7 +86,7 @@ class ParsedAnswer:
             parsed_tokens = self.token_parser.receive_token(content_raw, is_reasoning)
             for parsed_token in parsed_tokens:
                 await self._process_token(parsed_token)
-            interrupted = await self.lifecycle.trigger_after_token_generation(
+            interrupted = await self.lifecycle.after_token_generation.trigger(
                 self.agent, self._answer, self._answer.get_current_content()
             )
             if interrupted:
@@ -95,7 +95,7 @@ class ParsedAnswer:
         for parsed_token in self.token_parser.clear():
             await self._process_token(parsed_token)
         await self._finish_current_segment()
-        await self.lifecycle.trigger_after_parsing(self)
+        await self.lifecycle.after_parsing.trigger(self)
 
     async def wait_parsing(self):
         from linhai.task_supervisor import TaskSupervisor

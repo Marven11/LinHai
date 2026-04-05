@@ -52,7 +52,7 @@ class AgentLlm:
         agent = self.registry.get_member_typechecked("agent", Agent)
         lifecycle = agent.lifecycle
 
-        await lifecycle.trigger_before_message_generation()
+        await lifecycle.before_message_generation.trigger()
 
         answer: Answer = await self.llm_manager.answer_stream(
             self.message_processor.get_messages()
@@ -64,7 +64,7 @@ class AgentLlm:
             answer, lifecycle, agent=agent, registry=self.registry
         )
         await parsed_answer.start_parsing()
-        await lifecycle.trigger_after_new_parsed_answer(parsed_answer)
+        await lifecycle.after_new_parsed_answer.trigger(parsed_answer)
         await self.registry.send("parsed_agent_answer", parsed_answer)
 
         completed_normally = await parsed_answer.wait_parsing()

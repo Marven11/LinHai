@@ -36,4 +36,4 @@ class AfkPlugin(Plugin):
         )
 
     def register(self, lifecycle: "Lifecycle") -> None:
-        lifecycle.register_before_waiting_user(self.before_waiting_user)
+        lifecycle.before_waiting_user.register(self.before_waiting_user)

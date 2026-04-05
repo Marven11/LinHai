@@ -298,8 +298,8 @@ class SecretInterceptorPlugin:
         )
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_after_toolcall(self.after_toolcall)
-        lifecycle.register_before_tool_call(self.before_tool_call)
+        lifecycle.after_toolcall.register(self.after_toolcall)
+        lifecycle.before_tool_call.register(self.before_tool_call)
 
 
 def initialize_secret_system(

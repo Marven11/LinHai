@@ -25,4 +25,4 @@ class MachineControlIntroductionPlugin(Plugin):
             system_message.remove_introduction(title)
 
     def register(self, lifecycle):
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)

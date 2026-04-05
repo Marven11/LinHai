@@ -75,11 +75,11 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_method_adds_callback(self):
         """测试register方法正确注册回调。"""
-        mock_lifecycle = MagicMock(spec=Lifecycle)
+        mock_lifecycle = MagicMock()
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_after_message_generation.assert_called_once_with(
+        mock_lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
@@ -356,11 +356,11 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_method_adds_callback(self):
         """测试register方法正确注册回调。"""
-        mock_lifecycle = MagicMock(spec=Lifecycle)
+        mock_lifecycle = MagicMock()
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_after_message_generation.assert_called_once_with(
+        mock_lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
@@ -449,12 +449,12 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     async def test_register_method(self):
-        mock_lifecycle = MagicMock(spec=Lifecycle)
+        mock_lifecycle = MagicMock()
         self.plugin.register(mock_lifecycle)
-        mock_lifecycle.register_after_cache_invalidate.assert_called_once_with(
+        mock_lifecycle.after_cache_invalidate.register.assert_called_once_with(
             self.plugin.after_cache_invalidate
         )
-        mock_lifecycle.register_before_message_generation.assert_called_once_with(
+        mock_lifecycle.before_message_generation.register.assert_called_once_with(
             self.plugin.before_message_generation
         )
 
@@ -562,9 +562,9 @@ class TestPlanningInitOverridePlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(self.plugin, Plugin)
 
     async def test_register_method_adds_callback(self):
-        mock_lifecycle = MagicMock(spec=Lifecycle)
+        mock_lifecycle = MagicMock()
         self.plugin.register(mock_lifecycle)
-        mock_lifecycle.register_before_agent_loop.assert_called_once_with(
+        mock_lifecycle.before_agent_loop.register.assert_called_once_with(
             self.plugin.before_agent_loop
         )
 

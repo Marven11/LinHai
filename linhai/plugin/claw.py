@@ -94,7 +94,7 @@ class ClawPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         self.reminder_plugin.register(lifecycle)
-        lifecycle.register_before_agent_loop(self.before_agent_loop)
+        lifecycle.before_agent_loop.register(self.before_agent_loop)
 
 
 class ClawHeartbeatPlugin(Plugin):
@@ -125,4 +125,4 @@ class ClawHeartbeatPlugin(Plugin):
         )
 
     def register(self, lifecycle: Lifecycle) -> None:
-        lifecycle.register_before_waiting_user(self.before_waiting_user)
+        lifecycle.before_waiting_user.register(self.before_waiting_user)

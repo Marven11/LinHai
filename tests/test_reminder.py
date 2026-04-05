@@ -33,10 +33,10 @@ class TestReminderPlugin(TestCase):
         self.assertIsInstance(self.plugin, Plugin)
 
     def test_plugin_registers_before_message_generation(self):
-        initial_count = len(self.lifecycle._before_message_generation_callbacks)
+        initial_count = len(self.lifecycle.before_message_generation._callbacks)
         self.plugin.register(self.lifecycle)
         self.assertEqual(
-            len(self.lifecycle._before_message_generation_callbacks), initial_count + 1
+            len(self.lifecycle.before_message_generation._callbacks), initial_count + 1
         )
 
     def test_soul_file_is_tracked(self):

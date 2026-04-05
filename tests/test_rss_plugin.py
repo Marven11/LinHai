@@ -268,7 +268,7 @@ class TestRssPlugin(unittest.TestCase):
 
         plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_agent_loop.assert_called_once_with(
+        mock_lifecycle.before_agent_loop.register.assert_called_once_with(
             plugin.before_agent_loop
         )
 

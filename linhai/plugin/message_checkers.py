@@ -100,7 +100,7 @@ class WaitingUserPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class WrongEndPlugin(Plugin):
@@ -121,7 +121,7 @@ class WrongEndPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class EndThinkPlugin(Plugin):
@@ -143,7 +143,7 @@ class EndThinkPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
-        lifecycle.register_after_token_generation(self.after_token_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
 
 
 class VolcanoDeepseekFixPlugin(Plugin):
@@ -210,7 +210,7 @@ class VolcanoDeepseekFixPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle") -> None:
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class OnlyReasoningPlugin(Plugin):
@@ -249,7 +249,7 @@ class OnlyReasoningPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class PreviousReasoningPlugin(Plugin):
@@ -280,7 +280,7 @@ class PreviousReasoningPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class JsonCodeBlockPlugin(Plugin):
@@ -314,7 +314,7 @@ class JsonCodeBlockPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class KimiK25ToolCallPlugin(Plugin):
@@ -408,8 +408,8 @@ class KimiK25ToolCallPlugin(Plugin):
             )
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_after_token_generation(self.after_token_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class MinimaxToolCallPlugin(Plugin):
@@ -525,8 +525,8 @@ class MinimaxToolCallPlugin(Plugin):
             )
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_after_token_generation(self.after_token_generation)
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class RuntimeImitationPlugin(Plugin):
@@ -563,7 +563,7 @@ class RuntimeImitationPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_token_generation回调。"""
-        lifecycle.register_after_token_generation(self.after_token_generation)
+        lifecycle.after_token_generation.register(self.after_token_generation)
 
 
 class GlmToolCallPlugin(Plugin):
@@ -601,7 +601,7 @@ class GlmToolCallPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_message_generation回调。"""
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class MisplacedToolCallPlugin(Plugin):
@@ -641,7 +641,7 @@ class MisplacedToolCallPlugin(Plugin):
         )
 
     def register(self, lifecycle: "Lifecycle"):
-        lifecycle.register_after_message_generation(self.after_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
 
 
 class GlmInsultMaskPlugin(Plugin):
@@ -700,4 +700,4 @@ class GlmInsultMaskPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到after_toolcall回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)

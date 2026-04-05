@@ -178,11 +178,11 @@ class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         """测试插件注册。"""
         lifecycle = MagicMock()
-        lifecycle.register_after_message_generation = MagicMock()
+        lifecycle.after_message_generation.register = MagicMock()
 
         self.plugin.register(lifecycle)
 
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

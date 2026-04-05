@@ -28,7 +28,7 @@ class TestAgentLlm(unittest.IsolatedAsyncioTestCase):
         self.mock_message_processor = MagicMock()
         self.mock_message_processor.add_new_message = AsyncMock()
 
-        self.lifecycle = MagicMock(spec=Lifecycle)
+        self.lifecycle = MagicMock()
         self.mock_agent.lifecycle = self.lifecycle
 
         # 注册mock agent到registry，因为AgentLlm现在从registry获取agent

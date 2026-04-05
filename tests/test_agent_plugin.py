@@ -43,7 +43,7 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_token_generation.assert_called_once_with(
+        lifecycle.after_token_generation.register.assert_called_once_with(
             self.plugin.after_token_generation
         )
 
@@ -91,7 +91,7 @@ class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_before_message_generation.assert_called_once_with(
+        lifecycle.before_message_generation.register.assert_called_once_with(
             self.plugin.before_message_generation
         )
 
@@ -163,7 +163,7 @@ class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
@@ -267,7 +267,7 @@ class TestPromptFastAgentPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_token_generation.assert_called_once_with(
+        lifecycle.after_token_generation.register.assert_called_once_with(
             self.plugin.after_token_generation
         )
 
@@ -442,7 +442,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         """测试注册插件。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_before_tool_call.assert_called_once_with(
+        lifecycle.before_tool_call.register.assert_called_once_with(
             self.plugin.before_toolcall
         )
 
@@ -708,7 +708,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
@@ -807,7 +807,7 @@ class TestKimiK25ToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 
@@ -952,10 +952,10 @@ class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):
         """测试插件注册。"""
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
-        lifecycle.register_after_token_generation.assert_called_once_with(
+        lifecycle.after_token_generation.register.assert_called_once_with(
             self.plugin.after_token_generation
         )
 

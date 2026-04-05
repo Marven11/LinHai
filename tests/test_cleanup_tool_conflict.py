@@ -3,7 +3,7 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.registry import Registry
 from linhai.agent.message import AgentMessage
 from linhai.llm import SystemMessage, UserMessage
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 from linhai.agent.lifecycle import Lifecycle
 from linhai.tool.main import ToolManager
 from linhai.token_manager import TokenManager
@@ -12,9 +12,7 @@ from linhai.token_manager import TokenManager
 class TestCleanupToolConflict(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
-        mock_lifecycle = AsyncMock(spec=Lifecycle)
-        mock_lifecycle.trigger_before_add_new_message.return_value = None
-        self.registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(self.registry)
         mock_tool_manager = Mock(spec=ToolManager)
         mock_tool_manager.get_tools_info.return_value = []
         self.registry.register_member("tool_manager", mock_tool_manager)

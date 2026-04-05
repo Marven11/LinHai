@@ -51,7 +51,7 @@ class DuplicateFileReadPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def after_toolcall(
         self,
@@ -156,7 +156,7 @@ class UnnecessarySedReadPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def after_toolcall(
         self,
@@ -236,7 +236,7 @@ class UnnecessaryRunCommandPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def after_toolcall(
         self,
@@ -396,8 +396,8 @@ class FileReadWriteConflictPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册插件回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.before_message_generation.register(self.before_message_generation)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
 
 class DirectoryChangePlugin(Plugin):
@@ -436,4 +436,4 @@ class DirectoryChangePlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle"):
         """注册到before_message_generation回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)

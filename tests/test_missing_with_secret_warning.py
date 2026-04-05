@@ -155,7 +155,7 @@ class TestMissingWithSecretWarningPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register(self):
         lifecycle = Mock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_toolcall.assert_called_once_with(
+        lifecycle.after_toolcall.register.assert_called_once_with(
             self.plugin.after_toolcall
         )
 

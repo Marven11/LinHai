@@ -305,4 +305,4 @@ class TestRegister(unittest.TestCase):
         plugin = PythonCommentCheckerPlugin(registry)
         lifecycle = MagicMock()
         plugin.register(lifecycle)
-        lifecycle.register_after_toolcall.assert_called_once_with(plugin.after_toolcall)
+        lifecycle.after_toolcall.register.assert_called_once_with(plugin.after_toolcall)

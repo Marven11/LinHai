@@ -144,11 +144,11 @@ class TestProcessArgvCheckerPlugin(unittest.IsolatedAsyncioTestCase):
     def test_register_method(self):
         """测试插件的register方法"""
         mock_lifecycle = Mock()
-        mock_lifecycle.register_before_tool_call = Mock()
+        mock_lifecycle.before_tool_call.register = Mock()
 
         self.plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_tool_call.assert_called_once_with(
+        mock_lifecycle.before_tool_call.register.assert_called_once_with(
             self.plugin.before_tool_call
         )
 

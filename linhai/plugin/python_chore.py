@@ -66,7 +66,7 @@ class PythonCommentCheckerPlugin:
         self.registry = registry
 
     def register(self, lifecycle: "Lifecycle") -> None:
-        lifecycle.register_after_toolcall(self.after_toolcall)
+        lifecycle.after_toolcall.register(self.after_toolcall)
 
     async def after_toolcall(
         self,

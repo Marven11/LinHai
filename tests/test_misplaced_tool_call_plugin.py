@@ -86,7 +86,7 @@ class TestMisplacedToolCallPlugin(unittest.IsolatedAsyncioTestCase):
     def test_plugin_registration(self) -> None:
         lifecycle = MagicMock()
         self.plugin.register(lifecycle)
-        lifecycle.register_after_message_generation.assert_called_once_with(
+        lifecycle.after_message_generation.register.assert_called_once_with(
             self.plugin.after_message_generation
         )
 

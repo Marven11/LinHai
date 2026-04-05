@@ -1,7 +1,7 @@
 """测试回车发送后输入框是否被正确清空。"""
 
 import unittest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import asyncio
 
 from linhai.tui.app import TUIApp
@@ -31,14 +31,13 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_agent_message.notification_messages = {}
         self.mock_orchestration = Mock(spec=AgentContextOrchestration)
         self.mock_orchestration.large_messages = {}
-        self.mock_lifecycle = Mock(spec=Lifecycle)
+        Lifecycle(self.registry)
 
         self.registry.register_member("agent", self.mock_agent)
         self.registry.register_member("agent_message", self.mock_agent_message)
         self.registry.register_member(
             "agent_context_orchestration", self.mock_orchestration
         )
-        self.registry.register_member("lifecycle", self.mock_lifecycle)
 
         # 模拟cli_args
         import argparse

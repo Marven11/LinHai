@@ -2,7 +2,7 @@
 
 import unittest
 import time
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from linhai.agent.orchestration import (
     AgentContextOrchestration,
@@ -24,10 +24,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         self.registry = Registry()
-        # 注册一个mock的lifecycle以避免RuntimeError
-        mock_lifecycle = AsyncMock(spec=Lifecycle)
-        mock_lifecycle.trigger_before_add_new_message.return_value = None
-        self.registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(self.registry)
 
         # 注册一个mock的tool_manager，因为SystemMessage初始化需要它
         mock_tool_manager = Mock(spec=ToolManager)

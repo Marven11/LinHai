@@ -189,7 +189,7 @@ class TestAfkParam(unittest.TestCase):
 
         plugin.register(mock_lifecycle)
 
-        mock_lifecycle.register_before_waiting_user.assert_called_once_with(
+        mock_lifecycle.before_waiting_user.register.assert_called_once_with(
             plugin.before_waiting_user
         )
 

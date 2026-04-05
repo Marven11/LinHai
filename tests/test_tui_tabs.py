@@ -1,7 +1,7 @@
 """测试TUI的标签页功能"""
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 import asyncio
 from linhai.tui.app import TUIApp
 from linhai.registry import Registry
@@ -52,8 +52,7 @@ class TestTUITabs(unittest.TestCase):
 
         from linhai.agent.lifecycle import Lifecycle
 
-        mock_lifecycle = Mock(spec=Lifecycle)
-        registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(registry)
 
         import argparse
 
@@ -118,8 +117,7 @@ class TestTUITabs(unittest.TestCase):
 
         from linhai.agent.lifecycle import Lifecycle
 
-        mock_lifecycle = Mock(spec=Lifecycle)
-        registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(registry)
 
         import argparse
 

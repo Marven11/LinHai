@@ -31,4 +31,4 @@ class ReminderPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         """注册到before_message_generation回调。"""
-        lifecycle.register_before_message_generation(self.before_message_generation)
+        lifecycle.before_message_generation.register(self.before_message_generation)

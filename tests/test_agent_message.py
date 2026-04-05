@@ -1,7 +1,7 @@
 """AgentMessage类的单元测试。"""
 
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 
 from linhai.agent.message import AgentMessage
@@ -32,14 +32,9 @@ class TestAgentMessage(unittest.IsolatedAsyncioTestCase):
         conversation_dir = Path(self.temp_dir.name)
         registry.register_member("conversation_folder", conversation_dir)
 
-        # 注册lifecycle（mock），用于add_new_message和replace_message中的回调
         from linhai.agent.lifecycle import Lifecycle
 
-        mock_lifecycle = create_autospec(Lifecycle, instance=True)
-        mock_lifecycle.trigger_before_add_new_message = AsyncMock(return_value=None)
-        mock_lifecycle.trigger_before_cache_invalidate = AsyncMock(return_value=None)
-        mock_lifecycle.trigger_after_cache_invalidate = AsyncMock(return_value=None)
-        registry.register_member("lifecycle", mock_lifecycle)
+        Lifecycle(registry)
 
         # 注册agent（mock），用于_trigger_after_cache_invalidate中的回调
         from linhai.agent.main import Agent
