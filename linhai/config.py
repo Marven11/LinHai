@@ -290,6 +290,10 @@ class ToolConfig(BaseModel):
         default=0.3,
         description="单轮工具调用中允许的最大token数。int为静态限制，float为相对于token_limit的比例",
     )
+    tmux_terminal: bool = Field(
+        default=True,
+        description="是否在tmux可用时使用tmux作为终端后端。",
+    )
     enable_toolsets: Optional[list[str]] = Field(
         default=None,
         description="启用指定工具集，设置后仅加载这些工具集。",

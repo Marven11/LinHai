@@ -23,7 +23,7 @@ Registry通信框架，实现多个单例之间的通信，解耦设计
 例如，SubAgent现在使用wrapper类（SubAgentAnswerTokenWrapper, SubAgentAnswerCompleteWrapper）来传输消息。
 """
 
-from typing import Any, TypeVar, Type, LiteralString, Callable
+from typing import Any, TypeVar, Type, LiteralString, Callable, Awaitable
 import asyncio
 
 T = TypeVar("T")
@@ -35,13 +35,14 @@ class Registry:
         self.members: dict[str, Any] = {}
         self._postinit_callbacks: list[Callable[[], None]] = []
         self._postinit_called = False
+        self._cleanup_callbacks: list[Callable[[], Awaitable[None]]] = []
 
     def register_queue(self, name: LiteralString):
         if name in self.queues:
             raise RuntimeError(f"{name!r} exists")
         self.queues[name] = asyncio.Queue()
 
-    def register_member(self, name: LiteralString, obj: Any):
+    def register_member(self, name: LiteralString, obj: T) -> None:
 
         if name in self.members:
             raise RuntimeError(f"{name!r} exists")
@@ -75,12 +76,12 @@ class Registry:
         """检查指定的成员是否存在"""
         return name in self.members
 
-    async def send(self, name: LiteralString, message: Any):
+    async def send(self, name: LiteralString, message: T) -> None:
         if name not in self.queues:
             raise RuntimeError(f"{name!r} not exists")
         await self.queues[name].put(message)
 
-    async def send_if_exists(self, name: LiteralString, message: Any):
+    async def send_if_exists(self, name: LiteralString, message: T) -> None:
         if name in self.queues:
             await self.queues[name].put(message)
 
@@ -110,3 +111,13 @@ class Registry:
         for callback in self._postinit_callbacks:
             callback()
         self._postinit_called = True
+
+    def register_cleanup(self, callback: Callable[[], Awaitable[None]]) -> None:
+        self._cleanup_callbacks.append(callback)
+
+    async def call_cleanups(self) -> None:
+        if not self._cleanup_callbacks:
+            return
+        await asyncio.gather(
+            *(cb() for cb in self._cleanup_callbacks), return_exceptions=True
+        )

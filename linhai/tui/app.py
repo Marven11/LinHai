@@ -13,7 +13,7 @@ from linhai.config import TUIConfig
 from linhai.registry import Registry
 from linhai.task_supervisor import TextualTaskSupervisor
 from linhai.tool.base import ToolSet, ToolArgInfo
-from linhai.machine_control.master_host import close_all_terminals
+from linhai.machine_control.master_host import close_all_terminals_async
 from linhai.tool.mcp_connector import MCPConnector
 
 from .components import (
@@ -210,6 +210,7 @@ class TUIApp(App):
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
+        self.registry.register_cleanup(close_all_terminals_async)
         self.completions = self._generate_dynamic_completions()
         await self.messages_list.start_listening()
         if self.init_messages:
@@ -267,7 +268,7 @@ class TUIApp(App):
         if hasattr(self, "messages_list"):
             await self.messages_list.cleanup()
 
-        close_all_terminals()
+        await self.registry.call_cleanups()
 
     def update_token_display(self, current_answer_token: int) -> None:
         """更新token使用量显示，包括百分比"""

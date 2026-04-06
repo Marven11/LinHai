@@ -24,7 +24,7 @@ jobs:
       - name: Setup Python
         run: |
           apt-get update
-          apt-get install -y python3 python3-pip python3-venv curl
+          apt-get install -y python3 python3-pip python3-venv curl tmux
           curl -LsSf https://astral.sh/uv/install.sh | sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
@@ -165,7 +165,7 @@ jobs:
       - name: Setup Python
         run: |
           apt-get update
-          apt-get install -y python3 python3-pip python3-venv curl
+          apt-get install -y python3 python3-pip python3-venv curl tmux
           curl -LsSf https://astral.sh/uv/install.sh | sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version

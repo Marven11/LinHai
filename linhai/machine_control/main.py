@@ -637,11 +637,11 @@ class HostControl(Protocol):
 class MachineControl:
     """机器控制管理器，负责注册工具和切换机器。"""
 
-    def __init__(self, registry: Registry):
+    def __init__(self, registry: Registry, tmux_terminal: bool = True):
         self.registry = registry
         self.target_machine = "master_host"
         self.machines: Dict[str, HostControl] = {
-            "master_host": MasterHostControl(registry),
+            "master_host": MasterHostControl(registry, tmux_terminal=tmux_terminal),
         }
         self.machine_descriptions: Dict[str, str] = {
             "master_host": "本地主机",

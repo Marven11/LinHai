@@ -104,6 +104,7 @@
             pyproject = true;
 
             nativeBuildInputs = [ pkgs.installShellFiles ];
+            buildInputs = [ pkgs.tmux ];
 
             build-system = [
               hatchling
@@ -124,6 +125,7 @@
               ))
               pyright
               uv
+              tmux
             ];
         };
       }

@@ -17,6 +17,7 @@ from .terminal import (
     terminal_send_string,
     terminal_read_screen,
     terminal_close,
+    configure_terminals,
 )
 from .file import (
     read_file,
@@ -40,9 +41,10 @@ class MasterHostControl:
     工具定义由MachineControl统一管理。
     """
 
-    def __init__(self, registry: Registry):
+    def __init__(self, registry: Registry, tmux_terminal: bool = True):
         self._registry = registry
         self._processes: dict[str, asyncio.subprocess.Process] = {}
+        configure_terminals(tmux_terminal)
 
     async def http_request(
         self,

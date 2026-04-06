@@ -5,13 +5,22 @@ import os
 import pty
 import signal
 import subprocess
-from typing import List
+from typing import List, Union
 
 import pyte
 
 from linhai.utils.common import generate_id
+from .tmux_terminal import TmuxTerminal, is_tmux_available
 
-terminals = {}
+terminals: dict[str, Union["PyteTerminal", TmuxTerminal]] = {}
+
+_use_tmux = False
+
+
+def configure_terminals(use_tmux: bool) -> None:
+    global _use_tmux
+    _use_tmux = use_tmux and is_tmux_available()
+
 
 KEY_MAPPINGS = {
     "enter": "\r",
@@ -115,7 +124,7 @@ class PyteTerminal:
     def send_key(self, key_name: str):
         """发送按键到终端"""
         if key_name not in KEY_MAPPINGS:
-            raise ValueError(f"未知按键: {key_name}")
+            raise ValueError(f"unknown key: {key_name}")
         key_data = KEY_MAPPINGS[key_name]
         self.send(key_data)
 
@@ -160,12 +169,15 @@ async def terminal_create(
     """
     try:
         term_id = generate_id("terminal")
-        terminal = PyteTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
+        if _use_tmux:
+            terminal = TmuxTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
+        else:
+            terminal = PyteTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
         terminals[term_id] = terminal
         await terminal.start_reading()
         return term_id
     except Exception as e:  # pylint: disable=broad-exception-caught
-        return f"创建终端失败: {e}"
+        return f"\u521b\u5efa\u7ec8\u7aef\u5931\u8d25: {e}"
 
 
 def close_all_terminals() -> str:
@@ -174,13 +186,24 @@ def close_all_terminals() -> str:
     Returns:
         关闭结果消息
     """
-
     count = len(terminals)
     for terminal_id in list(terminals.keys()):
         terminal = terminals[terminal_id]
         terminal.close()
         del terminals[terminal_id]
-    return f"已关闭所有终端，共{count}个"
+    return f"\u5df2\u5173\u95ed\u6240\u6709\u7ec8\u7aef\uff0c\u5171{count}\u4e2a"
+
+
+async def close_all_terminals_async() -> None:
+    terminal_ids = list(terminals.keys())
+    if not terminal_ids:
+        return
+
+    async def _close(tid: str) -> None:
+        terminals[tid].close()
+        del terminals[tid]
+
+    await asyncio.gather(*[_close(tid) for tid in terminal_ids])
 
 
 async def terminal_send_keys(terminal_id: str, keys: List[str]) -> str:
@@ -194,7 +217,7 @@ async def terminal_send_keys(terminal_id: str, keys: List[str]) -> str:
         执行结果消息
     """
     if terminal_id not in terminals:
-        return f"错误：未找到终端 {terminal_id}"
+        return f"\u9519\u8bef\uff1a\u672a\u627e\u5230\u7ec8\u7aef {terminal_id}"
 
     terminal = terminals[terminal_id]
 
@@ -204,16 +227,16 @@ async def terminal_send_keys(terminal_id: str, keys: List[str]) -> str:
         elif len(key) == 1:
             terminal.send(key)
         else:
-            return f"未知按键: {key!r}, 所有按键: {list(KEY_MAPPINGS.keys())}"
+            return f"\u672a\u77e5\u6309\u952e: {key!r}, \u6240\u6709\u6309\u952e: {list(KEY_MAPPINGS.keys())}"
 
-    return f"已发送按键: {keys}"
+    return f"\u5df2\u53d1\u9001\u6309\u952e: {keys}"
 
 
 async def terminal_send_string(
     terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
 ) -> str:
     if terminal_id not in terminals:
-        return f"错误：未找到终端 {terminal_id}"
+        return f"\u9519\u8bef\uff1a\u672a\u627e\u5230\u7ec8\u7aef {terminal_id}"
 
     terminal = terminals[terminal_id]
     terminal.send(string)
@@ -221,7 +244,7 @@ async def terminal_send_string(
         terminal.send_key("enter")
     await asyncio.sleep(wait_seconds)
     content = terminal.get_screen()
-    return f"已发送: {string}, 当前内容:\n" + content
+    return f"\u5df2\u53d1\u9001: {string}, \u5f53\u524d\u5185\u5bb9:\n" + content
 
 
 async def terminal_read_screen(terminal_id: str) -> str:
@@ -234,7 +257,7 @@ async def terminal_read_screen(terminal_id: str) -> str:
         屏幕内容
     """
     if terminal_id not in terminals:
-        return f"错误：未找到终端 {terminal_id}"
+        return f"\u9519\u8bef\uff1a\u672a\u627e\u5230\u7ec8\u7aef {terminal_id}"
 
     terminal = terminals[terminal_id]
     return terminal.get_screen()
@@ -250,9 +273,9 @@ async def terminal_close(terminal_id: str) -> str:
         关闭结果消息
     """
     if terminal_id not in terminals:
-        return f"错误：未找到终端 {terminal_id}"
+        return f"\u9519\u8bef\uff1a\u672a\u627e\u5230\u7ec8\u7aef {terminal_id}"
 
     terminal = terminals[terminal_id]
     terminal.close()
     del terminals[terminal_id]
-    return f"已关闭终端 {terminal_id}"
+    return f"\u5df2\u5173\u95ed\u7ec8\u7aef {terminal_id}"

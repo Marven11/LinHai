@@ -70,7 +70,7 @@ class TestTerminalCreateSandbox(unittest.IsolatedAsyncioTestCase):
         sandbox = BubbleWrapSandbox(["bwrap", "--ro-bind", "/", "/"])
         registry = Registry()
         registry.register_member("process_sandbox", sandbox)
-        host = MasterHostControl(registry)
+        host = MasterHostControl(registry, tmux_terminal=False)
 
         with patch.object(terminal_mod, "PyteTerminal") as mock_cls:
             mock_term = Mock()

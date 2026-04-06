@@ -11,9 +11,12 @@ from .terminal import (
     terminal_read_screen,
     terminal_close,
     close_all_terminals,
+    close_all_terminals_async,
     terminals,
     PyteTerminal,
+    configure_terminals,
 )
+from .tmux_terminal import TmuxTerminal, is_tmux_available
 from .file import (
     read_file,
     write_file,
@@ -24,7 +27,6 @@ from .file import (
     modify_file_with_sed,
 )
 
-
 __all__ = [
     "http_request",
     "change_directory",
@@ -34,6 +36,7 @@ __all__ = [
     "terminal_read_screen",
     "terminal_close",
     "close_all_terminals",
+    "close_all_terminals_async",
     "read_file",
     "write_file",
     "replace_file_content",
@@ -43,5 +46,8 @@ __all__ = [
     "modify_file_with_sed",
     "MasterHostControl",
     "PyteTerminal",
+    "TmuxTerminal",
     "terminals",
+    "configure_terminals",
+    "is_tmux_available",
 ]

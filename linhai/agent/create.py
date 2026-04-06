@@ -432,7 +432,9 @@ async def _create_tool_manager(
     if "machine_control" in context["enabled_toolsets"]:
         from linhai.machine_control import MachineControl
 
-        machine_control = MachineControl(registry)
+        machine_control = MachineControl(
+            registry, tmux_terminal=context["tool_config"].tmux_terminal
+        )
         tool_manager.register_toolset(
             "machine_control", register_machine_control_tools(machine_control)
         )
