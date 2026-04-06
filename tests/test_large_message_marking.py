@@ -98,6 +98,8 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_large_messages(self):
         """测试删除大消息时，消息从数组中移除且其余消息不变。"""
+        self.mock_count_tokens.return_value = 500
+
         # 先添加50条普通消息，确保后面的大消息在recent_count=20之外
         # 需要在5个大消息之前至少有20条消息，才能让大消息被清理
         for i in range(50):
