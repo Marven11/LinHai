@@ -137,7 +137,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             ),
             "data": ToolArgInfo(desc="请求体数据", type="Optional[str]"),
             "follow_redirects": ToolArgInfo(
-                desc="是否跟随重定向，默认True", type="bool"
+                desc="是否跟随重定向，默认False", type="bool"
             ),
             "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="int"),
             "auth": ToolArgInfo(
@@ -162,7 +162,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         params: Optional[Dict[str, Union[str, int, float, bool]]] = None,
         headers: Optional[Dict[str, str]] = None,
         data: Optional[str] = None,
-        follow_redirects: bool = True,
+        follow_redirects: bool = False,
         timeout: int = 60,
         auth: Optional[tuple[str, str]] = None,
         cookies: Optional[Dict[str, str]] = None,
@@ -534,7 +534,7 @@ class HostControl(Protocol):
         params: Optional[Dict[str, Union[str, int, float, bool]]] = None,
         headers: Optional[Dict[str, str]] = None,
         data: Optional[str] = None,
-        follow_redirects: bool = True,
+        follow_redirects: bool = False,
         timeout: int = 60,
         auth: Optional[tuple[str, str]] = None,
         cookies: Optional[Dict[str, str]] = None,

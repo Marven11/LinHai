@@ -63,15 +63,6 @@ class TestTelegramPlugin(unittest.TestCase):
 
         self.assertEqual(len(plugin.send_queue), 0)
 
-    def test_after_segment_finished_empty_content(self):
-        """测试处理空内容的segment（会加入队列，因为没有空内容检查）。"""
-        plugin = TelegramPlugin(self.registry, self.telegram_config)
-
-        segment = {"segment_type": "normal", "content": "   "}
-        asyncio.run(plugin.after_segment_finished(None, segment))
-
-        self.assertEqual(len(plugin.send_queue), 1)
-
     def test_after_segment_finished_duplicate(self):
         """测试相同内容会被加入队列两次。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)

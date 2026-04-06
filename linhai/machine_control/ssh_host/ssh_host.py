@@ -96,7 +96,7 @@ class SshMachineControl:
         params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, str]] = None,
         data: Optional[str] = None,
-        follow_redirects: bool = True,
+        follow_redirects: bool = False,
         timeout: int = 60,
         auth: Optional[tuple[str, str]] = None,
         cookies: Optional[Dict[str, str]] = None,

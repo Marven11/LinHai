@@ -39,7 +39,7 @@ async def http_request(
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
     data: Optional[str] = None,
-    follow_redirects: bool = True,
+    follow_redirects: bool = False,
     timeout: int = 60,
     auth: Optional[tuple[str, str]] = None,
     cookies: Optional[dict] = None,
