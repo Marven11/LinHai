@@ -36,7 +36,7 @@ class TelegramPlugin(Plugin):
 
     async def after_segment_finished(self, _parsed_answer, segment: Segment):
         """在segment完成后将消息加入发送队列。"""
-        if segment["segment_type"] != "normal":
+        if segment["segment_type"] != "normal" or not segment["content"].strip():
             return
 
         self.send_queue.append(segment)
