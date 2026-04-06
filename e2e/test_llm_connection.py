@@ -22,7 +22,7 @@ OPENROUTER_MODEL = "openrouter/free"
 def _get_token() -> str:
     token = os.environ.get("OPENROUTER_TOKEN")
     if not token:
-        pytest.skip("OPENROUTER_TOKEN not set")
+        pytest.fail("OPENROUTER_TOKEN not set")
     return token
 
 

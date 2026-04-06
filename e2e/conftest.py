@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 async def openrouter_client() -> AsyncOpenAI:
     token = os.environ.get("OPENROUTER_TOKEN")
     if not token:
-        pytest.skip("OPENROUTER_TOKEN not set")
+        pytest.fail("OPENROUTER_TOKEN not set")
     return AsyncOpenAI(
         api_key=token,
         base_url="https://openrouter.ai/api/v1",

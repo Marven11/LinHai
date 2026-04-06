@@ -92,7 +92,7 @@ def _create_test_toolset() -> ToolSet:
 async def _get_agent() -> Agent:
     token = os.environ.get("OPENROUTER_TOKEN")
     if not token:
-        pytest.skip("OPENROUTER_TOKEN not set")
+        pytest.fail("OPENROUTER_TOKEN not set")
     return _create_test_agent(token)
 
 

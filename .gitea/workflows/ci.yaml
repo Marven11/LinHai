@@ -175,6 +175,15 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv sync --extra dev
 
+      - name: Verify OPENROUTER_TOKEN
+        env:
+          OPENROUTER_TOKEN: ${{ secrets.OPENROUTER_TOKEN }}
+        run: |
+          if [ -z "$OPENROUTER_TOKEN" ]; then
+            echo "OPENROUTER_TOKEN is not set, e2e tests require this secret"
+            exit 1
+          fi
+
       - name: Run e2e tests
         env:
           OPENROUTER_TOKEN: ${{ secrets.OPENROUTER_TOKEN }}
