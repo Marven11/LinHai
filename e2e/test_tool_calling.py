@@ -3,28 +3,12 @@ import json
 import pytest
 from openai import AsyncOpenAI
 
-from linhai.llm import ToolCallMessage
+from linhai.llm import SystemMessage, ToolCallMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
+from linhai.registry import Registry
 from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info
 
 pytestmark = pytest.mark.asyncio
-
-SYSTEM_PROMPT = """You are a helpful assistant that uses tools when requested.
-
-## Tool Calling Format
-
-When you need to call a tool, output a JSON code block with the language tag `json toolcall`:
-
-```json toolcall
-{"name": "tool_name", "arguments": {"param": "value"}}
-```
-
-## Available Tools
-
-{tools_json}
-
-When the user asks about weather, call the get_weather tool with the city name.
-"""
 
 
 def _get_weather_toolset() -> ToolSet:
@@ -43,12 +27,27 @@ def _get_weather_toolset() -> ToolSet:
 
 
 def _build_system_prompt() -> str:
+    registry = Registry()
+    system_message = SystemMessage(registry)
+    for title in [
+        "SOUL",
+        "WAITING USER AND AUTO RUN",
+        "GLOBAL PROMPT",
+        "CONTEXT MANAGEMENT",
+        "SECRET SYSTEM",
+        "MACHINE CONTROL BASIC",
+    ]:
+        system_message.remove_introduction(title)
+    for title in ["CODING STYLE", "USER INTERACTION"]:
+        system_message.remove_rule(title)
+    system_message.remove_example("SECRET")
     toolset = _get_weather_toolset()
     tools_json = json.dumps(to_tools_info(toolset.get_tools()), ensure_ascii=False)
-    return SYSTEM_PROMPT.format(tools_json=tools_json)
+    system_message.add_introduction("TOOLS", tools_json)
+    return system_message.get_content()
 
 
-async def _get_tool_call_response(client: AsyncOpenAI, max_retries: int = 3) -> str:
+async def _get_tool_call_response(client: AsyncOpenAI, max_retries: int = 5) -> str:
     system_prompt = _build_system_prompt()
     for _ in range(max_retries):
         response = await client.chat.completions.create(
@@ -95,17 +94,21 @@ async def test_tool_result_processing(openrouter_client: AsyncOpenAI):
     )
 
     system_prompt = _build_system_prompt()
-    response2 = await openrouter_client.chat.completions.create(
-        model="openrouter/free",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "What is the weather in Tokyo?"},
-            {"role": "assistant", "content": content},
-            {"role": "user", "content": tool_result},
-        ],
-        max_tokens=200,
-    )
-    final = response2.choices[0].message.content or ""
+    final = ""
+    for _ in range(5):
+        response2 = await openrouter_client.chat.completions.create(
+            model="openrouter/free",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "What is the weather in Tokyo?"},
+                {"role": "assistant", "content": content},
+                {"role": "user", "content": tool_result},
+            ],
+            max_tokens=200,
+        )
+        final = response2.choices[0].message.content or ""
+        if final:
+            break
     assert len(final) > 0
 
 

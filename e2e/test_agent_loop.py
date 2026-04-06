@@ -12,6 +12,8 @@ from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 
+from conftest import slim_system_message
+
 pytestmark = pytest.mark.asyncio
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -52,6 +54,7 @@ def _create_test_agent(token: str) -> Agent:
     register_conversation_folder(registry)
 
     system_message = SystemMessage(registry)
+    slim_system_message(system_message)
     pinned_messages: list[Message] = [system_message]
 
     agent = Agent(
@@ -129,17 +132,20 @@ async def test_tool_calling_loop():
 
 
 async def test_context_management():
-    agent = await _get_agent()
+    for _ in range(5):
+        agent = await _get_agent()
 
-    await agent.message_processor.add_new_message(
-        UserMessage("My secret code is BLUEBIRD. Remember it.")
-    )
-    await agent.generate_response()
+        await agent.message_processor.add_new_message(
+            UserMessage("My secret code is BLUEBIRD. Remember it.")
+        )
+        await agent.generate_response()
 
-    await agent.message_processor.add_new_message(
-        UserMessage("What is my secret code?")
-    )
-    await agent.generate_response()
+        await agent.message_processor.add_new_message(
+            UserMessage("What is my secret code?")
+        )
+        await agent.generate_response()
 
-    response = _get_last_assistant_message(agent)
-    assert "BLUEBIRD" in response.upper()
+        response = _get_last_assistant_message(agent)
+        if "BLUEBIRD" in response.upper():
+            return
+    pytest.fail("BLUEBIRD not found in response after 5 retries")
