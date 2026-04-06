@@ -9,7 +9,6 @@
 ## 在本地测试时
 
 - 你应该检查.gitea/workflows文件夹以了解CI会怎么检查你的代码。你**必须完全遵守深层价值观**以通过CI
-- 不要使用pytest，使用Python的unittest模块来运行测试
 - 在做最后检查时，**至少**运行所有unittest，必须看到所有（至少八百个）unittest成功运行后才可以暂停报告
 - 运行代码检查时使用uv管理环境：使用`uv run pyright linhai/`运行pyright，使用`uv run pylint linhai/ tests/`运行pylint
 - 忽略unittest的pyright错误
