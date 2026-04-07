@@ -73,15 +73,27 @@ async def run(args):
     )
     config = load_config(config_path)
 
+    from linhai.agent.create import AgentBuildArguments
+
+    build_args: AgentBuildArguments = {
+        "rss": args.rss,
+        "telegram": args.telegram,
+        "disable_waiting_marker": args.disable_waiting_marker,
+        "afk": args.afk,
+        "claw_enabled": args.claw,
+        "claw_folder": args.claw_folder,
+        "message": args.message,
+        "file": args.file,
+        "planning": args.planning,
+        "llm_name": args.llm,
+        "checklist_path": args.checklist,
+        "profile_name": args.profile,
+    }
     context = create_agent_build_context(
         registry=registry,
         config=config,
         config_basedir=config_path.parent,
-        cli_args=args,
-        planning=args.planning,
-        llm_name=args.llm,
-        checklist_path=args.checklist,
-        profile_name=args.profile,
+        build_args=build_args,
     )
     _agent = await create_agent_from_context(context)
 

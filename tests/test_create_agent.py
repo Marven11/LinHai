@@ -7,12 +7,11 @@ import os
 import asyncio
 from pathlib import Path
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from linhai.registry import Registry
 from linhai.agent.create import create_agent_from_context
-from linhai.agent.create import create_agent_build_context
+from linhai.agent.create import AgentBuildArguments, create_agent_build_context
 from linhai.agent import Agent
 from linhai.tool.main import ToolManager
 from linhai.config import load_config
@@ -29,29 +28,29 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
 
         registry = Registry()
-        import argparse
 
-        cli_args = argparse.Namespace(afk=False)
-
-        cli_args.checklist = None
-        cli_args.message = []
-        cli_args.file = []
-        cli_args.claw = False
-        cli_args.claw_folder = None
-        cli_args.disable_waiting_marker = False
-        cli_args.rss = []
-        cli_args.telegram = False
-        registry.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         config = load_config(Path(config_path))
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
         context = create_agent_build_context(
             registry=registry,
             config=config,
             config_basedir=Path("."),
-            llm_name=None,
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         result = asyncio.run(create_agent_from_context(context))
         self.assertIsInstance(result, Agent)
@@ -76,29 +75,29 @@ class TestCreateAgent(unittest.TestCase):
         mock_mcp_connector.return_value = mock_mcp_instance
 
         registry = Registry()
-        import argparse
 
-        cli_args = argparse.Namespace(afk=False)
-
-        cli_args.checklist = None
-        cli_args.message = []
-        cli_args.file = []
-        cli_args.claw = False
-        cli_args.claw_folder = None
-        cli_args.disable_waiting_marker = False
-        cli_args.rss = []
-        cli_args.telegram = False
-        registry.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         config = load_config(Path(config_path))
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test",
+            "checklist_path": None,
+            "profile_name": None,
+        }
         context = create_agent_build_context(
             registry=registry,
             config=config,
             config_basedir=Path("."),
-            llm_name="test",
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         result = asyncio.run(create_agent_from_context(context))
         self.assertIsInstance(result, Agent)
@@ -110,29 +109,32 @@ class TestCreateAgent(unittest.TestCase):
     def test_create_agent_with_invalid_llm_name(self):
         """测试使用无效的llm_name参数应抛出错误"""
         registry = Registry()
-        import argparse
 
-        cli_args = argparse.Namespace(afk=False)
-
-        cli_args.checklist = None
-        cli_args.message = []
-        cli_args.file = []
-        cli_args.claw = False
-        cli_args.claw_folder = None
-        registry.register_member("cli_args", cli_args)
         config_path = Path(__file__).parent / "test_config.toml"
 
         from linhai.config import load_config
 
         config = load_config(Path(config_path))
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "invalid_llm",
+            "checklist_path": None,
+            "profile_name": None,
+        }
         with self.assertRaises(ValueError) as context_error:
             context = create_agent_build_context(
                 registry=registry,
                 config=config,
                 config_basedir=Path("."),
-                llm_name="invalid_llm",
-                cli_args=cli_args,
-                checklist_path=None,
+                build_args=build_args,
             )
             asyncio.run(create_agent_from_context(context))
 

@@ -12,7 +12,7 @@ from linhai.agent.create import (
     _create_tool_manager,
     _create_pinned_messages,
 )
-from linhai.agent.create import create_agent_build_context
+from linhai.agent.create import AgentBuildArguments, create_agent_build_context
 from linhai.registry import Registry
 from linhai.config import AgentConfig, AVAILABLE_TOOLSETS
 
@@ -100,27 +100,26 @@ class TestCreateAgent(unittest.TestCase):
         mock_agent_instance.llm_manager = mock_llm_manager
         mock_agent.return_value = mock_agent_instance
 
-        import asyncio
-        import argparse
-
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test_llm",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name="test_llm",
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         result = asyncio.run(create_agent_from_context(context))
 
@@ -224,27 +223,26 @@ class TestCreateAgent(unittest.TestCase):
             mock_agent_instance.llm_manager = mock_llm_manager
             mock_agent.return_value = mock_agent_instance
 
-            import asyncio
-            import argparse
-
-            cli_args = argparse.Namespace(
-                message=None,
-                file=None,
-                claw=False,
-                claw_folder=None,
-                rss=[],
-                telegram=False,
-                disable_waiting_marker=False,
-                afk=False,
-            )
+            build_args: AgentBuildArguments = {
+                "rss": [],
+                "telegram": False,
+                "disable_waiting_marker": False,
+                "afk": False,
+                "claw_enabled": False,
+                "claw_folder": None,
+                "message": [],
+                "file": [],
+                "planning": False,
+                "llm_name": "llm1",
+                "checklist_path": None,
+                "profile_name": None,
+            }
 
             context = create_agent_build_context(
                 registry=self.registry,
                 config=mock_config,
                 config_basedir=Path("."),
-                llm_name="llm1",
-                cli_args=cli_args,
-                checklist_path=None,
+                build_args=build_args,
             )
             asyncio.run(create_agent_from_context(context))
 
@@ -572,26 +570,26 @@ class TestDefaultLlmConfig(unittest.TestCase):
             [mock_llm_config1, mock_llm_config2], default_llm=None
         )
 
-        import argparse
-
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name=None,
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         self.assertEqual(context["llm_name"], "llm1")
 
@@ -603,26 +601,26 @@ class TestDefaultLlmConfig(unittest.TestCase):
             [mock_llm_config1, mock_llm_config2], default_llm="llm2"
         )
 
-        import argparse
-
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name=None,
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         self.assertEqual(context["llm_name"], "llm2")
 
@@ -634,28 +632,29 @@ class TestDefaultLlmConfig(unittest.TestCase):
             [mock_llm_config1, mock_llm_config2], default_llm="invalid_llm"
         )
 
-        import argparse
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            rss=[],
-            telegram=False,
-            afk=False,
-        )
-
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(ValueError) as ctx:
             create_agent_build_context(
                 registry=self.registry,
                 config=mock_config,
                 config_basedir=Path("."),
-                llm_name=None,
-                cli_args=cli_args,
-                checklist_path=None,
+                build_args=build_args,
             )
-        self.assertIn("agent.default_llm", str(context.exception))
+        self.assertIn("agent.default_llm", str(ctx.exception))
 
     def test_cli_llm_name_overrides_default_llm_config(self):
         """测试命令行参数LLM名称覆盖agent.default_llm配置"""
@@ -665,26 +664,26 @@ class TestDefaultLlmConfig(unittest.TestCase):
             [mock_llm_config1, mock_llm_config2], default_llm="llm1"
         )
 
-        import argparse
-
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "llm2",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name="llm2",
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         self.assertEqual(context["llm_name"], "llm2")
 

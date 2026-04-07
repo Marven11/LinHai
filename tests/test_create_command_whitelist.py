@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """测试create.py中的CommandWhitelistPlugin注册逻辑。"""
+
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
-import argparse
-from linhai.agent.create import create_agent_build_context, create_agent_from_context
+from linhai.agent.create import (
+    AgentBuildArguments,
+    create_agent_build_context,
+    create_agent_from_context,
+)
 from linhai.config import Config
 from linhai.registry import Registry
 
@@ -34,21 +38,26 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")
-        cli_args = argparse.Namespace(afk=False)
-        cli_args.claw = False
-        cli_args.claw_folder = None
-        cli_args.message = []
-        cli_args.file = []
-        cli_args.disable_waiting_marker = False
-        cli_args.rss = []
-        cli_args.telegram = False
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=registry,
             config=config,
             config_basedir=config_basedir,
-            cli_args=cli_args,
-            llm_name="test",
+            build_args=build_args,
         )
 
         with (
@@ -101,21 +110,26 @@ class TestCreateCommandWhitelist(unittest.IsolatedAsyncioTestCase):
         }
         config = Config(**config_data)
         config_basedir = Path("/tmp")
-        cli_args = argparse.Namespace(afk=False)
-        cli_args.claw = False
-        cli_args.claw_folder = None
-        cli_args.message = []
-        cli_args.file = []
-        cli_args.disable_waiting_marker = False
-        cli_args.rss = []
-        cli_args.telegram = False
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=registry,
             config=config,
             config_basedir=config_basedir,
-            cli_args=cli_args,
-            llm_name="test",
+            build_args=build_args,
         )
 
         with (

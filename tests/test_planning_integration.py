@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from pathlib import Path
 import asyncio
 
-from linhai.agent.create import create_agent_build_context
+from linhai.agent.create import AgentBuildArguments, create_agent_build_context
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.config import AVAILABLE_TOOLSETS
 
@@ -31,32 +31,51 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         self.mock_config.agent[0].default_llm = None
 
         self.mock_config_basedir = Path("/tmp/test_config")
-        self.mock_cli_args = MagicMock()
-        self.mock_cli_args.planning = False
-        self.mock_cli_args.llm = None
-        self.mock_cli_args.checklist = None
 
     async def test_planning_parameter_default_false(self):
-        # 注意：create_agent_build_context需要llm_name参数，我们通过cli_args.llm传递
-        self.mock_cli_args.llm = None
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
         context = create_agent_build_context(
             registry=self.mock_registry,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
-            cli_args=self.mock_cli_args,
-            planning=False,
+            build_args=build_args,
         )
 
         self.assertFalse(context["planning"])
 
     async def test_planning_parameter_true(self):
-        self.mock_cli_args.llm = None
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": True,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
         context = create_agent_build_context(
             registry=self.mock_registry,
             config=self.mock_config,
             config_basedir=self.mock_config_basedir,
-            cli_args=self.mock_cli_args,
-            planning=True,
+            build_args=build_args,
         )
 
         self.assertTrue(context["planning"])

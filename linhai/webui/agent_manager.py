@@ -1,6 +1,5 @@
 """AgentManager模块，管理多个Agent实例的生命周期。"""
 
-import argparse
 import asyncio
 import uuid
 from datetime import datetime
@@ -9,6 +8,7 @@ from typing import Optional
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.agent.create import (
+    AgentBuildArguments,
     create_agent_build_context,
     create_agent_from_context,
 )
@@ -74,31 +74,26 @@ class AgentManager:
         agent_id = str(uuid.uuid4())
         registry = self._create_registry()
 
-        cli_args = argparse.Namespace(
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-            claw=False,
-            claw_folder=None,
-            message=init_messages or [],
-            file=[],
-            config=self.config_path,
-            llm=None,
-            planning=False,
-            checklist=None,
-            profile=profile_name,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": init_messages or [],
+            "file": [],
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": profile_name,
+        }
 
         context = create_agent_build_context(
             registry=registry,
             config=self._config,
             config_basedir=None,
-            cli_args=cli_args,
-            planning=False,
-            llm_name=None,
-            checklist_path=None,
-            profile_name=profile_name,
+            build_args=build_args,
         )
 
         agent = await create_agent_from_context(context)

@@ -5,7 +5,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from linhai.config import AgentConfig, ConfigValidationError
-from linhai.agent.create import create_agent_from_context, create_agent_build_context
+from linhai.agent.create import (
+    AgentBuildArguments,
+    create_agent_from_context,
+    create_agent_build_context,
+)
 
 
 class TestAgentToolsetConfig(unittest.TestCase):
@@ -162,26 +166,27 @@ disable_toolsets = ["llm"]
         mock_agent_instance.llm_manager = mock_llm_manager
 
         import asyncio
-        import argparse
 
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            disable_waiting_marker=False,
-            rss=[],
-            telegram=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test_llm",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=mock_registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name="test_llm",
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         result = asyncio.run(create_agent_from_context(context))
 
@@ -263,26 +268,27 @@ disable_toolsets = ["llm"]
         mock_agent_instance.llm_manager = mock_llm_manager
 
         import asyncio
-        import argparse
 
-        cli_args = argparse.Namespace(
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-            disable_waiting_marker=False,
-            rss=[],
-            telegram=False,
-            afk=False,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "claw_enabled": False,
+            "claw_folder": None,
+            "message": [],
+            "file": [],
+            "planning": False,
+            "llm_name": "test_llm",
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=mock_registry,
             config=mock_config,
             config_basedir=Path("."),
-            llm_name="test_llm",
-            cli_args=cli_args,
-            checklist_path=None,
+            build_args=build_args,
         )
         result = asyncio.run(create_agent_from_context(context))
 

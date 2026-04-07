@@ -3,9 +3,11 @@
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
-import argparse
-
-from linhai.agent.create import create_agent_build_context, _resolve_process_sandbox
+from linhai.agent.create import (
+    create_agent_build_context,
+    _resolve_process_sandbox,
+    AgentBuildArguments,
+)
 from linhai.config import (
     BubblewrapConfig,
     MacOsSandboxConfig,
@@ -56,23 +58,27 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.agent[0].process_sandbox = None
 
     def test_agent_build_context_with_rss(self):
-        """测试rss参数从cli_args传递到AgentBuildContext"""
-        cli_args = argparse.Namespace(
-            rss=["http://example.com/rss1", "http://example.com/rss2"],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-        )
+        """测试rss参数从build_args传递到AgentBuildContext"""
+        build_args: AgentBuildArguments = {
+            "rss": ["http://example.com/rss1", "http://example.com/rss2"],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(
@@ -84,23 +90,27 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertIsNone(context["process_sandbox"])
 
     def test_agent_build_context_with_telegram(self):
-        """测试telegram参数从cli_args传递到AgentBuildContext"""
-        cli_args = argparse.Namespace(
-            rss=[],
-            telegram=True,
-            disable_waiting_marker=False,
-            afk=False,
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-        )
+        """测试telegram参数从build_args传递到AgentBuildContext"""
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": True,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(context["telegram"], True)
@@ -109,23 +119,27 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertIsNone(context["process_sandbox"])
 
     def test_agent_build_context_with_disable_waiting_marker(self):
-        """测试disable_waiting_marker参数从cli_args传递到AgentBuildContext"""
-        cli_args = argparse.Namespace(
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=True,
-            afk=False,
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-        )
+        """测试disable_waiting_marker参数从build_args传递到AgentBuildContext"""
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": True,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(context["disable_waiting_marker"], True)
@@ -133,45 +147,53 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["claw_folder"], None)
 
     def test_agent_build_context_with_afk(self):
-        """测试afk参数从cli_args传递到AgentBuildContext"""
-        cli_args = argparse.Namespace(
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=True,
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-        )
+        """测试afk参数从build_args传递到AgentBuildContext"""
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": True,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(context["afk"], True)
 
     def test_agent_build_context_with_all_parameters(self):
         """测试所有参数同时传递"""
-        cli_args = argparse.Namespace(
-            rss=["http://example.com/rss"],
-            telegram=True,
-            disable_waiting_marker=True,
-            afk=True,
-            message=None,
-            file=None,
-            claw=True,
-            claw_folder="/custom/claw/path",
-        )
+        build_args: AgentBuildArguments = {
+            "rss": ["http://example.com/rss"],
+            "telegram": True,
+            "disable_waiting_marker": True,
+            "afk": True,
+            "message": [],
+            "file": [],
+            "claw_enabled": True,
+            "claw_folder": Path("/custom/claw/path"),
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(context["rss"], ["http://example.com/rss"])
@@ -179,26 +201,30 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["disable_waiting_marker"], True)
         self.assertEqual(context["afk"], True)
         self.assertEqual(context["claw_enabled"], True)
-        self.assertEqual(context["claw_folder"], "/custom/claw/path")
+        self.assertEqual(context["claw_folder"], Path("/custom/claw/path"))
 
     def test_agent_build_context_with_default_values(self):
         """测试默认值"""
-        cli_args = argparse.Namespace(
-            rss=[],
-            telegram=False,
-            disable_waiting_marker=False,
-            afk=False,
-            message=None,
-            file=None,
-            claw=False,
-            claw_folder=None,
-        )
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
 
         context = create_agent_build_context(
             registry=self.registry,
             config=self.config,
             config_basedir=Path("."),
-            cli_args=cli_args,
+            build_args=build_args,
         )
 
         self.assertEqual(context["rss"], [])

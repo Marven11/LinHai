@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import tempfile
 from typing import TypedDict, Optional, Tuple, Union
-import argparse
 from datetime import datetime
 
 import platform
@@ -54,6 +53,23 @@ class TelegramContext(TypedDict):
 
     bot_token: str
     default_chat_id: str
+
+
+class AgentBuildArguments(TypedDict):
+    """Agent构建参数，封装所有来自CLI/请求的运行时参数。"""
+
+    rss: list[str]
+    telegram: bool
+    disable_waiting_marker: bool
+    afk: bool
+    claw_enabled: bool
+    claw_folder: Optional[Path]
+    message: list[str]
+    file: list[Path]
+    planning: bool
+    llm_name: Optional[str]
+    checklist_path: Optional[Path]
+    profile_name: Optional[str]
 
 
 class AgentBuildContext(TypedDict):
@@ -125,19 +141,16 @@ def create_agent_build_context(
     registry: Registry,
     config: Config,
     config_basedir: Optional[Path],
-    cli_args: Optional[argparse.Namespace],
-    planning: bool = False,
-    llm_name: Optional[str] = None,
-    checklist_path: Optional[Path] = None,
-    profile_name: Optional[str] = None,
+    build_args: AgentBuildArguments,
 ) -> AgentBuildContext:
     """创建Agent构建上下文，包含验证逻辑。"""
 
-    agent_config = _resolve_agent_profile(config, profile_name)
+    agent_config = _resolve_agent_profile(config, build_args.get("profile_name"))
 
     llm_configs = config.llm
     llm_config_names = [llm_config.name for llm_config in llm_configs]
 
+    llm_name = build_args.get("llm_name")
     if llm_name is None:
         config_default_llm = agent_config.default_llm
         if config_default_llm is not None:
@@ -184,9 +197,9 @@ def create_agent_build_context(
         "llms": config.llm,
         "llm_name": resolved_llm_name,
         "max_toolcall_token_in_round": max_toolcall_token,
-        "checklist_path": checklist_path,
+        "checklist_path": build_args.get("checklist_path"),
         "user_prompt": user_prompt,
-        "planning": planning,
+        "planning": build_args.get("planning", False),
         "enabled_toolsets": _resolve_enabled_toolsets(config.tools, agent_config),
         "compress_threshold": agent_config.compress_threshold,
         "enable_directory_change_detection": agent_config.enable_directory_change_detection,
@@ -198,16 +211,14 @@ def create_agent_build_context(
         "secret_config_path": (
             config.tools.secret.config_path if config.tools.secret else None
         ),
-        "rss": cli_args.rss if cli_args else [],
-        "telegram": cli_args.telegram if cli_args else False,
-        "disable_waiting_marker": (
-            cli_args.disable_waiting_marker if cli_args else False
-        ),
-        "afk": cli_args.afk if cli_args else False,
-        "claw_enabled": cli_args.claw if cli_args else False,
-        "claw_folder": cli_args.claw_folder if cli_args else None,
-        "message": cli_args.message if cli_args else [],
-        "file": cli_args.file if cli_args else [],
+        "rss": build_args.get("rss", []),
+        "telegram": build_args.get("telegram", False),
+        "disable_waiting_marker": build_args.get("disable_waiting_marker", False),
+        "afk": build_args.get("afk", False),
+        "claw_enabled": build_args.get("claw_enabled", False),
+        "claw_folder": build_args.get("claw_folder"),
+        "message": build_args.get("message", []),
+        "file": build_args.get("file", []),
         "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
     }
 
