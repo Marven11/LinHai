@@ -175,6 +175,11 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv sync --extra dev
 
+      - name: Create config file for tests
+        run: |
+          mkdir -p /root/.config/linhai/
+          cp config-example.toml /root/.config/linhai/config.toml
+
       - name: Verify OPENROUTER_TOKEN
         env:
           OPENROUTER_TOKEN: ${{ vars.OPENROUTER_TOKEN }}

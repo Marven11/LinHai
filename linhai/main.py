@@ -10,6 +10,7 @@ import argparse
 import unittest
 import sys
 
+import uvicorn
 
 from linhai.init import InitApp
 from linhai.config import get_default_config_path
@@ -40,6 +41,19 @@ async def run_init(config_path: Path | None = None):
 
     app = InitApp(config_path=config_path)
     await app.run_async()
+    return 0
+
+
+async def run_webui(args):
+    """运行WebUI服务。"""
+    from linhai.webui import create_app
+    from linhai.webui.agent_manager import AgentManager
+
+    config_path = args.config or get_default_config_path()
+    AgentManager(config_path=str(config_path))
+
+    app = create_app()
+    uvicorn.run(app, host=args.host, port=args.port)
     return 0
 
 
@@ -167,13 +181,35 @@ def main():
         help="配置文件路径（默认：~/.config/linhai/config.toml）",
     )
 
+    webui_parser = subparsers.add_parser("webui", help="启动WebUI服务")
+    webui_parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="WebUI服务监听地址",
+    )
+    webui_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="WebUI服务监听端口",
+    )
+    webui_parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="配置文件路径（默认：~/.config/linhai/config.toml）",
+    )
+
     args = parser.parse_args()
 
-    if args.config is None and args.command != "init":
+    if args.config is None and args.command not in ("init", "webui"):
         args.config = get_default_config_path()
 
     if args.command == "init":
         return_code = asyncio.run(run_init(config_path=args.config))
+    elif args.command == "webui":
+        return_code = asyncio.run(run_webui(args))
     else:
         return_code = asyncio.run(run(args))
 
