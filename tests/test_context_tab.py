@@ -1,14 +1,69 @@
 """测试Context tab功能"""
 
 import unittest
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 import asyncio
 from linhai.tui.app import TUIApp
 from linhai.tui.context_tab import ContextTabWidget
+from linhai.context_statistics import estimate_message_tokens
 from linhai.registry import Registry
 from linhai.config import TUIConfig
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
+
+
+def _build_context_statistics(
+    hard_limit=None,
+    used_tokens=None,
+    token_limit=None,
+    generation_count=None,
+    cache_info=None,
+    cumulative_cache=None,
+    cumulative_total_tokens=None,
+    cumulative_input_tokens=None,
+    cumulative_output_tokens=None,
+    cumulative_cache_miss_count=None,
+    large_message_count=0,
+    messages_stats=None,
+    pinned_stats=None,
+    notification_stats=None,
+):
+    from linhai.context_statistics import (
+        MessageGroupStatistics,
+        MessageTypeCounts,
+        ContextStatistics,
+    )
+
+    empty_stats: MessageGroupStatistics = {
+        "count": 0,
+        "sparkline": [],
+        "type_counts": MessageTypeCounts(
+            user=0,
+            assistant=0,
+            system=0,
+            runtime=0,
+            other=0,
+        ),
+        "total_tokens": 0,
+        "avg_tokens": 0.0,
+        "longest": None,
+    }
+    return ContextStatistics(
+        messages=messages_stats or empty_stats,
+        pinned_messages=pinned_stats or empty_stats,
+        notification_messages=notification_stats or empty_stats,
+        large_message_count=large_message_count,
+        hard_limit=hard_limit,
+        used_tokens=used_tokens,
+        token_limit=token_limit,
+        generation_count=generation_count,
+        cache_info=cache_info,
+        cumulative_cache=cumulative_cache,
+        cumulative_total_tokens=cumulative_total_tokens,
+        cumulative_input_tokens=cumulative_input_tokens,
+        cumulative_output_tokens=cumulative_output_tokens,
+        cumulative_cache_miss_count=cumulative_cache_miss_count,
+    )
 
 
 class TestContextTab(unittest.TestCase):
@@ -136,8 +191,6 @@ class TestContextTab(unittest.TestCase):
         """Helper to set up mock registry members for update_display tests."""
         from linhai.llm import AnswerTokenUsage
         from linhai.token_manager import TokenManager
-        from linhai.agent.message import AgentMessage
-        from linhai.agent.orchestration import AgentContextOrchestration
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
@@ -187,8 +240,6 @@ class TestContextTab(unittest.TestCase):
 
     def test_update_display_with_mocks(self):
         """测试update_display功能"""
-        from unittest.mock import MagicMock
-
         registry = Registry()
         widget = ContextTabWidget(registry)
 
@@ -211,7 +262,7 @@ class TestContextTab(unittest.TestCase):
         mock_pb_cache = Mock(spec=ProgressBar)
         mock_cache_stats_text = Mock(spec=Static)
 
-        def _mock_query_one(selector, expect_type=None):
+        def _mock_query_one(selector, _expect_type=None, **_kwargs):
             mapping = {
                 "#cumulative-token-stats-text": mock_cumulative_stats_text,
                 "#msg-stats-sparkline": mock_sparkline,
@@ -234,8 +285,7 @@ class TestContextTab(unittest.TestCase):
         from math import log2
 
         expected_data = [
-            float(log2(widget._estimate_message_tokens(msg) + 1))
-            for msg in mock_messages
+            float(log2(estimate_message_tokens(msg) + 1)) for msg in mock_messages
         ]
         self.assertEqual(mock_sparkline.data, expected_data)
         mock_stats_text.update.assert_called_once()
@@ -256,39 +306,9 @@ class TestContextTab(unittest.TestCase):
         self.assertIn("当前消息缓存状态（实际）", token_stats_args)
         self.assertNotIn("当前消息估算缓存Token数", token_stats_args)
 
-    def test_update_token_usage_no_agent(self):
-        """测试Agent未初始化时的token用量显示"""
-        registry = Registry()
-        widget = ContextTabWidget(registry)
-
-        from textual.widgets import ProgressBar, Static
-
-        mock_pb_hard = Mock(spec=ProgressBar)
-        mock_pb_model = Mock(spec=ProgressBar)
-        mock_token_stats_text = Mock(spec=Static)
-
-        def _mock_query_one(selector, expect_type=None):
-            mapping = {
-                "#pb-hard-limit": mock_pb_hard,
-                "#pb-model-limit": mock_pb_model,
-                "#token-stats-text": mock_token_stats_text,
-            }
-            return mapping[selector]
-
-        widget.query_one = Mock(side_effect=_mock_query_one)
-
-        widget._update_token_usage(None)
-
-        mock_token_stats_text.update.assert_called_once_with("Agent未初始化")
-
     def test_update_token_usage_no_threshold(self):
         """测试threshold_info不可用时的token用量显示"""
-        from linhai.agent.main import Agent
-
         registry = Registry()
-        mock_agent = Mock(spec=Agent)
-        mock_agent.get_threshold_info.return_value = None
-
         widget = ContextTabWidget(registry)
 
         from textual.widgets import ProgressBar, Static
@@ -297,7 +317,7 @@ class TestContextTab(unittest.TestCase):
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
 
-        def _mock_query_one(selector, expect_type=None):
+        def _mock_query_one(selector, _expect_type=None, **_kwargs):
             mapping = {
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
@@ -307,39 +327,14 @@ class TestContextTab(unittest.TestCase):
 
         widget.query_one = Mock(side_effect=_mock_query_one)
 
-        widget._update_token_usage(mock_agent)
+        stats = _build_context_statistics()
+        widget._update_token_usage(stats)
 
         mock_token_stats_text.update.assert_called_once_with("不可用")
 
     def test_update_token_usage_with_no_cache(self):
         """测试无缓存时的token用量显示"""
-        from linhai.agent.main import Agent
-        from linhai.llm import AnswerTokenUsage
-        from linhai.token_manager import TokenManager
-
         registry = Registry()
-        mock_agent = Mock(spec=Agent)
-        mock_agent.get_threshold_info.return_value = {
-            "hard_limit": 8000,
-            "used_tokens": 3000,
-            "remaining_tokens": 5000,
-            "usage_ratio": 0.375,
-        }
-        mock_llm = Mock()
-        mock_llm.get_token_limit.return_value = 128000
-        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
-
-        mock_token_usage = AnswerTokenUsage(
-            input_tokens=3000,
-            output_tokens=0,
-            total_tokens=3000,
-            cached_input_tokens=None,
-        )
-        mock_token_manager = Mock(spec=TokenManager)
-        mock_token_manager.current_token_usage = mock_token_usage
-        mock_token_manager.generation_count = 0
-        registry.register_member("token_manager", mock_token_manager)
-
         widget = ContextTabWidget(registry)
 
         from textual.widgets import ProgressBar, Static
@@ -348,7 +343,7 @@ class TestContextTab(unittest.TestCase):
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
 
-        def _mock_query_one(selector, expect_type=None):
+        def _mock_query_one(selector, _expect_type=None, **_kwargs):
             mapping = {
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
@@ -358,7 +353,17 @@ class TestContextTab(unittest.TestCase):
 
         widget.query_one = Mock(side_effect=_mock_query_one)
 
-        widget._update_token_usage(mock_agent)
+        from linhai.context_statistics import CacheInfo
+
+        cache_info = CacheInfo(cached_tokens=0, percentage=0.0, is_estimated=True)
+        stats = _build_context_statistics(
+            hard_limit=8000,
+            used_tokens=3000,
+            token_limit=128000,
+            generation_count=0,
+            cache_info=cache_info,
+        )
+        widget._update_token_usage(stats)
 
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=3000.0)
         mock_pb_model.update.assert_called_once_with(total=128000.0, progress=3000.0)
@@ -370,33 +375,7 @@ class TestContextTab(unittest.TestCase):
 
     def test_update_token_usage_no_token_limit(self):
         """测试token_limit为None时的回退行为"""
-        from linhai.agent.main import Agent
-        from linhai.llm import AnswerTokenUsage
-        from linhai.token_manager import TokenManager
-
         registry = Registry()
-        mock_agent = Mock(spec=Agent)
-        mock_agent.get_threshold_info.return_value = {
-            "hard_limit": 8000,
-            "used_tokens": 5000,
-            "remaining_tokens": 3000,
-            "usage_ratio": 0.625,
-        }
-        mock_llm = Mock()
-        mock_llm.get_token_limit.return_value = None
-        mock_agent.get_current_llm_info.return_value = ("test-llm", mock_llm)
-
-        mock_token_usage = AnswerTokenUsage(
-            input_tokens=5000,
-            output_tokens=0,
-            total_tokens=5000,
-            cached_input_tokens=None,
-        )
-        mock_token_manager = Mock(spec=TokenManager)
-        mock_token_manager.current_token_usage = mock_token_usage
-        mock_token_manager.generation_count = 0
-        registry.register_member("token_manager", mock_token_manager)
-
         widget = ContextTabWidget(registry)
 
         from textual.widgets import ProgressBar, Static
@@ -405,7 +384,7 @@ class TestContextTab(unittest.TestCase):
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
 
-        def _mock_query_one(selector, expect_type=None):
+        def _mock_query_one(selector, _expect_type=None, **_kwargs):
             mapping = {
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
@@ -415,7 +394,17 @@ class TestContextTab(unittest.TestCase):
 
         widget.query_one = Mock(side_effect=_mock_query_one)
 
-        widget._update_token_usage(mock_agent)
+        from linhai.context_statistics import CacheInfo
+
+        cache_info = CacheInfo(cached_tokens=0, percentage=0.0, is_estimated=True)
+        stats = _build_context_statistics(
+            hard_limit=8000,
+            used_tokens=5000,
+            token_limit=None,
+            generation_count=0,
+            cache_info=cache_info,
+        )
+        widget._update_token_usage(stats)
 
         mock_pb_hard.update.assert_called_once_with(total=8000.0, progress=5000.0)
         mock_pb_model.update.assert_called_once_with(total=100.0, progress=100.0)
@@ -431,8 +420,6 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         from linhai.agent.main import Agent
         from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage
         from linhai.token_manager import TokenManager
-        from linhai.agent.message import AgentMessage, NotificationMessageEntry
-        from linhai.agent.orchestration import AgentContextOrchestration
 
         registry = Registry()
         widget = ContextTabWidget(registry)
@@ -537,7 +524,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         widget.update_display()
 
         expected_data = [
-            float(log2(widget._estimate_message_tokens(msg) + 1)) for msg in pinned
+            float(log2(estimate_message_tokens(msg) + 1)) for msg in pinned
         ]
         self.assertEqual(mock_pinned_sparkline.data, expected_data)
 
