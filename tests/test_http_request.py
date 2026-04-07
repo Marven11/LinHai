@@ -71,9 +71,10 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("body", parts)
             self.assertNotIn("body_file", parts)
 
-    async def test_http_request_success_large_body(self):
-        """测试成功响应，body大于5000字符"""
-        large_text = "A" * 6000  # 超过5000字符
+    @patch("linhai.machine_control.http_message.count_tokens", return_value=6000)
+    async def test_http_request_success_large_body(self, mock_tokens):
+        """测试成功响应，body超过5000 token阈值"""
+        large_text = "A" * 6000
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/html"}
@@ -101,7 +102,6 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("body_file", parts)
             self.assertNotIn("body", parts)
 
-            # 验证临时文件存在且内容正确
             filepath = parts.get("body_file")
             self.assertIsNotNone(filepath)
             self.assertTrue(os.path.exists(filepath))
@@ -109,7 +109,6 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
                 file_content = f.read()
             self.assertEqual(file_content, large_text)
 
-            # 清理临时文件
             if os.path.exists(filepath):
                 os.unlink(filepath)
 
@@ -244,7 +243,7 @@ class TestHttpRequest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(kwargs["url"], "http://example.com/api")
             self.assertEqual(kwargs["params"], params)
             self.assertEqual(kwargs["headers"].get("Authorization"), "Bearer token")
-            self.assertEqual(kwargs["data"], data)
+            self.assertEqual(kwargs["content"], data)
             self.assertEqual(kwargs["follow_redirects"], False)
             self.assertEqual(kwargs["timeout"], 30)
 

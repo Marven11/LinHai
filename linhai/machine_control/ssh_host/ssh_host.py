@@ -5,6 +5,7 @@ import json
 from typing import Dict, Optional, Any
 
 from linhai.registry import Registry
+from linhai.machine_control.http_message import HttpMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
 from ..trojan.ssh_transport import SshTrojanTransport
@@ -103,7 +104,7 @@ class SshMachineControl:
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> HttpMessage | ToolResultFailed:
         """SSH不支持http_request工具"""
         return ToolResultFailed(content="SSH机器不支持http_request工具")
 

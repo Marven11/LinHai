@@ -1,6 +1,7 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
 from typing import Dict, Optional, Protocol, Union, Any, Literal
+from linhai.machine_control.http_message import HttpMessage
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
@@ -541,7 +542,7 @@ class HostControl(Protocol):
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> ToolResultSuccess | ToolResultFailed: ...
+    ) -> HttpMessage | ToolResultFailed: ...
 
     async def change_directory(
         self, directory: str

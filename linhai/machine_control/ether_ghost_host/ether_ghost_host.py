@@ -1,11 +1,11 @@
 """EtherGhost机器控制类，用于通过webshell控制远程机器。"""
 
 import asyncio
-import tempfile
 import uuid
 from pathlib import Path
 from typing import Dict, Optional, Any, Union
 
+from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.agent.messages import FileContentMessage
 from ..main import HostControl
@@ -60,7 +60,7 @@ class EtherGhostMachineControl(HostControl):
         json_data: Optional[Dict[str, Any]] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> HttpMessage | ToolResultFailed:
         if self.session is None:
             return ToolResultFailed(content="Session未初始化")
 
@@ -85,11 +85,6 @@ class EtherGhostMachineControl(HostControl):
                 content=f"EtherGhost不支持以下参数: {', '.join(unsupported)}"
             )
 
-        if unsupported:
-            return ToolResultFailed(
-                content=f"EtherGhost不支持以下参数: {', '.join(unsupported)}"
-            )
-
         response = await self.session.send_http_request(
             url=url,
             method=method,
@@ -97,22 +92,14 @@ class EtherGhostMachineControl(HostControl):
             data=data,
             headers=headers,
         )
-        status_code = response["status_code"]
-        headers_dict = response["headers"]
-        body_bytes = response["body"]
 
-        try:
-            body_text = body_bytes.decode("utf-8")
-            headers_str = "; ".join([f"{k}: {v}" for k, v in headers_dict.items()])
-            content = f"<<status_code>>{status_code}<<status_code>>\n<<headers>>{headers_str}<<headers>>\n<<body>>{body_text}<<body>>"
-            return ToolResultSuccess(content=content)
-        except UnicodeDecodeError:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
-                f.write(body_bytes)
-                temp_path = f.name
-            headers_str = "; ".join([f"{k}: {v}" for k, v in headers_dict.items()])
-            content = f"<<status_code>>{status_code}<<status_code>>\n<<headers>>{headers_str}<<headers>>\n<<file_path>>{temp_path}<<file_path>>"
-            return ToolResultSuccess(content=content)
+        content_type = response["headers"].get("content-type", "")
+        return await build_http_message(
+            status_code=response["status_code"],
+            headers=response["headers"],
+            content=response["body"],
+            content_type=content_type.lower() if content_type else "",
+        )
 
     async def change_directory(
         self, directory: str

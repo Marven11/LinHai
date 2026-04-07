@@ -266,8 +266,13 @@ class TestHttpRequestTool(unittest.TestCase):
         call_args = mock_request.call_args
         self.assertEqual(call_args.kwargs["timeout"], 30)
 
+    @unittest.mock.patch(
+        "linhai.machine_control.http_message.count_tokens", return_value=6000
+    )
     @unittest.mock.patch("httpx.AsyncClient.request")
-    def test_http_request_large_text_body_saved_to_file(self, mock_request):
+    def test_http_request_large_text_body_saved_to_file(
+        self, mock_request, mock_tokens
+    ):
         mock_response = unittest.mock.Mock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "text/plain"}

@@ -5,6 +5,7 @@ import json
 import re
 import time
 from typing import Optional, Union
+from linhai.machine_control.http_message import HttpMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.llm import Message
 from linhai.agent.messages import FileContentMessage
@@ -60,7 +61,7 @@ class MasterHostControl:
         json_data: Optional[dict] = None,
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
-    ) -> ToolResultSuccess | ToolResultFailed:
+    ) -> HttpMessage | ToolResultFailed:
         """发送HTTP请求并返回响应内容或文件路径"""
         return await http_request(
             method,
