@@ -8,6 +8,8 @@ from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.registry import Registry
 from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info
 
+from conftest import retry_llm_call
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -47,9 +49,10 @@ def _build_system_prompt() -> str:
     return system_message.get_content()
 
 
-async def _get_tool_call_response(client: AsyncOpenAI, max_retries: int = 5) -> str:
+async def _get_tool_call_response(client: AsyncOpenAI) -> str:
     system_prompt = _build_system_prompt()
-    for _ in range(max_retries):
+
+    async def try_once():
         response = await client.chat.completions.create(
             model="openrouter/free",
             messages=[
@@ -60,9 +63,9 @@ async def _get_tool_call_response(client: AsyncOpenAI, max_retries: int = 5) -> 
         )
         content = response.choices[0].message.content or ""
         tool_calls, _ = extract_tool_calls_with_errors(content)
-        if tool_calls:
-            return content
-    pytest.fail("Free model did not generate json toolcall blocks after retries")
+        return content if tool_calls else None
+
+    return await retry_llm_call(try_once)
 
 
 async def test_llm_generates_tool_call(openrouter_client: AsyncOpenAI):
@@ -94,8 +97,8 @@ async def test_tool_result_processing(openrouter_client: AsyncOpenAI):
     )
 
     system_prompt = _build_system_prompt()
-    final = ""
-    for _ in range(5):
+
+    async def try_once():
         response2 = await openrouter_client.chat.completions.create(
             model="openrouter/free",
             messages=[
@@ -107,9 +110,9 @@ async def test_tool_result_processing(openrouter_client: AsyncOpenAI):
             max_tokens=200,
         )
         final = response2.choices[0].message.content or ""
-        if final:
-            break
-    assert len(final) > 0
+        return final if final else None
+
+    await retry_llm_call(try_once)
 
 
 def test_tool_call_message_assert_success():

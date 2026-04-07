@@ -12,7 +12,7 @@ from linhai.task_supervisor import PlainTaskSupervisor
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 
-from conftest import slim_system_message
+from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
@@ -99,11 +99,6 @@ async def _get_agent() -> Agent:
     return _create_test_agent(token)
 
 
-async def _run_with_retries(agent: Agent, max_rounds: int = 3):
-    for _ in range(max_rounds):
-        await agent.generate_response()
-
-
 def _get_last_assistant_message(agent: Agent) -> str:
     messages = agent.message_processor.get_messages()
     for msg in reversed(messages):
@@ -113,26 +108,34 @@ def _get_last_assistant_message(agent: Agent) -> str:
 
 
 async def test_pure_conversation():
-    agent = await _get_agent()
-    await agent.message_processor.add_new_message(UserMessage("Say hello in one word"))
-    await agent.generate_response()
-    response = _get_last_assistant_message(agent)
-    assert len(response) > 0
+    async def try_once():
+        agent = await _get_agent()
+        await agent.message_processor.add_new_message(
+            UserMessage("Say hello in one word")
+        )
+        await agent.generate_response()
+        response = _get_last_assistant_message(agent)
+        return response if response else None
+
+    await retry_llm_call(try_once)
 
 
 async def test_tool_calling_loop():
-    agent = await _get_agent()
-    await agent.message_processor.add_new_message(
-        UserMessage("Use the get_weather tool for Tokyo, then tell me the result")
-    )
-    for _ in range(3):
-        await agent.generate_response()
-    response = _get_last_assistant_message(agent)
-    assert len(response) > 0
+    async def try_once():
+        agent = await _get_agent()
+        await agent.message_processor.add_new_message(
+            UserMessage("Use the get_weather tool for Tokyo, then tell me the result")
+        )
+        for _ in range(3):
+            await agent.generate_response()
+        response = _get_last_assistant_message(agent)
+        return response if response else None
+
+    await retry_llm_call(try_once)
 
 
 async def test_context_management():
-    for _ in range(5):
+    async def try_once():
         agent = await _get_agent()
 
         await agent.message_processor.add_new_message(
@@ -146,6 +149,6 @@ async def test_context_management():
         await agent.generate_response()
 
         response = _get_last_assistant_message(agent)
-        if "BLUEBIRD" in response.upper():
-            return
-    pytest.fail("BLUEBIRD not found in response after 5 retries")
+        return response if "BLUEBIRD" in response.upper() else None
+
+    await retry_llm_call(try_once)

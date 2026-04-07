@@ -16,7 +16,7 @@ from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 from linhai.task_supervisor import PlainTaskSupervisor
 
-from conftest import slim_system_message
+from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
@@ -135,7 +135,8 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
 
 async def test_mcp_llm_coordination():
     token = _get_token()
-    for attempt in range(5):
+
+    async def try_once():
         agent, mcp_connector = await _create_mcp_agent(token)
 
         await agent.message_processor.add_new_message(
@@ -148,6 +149,6 @@ async def test_mcp_llm_coordination():
 
         response = _get_last_assistant_message(agent)
         await mcp_connector.disconnect_mcp_server("test")
-        if len(response) > 0 and "8" in response:
-            return
-    pytest.fail("mcp_llm_coordination failed after 5 retries")
+        return response if len(response) > 0 and "8" in response else None
+
+    await retry_llm_call(try_once)

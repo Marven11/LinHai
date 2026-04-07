@@ -1,5 +1,3 @@
-import asyncio
-
 import os
 
 import pytest
@@ -12,6 +10,8 @@ from linhai.llm import (
     AssistantMessage,
 )
 from linhai.registry import Registry
+
+from conftest import retry_llm_call
 
 pytestmark = pytest.mark.asyncio
 
@@ -60,7 +60,8 @@ async def test_basic_streaming_response():
     token = _get_token()
     llm, registry = _create_llm(token)
     system_msg = SystemMessage(registry)
-    for _ in range(3):
+
+    async def try_once():
         answer = await llm.answer_stream(
             [system_msg, UserMessage("Say hello in one word")]
         )
@@ -68,9 +69,9 @@ async def test_basic_streaming_response():
         async for t in answer:
             tokens.append(t)
         content = answer.get_current_content()
-        if len(content) > 0 and len(tokens) > 0:
-            return
-    pytest.fail("Free model returned empty response after retries")
+        return content if len(content) > 0 and len(tokens) > 0 else None
+
+    await retry_llm_call(try_once)
 
 
 async def _stream_and_collect(llm, history):
@@ -79,29 +80,29 @@ async def _stream_and_collect(llm, history):
     return answer
 
 
-async def _stream_with_retry(llm, history, max_retries: int = 5):
-    for i in range(max_retries):
+async def _stream_with_retry(llm, history):
+    async def try_once():
         answer = await _stream_and_collect(llm, history)
-        if len(answer.get_current_content()) > 0:
-            return answer
-        if i < max_retries - 1:
-            await asyncio.sleep(1)
-    pytest.fail("Free model returned empty response after retries")
+        return answer if len(answer.get_current_content()) > 0 else None
+
+    return await retry_llm_call(try_once)
 
 
 async def test_token_usage_reporting():
     token = _get_token()
     llm, registry = _create_llm(token)
     system_msg = SystemMessage(registry)
-    answer = await _stream_and_collect(llm, [system_msg, UserMessage("Say hi")])
-    for _ in range(3):
+
+    async def try_once():
+        answer = await _stream_and_collect(llm, [system_msg, UserMessage("Say hi")])
         usage = answer.get_token_usage()
         if usage is not None and usage.input_tokens > 0:
-            assert usage.output_tokens > 0
-            assert usage.total_tokens > 0
-            return
-        answer = await _stream_and_collect(llm, [system_msg, UserMessage("Say hi")])
-    pytest.fail("Free model did not return token usage after retries")
+            return usage
+        return None
+
+    usage = await retry_llm_call(try_once)
+    assert usage.output_tokens > 0
+    assert usage.total_tokens > 0
 
 
 async def test_multi_turn_conversation():
