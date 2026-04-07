@@ -27,6 +27,7 @@ def _build_context_statistics(
     messages_stats=None,
     pinned_stats=None,
     notification_stats=None,
+    notification_details=None,
 ):
     from linhai.context_statistics import (
         MessageGroupStatistics,
@@ -52,6 +53,9 @@ def _build_context_statistics(
         messages=messages_stats or empty_stats,
         pinned_messages=pinned_stats or empty_stats,
         notification_messages=notification_stats or empty_stats,
+        notification_details=(
+            notification_details if notification_details is not None else []
+        ),
         large_message_count=large_message_count,
         hard_limit=hard_limit,
         used_tokens=used_tokens,
@@ -256,6 +260,7 @@ class TestContextTab(unittest.TestCase):
         mock_pinned_sparkline = Mock(spec=Sparkline)
         mock_pinned_text = Mock(spec=Static)
         mock_notif_text = Mock(spec=Static)
+        mock_notif_list_text = Mock(spec=Static)
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
@@ -270,6 +275,7 @@ class TestContextTab(unittest.TestCase):
                 "#pinned-stats-sparkline": mock_pinned_sparkline,
                 "#pinned-stats-text": mock_pinned_text,
                 "#notification-stats-text": mock_notif_text,
+                "#notification-list-text": mock_notif_list_text,
                 "#pb-hard-limit": mock_pb_hard,
                 "#pb-model-limit": mock_pb_model,
                 "#token-stats-text": mock_token_stats_text,
@@ -472,6 +478,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_pinned_sparkline = Mock(spec=Sparkline)
         mock_pinned_text = Mock(spec=Static)
         mock_notif_text = Mock(spec=Static)
+        mock_notif_list_text = Mock(spec=Static)
         mock_pb_hard = Mock(spec=ProgressBar)
         mock_pb_model = Mock(spec=ProgressBar)
         mock_token_stats_text = Mock(spec=Static)
@@ -485,6 +492,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             "#pinned-stats-sparkline": mock_pinned_sparkline,
             "#pinned-stats-text": mock_pinned_text,
             "#notification-stats-text": mock_notif_text,
+            "#notification-list-text": mock_notif_list_text,
             "#pb-hard-limit": mock_pb_hard,
             "#pb-model-limit": mock_pb_model,
             "#token-stats-text": mock_token_stats_text,
@@ -501,24 +509,28 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             mock_pinned_sparkline,
             mock_pinned_text,
             mock_notif_text,
+            mock_notif_list_text,
         )
 
     def test_pinned_empty(self):
-        widget, _, mock_pinned_text, _ = self._create_widget_with_mocks()
+        widget, _, mock_pinned_text, _, _ = self._create_widget_with_mocks()
         widget.update_display()
         mock_pinned_text.update.assert_called_with("无置顶消息")
 
     def test_notification_empty(self):
-        widget, _, _, mock_notif_text = self._create_widget_with_mocks()
+        widget, _, _, mock_notif_text, mock_notif_list_text = (
+            self._create_widget_with_mocks()
+        )
         widget.update_display()
         mock_notif_text.update.assert_called_with("无通知消息")
+        mock_notif_list_text.update.assert_called_with("无通知消息")
 
     def test_pinned_with_messages(self):
         from linhai.llm import UserMessage
         from math import log2
 
         pinned = [UserMessage(message="系统指令1"), UserMessage(message="系统指令2")]
-        widget, mock_pinned_sparkline, mock_pinned_text, _ = (
+        widget, mock_pinned_sparkline, mock_pinned_text, _, _ = (
             self._create_widget_with_mocks(pinned_messages=pinned)
         )
         widget.update_display()
@@ -545,7 +557,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
             "a": NotificationMessageEntry(source="a", message=msg1, sort_value=1),
             "b": NotificationMessageEntry(source="b", message=msg2, sort_value=2),
         }
-        widget, _, _, mock_notif_text = self._create_widget_with_mocks(
+        widget, _, _, mock_notif_text, _ = self._create_widget_with_mocks(
             notification_messages=notifications
         )
         widget.update_display()
@@ -555,6 +567,51 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertIn("平均长度", text_arg)
         self.assertNotIn("消息平均Token数", text_arg)
         self.assertIn("最长消息", text_arg)
+
+    def test_notification_details_display(self):
+        from linhai.llm import UserMessage
+        from linhai.agent.messages import RuntimeMessage
+        from linhai.agent.message import NotificationMessageEntry
+
+        msg1 = RuntimeMessage("runtime内容")
+        msg2 = UserMessage(message="通知内容")
+        notifications = {
+            "a": NotificationMessageEntry(
+                source="source_a", message=msg1, sort_value=1
+            ),
+            "b": NotificationMessageEntry(
+                source="source_b", message=msg2, sort_value=2
+            ),
+        }
+        widget, _, _, _, mock_notif_list_text = self._create_widget_with_mocks(
+            notification_messages=notifications
+        )
+        widget.update_display()
+
+        text_arg = mock_notif_list_text.update.call_args[0][0]
+        self.assertIn("[source_a]", text_arg)
+        self.assertIn("runtime内容", text_arg)
+        self.assertNotIn("<<runtime>>", text_arg)
+        self.assertIn("[source_b]", text_arg)
+        self.assertIn("通知内容", text_arg)
+
+    def test_notification_details_truncation(self):
+        from linhai.llm import UserMessage
+        from linhai.agent.message import NotificationMessageEntry
+
+        long_content = "你好" * 200
+        msg = UserMessage(message=long_content)
+        notifications = {
+            "a": NotificationMessageEntry(source="long", message=msg, sort_value=1),
+        }
+        widget, _, _, _, mock_notif_list_text = self._create_widget_with_mocks(
+            notification_messages=notifications
+        )
+        widget.update_display()
+
+        text_arg = mock_notif_list_text.update.call_args[0][0]
+        self.assertIn("...", text_arg)
+        self.assertNotIn(long_content, text_arg)
 
 
 if __name__ == "__main__":

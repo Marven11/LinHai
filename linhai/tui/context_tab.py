@@ -8,6 +8,7 @@ from linhai.context_statistics import (
     ContextStatistics,
     LongestMessageInfo,
     compute_context_statistics,
+    compute_notification_details,
 )
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
@@ -71,6 +72,9 @@ class ContextTabWidget(Static):
     ContextTabWidget #cache-stats-text {
         height: auto;
     }
+    ContextTabWidget #notification-list-text {
+        height: auto;
+    }
     """
 
     def __init__(self, registry: Registry) -> None:
@@ -91,6 +95,12 @@ class ContextTabWidget(Static):
                 yield Static(id="pinned-stats-text")
                 yield Label("通知消息", classes="title")
                 yield Static(id="notification-stats-text")
+            with Collapsible(
+                title="通知消息列表",
+                id="notification-list-collapsible",
+                collapsed=True,
+            ):
+                yield Static(id="notification-list-text")
             with Collapsible(
                 title="上下文Token用量", id="token-usage-collapsible", collapsed=False
             ):
@@ -158,6 +168,18 @@ class ContextTabWidget(Static):
             + "\n"
             + _format_longest_message(notif["longest"])
         )
+
+    def _update_notification_details(self, stats: ContextStatistics) -> None:
+        notif_list_text = self.query_one("#notification-list-text", Static)
+        details = stats["notification_details"]
+        if not details:
+            notif_list_text.update("无通知消息")
+            return
+        lines: list[str] = []
+        for item in details:
+            lines.append(f"[{item['source']}] ({item['token_count']} token)")
+            lines.append(f"  {item['display_content']}")
+        notif_list_text.update("\n".join(lines))
 
     def _update_token_usage(self, stats: ContextStatistics) -> None:
         pb_hard = self.query_one("#pb-hard-limit", ProgressBar)
@@ -264,10 +286,15 @@ class ContextTabWidget(Static):
             generation_count = token_manager.generation_count
             cumulative_token_usage = token_manager.cumulative_token_usage
 
+        notification_details = compute_notification_details(
+            agent_message.notification_messages
+        )
+
         stats = compute_context_statistics(
             messages=messages,
             pinned_messages=pinned_messages,
             notification_entries=notification_entries,
+            notification_details=notification_details,
             large_message_count=len(orchestration.large_messages),
             threshold_info=threshold_info,
             token_limit=token_limit,
@@ -280,5 +307,6 @@ class ContextTabWidget(Static):
         self._update_message_statistics(stats)
         self._update_pinned_message_statistics(stats)
         self._update_notification_message_statistics(stats)
+        self._update_notification_details(stats)
         self._update_token_usage(stats)
         self._update_cache_status(stats)

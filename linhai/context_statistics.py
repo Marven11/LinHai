@@ -14,7 +14,8 @@ from linhai.llm import (
 from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.type_hints import CumulativeTokenUsage, ThresholdInfo
-from linhai.utils.tokenizer import count_tokens
+from linhai.agent.message import NotificationMessageEntry
+from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
 
 
 class MessageTypeCounts(TypedDict):
@@ -54,10 +55,17 @@ class CumulativeCacheStats(TypedDict):
     avg_cache_creation: float
 
 
+class NotificationMessageDisplay(TypedDict):
+    source: str
+    display_content: str
+    token_count: int
+
+
 class ContextStatistics(TypedDict):
     messages: MessageGroupStatistics
     pinned_messages: MessageGroupStatistics
     notification_messages: MessageGroupStatistics
+    notification_details: list[NotificationMessageDisplay]
     large_message_count: int
     hard_limit: int | None
     used_tokens: int | None
@@ -196,10 +204,49 @@ def compute_cumulative_cache_stats(
     )
 
 
+NOTIFICATION_DISPLAY_TOKEN_LIMIT = 100
+
+
+def _truncate_to_token_limit(content: str, max_tokens: int) -> str:
+    if count_tokens(content) <= max_tokens:
+        return content
+    tokenizer = get_cl100k_base_tokenizer()
+    tokens = tokenizer.encode(content, disallowed_special=())
+    return tokenizer.decode(tokens[:max_tokens]) + "..."
+
+
+def compute_notification_details(
+    notification_messages: dict[str, NotificationMessageEntry],
+) -> list[NotificationMessageDisplay]:
+    sorted_entries = sorted(
+        notification_messages.values(), key=lambda x: x["sort_value"]
+    )
+    result: list[NotificationMessageDisplay] = []
+    for entry in sorted_entries:
+        msg = entry["message"]
+        content = msg.message if isinstance(msg, RuntimeMessage) else msg.get_content()
+        if content is None:
+            content = ""
+        token_count = count_tokens(content)
+        if token_count > NOTIFICATION_DISPLAY_TOKEN_LIMIT:
+            content = _truncate_to_token_limit(
+                content, NOTIFICATION_DISPLAY_TOKEN_LIMIT
+            )
+        result.append(
+            NotificationMessageDisplay(
+                source=entry["source"],
+                display_content=content,
+                token_count=token_count,
+            )
+        )
+    return result
+
+
 def compute_context_statistics(
     messages: list[Message],
     pinned_messages: list[Message],
     notification_entries: list[Message],
+    notification_details: list[NotificationMessageDisplay],
     large_message_count: int,
     threshold_info: ThresholdInfo | None,
     token_limit: int | None,
@@ -240,6 +287,7 @@ def compute_context_statistics(
         messages=msg_stats,
         pinned_messages=pinned_stats,
         notification_messages=notif_stats,
+        notification_details=notification_details,
         large_message_count=large_message_count,
         hard_limit=hard_limit,
         used_tokens=used_tokens,
