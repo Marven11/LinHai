@@ -42,42 +42,62 @@ class TestTelegramPlugin(unittest.TestCase):
         self.assertFalse(plugin._running)
         self.assertIsNotNone(plugin.send_queue)
 
-    def test_after_segment_finished_normal(self):
+    def test_on_segment_start_normal(self):
         """测试处理normal segment，将消息加入队列。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
 
-        segment = {"segment_type": "normal", "content": "test content"}
-        asyncio.run(plugin.after_segment_finished(None, segment))
+        segment = {
+            "segment_type": "normal",
+            "content": "test content",
+            "is_finished": False,
+        }
+        asyncio.run(plugin._on_segment_start(None, segment))
 
         self.assertEqual(len(plugin.send_queue), 1)
-        self.assertEqual(
-            plugin.send_queue[0], {"segment_type": "normal", "content": "test content"}
-        )
+        self.assertIs(plugin.send_queue[0], segment)
 
-    def test_after_segment_finished_reasoning(self):
+    def test_on_segment_start_reasoning(self):
         """测试不处理reasoning segment。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
 
-        segment = {"segment_type": "reasoning", "content": "test content"}
-        asyncio.run(plugin.after_segment_finished(None, segment))
+        segment = {
+            "segment_type": "reasoning",
+            "content": "test content",
+            "is_finished": False,
+        }
+        asyncio.run(plugin._on_segment_start(None, segment))
 
         self.assertEqual(len(plugin.send_queue), 0)
 
-    def test_after_segment_finished_duplicate(self):
-        """测试相同内容会被加入队列两次。"""
+    def test_on_segment_start_empty_content(self):
+        """测试空内容的segment仍会加入队列（内容后续会增长）。"""
         plugin = TelegramPlugin(self.registry, self.telegram_config)
 
-        segment = {"segment_type": "normal", "content": "test content"}
-        asyncio.run(plugin.after_segment_finished(None, segment))
-        asyncio.run(plugin.after_segment_finished(None, segment))
+        segment = {"segment_type": "normal", "content": "   ", "is_finished": False}
+        asyncio.run(plugin._on_segment_start(None, segment))
+
+        self.assertEqual(len(plugin.send_queue), 1)
+
+    def test_on_segment_start_duplicate(self):
+        """测试相同内容会被加入队列两次（每个segment独立）。"""
+        plugin = TelegramPlugin(self.registry, self.telegram_config)
+
+        segment1 = {
+            "segment_type": "normal",
+            "content": "test content",
+            "is_finished": False,
+        }
+        segment2 = {
+            "segment_type": "normal",
+            "content": "test content",
+            "is_finished": False,
+        }
+        asyncio.run(plugin._on_segment_start(None, segment1))
+        asyncio.run(plugin._on_segment_start(None, segment2))
 
         self.assertEqual(len(plugin.send_queue), 2)
-        self.assertEqual(
-            plugin.send_queue[0], {"segment_type": "normal", "content": "test content"}
-        )
-        self.assertEqual(
-            plugin.send_queue[1], {"segment_type": "normal", "content": "test content"}
-        )
+        self.assertIs(plugin.send_queue[0], segment1)
+        self.assertIs(plugin.send_queue[1], segment2)
 
     def test_send_loop_with_no_bot(self):
         """测试bot为None时的行为（暂不实现，因为_send_loop是内部方法）。"""

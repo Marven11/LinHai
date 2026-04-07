@@ -1,11 +1,22 @@
-"""Telegram bot插件，监听Agent消息并通过telegram发送，接收telegram用户消息。"""
+"""Telegram bot插件，监听Agent消息并通过telegram发送，接收telegram用户消息。
+
+流式输出使用edit_message_text实现，而非draft API。
+
+draft API的问题：send_message_draft会为每次调用创建独立的临时消息，
+导致用户在聊天中看到多条重复消息。Telegram官方文档未说明draft API的正确用法，
+实际使用中draft消息和最终send_message的消息会同时存在，造成消息重复。
+
+解决方案：在segment开始生成时（after_segment回调），立即通过send_message发送初始消息，
+然后通过edit_message_text反复编辑同一条消息来更新内容，实现流式输出效果。
+这样始终只有一条消息，不会重复。
+"""
 
 from typing import TYPE_CHECKING
-import time
 import asyncio
 from collections import deque
-from telegram import Update
+from telegram import Update, Message
 from telegram.ext import Application, MessageHandler, filters
+from telegram.error import RetryAfter, BadRequest
 
 if TYPE_CHECKING:
     from linhai.agent import Agent as AgentType
@@ -20,7 +31,7 @@ from linhai.plugin.message_checkers import Plugin
 from linhai.telegram import TelegramMessage, load_sticker
 from linhai.utils.common import UiNotice
 
-DRAFT_INTERVAL = 1
+EDIT_INTERVAL = 2
 
 
 class TelegramPlugin(Plugin):
@@ -34,60 +45,119 @@ class TelegramPlugin(Plugin):
         self._running = False
         self.send_queue: deque[Segment] = deque()
 
-    async def after_segment_finished(self, _parsed_answer, segment: Segment):
-        """在segment完成后将消息加入发送队列。"""
+    async def _on_segment_start(self, _parsed_answer, segment: Segment):
+        """在segment开始生成时将消息加入发送队列。
+
+        监听after_segment事件而非after_segment_finished。
+        after_segment在segment创建时触发（parsed_message.py:_process_token），
+        此时segment刚进入生成状态，is_finished为False，content会随token到达持续增长。
+        segment对象以引用方式存入队列，_process_token直接修改segment["content"]，
+        队列中的同一对象会自动获得最新内容。
+        """
         if segment["segment_type"] != "normal":
             return
-
         self.send_queue.append(segment)
 
+    async def _edit_with_retry(self, chat_id: int, message_id: int, text: str) -> bool:
+        """编辑telegram消息，处理429限流和消息未修改的情况。
+
+        使用asyncio.gather(..., return_exceptions=True)捕获异常，
+        避免try/except（项目规范禁止EAFP风格）。
+        遇到RetryAfter（429限流）时等待指定时间后重试一次。
+        遇到BadRequest（如消息内容未变化）时返回False表示跳过。
+        """
+        assert self._bot is not None
+        result = await asyncio.gather(
+            self._bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=text,
+            ),
+            return_exceptions=True,
+        )
+        if isinstance(result[0], RetryAfter):
+            retry_after = result[0].retry_after
+            if not isinstance(retry_after, int):
+                retry_after = int(retry_after.total_seconds())
+            await asyncio.sleep(retry_after)
+            retry_result = await asyncio.gather(
+                self._bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=text,
+                ),
+                return_exceptions=True,
+            )
+            return not isinstance(retry_result[0], Exception)
+        if isinstance(result[0], BadRequest):
+            return False
+        return not isinstance(result[0], Exception)
+
     async def _send_loop(self):
-        """发送循环，从队列中获取消息并发送。"""
+        """发送循环，通过edit_message_text实现流式输出。
+
+        从队列获取segment后，等待内容积累，发送初始消息，
+        然后循环编辑直到segment完成，最后做最终编辑移除WAITING_USER_MARKER。
+        初始发送失败时使用指数退避重试。
+        """
         while self._running:
             if not self.send_queue:
                 await asyncio.sleep(0.05)
                 continue
 
             segment = self.send_queue.popleft()
-            draft_id = int(time.time() * 1000)
             assert self._bot is not None
+            chat_id = int(self.config["default_chat_id"])
 
-            if len(segment["content"]) < 10:
-                await asyncio.sleep(DRAFT_INTERVAL)
+            while not segment["content"].strip() and not segment["is_finished"]:
+                await asyncio.sleep(0.1)
 
-            while not segment["is_finished"]:
-                start_time = time.time()
-                result = await asyncio.gather(
-                    self._bot.send_message_draft(
-                        chat_id=int(self.config["default_chat_id"]),
-                        draft_id=draft_id,
-                        text=segment["content"],
-                    ),
-                    return_exceptions=True,
-                )
-                duration = time.time() - start_time
-                if DRAFT_INTERVAL - duration > 0:
-                    await asyncio.sleep(duration)
-
-            final_content = segment["content"].removesuffix(WAITING_USER_MARKER).strip()
-
-            await asyncio.sleep(DRAFT_INTERVAL)
+            if not segment["content"].strip():
+                continue
 
             send_delay = 1
-
+            message_id: int | None = None
             while self._running:
                 result = await asyncio.gather(
-                    self._bot.send_message(
-                        chat_id=int(self.config["default_chat_id"]),
-                        text=final_content,
-                    ),
+                    self._bot.send_message(chat_id=chat_id, text=segment["content"]),
                     return_exceptions=True,
                 )
-
-                if not isinstance(result[0], Exception) and result[0]:
+                if isinstance(result[0], Exception) and not isinstance(
+                    result[0], RetryAfter
+                ):
+                    await asyncio.sleep(send_delay)
+                    send_delay = min(send_delay * 1.5, 15)
+                    continue
+                if isinstance(result[0], RetryAfter):
+                    retry_after = result[0].retry_after
+                    if not isinstance(retry_after, int):
+                        retry_after = int(retry_after.total_seconds())
+                    await asyncio.sleep(retry_after)
+                    continue
+                if isinstance(result[0], Message):
+                    message_id = result[0].message_id
                     break
-                await asyncio.sleep(send_delay)
-                send_delay = min(send_delay * 1.5, 15)
+
+            if message_id is None:
+                continue
+
+            last_sent_content = segment["content"]
+
+            while self._running and not segment["is_finished"]:
+                await asyncio.sleep(EDIT_INTERVAL)
+                current_content = segment["content"]
+                if current_content == last_sent_content:
+                    continue
+
+                success = await self._edit_with_retry(
+                    chat_id, message_id, current_content
+                )
+                if success:
+                    last_sent_content = current_content
+
+            final_content = segment["content"].removesuffix(WAITING_USER_MARKER).strip()
+            if final_content and final_content != last_sent_content:
+                await self._edit_with_retry(chat_id, message_id, final_content)
 
     async def _handle_telegram_message(self, update: Update, _context):
         """处理来自telegram的消息。"""
@@ -212,5 +282,5 @@ class TelegramPlugin(Plugin):
 
     def register(self, lifecycle: "Lifecycle") -> None:
         """注册到Lifecycle。"""
-        lifecycle.after_segment.register(self.after_segment_finished)
+        lifecycle.after_segment.register(self._on_segment_start)
         lifecycle.before_agent_loop.register(self.before_agent_loop)
