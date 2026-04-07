@@ -51,8 +51,10 @@ class ParsedAnswer:
             await self.segment_queue.put(self.current_segment)
             await self.lifecycle.after_segment.trigger(self, self.current_segment)
         elif self.current_segment["segment_type"] == token_type:
-            # 类型相同，更新内容（队列中的segment是同一对象引用，会自动更新）
             self.current_segment["content"] += content
+            await self.lifecycle.after_segment_update.trigger(
+                self, self.current_segment
+            )
         else:
             # 类型变化：直接创建新segment并放入队列（丢掉前一个）
             self.current_segment["is_finished"] = True

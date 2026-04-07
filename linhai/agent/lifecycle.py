@@ -62,6 +62,11 @@ AfterSegmentCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+AfterSegmentUpdateCallback: TypeAlias = Callable[
+    ["ParsedAnswer", "Segment"],
+    Awaitable[None],
+]
+
 AfterParsingCallback: TypeAlias = Callable[
     ["ParsedAnswer"],
     Awaitable[None],
@@ -129,6 +134,7 @@ class Lifecycle:
         self.after_token_generation = InterruptSlot()
         self.before_parsing = BroadcastSlot()
         self.after_segment = BroadcastSlot()
+        self.after_segment_update = BroadcastSlot()
         self.after_parsing = BroadcastSlot()
         self.after_new_parsed_answer = BroadcastSlot()
         self.after_segment_finished = BroadcastSlot()

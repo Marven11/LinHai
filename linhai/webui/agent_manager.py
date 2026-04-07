@@ -14,6 +14,7 @@ from linhai.agent.create import (
 )
 from linhai.agent.main import Agent
 from linhai.config import load_config, get_default_config_path
+from linhai.llm import UserMessage, Message, AssistantMessage, SystemMessage
 
 
 class AgentSession:
@@ -36,10 +37,44 @@ class AgentSession:
         """获取Agent当前状态。"""
         return self.agent.state_machine.state
 
+    @property
+    def registry(self) -> Registry:
+        return self.agent.registry
+
     def get_current_llm(self) -> Optional[str]:
-        """获取当前使用的LLM名称。"""
         _, llm_instance = self.agent.get_current_llm_info()
         return llm_instance.get_name()
+
+    async def send_message(self, content: str) -> None:
+        await self.registry.send("user_message", UserMessage(content))
+
+    def get_messages(self) -> list[dict]:
+        result: list[dict] = []
+        for msg in self.agent.message_processor.get_messages():
+            role = self._get_message_role(msg)
+            if role is None:
+                continue
+            content = self._get_message_content(msg)
+            if content is None:
+                continue
+            result.append({"role": role, "content": content})
+        return result
+
+    @staticmethod
+    def _get_message_role(msg: Message) -> Optional[str]:
+        if isinstance(msg, SystemMessage):
+            return "system"
+        if isinstance(msg, UserMessage):
+            return "user"
+        if isinstance(msg, AssistantMessage):
+            return "assistant"
+        return None
+
+    @staticmethod
+    def _get_message_content(msg: Message) -> Optional[str]:
+        if isinstance(msg, (UserMessage, AssistantMessage)):
+            return msg.message
+        return msg.get_content()
 
     async def stop(self) -> None:
         """停止Agent并清理资源。"""
@@ -115,8 +150,10 @@ class AgentManager:
 
         return session
 
+    def get_registry(self, agent_id: str) -> Optional[Registry]:
+        return self._registries.get(agent_id)
+
     def get_agent(self, agent_id: str) -> Optional[AgentSession]:
-        """获取指定ID的AgentSession。"""
         return self.sessions.get(agent_id)
 
     def list_agents(self) -> list[AgentSession]:

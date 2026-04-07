@@ -157,6 +157,106 @@ class TestAgentSessionStop(unittest.IsolatedAsyncioTestCase):
         mock_supervisor.cancel.assert_called_once_with("task-1")
 
 
+class TestAgentSessionGetMessages(unittest.TestCase):
+    def test_get_messages_filters_unknown_roles(self):
+        mock_agent = MagicMock()
+        mock_msg = MagicMock()
+        mock_msg.get_content.return_value = "hello"
+        mock_agent.message_processor.get_messages.return_value = [mock_msg]
+        mock_manager = MagicMock()
+        session = AgentSession(
+            agent_id="test-id",
+            agent=mock_agent,
+            task_name="task-1",
+            manager=mock_manager,
+        )
+        result = session.get_messages()
+        self.assertEqual(result, [])
+
+    def test_get_messages_includes_user_messages(self):
+        from linhai.llm import UserMessage
+
+        mock_agent = MagicMock()
+        user_msg = UserMessage("hello")
+        mock_agent.message_processor.get_messages.return_value = [user_msg]
+        mock_manager = MagicMock()
+        session = AgentSession(
+            agent_id="test-id",
+            agent=mock_agent,
+            task_name="task-1",
+            manager=mock_manager,
+        )
+        result = session.get_messages()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["role"], "user")
+        self.assertEqual(result[0]["content"], "hello")
+
+    def test_registry_property(self):
+        mock_registry = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.registry = mock_registry
+        mock_manager = MagicMock()
+        session = AgentSession(
+            agent_id="test-id",
+            agent=mock_agent,
+            task_name="task-1",
+            manager=mock_manager,
+        )
+        self.assertEqual(session.registry, mock_registry)
+
+
+class TestAgentSessionSendMessage(unittest.IsolatedAsyncioTestCase):
+    async def test_send_message(self):
+        mock_registry = MagicMock()
+        mock_registry.send = AsyncMock()
+        mock_agent = MagicMock()
+        mock_agent.registry = mock_registry
+        mock_manager = MagicMock()
+        session = AgentSession(
+            agent_id="test-id",
+            agent=mock_agent,
+            task_name="task-1",
+            manager=mock_manager,
+        )
+        await session.send_message("hello")
+        mock_registry.send.assert_called_once()
+        args = mock_registry.send.call_args
+        self.assertEqual(args[0][0], "user_message")
+
+
+class TestNewSchemas(unittest.TestCase):
+    def test_message_request(self):
+        from linhai.webui.schemas import MessageRequest
+
+        req = MessageRequest(content="hello")
+        self.assertEqual(req.content, "hello")
+
+    def test_message_item(self):
+        from linhai.webui.schemas import MessageItem
+
+        item = MessageItem(role="user", content="hello")
+        self.assertEqual(item.role, "user")
+
+    def test_ws_segment_event(self):
+        from linhai.webui.schemas import WsSegmentEvent
+
+        event = WsSegmentEvent(segment_type="normal", content="hi", is_finished=False)
+        self.assertEqual(event.type, "segment")
+        self.assertEqual(event.segment_type, "normal")
+
+    def test_ws_state_change_event(self):
+        from linhai.webui.schemas import WsStateChangeEvent
+
+        event = WsStateChangeEvent(old_state="working", new_state="waiting_user")
+        self.assertEqual(event.type, "state_change")
+
+    def test_ws_ui_log_event(self):
+        from linhai.webui.schemas import WsUiLogEvent
+
+        event = WsUiLogEvent(level="INFO", content="test")
+        self.assertEqual(event.type, "ui_log")
+
+
 class TestPlainTaskSupervisor(unittest.IsolatedAsyncioTestCase):
     async def test_create_and_wait_task(self):
         supervisor = PlainTaskSupervisor()
