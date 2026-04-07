@@ -11,8 +11,11 @@ import platform
 import asyncio
 import tempfile
 import shutil
+import http.client
+import urllib.parse
+import ssl
 from pathlib import Path
-from typing import TypedDict, Dict, Union, Set
+from typing import Any, TypedDict, Dict, Union, Set
 from asyncio import Semaphore
 
 
@@ -517,6 +520,130 @@ class Trojan:
         else:
             return {"error": f"路径不存在: {path}"}
         return {"message": f"已删除: {path}"}
+
+    async def http_request(
+        self,
+        method: str,
+        url: str,
+        params: dict | None = None,
+        headers: dict | None = None,
+        data: str | None = None,
+        follow_redirects: bool = False,
+        timeout: int = 60,
+        auth: list[str] | None = None,
+        cookies: dict | None = None,
+        json_data: dict | None = None,
+        proxy: str | None = None,
+        verify: bool | None = None,
+    ):
+        if params:
+            query = urllib.parse.urlencode(params)
+            parsed = urllib.parse.urlparse(url)
+            new_query = f"{parsed.query}&{query}" if parsed.query else query
+            url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+        req_headers: dict[str, str] = dict(headers) if headers else {}
+        req_headers.setdefault(
+            "User-Agent", "Mozilla/5.0 (compatible; LinHai/1.0; Chrome-like)"
+        )
+
+        if json_data is not None:
+            body: bytes | None = json.dumps(json_data).encode()
+            req_headers.setdefault("Content-Type", "application/json")
+        elif data is not None:
+            body = data.encode() if isinstance(data, str) else data
+        else:
+            body = None
+
+        if auth:
+            cred = base64.b64encode(f"{auth[0]}:{auth[1]}".encode()).decode()
+            req_headers["Authorization"] = f"Basic {cred}"
+
+        if cookies:
+            req_headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
+
+        ctx = ssl.create_default_context()
+        if verify is False:
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+        max_redirects = 10 if follow_redirects else 0
+
+        def _do_request():
+            redirects_left = max_redirects
+            current = url
+            cur_method = method.upper()
+            cur_body = body
+
+            while True:
+                p = urllib.parse.urlparse(current)
+                host = p.hostname or "localhost"
+                port = p.port
+
+                if proxy:
+                    pp = urllib.parse.urlparse(
+                        "//" + proxy if "://" not in proxy else proxy
+                    )
+                    p_host = pp.hostname or "localhost"
+                    p_port = pp.port or 8080
+                    if p.scheme == "https":
+                        conn = http.client.HTTPSConnection(
+                            p_host, p_port, context=ctx, timeout=timeout
+                        )
+                        conn.set_tunnel(host, port)
+                    else:
+                        conn = http.client.HTTPConnection(
+                            p_host, p_port, timeout=timeout
+                        )
+                elif p.scheme == "https":
+                    conn = http.client.HTTPSConnection(
+                        host, port, context=ctx, timeout=timeout
+                    )
+                else:
+                    conn = http.client.HTTPConnection(host, port, timeout=timeout)
+
+                req_path = p.path or "/"
+                if p.query:
+                    req_path = f"{req_path}?{p.query}"
+
+                conn.request(cur_method, req_path, body=cur_body, headers=req_headers)
+                response = conn.getresponse()
+                content = response.read()
+                status = response.status
+                resp_hdrs = dict(response.getheaders())
+                ct = response.getheader("Content-Type", "")
+                conn.close()
+
+                if not follow_redirects or status not in (301, 302, 303, 307, 308):
+                    return status, resp_hdrs, content, ct
+
+                if redirects_left <= 0:
+                    return status, resp_hdrs, content, ct
+
+                redirects_left -= 1
+                location = response.getheader("Location", "")
+                if not location:
+                    return status, resp_hdrs, content, ct
+
+                current = urllib.parse.urljoin(current, location)
+                if status == 303:
+                    cur_method = "GET"
+                    cur_body = None
+
+        status_code, resp_headers, content, content_type = await asyncio.to_thread(
+            _do_request
+        )
+
+        return {
+            "message": json.dumps(
+                {
+                    "status_code": status_code,
+                    "headers": resp_headers,
+                    "content_base64": base64.b64encode(content).decode(),
+                    "content_type": content_type.lower() if content_type else "",
+                }
+            )
+        }
 
     def _remove_task(self, t):
         self.active_tasks.remove(t)

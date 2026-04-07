@@ -295,15 +295,36 @@ class TestSshTerminal(unittest.TestCase):
 
         self.loop.run_until_complete(test())
 
-    def test_http_request_not_supported(self):
-        """测试SSH机器不支持http_request工具"""
+    def test_http_request_delegates_to_call_tool(self):
+        """测试SSH机器通过call_tool调用远程http_request"""
+        import base64
+        import json
 
         async def test():
+            self.mock_call_tool.return_value = ToolResultSuccess(
+                content=json.dumps(
+                    {
+                        "status_code": 200,
+                        "headers": {"content-type": "text/html"},
+                        "content_base64": base64.b64encode(b"hello").decode(),
+                        "content_type": "text/html",
+                    }
+                )
+            )
+
             result = await self.ssh_control.http_request(
                 method="GET", url="http://example.com"
             )
-            self.assertIsInstance(result, ToolResultFailed)
-            self.assertIn("SSH机器不支持", result.content)
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.mock_call_tool.assert_called_once_with(
+                "http_request",
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "follow_redirects": False,
+                    "timeout": 60,
+                },
+            )
 
         self.loop.run_until_complete(test())
 

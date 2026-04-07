@@ -5,7 +5,7 @@ import json
 from typing import Dict, Optional, Any
 
 from linhai.registry import Registry
-from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
 from ..trojan.ssh_transport import SshTrojanTransport
@@ -105,8 +105,44 @@ class SshMachineControl:
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
     ) -> HttpMessage | ToolResultFailed:
-        """SSH不支持http_request工具"""
-        return ToolResultFailed(content="SSH机器不支持http_request工具")
+        import base64 as _base64
+
+        args: Dict[str, Any] = {
+            "method": method,
+            "url": url,
+            "follow_redirects": follow_redirects,
+            "timeout": timeout,
+        }
+        if params is not None:
+            args["params"] = params
+        if headers is not None:
+            args["headers"] = headers
+        if data is not None:
+            args["data"] = data
+        if auth is not None:
+            args["auth"] = list(auth)
+        if cookies is not None:
+            args["cookies"] = cookies
+        if json_data is not None:
+            args["json_data"] = json_data
+        if proxy is not None:
+            args["proxy"] = proxy
+        if verify is not None:
+            args["verify"] = verify
+
+        result = await self.call_tool("http_request", args)
+        if isinstance(result, ToolResultFailed):
+            return result
+
+        resp_data = json.loads(result.content)
+        content_bytes = _base64.b64decode(resp_data["content_base64"])
+
+        return await build_http_message(
+            status_code=resp_data["status_code"],
+            headers=resp_data["headers"],
+            content=content_bytes,
+            content_type=resp_data.get("content_type", ""),
+        )
 
     async def process_create(
         self, argv: list[str], wait_second: Optional[float] = None
