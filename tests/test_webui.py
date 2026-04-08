@@ -283,3 +283,160 @@ class TestPlainTaskSupervisor(unittest.IsolatedAsyncioTestCase):
         supervisor = PlainTaskSupervisor()
         with self.assertRaisesRegex(RuntimeError, "Task .* not found"):
             supervisor.cancel("nonexistent")
+
+
+class TestNewSchemasContextPlanning(unittest.TestCase):
+    def test_token_usage_info(self):
+        from linhai.webui.schemas import TokenUsageInfo
+
+        info = TokenUsageInfo(
+            input_tokens=100,
+            output_tokens=50,
+            total_tokens=150,
+            cached_input_tokens=80,
+            cache_creation_input_tokens=10,
+            message_count=5,
+            cache_miss_count=1,
+        )
+        self.assertEqual(info.input_tokens, 100)
+        self.assertEqual(info.message_count, 5)
+
+    def test_context_stats_response(self):
+        from linhai.webui.schemas import ContextStatsResponse
+
+        resp = ContextStatsResponse(
+            message_count=10,
+            pinned_message_count=2,
+            notification_count=1,
+            large_message_count=0,
+            traffic_light="绿灯",
+            is_dirty=False,
+            generation_count=3,
+        )
+        self.assertEqual(resp.message_count, 10)
+        self.assertIsNone(resp.cumulative_token_usage)
+
+    def test_planning_file_response(self):
+        from linhai.webui.schemas import PlanningFileResponse
+
+        resp = PlanningFileResponse(status="# Status", todolist=None, design="# Design")
+        self.assertEqual(resp.status, "# Status")
+        self.assertIsNone(resp.todolist)
+
+    def test_config_response(self):
+        from linhai.webui.schemas import ConfigResponse, ProfileInfo, LlmInfo
+
+        resp = ConfigResponse(
+            profiles=[ProfileInfo(name="default")],
+            llms=[LlmInfo(name="gpt", model="gpt-4", type="openai")],
+        )
+        self.assertEqual(len(resp.profiles), 1)
+        self.assertEqual(resp.llms[0].model, "gpt-4")
+
+
+class TestAgentSessionContextStats(unittest.TestCase):
+    def _make_session(self, agent_mock=None, registry_mock=None):
+        if agent_mock is None:
+            agent_mock = MagicMock()
+        if registry_mock is None:
+            registry_mock = MagicMock()
+        agent_mock.registry = registry_mock
+        manager = MagicMock()
+        return AgentSession(
+            agent_id="test-id",
+            agent=agent_mock,
+            task_name="task-1",
+            manager=manager,
+        )
+
+    def test_get_context_stats_basic(self):
+        mock_agent = MagicMock()
+        mock_agent.get_threshold_info.return_value = None
+        mock_mp = MagicMock()
+        mock_mp.get_message_count.return_value = 5
+        mock_mp.pinned_messages = [MagicMock()]
+        mock_mp.notification_messages = {}
+        mock_agent.message_processor = mock_mp
+        mock_registry = MagicMock()
+        mock_registry.has_member.return_value = False
+
+        session = self._make_session(mock_agent, mock_registry)
+        stats = session.get_context_stats()
+
+        self.assertEqual(stats["message_count"], 5)
+        self.assertEqual(stats["pinned_message_count"], 1)
+        self.assertEqual(stats["traffic_light"], "绿灯")
+        self.assertFalse(stats["is_dirty"])
+
+    def test_get_context_stats_yellow_light(self):
+        mock_agent = MagicMock()
+        mock_agent.get_threshold_info.return_value = {"usage_ratio": 0.85}
+        mock_mp = MagicMock()
+        mock_mp.get_message_count.return_value = 10
+        mock_mp.pinned_messages = []
+        mock_mp.notification_messages = {}
+        mock_agent.message_processor = mock_mp
+        mock_registry = MagicMock()
+        mock_registry.has_member.return_value = False
+
+        session = self._make_session(mock_agent, mock_registry)
+        stats = session.get_context_stats()
+
+        self.assertEqual(stats["traffic_light"], "黄灯")
+        self.assertEqual(stats["context_usage_ratio"], 0.85)
+
+    def test_get_context_stats_red_light(self):
+        mock_agent = MagicMock()
+        mock_agent.get_threshold_info.return_value = {"usage_ratio": 0.95}
+        mock_mp = MagicMock()
+        mock_mp.get_message_count.return_value = 10
+        mock_mp.pinned_messages = []
+        mock_mp.notification_messages = {}
+        mock_agent.message_processor = mock_mp
+        mock_registry = MagicMock()
+        mock_registry.has_member.return_value = False
+
+        session = self._make_session(mock_agent, mock_registry)
+        stats = session.get_context_stats()
+
+        self.assertEqual(stats["traffic_light"], "红灯")
+
+    def test_get_planning_files_no_planning(self):
+        mock_registry = MagicMock()
+        mock_registry.has_member.return_value = False
+        mock_agent = MagicMock()
+        mock_agent.registry = mock_registry
+
+        session = self._make_session(mock_agent, mock_registry)
+        result = session.get_planning_files()
+
+        self.assertIsNone(result["status"])
+        self.assertIsNone(result["todolist"])
+        self.assertIsNone(result["design"])
+
+
+class TestAgentManagerConfigInfo(unittest.IsolatedAsyncioTestCase):
+    async def test_get_config_info(self):
+        with patch("linhai.webui.agent_manager.load_config") as mock_load:
+            mock_config = MagicMock()
+            mock_agent_config = MagicMock()
+            mock_agent_config.name = "default"
+            mock_config.agent = [mock_agent_config]
+            mock_llm = MagicMock()
+            mock_llm.name = "gpt"
+            mock_llm.model = "gpt-4"
+            mock_llm.type = "openai"
+            mock_config.llm = [mock_llm]
+            mock_load.return_value = mock_config
+
+            with patch(
+                "linhai.webui.agent_manager.get_default_config_path",
+                return_value="/fake/path",
+            ):
+                manager = AgentManager(config_path="/fake/path")
+                info = manager.get_config_info()
+
+                self.assertEqual(len(info["profiles"]), 1)
+                self.assertEqual(info["profiles"][0]["name"], "default")
+                self.assertEqual(len(info["llms"]), 1)
+                self.assertEqual(info["llms"][0]["name"], "gpt")

@@ -58,3 +58,52 @@ class WsStateChangeEvent(BaseModel):
     type: Literal["state_change"] = "state_change"
     old_state: str = Field(..., description="旧状态")
     new_state: str = Field(..., description="新状态")
+
+
+class TokenUsageInfo(BaseModel):
+    input_tokens: int = Field(..., description="输入token数")
+    output_tokens: int = Field(..., description="输出token数")
+    total_tokens: int = Field(..., description="总token数")
+    cached_input_tokens: int = Field(..., description="缓存命中的输入token数")
+    cache_creation_input_tokens: int = Field(..., description="缓存创建的输入token数")
+    message_count: int = Field(..., description="消息生成次数")
+    cache_miss_count: int = Field(..., description="缓存未命中次数")
+
+
+class ContextStatsResponse(BaseModel):
+    message_count: int = Field(..., description="普通消息数量")
+    pinned_message_count: int = Field(..., description="置顶消息数量")
+    notification_count: int = Field(..., description="通知消息数量")
+    large_message_count: int = Field(..., description="大消息数量")
+    traffic_light: str = Field(..., description="红绿灯状态: 绿灯/黄灯/红灯")
+    context_usage_ratio: Optional[float] = Field(
+        default=None, description="上下文使用率"
+    )
+    is_dirty: bool = Field(..., description="token用量是否已失效")
+    cumulative_token_usage: Optional[TokenUsageInfo] = Field(
+        default=None, description="累计token用量"
+    )
+    generation_count: int = Field(..., description="生成次数")
+
+
+class PlanningFileResponse(BaseModel):
+    status: Optional[str] = Field(default=None, description="STATUS.md内容")
+    todolist: Optional[str] = Field(default=None, description="TODOLIST.md内容")
+    design: Optional[str] = Field(default=None, description="DESIGN.md内容")
+
+
+class LlmInfo(BaseModel):
+    name: str = Field(..., description="LLM名称")
+    model: str = Field(..., description="模型名称")
+    type: str = Field(..., description="LLM类型")
+
+
+class ProfileInfo(BaseModel):
+    name: str = Field(..., description="Profile名称")
+
+
+class ConfigResponse(BaseModel):
+    profiles: list[ProfileInfo] = Field(
+        default_factory=list, description="可用Profile列表"
+    )
+    llms: list[LlmInfo] = Field(default_factory=list, description="可用LLM列表")

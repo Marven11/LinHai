@@ -76,6 +76,95 @@ class AgentSession:
             return msg.message
         return msg.get_content()
 
+    def get_context_stats(self) -> dict:
+        agent = self.agent
+        mp = agent.message_processor
+        registry = self.registry
+
+        threshold_info = agent.get_threshold_info()
+        usage_ratio = None
+        traffic_light = "绿灯"
+        if threshold_info is not None:
+            usage_ratio = threshold_info["usage_ratio"]
+            percentage = usage_ratio * 100
+            if percentage < 80:
+                traffic_light = "绿灯"
+            elif percentage < 90:
+                traffic_light = "黄灯"
+            else:
+                traffic_light = "红灯"
+
+        is_dirty = False
+        large_message_count = 0
+        if registry.has_member("token_manager"):
+            from linhai.token_manager import TokenManager
+
+            token_manager = registry.get_member_typechecked(
+                "token_manager", TokenManager
+            )
+            is_dirty = token_manager.is_dirty
+
+        if registry.has_member("agent_context_orchestration"):
+            from linhai.agent.orchestration import AgentContextOrchestration
+
+            orchestration = registry.get_member_typechecked(
+                "agent_context_orchestration", AgentContextOrchestration
+            )
+            large_message_count = len(orchestration.large_messages)
+
+        cumulative_usage = None
+        generation_count = 0
+        if registry.has_member("token_manager"):
+            from linhai.token_manager import TokenManager
+
+            token_manager = registry.get_member_typechecked(
+                "token_manager", TokenManager
+            )
+            generation_count = token_manager.generation_count
+            if token_manager.cumulative_token_usage is not None:
+                cu = token_manager.cumulative_token_usage
+                cumulative_usage = {
+                    "input_tokens": cu["input_tokens"],
+                    "output_tokens": cu["output_tokens"],
+                    "total_tokens": cu["total_tokens"],
+                    "cached_input_tokens": cu["cached_input_tokens"],
+                    "cache_creation_input_tokens": cu["cache_creation_input_tokens"],
+                    "message_count": cu["message_count"],
+                    "cache_miss_count": cu["cache_miss_count"],
+                }
+
+        return {
+            "message_count": mp.get_message_count(),
+            "pinned_message_count": len(mp.pinned_messages),
+            "notification_count": len(mp.notification_messages),
+            "large_message_count": large_message_count,
+            "traffic_light": traffic_light,
+            "context_usage_ratio": usage_ratio,
+            "is_dirty": is_dirty,
+            "cumulative_token_usage": cumulative_usage,
+            "generation_count": generation_count,
+        }
+
+    def get_planning_files(self) -> dict[str, str | None]:
+        from pathlib import Path
+
+        if not self.registry.has_member("planning_folder"):
+            return {"status": None, "todolist": None, "design": None}
+
+        planning_folder = self.registry.get_member_typechecked("planning_folder", Path)
+        result: dict[str, str | None] = {}
+        for key, filename in [
+            ("status", "STATUS.md"),
+            ("todolist", "TODOLIST.md"),
+            ("design", "DESIGN.md"),
+        ]:
+            filepath = planning_folder / filename
+            if filepath.exists():
+                result[key] = filepath.read_text()
+            else:
+                result[key] = None
+        return result
+
     async def stop(self) -> None:
         """停止Agent并清理资源。"""
         task = self._manager._task_supervisor.tasks.get(self._task_name)
@@ -152,6 +241,15 @@ class AgentManager:
 
     def get_registry(self, agent_id: str) -> Optional[Registry]:
         return self._registries.get(agent_id)
+
+    def get_config_info(self) -> dict:
+        config = self._config
+        profiles = [{"name": a.name} for a in config.agent if a.name]
+        llms = [
+            {"name": llm.name, "model": llm.model, "type": llm.type}
+            for llm in config.llm
+        ]
+        return {"profiles": profiles, "llms": llms}
 
     def get_agent(self, agent_id: str) -> Optional[AgentSession]:
         return self.sessions.get(agent_id)

@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import router as agents_router
+from .routes import router as agents_router, config_router
 
 
 def create_app() -> FastAPI:
@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(agents_router)
+    app.include_router(config_router)
 
     @app.get("/health")
     async def health_check():

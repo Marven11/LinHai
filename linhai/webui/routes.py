@@ -16,10 +16,17 @@ from .schemas import (
     WsSegmentEvent,
     WsUiLogEvent,
     WsStateChangeEvent,
+    ContextStatsResponse,
+    TokenUsageInfo,
+    PlanningFileResponse,
+    ConfigResponse,
+    ProfileInfo,
+    LlmInfo,
 )
 from .agent_manager import AgentManager, AgentSession
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
+config_router = APIRouter(prefix="/api", tags=["config"])
 
 _manager: Optional[AgentManager] = None
 
@@ -184,4 +191,47 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     session.agent.lifecycle.after_segment._callbacks.remove(on_segment)
     session.agent.lifecycle.after_segment_finished._callbacks.remove(
         on_segment_finished
+    )
+
+
+@router.get("/{agent_id}/context", response_model=ContextStatsResponse)
+async def get_agent_context(agent_id: str):
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    stats = session.get_context_stats()
+    cumulative = None
+    if stats["cumulative_token_usage"] is not None:
+        cumulative = TokenUsageInfo(**stats["cumulative_token_usage"])
+    return ContextStatsResponse(
+        message_count=stats["message_count"],
+        pinned_message_count=stats["pinned_message_count"],
+        notification_count=stats["notification_count"],
+        large_message_count=stats["large_message_count"],
+        traffic_light=stats["traffic_light"],
+        context_usage_ratio=stats["context_usage_ratio"],
+        is_dirty=stats["is_dirty"],
+        cumulative_token_usage=cumulative,
+        generation_count=stats["generation_count"],
+    )
+
+
+@router.get("/{agent_id}/planning", response_model=PlanningFileResponse)
+async def get_agent_planning(agent_id: str):
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    files = session.get_planning_files()
+    return PlanningFileResponse(**files)
+
+
+@config_router.get("/config", response_model=ConfigResponse)
+async def get_config():
+    manager = get_manager()
+    info = manager.get_config_info()
+    return ConfigResponse(
+        profiles=[ProfileInfo(**p) for p in info["profiles"]],
+        llms=[LlmInfo(**l) for l in info["llms"]],
     )
