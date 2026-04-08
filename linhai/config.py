@@ -354,6 +354,12 @@ class ToolConfig(BaseModel):
         return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, enable_toolsets={self.enable_toolsets}, disable_toolsets={self.disable_toolsets}, secret={self.secret})"
 
 
+class ClawConfig(BaseModel):
+    """CLAW模式配置类型定义。"""
+
+    heartbeat_interval: int = Field(default=1800, description="CLAW心跳休眠周期（秒）")
+
+
 class TUIConfig(BaseModel):
     """TUI配置类型定义。"""
 
@@ -381,6 +387,7 @@ class Config(BaseModel):
     remote_control: RemoteControlConfig = Field(
         default_factory=RemoteControlConfig, description="远程控制配置"
     )
+    claw: ClawConfig = Field(default_factory=ClawConfig, description="CLAW模式配置")
 
     def __str__(self) -> str:
         """返回主配置的字符串表示"""

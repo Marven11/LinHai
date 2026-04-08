@@ -14,7 +14,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
         self.state_machine = AgentStateMachine(self.registry)
-        self.plugin = ClawHeartbeatPlugin(self.registry)
+        self.plugin = ClawHeartbeatPlugin(self.registry, 1800)
 
     def test_register(self):
         mock_lifecycle = Mock()
@@ -61,7 +61,7 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
         call_args = mock_agent.message_processor.add_new_message.call_args
         msg = call_args[0][0]
         self.assertIsInstance(msg, RuntimeMessage)
-        self.assertIn("十分钟过去了", msg.get_content())
+        self.assertIn("30分钟过去了", msg.get_content())
 
     def test_heartbeat_skips_if_not_waiting(self):
         mock_agent = Mock()
@@ -96,10 +96,11 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
         notice = asyncio.run(self.registry.receive("ui_log"))
         self.assertIsInstance(notice, UiNotice)
         self.assertEqual(notice.level, "INFO")
-        self.assertIn("10分钟", notice.content)
+        self.assertIn("30分钟", notice.content)
 
     def test_heartbeat_uses_correct_interval(self):
-        self.assertEqual(ClawHeartbeatPlugin.HEARTBEAT_INTERVAL, 600)
+        plugin = ClawHeartbeatPlugin(self.registry, 1800)
+        self.assertEqual(plugin.heartbeat_interval, 1800)
 
 
 class TestClawHeartbeatIntegration(unittest.TestCase):
@@ -107,7 +108,7 @@ class TestClawHeartbeatIntegration(unittest.TestCase):
     def test_heartbeat_sleeps_then_checks_state(self):
         registry = Registry()
         state_machine = AgentStateMachine(registry)
-        plugin = ClawHeartbeatPlugin(registry)
+        plugin = ClawHeartbeatPlugin(registry, 1800)
         mock_agent = Mock()
         mock_agent.message_processor = Mock()
         mock_agent.message_processor.add_new_message = AsyncMock()
@@ -124,7 +125,7 @@ class TestClawHeartbeatIntegration(unittest.TestCase):
 
         asyncio.run(run_test())
 
-        self.assertEqual(sleep_durations, [600])
+        self.assertEqual(sleep_durations, [1800])
         self.assertEqual(state_machine.state, "working")
 
 

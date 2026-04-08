@@ -99,9 +99,11 @@ class ClawPlugin(Plugin):
 
 
 class ClawHeartbeatPlugin(Plugin):
-    """CLAW模式心跳插件：当agent等待用户超过10分钟时自动唤醒。"""
+    """CLAW模式心跳插件：当agent等待用户超过指定时间后自动唤醒。"""
 
-    HEARTBEAT_INTERVAL = 600
+    def __init__(self, registry: Registry, heartbeat_interval: int):
+        super().__init__(registry)
+        self.heartbeat_interval = heartbeat_interval
 
     async def before_waiting_user(self, agent: "linhai_agent") -> None:
         from linhai.task_supervisor import TaskSupervisor
@@ -109,22 +111,24 @@ class ClawHeartbeatPlugin(Plugin):
         ts = self.registry.get_member_typechecked("task_supervisor", TaskSupervisor)
         ts.create_supervised_task("claw_heartbeat", lambda: self._heartbeat(agent))
 
+        minutes = self.heartbeat_interval // 60
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(level="INFO", content="将在10分钟后唤醒claw"),
+            UiNotice(level="INFO", content=f"将在{minutes}分钟后唤醒claw"),
         )
 
     async def _heartbeat(self, agent: "linhai_agent") -> None:
-        await asyncio.sleep(self.HEARTBEAT_INTERVAL)
+        await asyncio.sleep(self.heartbeat_interval)
         state_machine = self.registry.get_member_typechecked(
             "state_machine", AgentStateMachine
         )
         if state_machine.state != "waiting_user":
             return
         state_machine.transition_to_working()
+        minutes = self.heartbeat_interval // 60
         await agent.message_processor.add_new_message(
             RuntimeMessage(
-                "十分钟过去了，用户仍然没有回复。"
+                f"{minutes}分钟过去了，用户仍然没有回复。"
                 "你应该诚实地更新claw记忆等文档，记录当前状态，"
                 "重新诚实地反思用户交代的任务是否真正完成"
             )

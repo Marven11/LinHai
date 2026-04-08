@@ -472,6 +472,7 @@ model = "test_model"
         self.assertEqual(config_fields["tools"].description, "工具相关配置")
         self.assertEqual(config_fields["tui"].description, "TUI界面配置")
         self.assertEqual(config_fields["remote_control"].description, "远程控制配置")
+        self.assertEqual(config_fields["claw"].description, "CLAW模式配置")
 
     def test_load_config_with_process_sandbox_macos(self):
         """Test loading a config with macOS sandbox configuration."""

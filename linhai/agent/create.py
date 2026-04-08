@@ -104,6 +104,7 @@ class AgentBuildContext(TypedDict):
     message: list[str]
     file: list[Path]
     process_sandbox: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]]
+    config: Config
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -220,6 +221,7 @@ def create_agent_build_context(
         "message": build_args.get("message", []),
         "file": build_args.get("file", []),
         "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
+        "config": config,
     }
 
 
@@ -337,10 +339,13 @@ async def create_agent_from_context(
     if context["claw_enabled"]:
         from linhai.plugin.claw import ClawPlugin, ClawHeartbeatPlugin
 
+        claw_config = context["config"].claw
         ClawPlugin(context["registry"], context["claw_folder"]).register(
             agent.lifecycle
         )
-        ClawHeartbeatPlugin(context["registry"]).register(agent.lifecycle)
+        ClawHeartbeatPlugin(
+            context["registry"], claw_config.heartbeat_interval
+        ).register(agent.lifecycle)
 
     if context["afk"]:
         from linhai.plugin import AfkPlugin
