@@ -392,10 +392,6 @@ model = "test_model"
         )
         self.assertEqual(agent_fields["mcp"].description, "MCP服务器配置列表。")
         self.assertEqual(
-            agent_fields["enable_directory_change_detection"].description,
-            "是否启用目录变化检测。",
-        )
-        self.assertEqual(
             agent_fields["enable_task_planning"].description, "是否启用任务规划。"
         )
         self.assertEqual(

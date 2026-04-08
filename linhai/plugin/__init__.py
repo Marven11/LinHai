@@ -30,7 +30,6 @@ from .file_operations import (
     UnnecessarySedReadPlugin,
     UnnecessaryRunCommandPlugin,
     FileReadWriteConflictPlugin,
-    DirectoryChangePlugin,
 )
 
 from .security_config import (
@@ -80,7 +79,6 @@ __all__ = [
     "UnnecessarySedReadPlugin",
     "UnnecessaryRunCommandPlugin",
     "FileReadWriteConflictPlugin",
-    "DirectoryChangePlugin",
     "WithSecretParameterPositionPlugin",
     "MissingWithSecretWarningPlugin",
     "CommandWhitelistPlugin",

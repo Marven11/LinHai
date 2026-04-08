@@ -159,9 +159,6 @@ class AgentConfig(BaseModel):
     mcp: list[MCPConfig] = Field(
         default_factory=list, description="MCP服务器配置列表。"
     )
-    enable_directory_change_detection: bool = Field(
-        default=False, description="是否启用目录变化检测。"
-    )
     enable_task_planning: bool = Field(default=False, description="是否启用任务规划。")
     allowed_commands: list[list[str]] = Field(
         default_factory=list, description="允许执行的命令列表。"

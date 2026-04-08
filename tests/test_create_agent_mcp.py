@@ -90,9 +90,6 @@ server_script_path = "{server_script_path}"
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": config.agent[0].compress_threshold,
-            "enable_directory_change_detection": config.agent[
-                0
-            ].enable_directory_change_detection,
             "max_toolcall_for_llm": config.agent[0].max_toolcall_for_llm,
             "allowed_commands": config.agent[0].allowed_commands,
             "telegram_config": None,
@@ -147,9 +144,6 @@ compress_threshold = 80000
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": config.agent[0].compress_threshold,
-            "enable_directory_change_detection": config.agent[
-                0
-            ].enable_directory_change_detection,
             "max_toolcall_for_llm": config.agent[0].max_toolcall_for_llm,
             "allowed_commands": config.agent[0].allowed_commands,
             "telegram_config": None,

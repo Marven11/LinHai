@@ -5,7 +5,6 @@ import time
 from unittest.mock import MagicMock, AsyncMock
 from linhai.plugin import (
     WeirdTokenPlugin,
-    DirectoryChangePlugin,
     PromptFastAgentPlugin,
 )
 from linhai.agent.messages import RuntimeMessage
@@ -69,75 +68,6 @@ class TestWeirdEndOfSentencePlugin(unittest.IsolatedAsyncioTestCase):
         call_args = self.agent.message_processor.add_new_message.call_args[0]
         self.assertIsInstance(call_args[0], RuntimeMessage)
         self.assertIn("结束标记", call_args[0].message)
-
-
-class TestDirectoryChangePlugin(unittest.IsolatedAsyncioTestCase):
-    """测试DirectoryChangePlugin类。"""
-
-    def setUp(self):
-        """设置测试环境。"""
-        self.agent = MagicMock()
-        self.agent.message_processor = MagicMock()
-        self.agent.message_processor.get_messages = MagicMock(return_value=[])
-        self.agent.message_processor.add_new_message = AsyncMock()
-        self.agent.context = {"enable_directory_change_detection": False}  # 默认关闭
-        self.registry = MagicMock()
-        self.registry.get_member_typechecked = MagicMock(
-            side_effect=lambda name, t: self.agent
-        )
-        self.plugin = DirectoryChangePlugin(self.registry)
-
-    def test_register(self):
-        """测试插件注册。"""
-        lifecycle = MagicMock()
-        self.plugin.register(lifecycle)
-        lifecycle.before_message_generation.register.assert_called_once_with(
-            self.plugin.before_message_generation
-        )
-
-    async def test_before_message_generation_disabled(self):
-        """测试目录更改检测关闭的情况。"""
-        self.plugin.last_directory = pathlib.Path("/old/path")
-
-        await self.plugin.before_message_generation()
-
-        self.assertIsNotNone(self.plugin.last_directory)
-
-    async def test_before_message_generation_enabled_no_change(self):
-        """测试目录更改检测开启但目录未更改的情况。"""
-        self.agent.context["enable_directory_change_detection"] = True
-
-        current_dir = pathlib.Path.cwd()
-        self.plugin.last_directory = current_dir
-
-        await self.plugin.before_message_generation()
-
-        self.assertEqual(len(self.agent.message_processor.get_messages()), 0)
-
-    async def test_before_message_generation_enabled_with_change(self):
-        """测试目录更改检测开启且目录更改的情况。"""
-        self.agent.context["enable_directory_change_detection"] = True
-
-        self.plugin.last_directory = pathlib.Path("/old/path")
-
-        current_dir = pathlib.Path.cwd()
-
-        await self.plugin.before_message_generation()
-
-        self.assertEqual(self.plugin.last_directory, current_dir)
-
-    async def test_before_message_generation_no_duplicate_pathprompt(self):
-        """测试避免重复添加相同路径的PathPrompt。"""
-        self.agent.context["enable_directory_change_detection"] = True
-
-        self.plugin.last_directory = pathlib.Path("/old/path")
-
-        from linhai.agent.messages import PathPrompt
-
-        existing_pathprompt = PathPrompt(pathlib.Path.cwd() / "AGENTS.md")
-        self.agent.message_processor.get_messages.return_value = [existing_pathprompt]
-
-        await self.plugin.before_message_generation()
 
 
 class TestSingleToolCallReminderPlugin(unittest.IsolatedAsyncioTestCase):

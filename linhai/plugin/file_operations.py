@@ -11,8 +11,6 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import (
     FileContentMessage,
     RuntimeMessage,
-    GlobalPrompt,
-    PathPrompt,
 )
 from linhai.tool.base import ToolCallResultMessage
 from linhai.registry import Registry
@@ -398,42 +396,3 @@ class FileReadWriteConflictPlugin(Plugin):
         """注册插件回调。"""
         lifecycle.before_message_generation.register(self.before_message_generation)
         lifecycle.after_toolcall.register(self.after_toolcall)
-
-
-class DirectoryChangePlugin(Plugin):
-    """目录更改检测插件，检测当前目录更改并检查特定文件。"""
-
-    def __init__(self, registry):
-        super().__init__(registry)
-        self.last_directory = None
-
-    async def before_message_generation(self):
-        """在消息生成前检查目录是否更改。"""
-        agent = self.registry.get_member_typechecked("agent", Agent)
-
-        context = getattr(agent, "context", {})
-        if not context.get("enable_directory_change_detection", False):
-            return
-
-        current_directory = Path.cwd().resolve()
-
-        if self.last_directory == current_directory:
-            return
-
-        self.last_directory = current_directory
-
-        target_files = ["AGENTS.md", "CLAUDE.md"]
-        for filename in target_files:
-            filepath = current_directory / filename
-            if filepath.exists():
-                has_duplicate = any(
-                    message.filepath.resolve() == filepath.resolve()
-                    for message in agent.message_processor.get_messages()
-                    if isinstance(message, (GlobalPrompt, PathPrompt))
-                )
-                if not has_duplicate:
-                    await agent.message_processor.add_new_message(PathPrompt(filepath))
-
-    def register(self, lifecycle: "Lifecycle"):
-        """注册到before_message_generation回调。"""
-        lifecycle.before_message_generation.register(self.before_message_generation)

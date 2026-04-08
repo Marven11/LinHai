@@ -66,7 +66,6 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "planning": False,
             "enabled_toolsets": list(AVAILABLE_TOOLSETS),
             "compress_threshold": 0.8,
-            "enable_directory_change_detection": False,
             "max_toolcall_for_llm": {},
             "allowed_commands": [],
             "telegram_config": None,

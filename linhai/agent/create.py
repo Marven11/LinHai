@@ -88,7 +88,6 @@ class AgentBuildContext(TypedDict):
     planning: bool
     enabled_toolsets: list[str]
     compress_threshold: Union[int, float]
-    enable_directory_change_detection: bool
     max_toolcall_for_llm: dict[str, int]
     allowed_commands: list[list[str]]
     telegram_config: Optional[TelegramContext]
@@ -203,7 +202,6 @@ def create_agent_build_context(
         "planning": build_args.get("planning", False),
         "enabled_toolsets": _resolve_enabled_toolsets(config.tools, agent_config),
         "compress_threshold": agent_config.compress_threshold,
-        "enable_directory_change_detection": agent_config.enable_directory_change_detection,
         "max_toolcall_for_llm": agent_config.max_toolcall_for_llm,
         "allowed_commands": agent_config.allowed_commands,
         "telegram_config": telegram_config,
@@ -292,11 +290,6 @@ async def create_agent_from_context(
         machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
     tool_manager.register_lifecycle()
-
-    if context["enable_directory_change_detection"]:
-        from linhai.plugin import DirectoryChangePlugin
-
-        DirectoryChangePlugin(context["registry"]).register(agent.lifecycle)
 
     if context["allowed_commands"]:
         from linhai.plugin import CommandWhitelistPlugin

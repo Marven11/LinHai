@@ -42,7 +42,6 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.agent[0].enable_toolsets = None
         self.config.agent[0].disable_toolsets = None
         self.config.agent[0].compress_threshold = 0.8
-        self.config.agent[0].enable_directory_change_detection = False
         self.config.agent[0].max_toolcall_for_llm = {}
         self.config.agent[0].allowed_commands = []
         self.config.agent[0].mcp = []
