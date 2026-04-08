@@ -7,6 +7,7 @@ from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.plugin.message_checkers import Plugin
+from linhai.utils.common import UiNotice
 from linhai.prompt import (
     AGENTS_MD,
     BOOTSTRAP_MD,
@@ -107,6 +108,11 @@ class ClawHeartbeatPlugin(Plugin):
 
         ts = self.registry.get_member_typechecked("task_supervisor", TaskSupervisor)
         ts.create_supervised_task("claw_heartbeat", lambda: self._heartbeat(agent))
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(level="INFO", content="将在10分钟后唤醒claw"),
+        )
 
     async def _heartbeat(self, agent: "linhai_agent") -> None:
         await asyncio.sleep(self.HEARTBEAT_INTERVAL)

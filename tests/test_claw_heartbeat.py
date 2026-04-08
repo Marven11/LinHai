@@ -6,6 +6,7 @@ from linhai.plugin.claw import ClawHeartbeatPlugin
 from linhai.agent.messages import RuntimeMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
+from linhai.utils.common import UiNotice
 
 
 class TestClawHeartbeatPlugin(unittest.TestCase):
@@ -76,6 +77,26 @@ class TestClawHeartbeatPlugin(unittest.TestCase):
 
         self.assertEqual(self.state_machine.state, "working")
         mock_agent.message_processor.add_new_message.assert_not_called()
+
+    def test_before_waiting_user_sends_ui_notice(self):
+        from linhai.task_supervisor import PlainTaskSupervisor
+
+        ts = PlainTaskSupervisor()
+        ts.create_supervised_task = Mock()
+        mock_agent = Mock()
+        self.state_machine.state = "waiting_user"
+        self.registry.register_queue("ui_log")
+        self.registry.register_member("task_supervisor", ts)
+
+        async def run_test():
+            await self.plugin.before_waiting_user(mock_agent)
+
+        asyncio.run(run_test())
+
+        notice = asyncio.run(self.registry.receive("ui_log"))
+        self.assertIsInstance(notice, UiNotice)
+        self.assertEqual(notice.level, "INFO")
+        self.assertIn("10分钟", notice.content)
 
     def test_heartbeat_uses_correct_interval(self):
         self.assertEqual(ClawHeartbeatPlugin.HEARTBEAT_INTERVAL, 600)
