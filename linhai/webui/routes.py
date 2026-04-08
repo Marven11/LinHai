@@ -24,6 +24,7 @@ from .schemas import (
     LlmInfo,
 )
 from .agent_manager import AgentManager, AgentSession
+from ..config import get_default_config_path
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 config_router = APIRouter(prefix="/api", tags=["config"])
@@ -32,9 +33,12 @@ _manager: Optional[AgentManager] = None
 
 
 def get_manager() -> AgentManager:
+    """获得AgentManager
+    
+    TODO 需要支持指定默认配置目录"""
     global _manager
     if _manager is None:
-        _manager = AgentManager()
+        _manager = AgentManager(get_default_config_path())
     return _manager
 
 

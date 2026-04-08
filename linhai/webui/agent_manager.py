@@ -3,6 +3,7 @@
 import asyncio
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from linhai.registry import Registry
@@ -13,7 +14,7 @@ from linhai.agent.create import (
     create_agent_from_context,
 )
 from linhai.agent.main import Agent
-from linhai.config import load_config, get_default_config_path
+from linhai.config import load_config
 from linhai.llm import UserMessage, Message, AssistantMessage, SystemMessage
 
 
@@ -176,10 +177,10 @@ class AgentSession:
 class AgentManager:
     """管理多个Agent实例的生命周期。"""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Path):
         self.sessions: dict[str, AgentSession] = {}
         self._registries: dict[str, Registry] = {}
-        self.config_path = config_path or str(get_default_config_path())
+        self.config_path = config_path
         self._config = load_config(self.config_path)
         self._task_supervisor = PlainTaskSupervisor()
 
@@ -216,7 +217,7 @@ class AgentManager:
         context = create_agent_build_context(
             registry=registry,
             config=self._config,
-            config_basedir=None,
+            config_basedir=self.config_path,
             build_args=build_args,
         )
 

@@ -50,7 +50,7 @@ def run_webui(args):
     from linhai.webui.agent_manager import AgentManager
 
     config_path = args.config or get_default_config_path()
-    AgentManager(config_path=str(config_path))
+    AgentManager(config_path=config_path)
 
     app = create_app()
     uvicorn.run(app, host=args.host, port=args.port)
