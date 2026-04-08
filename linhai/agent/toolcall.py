@@ -272,18 +272,6 @@ class AgentToolcall:
         if state_machine.state == "waiting_user":
             state_machine.transition_to_working()
         if self.early_return:
-            msg = f"工具调用因先前工具失败被跳过: {tool_call.function_name}"
-            message_processor = self.registry.get_member_typechecked(
-                "agent_message", AgentMessage
-            )
-            await message_processor.add_new_message(RuntimeMessage(msg))
-            await self.registry.send_if_exists(
-                "ui_log",
-                UiNotice(
-                    level="WARNING",
-                    content=msg,
-                ),
-            )
             return
 
         conflict_tool = self._check_tool_conflict(tool_call.function_name)
