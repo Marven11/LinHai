@@ -44,7 +44,7 @@ async def run_init(config_path: Path | None = None):
     return 0
 
 
-async def run_webui(args):
+def run_webui(args):
     """运行WebUI服务。"""
     from linhai.webui import create_app
     from linhai.webui.agent_manager import AgentManager
@@ -221,7 +221,7 @@ def main():
     if args.command == "init":
         return_code = asyncio.run(run_init(config_path=args.config))
     elif args.command == "webui":
-        return_code = asyncio.run(run_webui(args))
+        return_code = run_webui(args)
     else:
         return_code = asyncio.run(run(args))
 
