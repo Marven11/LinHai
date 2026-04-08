@@ -20,6 +20,8 @@ from linhai.tool.base import (
     ToolArgInfo,
     ToolSet,
     ToolResultSuccess,
+    ToolResultFailed,
+    ToolResult,
 )
 from linhai.registry import Registry
 from linhai.utils.common import generate_id
@@ -88,10 +90,10 @@ def _download_with_httpx(url: str) -> str:
     },
     required_args=["url"],
 )
-def fetch_article(url: str, http_downloader: str = "none") -> str:
+def fetch_article(url: str, http_downloader: str = "none"):
 
     if http_downloader not in ("none", "selenium", "httpx"):
-        return f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'"
+        return ToolResultFailed(content=f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'")
 
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
         output_md = file.name
@@ -120,7 +122,7 @@ def fetch_article(url: str, http_downloader: str = "none") -> str:
         with open(output_html, "w", encoding="utf-8") as f:
             f.write(str(soup))
         if shutil.which("pandoc") is None:
-            return "错误：pandoc未安装，请先安装pandoc"
+            return ToolResultFailed(content="错误：pandoc未安装，请先安装pandoc")
 
         subprocess.run(
             [
@@ -147,7 +149,7 @@ def fetch_article(url: str, http_downloader: str = "none") -> str:
 
         with open(output_md, "r", encoding="utf-8") as f:
             content = f.read()
-            return f"""
+            return ToolResultSuccess(content=f"""
 文件已经保存在: {output_html=} {output_md=} 用户需要时优先提供markdown
 
 markdown内容如下
@@ -155,10 +157,10 @@ markdown内容如下
 ---
 
 {content}
-"""
+""")
 
     except (OSError, subprocess.SubprocessError) as e:
-        return f"转换失败: {str(e)}"
+        return ToolResultFailed(content=f"转换失败: {str(e)}")
 
 
 @utils_tools.register_tool(
@@ -170,7 +172,7 @@ markdown内容如下
     },
     required_args=["query"],
 )
-async def search_web(query: str, max_results: int = 5) -> str:
+async def search_web(query: str, max_results: int = 5) -> ToolResult:
     """
     搜索DuckDuckGo并返回格式化的搜索结果
     """
@@ -193,7 +195,7 @@ async def search_web(query: str, max_results: int = 5) -> str:
 
             soup = BeautifulSoup(response.text, "html.parser")
             if not soup:
-                return "解析HTML响应失败"
+                return ToolResultFailed(content="解析HTML响应失败")
 
             results = []
             for result in soup.select(".result"):
@@ -232,7 +234,7 @@ async def search_web(query: str, max_results: int = 5) -> str:
                     break
 
             if not results:
-                return "未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
+                return ToolResultFailed(content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。")
 
             output = []
             output.append(f"找到 {len(results)} 个搜索结果：\n")
@@ -243,12 +245,12 @@ async def search_web(query: str, max_results: int = 5) -> str:
                 output.append(f"   摘要: {result['snippet']}")
                 output.append("")
 
-            return "\n".join(output)
+            return ToolResultSuccess(content="\n".join(output))
 
     except httpx.RequestError as e:
-        return f"搜索请求失败: {str(e)}"
+        return ToolResultFailed(content=f"搜索请求失败: {str(e)}")
     except (ConnectionError, TimeoutError, OSError) as e:
-        return f"搜索过程中发生错误: {str(e)}"
+        return ToolResultFailed(content=f"搜索过程中发生错误: {str(e)}")
 
 
 @utils_tools.register_tool(
@@ -261,6 +263,6 @@ async def search_web(query: str, max_results: int = 5) -> str:
     },
     required_args=["expression"],
 )
-def quickjs_calculator(expression: str) -> str:
+def quickjs_calculator(expression: str) -> ToolResult:
     ctx = quickjs.Context()
-    return str(ctx.eval(expression))
+    return ToolResultSuccess(content=str(ctx.eval(expression)))

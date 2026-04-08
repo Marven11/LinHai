@@ -11,6 +11,7 @@ from linhai.tool.base import (
     ToolArgInfo,
     ToolCallResultMessage,
     ToolResultFailed,
+    ToolResultSuccess,
     ToolSet,
 )
 from linhai.tool.main import ToolManager
@@ -21,25 +22,6 @@ from .lifecycle import Lifecycle
 from .message import AgentMessage
 from .messages import RuntimeMessage
 from .state_machine import AgentStateMachine
-
-
-def _extract_text_content(content: str | list) -> str:
-    """从可能是字符串或列表的内容中提取纯文本。
-
-    处理OpenAI API返回的多模态内容，将列表格式的内容转换为纯文本。
-    """
-    if isinstance(content, str):
-        return content
-
-    if isinstance(content, list):
-        text_parts = []
-        for item in content:
-            if isinstance(item, dict):
-                if item.get("type") == "text":
-                    text_parts.append(str(item.get("text", "")))
-        return "".join(text_parts)
-
-    return str(content)
 
 
 class AgentToolcall:
@@ -127,7 +109,7 @@ class AgentToolcall:
         )
         async def switch_llm(llm_name: str):
             await llm_manager.switch_to_llm(llm_name)
-            return f"已切换到LLM: {llm_name}"
+            return ToolResultSuccess(content=f"已切换到LLM: {llm_name}")
 
         @toolset.register_tool(
             name="current_llm",
@@ -138,7 +120,7 @@ class AgentToolcall:
         def current_llm():
             current_llm_instance = llm_manager.get_current_llm()
             current_name = current_llm_instance.get_name()
-            return f"当前使用的LLM: {current_name}"
+            return ToolResultSuccess(content=f"当前使用的LLM: {current_name}")
 
         @toolset.register_tool(
             name="list_llm",
@@ -146,12 +128,10 @@ class AgentToolcall:
             args={},
             required_args=[],
         )
-        def list_llm() -> str:
+        def list_llm():
             llms_info = llm_manager.list_available_llms()
 
-            if not llms_info:
-                return "没有可用的LLM"
-
+            assert llms_info, "There is no way agent run withou LLM"
             result = []
             result.append(f"找到 {len(llms_info)} 个LLM:")
             for info in llms_info:
@@ -164,7 +144,7 @@ class AgentToolcall:
                 result.append(f"    错误计数: {info['error_count']}")
                 result.append("")
 
-            return "\n".join(result)
+            return ToolResultSuccess(content="\n".join(result))
 
     def _register_dummy_tools(self, toolset: ToolSet):
         """注册虚拟工具到给定的toolset（token使用情况、历史消息管理等）。"""
@@ -175,7 +155,7 @@ class AgentToolcall:
             args={},
             required_args=[],
         )
-        def get_token_usage() -> str:
+        def get_token_usage():
             from ..token_manager import TokenManager
 
             token_manager = self.registry.get_member_typechecked(
@@ -183,9 +163,9 @@ class AgentToolcall:
             )
             if token_manager.cumulative_token_usage is not None:
                 total = token_manager.cumulative_token_usage["total_tokens"]
-                return f"当前token总用量为: {total} ({total/1000:.2f} k)"
+                return ToolResultSuccess(content=f"当前token总用量为: {total} ({total/1000:.2f} k)")
             else:
-                return "暂无token用量信息"
+                return ToolResultSuccess(content="暂无token用量信息")
 
     def _split_and_save_large_output(
         self,
@@ -193,7 +173,7 @@ class AgentToolcall:
         token_count: int,
         tool_name: str,
         single_tool_limit: int,
-    ) -> str:
+    ) -> RuntimeMessage:
         """分割并保存过大的工具输出到文件。"""
         conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
@@ -224,9 +204,13 @@ class AgentToolcall:
             filepaths.append(str(filepath))
 
         if len(parts) > 1:
-            return f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已分割保存到 {len(parts)} 个文件: {', '.join(filepaths)}"
+            return RuntimeMessage(
+                f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已分割保存到 {len(parts)} 个文件: {', '.join(filepaths)}"
+            )
         else:
-            return f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepaths[0]}"
+            return RuntimeMessage(
+                f"工具输出过长（{token_count} tokens，超过{single_tool_limit} tokens限制）。已保存到文件: {filepaths[0]}"
+            )
 
     def _save_output_to_file(
         self,
@@ -234,7 +218,7 @@ class AgentToolcall:
         token_count: int,
         tool_name: str,
         current_round_token_count: int,
-    ) -> str:
+    ) -> RuntimeMessage:
         """保存当前轮次超限的工具输出到文件。"""
         conversation_dir = self.registry.get_member_typechecked(
             "conversation_folder", Path
@@ -247,7 +231,9 @@ class AgentToolcall:
         filepath = long_toolcall_dir / filename
         filepath.write_text(result_content, encoding="utf-8")
 
-        return f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
+        return RuntimeMessage(
+            f"当前轮次token总数已达限制（已使用{current_round_token_count} tokens，当前工具{token_count} tokens超过限制）。工具输出已保存到文件: {filepath}"
+        )
 
     def start_new_tool_call_round(self):
         """开始新一轮工具调用，清空已调用工具记录"""
@@ -276,7 +262,9 @@ class AgentToolcall:
 
         conflict_tool = self._check_tool_conflict(tool_call.function_name)
         if conflict_tool:
-            conflict_msg = f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool} 存在冲突，已阻止调用，剩余工具调用已忽略"
+            conflict_msg = RuntimeMessage(
+                f"工具调用冲突: {tool_call.function_name} 与 {conflict_tool} 存在冲突，已阻止调用，剩余工具调用已忽略"
+            )
 
             await self.registry.send_if_exists(
                 "ui_log",
@@ -291,9 +279,7 @@ class AgentToolcall:
                 tool_name=tool_call.function_name,
                 tool_index=0,
                 status="failed",
-                message=RuntimeMessage(
-                    f"工具调用冲突: {tool_call.function_name} 与 {self.called_tools_in_round}"
-                ),
+                message=conflict_msg,
                 toolcall_arguments=tool_call.function_arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=True,
@@ -302,9 +288,10 @@ class AgentToolcall:
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
             )
-            await message_processor.add_new_message(RuntimeMessage(conflict_msg))
+            await message_processor.add_new_message(conflict_msg)
             self.early_return = True
             return True
+
         self.called_tools_in_round.append(tool_call.function_name)
 
         compress_tools = [
@@ -317,20 +304,6 @@ class AgentToolcall:
             tool_call.function_name in compress_tools
         )
 
-        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        skip_result = await lifecycle.after_toolcall.trigger(
-            tool_name=tool_call.function_name,
-            tool_index=tool_index,
-            status="skipped",
-            message=RuntimeMessage(f"工具调用被跳过: {tool_call.function_name}"),
-            toolcall_arguments=tool_call.function_arguments,
-            with_secret=tool_call.with_secret,
-            is_tool_failed_duplicated_error=False,
-        )
-        if skip_result is True:
-            self.early_return = True
-            return True
-
         result = await self._call_tool(tool_call, tool_index)
         if result:
             self.early_return = True
@@ -341,121 +314,86 @@ class AgentToolcall:
         tool_call: ToolCallMessage,
         tool_index: int,
         tool_result: Message,
-    ) -> tuple[Message, bool]:
+    ) -> Message:
         """处理工具结果的token管理
 
         返回:
-            tuple[Message, bool]: (处理后的消息, 是否需要跳过后续处理)
+            Message: 处理后的消息
         """
 
-        result_content = ""
-        if isinstance(tool_result, ToolCallResultMessage):
-            result_content = tool_result.get_content()
-        elif isinstance(tool_result, RuntimeMessage):
-            result_content = tool_result.message
-        else:
-            result_content = str(tool_result)
+        result_content = tool_result.get_content()
+        replaced_tool_result = tool_result
+        if result_content is not None:
+            token_count = count_tokens(result_content)
+            single_tool_limit = self.max_token_limit // 3
 
-        token_count = count_tokens(_extract_text_content(result_content))
+            if token_count > single_tool_limit:
+                replaced_tool_result = self._split_and_save_large_output(
+                    result_content,
+                    token_count,
+                    tool_call.function_name,
+                    single_tool_limit,
+                )
 
-        single_tool_limit = self.max_token_limit // 3
-        if token_count > single_tool_limit:
-            runtime_msg = self._split_and_save_large_output(
-                _extract_text_content(result_content),
-                token_count,
-                tool_call.function_name,
-                single_tool_limit,
-            )
-            runtime_message = RuntimeMessage(runtime_msg)
-
-            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            replacement_result = await lifecycle.after_toolcall.trigger(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                status="success",
-                message=runtime_message,
-                toolcall_arguments=tool_call.function_arguments,
-                with_secret=tool_call.with_secret,
-                is_tool_failed_duplicated_error=False,
-            )
-            if isinstance(replacement_result, RuntimeMessage):
-                runtime_message = replacement_result
-
-            return runtime_message, True
-
-        if self.current_round_token_count + token_count > self.max_token_limit:
-            runtime_msg = self._save_output_to_file(
-                _extract_text_content(result_content),
-                token_count,
-                tool_call.function_name,
-                self.current_round_token_count,
-            )
-            runtime_message = RuntimeMessage(runtime_msg)
-
-            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-            replacement_result = await lifecycle.after_toolcall.trigger(
-                tool_name=tool_call.function_name,
-                tool_index=tool_index,
-                status="success",
-                message=runtime_message,
-                toolcall_arguments=tool_call.function_arguments,
-                with_secret=tool_call.with_secret,
-                is_tool_failed_duplicated_error=False,
-            )
-            if isinstance(replacement_result, RuntimeMessage):
-                runtime_message = replacement_result
-
-            return runtime_message, True
-
-        self.current_round_token_count += token_count
+            if self.current_round_token_count + token_count > self.max_token_limit:
+                replaced_tool_result = self._save_output_to_file(
+                    result_content,
+                    token_count,
+                    tool_call.function_name,
+                    self.current_round_token_count,
+                )
+            else:
+                self.current_round_token_count += token_count
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        replacement_result = await lifecycle.after_toolcall.trigger(
+        callback_result = await lifecycle.after_toolcall.trigger(
             tool_name=tool_call.function_name,
             tool_index=tool_index,
             status="success",
-            message=tool_result,
+            message=replaced_tool_result,
             toolcall_arguments=tool_call.function_arguments,
             with_secret=tool_call.with_secret,
             is_tool_failed_duplicated_error=False,
         )
-        if isinstance(replacement_result, RuntimeMessage):
-            tool_result = replacement_result
+        if isinstance(callback_result, Message):
+            replaced_tool_result = callback_result
 
-        return tool_result, False
+        return replaced_tool_result
 
     async def _call_tool(self, tool_call: ToolCallMessage, tool_index: int) -> bool:
         """调用工具。"""
 
-        from linhai.tool.base import ToolResultFailed
-
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
-        before_result = await lifecycle.before_tool_call.trigger(
+        arguments = tool_call.function_arguments
+        beforecbs_result = await lifecycle.before_tool_call.trigger(
             tool_call.function_name,
-            tool_call.function_arguments,
+            arguments,
             tool_call.with_secret,
         )
-        if isinstance(before_result, ToolResultFailed):
-            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        if isinstance(beforecbs_result, ToolResultFailed):
             await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
-                message=RuntimeMessage(before_result.content),
-                toolcall_arguments=tool_call.function_arguments,
+                message=RuntimeMessage(beforecbs_result.content),
+                toolcall_arguments=arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            msg = f"工具调用失败: {before_result.content}"
+            msg = f"工具调用失败: {beforecbs_result.content}"
             message_processor = self.registry.get_member_typechecked(
                 "agent_message", AgentMessage
             )
             await message_processor.add_new_message(RuntimeMessage(msg))
             return True
-        elif isinstance(before_result, dict):
-            tool_call.function_arguments = before_result
+        elif isinstance(beforecbs_result, dict):
+            arguments = beforecbs_result
 
         tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
+        message_processor = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+
         try:
             tool_result = await tool_manager.process_tool_call(tool_call, tool_index)
 
@@ -472,45 +410,31 @@ class AgentToolcall:
                     with_secret=tool_call.with_secret,
                     is_tool_failed_duplicated_error=False,
                 )
-                msg = f"工具调用失败: {tool_result.result.content}"
 
-                message_processor = self.registry.get_member_typechecked(
-                    "agent_message", AgentMessage
-                )
-                await message_processor.add_new_message(RuntimeMessage(msg))
-                if tool_call.assert_success:
-                    return True
-                else:
-                    return False
+                await message_processor.add_new_message(tool_result)
+                return tool_call.assert_success
 
-            processed_result, skip_handle = await self._tool_result_token_management(
+            processed_result = await self._tool_result_token_management(
                 tool_call, tool_index, tool_result
             )
-
-            if skip_handle:
-                await self._handle_tool_result(tool_call, processed_result)
-                return False
 
             await self._handle_tool_result(tool_call, processed_result)
             return False
         except (OSError, IOError) as e:
 
             lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            msg = RuntimeMessage(f"工具调用失败: {str(e)} {repr(e)}")
             await lifecycle.after_toolcall.trigger(
                 tool_name=tool_call.function_name,
                 tool_index=tool_index,
                 status="failed",
-                message=RuntimeMessage(str(e)),
-                toolcall_arguments=tool_call.function_arguments,
+                message=msg,
+                toolcall_arguments=arguments,
                 with_secret=tool_call.with_secret,
                 is_tool_failed_duplicated_error=False,
             )
-            msg = f"工具调用失败: {str(e)} {repr(e)}"
 
-            message_processor = self.registry.get_member_typechecked(
-                "agent_message", AgentMessage
-            )
-            await message_processor.add_new_message(RuntimeMessage(msg))
+            await message_processor.add_new_message(msg)
             return False
 
     async def _handle_tool_result(

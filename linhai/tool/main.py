@@ -167,30 +167,8 @@ class ToolManager:
             if isinstance(result, Awaitable):
                 result = await result
 
-            from ..multimodal import ImageMessage
-
-            if isinstance(result, ImageMessage):
-                return result
-
             if isinstance(result, Message):
-                content = result.get_content()
-                assert (
-                    content is not None
-                ), "Possible unfiltered complex content: " + repr(result)
-                processed_content = content
-                result_type = (
-                    ToolResultFailed
-                    if isinstance(result, ToolResultFailed)
-                    else ToolResultSuccess
-                )
-                return ToolCallResultMessage(
-                    tool_name=tool_call.function_name,
-                    tool_index=tool_index,
-                    result=result_type(content=processed_content),
-                    toolcall_arguments=(
-                        kwargs if isinstance(result, ToolResultFailed) else {}
-                    ),
-                )
+                return result
 
             if isinstance(result, ToolResultSuccess) or isinstance(
                 result, ToolResultFailed

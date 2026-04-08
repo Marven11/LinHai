@@ -68,7 +68,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
         files = list(long_toolcall_dir.glob("*.txt"))
         self.assertEqual(len(files), 3, f"应该生成3个文件，实际生成了{len(files)}个")
 
-        self.assertIn("已分割保存到 3 个文件", result)
+        self.assertIn("已分割保存到 3 个文件", str(result))
 
     def test_split_content_distribution(self):
         """验证内容被均匀分割到3个部分。"""

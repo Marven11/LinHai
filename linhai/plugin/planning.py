@@ -287,15 +287,16 @@ class DesignMdReminderPlugin(Plugin):
             )
 
     async def before_message_generation(self) -> None:
-        if not self._design_notification_active or self._design_reminded:
-            return
-
         agent = self.registry.get_member_typechecked("agent", Agent)
         if agent is None:
             return
 
         all_messages = agent.message_processor.get_messages()
-        if self._is_design_in_messages(all_messages):
+        if (
+            self._is_design_in_messages(all_messages)
+            and self._design_notification_active
+            and not self._design_reminded
+        ):
             self._design_notification_active = False
             self._design_reminded = True
             agent.message_processor.update_notification_message(

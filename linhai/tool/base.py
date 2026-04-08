@@ -3,7 +3,13 @@
 包含工具定义、注册和调用相关的基类和函数。
 """
 
-from typing import TypedDict, Callable, Any, cast, Self  # pylint: disable=unused-import
+from typing import (
+    TypedDict,
+    Callable,
+    Any,
+    cast,
+    Awaitable,  # pylint: disable=unused-import
+)
 
 import json
 import tempfile
@@ -30,7 +36,7 @@ class Tool(TypedDict):
     desc: str
     args: dict[str, ToolArgInfo]
     required: list[str]
-    func: Callable
+    func: Callable[..., "ToolResult | Awaitable[ToolResult]"]
     conflict_with: list[str]
 
 
@@ -84,7 +90,9 @@ class ToolSet:
         conflict_with: list[str] | None = None,
     ):
 
-        def _wraps(f: Callable) -> Callable:
+        def _wraps(
+            f: Callable[..., "ToolResult | Awaitable[ToolResult]"],
+        ) -> Callable[..., "ToolResult | Awaitable[ToolResult]"]:
             """实际装饰器
 
             Args:
@@ -105,7 +113,9 @@ class ToolSet:
 
         return _wraps
 
-    def get_tool(self, name: str) -> Callable:
+    def get_tool(
+        self, name: str
+    ) -> Callable[..., "ToolResult | Awaitable[ToolResult]"]:
         if name not in self.tools:
             raise ValueError(f"Tool not found: {name}")
         return self.tools[name]["func"]
@@ -240,3 +250,5 @@ class ToolCallResultMessage(Message):
 
 
 utils_tools = ToolSet()
+
+ToolResult = Message | ToolResultSuccess | ToolResultFailed
