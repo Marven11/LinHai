@@ -363,6 +363,7 @@ class ToolCallWidget(Static):
         self.collapse_timer: Timer | None = None
         self.get_refresh_interval = get_refresh_interval
 
+        self._markdown_widget: Markdown | None = None
         self.border_title = "tool call"
 
     def on_mount(self) -> None:
@@ -481,6 +482,10 @@ class ToolCallWidget(Static):
         if self.is_collapsed:
             return
 
+        if self._markdown_widget:
+            self._markdown_widget.remove()
+            self._markdown_widget = None
+
         self.is_collapsed = True
         self.add_class("collapsed")
         self.border_title = "tool call [点击展开]"
@@ -506,15 +511,20 @@ class ToolCallWidget(Static):
         self.remove_class("collapsed")
         self.border_title = "tool call [点击隐藏]"
 
-        self.update(
-            Syntax(
-                self.current_content.strip(),
-                lexer="markdown",
-                theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
+        if self._segment["is_finished"] and not self.has_error:
+            self.update("")
+            self._markdown_widget = Markdown(self.current_content.strip())
+            self.mount(self._markdown_widget)
+        else:
+            self.update(
+                Syntax(
+                    self.current_content.strip(),
+                    lexer="markdown",
+                    theme=self.theme,
+                    background_color="#2E3440",
+                    word_wrap=True,
+                )
             )
-        )
 
     def _start_collapse_timer(self) -> None:
         if self.collapse_timer:
