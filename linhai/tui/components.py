@@ -405,7 +405,7 @@ class ToolCallWidget(Static):
             if value.index_key != self.current_key:
                 self.current_key = value.index_key
                 self.content_before_current_value = self.current_content
-                self.current_content += f"{self.current_key}: `"
+                self.current_content += f"- {self.current_key}: `"
 
             if isinstance(value, Value):
                 final_value = (
@@ -418,12 +418,12 @@ class ToolCallWidget(Static):
                     backticks = "`" * self.get_backtick_count(final_value)
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
+                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}: `{final_value}`\n"
+                        + f"- {self.current_key}: `{final_value}`\n"
                     )
 
                 new_guessed_type = self._guess_content_type(final_value)
@@ -439,12 +439,12 @@ class ToolCallWidget(Static):
                     backticks = "`" * backtick_count
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
+                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
                     )
                 else:
                     self.current_content = (
                         self.content_before_current_value
-                        + f"{self.current_key}: `{self.current_value}`"
+                        + f"- {self.current_key}: `{self.current_value}`"
                     )
 
             self.update(
