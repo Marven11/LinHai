@@ -186,6 +186,7 @@ class AgentContextOrchestration:
                     "is_dirty": False,
                     "current_state": "绿灯",
                 },
+                "cache_ratio": None,
             }
 
         usage_ratio = threshold_info["usage_ratio"]
@@ -228,6 +229,20 @@ class AgentContextOrchestration:
         }
 
         notification_message = None
+        cache_ratio: float | None = None
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        cache_ratio_text = ""
+        if token_manager.cumulative_token_usage is not None:
+            input_tokens = token_manager.cumulative_token_usage["input_tokens"]
+            cached_input_tokens = token_manager.cumulative_token_usage[
+                "cached_input_tokens"
+            ]
+            if input_tokens > 0:
+                cache_ratio = (cached_input_tokens / input_tokens) * 100
+                cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
+
         if current_state != "绿灯" or is_dirty:
             total_large_count = len(self.large_messages)
             cleanable_messages = get_cleanable_large_messages(
@@ -236,18 +251,6 @@ class AgentContextOrchestration:
                 cleaned_messages_dict=self.cleaned_messages,
             )
             cleanable_count = len(cleanable_messages)
-            token_manager = self.registry.get_member_typechecked(
-                "token_manager", TokenManager
-            )
-            cache_ratio_text = ""
-            if token_manager.cumulative_token_usage is not None:
-                input_tokens = token_manager.cumulative_token_usage["input_tokens"]
-                cached_input_tokens = token_manager.cumulative_token_usage[
-                    "cached_input_tokens"
-                ]
-                if input_tokens > 0:
-                    cache_ratio = (cached_input_tokens / input_tokens) * 100
-                    cache_ratio_text = f", 缓存比例: {cache_ratio:.0f}%"
 
             if is_dirty:
                 base_info = f"当前上下文占用量失效, 总大消息数: {total_large_count}, 可清理: {cleanable_count}, token用量信息已失效{cache_ratio_text}"
@@ -260,13 +263,18 @@ class AgentContextOrchestration:
                     else:
                         suggestion = "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文"
                 elif current_state == "黄灯":
-                    suggestion = (
-                        "建议: 根据缓存比例判断是否需要使用context_forget_large_message工具"
-                        if cleanable_count >= 5
-                        else ""
-                    )
+                    if cache_ratio is not None and cache_ratio < 80:
+                        suggestion = f"建议: 当前缓存命中率{cache_ratio:.0f}%低于80%，优先保证缓存命中率而不是清理上下文"
+                    else:
+                        suggestion = (
+                            "建议: 根据缓存比例判断是否需要使用context_forget_large_message工具"
+                            if cleanable_count >= 5
+                            else ""
+                        )
                 else:
                     suggestion = "建议: 不要担心消息限制，立即工作"
+                    if cache_ratio is not None and cache_ratio < 90:
+                        suggestion = f"建议: 当前缓存命中率{cache_ratio:.0f}%低于90%，优先保证缓存命中率而不是清理上下文"
             notification_message = f"{base_info}, {suggestion}"
 
         return {
@@ -275,6 +283,7 @@ class AgentContextOrchestration:
             "is_dirty": is_dirty,
             "notification_message": notification_message,
             "tool_block_details": tool_block_details,
+            "cache_ratio": cache_ratio,
         }
 
     def get_status_display_pieces(self, use_nerd_font: bool = False) -> list[str]:
@@ -459,6 +468,28 @@ class RedStateToolBlockPlugin:
 
         context = orchestration.compute_orchestration_context(tool_name, threshold_info)
         details = context["tool_block_details"]
+        cache_ratio = context.get("cache_ratio")
+        current_state = details["current_state"]
+
+        cache_warning = ""
+        should_remind_due_to_cache = False
+        if cache_ratio is not None and details["actual_category"] == "cleanup":
+            if current_state == "绿灯" and cache_ratio < 90:
+                should_remind_due_to_cache = True
+                cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于90%"
+            elif current_state == "黄灯" and cache_ratio < 80:
+                should_remind_due_to_cache = True
+                cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于80%"
+
+        if should_remind_due_to_cache:
+            warning_msg = f"你在上下文健康且缓存命中率较低的情况下清理了上下文，这进一步破坏了缓存，为什么不优先保证缓存命中率而是清理上下文？{cache_warning}"
+            await self.registry.send_if_exists(
+                "ui_log",
+                UiNotice(
+                    level="WARNING",
+                    content=f"缓存命中率低时清理上下文：{cache_warning}",
+                ),
+            )
 
         if details["blocked_category"] == details["actual_category"]:
             is_dirty = details["is_dirty"]

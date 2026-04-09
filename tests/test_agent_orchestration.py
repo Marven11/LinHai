@@ -178,6 +178,11 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "remaining_tokens": 50000,
             "usage_ratio": 0.5,
         }
+        # 更新agent的threshold_info
+        from linhai.agent.main import Agent
+
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
 
         # 测试消息清理工具
         context = self.orchestration.compute_orchestration_context(
@@ -687,3 +692,180 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
             "consecutive_red_block"
         )
         self.assertIsNone(notifications)
+
+    async def test_compute_orchestration_context_returns_cache_ratio(self):
+        """测试compute_orchestration_context返回cache_ratio字段。"""
+        # 设置token manager的cumulative_token_usage以计算缓存比例
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        token_manager.cumulative_token_usage = {
+            "input_tokens": 1000,
+            "cached_input_tokens": 600,  # 缓存比例应为60%
+            "output_tokens": 0,
+        }
+        # 确保input_tokens > 0 以计算cache_ratio
+
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 50000,
+            "remaining_tokens": 50000,
+            "usage_ratio": 0.5,
+        }
+
+        context = self.orchestration.compute_orchestration_context("", threshold_info)
+        self.assertIn("cache_ratio", context)
+        self.assertAlmostEqual(context["cache_ratio"], 60.0, places=1)
+
+    async def test_cache_ratio_reminder_green_state_low_cache(self):
+        """测试绿灯状态且缓存命中率低于90%时发送提醒。"""
+        # 设置绿灯状态（使用率50%）和低缓存比例（60%）
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        token_manager.cumulative_token_usage = {
+            "input_tokens": 1000,
+            "cached_input_tokens": 600,
+            "output_tokens": 0,
+        }
+
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 50000,
+            "remaining_tokens": 50000,
+            "usage_ratio": 0.5,
+        }
+
+        from linhai.agent.main import Agent
+
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
+
+        # 模拟清理工具调用
+        from linhai.agent.orchestration import RedStateToolBlockPlugin
+
+        plugin = RedStateToolBlockPlugin(self.registry)
+
+        # 捕获UI日志
+        ui_log_calls = []
+
+        async def mock_send_ui_log(event_name, ui_notice):
+            ui_log_calls.append(ui_notice)
+
+        self.registry.send_if_exists = AsyncMock(side_effect=mock_send_ui_log)
+
+        # 调用before_toolcall，应该发送提醒但不阻止工具
+        result = await plugin.before_toolcall(
+            tool_name="context_forget_large_message",
+            toolcall_arguments={},
+            with_secret=None,
+        )
+
+        # 验证：不应返回ToolResultFailed（不阻止工具）
+        self.assertIsNone(result)
+        # 验证：发送了UI提醒
+        self.assertEqual(len(ui_log_calls), 1)
+        self.assertEqual(ui_log_calls[0].level, "WARNING")
+        self.assertIn("缓存命中率低时清理上下文", ui_log_calls[0].content)
+
+    async def test_cache_ratio_reminder_yellow_state_low_cache(self):
+        """测试黄灯状态且缓存命中率低于80%时发送提醒。"""
+        # 设置黄灯状态（使用率85%）和低缓存比例（70%）
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        token_manager.cumulative_token_usage = {
+            "input_tokens": 1000,
+            "cached_input_tokens": 700,
+            "output_tokens": 0,
+        }
+
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 85000,
+            "remaining_tokens": 25000,
+            "usage_ratio": 0.85,
+        }
+
+        # 更新agent的threshold_info
+        from linhai.agent.main import Agent
+
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
+
+        # 模拟清理工具调用
+        from linhai.agent.orchestration import RedStateToolBlockPlugin
+
+        plugin = RedStateToolBlockPlugin(self.registry)
+
+        # 捕获UI日志
+        ui_log_calls = []
+
+        async def mock_send_ui_log(event_name, ui_notice):
+            ui_log_calls.append(ui_notice)
+
+        self.registry.send_if_exists = AsyncMock(side_effect=mock_send_ui_log)
+
+        # 调用before_toolcall，应该发送提醒但不阻止工具
+        result = await plugin.before_toolcall(
+            tool_name="context_forget_range_step1",
+            toolcall_arguments={},
+            with_secret=None,
+        )
+
+        # 验证：不应返回ToolResultFailed（不阻止工具）
+        self.assertIsNone(result)
+        # 验证：发送了UI提醒
+        self.assertEqual(len(ui_log_calls), 1)
+        self.assertEqual(ui_log_calls[0].level, "WARNING")
+        self.assertIn("缓存命中率低时清理上下文", ui_log_calls[0].content)
+
+    async def test_no_cache_ratio_reminder_when_cache_high(self):
+        """测试缓存命中率高时不发送提醒。"""
+        # 设置绿灯状态和高缓存比例（95%）
+        token_manager = self.registry.get_member_typechecked(
+            "token_manager", TokenManager
+        )
+        token_manager.cumulative_token_usage = {
+            "input_tokens": 1000,
+            "cached_input_tokens": 950,
+            "output_tokens": 0,
+        }
+
+        threshold_info: ThresholdInfo = {
+            "hard_limit": 100000,
+            "used_tokens": 50000,
+            "remaining_tokens": 50000,
+            "usage_ratio": 0.5,
+        }
+
+        # 更新agent的threshold_info
+        from linhai.agent.main import Agent
+
+        mock_agent = self.registry.get_member_typechecked("agent", Agent)
+        mock_agent.get_threshold_info = Mock(return_value=threshold_info)
+
+        # 模拟清理工具调用
+        from linhai.agent.orchestration import RedStateToolBlockPlugin
+
+        plugin = RedStateToolBlockPlugin(self.registry)
+
+        # 捕获UI日志
+        ui_log_calls = []
+
+        async def mock_send_ui_log(event_name, ui_notice):
+            ui_log_calls.append(ui_notice)
+
+        self.registry.send_if_exists = AsyncMock(side_effect=mock_send_ui_log)
+
+        # 调用before_toolcall，不应发送提醒
+        result = await plugin.before_toolcall(
+            tool_name="context_forget_large_message",
+            toolcall_arguments={},
+            with_secret=None,
+        )
+
+        # 验证：不应返回ToolResultFailed
+        self.assertIsNone(result)
+        # 验证：没有发送UI提醒
+        self.assertEqual(len(ui_log_calls), 0)

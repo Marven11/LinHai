@@ -31,6 +31,8 @@ dependencies = [
     "feedparser",
     "python-telegram-bot>=22.7",
     "quickjs-ng @ git+https://github.com/Marven11/python-quickjs-ng@v0.12.1.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
 ]
 requires-python = ">=3.10"
 
