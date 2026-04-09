@@ -58,6 +58,11 @@ class LLMConfig(BaseModel):
     fallback: Optional[str] = Field(
         default=None, description="回退LLM的名称，当主LLM不可用时使用"
     )
+    fallback_duration: int = Field(
+        default=120,
+        gt=0,
+        description="回退持续时间（秒），当LLM遇到429错误时切换到备用LLM的禁用时间",
+    )
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument

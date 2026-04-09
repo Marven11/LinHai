@@ -60,6 +60,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
+            llm_fallback_duration_map={"test_llm": 120},
         )
         self.agent = Agent(
             llm_manager=llm_manager,

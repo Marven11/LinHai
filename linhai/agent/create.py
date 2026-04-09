@@ -399,17 +399,22 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
         llms.append(llm)
 
     llm_fallback_map = {}
+    llm_fallback_duration_map = {}
     for llm_config in context["llms"]:
         if llm_config.fallback is not None:
             llm_fallback_map[llm_config.name] = llm_config.fallback
         else:
             llm_fallback_map[llm_config.name] = None
 
+        fallback_duration = llm_config.fallback_duration
+        llm_fallback_duration_map[llm_config.name] = fallback_duration
+
     llm_manager = LlmManager(
         registry=context["registry"],
         llms=llms,
         default_llm_name=context["llm_name"],
         llm_fallback_map=llm_fallback_map,
+        llm_fallback_duration_map=llm_fallback_duration_map,
     )
     return llm_manager
 

@@ -95,6 +95,7 @@ class TestQueueInterrupt(unittest.IsolatedAsyncioTestCase):
             llms=self.config["llms"],
             default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
+            llm_fallback_duration_map={"test_llm": 120},
         )
         self.agent = Agent(
             llm_manager=llm_manager,

@@ -115,6 +115,7 @@ class TestAgentAtSystem(unittest.IsolatedAsyncioTestCase):
             llms=self.config["llms"],
             default_llm_name=self.config["llm_names"][self.config["current_llm_index"]],
             llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
+            llm_fallback_duration_map={"deepseek-reasoning": 120, "qwen": 120},
         )
 
         self.agent = Agent(

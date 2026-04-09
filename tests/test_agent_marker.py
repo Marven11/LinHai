@@ -166,6 +166,7 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"test-llm": None},
+            llm_fallback_duration_map={"test-llm": 120},
         )
 
         from linhai.token_manager import TokenManager

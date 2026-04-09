@@ -62,6 +62,7 @@ class TestLLMSwitching(unittest.IsolatedAsyncioTestCase):
             llms=config["llms"],
             default_llm_name=config["llm_names"][config["current_llm_index"]],
             llm_fallback_map={"primary": None, "secondary": None},
+            llm_fallback_duration_map={"primary": 120, "secondary": 120},
         )
         self.agent = Agent(
             llm_manager=llm_manager,

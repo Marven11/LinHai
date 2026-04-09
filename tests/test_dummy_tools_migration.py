@@ -62,6 +62,7 @@ class TestDummyToolsMigration(unittest.IsolatedAsyncioTestCase):
             llms=mock_config["llms"],
             default_llm_name=mock_config["llm_names"][mock_config["current_llm_index"]],
             llm_fallback_map={"test_llm": None},
+            llm_fallback_duration_map={"test_llm": 120},
         )
         Agent(
             llm_manager=llm_manager,

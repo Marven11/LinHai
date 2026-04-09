@@ -135,6 +135,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             llms=[self.mock_llm],
             default_llm_name="test_llm",
             llm_fallback_map={"test_llm": None},
+            llm_fallback_duration_map={"test_llm": 120},
         )
 
         config = {
@@ -419,6 +420,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
             llms=[mock_llm1, mock_llm2],
             default_llm_name="deepseek-reasoning",
             llm_fallback_map={"deepseek-reasoning": None, "qwen": None},
+            llm_fallback_duration_map={"deepseek-reasoning": 120, "qwen": 120},
         )
 
         agent = Agent(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Sequence
-import random
 import asyncio
 from datetime import datetime, timedelta
 from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
@@ -24,6 +23,7 @@ class LlmManager:
         registry: Registry,
         llms: list[LanguageModel],
         llm_fallback_map: dict[str, str | None],
+        llm_fallback_duration_map: dict[str, int],
         default_llm_name: str | None = None,
     ) -> None:
         """初始化LlmManager
@@ -33,6 +33,7 @@ class LlmManager:
             llms: LanguageModel实例列表
             default_llm_name: 默认LLM名称，如果为None则使用第一个LLM
             llm_fallback_map: LLM fallback映射，key为LLM名称，value为fallback的LLM名称
+            llm_fallback_duration_map: LLM fallback持续时间映射（秒），key为LLM名称，value为fallback持续时间（秒）
 
         """
         self.registry = registry
@@ -64,6 +65,22 @@ class LlmManager:
             assert (
                 llm_name in self.llm_fallback_map
             ), f"LLM名称 '{llm_name}' 未在llm_fallback_map中配置"
+
+        self.llm_fallback_duration_map: dict[str, int] = {}
+        if llm_fallback_duration_map is not None:
+            for llm_name, duration in llm_fallback_duration_map.items():
+                if llm_name not in self.llm_names:
+                    raise ValueError(
+                        f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                    )
+                if not isinstance(duration, int) or duration <= 0:
+                    raise ValueError(
+                        f"错误：LLM '{llm_name}' 的fallback_duration必须为正整数，得到: {duration}"
+                    )
+                self.llm_fallback_duration_map[llm_name] = duration
+        for llm_name in self.llm_names:
+            if llm_name not in self.llm_fallback_duration_map:
+                self.llm_fallback_duration_map[llm_name] = 120
 
         self.llm_stack: list[tuple[str, datetime | None]] = [
             (self.default_llm_name, None)
@@ -194,16 +211,17 @@ class LlmManager:
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
                     if fallback_llm is not None:
-                        disabled_duration = timedelta(
-                            minutes=1, seconds=random.randint(0, 30)
+                        fallback_duration = self.llm_fallback_duration_map.get(
+                            current_llm_name, 120
                         )
+                        disabled_duration = timedelta(seconds=fallback_duration)
                         disabled_until = datetime.now() + disabled_duration
                         self.llm_stack.append((fallback_llm, disabled_until))
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，{disabled_duration.seconds}s后恢复",
+                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，{fallback_duration}s后恢复",
                             ),
                         )
                     else:

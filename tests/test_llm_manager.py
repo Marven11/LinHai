@@ -46,6 +46,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": "llm2", "llm2": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
         )
 
     def test_initialization(self):
@@ -144,6 +145,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": None, "llm2": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
         )
 
         history = [MagicMock(spec=Message)]
@@ -255,6 +257,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             llms=[self.mock_llm1, self.mock_llm2, mock_llm3],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": "llm2", "llm2": "llm3", "llm3": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120, "llm3": 120},
         )
 
         call_count1 = 0
@@ -322,6 +325,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             llms=[self.mock_llm1, self.mock_llm2],
             default_llm_name="llm1",
             llm_fallback_map={"llm1": None, "llm2": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
         )
 
         history = [MagicMock(spec=Message)]

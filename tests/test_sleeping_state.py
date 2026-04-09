@@ -24,6 +24,7 @@ def _create_agent() -> Agent:
         llms=[mock_llm],
         default_llm_name="test-llm",
         llm_fallback_map={"test-llm": None},
+        llm_fallback_duration_map={"test-llm": 120},
     )
 
     agent = Agent(
