@@ -123,6 +123,25 @@ class TestExtractUsage(unittest.TestCase):
         assert result is not None
         self.assertIsNone(result.cached_input_tokens)
 
+    def test_glm_format(self):
+        result = extract_usage(
+            {
+                "prompt_tokens": 123,
+                "completion_tokens": 123,
+                "total_tokens": 123,
+                "prompt_tokens_details": {
+                    "cached_tokens": 123,
+                },
+            }
+        )
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result.input_tokens, 123)
+        self.assertEqual(result.output_tokens, 123)
+        self.assertEqual(result.total_tokens, 123)
+        self.assertEqual(result.cached_input_tokens, 123)
+        self.assertIsNone(result.cache_creation_input_tokens)
+
 
 if __name__ == "__main__":
     unittest.main()
