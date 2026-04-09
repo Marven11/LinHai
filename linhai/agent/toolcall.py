@@ -163,7 +163,9 @@ class AgentToolcall:
             )
             if token_manager.cumulative_token_usage is not None:
                 total = token_manager.cumulative_token_usage["total_tokens"]
-                return ToolResultSuccess(content=f"当前token总用量为: {total} ({total/1000:.2f} k)")
+                return ToolResultSuccess(
+                    content=f"当前token总用量为: {total} ({total/1000:.2f} k)"
+                )
             else:
                 return ToolResultSuccess(content="暂无token用量信息")
 
@@ -388,6 +390,7 @@ class AgentToolcall:
             return True
         elif isinstance(beforecbs_result, dict):
             arguments = beforecbs_result
+            tool_call.function_arguments = arguments
 
         tool_manager = self.registry.get_member_typechecked("tool_manager", ToolManager)
         message_processor = self.registry.get_member_typechecked(
