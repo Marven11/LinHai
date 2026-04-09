@@ -82,10 +82,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call, 1, tool_result
-            )
+        result = await self.toolcall_processor._tool_result_token_management(
+            tool_call, 1, tool_result
         )
 
         self.assertEqual(result, tool_result)
@@ -108,10 +106,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call, 1, tool_result
-            )
+        result = await self.toolcall_processor._tool_result_token_management(
+            tool_call, 1, tool_result
         )
 
         self.assertIsInstance(result, RuntimeMessage)
@@ -144,10 +140,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result1 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call1, 1, tool_result1
-            )
+        result1 = await self.toolcall_processor._tool_result_token_management(
+            tool_call1, 1, tool_result1
         )
 
         token_count1 = self.toolcall_processor.current_round_token_count
@@ -167,13 +161,9 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result2, skip_handle2 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call2, 2, tool_result2
-            )
+        result2 = await self.toolcall_processor._tool_result_token_management(
+            tool_call2, 2, tool_result2
         )
-
-        self.assertFalse(skip_handle2)
         token_count2 = self.toolcall_processor.current_round_token_count
 
         self.assertGreater(token_count2, token_count1)
@@ -198,10 +188,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
                 with_secret=None,
             )
 
-            result = (
-                await self.toolcall_processor._tool_result_token_management(
-                    tool_call, i + 1, tool_result
-                )
+            result = await self.toolcall_processor._tool_result_token_management(
+                tool_call, i + 1, tool_result
             )
 
             total_tokens = self.toolcall_processor.current_round_token_count
@@ -225,10 +213,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result1, skip_handle1 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call1, 1, tool_result1
-            )
+        result1 = await self.toolcall_processor._tool_result_token_management(
+            tool_call1, 1, tool_result1
         )
 
         for i in range(5):
@@ -247,13 +233,9 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
                 with_secret=None,
             )
 
-            result, skip_handle = (
-                await self.toolcall_processor._tool_result_token_management(
-                    tool_call, i + 1, tool_result
-                )
+            result = await self.toolcall_processor._tool_result_token_management(
+                tool_call, i + 1, tool_result
             )
-
-            self.assertFalse(skip_handle)
             total_tokens = self.toolcall_processor.current_round_token_count
 
         self.assertLess(total_tokens, self.toolcall_processor.max_token_limit)
@@ -275,10 +257,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result1 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call1, 1, tool_result1
-            )
+        result1 = await self.toolcall_processor._tool_result_token_management(
+            tool_call1, 1, tool_result1
         )
 
         content2 = "x" * 12000
@@ -296,13 +276,9 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result2, skip_handle2 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call2, 2, tool_result2
-            )
+        result2 = await self.toolcall_processor._tool_result_token_management(
+            tool_call2, 2, tool_result2
         )
-
-        self.assertTrue(skip_handle2)
         self.assertIsInstance(result2, RuntimeMessage)
 
         content3 = "x" * 100
@@ -320,13 +296,9 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result3, skip_handle3 = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call3, 3, tool_result3
-            )
+        result3 = await self.toolcall_processor._tool_result_token_management(
+            tool_call3, 3, tool_result3
         )
-
-        self.assertFalse(skip_handle3)
 
     async def test_on_tool_result_replacement(self):
         """测试当on_tool_result回调返回RuntimeMessage时使用替换内容。"""
@@ -349,10 +321,8 @@ class TestToolcallTokenManagementTDD(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
 
-        result = (
-            await self.toolcall_processor._tool_result_token_management(
-                tool_call, 1, tool_result
-            )
+        result = await self.toolcall_processor._tool_result_token_management(
+            tool_call, 1, tool_result
         )
 
         self.assertEqual(result, replacement_message)

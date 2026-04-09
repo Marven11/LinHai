@@ -143,14 +143,13 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         body_line = [l for l in lines if l.startswith("<<body>>")][0]
 
         self.assertEqual(status_line, "<<status_code>>200<<status_code>>")
-        self.assertIn("Content-Type: application/json", headers_line)
-        self.assertIn("Server: nginx", headers_line)
+        self.assertIn('"Content-Type": "application/json"', headers_line)
+        self.assertIn('"Server": "nginx"', headers_line)
         self.assertIn('{"test": "data"}', body_line)
 
     async def test_http_request_binary_content(self):
-        """Test http_request with binary content returns file_path in <<>> format."""
+        """Test http_request with binary content returns body in <<>> format."""
         mock_session = AsyncMock()
-        # 模拟一个二进制响应，无法UTF-8解码
         mock_session.send_http_request = AsyncMock(
             return_value={
                 "status_code": 200,
@@ -166,28 +165,17 @@ class TestEtherGhostMachineControl(unittest.IsolatedAsyncioTestCase):
         control.session = mock_session
         result = await control.http_request("GET", "http://example.com/image.png")
         self.assertIsInstance(result, ToolResultSuccess)
-        # 解析<<>>格式
         content = result.content
         self.assertIn("<<status_code>>", content)
         self.assertIn("<<headers>>", content)
-        self.assertIn("<<file_path>>", content)
+        self.assertIn("<<body>>", content)
 
         lines = content.split("\n")
         status_line = [l for l in lines if l.startswith("<<status_code>>")][0]
         headers_line = [l for l in lines if l.startswith("<<headers>>")][0]
-        file_path_line = [l for l in lines if l.startswith("<<file_path>>")][0]
 
         self.assertEqual(status_line, "<<status_code>>200<<status_code>>")
-        self.assertIn("Content-Type: application/octet-stream", headers_line)
-        # 提取文件路径
-        file_path = file_path_line.replace("<<file_path>>", "").replace(
-            "<<file_path>>", ""
-        )
-        # 清理临时文件
-        import os
-
-        if os.path.exists(file_path):
-            os.unlink(file_path)
+        self.assertIn("application/octet-stream", headers_line)
 
     async def test_list_files_success(self):
         """Test list_files with mock directory entries."""

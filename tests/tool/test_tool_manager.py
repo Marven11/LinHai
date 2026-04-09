@@ -3,6 +3,7 @@
 import unittest
 import unittest.mock
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolArgInfo, utils_tools
@@ -11,12 +12,25 @@ from linhai.registry import Registry
 from linhai.config import ToolConfig, MCPConfig
 
 
+def _create_registry_with_lifecycle() -> Registry:
+    from linhai.agent.lifecycle import Lifecycle
+
+    registry = Registry()
+    mock_lifecycle = MagicMock(spec=Lifecycle)
+    mock_lifecycle.after_toolcall = MagicMock()
+    mock_lifecycle.after_toolcall.trigger = AsyncMock(return_value=None)
+    mock_lifecycle.before_message_generation = MagicMock()
+    mock_lifecycle.before_message_generation.register = MagicMock()
+    registry.register_member("lifecycle", mock_lifecycle)
+    return registry
+
+
 class TestToolManager(unittest.IsolatedAsyncioTestCase):
     """Test cases for the ToolManager class."""
 
     async def asyncSetUp(self):
 
-        registry = Registry()
+        registry = _create_registry_with_lifecycle()
         self.manager = ToolManager(
             registry=registry,
             config=ToolConfig(),
@@ -117,9 +131,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
             ],
             tools=ToolConfig(max_output_length=1000),
         )
-        from linhai.registry import Registry
-
-        registry = Registry()
+        registry = _create_registry_with_lifecycle()
         manager_with_config = ToolManager(
             registry=registry,
             config=config.tools if config.tools else ToolConfig(),
@@ -170,9 +182,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                 )
             ],
         )
-        from linhai.registry import Registry
-
-        registry = Registry()
+        registry = _create_registry_with_lifecycle()
         manager_with_config = ToolManager(
             registry=registry,
             config=config.tools if config.tools else ToolConfig(),
@@ -205,9 +215,7 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_tool_manager_without_config(self):
         """测试ToolManager不使用配置的情况（使用默认值）"""
-        from linhai.registry import Registry
-
-        registry = Registry()
+        registry = _create_registry_with_lifecycle()
         manager_without_config = ToolManager(
             registry=registry,
             config=ToolConfig(),

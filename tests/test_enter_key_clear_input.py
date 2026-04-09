@@ -38,6 +38,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.registry.register_member(
             "agent_context_orchestration", self.mock_orchestration
         )
+        self.registry.register_member("process_sandbox", None)
 
         # 模拟cli_args
         import argparse

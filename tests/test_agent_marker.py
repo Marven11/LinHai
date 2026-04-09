@@ -228,7 +228,12 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        tool_result = ToolResultSuccess(content="tool result")
+        tool_result = ToolCallResultMessage(
+            tool_name="add_numbers",
+            tool_index=0,
+            result=ToolResultSuccess(content="tool result"),
+            toolcall_arguments={"a": 2, "b": 2},
+        )
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         await self.agent.message_processor.add_new_message(UserMessage(message="Test"))
@@ -318,7 +323,12 @@ class TestAgentMarkerValidation(unittest.IsolatedAsyncioTestCase):
         mock_answer = MockAnswer(response_content)
         self.mock_llm.answer_stream.return_value = mock_answer
 
-        tool_result = ToolResultSuccess(content="tool result")
+        tool_result = ToolCallResultMessage(
+            tool_name="add_numbers",
+            tool_index=0,
+            result=ToolResultSuccess(content="tool result"),
+            toolcall_arguments={"a": 2, "b": 2},
+        )
         self.tool_manager.process_tool_call = AsyncMock(return_value=tool_result)
 
         await self.agent.message_processor.add_new_message(UserMessage(message="Test"))

@@ -5,7 +5,7 @@ import unittest.mock
 import tempfile
 import os
 
-from linhai.tool.base import ToolSet, ToolArgInfo
+from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultFailed
 from linhai.tool.general import fetch_article
 
 
@@ -27,7 +27,7 @@ class TestFetchArticleTool(unittest.TestCase):
             required_args=["url"],
         )(fetch_article)
 
-    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_success(self, mock_subprocess, mock_which, mock_driver):
@@ -72,13 +72,13 @@ class TestFetchArticleTool(unittest.TestCase):
                 "fetch_article", {"url": "http://example.com"}
             )
 
-        self.assertIn("测试标题", result)
-        self.assertIn("测试段落", result)
-        self.assertIn("<table>", result)
-        self.assertIn("<tr>", result)
-        self.assertIn("short.jpg", result)
-        self.assertNotIn("a" * 800, result)
-        self.assertNotIn("javascript:", result)
+        self.assertIn("测试标题", result.content)
+        self.assertIn("测试段落", result.content)
+        self.assertIn("<table>", result.content)
+        self.assertIn("<tr>", result.content)
+        self.assertIn("short.jpg", result.content)
+        self.assertNotIn("a" * 800, result.content)
+        self.assertNotIn("javascript:", result.content)
 
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)
@@ -119,7 +119,7 @@ class TestFetchArticleTool(unittest.TestCase):
                     )
                     # 验证调用了httpx下载函数
                     mock_httpx_download.assert_called_once_with("http://example.com")
-                    self.assertIn("Test", result)
+                    self.assertIn("Test", result.content)
 
     def test_fetch_article_invalid_http_downloader(self):
         """测试fetch_article使用无效的http_downloader参数"""
@@ -128,9 +128,10 @@ class TestFetchArticleTool(unittest.TestCase):
             "fetch_article", {"url": "http://example.com", "http_downloader": "invalid"}
         )
         # 验证返回了正确的错误信息
+        self.assertIsInstance(result, ToolResultFailed)
         self.assertIn(
             "错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'invalid'",
-            result,
+            result.content,
         )
 
     @unittest.mock.patch("linhai.tool.general._download_with_selenium")
@@ -142,9 +143,10 @@ class TestFetchArticleTool(unittest.TestCase):
 
         result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
 
-        self.assertEqual(result, "错误：pandoc未安装，请先安装pandoc")
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertEqual(result.content, "错误：pandoc未安装，请先安装pandoc")
 
-    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     def test_fetch_article_webdriver_error(self, mock_which, mock_driver):
         """测试webdriver出错的情况"""
@@ -156,7 +158,7 @@ class TestFetchArticleTool(unittest.TestCase):
             self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
         self.assertIn("WebDriver错误", str(context.exception))
 
-    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_pandoc_error(self, mock_subprocess, mock_which, mock_driver):
@@ -172,7 +174,7 @@ class TestFetchArticleTool(unittest.TestCase):
             self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
         self.assertIn("Pandoc错误", str(context.exception))
 
-    @unittest.mock.patch("linhai.tool.general.webdriver.Firefox")
+    @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
     def test_fetch_article_table_attributes_removed(
@@ -214,15 +216,15 @@ class TestFetchArticleTool(unittest.TestCase):
                 "fetch_article", {"url": "http://example.com"}
             )
 
-        self.assertIn("<table>", result)
-        self.assertIn("<tr>", result)
-        self.assertIn("<th>列1</th>", result)
-        self.assertIn("<td>数据1</td>", result)
-        self.assertNotIn("border", result)
-        self.assertNotIn("class", result)
-        self.assertNotIn("style", result)
-        self.assertNotIn("align", result)
-        self.assertNotIn("width", result)
+        self.assertIn("<table>", result.content)
+        self.assertIn("<tr>", result.content)
+        self.assertIn("<th>列1</th>", result.content)
+        self.assertIn("<td>数据1</td>", result.content)
+        self.assertNotIn("border", result.content)
+        self.assertNotIn("class", result.content)
+        self.assertNotIn("style", result.content)
+        self.assertNotIn("align", result.content)
+        self.assertNotIn("width", result.content)
 
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)

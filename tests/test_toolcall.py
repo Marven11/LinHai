@@ -81,7 +81,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_result = Mock()
-        mock_result.__str__ = Mock(return_value="test result")
+        mock_result.get_content = Mock(return_value="test result")
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
         result = await self.toolcall_processor.call_tool(tool_call, tool_index=1)
@@ -183,6 +183,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_result = Mock()
+        mock_result.get_content = Mock(return_value="test result")
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
         await self.toolcall_processor.call_tool(tool_call, tool_index=1)
@@ -296,6 +297,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
             with_secret=None,
         )
         mock_result_a = Mock()
+        mock_result_a.get_content = Mock(return_value="result a")
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result_a)
 
         result_a = await self.toolcall_processor.call_tool(tool_call_a, tool_index=1)
@@ -381,6 +383,7 @@ class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_result = Mock()
+        mock_result.get_content = Mock(return_value="test result")
         self.mock_tool_manager.process_tool_call = AsyncMock(return_value=mock_result)
 
         await self.toolcall_processor.call_tool(tool_call, tool_index=1)

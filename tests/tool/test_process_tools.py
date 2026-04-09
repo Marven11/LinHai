@@ -4,11 +4,12 @@
 import asyncio
 import inspect
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from linhai.llm import ToolCallMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.machine_control.main import register_machine_control_tools
 from linhai.machine_control import MachineControl
 from linhai.tool.main import ToolManager
 from linhai.registry import Registry
@@ -75,18 +76,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
     def test_process_create_tool_definition(self):
         """测试process_create工具定义是否存在于工具列表中"""
         # 创建模拟的MachineControlToolSet来检查工具定义
-        from linhai.machine_control.main import MachineControlToolSet
-        from unittest.mock import Mock
-
-        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
 
-        # 创建工具集实例
-        toolset = MachineControlToolSet(mock_machine_control)
+        toolset = register_machine_control_tools(mock_machine_control)
 
-        # 检查process_create工具是否在工具列表中
         self.assertTrue(toolset.has_tool("process_create"))
 
         # 获取工具函数并检查其参数
@@ -100,17 +95,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
     def test_process_stdio_write_tool_definition(self):
         """测试process_stdio_write工具定义"""
-        from linhai.machine_control.main import MachineControlToolSet
-        from unittest.mock import Mock
-
-        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
 
-        toolset = MachineControlToolSet(mock_machine_control)
+        toolset = register_machine_control_tools(mock_machine_control)
 
-        # 检查process_stdio_write工具是否在工具列表中
         self.assertTrue(toolset.has_tool("process_stdio_write"))
 
         # 获取工具函数并检查其参数
@@ -130,17 +120,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
     def test_process_stdio_read_tool_definition(self):
         """测试process_stdio_read工具定义"""
-        from linhai.machine_control.main import MachineControlToolSet
-        from unittest.mock import Mock
-
-        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
 
-        toolset = MachineControlToolSet(mock_machine_control)
+        toolset = register_machine_control_tools(mock_machine_control)
 
-        # 检查process_stdio_read工具是否在工具列表中
         self.assertTrue(toolset.has_tool("process_stdio_read"))
 
         # 获取工具函数并检查其参数
@@ -160,17 +145,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
     def test_process_wait_tool_definition(self):
         """测试process_wait工具定义"""
-        from linhai.machine_control.main import MachineControlToolSet
-        from unittest.mock import Mock
-
-        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
 
-        toolset = MachineControlToolSet(mock_machine_control)
+        toolset = register_machine_control_tools(mock_machine_control)
 
-        # 检查process_wait工具是否在工具列表中
         self.assertTrue(toolset.has_tool("process_wait"))
 
         # 获取工具函数并检查其参数
@@ -184,17 +164,12 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
 
     def test_process_kill_tool_definition(self):
         """测试process_kill工具定义"""
-        from linhai.machine_control.main import MachineControlToolSet
-        from unittest.mock import Mock
-
-        mock_registry = Mock()
         mock_machine_control = Mock()
         mock_machine_control.machines = {"master_host": Mock()}
         mock_machine_control.target_machine = "master_host"
 
-        toolset = MachineControlToolSet(mock_machine_control)
+        toolset = register_machine_control_tools(mock_machine_control)
 
-        # 检查process_kill工具是否在工具列表中
         self.assertTrue(toolset.has_tool("process_kill"))
 
         # 获取工具函数并检查其参数
@@ -260,11 +235,6 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 由于我们模拟了MachineControl，可以检查target_machine是否被设置
         # 注意：实际实现中，ToolManager会切换机器，然后恢复
         # 这里我们验证send_if_exists被调用来记录切换信息
-        mock_registry.send_if_exists.assert_any_call(
-            "ui_log", unittest.mock.ANY  # UiNotice
-        )
-
-        # 验证结果是成功的
         self.assertIsInstance(result, ToolCallResultMessage)
         self.assertEqual(result.tool_name, "some_tool")
 

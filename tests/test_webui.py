@@ -32,66 +32,46 @@ class TestSchemas(unittest.TestCase):
 class TestAgentManager(unittest.IsolatedAsyncioTestCase):
     async def test_agent_manager_init(self):
         with patch("linhai.webui.agent_manager.load_config"):
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                self.assertEqual(manager.sessions, {})
+            manager = AgentManager(config_path="/fake/path")
+            self.assertEqual(manager.sessions, {})
 
     async def test_agent_manager_list_agents(self):
         with patch("linhai.webui.agent_manager.load_config"):
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                mock_session = MagicMock(spec=AgentSession)
-                mock_session.get_state = MagicMock(return_value="working")
-                mock_session.get_current_llm = MagicMock(return_value="gpt")
-                mock_session.created_at = MagicMock()
-                manager.sessions["test-id"] = mock_session
+            manager = AgentManager(config_path="/fake/path")
+            mock_session = MagicMock(spec=AgentSession)
+            mock_session.get_state = MagicMock(return_value="working")
+            mock_session.get_current_llm = MagicMock(return_value="gpt")
+            mock_session.created_at = MagicMock()
+            manager.sessions["test-id"] = mock_session
 
-                agents = manager.list_agents()
-                self.assertEqual(len(agents), 1)
+            agents = manager.list_agents()
+            self.assertEqual(len(agents), 1)
 
     async def test_agent_manager_get_agent_not_found(self):
         with patch("linhai.webui.agent_manager.load_config"):
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                agent = manager.get_agent("non-existent")
-                self.assertIsNone(agent)
+            manager = AgentManager(config_path="/fake/path")
+            agent = manager.get_agent("non-existent")
+            self.assertIsNone(agent)
 
     async def test_agent_manager_delete_agent(self):
         with patch("linhai.webui.agent_manager.load_config"):
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                mock_session = MagicMock(spec=AgentSession)
-                mock_session.stop = AsyncMock()
-                manager.sessions["test-id"] = mock_session
-                manager._registries["test-id"] = MagicMock()
-                manager._registries["test-id"].call_cleanups = AsyncMock()
+            manager = AgentManager(config_path="/fake/path")
+            mock_session = MagicMock(spec=AgentSession)
+            mock_session.stop = AsyncMock()
+            manager.sessions["test-id"] = mock_session
+            manager._registries["test-id"] = MagicMock()
+            manager._registries["test-id"].call_cleanups = AsyncMock()
 
-                result = await manager.delete_agent("test-id")
-                self.assertTrue(result)
-                self.assertNotIn("test-id", manager.sessions)
-                mock_session.stop.assert_called_once()
+            result = await manager.delete_agent("test-id")
+            self.assertTrue(result)
+            self.assertNotIn("test-id", manager.sessions)
+            mock_session.stop.assert_called_once()
 
     async def test_agent_manager_delete_nonexistent_agent(self):
         with patch("linhai.webui.agent_manager.load_config"):
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                result = await manager.delete_agent("non-existent")
-                self.assertFalse(result)
+            manager = AgentManager(config_path="/fake/path")
+            result = await manager.delete_agent("non-existent")
+            self.assertFalse(result)
 
 
 class TestAgentSession(unittest.TestCase):
@@ -429,14 +409,10 @@ class TestAgentManagerConfigInfo(unittest.IsolatedAsyncioTestCase):
             mock_config.llm = [mock_llm]
             mock_load.return_value = mock_config
 
-            with patch(
-                "linhai.webui.agent_manager.get_default_config_path",
-                return_value="/fake/path",
-            ):
-                manager = AgentManager(config_path="/fake/path")
-                info = manager.get_config_info()
+            manager = AgentManager(config_path="/fake/path")
+            info = manager.get_config_info()
 
-                self.assertEqual(len(info["profiles"]), 1)
-                self.assertEqual(info["profiles"][0]["name"], "default")
-                self.assertEqual(len(info["llms"]), 1)
-                self.assertEqual(info["llms"][0]["name"], "gpt")
+            self.assertEqual(len(info["profiles"]), 1)
+            self.assertEqual(info["profiles"][0]["name"], "default")
+            self.assertEqual(len(info["llms"]), 1)
+            self.assertEqual(info["llms"][0]["name"], "gpt")

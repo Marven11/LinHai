@@ -65,7 +65,7 @@ class EtherGhostMachineControl(HostControl):
             return ToolResultFailed(content="Session未初始化")
 
         unsupported = []
-        if not follow_redirects:
+        if follow_redirects:
             unsupported.append("follow_redirects")
         if timeout != 60:
             unsupported.append("timeout")

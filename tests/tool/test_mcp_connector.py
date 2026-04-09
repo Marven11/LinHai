@@ -156,8 +156,8 @@ class TestMCPConnector(unittest.IsolatedAsyncioTestCase):
         mock_conn._session.call_tool.assert_called_once_with(
             "test_tool", arguments={"arg": "value"}
         )
-        self.assertIsInstance(result, str)
-        self.assertEqual(result, "data.meta={}\nsuccess")
+        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertEqual(result.content, "data.meta={}\nsuccess")
 
     async def test_call_tool_raw_failure(self):
         mock_conn = _make_mock_conn()
