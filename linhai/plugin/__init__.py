@@ -47,6 +47,7 @@ from .system_message_leaning import MachineControlIntroductionPlugin
 from .planning import TodolistCheckerPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
+from .catgirl_tone import CatgirlTonePlugin
 
 from .helpers import (
     is_small_file,
@@ -96,4 +97,5 @@ __all__ = [
     "JsonValue",
     "READ_FILE_COMMANDS",
     "PythonCommentCheckerPlugin",
+    "CatgirlTonePlugin",
 ]

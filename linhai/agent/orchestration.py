@@ -230,9 +230,6 @@ class AgentContextOrchestration:
 
         notification_message = None
         cache_ratio: float | None = None
-        token_manager = self.registry.get_member_typechecked(
-            "token_manager", TokenManager
-        )
         cache_ratio_text = ""
         if token_manager.cumulative_token_usage is not None:
             input_tokens = token_manager.cumulative_token_usage["input_tokens"]
