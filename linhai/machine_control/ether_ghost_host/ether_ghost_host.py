@@ -9,7 +9,6 @@ from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.agent.messages import FileContentMessage
 from ..main import HostControl
-from ..process import ProcessCreateResult, Process
 
 
 from ether_ghost import session_manager
@@ -111,35 +110,70 @@ class EtherGhostMachineControl(HostControl):
             content=f"因webshell限制，EtherGhost不支持change_directory，当前路径固定为{self.current_dir}"
         )
 
-    async def create_process(
+    async def process_create(
         self, argv: list[str], wait_second: Optional[float] = None
-    ) -> ProcessCreateResult:
+    ) -> ToolResultSuccess | ToolResultFailed:
         if self.session is None:
-            return ProcessCreateResult(
-                process=None,
-                pid="",
-                error="Session未初始化",
-            )
+            return ToolResultFailed(content="Session未初始化")
 
         if wait_second is None:
             cmd = " ".join(argv)
             result = await self.session.execute_cmd(cmd)
-            return ProcessCreateResult(
-                process=None,
-                pid="",
-                returncode=0,
-                stdout=result,
-                message="EtherGhost不支持持久进程，命令已直接执行",
+            return ToolResultSuccess(
+                content=f"命令执行结果:\n{result}\n\n警告: EtherGhost不支持指定wait_seconds"
             )
         else:
-            return ProcessCreateResult(
-                process=None,
-                pid="",
-                error="EtherGhost不支持wait_second参数，请使用wait_second=None",
+            return ToolResultFailed(
+                content="EtherGhost不支持wait_second参数，请使用wait_second=None"
             )
 
-    def get_process(self, pid: str) -> Process | None:
-        return None
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict:
+        return {
+            "pid": pid,
+            "success": False,
+            "error": "EtherGhost不支持process_stdio_write_structured，仅支持通过process_create执行不需要长时间运行的命令",
+            "timestamp": 0.0,
+        }
+
+    async def process_stdio_write(
+        self, pid: str, content: str, with_enter: bool
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return ToolResultFailed(
+            content="EtherGhost不支持process_stdio_write，仅支持通过process_create执行不需要长时间运行的命令"
+        )
+
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict:
+        return {
+            "pid": pid,
+            "success": False,
+            "error": "EtherGhost不支持process_stdio_read_structured，仅支持通过process_create执行不需要长时间运行的命令",
+            "timestamp": 0.0,
+        }
+
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return ToolResultFailed(
+            content="EtherGhost不支持process_stdio_read，仅支持通过process_create执行不需要长时间运行的命令"
+        )
+
+    async def process_wait(
+        self, pid: str, timeout: float
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return ToolResultFailed(
+            content="EtherGhost不支持process_wait，仅支持通过process_create执行不需要长时间运行的命令"
+        )
+
+    async def process_kill(
+        self, pid: str, graceful: bool = True
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return ToolResultFailed(
+            content="EtherGhost不支持process_kill，仅支持通过process_create执行不需要长时间运行的命令"
+        )
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24

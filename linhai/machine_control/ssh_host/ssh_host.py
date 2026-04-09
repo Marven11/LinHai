@@ -9,11 +9,6 @@ from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
 from ..trojan.ssh_transport import SshTrojanTransport
-from linhai.machine_control.process import (
-    ProcessCreateResult,
-    Process,
-)
-from .process import RemoteProcess
 
 
 class SshMachineControl:
@@ -29,7 +24,6 @@ class SshMachineControl:
         self.transport = SshTrojanTransport(host, registry, port, username)
         self.registry = registry
         self._username = username
-        self._processes: dict[str, RemoteProcess] = {}
 
     @property
     def username(self) -> str | None:
@@ -150,56 +144,83 @@ class SshMachineControl:
             content_type=resp_data.get("content_type", ""),
         )
 
-    async def create_process(
+    async def process_create(
         self, argv: list[str], wait_second: Optional[float] = None
-    ) -> ProcessCreateResult:
-        """创建一个进程并返回进程对象"""
-        from linhai.machine_control.http_message import HttpMessage
-
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """创建一个进程，等待一段时间后检查状态"""
         if wait_second is None:
             wait_second = 1.0
-
-        result = await self.call_tool(
+        return await self.call_tool(
             "process_create", {"argv": argv, "wait_second": wait_second}
         )
 
-        if isinstance(result, ToolResultFailed):
-            return ProcessCreateResult(
-                process=None,
-                pid="",
-                error=result.content,
-            )
-
-        data = json.loads(result.content)
-        pid = str(data.get("pid", ""))
-        returncode = data.get("returncode")
-        stdout = data.get("stdout", "")
-        stderr = data.get("stderr", "")
-        message = data.get("message", "")
-
-        def on_exit(p: str) -> None:
-            if p in self._processes:
-                del self._processes[p]
-
-        process = RemoteProcess(
-            pid=pid,
-            call_tool=self.call_tool,
-            on_exit=on_exit,
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict:
+        """向进程的标准输入写入内容，返回结构化数据"""
+        result = await self.call_tool(
+            "process_stdio_write",
+            {"pid": pid, "content": content, "with_enter": with_enter},
         )
-        self._processes[pid] = process
+        if isinstance(result, ToolResultSuccess):
+            data = json.loads(result.content)
+            return data
+        else:
+            return {
+                "pid": pid,
+                "success": False,
+                "error": result.content,
+                "timestamp": 0.0,
+            }
 
-        return ProcessCreateResult(
-            process=process,
-            pid=pid,
-            returncode=returncode,
-            stdout=stdout,
-            stderr=stderr,
-            message=message,
+    async def process_stdio_write(
+        self, pid: str, content: str, with_enter: bool
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """向进程的标准输入写入内容"""
+        return await self.call_tool(
+            "process_stdio_write",
+            {"pid": pid, "content": content, "with_enter": with_enter},
         )
 
-    def get_process(self, pid: str) -> Process | None:
-        """获取已有进程对象"""
-        return self._processes.get(pid)
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict:
+        """读取进程的标准输出和标准错误内容，返回结构化数据"""
+        result = await self.call_tool(
+            "process_stdio_read",
+            {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
+        )
+        if isinstance(result, ToolResultSuccess):
+            data = json.loads(result.content)
+            return data
+        else:
+            return {
+                "pid": pid,
+                "success": False,
+                "error": result.content,
+                "timestamp": 0.0,
+            }
+
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """读取进程的标准输出和标准错误内容"""
+        return await self.call_tool(
+            "process_stdio_read",
+            {"pid": pid, "unescape_ansi": unescape_ansi, "timeout": timeout},
+        )
+
+    async def process_wait(
+        self, pid: str, timeout: float
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """等待进程结束，带超时设置"""
+        return await self.call_tool("process_wait", {"pid": pid, "timeout": timeout})
+
+    async def process_kill(
+        self, pid: str, graceful: bool = True
+    ) -> ToolResultSuccess | ToolResultFailed:
+        """杀死进程，可选择优雅终止"""
+        return await self.call_tool("process_kill", {"pid": pid, "graceful": graceful})
 
     async def change_directory(
         self, directory: str

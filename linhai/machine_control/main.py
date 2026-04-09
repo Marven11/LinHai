@@ -16,7 +16,6 @@ from linhai.tool.base import (
 from linhai.utils.common import UiNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
-from .process import Process, ProcessCreateResult
 
 
 def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet:
@@ -220,22 +219,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         argv: list[str], wait_second: Optional[float] = None
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        result = await host_control.create_process(argv, wait_second)
-
-        if result.process is None:
-            return ToolResultFailed(content=result.error)
-
-        lines = [f"<<pid>>{result.pid}<<pid>>"]
-        if result.returncode is not None:
-            lines.append(f"<<returncode>>{result.returncode}<<returncode>>")
-        if result.stdout:
-            lines.append(result.stdout)
-        if result.stderr:
-            lines.append(f"<<stderr>>{result.stderr}<<stderr>>")
-        if result.message:
-            lines.append(result.message)
-
-        return ToolResultSuccess(content="\n".join(lines))
+        return await host_control.process_create(argv, wait_second)
 
     @toolset.register_tool(
         name="process_stdio_write",
@@ -252,20 +236,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, content: str, with_enter: bool
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        process = host_control.get_process(pid)
-        if process is None:
-            return ToolResultFailed(content=f"进程未找到: {pid}")
-        result = await process.stdio_write(content, with_enter)
-        if not result.success:
-            return ToolResultFailed(content=result.error)
-        lines = []
-        if result.stdout:
-            lines.append(result.stdout)
-        if result.stderr:
-            lines.append(f"<<stderr>>{result.stderr}<<stderr>>")
-        if result.exit_note:
-            lines.append(result.exit_note)
-        return ToolResultSuccess(content="\n".join(lines) if lines else "写入成功")
+        return await host_control.process_stdio_write(pid, content, with_enter)
 
     @toolset.register_tool(
         name="process_stdio_read",
@@ -284,20 +255,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, unescape_ansi: bool = True, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        process = host_control.get_process(pid)
-        if process is None:
-            return ToolResultFailed(content=f"进程未找到: {pid}")
-        result = await process.stdio_read(unescape_ansi, timeout)
-        if not result.success:
-            return ToolResultFailed(content=result.error)
-        lines = []
-        if result.stdout:
-            lines.append(result.stdout)
-        if result.stderr:
-            lines.append(f"<<stderr>>{result.stderr}<<stderr>>")
-        if result.exit_note:
-            lines.append(result.exit_note)
-        return ToolResultSuccess(content="\n".join(lines) if lines else "无输出")
+        return await host_control.process_stdio_read(pid, unescape_ansi, timeout)
 
     @toolset.register_tool(
         name="process_wait",
@@ -313,18 +271,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, timeout: float
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        process = host_control.get_process(pid)
-        if process is None:
-            return ToolResultFailed(content=f"进程未找到: {pid}")
-        result = await process.wait(timeout)
-        if not result.success:
-            return ToolResultFailed(content=result.error)
-        lines = [f"<<returncode>>{result.returncode}<<returncode>>"]
-        if result.stdout:
-            lines.append(result.stdout)
-        if result.stderr:
-            lines.append(f"<<stderr>>{result.stderr}<<stderr>>")
-        return ToolResultSuccess(content="\n".join(lines))
+        return await host_control.process_wait(pid, timeout)
 
     @toolset.register_tool(
         name="process_kill",
@@ -340,13 +287,7 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         pid: str, graceful: bool = True
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        process = host_control.get_process(pid)
-        if process is None:
-            return ToolResultFailed(content=f"进程未找到: {pid}")
-        result = await process.kill(graceful)
-        if not result.success:
-            return ToolResultFailed(content=result.error)
-        return ToolResultSuccess(content=f"进程 {pid} 已终止")
+        return await host_control.process_kill(pid, graceful)
 
     @toolset.register_tool(
         name="terminal_create",
@@ -607,11 +548,33 @@ class HostControl(Protocol):
         self, directory: str
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    async def create_process(
+    async def process_create(
         self, argv: list[str], wait_second: Optional[float] = None
-    ) -> ProcessCreateResult: ...
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
-    def get_process(self, pid: str) -> Process | None: ...
+    async def process_stdio_write(
+        self, pid: str, content: str, with_enter: bool
+    ) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_stdio_write_structured(
+        self, pid: str, content: str, with_enter: bool
+    ) -> dict: ...
+
+    async def process_stdio_read(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_stdio_read_structured(
+        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+    ) -> dict: ...
+
+    async def process_wait(
+        self, pid: str, timeout: float
+    ) -> ToolResultSuccess | ToolResultFailed: ...
+
+    async def process_kill(
+        self, pid: str, graceful: bool
+    ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24

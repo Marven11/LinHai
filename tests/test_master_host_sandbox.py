@@ -29,14 +29,13 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            result = await host.create_process(["echo", "test"], 1.0)
+            await host.process_create(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(
             called_argv,
             ["bwrap", "--ro-bind", "/", "/", "echo", "test"],
         )
-        self.assertIn("999", result.pid)
 
     async def test_process_create_no_sandbox_passes_through(self):
         registry = Registry()
@@ -58,11 +57,10 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            result = await host.create_process(["echo", "test"], 1.0)
+            await host.process_create(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(called_argv, ["echo", "test"])
-        self.assertIn("998", result.pid)
 
 
 class TestTerminalCreateSandbox(unittest.IsolatedAsyncioTestCase):
