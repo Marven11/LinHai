@@ -2,12 +2,14 @@
 
 import asyncio
 import json
-import re
 import time
 from typing import Optional, Union
 from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.process import (
+    ProcessCreateResult,
+    Process,
+)
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.llm import Message
 from linhai.agent.messages import FileContentMessage
 
 from .http import http_request
@@ -34,6 +36,8 @@ from .file import (
 from linhai.registry import Registry
 from linhai.sandbox import ProcessSandboxProtocol
 
+from .process import MasterProcess
+
 
 class MasterHostControl:
     """本地主机控制类，负责提供本地机器工具的实现。
@@ -44,7 +48,7 @@ class MasterHostControl:
 
     def __init__(self, registry: Registry, tmux_terminal: bool = True):
         self._registry = registry
-        self._processes: dict[str, asyncio.subprocess.Process] = {}
+        self._processes: dict[str, MasterProcess] = {}
         configure_terminals(tmux_terminal)
 
     async def http_request(
@@ -78,10 +82,10 @@ class MasterHostControl:
             verify,
         )
 
-    async def process_create(
+    async def create_process(
         self, argv: list[str], wait_second: Optional[float] = None
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """创建一个进程，等待一段时间后检查状态"""
+    ) -> ProcessCreateResult:
+        """创建一个进程，返回进程对象和初始输出信息"""
         try:
             sandbox = self._registry.get_member_typechecked(
                 "process_sandbox", ProcessSandboxProtocol
@@ -95,7 +99,13 @@ class MasterHostControl:
                 start_new_session=True,
             )
             pid = str(process.pid)
-            self._processes[pid] = process
+
+            def on_exit(p: str) -> None:
+                if p in self._processes:
+                    del self._processes[p]
+
+            master_process = MasterProcess(pid, process, on_exit)
+            self._processes[pid] = master_process
 
             if wait_second is None:
                 wait_second = 1.0
@@ -107,215 +117,46 @@ class MasterHostControl:
                     break
 
             if process.returncode is not None:
-                del self._processes[pid]
-                stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
-                    process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
-                )
-                extra = ""
-                if timeout_msg:
-                    extra = f" (读取输出超时，可能存在子进程持有管道)"
-                return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<returncode>>{process.returncode}<<returncode>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>{extra}"
+                result = await master_process.wait(timeout=2.0)
+                return ProcessCreateResult(
+                    process=None,
+                    pid=pid,
+                    returncode=result.returncode,
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                    message=f"进程已退出，返回码: {result.returncode}",
                 )
             else:
-                stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
-                    process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
+                read_result = await master_process.stdio_read(
+                    unescape_ansi=True, timeout=2.0
                 )
-
                 message = f"等待失败，程序在{wait_second}秒后在运行。"
-                if timeout_msg:
-                    message += f" {timeout_msg}"
-                if stdout_str or stderr_str:
-                    message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+                if read_result.exit_note:
+                    message += f" {read_result.exit_note}"
+                if read_result.stdout or read_result.stderr:
+                    message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{read_result.stdout}\nstderr:\n{read_result.stderr}"
                 else:
                     message += (
                         " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
                     )
 
-                return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<message>>{message}<<message>>"
+                return ProcessCreateResult(
+                    process=master_process,
+                    pid=pid,
+                    stdout=read_result.stdout,
+                    stderr=read_result.stderr,
+                    message=message,
                 )
         except Exception as e:
-            return ToolResultFailed(content=str(e))
-
-    async def _read_process_stdio(
-        self,
-        process: asyncio.subprocess.Process,
-        timeout: float = 2.0,
-        max_read_size: int = 32 * 1024,
-        check_exit: bool = False,
-    ) -> tuple[str, str, str | None, str | None]:
-        stdout_str, stderr_str = "", ""
-        timeout_msg = ""
-        exit_note = None
-
-        if process.stdout:
-            try:
-                stdout_data = await asyncio.wait_for(
-                    process.stdout.read(max_read_size), timeout=timeout
-                )
-                stdout_str = stdout_data.decode("utf-8", errors="replace")
-            except asyncio.TimeoutError:
-                timeout_msg += "读取stdout超时；"
-
-        if process.stderr:
-            try:
-                stderr_data = await asyncio.wait_for(
-                    process.stderr.read(max_read_size), timeout=timeout
-                )
-                stderr_str = stderr_data.decode("utf-8", errors="replace")
-            except asyncio.TimeoutError:
-                timeout_msg += "读取stderr超时；"
-
-        if check_exit and process.returncode is not None:
-            exit_note = f"注意：当前程序{process.pid}已经退出\n"
-
-        if timeout_msg:
-            timeout_msg = timeout_msg.rstrip("；")
-        else:
-            timeout_msg = None
-
-        return stdout_str, stderr_str, timeout_msg, exit_note
-
-    async def process_stdio_write_structured(
-        self, pid: str, content: str, with_enter: bool
-    ) -> dict:
-        """向进程的标准输入写入内容，返回结构化数据"""
-        try:
-            process = self._processes.get(pid)
-            if process is None:
-                raise ValueError(f"找不到进程 {pid}")
-            if process.stdin is None:
-                raise ValueError(f"进程 {pid} 没有标准输入")
-            if with_enter:
-                content = content + "\n"
-            process.stdin.write(content.encode("utf-8"))
-            await process.stdin.drain()
-            return {
-                "pid": pid,
-                "success": True,
-                "message": "写入成功",
-                "timestamp": time.time(),
-            }
-        except Exception as e:
-            return {
-                "pid": pid,
-                "success": False,
-                "error": str(e),
-                "timestamp": time.time(),
-            }
-
-    async def process_stdio_write(
-        self, pid: str, content: str, with_enter: bool
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """向进程的标准输入写入内容"""
-        structured = await self.process_stdio_write_structured(pid, content, with_enter)
-        if structured["success"]:
-            return ToolResultSuccess(content=json.dumps(structured))
-        else:
-            return ToolResultFailed(content=structured["error"])
-
-    async def process_stdio_read_structured(
-        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
-    ) -> dict:
-        """读取进程的标准输出和标准错误内容，返回结构化数据"""
-        try:
-            process = self._processes.get(pid)
-            if process is None:
-                raise ValueError(f"找不到进程 {pid}")
-            stdout_str, stderr_str, timeout_msg, exit_note = (
-                await self._read_process_stdio(
-                    process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
-                )
+            return ProcessCreateResult(
+                process=None,
+                pid="",
+                error=str(e),
             )
-            if unescape_ansi:
-                ansi_escape = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-                stdout_str = ansi_escape.sub("", stdout_str)
-                stderr_str = ansi_escape.sub("", stderr_str)
-            if timeout_msg:
-                raise TimeoutError(f"读取进程 {pid} 的输出超时（{timeout}秒）")
-            return {
-                "pid": pid,
-                "success": True,
-                "stdout": stdout_str,
-                "stderr": stderr_str,
-                "exit_note": exit_note,
-                "timestamp": time.time(),
-            }
-        except Exception as e:
-            return {
-                "pid": pid,
-                "success": False,
-                "error": str(e),
-                "timestamp": time.time(),
-            }
 
-    async def process_stdio_read(
-        self, pid: str, unescape_ansi: bool = True, timeout: float = 60.0
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """读取进程的标准输出和标准错误内容"""
-        structured = await self.process_stdio_read_structured(
-            pid, unescape_ansi, timeout
-        )
-        if structured["success"]:
-            return ToolResultSuccess(content=json.dumps(structured))
-        else:
-            return ToolResultFailed(content=structured["error"])
-
-    async def process_wait(
-        self, pid: str, timeout: float
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """等待进程结束，带超时设置"""
-        try:
-            if timeout > 3600:
-                return ToolResultFailed(content="超时时间不能超过3600秒")
-            process = self._processes.get(pid)
-            if process is None:
-                return ToolResultFailed(content=f"找不到进程 {pid}")
-            try:
-                await asyncio.wait_for(process.wait(), timeout=timeout)
-                stdout_data, stderr_data = b"", b""
-                if process.stdout:
-                    stdout_data = await process.stdout.read()
-                if process.stderr:
-                    stderr_data = await process.stderr.read()
-                stdout_str = stdout_data.decode("utf-8", errors="replace")
-                stderr_str = stderr_data.decode("utf-8", errors="replace")
-                del self._processes[pid]
-                return ToolResultSuccess(
-                    content=f"<<pid>>{pid}<<pid>><<returncode>>{process.returncode}<<returncode>><<stdout>>{stdout_str}<<stdout>><<stderr>>{stderr_str}<<stderr>>"
-                )
-            except asyncio.TimeoutError:
-                return ToolResultFailed(content=f"等待进程 {pid} 超时")
-        except Exception as e:
-            return ToolResultFailed(content=str(e))
-
-    async def process_kill(
-        self, pid: str, graceful: bool = True
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """杀死进程，可选择优雅终止"""
-        try:
-            process = self._processes.get(pid)
-            if process is None:
-                return ToolResultFailed(
-                    content="找不到进程，必须传入当前工具组创建的PID"
-                )
-            if graceful:
-                process.terminate()
-                try:
-                    await asyncio.wait_for(process.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    process.kill()
-                    await asyncio.wait_for(process.wait(), timeout=5.0)
-            else:
-                process.kill()
-                await asyncio.wait_for(process.wait(), timeout=5.0)
-            del self._processes[pid]
-            return ToolResultSuccess(
-                content=f"<<pid>>{pid}<<pid>><<message>>进程已终止<<message>>"
-            )
-        except Exception as e:
-            return ToolResultFailed(content=str(e))
+    def get_process(self, pid: str) -> Process | None:
+        """获取已存在的进程对象"""
+        return self._processes.get(pid)
 
     async def change_directory(
         self, directory: str
