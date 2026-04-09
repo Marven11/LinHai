@@ -1,11 +1,13 @@
 import asyncio
 import tempfile
 import base64
+import gzip
 from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
+from linhai.task_supervisor import PlainTaskSupervisor, TaskSupervisor
 from linhai.utils.common import UiNotice
 from .transport import TrojanTransport
 
@@ -30,95 +32,112 @@ class SshTrojanTransport:
         self.trojan_path: Optional[Path] = None
         self.remote_trojan_path: Optional[str] = None
         self._trojan_transport: Optional[TrojanTransport] = None
+        self._bash_process: Optional[Process] = None
 
-    async def _check_python_version(self, ssh_cmd: list[str]) -> bool:
-        check_cmd = ssh_cmd + ["/usr/bin/env python3 -V"]
-        process = await asyncio.create_subprocess_exec(
-            *check_cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            limit=256 * 1024,
-            start_new_session=True,
-        )
-        _, stderr = await process.communicate()
-        if process.returncode != 0:
-            error_msg = stderr.decode()
+        self.task_supervisor: TaskSupervisor = PlainTaskSupervisor()
+        if registry.has_member("task_supervisor"):
+            self.task_supervisor = registry.get_member_typechecked(
+                "task_supervisor", TaskSupervisor
+            )
+
+    async def _execute_in_bash(
+        self, command: str, timeout: float = 10.0
+    ) -> tuple[int, str, str]:
+        if self._bash_process is None or self._bash_process.stdin is None:
+            raise RuntimeError("Bash shell not started")
+
+        marker = f"CMD_RESULT_{int(asyncio.get_event_loop().time())}"
+        full_command = f"{{ {command}; }} 2>&1; echo '{marker}:$?'"
+
+        self._bash_process.stdin.write(f"{full_command}\n".encode())
+        await self._bash_process.stdin.drain()
+
+        output_lines = []
+        result_line = None
+        start_time = asyncio.get_event_loop().time()
+
+        while self._bash_process.stdout:
+            if asyncio.get_event_loop().time() - start_time > timeout:
+                break
+
+            success, line_bytes = await self.task_supervisor.run_with_timeout(
+                self._bash_process.stdout.readline(), timeout=1.0
+            )
+
+            if not success:
+                continue
+
+            if not line_bytes:
+                break
+            line = line_bytes.decode().rstrip()
+            if line.startswith(f"{marker}:"):
+                result_line = line
+                break
+            output_lines.append(line)
+
+        if result_line is None:
+            return 1, "", "命令执行超时"
+
+        parts = result_line.split(":", 1)
+        if len(parts) != 2:
+            exit_code = 1
+        else:
+            exit_code_str = parts[1]
+            if exit_code_str.isdigit():
+                exit_code = int(exit_code_str)
+            else:
+                exit_code = 1
+
+        return exit_code, "\n".join(output_lines), ""
+
+    async def _check_python_version(self) -> bool:
+        exit_code, output, error = await self._execute_in_bash("python3 -V")
+        if exit_code != 0 or "Python 3" not in output:
             await self.registry.send_if_exists(
                 "ui_log",
-                UiNotice(level="ERROR", content=f"检查远程Python版本失败: {error_msg}"),
+                UiNotice(
+                    level="ERROR", content=f"检查远程Python版本失败: {output or error}"
+                ),
             )
             return False
         return True
 
-    async def _copy_trojan_to_remote(self, ssh_cmd: list[str]) -> str:
+    async def _copy_trojan_to_remote(self) -> Optional[str]:
         if self.trojan_path is None or not self.trojan_path.exists():
             raise FileNotFoundError("本地trojan临时文件不存在")
 
         trojan_content = self.trojan_path.read_text(encoding="utf-8")
 
-        remote_temp_path_cmd = ssh_cmd + ["mktemp --suffix=.py"]
-        process = await asyncio.create_subprocess_exec(
-            *remote_temp_path_cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
-        stdout, stderr = await process.communicate()
-        if process.returncode != 0:
-            error_msg = stderr.decode()
+        compressed = gzip.compress(trojan_content.encode())
+        encoded_content = base64.b64encode(compressed).decode()
+
+        command = f"""
+        REMOTE_TEMP_PATH=$(mktemp --suffix=.py) && \
+        echo '{encoded_content}' | base64 -d | gzip -d > "$REMOTE_TEMP_PATH" && \
+        echo "$REMOTE_TEMP_PATH"
+        """
+
+        exit_code, output, error = await self._execute_in_bash(command.strip())
+
+        if exit_code != 0:
+            error_msg = error or "创建远程临时文件失败"
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(level="ERROR", content=f"创建远程临时文件失败: {error_msg}"),
             )
-            raise RuntimeError(f"创建远程临时文件失败: {error_msg}")
+            return None
 
-        remote_path = stdout.decode().strip()
-
-        encoded_content = base64.b64encode(trojan_content.encode()).decode()
-        echo_cmd = ssh_cmd + [f"echo {encoded_content} | base64 -d > {remote_path}"]
-        process = await asyncio.create_subprocess_exec(
-            *echo_cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
-        _, stderr = await process.communicate()
-        if process.returncode != 0:
-            error_msg = stderr.decode()
-            await self.registry.send_if_exists(
-                "ui_log",
-                UiNotice(level="ERROR", content=f"写入远程文件失败: {error_msg}"),
-            )
-            cleanup_cmd = ssh_cmd + [f"rm -f {remote_path}"]
-            cleanup_process = await asyncio.create_subprocess_exec(
-                *cleanup_cmd,
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            await asyncio.wait_for(cleanup_process.wait(), timeout=60.0)
-            raise RuntimeError(f"写入远程文件失败: {error_msg}")
-
+        remote_path = output.strip()
         return remote_path
 
-    async def _start_trojan_process(
-        self, ssh_cmd: list[str], remote_trojan_path: str
-    ) -> Optional[Process]:
-        ssh_trojan_cmd = ssh_cmd + [f"/usr/bin/env python3 {remote_trojan_path}"]
-        process = await asyncio.create_subprocess_exec(
-            *ssh_trojan_cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
+    async def _start_trojan_process(self, remote_trojan_path: str) -> Optional[Process]:
+        command = f"python3 {remote_trojan_path}"
+        exit_code, output, error = await self._execute_in_bash(command)
 
-        await asyncio.sleep(1)
-        return process
+        if exit_code != 0:
+            return None
+
+        return self._bash_process
 
     async def connect(self) -> bool:
         ssh_cmd = [
@@ -134,6 +153,8 @@ class SshTrojanTransport:
             "ServerAliveInterval=30",
             "-o",
             "ServerAliveCountMax=3",
+            "bash",
+            "-s",
         ]
 
         await self.registry.send_if_exists(
@@ -150,6 +171,35 @@ class SshTrojanTransport:
         trojan_content = trojan_file_path.read_text(encoding="utf-8")
         self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
+        success, process = await self.task_supervisor.run_with_timeout(
+            asyncio.create_subprocess_exec(
+                *ssh_cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                limit=256 * 1024,
+                start_new_session=True,
+            ),
+            timeout=15.0,
+        )
+
+        if not success:
+            if self.trojan_path and self.trojan_path.exists():
+                self.trojan_path.unlink(missing_ok=True)
+            return False
+
+        self._bash_process = process
+        assert self._bash_process is not None
+
+        if self._bash_process.stdin is None or self._bash_process.stdout is None:
+            await self.registry.send_if_exists(
+                "ui_log",
+                UiNotice(level="ERROR", content="SSH进程标准IO为空"),
+            )
+            if self.trojan_path and self.trojan_path.exists():
+                self.trojan_path.unlink(missing_ok=True)
+            return False
+
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
@@ -158,7 +208,7 @@ class SshTrojanTransport:
             ),
         )
 
-        if not await self._check_python_version(ssh_cmd):
+        if not await self._check_python_version():
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -166,8 +216,7 @@ class SshTrojanTransport:
                     content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
                 ),
             )
-            if self.trojan_path and self.trojan_path.exists():
-                self.trojan_path.unlink(missing_ok=True)
+            await self._cleanup()
             return False
 
         await self.registry.send_if_exists(
@@ -185,7 +234,10 @@ class SshTrojanTransport:
             ),
         )
 
-        remote_trojan_path = await self._copy_trojan_to_remote(ssh_cmd)
+        remote_trojan_path = await self._copy_trojan_to_remote()
+        if remote_trojan_path is None:
+            await self._cleanup()
+            return False
         self.remote_trojan_path = remote_trojan_path
 
         await self.registry.send_if_exists(
@@ -203,13 +255,8 @@ class SshTrojanTransport:
             ),
         )
 
-        process = await self._start_trojan_process(ssh_cmd, remote_trojan_path)
-        if (
-            process is None
-            or process.stdin is None
-            or process.stdout is None
-            or process.stderr is None
-        ):
+        process_result = await self._start_trojan_process(remote_trojan_path)
+        if process_result is None:
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -217,8 +264,7 @@ class SshTrojanTransport:
                     content=f"启动远程控制程序失败: {self.host}:{self.port}",
                 ),
             )
-            if self.trojan_path and self.trojan_path.exists():
-                self.trojan_path.unlink(missing_ok=True)
+            await self._cleanup()
             return False
 
         await self.registry.send_if_exists(
@@ -231,13 +277,29 @@ class SshTrojanTransport:
 
         self._trojan_transport = TrojanTransport(
             registry=self.registry,
-            stdin=process.stdin,
-            stdout=process.stdout,
-            stderr=process.stderr,
-            process=process,
+            stdin=process_result.stdin,
+            stdout=process_result.stdout,
+            stderr=process_result.stderr,
+            process=process_result,
         )
         self._trojan_transport.start_reading()
         return True
+
+    async def _cleanup(self):
+        if self._bash_process:
+            self._bash_process.terminate()
+            success, _ = await self.task_supervisor.run_with_timeout(
+                self._bash_process.wait(), timeout=5.0
+            )
+            if not success and self._bash_process.returncode is None:
+                self._bash_process.kill()
+                await self._bash_process.wait()
+
+        if self.trojan_path and self.trojan_path.exists():
+            self.trojan_path.unlink(missing_ok=True)
+
+        self._bash_process = None
+        self._trojan_transport = None
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         if self._trojan_transport is None:
@@ -247,11 +309,7 @@ class SshTrojanTransport:
     async def disconnect(self):
         if self._trojan_transport:
             await self._trojan_transport.disconnect()
-
-        if self.trojan_path and self.trojan_path.exists():
-            self.trojan_path.unlink(missing_ok=True)
-
-        self._trojan_transport = None
+        await self._cleanup()
 
     def is_connected(self) -> bool:
         return (

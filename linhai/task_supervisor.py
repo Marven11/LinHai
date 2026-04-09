@@ -1,7 +1,14 @@
-"""TaskSupervisor模块，提供异步任务生命周期管理。"""
-
 import asyncio
-from typing import TYPE_CHECKING, Protocol, Callable, Coroutine, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Optional,
+    Protocol,
+    Tuple,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
     from linhai.registry import Registry
@@ -19,6 +26,10 @@ class TaskSupervisor(Protocol):
     async def wait(self, name: str) -> None: ...
 
     def cancel(self, name: str) -> None: ...
+
+    async def run_with_timeout(
+        self, coro: Coroutine[Any, Any, Any], timeout: float
+    ) -> Tuple[bool, Any]: ...
 
 
 class PlainTaskSupervisor:
@@ -40,6 +51,16 @@ class PlainTaskSupervisor:
         if name not in self.tasks:
             raise RuntimeError(f"Task {name} not found")
         self.tasks[name].cancel()
+
+    async def run_with_timeout(
+        self, coro: Coroutine[Any, Any, Any], timeout: float
+    ) -> Tuple[bool, Any]:
+        task = asyncio.create_task(coro)
+        done, _ = await asyncio.wait({task}, timeout=timeout)
+        if task in done:
+            return True, task.result()
+        task.cancel()
+        return False, None
 
 
 class TextualTaskSupervisor:
@@ -63,3 +84,13 @@ class TextualTaskSupervisor:
         if name not in self.workers:
             raise RuntimeError(f"Worker {name} not found")
         self.workers[name].cancel()
+
+    async def run_with_timeout(
+        self, coro: Coroutine[Any, Any, Any], timeout: float
+    ) -> Tuple[bool, Any]:
+        task = asyncio.create_task(coro)
+        done, _ = await asyncio.wait({task}, timeout=timeout)
+        if task in done:
+            return True, task.result()
+        task.cancel()
+        return False, None
