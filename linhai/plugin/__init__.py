@@ -45,7 +45,7 @@ from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
 from .planning import TodolistCheckerPlugin
-from .reminder import ReminderPlugin
+from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
 
 from .helpers import (
@@ -89,6 +89,7 @@ __all__ = [
     "MachineControlIntroductionPlugin",
     "TodolistCheckerPlugin",
     "ReminderPlugin",
+    "ReminderWriteGuardPlugin",
     "is_small_file",
     "is_already_read",
     "is_existing_file",

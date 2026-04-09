@@ -16,7 +16,7 @@ from linhai.prompt import (
     SOUL_MD,
     USER_MD,
 )
-from .reminder import ReminderPlugin
+from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent
@@ -32,6 +32,7 @@ class ClawPlugin(Plugin):
         else:
             self.claw_dir = Path.home() / ".local" / "share" / "linhai" / "claw"
         self.reminder_plugin = ReminderPlugin(registry, self.claw_dir)
+        self.write_guard_plugin = ReminderWriteGuardPlugin(registry, self.claw_dir)
 
     async def before_agent_loop(self, agent: "linhai_agent") -> None:
         """在agent循环开始前添加CLAW模式介绍和文档内容。"""
@@ -95,6 +96,7 @@ class ClawPlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         self.reminder_plugin.register(lifecycle)
+        self.write_guard_plugin.register(lifecycle)
         lifecycle.before_agent_loop.register(self.before_agent_loop)
 
 
