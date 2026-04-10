@@ -11,7 +11,7 @@ from linhai.llm import OpenAi, SystemMessage, UserMessage, AssistantMessage
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.token_manager import TokenManager
-from linhai.tool.base import ToolResultFailed
+from linhai.tool.base import ToolResultFailed, ToolResultSuccess
 from linhai.tool.mcp_connector import MCPConnector
 from linhai.tool.main import ToolManager
 from linhai.task_supervisor import PlainTaskSupervisor
@@ -56,12 +56,12 @@ async def test_mcp_tool_call():
     connector = await _connect_mcp_server(registry)
 
     result = await connector.call_tool_raw("test", "add", {"a": 3, "b": 5})
-    assert isinstance(result, str)
-    assert "8" in result
+    assert isinstance(result, ToolResultSuccess)
+    assert "8" in result.content
 
     result2 = await connector.call_tool_raw("test", "multiply", {"a": 4, "b": 7})
-    assert isinstance(result2, str)
-    assert "28" in result2
+    assert isinstance(result2, ToolResultSuccess)
+    assert "28" in result2.content
 
     await connector.disconnect_mcp_server("test")
 
@@ -106,6 +106,7 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
         registry=registry,
         llms=[llm],
         llm_fallback_map={LLM_NAME: None},
+        llm_fallback_duration_map={LLM_NAME: 120},
     )
 
     mcp_connector = await _connect_mcp_server(registry)

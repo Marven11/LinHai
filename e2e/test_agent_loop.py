@@ -46,6 +46,7 @@ def _create_test_agent(token: str) -> Agent:
         registry=registry,
         llms=[llm],
         llm_fallback_map={LLM_NAME: None},
+        llm_fallback_duration_map={LLM_NAME: 120},
     )
 
     mcp_connector = MCPConnector(registry)
