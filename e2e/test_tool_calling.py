@@ -10,8 +10,6 @@ from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info
 
 from conftest import retry_llm_call
 
-pytestmark = pytest.mark.asyncio
-
 
 def _get_weather_toolset() -> ToolSet:
     toolset = ToolSet()

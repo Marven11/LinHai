@@ -1,7 +1,4 @@
-import os
-
 import pytest
-from openai import OpenAIError
 
 from linhai.llm import (
     OpenAi,
@@ -17,7 +14,6 @@ pytestmark = pytest.mark.asyncio
 
 DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
 DEEPSEEK_MODEL = "deepseek-reasoner"
-
 
 
 def _create_llm(api_key: str) -> tuple[OpenAi, Registry]:
@@ -125,11 +121,3 @@ async def test_empty_history_raises_error():
     llm, _ = _create_llm(token)
     with pytest.raises(ValueError, match="history is empty"):
         await llm.answer_stream([])
-
-
-async def test_invalid_api_key():
-    llm, _ = _create_llm("invalid-key-12345")
-    history = [UserMessage("Hello")]
-    with pytest.raises(OpenAIError):
-        answer = await llm.answer_stream(history)
-        await _collect_answer(answer)

@@ -8,6 +8,7 @@ from typing import Optional
 
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
+from linhai.token_manager import TokenManager
 from linhai.agent.create import (
     AgentBuildArguments,
     create_agent_build_context,
@@ -188,6 +189,7 @@ class AgentManager:
         """创建独立的Registry实例。"""
         registry = Registry()
         registry.register_member("task_supervisor", self._task_supervisor)
+        TokenManager(registry)
         return registry
 
     async def create_agent(
@@ -222,6 +224,9 @@ class AgentManager:
         )
 
         agent = await create_agent_from_context(context)
+
+        token_manager = registry.get_member_typechecked("token_manager", TokenManager)
+        token_manager.start_watching()
 
         async def run_agent():
             await agent.run()

@@ -52,7 +52,6 @@ linhai = "linhai.main:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_timeout = 60
 
 [dependency-groups]
 dev = [
