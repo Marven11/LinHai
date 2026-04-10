@@ -11,12 +11,9 @@ from linhai.llm import SystemMessage
 
 @pytest_asyncio.fixture
 async def llm_client() -> AsyncOpenAI:
-    token = os.environ.get("DEEPSEEK_TOKEN")
-    if not token:
-        pytest.fail("DEEPSEEK_TOKEN not set")
     return AsyncOpenAI(
-        api_key=token,
-        base_url="https://api.deepseek.com/v1",
+        api_key="x",
+        base_url="http://192.168.114.149:8124/v1/deepseek",
     )
 
 

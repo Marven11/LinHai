@@ -20,7 +20,7 @@ from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
-DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
 DEEPSEEK_MODEL = "deepseek-reasoner"
 LLM_NAME = "free"
 
@@ -64,13 +64,6 @@ async def test_mcp_tool_call():
     assert "28" in result2.content
 
     await connector.disconnect_mcp_server("test")
-
-
-def _get_token() -> str:
-    token = os.environ.get("DEEPSEEK_TOKEN")
-    if not token:
-        pytest.fail("DEEPSEEK_TOKEN not set")
-    return token
 
 
 def _get_last_assistant_message(agent: Agent) -> str:
@@ -135,7 +128,7 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
 
 
 async def test_mcp_llm_coordination():
-    token = _get_token()
+    token = "x"
 
     async def try_once():
         agent, mcp_connector = await _create_mcp_agent(token)

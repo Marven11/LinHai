@@ -208,18 +208,7 @@ jobs:
           mkdir -p /root/.config/linhai/
           cp config-example.toml /root/.config/linhai/config.toml
 
-      - name: Verify DEEPSEEK_TOKEN
-        env:
-          DEEPSEEK_TOKEN: ${{ secrets.DEEPSEEK_TOKEN }}
-        run: |
-          if [ -z "$DEEPSEEK_TOKEN" ]; then
-            echo "DEEPSEEK_TOKEN is not set, e2e tests require this secret"
-            exit 1
-          fi
-
       - name: Run e2e tests
-        env:
-          DEEPSEEK_TOKEN: ${{ secrets.DEEPSEEK_TOKEN }}
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           uv run pytest e2e/ -v

@@ -15,15 +15,9 @@ from conftest import retry_llm_call
 
 pytestmark = pytest.mark.asyncio
 
-DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
 DEEPSEEK_MODEL = "deepseek-reasoner"
 
-
-def _get_token() -> str:
-    token = os.environ.get("DEEPSEEK_TOKEN")
-    if not token:
-        pytest.fail("DEEPSEEK_TOKEN not set")
-    return token
 
 
 def _create_llm(api_key: str) -> tuple[OpenAi, Registry]:
@@ -57,7 +51,7 @@ async def _collect_answer(answer):
 
 
 async def test_basic_streaming_response():
-    token = _get_token()
+    token = "x"
     llm, registry = _create_llm(token)
     system_msg = SystemMessage(registry)
 
@@ -89,7 +83,7 @@ async def _stream_with_retry(llm, history):
 
 
 async def test_token_usage_reporting():
-    token = _get_token()
+    token = "x"
     llm, registry = _create_llm(token)
     system_msg = SystemMessage(registry)
 
@@ -106,7 +100,7 @@ async def test_token_usage_reporting():
 
 
 async def test_multi_turn_conversation():
-    token = _get_token()
+    token = "x"
     llm, registry = _create_llm(token)
     system_msg = SystemMessage(registry)
 
@@ -127,7 +121,7 @@ async def test_multi_turn_conversation():
 
 
 async def test_empty_history_raises_error():
-    token = _get_token()
+    token = "x"
     llm, _ = _create_llm(token)
     with pytest.raises(ValueError, match="history is empty"):
         await llm.answer_stream([])

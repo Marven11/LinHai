@@ -16,7 +16,7 @@ from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
-DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_BASE_URL = "http://192.168.114.149:8124/v1/deepseek"
 DEEPSEEK_MODEL = "deepseek-reasoner"
 LLM_NAME = "ds"
 
@@ -94,10 +94,7 @@ def _create_test_toolset() -> ToolSet:
 
 
 async def _get_agent() -> Agent:
-    token = os.environ.get("DEEPSEEK_TOKEN")
-    if not token:
-        pytest.fail("DEEPSEEK_TOKEN not set")
-    return _create_test_agent(token)
+    return _create_test_agent("x")
 
 
 def _get_last_assistant_message(agent: Agent) -> str:
