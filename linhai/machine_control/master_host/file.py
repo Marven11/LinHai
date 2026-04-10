@@ -441,6 +441,7 @@ def modify_file_with_sed(
                 "警告：使用行号匹配并修改文件，文件的行号已经变化！"
                 "使用行号匹配是不推荐的行为，之后需要按照内容匹配以避免删除错误！"
             )
+        result_text += "\n<<message>>为什么要使用modify_file_with_sed修改单个文件而不是replace_file_content？这是有必要的吗？你可以保证你的表达式不会把代码改坏吗？<<message>>"
         return ToolResultSuccess(content=result_text)
     except subprocess.CalledProcessError as exc:
         return ToolResultFailed(content=f"sed命令执行错误: {exc.stderr}")
