@@ -316,6 +316,23 @@ class RuntimeMessageWidget(Static):
         )
 
 
+class _ToolCallCollapseHeader(Static):
+    DEFAULT_CSS = """
+    _ToolCallCollapseHeader {
+        width: 100%;
+        color: $accent;
+    }
+    """
+
+    def __init__(self, collapse_callback: Callable[[], None]):
+        super().__init__("▼ 工具")
+        self._collapse_callback = collapse_callback
+
+    def on_click(self, event: events.Click) -> None:
+        event.stop()
+        self._collapse_callback()
+
+
 class ToolCallWidget(Static):
     """工具调用显示组件，流式显示键值对表格"""
 
@@ -364,6 +381,7 @@ class ToolCallWidget(Static):
         self.get_refresh_interval = get_refresh_interval
 
         self._markdown_widget: Markdown | None = None
+        self._collapse_header: _ToolCallCollapseHeader | None = None
         self.border_title = "tool call"
 
     def on_mount(self) -> None:
@@ -486,6 +504,10 @@ class ToolCallWidget(Static):
             self._markdown_widget.remove()
             self._markdown_widget = None
 
+        if self._collapse_header:
+            self._collapse_header.remove()
+            self._collapse_header = None
+
         self.is_collapsed = True
         self.add_class("collapsed")
         self.border_title = "tool call [点击展开]"
@@ -509,13 +531,16 @@ class ToolCallWidget(Static):
 
         self.is_collapsed = False
         self.remove_class("collapsed")
-        self.border_title = "tool call [点击隐藏]"
 
         if self._segment["is_finished"] and not self.has_error:
+            self.border_title = "tool call"
             self.update("")
+            self._collapse_header = _ToolCallCollapseHeader(self._collapse)
+            self.mount(self._collapse_header)
             self._markdown_widget = Markdown(self.current_content.strip())
             self.mount(self._markdown_widget)
         else:
+            self.border_title = "tool call [点击隐藏]"
             self.update(
                 Syntax(
                     self.current_content.strip(),
@@ -536,7 +561,7 @@ class ToolCallWidget(Static):
         """点击事件，切换折叠状态"""
         if self.is_collapsed:
             self._expand()
-        else:
+        elif not self._segment["is_finished"] or self.has_error:
             self._collapse()
 
 
