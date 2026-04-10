@@ -183,7 +183,6 @@ jobs:
       - name: Build with Nix
         run: nix build
 
-
   e2e-test:
     needs: [test, nix-build]
     runs-on: debian-latest
