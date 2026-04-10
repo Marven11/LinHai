@@ -152,7 +152,6 @@ jobs:
           echo "Checking for browser MCP snapshot documents..."
           uv run python .gitea/scripts/check_snapshot_docs.py
 
-
   nix-build:
     needs: [test]
     runs-on: debian-latest
