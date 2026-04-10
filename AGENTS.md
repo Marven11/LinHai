@@ -5,6 +5,7 @@
 - Registry.get_member_typechecked使用时必须先确认registry.py的内容，必须先了解其的所有注意事项
 - 对于空行、多余空格等问题: 使用black格式化以清理
 - 在使用black时避免让black修改仍未修改过的文件，使用: `git diff --name-only | grep .py | xargs black`
+- 你提交的PR**总是**会被CI检查，你需要查看./gitea以了解CI的代码审核规则。你**必须**遵守**所有**CI规范，否则代码必然无法通过CI
 
 ## 在本地测试时
 
