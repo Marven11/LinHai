@@ -20,8 +20,8 @@ from conftest import retry_llm_call, slim_system_message
 
 pytestmark = pytest.mark.asyncio
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-OPENROUTER_MODEL = "openrouter/free"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_MODEL = "deepseek-reasoner"
 LLM_NAME = "free"
 
 
@@ -67,9 +67,9 @@ async def test_mcp_tool_call():
 
 
 def _get_token() -> str:
-    token = os.environ.get("OPENROUTER_TOKEN")
+    token = os.environ.get("DEEPSEEK_TOKEN")
     if not token:
-        pytest.fail("OPENROUTER_TOKEN not set")
+        pytest.fail("DEEPSEEK_TOKEN not set")
     return token
 
 
@@ -88,8 +88,8 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
     llm = OpenAi(
         registry=registry,
         api_key=token,
-        base_url=OPENROUTER_BASE_URL,
-        model=OPENROUTER_MODEL,
+        base_url=DEEPSEEK_BASE_URL,
+        model=DEEPSEEK_MODEL,
         openai_config={
             "default_headers": {
                 "HTTP-Referer": "https://github.com/Marven11/LinHai",

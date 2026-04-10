@@ -10,17 +10,13 @@ from linhai.llm import SystemMessage
 
 
 @pytest_asyncio.fixture
-async def openrouter_client() -> AsyncOpenAI:
-    token = os.environ.get("OPENROUTER_TOKEN")
+async def llm_client() -> AsyncOpenAI:
+    token = os.environ.get("DEEPSEEK_TOKEN")
     if not token:
-        pytest.fail("OPENROUTER_TOKEN not set")
+        pytest.fail("DEEPSEEK_TOKEN not set")
     return AsyncOpenAI(
         api_key=token,
-        base_url="https://openrouter.ai/api/v1",
-        default_headers={
-            "HTTP-Referer": "https://github.com/Marven11/LinHai",
-            "X-Title": "LinHai E2E Tests",
-        },
+        base_url="https://api.deepseek.com/v1",
     )
 
 

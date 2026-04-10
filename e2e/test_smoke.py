@@ -3,10 +3,10 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
-async def test_openrouter_basic(openrouter_client):
+async def test_deepseek_basic(llm_client):
     for _ in range(3):
-        response = await openrouter_client.chat.completions.create(
-            model="openrouter/free",
+        response = await llm_client.chat.completions.create(
+            model="deepseek-reasoner",
             messages=[{"role": "user", "content": "Say hello"}],
             max_tokens=200,
         )

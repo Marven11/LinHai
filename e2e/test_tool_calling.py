@@ -54,7 +54,7 @@ async def _get_tool_call_response(client: AsyncOpenAI) -> str:
 
     async def try_once():
         response = await client.chat.completions.create(
-            model="openrouter/free",
+            model="deepseek-reasoner",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "What is the weather in Tokyo?"},
@@ -68,8 +68,8 @@ async def _get_tool_call_response(client: AsyncOpenAI) -> str:
     return await retry_llm_call(try_once)
 
 
-async def test_llm_generates_tool_call(openrouter_client: AsyncOpenAI):
-    content = await _get_tool_call_response(openrouter_client)
+async def test_llm_generates_tool_call(llm_client: AsyncOpenAI):
+    content = await _get_tool_call_response(llm_client)
     tool_calls, errors = extract_tool_calls_with_errors(content)
     assert not errors, f"Tool call parse errors: {errors}"
     assert len(tool_calls) == 1
@@ -82,8 +82,8 @@ async def test_llm_generates_tool_call(openrouter_client: AsyncOpenAI):
     )
 
 
-async def test_tool_result_processing(openrouter_client: AsyncOpenAI):
-    content = await _get_tool_call_response(openrouter_client)
+async def test_tool_result_processing(llm_client: AsyncOpenAI):
+    content = await _get_tool_call_response(llm_client)
     tool_calls, _ = extract_tool_calls_with_errors(content)
     assert tool_calls
 
@@ -99,8 +99,8 @@ async def test_tool_result_processing(openrouter_client: AsyncOpenAI):
     system_prompt = _build_system_prompt()
 
     async def try_once():
-        response2 = await openrouter_client.chat.completions.create(
-            model="openrouter/free",
+        response2 = await llm_client.chat.completions.create(
+            model="deepseek-reasoner",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "What is the weather in Tokyo?"},
