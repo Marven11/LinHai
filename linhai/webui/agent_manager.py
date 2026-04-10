@@ -217,7 +217,7 @@ class AgentManager:
         context = create_agent_build_context(
             registry=registry,
             config=self._config,
-            config_basedir=self.config_path,
+            config_basedir=Path(self.config_path).parent,
             build_args=build_args,
         )
 
