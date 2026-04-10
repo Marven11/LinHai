@@ -62,6 +62,15 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         current_llm = self.llm_manager.get_current_llm()
         self.assertEqual(current_llm, self.mock_llm1)
 
+    def test_get_current_llm_without_cleanup(self):
+        future_time = datetime.now() + timedelta(seconds=10)
+        self.llm_manager.llm_stack.append(("llm2", future_time))
+
+        current_llm = self.llm_manager.get_current_llm(rotate_invalid_llm=False)
+        self.assertEqual(current_llm, self.mock_llm2)
+
+        self.assertEqual(len(self.llm_manager.llm_stack), 2)
+
     async def test_switch_to_llm(self):
         await self.llm_manager.switch_to_llm("llm2")
         self.assertEqual(len(self.llm_manager.llm_stack), 1)

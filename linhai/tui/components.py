@@ -868,7 +868,7 @@ class FooterWidget(Static):
         from linhai.agent import Agent
 
         agent = self.registry.get_member_typechecked("agent", Agent)
-        llm_name, _ = agent.get_current_llm_info()
+        llm_name, _ = agent.get_current_llm_info(rotate_invalid_llm=False)
         return llm_name
 
     def update_display(self):

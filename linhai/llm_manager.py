@@ -109,13 +109,19 @@ class LlmManager:
         while len(self.llm_stack) > 1 and self._is_llm_expired(self.llm_stack[-1][1]):
             self.llm_stack.pop()
 
-    def get_current_llm(self) -> LanguageModel:
+    def get_current_llm(self, rotate_invalid_llm: bool = True) -> LanguageModel:
         """获取当前使用的LLM实例
+
+        Args:
+            rotate_invalid_llm: 是否清理过期LLM，默认为True
+                - True: 清理过期LLM后返回栈顶LLM（现有行为）
+                - False: 不清理过期LLM，直接返回栈顶LLM（底栏显示使用）
 
         Returns:
             LanguageModel: 当前LLM实例
         """
-        self._cleanup_expired_llms()
+        if rotate_invalid_llm:
+            self._cleanup_expired_llms()
         assert len(self.llm_stack) > 0, "llm_stack should never be empty"
         llm_name = self.llm_stack[-1][0]
         index = self.llm_names.index(llm_name)
@@ -298,8 +304,8 @@ class LlmManager:
                 - is_default: 是否是默认LLM
                 - error_count: 错误计数
         """
-        self._cleanup_expired_llms()
-        current_llm_name = self.llm_stack[-1][0] if self.llm_stack else None
+        current_llm = self.get_current_llm(rotate_invalid_llm=False)
+        current_llm_name = current_llm.get_name() if current_llm else None
         result = []
         for llm, name in zip(self.llms, self.llm_names):
             model_name = "unknown"

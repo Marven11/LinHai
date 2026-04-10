@@ -278,9 +278,15 @@ class Agent:
 
         return parsed_answer
 
-    def get_current_llm_info(self) -> tuple[str, LanguageModel]:
-        llm_instance = self.llm_manager.get_current_llm()
-        current_llm = self.llm_manager.get_current_llm()
+    def get_current_llm_info(
+        self, rotate_invalid_llm: bool = True
+    ) -> tuple[str, LanguageModel]:
+        llm_instance = self.llm_manager.get_current_llm(
+            rotate_invalid_llm=rotate_invalid_llm
+        )
+        current_llm = self.llm_manager.get_current_llm(
+            rotate_invalid_llm=rotate_invalid_llm
+        )
         llm_name = current_llm.get_name()
         return llm_name, llm_instance
 
