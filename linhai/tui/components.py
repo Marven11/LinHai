@@ -946,6 +946,6 @@ class ExtendedTextArea(TextArea):
         if event.key == "enter":
             await self.on_enter_key()
             event.stop()
-        if event.key == "ctrl+enter":
+        if event.key == "shift+enter":
             self.insert("\n")
             event.stop()

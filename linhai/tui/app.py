@@ -152,7 +152,7 @@ class TUIApp(App):
                 with Horizontal(id="input-container"):
                     yield ExtendedTextArea(
                         on_enter_key=self._handle_message_submission,
-                        placeholder="Enter发送，Ctrl+Enter换行（如果终端支持）",
+                        placeholder="Enter发送，Shift+Enter换行（如果终端支持）",
                         id="input",
                         show_line_numbers=False,
                     )
@@ -286,7 +286,7 @@ class TUIApp(App):
             event.stop()
             return
 
-        if event.key == "ctrl+enter":
+        if event.key == "shift+enter":
             input_element = self.query_one("#input", ExtendedTextArea)
             input_element.insert("\n")
 
