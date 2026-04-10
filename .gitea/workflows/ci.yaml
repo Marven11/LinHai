@@ -182,7 +182,7 @@ jobs:
 
       - name: Verify OPENROUTER_TOKEN
         env:
-          OPENROUTER_TOKEN: ${{ vars.OPENROUTER_TOKEN }}
+          OPENROUTER_TOKEN: ${{ secrets.OPENROUTER_TOKEN }}
         run: |
           if [ -z "$OPENROUTER_TOKEN" ]; then
             echo "OPENROUTER_TOKEN is not set, e2e tests require this secret"
