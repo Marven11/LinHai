@@ -35,6 +35,10 @@ if TYPE_CHECKING:
 r = reprlib.Repr()
 r.maxstring = 100
 
+LARGE_MESSAGE_TOKEN_THRESHOLD = 600
+MIN_CLEANABLE_LARGE_MESSAGES = 3
+MIN_CLEANABLE_TOTAL_TOKENS = 10000
+
 
 class ToolBlockDetailsDict(TypedDict):
     blocked_category: str | None
@@ -83,6 +87,25 @@ def get_cleanable_large_messages(
     return cleanable
 
 
+def check_cleanable_threshold(
+    cleanable_messages: list[Message],
+) -> tuple[bool, int, int]:
+    message_count = len(cleanable_messages)
+    if message_count < MIN_CLEANABLE_LARGE_MESSAGES:
+        return False, message_count, 0
+
+    total_tokens = 0
+    for msg in cleanable_messages:
+        content = msg.get_content()
+        if isinstance(content, str):
+            total_tokens += count_tokens(content)
+
+    if total_tokens < MIN_CLEANABLE_TOTAL_TOKENS:
+        return False, message_count, total_tokens
+
+    return True, message_count, total_tokens
+
+
 class AgentContextOrchestration:
     """消息编排器，负责管理大消息、垃圾消息、阈值通知等高级消息管理功能。"""
 
@@ -112,9 +135,9 @@ class AgentContextOrchestration:
             清理结果消息。如果当前可清理的大消息少于5条则返回失败消息。
         """
         large_count = len(self.large_messages)
-        if large_count < 5:
+        if large_count < MIN_CLEANABLE_LARGE_MESSAGES:
             return ToolResultFailed(
-                content=f"需要至少5条大消息，当前只有{large_count}条"
+                content=f"需要至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息，当前只有{large_count}条"
             )
 
         removed_messages = get_cleanable_large_messages(
@@ -123,9 +146,12 @@ class AgentContextOrchestration:
             cleaned_messages_dict=self.cleaned_messages,
         )
 
-        if len(removed_messages) < 5:
+        meets_threshold, msg_count, total_tokens = check_cleanable_threshold(
+            removed_messages
+        )
+        if not meets_threshold:
             return ToolResultFailed(
-                content=f"可清理的大消息不足5条（总共{large_count}条），无法执行清理"
+                content=f"可清理的大消息不满足阈值（消息数:{msg_count}, token数:{total_tokens}），需要至少{MIN_CLEANABLE_LARGE_MESSAGES}条消息且总token数至少{MIN_CLEANABLE_TOTAL_TOKENS}"
             )
 
         conversation_dir = self.registry.get_member_typechecked(
@@ -255,7 +281,7 @@ class AgentContextOrchestration:
             else:
                 base_info = f"当前为{current_state}状态, 上下文占用量为{percentage:.1f}%, 总大消息数: {total_large_count}, 可清理: {cleanable_count}{cache_ratio_text}"
                 if current_state == "红灯":
-                    if cleanable_count >= 5:
+                    if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
                         suggestion = "建议: 立即暂停当前任务，开始使用context_forget_large_message清理上下文"
                     else:
                         suggestion = "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文"
@@ -318,7 +344,7 @@ class AgentContextOrchestration:
 
         @toolset.register_tool(
             name="context_forget_large_message",
-            desc="清理大消息：如果当前有至少5条大消息，全部删除并返回每条被删除的消息的repr。",
+            desc="清理大消息：如果当前有至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息，全部删除并返回每条被删除的消息的repr。",
             args={},
             required_args=[],
             conflict_with=["context_forget_range_step1", "context_forget_range_step2"],
@@ -410,7 +436,7 @@ class AgentContextOrchestration:
             content = message.get_content()
             if content is not None:
                 token_count = count_tokens(content)
-                if token_count > 800:
+                if token_count > LARGE_MESSAGE_TOKEN_THRESHOLD:
                     self.large_messages.add(message)
 
     async def _before_message_generation(self) -> None:
@@ -567,7 +593,7 @@ class NotificationMessagePlugin:
             )
             cleanable_count = len(cleanable_messages)
 
-            if cleanable_count >= 5:
+            if cleanable_count >= MIN_CLEANABLE_LARGE_MESSAGES:
                 example_call = (
                     '{"name": "context_forget_large_message", "arguments": {}}'
                 )
@@ -595,8 +621,8 @@ class LargeMessageCountPlugin:
     """大消息数量通知插件。
 
     根据大消息数量动态管理notification_message：
-    - 大消息少于5条时：提示不能调用context_forget_large_message
-    - 大消息至少5条时：删除提示（不添加notification_message）
+    - 大消息少于3条时：提示不能调用context_forget_large_message
+    - 大消息至少3条时：删除提示（不添加notification_message）
     """
 
     def __init__(self, registry: Registry):
@@ -616,9 +642,9 @@ class LargeMessageCountPlugin:
 
         large_count = len(orchestration.large_messages)
 
-        if large_count < 5:
+        if large_count < MIN_CLEANABLE_LARGE_MESSAGES:
 
-            message_content = f"当前只有{large_count}条大消息，需要至少5条大消息才能调用context_forget_large_message"
+            message_content = f"当前只有{large_count}条大消息，需要至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息且总token数超过{MIN_CLEANABLE_TOTAL_TOKENS}才能调用context_forget_large_message"
             agent.message_processor.update_notification_message(
                 RuntimeMessage(message_content),
                 source="large_message_count",
