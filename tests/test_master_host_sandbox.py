@@ -17,6 +17,10 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
         mock_process = AsyncMock()
         mock_process.pid = 999
         mock_process.returncode = 0
+        mock_process.stdout = AsyncMock()
+        mock_process.stdout.read = AsyncMock(return_value=b"out")
+        mock_process.stderr = AsyncMock()
+        mock_process.stderr.read = AsyncMock(return_value=b"")
 
         with (
             patch(
@@ -25,7 +29,7 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            await host.create_process(["echo", "test"], 1.0)
+            await host.process_create(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(
@@ -41,6 +45,10 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
         mock_process = AsyncMock()
         mock_process.pid = 998
         mock_process.returncode = 0
+        mock_process.stdout = AsyncMock()
+        mock_process.stdout.read = AsyncMock(return_value=b"out")
+        mock_process.stderr = AsyncMock()
+        mock_process.stderr.read = AsyncMock(return_value=b"")
 
         with (
             patch(
@@ -49,7 +57,7 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            await host.create_process(["echo", "test"], 1.0)
+            await host.process_create(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(called_argv, ["echo", "test"])

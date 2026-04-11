@@ -110,65 +110,44 @@ class Trojan:
                 )
             }
 
-    async def _read_available(
-        self,
-        stream: asyncio.StreamReader,
-        timeout_seconds: float,
-        max_read_size: int = 32 * 1024,
-    ) -> bytes:
-        chunks: list[bytes] = []
-        deadline = time.monotonic() + timeout_seconds
-
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            read_task = asyncio.ensure_future(stream.read(max_read_size))
-            sleep_task = asyncio.ensure_future(asyncio.sleep(min(remaining, 0.5)))
-            done, pending = await asyncio.wait(
-                [read_task, sleep_task],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            for p in pending:
-                p.cancel()
-            if read_task in done:
-                data = read_task.result()
-                if not data:
-                    break
-                chunks.append(data)
-
-        return b"".join(chunks)
-
     async def _read_process_stdio(
         self,
         process: asyncio.subprocess.Process,
         timeout: float = 2.0,
         max_read_size: int = 32 * 1024,
         check_exit: bool = False,
-    ) -> tuple[str, str, None, str | None]:
-        async def _read_empty() -> bytes:
-            return b""
-
-        stdout_data, stderr_data = await asyncio.gather(
-            (
-                self._read_available(process.stdout, timeout, max_read_size)
-                if process.stdout
-                else _read_empty()
-            ),
-            (
-                self._read_available(process.stderr, timeout, max_read_size)
-                if process.stderr
-                else _read_empty()
-            ),
-        )
-        stdout_str = stdout_data.decode("utf-8", errors="replace")
-        stderr_str = stderr_data.decode("utf-8", errors="replace")
-
+    ) -> tuple[str, str, str | None, str | None]:
+        stdout_str, stderr_str = "", ""
+        timeout_msg = ""
         exit_note = None
+
+        if process.stdout:
+            try:
+                stdout_data = await asyncio.wait_for(
+                    process.stdout.read(max_read_size), timeout=timeout
+                )
+                stdout_str = stdout_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stdout超时；"
+
+        if process.stderr:
+            try:
+                stderr_data = await asyncio.wait_for(
+                    process.stderr.read(max_read_size), timeout=timeout
+                )
+                stderr_str = stderr_data.decode("utf-8", errors="replace")
+            except asyncio.TimeoutError:
+                timeout_msg += "读取stderr超时；"
+
         if check_exit and process.returncode is not None:
             exit_note = f"注意：当前程序{process.pid}已经退出\n"
 
-        return stdout_str, stderr_str, None, exit_note
+        if timeout_msg:
+            timeout_msg = timeout_msg.rstrip("；")
+        else:
+            timeout_msg = None
+
+        return stdout_str, stderr_str, timeout_msg, exit_note
 
     async def process_stdio_write(self, pid, content):
         assert pid in self._processes, f"进程不存在: {pid}"
@@ -178,14 +157,14 @@ class Trojan:
         await process.stdin.drain()
         return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
 
-    async def process_stdio_read(self, pid, unescape_ansi=True, timeout=60.0):
+    async def process_stdio_read(self, pid, unescape_ansi=True):
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
-        stdout_str, stderr_str, _, exit_note = await self._read_process_stdio(
-            process, timeout=timeout, max_read_size=32 * 1024, check_exit=True
+        stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(
+            process, timeout=3600.0, max_read_size=32 * 1024, check_exit=True
         )
 
-        result_data: dict = {
+        result_data = {
             "pid": pid,
             "stdout": stdout_str,
             "stderr": stderr_str,
@@ -199,15 +178,9 @@ class Trojan:
     async def process_wait(self, pid, timeout):
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
-        wait_task = asyncio.ensure_future(process.wait())
-        sleep_task = asyncio.ensure_future(asyncio.sleep(timeout))
-        done, pending = await asyncio.wait(
-            [wait_task, sleep_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for p in pending:
-            p.cancel()
-        if sleep_task in done:
+        try:
+            await asyncio.wait_for(process.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
             return {"message": json.dumps({"pid": pid, "timeout": True})}
         stdout_data, stderr_data = b"", b""
         if process.stdout:
@@ -235,15 +208,9 @@ class Trojan:
             process.terminate()
         else:
             process.kill()
-        wait_task = asyncio.ensure_future(process.wait())
-        sleep_task = asyncio.ensure_future(asyncio.sleep(5))
-        done, pending = await asyncio.wait(
-            [wait_task, sleep_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for p in pending:
-            p.cancel()
-        if sleep_task in done:
+        try:
+            await asyncio.wait_for(process.wait(), timeout=5)
+        except asyncio.TimeoutError:
             return {"error": f"杀死进程 {pid} 超时"}
         del self._processes[pid]
         return {"message": f"进程 {pid} 已被杀死"}
@@ -578,9 +545,7 @@ class Trojan:
             request_data, request_id = request
             method = request_data.get("method")
             params = request_data.get("params", {})
-            task = asyncio.ensure_future(
-                self._handle_request(method, params, request_id)
-            )
+            task = asyncio.create_task(self._handle_request(method, params, request_id))
             self.active_tasks.add(task)
             task.add_done_callback(self._remove_task)
 
@@ -616,9 +581,9 @@ class Trojan:
 
 async def main():
     trojan = Trojan()
-    reader_task = asyncio.ensure_future(trojan.read_input())
-    processor_task = asyncio.ensure_future(trojan.process_requests())
-    writer_task = asyncio.ensure_future(trojan.write_responses())
+    reader_task = asyncio.create_task(trojan.read_input())
+    processor_task = asyncio.create_task(trojan.process_requests())
+    writer_task = asyncio.create_task(trojan.write_responses())
     try:
         await asyncio.gather(reader_task, processor_task, writer_task)
     except asyncio.CancelledError:
