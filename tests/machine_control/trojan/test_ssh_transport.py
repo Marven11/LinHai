@@ -2,15 +2,15 @@
 
 import unittest
 import asyncio
-import sys
-import os
 import shutil
-import subprocess
-import tempfile
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-from io import StringIO
+from unittest.mock import AsyncMock, Mock, patch
 
 from linhai.machine_control.trojan.ssh_transport import SshTrojanTransport
+from linhai.machine_control.process import (
+    ProcessKillResult,
+    ProcessReadResult,
+    ProcessWriteResult,
+)
 from linhai.registry import Registry
 
 
@@ -23,27 +23,9 @@ class TestSshTrojanTransport(unittest.TestCase):
         self.registry.send_if_exists = self.send_if_exists_mock
 
         self.mock_task_supervisor = AsyncMock()
-        self.mock_process = AsyncMock()
-        self.mock_process.stdin = AsyncMock()
-        self.mock_process.stdin.write = Mock()
-        self.mock_process.stdin.drain = AsyncMock()
-        self.mock_process.stdout = AsyncMock()
-        self.mock_process.stderr = AsyncMock()
-        self.mock_process.returncode = None
-
-        self.run_with_timeout_responses = []
-        self.run_with_timeout_index = 0
-
-        async def run_with_timeout_side_effect(coro, timeout):
-            if self.run_with_timeout_index < len(self.run_with_timeout_responses):
-                response = self.run_with_timeout_responses[self.run_with_timeout_index]
-                self.run_with_timeout_index += 1
-                return (True, response)
-            return (True, b"")
-
-        self.mock_task_supervisor.run_with_timeout = AsyncMock(
-            side_effect=run_with_timeout_side_effect
-        )
+        self.mock_task_supervisor.create_supervised_task = Mock()
+        self.mock_task_supervisor.cancel = Mock()
+        self.mock_task_supervisor.wait = AsyncMock(return_value=None)
         self.registry.has_member = Mock(return_value=True)
         self.registry.get_member_typechecked = Mock(
             return_value=self.mock_task_supervisor
@@ -62,148 +44,142 @@ class TestSshTrojanTransport(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
 
+    def _make_mock_process(self, read_responses):
+        mock_process = AsyncMock()
+        mock_process.pid = "1"
+        mock_process.stdio_write = AsyncMock(
+            return_value=ProcessWriteResult(pid="1", success=True, message="写入成功")
+        )
+        responses = iter(read_responses)
+        default = ProcessReadResult(pid="1", success=True, stdout="", stderr="")
+
+        async def read_side_effect(wait_seconds, unescape_ansi=True):
+            return next(responses, default)
+
+        mock_process.stdio_read = AsyncMock(side_effect=read_side_effect)
+        mock_process.kill = AsyncMock(
+            return_value=ProcessKillResult(pid="1", success=True, message="进程已终止")
+        )
+        return mock_process
+
     @unittest.skipIf(shutil.which("bash") is None, "系统没有bash，跳过测试")
     def test_connect_success_with_real_bash(self):
         async def test():
-            mock_process = AsyncMock()
-            mock_process.stdin = AsyncMock()
-            mock_process.stdin.write = Mock()
-            mock_process.stdin.drain = AsyncMock()
-            mock_process.stdout = AsyncMock()
-            mock_process.stdout.readline = AsyncMock()
-            mock_process.stderr = AsyncMock()
-            mock_process.returncode = None
-            mock_process.terminate = Mock()
-
-            self.run_with_timeout_responses = [
-                mock_process,
-                b"Python 3.14.2\n",
-                b"CMD_RESULT_0:0\n",
-                b"/tmp/trojan.py\n",
-                b"CMD_RESULT_0:0\n",
-                b"CMD_RESULT_0:0\n",
+            read_responses = [
+                ProcessReadResult(
+                    pid="1",
+                    success=True,
+                    stdout="Python 3.14.2\nCMD_RESULT_0:0\n",
+                    stderr="",
+                ),
+                ProcessReadResult(
+                    pid="1",
+                    success=True,
+                    stdout="/tmp/trojan.py\nCMD_RESULT_0:0\n",
+                    stderr="",
+                ),
+                ProcessReadResult(
+                    pid="1",
+                    success=True,
+                    stdout="CMD_RESULT_0:0\n",
+                    stderr="",
+                ),
             ]
-            self.run_with_timeout_index = 0
+            mock_process = self._make_mock_process(read_responses)
 
-            with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-                with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
-                    with patch("pathlib.Path.exists", return_value=True):
-                        with patch(
-                            "pathlib.Path.read_text", return_value="# trojan content"
-                        ):
-                            with patch("pathlib.Path.write_text"):
-                                with patch("pathlib.Path.unlink"):
-                                    with patch("asyncio.get_event_loop") as mock_loop:
-                                        mock_loop_instance = Mock()
-                                        mock_loop_instance.time = Mock(return_value=0)
-                                        mock_loop.return_value = mock_loop_instance
-                                        result = await self.transport.connect()
-                                        self.assertTrue(result)
-                                        self.assertTrue(self.transport.is_connected())
-                                        self.assertTrue(self.send_if_exists_mock.called)
-                                        await self.transport.disconnect()
+            with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch(
+                        "pathlib.Path.read_text", return_value="# trojan content"
+                    ):
+                        with patch("pathlib.Path.write_text"):
+                            with patch("pathlib.Path.unlink"):
+                                with patch("asyncio.get_event_loop") as mock_loop:
+                                    mock_loop_instance = Mock()
+                                    mock_loop_instance.time = Mock(return_value=0)
+                                    mock_loop.return_value = mock_loop_instance
+                                    result = await self.transport.connect(mock_process)
+                                    self.assertTrue(result)
+                                    self.assertTrue(self.transport.is_connected())
+                                    self.assertTrue(self.send_if_exists_mock.called)
+                                    await self.transport.disconnect()
 
         self.loop.run_until_complete(test())
 
     @unittest.skipIf(shutil.which("bash") is None, "系统没有bash，跳过测试")
     def test_python_version_check_failure_with_real_bash(self):
         async def test():
-            mock_process = AsyncMock()
-            mock_process.stdin = AsyncMock()
-            mock_process.stdin.write = Mock()
-            mock_process.stdin.drain = AsyncMock()
-            mock_process.stdout = AsyncMock()
-            mock_process.stdout.readline = AsyncMock()
-            mock_process.stderr = AsyncMock()
-            mock_process.returncode = 0
-            mock_process.terminate = Mock()
-
-            self.run_with_timeout_responses = [
-                mock_process,
-                b"Python 2.7.18\n",
-                b"CMD_RESULT_0:0\n",
+            read_responses = [
+                ProcessReadResult(
+                    pid="1",
+                    success=True,
+                    stdout="Python 2.7.18\nCMD_RESULT_0:0\n",
+                    stderr="",
+                ),
             ]
-            self.run_with_timeout_index = 0
+            mock_process = self._make_mock_process(read_responses)
 
-            with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-                with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
-                    with patch("pathlib.Path.exists", return_value=True):
-                        with patch(
-                            "pathlib.Path.read_text", return_value="# trojan content"
-                        ):
-                            with patch("pathlib.Path.write_text"):
-                                with patch("pathlib.Path.unlink"):
-                                    with patch("asyncio.get_event_loop") as mock_loop:
-                                        mock_loop_instance = Mock()
-                                        mock_loop_instance.time = Mock(return_value=0)
-                                        mock_loop.return_value = mock_loop_instance
-                                        result = await self.transport.connect()
-                                        self.assertFalse(result)
-                                        self.assertFalse(self.transport.is_connected())
+            with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch(
+                        "pathlib.Path.read_text", return_value="# trojan content"
+                    ):
+                        with patch("pathlib.Path.write_text"):
+                            with patch("pathlib.Path.unlink"):
+                                with patch("asyncio.get_event_loop") as mock_loop:
+                                    mock_loop_instance = Mock()
+                                    mock_loop_instance.time = Mock(return_value=0)
+                                    mock_loop.return_value = mock_loop_instance
+                                    result = await self.transport.connect(mock_process)
+                                    self.assertFalse(result)
+                                    self.assertFalse(self.transport.is_connected())
 
         self.loop.run_until_complete(test())
 
     @unittest.skipIf(shutil.which("bash") is None, "系统没有bash，跳过测试")
     def test_command_timeout_with_real_bash(self):
-
         async def test():
-            mock_process = AsyncMock()
-            mock_process.stdin = AsyncMock()
-            mock_process.stdin.write = Mock()
-            mock_process.stdin.drain = AsyncMock()
-            mock_process.stdout = AsyncMock()
-            mock_process.stdout.readline = AsyncMock(return_value=b"")
-            mock_process.stderr = AsyncMock()
-            mock_process.returncode = None
+            empty_read = ProcessReadResult(pid="1", success=True, stdout="", stderr="")
+            mock_process = self._make_mock_process([empty_read, empty_read])
 
-            with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-                with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
-                    with patch("pathlib.Path.exists", return_value=True):
-                        with patch(
-                            "pathlib.Path.read_text",
-                            return_value="# trojan content",
-                        ):
-                            with patch("pathlib.Path.write_text"):
-                                with patch("pathlib.Path.unlink"):
-                                    self.transport._bash_process = mock_process
+            with patch("asyncio.get_event_loop") as mock_loop:
+                mock_loop_instance = Mock()
+                time_values = iter([0, 0, 0.3, 0.6])
+                mock_loop_instance.time = Mock(side_effect=lambda: next(time_values))
+                mock_loop.return_value = mock_loop_instance
 
-                                    exit_code, output, error = (
-                                        await self.transport._execute_in_bash(
-                                            "test command", timeout=0.5
-                                        )
-                                    )
+                self.transport._bash_process = mock_process
 
-                                    self.assertEqual(exit_code, 1)
-                                    self.assertEqual(error, "命令执行超时")
+                exit_code, output, error = await self.transport._execute_in_bash(
+                    "test command", timeout=0.5
+                )
+
+                self.assertEqual(exit_code, 1)
+                self.assertEqual(error, "命令执行超时")
 
         self.loop.run_until_complete(test())
 
     def test_disconnect(self):
         async def test():
-            # 设置一个模拟的trojan_transport
             mock_trojan_transport = AsyncMock()
             mock_trojan_transport.disconnect = AsyncMock()
             mock_trojan_transport.is_connected = Mock(return_value=True)
 
-            # 创建一个模拟的bash进程，确保wait()返回一个可await的值
             mock_bash_process = AsyncMock()
-            mock_bash_process.terminate = Mock()
-            # 创建一个future，使wait()可await且返回returncode
-            future = asyncio.Future()
-            future.set_result(0)  # 模拟进程退出码为0
-            mock_bash_process.wait = Mock(return_value=future)
-            mock_bash_process.returncode = 0
+            mock_bash_process.kill = AsyncMock(
+                return_value=ProcessKillResult(
+                    pid="1", success=True, message="进程已终止"
+                )
+            )
 
             self.transport._trojan_transport = mock_trojan_transport
             self.transport._bash_process = mock_bash_process
 
-            # 执行断开连接
             await self.transport.disconnect()
 
-            # 验证trojan_transport.disconnect被调用
             mock_trojan_transport.disconnect.assert_called_once()
+            mock_bash_process.kill.assert_called_once_with(graceful=True)
 
-            # 验证清理操作
             self.assertIsNone(self.transport._trojan_transport)
             self.assertIsNone(self.transport._bash_process)
 

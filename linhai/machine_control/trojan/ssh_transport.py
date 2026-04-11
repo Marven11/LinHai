@@ -3,7 +3,6 @@ import re
 import tempfile
 import base64
 import gzip
-from asyncio.subprocess import Process
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -11,6 +10,7 @@ from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor, TaskSupervisor
 from linhai.utils.common import UiNotice
 from linhai.machine_control.process import (
+    Process,
     ProcessKillResult,
     ProcessReadResult,
     ProcessWriteResult,
@@ -22,7 +22,7 @@ _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 class _AsyncioProcessAdapter:
-    def __init__(self, process: Process) -> None:
+    def __init__(self, process: asyncio.subprocess.Process) -> None:
         self._process = process
 
     @property
@@ -131,37 +131,37 @@ class SshTrojanTransport:
     async def _execute_in_bash(
         self, command: str, timeout: float = 10.0
     ) -> tuple[int, str, str]:
-        if self._bash_process is None or self._bash_process.stdin is None:
+        if self._bash_process is None:
             raise RuntimeError("Bash shell not started")
 
         marker = f"CMD_RESULT_{int(asyncio.get_event_loop().time())}"
-        full_command = f"{{ {command}; }} 2>&1; echo '{marker}:$?'"
+        full_command = f'{{ {command}; }} 2>&1; echo "{marker}:$?"'
 
-        self._bash_process.stdin.write(f"{full_command}\n".encode())
-        await self._bash_process.stdin.drain()
+        write_result = await self._bash_process.stdio_write(
+            full_command, with_enter=True
+        )
+        if not write_result.success:
+            return 1, "", f"写入命令失败: {write_result.error}"
 
         output_lines = []
         result_line = None
+        buffer = ""
         start_time = asyncio.get_event_loop().time()
 
-        while self._bash_process.stdout:
-            if asyncio.get_event_loop().time() - start_time > timeout:
+        while asyncio.get_event_loop().time() - start_time < timeout:
+            read_result = await self._bash_process.stdio_read(wait_seconds=1.0)
+            if not read_result.success:
                 break
-
-            success, line_bytes = await self.task_supervisor.run_with_timeout(
-                self._bash_process.stdout.readline(), timeout=1.0
-            )
-
-            if not success:
-                continue
-
-            if not line_bytes:
+            buffer += read_result.stdout
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.rstrip()
+                if line.startswith(f"{marker}:"):
+                    result_line = line
+                    break
+                output_lines.append(line)
+            if result_line is not None:
                 break
-            line = line_bytes.decode().rstrip()
-            if line.startswith(f"{marker}:"):
-                result_line = line
-                break
-            output_lines.append(line)
 
         if result_line is None:
             return 1, "", "命令执行超时"
@@ -218,33 +218,17 @@ class SshTrojanTransport:
         remote_path = output.strip()
         return remote_path
 
-    async def _start_trojan_process(self, remote_trojan_path: str) -> Optional[Process]:
+    async def _start_trojan_process(self, remote_trojan_path: str) -> bool:
+        if self._bash_process is None:
+            raise RuntimeError("Bash shell not started")
         command = f"python3 {remote_trojan_path}"
-        exit_code, _, _ = await self._execute_in_bash(command)
+        write_result = await self._bash_process.stdio_write(command, with_enter=True)
+        if not write_result.success:
+            return False
+        await asyncio.sleep(0.5)
+        return True
 
-        if exit_code != 0:
-            return None
-
-        return self._bash_process
-
-    async def connect(self) -> bool:
-        ssh_cmd = [
-            "ssh",
-            f"{self.username}@{self.host}",
-            "-p",
-            str(self.port),
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "ConnectTimeout=10",
-            "-o",
-            "ServerAliveInterval=30",
-            "-o",
-            "ServerAliveCountMax=3",
-            "bash",
-            "-s",
-        ]
-
+    async def connect(self, process: Process) -> bool:
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
@@ -259,34 +243,7 @@ class SshTrojanTransport:
         trojan_content = trojan_file_path.read_text(encoding="utf-8")
         self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
-        success, process = await self.task_supervisor.run_with_timeout(
-            asyncio.create_subprocess_exec(
-                *ssh_cmd,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                limit=256 * 1024,
-                start_new_session=True,
-            ),
-            timeout=15.0,
-        )
-
-        if not success:
-            if self.trojan_path and self.trojan_path.exists():
-                self.trojan_path.unlink(missing_ok=True)
-            return False
-
         self._bash_process = process
-        assert self._bash_process is not None
-
-        if self._bash_process.stdin is None or self._bash_process.stdout is None:
-            await self.registry.send_if_exists(
-                "ui_log",
-                UiNotice(level="ERROR", content="SSH进程标准IO为空"),
-            )
-            if self.trojan_path and self.trojan_path.exists():
-                self.trojan_path.unlink(missing_ok=True)
-            return False
 
         await self.registry.send_if_exists(
             "ui_log",
@@ -343,8 +300,7 @@ class SshTrojanTransport:
             ),
         )
 
-        process_result = await self._start_trojan_process(remote_trojan_path)
-        if process_result is None:
+        if not await self._start_trojan_process(remote_trojan_path):
             await self.registry.send_if_exists(
                 "ui_log",
                 UiNotice(
@@ -363,23 +319,16 @@ class SshTrojanTransport:
             ),
         )
 
-        process_adapter = _AsyncioProcessAdapter(process_result)
         self._trojan_transport = TrojanTransport(
             registry=self.registry,
-            process=process_adapter,
+            process=self._bash_process,
         )
         self._trojan_transport.start_reading()
         return True
 
     async def _cleanup(self):
         if self._bash_process:
-            self._bash_process.terminate()
-            success, _ = await self.task_supervisor.run_with_timeout(
-                self._bash_process.wait(), timeout=5.0
-            )
-            if not success and self._bash_process.returncode is None:
-                self._bash_process.kill()
-                await self._bash_process.wait()
+            await self._bash_process.kill(graceful=True)
 
         if self.trojan_path and self.trojan_path.exists():
             self.trojan_path.unlink(missing_ok=True)
