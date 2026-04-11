@@ -500,6 +500,13 @@ class LanguageModel(Protocol):
         """
         raise NotImplementedError()
 
+    async def reconnect(self) -> None:
+        """重置底层客户端连接。
+
+        在429等错误时调用，关闭当前连接并重新初始化。
+        """
+        raise NotImplementedError()
+
 
 class OpenAiAnswer:
     """OpenAI回答类，用于处理OpenAI API的流式响应。"""
@@ -813,12 +820,15 @@ class OpenAi:
         """
         self.registry = registry
         self.model = model
+        self._api_key = api_key
+        self._base_url = base_url
+        self._openai_config = openai_config
         self.openai = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url,
+            api_key=self._api_key,
+            base_url=self._base_url,
             timeout=10,
             max_retries=0,
-            **openai_config,
+            **self._openai_config,
         )
         self.tools = tools
         self.chat_completion_kwargs = chat_completion_kwargs
@@ -872,6 +882,21 @@ class OpenAi:
             f"{self.token_limit}" if self.token_limit is not None else "未设置"
         )
         return f"名称: {self.name}, 模型: {self.model}, token限制: {token_limit}"
+
+    async def reconnect(self) -> None:
+        """重置底层OpenAI客户端连接。
+
+        关闭当前连接并重新初始化AsyncOpenAI实例，
+        用于在429等错误时重置客户端状态。
+        """
+        await self.openai.close()
+        self.openai = AsyncOpenAI(
+            api_key=self._api_key,
+            base_url=self._base_url,
+            timeout=10,
+            max_retries=0,
+            **self._openai_config,
+        )
 
     def _estimate_cached_input_tokens(self, current_history: Sequence[Message]) -> int:
         """估算缓存的输入token数量。

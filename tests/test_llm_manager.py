@@ -342,6 +342,53 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(answer, MockAnswer)
         self.assertEqual(call_count, 3)
 
+    async def test_reconnect_called_on_429_with_openai(self):
+        from unittest.mock import patch, PropertyMock
+        from linhai.llm import OpenAi
+
+        mock_registry = MagicMock(spec=Registry)
+        mock_registry.register_member = MagicMock()
+
+        with patch("linhai.llm.AsyncOpenAI") as mock_async_openai_cls:
+            mock_client = AsyncMock()
+            mock_client.close = AsyncMock()
+            mock_async_openai_cls.return_value = mock_client
+
+            openai_llm = OpenAi(
+                registry=mock_registry,
+                api_key="test-key",
+                base_url="http://test",
+                model="test-model",
+                openai_config={},
+                chat_completion_kwargs={},
+                support_image=False,
+                explicit_cache_info=None,
+                name="test-llm",
+            )
+            openai_llm.answer_stream = AsyncMock(
+                side_effect=Exception("429 rate limit")
+            )
+
+            mock_fallback = MagicMock()
+            mock_fallback.get_name = MagicMock(return_value="fallback")
+            mock_fallback.get_token_limit = MagicMock(return_value=8000)
+            mock_fallback.support_image = MagicMock(return_value=False)
+            mock_fallback.answer_stream = AsyncMock(return_value=MockAnswer())
+
+            mgr = LlmManager(
+                registry=self.mock_registry,
+                llms=[openai_llm, mock_fallback],
+                default_llm_name="test-llm",
+                llm_fallback_map={"test-llm": "fallback", "fallback": None},
+                llm_fallback_duration_map={"test-llm": 120, "fallback": 120},
+            )
+
+            history = [MagicMock(spec=Message)]
+            await mgr.answer_stream(history)
+
+            mock_client.close.assert_awaited_once()
+            self.assertEqual(mock_async_openai_cls.call_count, 2)
+
     async def test_non_openai_error_propagates(self):
         self.mock_llm1.answer_stream = AsyncMock(
             side_effect=ValueError("unexpected error")

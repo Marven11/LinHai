@@ -216,6 +216,8 @@ class LlmManager:
 
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
+                    if isinstance(current_llm, OpenAi):
+                        await current_llm.reconnect()
                     if fallback_llm is not None:
                         fallback_duration = self.llm_fallback_duration_map.get(
                             current_llm_name, 120
