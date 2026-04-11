@@ -16,6 +16,7 @@ from linhai.tool.base import ToolCallResultMessage
 from linhai.registry import Registry
 from linhai.machine_control import MachineControl
 from linhai.utils.common import UiNotice
+from linhai.utils.tokenizer import count_tokens
 from linhai.llm import Message
 
 from .helpers import (
@@ -396,3 +397,108 @@ class FileReadWriteConflictPlugin(Plugin):
         """注册插件回调。"""
         lifecycle.before_message_generation.register(self.before_message_generation)
         lifecycle.after_toolcall.register(self.after_toolcall)
+
+
+class SedFragmentedReadPlugin(Plugin):
+    """检测sed细碎重叠读取文件的插件，覆盖所有文件（不限大小/已读状态）。"""
+
+    _CLEANUP_SECONDS = 300
+    _TOKEN_THRESHOLD = 1000
+    _TRIGGER_COUNT = 3
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self._records: dict[str, list[tuple[set[str], float]]] = {}
+        self._count: dict[str, int] = {}
+
+    def register(self, lifecycle: "Lifecycle") -> None:
+        lifecycle.after_toolcall.register(self.after_toolcall)
+
+    def _cleanup(self, now: float) -> None:
+        cutoff = now - self._CLEANUP_SECONDS
+        for filepath in list(self._records):
+            self._records[filepath] = [
+                r for r in self._records[filepath] if r[1] > cutoff
+            ]
+            if not self._records[filepath]:
+                del self._records[filepath]
+                self._count.pop(filepath, 0)
+
+    async def after_toolcall(
+        self,
+        tool_name: str,
+        tool_index: int,
+        status: Literal["skipped", "success", "failed"],
+        message: Message | None,
+        toolcall_arguments: dict,
+        with_secret: list[str] | None,
+        is_tool_failed_duplicated_error: bool,
+    ) -> Union[None, bool, RuntimeMessage]:
+        machine_control = self.registry.get_member_typechecked(
+            "machine_control", MachineControl
+        )
+        if machine_control.target_machine != "master_host":
+            return None
+
+        if status != "success":
+            return None
+
+        if tool_name == "read_file":
+            filepath = toolcall_arguments.get("filepath")
+            if filepath:
+                self._count.pop(str(Path(filepath).resolve()), 0)
+            return None
+
+        if tool_name != "read_file_with_sed":
+            return None
+
+        filepath = toolcall_arguments.get("filepath")
+        if not filepath:
+            return None
+
+        if message is None:
+            return None
+
+        if not isinstance(message, ToolCallResultMessage):
+            return None
+
+        content = message.result.content
+        now = time.time()
+
+        self._cleanup(now)
+
+        token_count = count_tokens(content)
+
+        abs_path = str(Path(filepath).resolve())
+
+        if token_count >= self._TOKEN_THRESHOLD:
+            self._count.pop(abs_path, 0)
+            return None
+
+        content_lines = set(content.splitlines())
+        if not content_lines:
+            return None
+
+        records = self._records.setdefault(abs_path, [])
+        has_overlap = any(content_lines & prev for prev, _ in records)
+
+        records.append((content_lines, now))
+
+        count = self._count.get(abs_path, 0) + 1
+        self._count[abs_path] = count
+
+        if not has_overlap or count < self._TRIGGER_COUNT:
+            return None
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(
+                level="WARNING",
+                content=f"模型连续{count}次使用sed重复读取文件{filepath}的细碎重叠内容",
+            ),
+        )
+        return RuntimeMessage(
+            f"你已经连续{count}次使用sed重复读取文件内容，"
+            "为什么要重复读取？为什么要重复确认内容？"
+            "你就不能一次性读取周围大块内容以完全理解这部分代码吗？"
+        )
