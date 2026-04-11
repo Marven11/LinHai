@@ -238,10 +238,13 @@ class UserPromptConfig(BaseModel):
     """内存配置类型定义。"""
 
     file_path: str = Field(description="用户提示文件路径。")
+    reminder_file_path: str = Field(
+        description="用户提醒文件路径，每次生成消息前将其内容加入通知。"
+    )
 
     def __str__(self) -> str:
         """返回内存配置的字符串表示"""
-        return f"UserPromptConfig(file_path={self.file_path})"
+        return f"UserPromptConfig(file_path={self.file_path}, reminder_file_path={self.reminder_file_path})"
 
 
 class SecretSubConfig(BaseModel):
@@ -381,7 +384,7 @@ class Config(BaseModel):
         default_factory=list, description="Agent行为配置列表，支持多个profile"
     )
     user_prompt: UserPromptConfig = Field(
-        default_factory=lambda: UserPromptConfig(file_path=""),
+        default_factory=lambda: UserPromptConfig(file_path="", reminder_file_path=""),
         description="用户提示配置",
     )
     tools: ToolConfig = Field(default_factory=ToolConfig, description="工具相关配置")

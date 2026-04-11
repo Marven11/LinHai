@@ -345,6 +345,13 @@ async def create_agent_from_context(
 
         AfkPlugin(context["registry"], afk=True).register(agent.lifecycle)
 
+    if context.get("config"):
+        from linhai.plugin.user_reminder import UserReminderPlugin
+
+        UserReminderPlugin(
+            context["registry"], context["config"].user_prompt.reminder_file_path
+        ).register(agent.lifecycle)
+
     if not context["disable_waiting_marker"]:
         from linhai.plugin.message_checkers import WaitingUserPlugin
 

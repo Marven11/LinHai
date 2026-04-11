@@ -7,6 +7,10 @@ model = "gpt-3.5-turbo"
 [[agent]]
 compress_threshold = 0.8
 
+[user_prompt]
+file_path = "./test_prompt.md"
+reminder_file_path = "./test_reminder.md"
+
 [tools]
 max_output_length = 50000
 

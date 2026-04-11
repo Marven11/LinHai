@@ -97,6 +97,7 @@ compress_threshold = 60000
 
 [user_prompt]
 file_path = "./test_prompt.md"
+reminder_file_path = "./test_reminder.md"
 
 [tools]
 max_toolcall_token_in_round = 2000
@@ -167,6 +168,10 @@ name = "test_llm"
 base_url = "https://api.example.com"
 api_key = "test_key"
 model = "test_model"
+
+[user_prompt]
+file_path = "./test_prompt.md"
+reminder_file_path = "./test_reminder.md"
 """
         temp_file = create_temp_config(config_content)
         try:
@@ -176,7 +181,10 @@ model = "test_model"
             self.assertEqual(config.agent, [])
             # user_prompt现在有默认值，检查默认值
             self.assertIsNotNone(config.user_prompt)
-            self.assertEqual(config.user_prompt.file_path, "")
+            self.assertEqual(config.user_prompt.file_path, "./test_prompt.md")
+            self.assertEqual(
+                config.user_prompt.reminder_file_path, "./test_reminder.md"
+            )
             # tools现在有默认值，不再是None
             self.assertIsNotNone(config.tools)
             self.assertEqual(config.tools.max_toolcall_token_in_round, 0.3)
@@ -234,6 +242,7 @@ compress_threshold = 0.8
 
 [user_prompt]
 file_path = "./test_prompt.md"
+reminder_file_path = "./test_reminder.md"
 
 [tools]
 max_toolcall_token_in_round = 2000

@@ -1,0 +1,125 @@
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import Mock
+
+from linhai.agent.lifecycle import Lifecycle
+from linhai.plugin.message_checkers import Plugin
+from linhai.plugin.user_reminder import UserReminderPlugin
+from linhai.registry import Registry
+
+
+class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.registry = Registry()
+        self.lifecycle = Lifecycle(self.registry)
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.reminder_file = Path(self.temp_dir.name) / "REMINDER.md"
+        self.plugin = UserReminderPlugin(self.registry, str(self.reminder_file))
+
+        self.agent = Mock()
+        self.agent.message_processor = Mock()
+        self.agent.message_processor.update_notification_message = Mock()
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_plugin_inherits_plugin(self):
+        self.assertIsInstance(self.plugin, Plugin)
+
+    def test_plugin_registers_before_message_generation(self):
+        initial_count = len(self.lifecycle.before_message_generation._callbacks)
+        self.plugin.register(self.lifecycle)
+        self.assertEqual(
+            len(self.lifecycle.before_message_generation._callbacks), initial_count + 1
+        )
+
+    async def test_nonexistent_file_skips(self):
+        self.plugin = UserReminderPlugin(self.registry, "/nonexistent/path/reminder.md")
+        result = await self.plugin.before_message_generation()
+        self.assertIsNone(result)
+
+    async def test_empty_file_skips(self):
+        self.reminder_file.write_text("", encoding="utf-8")
+        result = await self.plugin.before_message_generation()
+        self.assertIsNone(result)
+
+    async def test_no_agent_skips(self):
+        self.reminder_file.write_text("test content", encoding="utf-8")
+        result = await self.plugin.before_message_generation()
+        self.assertIsNone(result)
+
+    async def test_reminder_content_added_to_notification(self):
+        self.reminder_file.write_text("test reminder content", encoding="utf-8")
+        self.registry.register_member("agent", self.agent)
+
+        await self.plugin.before_message_generation()
+
+        self.agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertEqual(call_args.kwargs["source"], "user_reminder")
+        self.assertEqual(call_args.kwargs["sort_value"], 900)
+        message_obj = call_args.args[0]
+        self.assertIn("test reminder content", str(message_obj))
+
+    async def test_reminder_file_path_stored(self):
+        self.assertEqual(self.plugin.reminder_file_path, str(self.reminder_file))
+
+    async def test_relative_path_with_config_path(self):
+        config_file = Path(self.temp_dir.name) / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        self.registry.register_member("config_path", str(config_file))
+        self.registry.register_member("agent", self.agent)
+
+        relative_path = "reminder.md"
+        reminder_file = Path(self.temp_dir.name) / "reminder.md"
+        reminder_file.write_text("relative reminder", encoding="utf-8")
+
+        plugin = UserReminderPlugin(self.registry, relative_path)
+        await plugin.before_message_generation()
+
+        self.agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertIn("relative reminder", str(call_args.args[0]))
+
+    async def test_absolute_path_works(self):
+        self.reminder_file.write_text("absolute path reminder", encoding="utf-8")
+        self.registry.register_member("agent", self.agent)
+
+        plugin = UserReminderPlugin(self.registry, str(self.reminder_file))
+        await plugin.before_message_generation()
+
+        self.agent.message_processor.update_notification_message.assert_called_once()
+        call_args = self.agent.message_processor.update_notification_message.call_args
+        self.assertIn("absolute path reminder", str(call_args.args[0]))
+
+    async def test_tilde_expansion(self):
+        home_dir = Path.home()
+        test_file = home_dir / ".test_reminder.md"
+        test_file.write_text("home reminder", encoding="utf-8")
+
+        self.registry.register_member("agent", self.agent)
+
+        try:
+            plugin = UserReminderPlugin(self.registry, "~/.test_reminder.md")
+            await plugin.before_message_generation()
+
+            self.agent.message_processor.update_notification_message.assert_called_once()
+            call_args = (
+                self.agent.message_processor.update_notification_message.call_args
+            )
+            self.assertIn("home reminder", str(call_args.args[0]))
+        finally:
+            test_file.unlink(missing_ok=True)
+
+    async def test_whitespace_only_content_skips(self):
+        self.reminder_file.write_text("   \n\t   ", encoding="utf-8")
+        self.registry.register_member("agent", self.agent)
+
+        result = await self.plugin.before_message_generation()
+        self.assertIsNone(result)
+        self.agent.message_processor.update_notification_message.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
