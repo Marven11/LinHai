@@ -29,7 +29,7 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            await host.process_create(["echo", "test"], 1.0)
+            await host.create_process(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(
@@ -57,7 +57,7 @@ class TestProcessCreateSandbox(unittest.IsolatedAsyncioTestCase):
             patch("time.perf_counter", side_effect=[0.0, 1.5]),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
-            await host.process_create(["echo", "test"], 1.0)
+            await host.create_process(["echo", "test"], 1.0)
 
         called_argv = list(mock_exec.call_args[0])
         self.assertEqual(called_argv, ["echo", "test"])
