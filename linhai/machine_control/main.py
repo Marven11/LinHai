@@ -1,5 +1,6 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
+import asyncio
 import json
 from typing import Dict, Optional, Protocol, Union, Any, Literal
 from linhai.machine_control.http_message import HttpMessage
@@ -8,6 +9,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.base import Message
 from linhai.registry import Registry
+from linhai.task_supervisor import TaskSupervisor
 from linhai.tool.base import (
     ToolArgInfo,
     ToolResultSuccess,
@@ -18,6 +20,7 @@ from linhai.utils.common import UiNotice
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
 from .process import Process, ProcessCreateResult
+from .trojan.ssh_transport import _AsyncioProcessAdapter
 
 
 def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet:
@@ -686,12 +689,50 @@ class MachineControl:
             host=host, registry=self.registry, port=port, username=username
         )
 
-        try:
-            connected = await ssh_control.connect()
-            if not connected:
-                return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
-        except Exception as e:
-            return ToolResultFailed(content=f"连接SSH机器时出错: {e}")
+        ssh_cmd = [
+            "ssh",
+            f"{username or 'root'}@{host}",
+            "-p",
+            str(port),
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "bash",
+            "-s",
+        ]
+
+        task_supervisor = self.registry.get_member_typechecked(
+            "task_supervisor", TaskSupervisor
+        )
+
+        success, process = await task_supervisor.run_with_timeout(
+            asyncio.create_subprocess_exec(
+                *ssh_cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                limit=256 * 1024,
+                start_new_session=True,
+            ),
+            timeout=15.0,
+        )
+
+        if not success:
+            return ToolResultFailed(content=f"连接SSH机器超时: {host}:{port}")
+
+        if process.stdin is None or process.stdout is None:
+            process.kill()
+            return ToolResultFailed(content=f"SSH进程stdio不可用: {host}:{port}")
+
+        adapter = _AsyncioProcessAdapter(process)
+        connected = await ssh_control.connect(adapter)
+        if not connected:
+            return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
 
         self.machines[machine_id] = ssh_control
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"

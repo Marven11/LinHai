@@ -8,7 +8,7 @@ from linhai.registry import Registry
 from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
-from ..trojan.ssh_transport import SshTrojanTransport, _AsyncioProcessAdapter
+from ..trojan.ssh_transport import SshTrojanTransport
 from ..process import Process, ProcessCreateResult
 from .process import RemoteProcess, _extract_tag
 
@@ -33,66 +33,16 @@ class SshMachineControl:
         """返回SSH用户名"""
         return self._username
 
-    async def connect(self) -> bool:
+    async def connect(self, process: Process) -> bool:
         """连接到SSH服务器并启动trojan。
 
-        假设ssh命令可以直接连接，不需要密码交互。
+        Args:
+            process: 已建立的SSH bash进程（通过stdio交互）
 
         Returns:
             连接是否成功
         """
-        ssh_cmd = [
-            "ssh",
-            f"{self.transport.username}@{self.transport.host}",
-            "-p",
-            str(self.transport.port),
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "ConnectTimeout=10",
-            "-o",
-            "ServerAliveInterval=30",
-            "-o",
-            "ServerAliveCountMax=3",
-            "bash",
-            "-s",
-        ]
-
-        success, process = await self.transport.task_supervisor.run_with_timeout(
-            asyncio.create_subprocess_exec(
-                *ssh_cmd,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                limit=256 * 1024,
-                start_new_session=True,
-            ),
-            timeout=15.0,
-        )
-
-        if not success:
-            return False
-
-        if process.stdin is None or process.stdout is None:
-            process.kill()
-            return False
-
-        adapter = _AsyncioProcessAdapter(process)
-        results = await asyncio.gather(
-            self.transport.connect(adapter),
-            return_exceptions=True,
-        )
-        result = results[0]
-        if isinstance(result, BaseException):
-            await self.registry.send_if_exists(
-                "ui_log",
-                UiNotice(
-                    level="ERROR",
-                    content=f"连接失败: {result}",
-                ),
-            )
-            return False
-        return result
+        return await self.transport.connect(process)
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
