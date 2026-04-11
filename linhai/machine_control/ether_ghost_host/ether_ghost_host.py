@@ -267,18 +267,6 @@ class EtherGhostMachineControl(HostControl):
             return ToolResultFailed(content=f"目标机器上未安装sed (uuid: {self._uuid})")
         return ToolResultSuccess(content=result)
 
-    async def modify_file_with_sed(
-        self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        if self.session is None:
-            return ToolResultFailed(content="Session未初始化")
-
-        cmd = f"if command -v sed >/dev/null 2>&1; then sed -i '{expression}' {filepath}; else echo {self._uuid}; fi"
-        result = await self.session.execute_cmd(cmd)
-        if self._uuid in result:
-            return ToolResultFailed(content=f"目标机器上未安装sed (uuid: {self._uuid})")
-        return ToolResultSuccess(content="文件已修改")
-
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:

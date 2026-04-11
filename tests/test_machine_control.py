@@ -278,8 +278,6 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hasattr(self.host_control, "list_files"))
         self.assertTrue(hasattr(self.host_control, "get_absolute_path"))
 
-        self.assertTrue(hasattr(self.host_control, "modify_file_with_sed"))
-
     def test_terminal_operations(self):
         """测试终端操作"""
         self.assertTrue(hasattr(self.host_control, "terminal_create"))

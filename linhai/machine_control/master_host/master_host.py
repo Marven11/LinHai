@@ -25,7 +25,6 @@ from .file import (
     list_files,
     get_absolute_path,
     read_file_with_sed,
-    modify_file_with_sed,
 )
 
 
@@ -231,17 +230,6 @@ class MasterHostControl:
         )
         return await asyncio.to_thread(
             read_file_with_sed, expression, filepath, sandbox.wrap_argv
-        )
-
-    async def modify_file_with_sed(
-        self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """使用sed表达式修改文件"""
-        sandbox = self._registry.get_member_typechecked(
-            "process_sandbox", ProcessSandboxProtocol
-        )
-        return await asyncio.to_thread(
-            modify_file_with_sed, expression, filepath, sandbox.wrap_argv
         )
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:

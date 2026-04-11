@@ -19,7 +19,6 @@ class TestFileValidation(unittest.TestCase):
             write_file,
             replace_file_content,
             read_file_with_sed,
-            modify_file_with_sed,
         )
 
         self.toolset.register_tool(
@@ -60,20 +59,6 @@ class TestFileValidation(unittest.TestCase):
             required_args=["filepath", "expression"],
         )(
             lambda expression, filepath: read_file_with_sed(
-                expression, filepath, sandbox.wrap_argv
-            )
-        )
-
-        self.toolset.register_tool(
-            name="modify_file_with_sed",
-            desc="使用sed表达式修改文件",
-            args={
-                "filepath": ToolArgInfo(desc="文件路径", type="str"),
-                "expression": ToolArgInfo(desc="sed表达式", type="str"),
-            },
-            required_args=["filepath", "expression"],
-        )(
-            lambda expression, filepath: modify_file_with_sed(
                 expression, filepath, sandbox.wrap_argv
             )
         )
@@ -120,17 +105,6 @@ class TestFileValidation(unittest.TestCase):
         """测试read_file_with_sed拒绝二进制文件"""
         result = self.toolset.call_tool(
             "read_file_with_sed",
-            {
-                "filepath": "./tests/test_binary.zip",
-                "expression": "s/test/replacement/",
-            },
-        )
-        self.assertIn("不是纯文本文件", str(result))
-
-    def test_modify_file_with_sed_rejects_binary_file(self):
-        """测试modify_file_with_sed拒绝二进制文件"""
-        result = self.toolset.call_tool(
-            "modify_file_with_sed",
             {
                 "filepath": "./tests/test_binary.zip",
                 "expression": "s/test/replacement/",

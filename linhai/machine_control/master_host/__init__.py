@@ -24,7 +24,6 @@ from .file import (
     list_files,
     get_absolute_path,
     read_file_with_sed,
-    modify_file_with_sed,
 )
 
 __all__ = [
@@ -43,7 +42,6 @@ __all__ = [
     "list_files",
     "get_absolute_path",
     "read_file_with_sed",
-    "modify_file_with_sed",
     "MasterHostControl",
     "PyteTerminal",
     "TmuxTerminal",

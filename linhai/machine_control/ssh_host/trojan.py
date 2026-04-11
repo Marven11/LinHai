@@ -297,23 +297,6 @@ class Trojan:
             return {"error": stderr.decode()}
         return {"message": stdout.decode()}
 
-    async def modify_file_with_sed(self, expression: str, filepath: str) -> dict:
-        system = platform.system()
-        if system == "Darwin":
-            cmd = ["sed", "-i", "", expression, filepath]
-        else:
-            cmd = ["sed", "-i", expression, filepath]
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        if process.returncode != 0:
-            return {"error": stderr.decode()}
-        return {"message": "文件已修改"}
-
     async def terminal_create(self, columns: int = 80, lines: int = 24) -> TrojanResult:
         assert (
             columns > 0 and lines > 0

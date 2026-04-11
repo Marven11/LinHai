@@ -62,7 +62,7 @@ class PlanningStatusReminderPlugin(Plugin):
     def _check_modifications(
         self, tool_calls: list[dict], planning_folder: Path
     ) -> tuple[bool, bool]:
-        write_tools = {"write_file", "replace_file_content", "modify_file_with_sed"}
+        write_tools = {"write_file", "replace_file_content"}
         status_file = planning_folder / "STATUS.md"
         todolist_file = planning_folder / "TODOLIST.md"
 

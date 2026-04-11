@@ -297,14 +297,6 @@ class SshMachineControl:
             "read_file_with_sed", {"expression": expression, "filepath": filepath}
         )
 
-    async def modify_file_with_sed(
-        self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        """使用sed表达式修改文件"""
-        return await self.call_tool(
-            "modify_file_with_sed", {"expression": expression, "filepath": filepath}
-        )
-
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:

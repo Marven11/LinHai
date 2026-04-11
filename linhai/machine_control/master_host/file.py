@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Callable
 import difflib
 import json
-import platform
-import re
 import stat
 import subprocess
 import time
@@ -411,48 +409,6 @@ def read_file_with_sed(
             )
 
         return ToolResultSuccess(content=result.stdout)
-    except subprocess.CalledProcessError as exc:
-        return ToolResultFailed(content=f"sed命令执行错误: {exc.stderr}")
-    except OSError as exc:
-        return ToolResultFailed(content=f"运行sed时发生错误: {exc!r}")
-
-
-def modify_file_with_sed(
-    expression: str,
-    filepath: str,
-    wrap_argv: Callable[[list[str]], list[str]],
-) -> ToolResultSuccess | ToolResultFailed:
-    """使用sed表达式修改文件。
-
-    Args:
-        expression: sed表达式
-        filepath: 文件路径
-        wrap_argv: 将argv用沙箱包裹的回调函数
-
-    Returns:
-        成功或错误消息
-    """
-    file_path = Path(filepath)
-    validation_error = validate_file(file_path)
-    if validation_error:
-        return ToolResultFailed(content=validation_error)
-    try:
-
-        system = platform.system()
-        if system == "Darwin":
-            cmd = ["sed", "-i", "", expression, file_path.as_posix()]
-        else:
-            cmd = ["sed", "-i", expression, file_path.as_posix()]
-        _ = subprocess.run(wrap_argv(cmd), capture_output=True, text=True, check=True)
-
-        line_number_pattern = r"^\d+"
-        result_text = f"文件{file_path.as_posix()!r}已使用sed表达式修改"
-        if re.match(line_number_pattern, expression.strip()):
-            result_text += (
-                "警告：使用行号匹配并修改文件，文件的行号已经变化！"
-                "使用行号匹配是不推荐的行为，之后需要按照内容匹配以避免删除错误！"
-            )
-        return ToolResultSuccess(content=result_text)
     except subprocess.CalledProcessError as exc:
         return ToolResultFailed(content=f"sed命令执行错误: {exc.stderr}")
     except OSError as exc:

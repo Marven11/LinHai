@@ -527,22 +527,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await host_control.read_file_with_sed(expression, filepath)
 
     @toolset.register_tool(
-        name="modify_file_with_sed",
-        desc="使用sed表达式修改文件，支持mac和linux的区别",
-        args={
-            "expression": ToolArgInfo(desc="sed表达式", type="str"),
-            "filepath": ToolArgInfo(desc="文件路径", type="str"),
-        },
-        required_args=["expression", "filepath"],
-        conflict_with=[],
-    )
-    async def modify_file_with_sed_tool(
-        expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed:
-        host_control = machine_control.machines[machine_control.target_machine]
-        return await host_control.modify_file_with_sed(expression, filepath)
-
-    @toolset.register_tool(
         name="transfer_file",
         desc="将文件从一台机器传送到另一台机器上",
         args={
@@ -642,10 +626,6 @@ class HostControl(Protocol):
     ) -> ToolResultSuccess | ToolResultFailed: ...
 
     async def read_file_with_sed(
-        self, expression: str, filepath: str
-    ) -> ToolResultSuccess | ToolResultFailed: ...
-
-    async def modify_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed: ...
 

@@ -362,7 +362,6 @@ class FileReadWriteConflictPlugin(Plugin):
         write_file_tools = {
             "write_file",
             "replace_file_content",
-            "modify_file_with_sed",
         }
         if tool_name in write_file_tools:
             filepath = (
