@@ -1,4 +1,5 @@
 import asyncio
+import re
 import tempfile
 import base64
 import gzip
@@ -9,7 +10,94 @@ from typing import Dict, Any, Optional
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor, TaskSupervisor
 from linhai.utils.common import UiNotice
+from linhai.machine_control.process import (
+    ProcessKillResult,
+    ProcessReadResult,
+    ProcessWriteResult,
+    ProcessWaitResult,
+)
 from .transport import TrojanTransport
+
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+class _AsyncioProcessAdapter:
+    def __init__(self, process: Process) -> None:
+        self._process = process
+
+    @property
+    def pid(self) -> str:
+        return str(self._process.pid)
+
+    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
+        if self._process.stdin is None:
+            return ProcessWriteResult(pid=self.pid, success=False, error="stdin不可用")
+        if with_enter:
+            content += "\n"
+        self._process.stdin.write(content.encode())
+        await self._process.stdin.drain()
+        return ProcessWriteResult(pid=self.pid, success=True, message="写入成功")
+
+    async def stdio_read(
+        self, wait_seconds: float, unescape_ansi: bool = True
+    ) -> ProcessReadResult:
+        if self._process.stdout is None:
+            return ProcessReadResult(pid=self.pid, success=True, stdout="", stderr="")
+
+        chunks: list[bytes] = []
+        loop = asyncio.get_event_loop()
+        start = loop.time()
+        while loop.time() - start < wait_seconds:
+            remaining = wait_seconds - (loop.time() - start)
+            if remaining <= 0:
+                break
+            read_task = asyncio.ensure_future(self._process.stdout.read(4096))
+            done, _ = await asyncio.wait({read_task}, timeout=min(0.5, remaining))
+            if not done:
+                read_task.cancel()
+                if chunks:
+                    break
+                continue
+            data = read_task.result()
+            if data:
+                chunks.append(data)
+            else:
+                break
+
+        raw = b"".join(chunks).decode("utf-8", errors="replace")
+        if unescape_ansi:
+            raw = _ANSI_ESCAPE_RE.sub("", raw)
+        exit_note = None
+        if self._process.returncode is not None:
+            exit_note = f"注意：当前程序{self.pid}已经退出\n"
+        return ProcessReadResult(
+            pid=self.pid, success=True, stdout=raw, stderr="", exit_note=exit_note
+        )
+
+    async def wait(self, timeout: float) -> ProcessWaitResult:
+        wait_task = asyncio.ensure_future(self._process.wait())
+        done, _ = await asyncio.wait({wait_task}, timeout=timeout)
+        if not done:
+            wait_task.cancel()
+            return ProcessWaitResult(pid=self.pid, success=False, error="等待超时")
+        returncode = wait_task.result()
+        return ProcessWaitResult(
+            pid=self.pid, success=True, returncode=returncode, stdout="", stderr=""
+        )
+
+    async def kill(self, graceful: bool = True) -> ProcessKillResult:
+        if graceful:
+            self._process.terminate()
+            wait_task = asyncio.ensure_future(self._process.wait())
+            done, _ = await asyncio.wait({wait_task}, timeout=5.0)
+            if not done:
+                wait_task.cancel()
+                self._process.kill()
+                await self._process.wait()
+        else:
+            self._process.kill()
+            await self._process.wait()
+        return ProcessKillResult(pid=self.pid, success=True, message="进程已终止")
 
 
 class SshTrojanTransport:
@@ -132,7 +220,7 @@ class SshTrojanTransport:
 
     async def _start_trojan_process(self, remote_trojan_path: str) -> Optional[Process]:
         command = f"python3 {remote_trojan_path}"
-        exit_code, output, error = await self._execute_in_bash(command)
+        exit_code, _, _ = await self._execute_in_bash(command)
 
         if exit_code != 0:
             return None
@@ -275,12 +363,10 @@ class SshTrojanTransport:
             ),
         )
 
+        process_adapter = _AsyncioProcessAdapter(process_result)
         self._trojan_transport = TrojanTransport(
             registry=self.registry,
-            stdin=process_result.stdin,
-            stdout=process_result.stdout,
-            stderr=process_result.stderr,
-            process=process_result,
+            process=process_adapter,
         )
         self._trojan_transport.start_reading()
         return True

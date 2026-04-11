@@ -1,46 +1,61 @@
 import asyncio
 import json
 import uuid
-from asyncio.subprocess import Process
 from typing import Dict, Any, Optional
 
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
+from linhai.machine_control.process import Process
 
 
 class JsonRpcResponse(Dict[str, Any]):
     pass
 
 
+class _ProcessLineReader:
+    def __init__(self, process: Process) -> None:
+        self._process = process
+        self._buffer = ""
+
+    async def readline(self, timeout: float = 1.0) -> Optional[str]:
+        while "\n" not in self._buffer:
+            result = await self._process.stdio_read(timeout, unescape_ansi=False)
+            if not result.success or (
+                not result.stdout and result.exit_note is not None
+            ):
+                if self._buffer:
+                    remaining = self._buffer
+                    self._buffer = ""
+                    return remaining
+                return None
+            if not result.stdout:
+                return None
+            self._buffer += result.stdout
+
+        idx = self._buffer.index("\n")
+        line = self._buffer[:idx]
+        self._buffer = self._buffer[idx + 1 :]
+        return line
+
+
 class TrojanTransport:
     def __init__(
         self,
         registry: Registry,
-        stdin: Optional[asyncio.StreamWriter] = None,
-        stdout: Optional[asyncio.StreamReader] = None,
-        stderr: Optional[asyncio.StreamReader] = None,
         process: Optional[Process] = None,
     ):
         self.registry = registry
-        self.stdin = stdin
-        self.stdout = stdout
-        self.stderr = stderr
-        self.process = process
+        self._process: Optional[Process] = process
+        self._line_reader: Optional[_ProcessLineReader] = None
         self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
         self._connection_valid = True
+        if process is not None:
+            self._line_reader = _ProcessLineReader(process)
 
-    def set_stdio(
-        self,
-        stdin: asyncio.StreamWriter,
-        stdout: asyncio.StreamReader,
-        stderr: asyncio.StreamReader,
-        process: Process,
-    ) -> None:
-        self.stdin = stdin
-        self.stdout = stdout
-        self.stderr = stderr
-        self.process = process
+    def set_process(self, process: Process) -> None:
+        self._process = process
+        self._line_reader = _ProcessLineReader(process)
         self._connection_valid = True
 
     def start_reading(self) -> None:
@@ -61,8 +76,8 @@ class TrojanTransport:
         if not self._connection_valid:
             raise ConnectionError("连接已失效")
 
-        if self.stdin is None:
-            raise ConnectionError("连接未建立，stdin为None")
+        if self._process is None:
+            raise ConnectionError("连接未建立，process为None")
 
         request_id = uuid.uuid4().hex
         request = {
@@ -72,9 +87,10 @@ class TrojanTransport:
             "params": params,
         }
 
-        request_json = json.dumps(request) + "\n"
-        self.stdin.write(request_json.encode())
-        await self.stdin.drain()
+        request_json = json.dumps(request)
+        write_result = await self._process.stdio_write(request_json, with_enter=True)
+        if not write_result.success:
+            raise ConnectionError(f"写入失败: {write_result.error}")
 
         loop = asyncio.get_running_loop()
         future: asyncio.Future[JsonRpcResponse] = loop.create_future()
@@ -87,44 +103,48 @@ class TrojanTransport:
         return next(iter(done)).result()
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            response = await self._send_request(method, params)
-            return dict(response)
-        except ConnectionError as e:
+        results = await asyncio.gather(
+            self._send_request(method, params), return_exceptions=True
+        )
+        result = results[0]
+        if isinstance(result, ConnectionError):
             self._connection_valid = False
-            raise
+            raise result
+        if isinstance(result, BaseException):
+            raise result
+        return dict(result)
+
+    async def _read_one_response(self) -> None:
+        assert self._line_reader is not None
+        line = await self._line_reader.readline(timeout=1.0)
+        if line is None:
+            self._connection_valid = False
+            self._fail_pending_futures()
+            return
+        response = json.loads(line)
+        response_id = response.get("id")
+        if response_id is not None:
+            future = self._pending_futures.pop(response_id, None)
+            if future is not None and not future.done():
+                future.set_result(response)
 
     async def _read_responses(self) -> None:
-        while True:
-            if not self._connection_valid:
-                break
-            if self.stdout is None:
-                await asyncio.sleep(0.1)
-                continue
-            try:
-                line = await self.stdout.readline()
-                if not line:
+        while self._connection_valid:
+            results = await asyncio.gather(
+                self._read_one_response(), return_exceptions=True
+            )
+            result = results[0]
+            if isinstance(result, BaseException):
+                if not isinstance(result, asyncio.CancelledError):
+                    await self.registry.send_if_exists(
+                        "ui_log",
+                        UiNotice(
+                            level="ERROR",
+                            content=f"读取响应时出错: {result}",
+                        ),
+                    )
                     self._connection_valid = False
                     self._fail_pending_futures()
-                    break
-                response = json.loads(line.decode())
-                response_id = response.get("id")
-                if response_id is not None:
-                    future = self._pending_futures.pop(response_id, None)
-                    if future is not None and not future.done():
-                        future.set_result(response)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                await self.registry.send_if_exists(
-                    "ui_log",
-                    UiNotice(
-                        level="ERROR",
-                        content=f"读取响应时出错: {e}",
-                    ),
-                )
-                self._connection_valid = False
-                self._fail_pending_futures()
                 break
 
     def _fail_pending_futures(self) -> None:
@@ -141,14 +161,13 @@ class TrojanTransport:
                 "task_supervisor", TaskSupervisor
             )
             task_supervisor.cancel("trojan_transport_reader")
-            try:
-                await task_supervisor.wait("trojan_transport_reader")
-            except asyncio.CancelledError:
-                pass
+            await asyncio.gather(
+                task_supervisor.wait("trojan_transport_reader"),
+                return_exceptions=True,
+            )
 
-        if self.process:
-            self.process.terminate()
-            await asyncio.wait_for(self.process.wait(), timeout=60.0)
+        if self._process:
+            await self._process.kill(graceful=True)
 
         self._connection_valid = False
         self._fail_pending_futures()
