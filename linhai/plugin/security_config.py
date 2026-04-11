@@ -10,7 +10,7 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.llm import Message
+from linhai.base import Message
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent as linhai_agent

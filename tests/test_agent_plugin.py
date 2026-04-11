@@ -8,7 +8,8 @@ from linhai.plugin import (
     PromptFastAgentPlugin,
 )
 from linhai.agent.messages import RuntimeMessage
-from linhai.llm import OpenAi, UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage
+from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
 import pathlib
 
@@ -389,7 +390,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration.should_block_tool_call.return_value = False
 
         # 创建工具调用
-        from linhai.llm import ToolCallMessage
+        from linhai.base import ToolCallMessage
 
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -426,7 +427,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         }  # 90%使用率，红灯
 
         # 创建清理类工具调用
-        from linhai.llm import ToolCallMessage
+        from linhai.base import ToolCallMessage
 
         tool_call = ToolCallMessage(
             function_name="context_forget_large_message",  # 替换为现有工具
@@ -484,7 +485,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
             self.registry.send_if_exists.reset_mock()
 
             # 创建工具调用
-            from linhai.llm import ToolCallMessage
+            from linhai.base import ToolCallMessage
 
             tool_call = ToolCallMessage(
                 function_name=tool_name,
@@ -524,7 +525,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration.should_block_tool_call.return_value = True  # 应该拦截
 
         # 创建清理工具调用
-        from linhai.llm import ToolCallMessage
+        from linhai.base import ToolCallMessage
 
         tool_call = ToolCallMessage(
             function_name="context_forget_large_message",
@@ -576,7 +577,7 @@ class TestRedStateToolBlockPlugin(unittest.TestCase):
         self.orchestration.should_block_tool_call.return_value = False  # 不应该拦截
 
         # 创建其他工具调用
-        from linhai.llm import ToolCallMessage
+        from linhai.base import ToolCallMessage
 
         tool_call = ToolCallMessage(
             function_name="read_file",
@@ -609,7 +610,7 @@ class TestPreviousReasoningPlugin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """设置测试环境。"""
         from linhai.plugin import PreviousReasoningPlugin
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         self.agent = MagicMock()
         self.agent.message_processor = MagicMock()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 import asyncio
 from typing import Optional, TYPE_CHECKING
-from linhai.llm import AnswerTokenUsage
+from linhai.base import AnswerTokenUsage
 from linhai.registry import Registry
 from linhai.type_hints import CumulativeTokenUsage
 

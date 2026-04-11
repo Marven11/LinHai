@@ -6,7 +6,7 @@ from linhai.machine_control.http_message import HttpMessage
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
-from linhai.llm import Message
+from linhai.base import Message
 from linhai.registry import Registry
 from linhai.tool.base import (
     ToolArgInfo,

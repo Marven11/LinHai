@@ -105,7 +105,7 @@ class TestContextTab(unittest.TestCase):
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
 
-        from linhai.llm import UserMessage, AssistantMessage
+        from linhai.base import UserMessage, AssistantMessage
         from linhai.agent.messages import RuntimeMessage
 
         mock_messages = [
@@ -134,7 +134,7 @@ class TestContextTab(unittest.TestCase):
 
         mock_cli_args = argparse.Namespace(planning=False)
         registry.register_member("cli_args", mock_cli_args)
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         mock_token_usage = AnswerTokenUsage(
             input_tokens=1000,
@@ -193,13 +193,13 @@ class TestContextTab(unittest.TestCase):
 
     def _create_mock_registry(self, registry: Registry, mock_agent: Mock) -> list:
         """Helper to set up mock registry members for update_display tests."""
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
         from linhai.token_manager import TokenManager
 
         mock_agent_message = Mock(spec=AgentMessage)
         mock_orchestration = Mock(spec=AgentContextOrchestration)
 
-        from linhai.llm import UserMessage, AssistantMessage
+        from linhai.base import UserMessage, AssistantMessage
         from linhai.agent.messages import RuntimeMessage
 
         mock_messages = [
@@ -424,7 +424,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
     ):
         from textual.widgets import Sparkline, Static, ProgressBar
         from linhai.agent.main import Agent
-        from linhai.llm import AnswerTokenUsage, UserMessage, AssistantMessage
+        from linhai.base import AnswerTokenUsage, UserMessage, AssistantMessage
         from linhai.token_manager import TokenManager
 
         registry = Registry()
@@ -526,7 +526,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         mock_notif_list_text.update.assert_called_with("无通知消息")
 
     def test_pinned_with_messages(self):
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
         from math import log2
 
         pinned = [UserMessage(message="系统指令1"), UserMessage(message="系统指令2")]
@@ -548,7 +548,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertNotIn("大消息", text_arg)
 
     def test_notification_with_messages(self):
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
         from linhai.agent.message import NotificationMessageEntry
 
         msg1 = UserMessage(message="通知1")
@@ -569,7 +569,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertIn("最长消息", text_arg)
 
     def test_notification_details_display(self):
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
         from linhai.agent.messages import RuntimeMessage
         from linhai.agent.message import NotificationMessageEntry
 
@@ -596,7 +596,7 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertIn("通知内容", text_arg)
 
     def test_notification_details_truncation(self):
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
         from linhai.agent.message import NotificationMessageEntry
 
         long_content = "你好" * 200

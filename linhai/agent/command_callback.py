@@ -1,6 +1,6 @@
 from typing import Literal
 
-from linhai.llm import UserMessage, ToolCallMessage
+from linhai.base import UserMessage, ToolCallMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 from linhai.agent.user_message_handler import ParsedUserMessage

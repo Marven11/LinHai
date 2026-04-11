@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from linhai.plugin.message_checkers import GlmToolCallPlugin
 from linhai.registry import Registry
-from linhai.llm import Answer
+from linhai.base import Answer
 from linhai.llm import OpenAi
 
 

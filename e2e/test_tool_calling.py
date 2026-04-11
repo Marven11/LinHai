@@ -3,7 +3,7 @@ import json
 import pytest
 from openai import AsyncOpenAI
 
-from linhai.llm import SystemMessage, ToolCallMessage
+from linhai.base import SystemMessage, ToolCallMessage
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.registry import Registry
 from linhai.tool.base import ToolArgInfo, ToolSet, to_tools_info

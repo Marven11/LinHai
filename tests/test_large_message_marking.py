@@ -5,7 +5,7 @@ from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent.message import AgentMessage
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
-from linhai.llm import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.tool.main import ToolManager

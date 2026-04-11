@@ -1,10 +1,7 @@
 import json
 
 import linhai
-from linhai.llm import (
-    LanguageModelMessage,
-    Message,
-)
+from linhai.base import LanguageModelMessage, Message
 
 WAITING_USER_MARKER = "#LINHAI_WAITING_USER"
 

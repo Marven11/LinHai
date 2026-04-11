@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from pathlib import Path
 
 from linhai.plugin import UnnecessarySedReadPlugin
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.agent.messages import FileContentMessage
 from linhai.agent.messages import RuntimeMessage
 

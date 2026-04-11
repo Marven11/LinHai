@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 
 from linhai.agent.message import AgentMessage
-from linhai.llm import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.agent.messages import RuntimeMessage
 
 

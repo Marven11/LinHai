@@ -3,7 +3,8 @@ import pytest
 from linhai.agent.main import Agent
 from linhai.agent.conversation import register_conversation_folder
 from linhai.config import ToolConfig
-from linhai.llm import Message, OpenAi, SystemMessage, UserMessage, AssistantMessage
+from linhai.base import Message, SystemMessage, UserMessage, AssistantMessage
+from linhai.llm import OpenAi
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.token_manager import TokenManager

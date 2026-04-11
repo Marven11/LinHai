@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from openai import AsyncOpenAI
 
-from linhai.llm import SystemMessage
+from linhai.base import SystemMessage
 
 
 @pytest_asyncio.fixture

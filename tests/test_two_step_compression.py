@@ -16,7 +16,7 @@ from linhai.agent.workflow import (
     _prepare_messages_for_compression,
     _validate_compression_range,
 )
-from linhai.llm import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
 from linhai.registry import Registry

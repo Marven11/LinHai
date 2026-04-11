@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from linhai.llm import extract_usage, AnswerTokenUsage
+from linhai.base import extract_usage, AnswerTokenUsage
 
 
 class TestExtractUsage(unittest.TestCase):

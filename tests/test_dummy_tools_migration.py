@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from pathlib import Path
 
 from linhai.agent import Agent
-from linhai.llm import ToolCallMessage, SystemMessage, Message
+from linhai.base import ToolCallMessage, SystemMessage, Message
 from linhai.agent.messages import RuntimeMessage
 
 from linhai.registry import Registry

@@ -10,7 +10,8 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
-from linhai.llm import Answer, OpenAi
+from linhai.base import Answer
+from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
 
 from .helpers import JsonValue

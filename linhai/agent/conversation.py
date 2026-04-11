@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 from linhai.registry import Registry
-from linhai.llm import Message
+from linhai.base import Message
 
 
 def register_conversation_folder(registry: Registry) -> Path:

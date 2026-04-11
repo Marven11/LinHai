@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from linhai.token_manager import TokenManager
 from linhai.registry import Registry
-from linhai.llm import AnswerTokenUsage
+from linhai.base import AnswerTokenUsage
 
 
 class TestTokenManager(unittest.TestCase):

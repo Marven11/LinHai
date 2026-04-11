@@ -12,7 +12,7 @@ from linhai.agent.workflow import (
     context_forget_range_step2,
 )
 from linhai.agent.orchestration import AgentContextOrchestration
-from linhai.llm import UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools, ToolResultSuccess, ToolResultFailed
 from linhai.registry import Registry
@@ -473,7 +473,7 @@ class TestAgentWorkflow(unittest.IsolatedAsyncioTestCase):
         """Test that system messages are protected during compression range validation."""
         from linhai.agent.workflow import _validate_compression_range
         from linhai.agent.messages import GlobalPrompt
-        from linhai.llm import SystemMessage
+        from linhai.base import SystemMessage
 
         mock_agent = MagicMock()
 

@@ -5,7 +5,7 @@ import tempfile
 
 from linhai.plugin import FileReadWriteConflictPlugin
 from linhai.registry import Registry
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.tool.base import ToolResultSuccess
 
 

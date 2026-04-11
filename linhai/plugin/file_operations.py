@@ -17,7 +17,7 @@ from linhai.registry import Registry
 from linhai.machine_control import MachineControl
 from linhai.utils.common import UiNotice
 from linhai.utils.tokenizer import count_tokens
-from linhai.llm import Message
+from linhai.base import Message
 
 from .helpers import (
     READ_FILE_COMMANDS,

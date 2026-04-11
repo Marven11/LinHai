@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from typing import TypedDict, Any
 
 from linhai.agent import Lifecycle
-from linhai.llm import UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage
 from linhai.agent.messages import RuntimeMessage
 
 

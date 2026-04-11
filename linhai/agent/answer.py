@@ -1,13 +1,13 @@
 from typing import Tuple, TYPE_CHECKING
 import asyncio
-from linhai.llm import Answer, Message
+from linhai.base import Answer, Message
 from linhai.llm_manager import LlmManager
 from linhai.parsed_message import ParsedAnswer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
-from linhai.llm import UserMessage, AssistantMessage, ToolCallMessage
+from linhai.base import UserMessage, AssistantMessage, ToolCallMessage
 from linhai.agent.user_message_handler import UserMessageHandler
 
 if TYPE_CHECKING:

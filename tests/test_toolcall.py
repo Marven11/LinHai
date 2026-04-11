@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock
 from linhai.agent.toolcall import AgentToolcall
 from linhai.agent.state_machine import AgentStateMachine
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 
 
 class TestAgentToolcall(unittest.IsolatedAsyncioTestCase):

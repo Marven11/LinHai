@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.plugin.tool_call_managers import PromptFastAgentPlugin
 from linhai.registry import Registry
-from linhai.llm import Answer, OpenAi
+from linhai.base import Answer
+from linhai.llm import OpenAi
 
 
 class TestPromptFastAgentPlugin(unittest.TestCase):

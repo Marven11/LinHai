@@ -11,7 +11,7 @@ from typing import Literal
 
 import math
 
-from linhai.llm import EstimateToken, LanguageModelMessage, Message
+from linhai.base import EstimateToken, LanguageModelMessage, Message
 
 if TYPE_CHECKING:
     from linhai.registry import Registry

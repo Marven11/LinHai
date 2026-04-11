@@ -10,7 +10,7 @@ from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
 from linhai.machine_control.main import MachineControlPlugin
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.machine_control.process import ProcessCreateResult
 from linhai.utils.common import UiNotice
 

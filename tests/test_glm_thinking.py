@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from linhai.llm import OpenAi, UserMessage
+from linhai.base import UserMessage
+from linhai.llm import OpenAi
 
 
 def _make_openai(

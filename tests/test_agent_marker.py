@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 from linhai.agent import Agent
 from linhai.agent.messages import WAITING_USER_MARKER, RuntimeMessage
 from linhai.plugin import WaitingUserPlugin
-from linhai.llm import UserMessage, AssistantMessage, SystemMessage
+from linhai.base import UserMessage, AssistantMessage, SystemMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 
 r = reprlib.Repr()
@@ -30,7 +30,7 @@ class MockAnswer:
     def __init__(self, content: str):
         """Initialize MockAnswer with content."""
         self.content = content
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         self.tokens = [AnswerToken(reasoning_content=None, content=content)]
         self.index = 0

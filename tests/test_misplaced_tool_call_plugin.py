@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from linhai.plugin.message_checkers import MisplacedToolCallPlugin
 from linhai.agent import Agent
-from linhai.llm import Answer
+from linhai.base import Answer
 
 
 class TestMisplacedToolCallPlugin(unittest.IsolatedAsyncioTestCase):

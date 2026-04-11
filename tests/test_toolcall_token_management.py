@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from linhai.agent.toolcall import AgentToolcall
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.agent.messages import RuntimeMessage
 from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 

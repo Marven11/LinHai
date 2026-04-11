@@ -14,7 +14,7 @@ from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
-from linhai.llm import UserMessage, Answer
+from linhai.base import UserMessage, Answer
 
 
 class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
@@ -383,7 +383,7 @@ class TestUserInputRuntimeMessagePlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_runtime_message_when_last_message_not_user(self):
         """测试最后一条消息不是用户消息时不添加RuntimeMessage。"""
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         mock_assistant_message = MagicMock(spec=AssistantMessage)
         self.mock_agent.message_processor.get_messages.return_value = [

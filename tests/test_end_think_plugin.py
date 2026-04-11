@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock
 
 from linhai.plugin import EndThinkPlugin
-from linhai.llm import Answer
+from linhai.base import Answer
 
 
 class TestEndThinkPlugin(unittest.IsolatedAsyncioTestCase):

@@ -16,7 +16,7 @@ from linhai.agent.create import (
 )
 from linhai.agent.main import Agent
 from linhai.config import load_config
-from linhai.llm import UserMessage, Message, AssistantMessage, SystemMessage
+from linhai.base import UserMessage, Message, AssistantMessage, SystemMessage
 
 
 class AgentSession:

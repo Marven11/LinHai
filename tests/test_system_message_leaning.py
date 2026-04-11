@@ -2,7 +2,7 @@ import unittest
 import asyncio
 from unittest.mock import MagicMock
 
-from linhai.llm import SystemMessage
+from linhai.base import SystemMessage
 from linhai.machine_control.main import MachineControl
 from linhai.plugin.system_message_leaning import MachineControlIntroductionPlugin
 

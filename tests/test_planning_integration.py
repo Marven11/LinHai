@@ -82,8 +82,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_create_pinned_messages_with_planning(self):
         from linhai.agent.create import _create_pinned_messages
         from linhai.agent.messages import RuntimeMessage, GlobalPrompt
-        from linhai.llm import SystemMessage
-        from linhai.llm import UserMessage, AssistantMessage
+        from linhai.base import SystemMessage
+        from linhai.base import UserMessage, AssistantMessage
 
         # 模拟对话文件夹
         mock_conversation_folder = Path("/tmp/test_conversation")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from math import log2
 from typing import TypedDict
 
-from linhai.llm import (
+from linhai.base import (
     AnswerTokenUsage,
     EstimateToken,
     Message,

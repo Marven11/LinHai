@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from linhai.agent import DynamicFileContentMessage
-from linhai.llm import Message
+from linhai.base import Message
 
 
 class TestDynamicFileContentMessage(unittest.TestCase):

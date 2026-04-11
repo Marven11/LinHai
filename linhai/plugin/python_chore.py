@@ -13,7 +13,7 @@ from linhai.agent.messages import (
     PathPrompt,
     RuntimeMessage,
 )
-from linhai.llm import Message, SystemMessage, UserMessage
+from linhai.base import Message, SystemMessage, UserMessage
 from linhai.machine_control import MachineControl
 from linhai.registry import Registry
 

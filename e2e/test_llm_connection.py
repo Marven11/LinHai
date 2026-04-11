@@ -1,11 +1,7 @@
 import pytest
 
-from linhai.llm import (
-    OpenAi,
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-)
+from linhai.base import SystemMessage, UserMessage, AssistantMessage
+from linhai.llm import OpenAi
 from linhai.registry import Registry
 
 from conftest import retry_llm_call

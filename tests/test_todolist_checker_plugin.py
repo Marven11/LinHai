@@ -10,7 +10,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
 from linhai.agent.messages import RuntimeMessage
-from linhai.llm import UserMessage, Answer
+from linhai.base import UserMessage, Answer
 from linhai.agent.planning import PlanningPromptMessage
 
 

@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 from linhai.agent import Agent
 from linhai.agent.command_callback import CommandCallback
 from linhai.registry import Registry
-from linhai.llm import UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage
 from linhai.agent.messages import RuntimeMessage
 
 

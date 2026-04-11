@@ -1,10 +1,7 @@
 import json
 
 import linhai
-from linhai.llm import (
-    LanguageModelMessage,
-    Message,
-)
+from linhai.base import LanguageModelMessage, Message
 
 
 class PreviousReasoningMessage(Message):

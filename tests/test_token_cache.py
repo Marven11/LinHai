@@ -2,7 +2,8 @@
 
 import unittest
 from unittest.mock import MagicMock
-from linhai.llm import OpenAi, UserMessage, AssistantMessage, AnswerTokenUsage
+from linhai.base import UserMessage, AssistantMessage, AnswerTokenUsage
+from linhai.llm import OpenAi
 
 
 class TestTokenCache(unittest.TestCase):

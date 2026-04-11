@@ -2,7 +2,8 @@ from __future__ import annotations
 from typing import Sequence
 import asyncio
 from datetime import datetime, timedelta
-from linhai.llm import Message, LanguageModel, Answer, OpenAi, OpenAIError
+from linhai.base import Message, LanguageModel, Answer
+from linhai.llm import OpenAi, OpenAIError
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 

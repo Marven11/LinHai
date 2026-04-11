@@ -1,10 +1,7 @@
 import json
 
 import linhai
-from linhai.llm import (
-    LanguageModelMessage,
-    Message,
-)
+from linhai.base import LanguageModelMessage, Message
 
 from linhai.prompt import COMPRESS_RANGE_PROMPT
 

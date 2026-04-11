@@ -4,7 +4,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 from linhai.parsed_message import ParsedAnswer, Segment
-from linhai.llm import Answer
+from linhai.base import Answer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
@@ -29,7 +29,7 @@ class MockAnswer(Answer):
 
     def get_message(self):
         content = "".join(tok.content for tok in self.tokens)
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         return AssistantMessage(message=content)
 
@@ -59,7 +59,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock()
 
         # Simulate tokens: two normal tokens, one toolcall, then another normal
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="Hello "),
@@ -128,7 +128,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle.after_segment_finished.trigger = AsyncMock()
 
         agent = MagicMock()
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="First"),
@@ -175,7 +175,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle.after_segment_finished.trigger = AsyncMock()
 
         agent = MagicMock()
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         # Create tokens that cause segment type changes: normal -> toolcall -> normal
         tokens = [
@@ -254,7 +254,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         agent = MagicMock()
 
         # Create mock answer with tool call content
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="Here is a tool call:\n\n"),
@@ -278,7 +278,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle = MagicMock()
         agent = MagicMock()
 
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="First tool:\n"),
@@ -307,7 +307,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle = MagicMock()
         agent = MagicMock()
 
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="Valid tool:\n"),
@@ -338,7 +338,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle = MagicMock()
         agent = MagicMock()
 
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(
@@ -358,7 +358,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         lifecycle = MagicMock()
         agent = MagicMock()
 
-        from linhai.llm import AnswerToken
+        from linhai.base import AnswerToken
 
         tokens = [
             AnswerToken(reasoning_content=None, content="Broken tool:\n"),

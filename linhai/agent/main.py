@@ -17,13 +17,8 @@ from .message import AgentMessage
 from .orchestration import AgentContextOrchestration
 from .toolcall import AgentToolcall
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.llm import (
-    Message,
-    LanguageModel,
-    Answer,
-    OpenAiAnswer,
-    ToolCallMessage,
-)
+from linhai.base import Message, LanguageModel, Answer, ToolCallMessage
+from linhai.llm import OpenAiAnswer
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.type_hints import ThresholdInfo
@@ -212,7 +207,7 @@ class Agent:
         if not self.message_processor.get_messages():
             return False
         msg = self.message_processor.get_messages()[-1]
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
 
         return isinstance(msg, UserMessage)
 
@@ -224,7 +219,7 @@ class Agent:
 
         if self.message_processor.get_message_count() > 0:
             last_msg = self.message_processor.get_messages()[-1]
-            from linhai.llm import AssistantMessage
+            from linhai.base import AssistantMessage
 
             if isinstance(last_msg, AssistantMessage):
                 empty_user_msg = RuntimeMessage("继续")
@@ -236,14 +231,14 @@ class Agent:
         if not completed_normally:
             return parsed_answer
 
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         message = answer.get_message()
         if not isinstance(message, AssistantMessage):
             raise TypeError(f"Expected AssistantMessage, got {type(message).__name__}")
         chat_message: AssistantMessage = message
 
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         full_response = chat_message.message
         await self.message_processor.add_new_message(chat_message)

@@ -218,7 +218,7 @@ class TestTelegramStickerMessageEstimatedTokens(TestCase):
         self.assertEqual(msg.estimated_tokens(), 0)
 
     def test_satisfies_estimate_token_protocol(self):
-        from linhai.llm import EstimateToken
+        from linhai.base import EstimateToken
 
         msg = TelegramStickerMessage(
             image_bytes=b"data",

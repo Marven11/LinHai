@@ -15,7 +15,7 @@ from linhai.agent.workflow import (
     context_forget_range_step2,
 )
 from .lifecycle import Lifecycle
-from linhai.llm import ToolCallMessage, Answer
+from linhai.base import ToolCallMessage, Answer
 from linhai.tool.base import ToolCallResultMessage
 from linhai.multimodal import ImageMessage
 from linhai.utils.tokenizer import count_tokens
@@ -24,7 +24,7 @@ from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolA
 from linhai.utils.common import UiNotice
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
-from linhai.llm import Message
+from linhai.base import Message
 from .messages import RuntimeMessage
 from .message import AgentMessage
 from .conversation import save_cleaned_messages

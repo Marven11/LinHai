@@ -55,7 +55,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_token_manager.start_watching = Mock()
 
         # 模拟其他组件
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         self.mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,

@@ -3,10 +3,7 @@ import json
 from pathlib import Path
 
 import linhai
-from linhai.llm import (
-    LanguageModelMessage,
-    Message,
-)
+from linhai.base import LanguageModelMessage, Message
 
 
 class FileContentMessage(Message):

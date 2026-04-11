@@ -1,6 +1,6 @@
 from typing import Literal, TypedDict, Tuple, TYPE_CHECKING
 import asyncio
-from .llm import Answer
+from .base import Answer
 from .agent.lifecycle import Lifecycle
 from .markdown_parser import extract_tool_calls_with_errors
 

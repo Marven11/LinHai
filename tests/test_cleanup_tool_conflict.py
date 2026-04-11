@@ -2,7 +2,7 @@ import unittest
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.registry import Registry
 from linhai.agent.message import AgentMessage
-from linhai.llm import SystemMessage, UserMessage
+from linhai.base import SystemMessage, UserMessage
 from unittest.mock import Mock, AsyncMock, MagicMock
 from linhai.agent.lifecycle import Lifecycle
 from linhai.tool.main import ToolManager

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.toolcall import AgentToolcall
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 
 
 class TestDirectedToolConflict(unittest.TestCase):

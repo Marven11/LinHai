@@ -19,7 +19,8 @@ from linhai.config import (
     ToolConfig,
 )
 from linhai.registry import Registry
-from linhai.llm import Message, OpenAi, SystemMessage, UserMessage
+from linhai.base import Message, SystemMessage, UserMessage
+from linhai.llm import OpenAi
 from linhai.llm_manager import LlmManager
 
 from linhai.tool.base import utils_tools
@@ -375,7 +376,7 @@ async def create_agent_from_context(
 
 
 def _build_explicit_cache_info(llm_config):
-    from linhai.llm import ExplicitCacheInfo
+    from linhai.base import ExplicitCacheInfo
 
     if llm_config.explicit_cache is None or not llm_config.explicit_cache.enable:
         return None

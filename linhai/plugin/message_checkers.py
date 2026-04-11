@@ -16,7 +16,8 @@ from linhai.agent.messages import (
 )
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls_with_errors
-from linhai.llm import Answer, AssistantMessage, OpenAi, Message
+from linhai.base import Answer, AssistantMessage, Message
+from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
 
 from .helpers import JsonValue

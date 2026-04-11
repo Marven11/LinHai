@@ -9,7 +9,7 @@ from pathlib import Path
 from .exceptions import ConfigValidationError
 from .agent.messages import RuntimeMessage
 from .agent.conversation import save_secret_intercepted
-from .llm import Message
+from .base import Message
 from .agent.lifecycle import Lifecycle
 from .tool.base import ToolResultSuccess, ToolResultFailed
 
@@ -305,7 +305,7 @@ class SecretInterceptorPlugin:
 def initialize_secret_system(
     registry: "Registry", secret_config_path: str, config_basedir: str | Path | None
 ) -> SecretInterceptorPlugin:
-    from linhai.llm import SystemMessage
+    from linhai.base import SystemMessage
     from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
 
     if not secret_config_path:

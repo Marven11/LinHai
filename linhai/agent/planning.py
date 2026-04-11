@@ -68,7 +68,7 @@ def setup_planning_for_agent(context: "AgentBuildContext") -> RuntimeMessage:
     context["registry"].register_member("planning_folder", planning_folder)
 
     def register_system_message():
-        from ..llm import SystemMessage
+        from ..base import SystemMessage
 
         system_message = context["registry"].get_member_typechecked(
             "system_message", SystemMessage

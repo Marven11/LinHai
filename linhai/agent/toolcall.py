@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import cast
 
-from linhai.llm import ToolCallMessage, Message
+from linhai.base import ToolCallMessage, Message
 from linhai.llm_manager import LlmManager
 from linhai.registry import Registry
 from linhai.tool.base import (

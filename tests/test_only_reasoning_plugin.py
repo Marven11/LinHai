@@ -4,7 +4,8 @@ import asyncio
 
 from linhai.plugin import OnlyReasoningPlugin
 from linhai.registry import Registry
-from linhai.llm import Answer, OpenAi
+from linhai.base import Answer
+from linhai.llm import OpenAi
 from linhai.agent.messages import RuntimeMessage
 from linhai.utils.common import UiNotice
 

@@ -11,7 +11,7 @@ from linhai.agent.messages import (
     PathPrompt,
     RuntimeMessage,
 )
-from linhai.llm import AssistantMessage, SystemMessage, UserMessage
+from linhai.base import AssistantMessage, SystemMessage, UserMessage
 from linhai.plugin.python_chore import (
     PythonCommentCheckerPlugin,
     _extract_comments,

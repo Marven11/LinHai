@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock, patch
 import json
 
 from linhai.prompt import OVERVIEW, INTRODUCTION_TOOL_USE, RULES_TOOL_USE
-from linhai.llm import SystemMessage
+from linhai.base import SystemMessage
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 

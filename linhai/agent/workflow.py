@@ -8,11 +8,7 @@ from reprlib import Repr
 import linhai
 from .messages import RuntimeMessage, MessagesListSummerizeMessage, GlobalPrompt
 from linhai.markdown_parser import extract_json_blocks
-from linhai.llm import (
-    AssistantMessage,
-    SystemMessage,
-    UserMessage,
-)
+from linhai.base import AssistantMessage, SystemMessage, UserMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice, generate_id
 from pathlib import Path

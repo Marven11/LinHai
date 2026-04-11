@@ -4,11 +4,7 @@ import json
 import unittest
 from unittest.mock import Mock
 
-from linhai.llm import (
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
-)
+from linhai.base import SystemMessage, UserMessage, AssistantMessage
 from linhai.tool.base import ToolCallResultMessage, ToolResultSuccess, ToolResultFailed
 
 

@@ -5,7 +5,7 @@ class MachineControlIntroductionPlugin(Plugin):
 
     async def before_message_generation(self):
         from ..machine_control import MachineControl
-        from ..llm import SystemMessage
+        from ..base import SystemMessage
 
         machine_control = self.registry.get_member_typechecked(
             "machine_control", MachineControl

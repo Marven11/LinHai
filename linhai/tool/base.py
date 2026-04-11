@@ -7,8 +7,7 @@ from typing import (
     TypedDict,
     Callable,
     Any,
-    cast,
-    Awaitable,  # pylint: disable=unused-import
+    Awaitable,
 )
 
 import json
@@ -18,7 +17,7 @@ import reprlib
 from pydantic import BaseModel
 
 from linhai.type_hints import LanguageModelMessage
-from linhai.llm import Message
+from linhai.base import Message
 import linhai
 
 
@@ -180,10 +179,7 @@ class ToolCallResultMessage(Message):
         self.toolcall_arguments = toolcall_arguments
 
     def to_llm_message(self) -> LanguageModelMessage:
-        return cast(
-            LanguageModelMessage,
-            {"role": "user", "content": self.get_content()},
-        )
+        return {"role": "user", "content": self.get_content()}
 
     def get_content(self) -> str:
         if isinstance(self.result, ToolResultSuccess):

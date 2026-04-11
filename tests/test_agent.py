@@ -8,12 +8,13 @@ from pathlib import Path
 
 from linhai.agent import Agent
 from linhai.agent.messages import RuntimeMessage
-from linhai.llm import UserMessage, AssistantMessage
+from linhai.base import UserMessage, AssistantMessage
 from linhai.tool.base import ToolResultSuccess, ToolCallResultMessage
 from linhai.registry import Registry
 from linhai.tool.main import ToolManager
 from linhai.tool.base import utils_tools
-from linhai.llm import SystemMessage, OpenAi
+from linhai.base import SystemMessage
+from linhai.llm import OpenAi
 from linhai.tui.components import RuntimeMessageWidget
 from linhai.task_supervisor import PlainTaskSupervisor
 
@@ -187,7 +188,7 @@ class TestAgent(unittest.IsolatedAsyncioTestCase):
         completed_normally = await parsed_answer.wait_parsing()
         self.assertTrue(completed_normally, "Parsing was interrupted")
 
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         content = "Hi there"
         self.assertEqual(self.agent.state_machine.state, "waiting_user")

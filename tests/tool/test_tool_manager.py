@@ -5,7 +5,7 @@ import unittest.mock
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.tool.base import ToolArgInfo, utils_tools
 from linhai.tool.main import ToolManager
 from linhai.registry import Registry

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from linhai.agent import Agent
 from linhai.registry import Registry
-from linhai.llm import UserMessage, AssistantMessage, AnswerToken
+from linhai.base import UserMessage, AssistantMessage, AnswerToken
 from linhai.agent.messages import RuntimeMessage
 
 

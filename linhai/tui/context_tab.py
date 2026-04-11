@@ -271,7 +271,7 @@ class ContextTabWidget(Static):
         _, current_llm = agent.get_current_llm_info()
         token_limit = current_llm.get_token_limit()
 
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
         from linhai.type_hints import CumulativeTokenUsage
 
         current_token_usage: AnswerTokenUsage | None = None

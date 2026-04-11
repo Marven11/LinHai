@@ -12,7 +12,7 @@ from typing import Literal
 from PIL import Image
 from io import BytesIO
 
-from linhai.llm import Message
+from linhai.base import Message
 from linhai.agent.lifecycle import Lifecycle
 from linhai.type_hints import LanguageModelMessage
 from linhai.registry import Registry

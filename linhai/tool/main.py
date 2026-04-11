@@ -11,7 +11,7 @@ from typing import Awaitable, Optional
 
 from linhai.config import ToolConfig, MCPConfig
 from linhai.registry import Registry
-from linhai.llm import Message, ToolCallMessage
+from linhai.base import Message, ToolCallMessage
 from linhai.tool.base import (
     ToolSet,
     to_tools_info,
@@ -238,7 +238,7 @@ class ToolManager:
 
     async def update_tools_definition(self):
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""
-        from linhai.llm import SystemMessage
+        from linhai.base import SystemMessage
 
         system_message = self.registry.get_member_typechecked(
             "system_message", SystemMessage

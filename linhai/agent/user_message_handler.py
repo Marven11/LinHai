@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from linhai.llm import UserMessage
+from linhai.base import UserMessage
 from linhai.utils.input_parser import ParsedInput, parse_user_input
 from linhai.registry import Registry
 

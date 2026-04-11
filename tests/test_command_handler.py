@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, MagicMock
 
 from linhai.agent.command_callback import CommandCallback
 from linhai.agent.user_message_handler import ParsedUserMessage
-from linhai.llm import UserMessage
+from linhai.base import UserMessage
 from linhai.utils.input_parser import parse_user_input
 from linhai.registry import Registry
 

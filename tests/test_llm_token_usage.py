@@ -5,14 +5,14 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from typing import Dict
 
-from linhai.llm import (
-    OpenAiAnswer,
+from linhai.base import (
     AnswerTokenUsage,
     ToolCallMessage,
     AssistantMessage,
     UserMessage,
     SystemMessage,
 )
+from linhai.llm import OpenAiAnswer
 from linhai.registry import Registry
 from linhai.agent import Agent
 from linhai.agent.orchestration import (

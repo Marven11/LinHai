@@ -15,7 +15,7 @@ from linhai.secret import SecretInterceptorPlugin, load_secrets_from_config
 from linhai.tool.main import ToolManager
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultFailed
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 from linhai.agent.messages import RuntimeMessage
 
 

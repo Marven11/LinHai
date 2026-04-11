@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from pathlib import Path
 from linhai.plugin import UnnecessaryRunCommandPlugin
 from linhai.agent.messages import RuntimeMessage, FileContentMessage
-from linhai.llm import ToolCallMessage
+from linhai.base import ToolCallMessage
 
 
 class TestUnnecessaryRunCommandPlugin(unittest.IsolatedAsyncioTestCase):

@@ -21,7 +21,7 @@ class TestTUITabs(unittest.TestCase):
         mock_agent = Mock(spec=Agent)
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         # 配置mock_agent以支持ContextTabWidget
         mock_agent.get_threshold_info.return_value = {
@@ -86,7 +86,7 @@ class TestTUITabs(unittest.TestCase):
         mock_agent = Mock(spec=Agent)
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         # 配置mock_agent以支持ContextTabWidget
         mock_agent.get_threshold_info.return_value = {

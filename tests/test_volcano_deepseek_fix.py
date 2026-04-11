@@ -3,7 +3,8 @@ from unittest.mock import MagicMock, AsyncMock
 
 from linhai.plugin.message_checkers import VolcanoDeepseekFixPlugin
 from linhai.agent import Agent
-from linhai.llm import OpenAi, Answer
+from linhai.base import Answer
+from linhai.llm import OpenAi
 
 
 class TestVolcanoDeepseekFixPlugin(unittest.IsolatedAsyncioTestCase):

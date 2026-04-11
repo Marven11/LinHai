@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from linhai.plugin import ToolCallInReasoningPlugin
-from linhai.llm import Answer
+from linhai.base import Answer
 
 
 class TestToolCallInReasoningPlugin(unittest.IsolatedAsyncioTestCase):

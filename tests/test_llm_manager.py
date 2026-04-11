@@ -4,7 +4,8 @@ import asyncio
 from datetime import datetime, timedelta
 from linhai.llm_manager import LlmManager, NoAvailableLlmError
 from linhai.registry import Registry
-from linhai.llm import Message, Answer, OpenAIError
+from linhai.base import Message, Answer
+from linhai.llm import OpenAIError
 
 
 class MockAnswer(Answer):

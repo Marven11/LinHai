@@ -134,7 +134,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
         from linhai.agent.lifecycle import Lifecycle
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
         import argparse
 
         mock_agent = Mock(spec=Agent)
@@ -194,7 +194,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
         from linhai.agent.lifecycle import Lifecycle
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
         import argparse
 
         mock_agent = Mock(spec=Agent)
@@ -264,7 +264,7 @@ class TestPlanningTabInApp(unittest.TestCase):
         from linhai.agent.message import AgentMessage
         from linhai.agent.orchestration import AgentContextOrchestration
         from linhai.agent.lifecycle import Lifecycle
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
         import argparse
 
         mock_agent = Mock(spec=Agent)

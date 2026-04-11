@@ -22,7 +22,7 @@ class MockAnswer:
         raise StopAsyncIteration
 
     def get_message(self):
-        from linhai.llm import AssistantMessage
+        from linhai.base import AssistantMessage
 
         return AssistantMessage(message="test")
 

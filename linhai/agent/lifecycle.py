@@ -7,10 +7,7 @@ from typing import (
     Union,
     TYPE_CHECKING,
 )
-from linhai.llm import (
-    Answer,
-    Message,
-)
+from linhai.base import Answer, Message
 
 if TYPE_CHECKING:
     from linhai.agent.messages import RuntimeMessage

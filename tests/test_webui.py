@@ -154,7 +154,7 @@ class TestAgentSessionGetMessages(unittest.TestCase):
         self.assertEqual(result, [])
 
     def test_get_messages_includes_user_messages(self):
-        from linhai.llm import UserMessage
+        from linhai.base import UserMessage
 
         mock_agent = MagicMock()
         user_msg = UserMessage("hello")

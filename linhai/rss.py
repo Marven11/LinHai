@@ -6,7 +6,7 @@ from typing import List, TYPE_CHECKING
 import feedparser
 import httpx
 
-from linhai.llm import LanguageModelMessage, Message
+from linhai.base import LanguageModelMessage, Message
 from linhai.utils.common import UiNotice
 
 if TYPE_CHECKING:

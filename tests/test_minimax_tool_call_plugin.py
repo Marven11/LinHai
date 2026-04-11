@@ -6,7 +6,7 @@ import time
 
 from linhai.plugin.message_checkers import MinimaxToolCallPlugin
 from linhai.registry import Registry
-from linhai.llm import Answer
+from linhai.base import Answer
 
 
 class TestMinimaxToolCallPlugin(unittest.IsolatedAsyncioTestCase):

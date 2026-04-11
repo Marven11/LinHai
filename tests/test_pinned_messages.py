@@ -8,7 +8,7 @@ import argparse
 
 from linhai.agent.create import _create_pinned_messages, AgentBuildContext
 from linhai.registry import Registry
-from linhai.llm import SystemMessage, UserMessage
+from linhai.base import SystemMessage, UserMessage
 from linhai.agent.messages import (
     GlobalPrompt,
     PathPrompt,

@@ -9,7 +9,7 @@ from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
-from linhai.llm import Answer, UserMessage, Message
+from linhai.base import Answer, UserMessage, Message
 from linhai.plugin.file_operations import Plugin
 
 if TYPE_CHECKING:

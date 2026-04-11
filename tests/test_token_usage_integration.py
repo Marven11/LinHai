@@ -16,7 +16,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
         """测试OpenAiAnswer将token usage发送到registry。"""
         # 避免循环导入，使用mock
         from linhai.registry import Registry
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         # 模拟OpenAiAnswer的核心逻辑
         registry = Registry()
@@ -124,7 +124,7 @@ class TestTokenUsageIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_cli_token_usage_receiving(self):
         """测试TUI接收token usage的基本逻辑。"""
         from linhai.registry import Registry
-        from linhai.llm import AnswerTokenUsage
+        from linhai.base import AnswerTokenUsage
 
         registry = Registry()
         registry.register_queue("token_usage")
