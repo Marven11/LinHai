@@ -352,6 +352,69 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
         # 验证insert_message被调用两次（一次插入RuntimeMessage描述删除的用户消息，一次插入描述）
         self.assertEqual(mock_message_processor.insert_message.call_count, 2)
 
+    async def test_pinned_messages_with_image_file(self):
+        """测试通过-f参数添加图像文件时创建ImageMessage。"""
+        import tempfile
+        from PIL import Image
+        from linhai.multimodal import ImageMessage
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            img = Image.new("RGB", (10, 10), color="red")
+            img.save(f, format="PNG")
+            image_path = Path(f.name)
+
+        try:
+            self.exists_patcher.stop()
+            context = self.create_context()
+            context["file"] = [image_path]
+
+            pinned_messages = await _create_pinned_messages(context)
+
+            image_messages = [m for m in pinned_messages if isinstance(m, ImageMessage)]
+            self.assertEqual(len(image_messages), 1)
+            self.assertEqual(image_messages[0].filename, image_path.name)
+            self.assertEqual(image_messages[0].width, 10)
+            self.assertEqual(image_messages[0].height, 10)
+        finally:
+            self.exists_patcher.start()
+            image_path.unlink(missing_ok=True)
+
+    async def test_pinned_messages_with_text_and_image_files(self):
+        """测试-f参数同时传入文本文件和图像文件。"""
+        import tempfile
+        from PIL import Image
+        from linhai.multimodal import ImageMessage
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("Text content")
+            text_path = Path(f.name)
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            img = Image.new("RGB", (20, 30), color="blue")
+            img.save(f, format="PNG")
+            image_path = Path(f.name)
+
+        try:
+            self.exists_patcher.stop()
+            context = self.create_context()
+            context["file"] = [text_path, image_path]
+
+            pinned_messages = await _create_pinned_messages(context)
+
+            file_messages = [
+                m for m in pinned_messages if isinstance(m, FileContentMessage)
+            ]
+            image_messages = [m for m in pinned_messages if isinstance(m, ImageMessage)]
+            self.assertEqual(len(file_messages), 1)
+            self.assertEqual(file_messages[0].content, "Text content")
+            self.assertEqual(len(image_messages), 1)
+            self.assertEqual(image_messages[0].width, 20)
+            self.assertEqual(image_messages[0].height, 30)
+        finally:
+            self.exists_patcher.start()
+            text_path.unlink(missing_ok=True)
+            image_path.unlink(missing_ok=True)
+
     async def test_pinned_messages_includes_startup_time(self):
         """测试pinned messages包含启动时间。"""
         context = self.create_context()
