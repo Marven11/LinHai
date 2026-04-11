@@ -12,6 +12,7 @@ from linhai.machine_control.master_host.file import (
     replace_file_content,
     list_files,
     get_absolute_path,
+    find_most_similar_in_files,
 )
 
 
@@ -134,6 +135,36 @@ class TestFileTools(unittest.TestCase):
         result = get_absolute_path(".")
         self.assertIn("绝对路径:", result.content)
         self.assertIn(os.path.abspath("."), result.content)
+
+    def test_find_most_similar_in_files_short_content(self):
+        """测试find_most_similar_in_files：短内容返回完整块"""
+        content = "line1\nline2\nline3\nline4\nline5"
+        search = "line2\nline3"
+        result = find_most_similar_in_files(search, content, top_n=1)
+        self.assertIn("line2", result)
+        self.assertIn("line3", result)
+        self.assertIn("相似度:", result)
+        self.assertIn("行号:", result)
+
+    def test_find_most_similar_in_files_long_content(self):
+        """测试find_most_similar_in_files：长内容仅返回位置"""
+        long_line = (
+            "this is a very long line with many words to increase token count substantially "
+            * 10
+        )
+        content = "\n".join([f"line{i}: {long_line}" for i in range(10)])
+        search = "line2:\nline3:\nline4:"
+        result = find_most_similar_in_files(search, content, top_n=1)
+        self.assertIn("相似度:", result)
+        self.assertIn("行号:", result)
+        self.assertIn("内容超过300 token已省略", result)
+
+    def test_find_most_similar_in_files_multiple_results(self):
+        """测试find_most_similar_in_files：返回多个结果"""
+        content = "target\nline2\nline3\ntarget\nline5"
+        search = "target"
+        result = find_most_similar_in_files(search, content, top_n=2)
+        self.assertEqual(result.count("<<alternative>>"), 4)
 
 
 if __name__ == "__main__":

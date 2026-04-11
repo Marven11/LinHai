@@ -16,6 +16,9 @@ from linhai.tool.base import (
     ToolResultSuccess,
     ToolResultFailed,
 )
+from linhai.utils.tokenizer import count_tokens
+
+TOKEN_THRESHOLD = 300
 
 
 def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3):
@@ -28,6 +31,7 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
 
     Returns:
         使用<<alternative>>包裹的相似内容字符串
+        当块内容超过300 token时，仅返回位置信息而不返回完整内容
     """
 
     linenum = search_string.count("\n") + 1
@@ -46,10 +50,17 @@ def find_most_similar_in_files(search_string: str, content: str, top_n: int = 3)
     for similarity, chunk_index, chunk_content in similarities[:top_n]:
         start_line = chunk_index + 1
         end_line = chunk_index + linenum
-        message = f"相似度: {similarity:.2%}, 行号: {start_line}-{end_line}"
-        results.append(
-            f"<<alternative>><<message>>{message}<<message>><<chunk>>{chunk_content}<<chunk>><<alternative>>"
-        )
+        token_count = count_tokens(chunk_content)
+        if token_count > TOKEN_THRESHOLD:
+            message = f"相似度: {similarity:.2%}, 行号: {start_line}-{end_line}, 内容超过{TOKEN_THRESHOLD} token已省略"
+            results.append(
+                f"<<alternative>><<message>>{message}<<message>><<alternative>>"
+            )
+        else:
+            message = f"相似度: {similarity:.2%}, 行号: {start_line}-{end_line}"
+            results.append(
+                f"<<alternative>><<message>>{message}<<message>><<chunk>>{chunk_content}<<chunk>><<alternative>>"
+            )
     return "\n".join(results)
 
 
