@@ -51,6 +51,7 @@ class ClawPlugin(Plugin):
 3. **IDENTITY.md** - 你的身份定义
 4. **SOUL.md** - 你的核心原则和风格
 5. **USER.md** - 关于你帮助的人类信息
+6. **REMINDER.md** - 一句极为简短的提醒，包含最经常出错的教训
 
 这些文档位于: {self.claw_dir}
 
