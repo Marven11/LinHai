@@ -25,12 +25,10 @@ class RemoteProcess:
             {"pid": self._pid, "content": content, "with_enter": with_enter},
         )
         if isinstance(result, ToolResultSuccess):
-            data = json.loads(result.content)
             return ProcessWriteResult(
                 pid=self._pid,
-                success=data.get("success", True),
-                message=data.get("message", ""),
-                error=data.get("error"),
+                success=True,
+                message=result.content,
             )
         return ProcessWriteResult(
             pid=self._pid, success=False, error=str(result.content)
