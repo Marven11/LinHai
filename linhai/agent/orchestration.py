@@ -428,7 +428,11 @@ class AgentContextOrchestration:
 
     async def _before_add_new_message(self, message: "Message") -> None:
         """在添加新消息前检查是否为大消息。"""
+        from linhai.base import AssistantMessage
         from linhai.multimodal import ImageMessage
+
+        if isinstance(message, AssistantMessage):
+            return
 
         if isinstance(message, ImageMessage):
             self.large_messages.add(message)

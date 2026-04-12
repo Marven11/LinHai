@@ -96,6 +96,17 @@ class TestLargeMessageMarking(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(short_message, self.orchestration.large_messages)
         self.assertEqual(len(self.orchestration.large_messages), 0)
 
+    async def test_do_not_mark_assistant_message(self):
+        """测试AssistantMessage即使token很长也不被标记为大消息。"""
+        self.mock_count_tokens.return_value = 10000
+
+        assistant_message = AssistantMessage(message="A" * 10000)
+
+        await self.orchestration._before_add_new_message(assistant_message)
+
+        self.assertNotIn(assistant_message, self.orchestration.large_messages)
+        self.assertEqual(len(self.orchestration.large_messages), 0)
+
     async def test_delete_large_messages(self):
         from linhai.agent.orchestration import check_cleanable_threshold
         from linhai.agent.messages import RuntimeMessage
