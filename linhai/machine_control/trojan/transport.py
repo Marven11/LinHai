@@ -29,7 +29,7 @@ class _ProcessLineReader:
                     return remaining
                 return None
             if not result.stdout:
-                return None
+                return ""
             self._buffer += result.stdout
 
         idx = self._buffer.index("\n")
@@ -120,6 +120,8 @@ class TrojanTransport:
         if line is None:
             self._connection_valid = False
             self._fail_pending_futures()
+            return
+        if line == "":
             return
         response = json.loads(line)
         response_id = response.get("id")
