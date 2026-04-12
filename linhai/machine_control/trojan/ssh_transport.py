@@ -327,9 +327,6 @@ class SshTrojanTransport:
         return True
 
     async def _cleanup(self):
-        if self._bash_process:
-            await self._bash_process.kill(graceful=True)
-
         if self.trojan_path and self.trojan_path.exists():
             self.trojan_path.unlink(missing_ok=True)
 

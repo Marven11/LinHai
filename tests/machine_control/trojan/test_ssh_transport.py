@@ -166,11 +166,6 @@ class TestSshTrojanTransport(unittest.TestCase):
             mock_trojan_transport.is_connected = Mock(return_value=True)
 
             mock_bash_process = AsyncMock()
-            mock_bash_process.kill = AsyncMock(
-                return_value=ProcessKillResult(
-                    pid="1", success=True, message="进程已终止"
-                )
-            )
 
             self.transport._trojan_transport = mock_trojan_transport
             self.transport._bash_process = mock_bash_process
@@ -178,7 +173,6 @@ class TestSshTrojanTransport(unittest.TestCase):
             await self.transport.disconnect()
 
             mock_trojan_transport.disconnect.assert_called_once()
-            mock_bash_process.kill.assert_called_once_with(graceful=True)
 
             self.assertIsNone(self.transport._trojan_transport)
             self.assertIsNone(self.transport._bash_process)
