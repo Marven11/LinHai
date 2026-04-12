@@ -1,0 +1,86 @@
+import asyncio
+import json
+import unittest
+from pathlib import Path
+
+from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+from linhai.machine_control.trojan.ssh_transport import _AsyncioProcessAdapter
+from linhai.registry import Registry
+from linhai.task_supervisor import PlainTaskSupervisor
+
+
+class TestSshMachineControlE2E(unittest.IsolatedAsyncioTestCase):
+    async def _create_control_with_bash(
+        self,
+    ) -> tuple[SshMachineControl, _AsyncioProcessAdapter, asyncio.subprocess.Process]:
+        registry = Registry()
+        registry.register_member("task_supervisor", PlainTaskSupervisor())
+
+        control = SshMachineControl(
+            host="localhost",
+            registry=registry,
+        )
+
+        trojan_source = (
+            Path(__file__).parent.parent.parent
+            / "linhai"
+            / "machine_control"
+            / "trojan"
+            / "trojan.py"
+        )
+        if not trojan_source.exists():
+            self.skipTest(f"trojan.py不存在: {trojan_source}")
+
+        process = await asyncio.create_subprocess_exec(
+            "bash",
+            "-s",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
+        adapter = _AsyncioProcessAdapter(process)
+        return control, adapter, process
+
+    async def _cleanup_process(self, control, process):
+        await control.close()
+        if process.stdin and not process.stdin.is_closing():
+            process.stdin.close()
+        process.kill()
+        await process.wait()
+        process._transport.close()
+
+    async def test_connect_with_local_bash(self):
+        control, adapter, process = await self._create_control_with_bash()
+        result = await control.connect(adapter)
+        self.assertTrue(result)
+
+        try:
+            process_result = await control.create_process(["echo", "hello"])
+            self.assertTrue(
+                process_result.success,
+                f"create_process failed: {getattr(process_result, 'error', 'unknown')}",
+            )
+            self.assertIn("hello", process_result.stdout)
+        finally:
+            await self._cleanup_process(control, process)
+
+    async def test_call_tool_with_local_bash(self):
+        control, adapter, process = await self._create_control_with_bash()
+        result = await control.connect(adapter)
+        self.assertTrue(result)
+
+        try:
+            from linhai.tool.base import ToolResultSuccess
+
+            tool_result = await control.call_tool(
+                "read_file", {"filepath": "/etc/hostname"}
+            )
+            self.assertIsInstance(tool_result, ToolResultSuccess)
+        finally:
+            await self._cleanup_process(control, process)
+
+
+if __name__ == "__main__":
+    unittest.main()

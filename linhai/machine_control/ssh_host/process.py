@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
-
 from linhai.machine_control.process import (
     ProcessKillResult,
     ProcessReadResult,
@@ -68,15 +66,15 @@ class RemoteProcess:
             "process_wait", {"pid": self._pid, "timeout": timeout}
         )
         if isinstance(result, ToolResultSuccess):
-            returncode = _extract_tag(result.content, "returncode")
-            stdout = _extract_tag(result.content, "stdout")
-            stderr = _extract_tag(result.content, "stderr")
+            data = json.loads(result.content)
+            if data.get("timeout"):
+                return ProcessWaitResult(pid=self._pid, success=False, error="等待超时")
             return ProcessWaitResult(
                 pid=self._pid,
                 success=True,
-                returncode=int(returncode) if returncode is not None else None,
-                stdout=stdout or "",
-                stderr=stderr or "",
+                returncode=data.get("returncode"),
+                stdout=data.get("stdout", ""),
+                stderr=data.get("stderr", ""),
             )
         return ProcessWaitResult(
             pid=self._pid, success=False, error=str(result.content)
@@ -91,9 +89,3 @@ class RemoteProcess:
         return ProcessKillResult(
             pid=self._pid, success=False, error=str(result.content)
         )
-
-
-def _extract_tag(content: str, tag: str) -> str | None:
-    pattern = f"<<{tag}>>(.*?)<<{tag}>>"
-    match = re.search(pattern, content, re.DOTALL)
-    return match.group(1) if match else None

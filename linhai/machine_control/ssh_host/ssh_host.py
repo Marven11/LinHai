@@ -10,7 +10,7 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
 from ..trojan.ssh_transport import SshTrojanTransport
 from ..process import Process, ProcessCreateResult
-from .process import RemoteProcess, _extract_tag
+from .process import RemoteProcess
 
 
 class SshMachineControl:
@@ -149,27 +149,24 @@ class SshMachineControl:
         if isinstance(result, ToolResultFailed):
             return ProcessCreateResult(pid="", success=False, error=result.content)
 
-        pid = _extract_tag(result.content, "pid")
+        data = json.loads(result.content)
+        pid = data.get("pid")
         if pid is None:
             return ProcessCreateResult(pid="", success=False, error="无法解析进程ID")
 
-        returncode_str = _extract_tag(result.content, "returncode")
-        if returncode_str is not None:
-            stdout = _extract_tag(result.content, "stdout") or ""
-            stderr = _extract_tag(result.content, "stderr") or ""
+        if "returncode" in data:
             return ProcessCreateResult(
                 pid=pid,
                 success=True,
-                returncode=int(returncode_str),
-                stdout=stdout,
-                stderr=stderr,
+                returncode=data["returncode"],
+                stdout=data.get("stdout", ""),
+                stderr=data.get("stderr", ""),
             )
 
         rp = RemoteProcess(pid, self)
         self._processes[pid] = rp
-        message = _extract_tag(result.content, "message") or ""
         return ProcessCreateResult(
-            pid=pid, success=True, returncode=None, message=message
+            pid=pid, success=True, returncode=None, message=data.get("message", "")
         )
 
     def get_process(self, pid: str) -> Process | None:
