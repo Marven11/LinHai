@@ -271,16 +271,24 @@ class TestMCPSandbox(unittest.IsolatedAsyncioTestCase):
         self.registry = Registry()
         self.connector = MCPConnector(self.registry)
 
-    async def test_connect_blocked_with_sandbox(self):
-        self.registry.register_member(
-            "process_sandbox", MagicMock(spec=ProcessSandboxProtocol)
-        )
+    @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
+    async def test_connect_wrapped_with_sandbox(self, mock_connect):
+        mock_sandbox = MagicMock(spec=ProcessSandboxProtocol)
+        mock_sandbox.wrap_argv.return_value = ["sandbox-exec", "test.py"]
+        self.registry.register_member("process_sandbox", mock_sandbox)
+
+        mock_conn = _make_mock_conn()
+        mock_conn.toolset.tools.keys.return_value = ["tool1"]
+        mock_connect.return_value = mock_conn
+
         result = await self.connector.connector_toolset.call_tool(
             "connect_mcp_server",
             {"name": "test_server", "command": "test.py"},
         )
-        self.assertIsInstance(result, ToolResultFailed)
-        self.assertIn("沙箱", result.content)
+
+        self.assertIsInstance(result, ToolResultSuccess)
+        mock_sandbox.wrap_argv.assert_called_once_with(["test.py"])
+        mock_connect.assert_called_once_with("test_server", "sandbox-exec test.py")
 
     @patch("linhai.tool.mcp_connector.MCPConnector.connect_mcp_server")
     async def test_connect_allowed_with_no_sandbox(self, mock_connect):

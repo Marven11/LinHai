@@ -281,7 +281,15 @@ class RemoteControlConfig(BaseModel):
 
 
 AVAILABLE_TOOLSETS = frozenset(
-    ["utils", "sleep", "machine_control", "multimodal", "llm", "context_cleaning"]
+    [
+        "utils",
+        "sleep",
+        "machine_control",
+        "multimodal",
+        "llm",
+        "context_cleaning",
+        "mcp",
+    ]
 )
 
 

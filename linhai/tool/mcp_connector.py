@@ -160,11 +160,13 @@ class MCPConnector:
             sandbox = self.registry.get_member_typechecked(
                 "process_sandbox", ProcessSandboxProtocol
             )
-            if not isinstance(sandbox, NoSandbox):
-                return ToolResultFailed(content="当前开启了沙箱，无法启动MCP服务器进程")
+
+            command_lst = shlex.split(command)
+            wrapped_argv = sandbox.wrap_argv(command_lst)
+            wrapped_command = " ".join(shlex.quote(arg) for arg in wrapped_argv)
 
             try:
-                conn = await self.connect_mcp_server(name, command)
+                conn = await self.connect_mcp_server(name, wrapped_command)
                 assert conn.toolset is not None
                 return ToolResultSuccess(
                     content=f"连接{command!r}成功，名字为{name!r}，添加了以下工具: "

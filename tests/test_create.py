@@ -472,6 +472,7 @@ class TestToolsetsConfig(unittest.TestCase):
             "multimodal",
             "llm",
             "context_cleaning",
+            "mcp",
         }
         self.assertEqual(set(AVAILABLE_TOOLSETS), expected)
 
