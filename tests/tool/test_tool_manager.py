@@ -123,7 +123,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                     model="test_model",
                 )
             ],
-            user_prompt=UserPromptConfig(file_path="./prompt.md"),
+            user_prompt=UserPromptConfig(
+                file_path="./prompt.md", reminder_file_path="./reminder.md"
+            ),
             agent=[
                 AgentConfig(
                     compress_threshold=60000,
@@ -175,7 +177,9 @@ class TestToolManager(unittest.IsolatedAsyncioTestCase):
                     model="test_model",
                 )
             ],
-            user_prompt=UserPromptConfig(file_path="./prompt.md"),
+            user_prompt=UserPromptConfig(
+                file_path="./prompt.md", reminder_file_path="./reminder.md"
+            ),
             agent=[
                 AgentConfig(
                     compress_threshold=60000,

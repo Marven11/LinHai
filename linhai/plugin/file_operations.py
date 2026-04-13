@@ -471,7 +471,7 @@ class SedFragmentedReadPlugin(Plugin):
         abs_path = str(Path(filepath).resolve())
 
         if token_count >= self._TOKEN_THRESHOLD:
-            self._count.pop(abs_path, 0)
+            self._count[abs_path] = 0
             return None
 
         content_lines = set(content.splitlines())
@@ -483,7 +483,10 @@ class SedFragmentedReadPlugin(Plugin):
 
         records.append((content_lines, now))
 
-        count = self._count.get(abs_path, 0) + 1
+        if has_overlap:
+            count = self._count.get(abs_path, 0) + 1
+        else:
+            count = 0
         self._count[abs_path] = count
 
         if not has_overlap or count < self._TRIGGER_COUNT:
