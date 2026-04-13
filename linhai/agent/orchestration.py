@@ -38,6 +38,7 @@ r.maxstring = 100
 LARGE_MESSAGE_TOKEN_THRESHOLD = 600
 MIN_CLEANABLE_LARGE_MESSAGES = 3
 MIN_CLEANABLE_TOTAL_TOKENS = 10000
+CACHE_RATIO_ABNORMAL_THRESHOLD = 5.0
 
 
 class ToolBlockDetailsDict(TypedDict):
@@ -286,7 +287,11 @@ class AgentContextOrchestration:
                     else:
                         suggestion = "建议: 立即暂停当前任务，开始使用context_forget_range_step1清理上下文"
                 elif current_state == "黄灯":
-                    if cache_ratio is not None and cache_ratio < 80:
+                    if (
+                        cache_ratio is not None
+                        and cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD
+                        and cache_ratio < 80
+                    ):
                         suggestion = f"建议: 当前缓存命中率{cache_ratio:.0f}%低于80%，优先保证缓存命中率而不是清理上下文"
                     else:
                         suggestion = (
@@ -296,7 +301,11 @@ class AgentContextOrchestration:
                         )
                 else:
                     suggestion = "建议: 不要担心消息限制，立即工作"
-                    if cache_ratio is not None and cache_ratio < 90:
+                    if (
+                        cache_ratio is not None
+                        and cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD
+                        and cache_ratio < 90
+                    ):
                         suggestion = f"建议: 当前缓存命中率{cache_ratio:.0f}%低于90%，优先保证缓存命中率而不是清理上下文"
             notification_message = f"{base_info}, {suggestion}"
 
@@ -501,12 +510,13 @@ class RedStateToolBlockPlugin:
         cache_warning = ""
         should_remind_due_to_cache = False
         if cache_ratio is not None and details["actual_category"] == "cleanup":
-            if current_state == "绿灯" and cache_ratio < 90:
-                should_remind_due_to_cache = True
-                cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于90%"
-            elif current_state == "黄灯" and cache_ratio < 80:
-                should_remind_due_to_cache = True
-                cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于80%"
+            if cache_ratio >= CACHE_RATIO_ABNORMAL_THRESHOLD:
+                if current_state == "绿灯" and cache_ratio < 90:
+                    should_remind_due_to_cache = True
+                    cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于90%"
+                elif current_state == "黄灯" and cache_ratio < 80:
+                    should_remind_due_to_cache = True
+                    cache_warning = f"当前缓存命中率{cache_ratio:.0f}%低于80%"
 
         if should_remind_due_to_cache:
             warning_msg = f"你在上下文健康且缓存命中率较低的情况下清理了上下文，这进一步破坏了缓存，为什么不优先保证缓存命中率而是清理上下文？{cache_warning}"

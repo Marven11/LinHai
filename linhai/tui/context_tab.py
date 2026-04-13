@@ -10,6 +10,7 @@ from linhai.context_statistics import (
     compute_context_statistics,
     compute_notification_details,
 )
+
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
 from linhai.agent import Agent
@@ -213,8 +214,10 @@ class ContextTabWidget(Static):
         cache_info = stats["cache_info"]
         if cache_info is not None and cache_info["cached_tokens"] > 0:
             label = "估算" if cache_info["is_estimated"] else "实际"
+            percentage = cache_info["percentage"]
+            abnormal_note = ""
             lines.append(
-                f"当前消息缓存状态（{label}）: {cache_info['cached_tokens']} token ({cache_info['percentage']:.1f}%)"
+                f"当前消息缓存状态（{label}）: {cache_info['cached_tokens']} token ({percentage:.1f}%){abnormal_note}"
             )
         token_stats_text.update("\n".join(lines))
 
@@ -230,8 +233,9 @@ class ContextTabWidget(Static):
         cache_percentage = cumulative_cache["cache_percentage"]
         pb_cache.update(total=100.0, progress=cache_percentage)
 
+        abnormal_note = ""
         cache_stats_text.update(
-            f"平均缓存比例: {cache_percentage:.1f}%\n"
+            f"平均缓存比例: {cache_percentage:.1f}%{abnormal_note}\n"
             f"平均输入Token: {cumulative_cache['avg_input']:.0f}\n"
             f"平均输出Token: {cumulative_cache['avg_output']:.0f}\n"
             f"平均缓存Token: {cumulative_cache['avg_cached']:.0f}\n"
