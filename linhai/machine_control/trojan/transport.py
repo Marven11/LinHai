@@ -42,20 +42,13 @@ class TrojanTransport:
     def __init__(
         self,
         registry: Registry,
-        process: Optional[Process] = None,
+        process: Process,
     ):
         self.registry = registry
-        self._process: Optional[Process] = process
-        self._line_reader: Optional[_ProcessLineReader] = None
+        self._process: Process = process
+        self._line_reader: _ProcessLineReader = _ProcessLineReader(process)
         self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
-        self._connection_valid = True
-        if process is not None:
-            self._line_reader = _ProcessLineReader(process)
-
-    def set_process(self, process: Process) -> None:
-        self._process = process
-        self._line_reader = _ProcessLineReader(process)
         self._connection_valid = True
 
     def start_reading(self) -> None:
@@ -75,9 +68,6 @@ class TrojanTransport:
     ) -> JsonRpcResponse:
         if not self._connection_valid:
             raise ConnectionError("连接已失效")
-
-        if self._process is None:
-            raise ConnectionError("连接未建立，process为None")
 
         request_id = uuid.uuid4().hex
         request = {
@@ -115,7 +105,6 @@ class TrojanTransport:
         return dict(result)
 
     async def _read_one_response(self) -> None:
-        assert self._line_reader is not None
         line = await self._line_reader.readline(timeout=1.0)
         if line is None:
             self._connection_valid = False

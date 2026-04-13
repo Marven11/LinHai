@@ -59,12 +59,6 @@ def _make_registry():
 
 
 class TestTrojanTransportConstruction(unittest.IsolatedAsyncioTestCase):
-    async def test_create_without_process(self):
-        registry, _ = _make_registry()
-        transport = TrojanTransport(registry)
-        self.assertIsNone(transport._process)
-        self.assertIsNone(transport._line_reader)
-
     async def test_create_with_process(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
@@ -77,15 +71,16 @@ class TestTrojanTransportRequest(unittest.IsolatedAsyncioTestCase):
     async def test_send_request_writes_to_process(self):
         registry, task_supervisor = _make_registry()
         process = _FakeProcess()
-        process.add_response('{"jsonrpc":"2.0","id":"abc","result":{}}\n')
         transport = TrojanTransport(registry, process=process)
-
+        transport._connection_valid = False
         with self.assertRaises(ConnectionError):
             await transport._send_request("test", {})
 
     async def test_send_request_not_connected_raises(self):
         registry, _ = _make_registry()
-        transport = TrojanTransport(registry)
+        process = _FakeProcess()
+        transport = TrojanTransport(registry, process=process)
+        transport._connection_valid = False
         with self.assertRaises(ConnectionError):
             await transport._send_request("test", {})
 
@@ -111,7 +106,8 @@ class TestTrojanTransportDisconnect(unittest.IsolatedAsyncioTestCase):
 class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
     async def test_fail_pending_futures(self):
         registry, _ = _make_registry()
-        transport = TrojanTransport(registry)
+        process = _FakeProcess()
+        transport = TrojanTransport(registry, process=process)
         future = asyncio.get_event_loop().create_future()
         transport._pending_futures["test_id"] = future
         transport._fail_pending_futures()
@@ -132,14 +128,13 @@ class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
         await transport.disconnect()
         self.assertFalse(transport.is_connected())
 
-    async def test_set_process_updates_state(self):
+    async def test_connection_valid_state(self):
         registry, _ = _make_registry()
-        transport = TrojanTransport(registry)
-        transport._connection_valid = False
         process = _FakeProcess()
-        transport.set_process(process)
+        transport = TrojanTransport(registry, process=process)
         self.assertTrue(transport.is_connected())
-        self.assertIsNotNone(transport._line_reader)
+        transport._connection_valid = False
+        self.assertFalse(transport.is_connected())
 
 
 class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):

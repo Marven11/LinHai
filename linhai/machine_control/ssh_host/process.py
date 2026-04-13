@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
+
 from linhai.machine_control.process import (
     ProcessKillResult,
     ProcessReadResult,
@@ -9,9 +11,12 @@ from linhai.machine_control.process import (
 )
 from linhai.tool.base import ToolResultSuccess
 
+if TYPE_CHECKING:
+    from .ssh_host import SshMachineControl
+
 
 class RemoteProcess:
-    def __init__(self, pid: str, ssh_control) -> None:
+    def __init__(self, pid: str, ssh_control: "SshMachineControl") -> None:
         self._pid = pid
         self._ssh_control = ssh_control
 
