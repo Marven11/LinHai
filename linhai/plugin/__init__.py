@@ -40,6 +40,8 @@ from .security_config import (
     ProcessArgvCheckerPlugin,
 )
 
+from .file_permission_plugin import FileOperationPermissionPlugin
+
 from .sudo_stdio_checker import SudoStdioCheckerPlugin
 
 from .afk_plugin import AfkPlugin
@@ -86,6 +88,7 @@ __all__ = [
     "MissingWithSecretWarningPlugin",
     "CommandWhitelistPlugin",
     "ProcessArgvCheckerPlugin",
+    "FileOperationPermissionPlugin",
     "AfkPlugin",
     "ClawHeartbeatPlugin",
     "VolcanoDeepseekFixPlugin",

@@ -280,6 +280,21 @@ class RemoteControlConfig(BaseModel):
         return f"RemoteControlConfig(telegram={self.telegram})"
 
 
+class FileOperationRule(BaseModel):
+    """文件操作权限规则类型定义。"""
+
+    operation: Literal["READ", "WRITE", "READ_WRITE"] = Field(
+        description="操作类型：READ（读）、WRITE（写）、READ_WRITE（读写）"
+    )
+    pattern: str = Field(description="glob模式，路径相对于程序启动时的pwd")
+    action: Literal["ALLOW", "BLOCK"] = Field(
+        description="动作：ALLOW（允许）、BLOCK（阻止）"
+    )
+
+    def __str__(self) -> str:
+        return f"FileOperationRule(operation={self.operation}, pattern={self.pattern}, action={self.action})"
+
+
 AVAILABLE_TOOLSETS = frozenset(
     [
         "utils",
@@ -314,6 +329,14 @@ class ToolConfig(BaseModel):
     disable_toolsets: Optional[list[str]] = Field(
         default=None,
         description="禁用指定工具集，设置后加载除这些外的所有工具集。",
+    )
+    file_operation_rules: list[FileOperationRule] = Field(
+        default_factory=list,
+        description="文件操作权限规则列表",
+    )
+    file_operation_default_rule: Literal["ALLOW", "BLOCK"] = Field(
+        default="BLOCK",
+        description="默认规则（当没有规则匹配时）",
     )
 
     @field_validator("max_toolcall_token_in_round")
