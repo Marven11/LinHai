@@ -213,11 +213,14 @@ class TodolistCheckerPlugin(Plugin):
             return
 
         if self._has_unfinished_tasks(todolist_path):
-            from linhai.agent.messages import RuntimeMessage
-
             await agent.message_processor.add_new_message(
                 RuntimeMessage(
                     "错误：当前TODOLIST.md仍有未完成项，你是不是搞错什么了？"
+                    "你是不是完全忘记了你应该做什么？你是不是遗漏了用户的要求？"
+                    "你是否搞错了用户的最终目标？你有考虑用户的验收标准是什么吗？"
+                    "是否还有其他要求应该列为未完成项？当前的未完成项应该怎么完成？"
+                    "你应该重新审视用户的**所有要求**，**诚实地**列出所有已经完成的和没有完成的任务！"
+                    "完成的任务**必须**标记为已经完成！没有完成的任务**必须**标记为没有完成！！"
                 )
             )
             state_machine = self.registry.get_member_typechecked(
