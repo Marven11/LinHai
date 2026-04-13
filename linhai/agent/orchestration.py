@@ -173,12 +173,12 @@ class AgentContextOrchestration:
         for msg in removed_messages:
             self.large_messages.discard(msg)
 
-        result = f"清理了{len(removed_messages)}条大消息，保存到: {saved_path}"
+        result = f"清理了{len(removed_messages)}条大消息（约{total_tokens} token），保存到: {saved_path}"
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"已清理{len(removed_messages)}条大消息",
+                content=f"已清理{len(removed_messages)}条大消息（约{total_tokens} token）",
             ),
         )
         return ToolResultSuccess(content=result)
