@@ -1,6 +1,6 @@
 import unittest
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
 from linhai.machine_control.process import (
@@ -45,13 +45,21 @@ class TestSshMachineControlConnect(unittest.TestCase):
                 return_value=ProcessKillResult(pid="1", success=True, message="ok")
             )
 
-            connect_result = True
-            with patch.object(
-                self.control.transport, "connect", return_value=connect_result
-            ) as mock_connect:
+            mock_transport_instance = AsyncMock()
+            mock_transport_instance.connect = AsyncMock(return_value=True)
+            mock_transport_instance.disconnect = AsyncMock()
+
+            with patch(
+                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                return_value=mock_transport_instance,
+            ) as mock_transport_class:
                 result = await self.control.connect(mock_process)
                 self.assertTrue(result)
-                mock_connect.assert_called_once_with(mock_process)
+                mock_transport_class.assert_called_once_with(
+                    registry=self.registry, process=mock_process
+                )
+                mock_transport_instance.connect.assert_called_once_with()
+                self.assertEqual(self.control.transport, mock_transport_instance)
 
         self.loop.run_until_complete(test())
 
@@ -60,10 +68,15 @@ class TestSshMachineControlConnect(unittest.TestCase):
             mock_process = AsyncMock()
             mock_process.pid = "1"
 
-            with patch.object(
-                self.control.transport,
-                "connect",
-                side_effect=RuntimeError("connection failed"),
+            mock_transport_instance = AsyncMock()
+            mock_transport_instance.connect = AsyncMock(
+                side_effect=RuntimeError("connection failed")
+            )
+            mock_transport_instance.disconnect = AsyncMock()
+
+            with patch(
+                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                return_value=mock_transport_instance,
             ):
                 with self.assertRaises(RuntimeError):
                     await self.control.connect(mock_process)
@@ -75,12 +88,21 @@ class TestSshMachineControlConnect(unittest.TestCase):
             mock_process = AsyncMock()
             mock_process.pid = "1"
 
-            with patch.object(
-                self.control.transport, "connect", return_value=False
-            ) as mock_connect:
+            mock_transport_instance = AsyncMock()
+            mock_transport_instance.connect = AsyncMock(return_value=False)
+            mock_transport_instance.disconnect = AsyncMock()
+
+            with patch(
+                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                return_value=mock_transport_instance,
+            ) as mock_transport_class:
                 result = await self.control.connect(mock_process)
                 self.assertFalse(result)
-                mock_connect.assert_called_once_with(mock_process)
+                mock_transport_class.assert_called_once_with(
+                    registry=self.registry, process=mock_process
+                )
+                mock_transport_instance.connect.assert_called_once_with()
+                self.assertEqual(self.control.transport, mock_transport_instance)
 
         self.loop.run_until_complete(test())
 

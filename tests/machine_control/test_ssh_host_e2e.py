@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
-from linhai.machine_control.trojan.ssh_transport import _AsyncioProcessAdapter
+from ..test_helpers import _AsyncioProcessAdapter
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 

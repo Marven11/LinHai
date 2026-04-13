@@ -23,10 +23,10 @@ class SshMachineControl:
         port: int = 22,
         username: Optional[str] = None,
     ):
-        self.transport = SshTrojanTransport(host, registry, port, username)
         self.registry = registry
         self._username = username
         self._processes: dict[str, RemoteProcess] = {}
+        self.transport: Optional[SshTrojanTransport] = None
 
     @property
     def username(self) -> str | None:
@@ -42,7 +42,8 @@ class SshMachineControl:
         Returns:
             连接是否成功
         """
-        return await self.transport.connect(process)
+        self.transport = SshTrojanTransport(registry=self.registry, process=process)
+        return await self.transport.connect()
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
@@ -56,6 +57,8 @@ class SshMachineControl:
         Returns:
             工具执行结果
         """
+        if self.transport is None:
+            return ToolResultFailed(content="未建立连接")
         try:
             response = await self.transport.send_request(name, args)
         except ConnectionError as e:
@@ -82,7 +85,9 @@ class SshMachineControl:
 
     async def close(self):
         """关闭连接。"""
-        await self.transport.disconnect()
+        if self.transport:
+            await self.transport.disconnect()
+            self.transport = None
 
     async def http_request(
         self,

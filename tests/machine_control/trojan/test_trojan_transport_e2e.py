@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from linhai.machine_control.trojan.ssh_transport import _AsyncioProcessAdapter
+from tests.test_helpers import _AsyncioProcessAdapter
 from linhai.machine_control.trojan.transport import TrojanTransport
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor

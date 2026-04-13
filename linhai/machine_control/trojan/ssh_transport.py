@@ -21,106 +21,17 @@ from .transport import TrojanTransport
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
-class _AsyncioProcessAdapter:
-    def __init__(self, process: asyncio.subprocess.Process) -> None:
-        self._process = process
-
-    @property
-    def pid(self) -> str:
-        return str(self._process.pid)
-
-    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
-        if self._process.stdin is None:
-            return ProcessWriteResult(pid=self.pid, success=False, error="stdin不可用")
-        if with_enter:
-            content += "\n"
-        self._process.stdin.write(content.encode())
-        await self._process.stdin.drain()
-        return ProcessWriteResult(pid=self.pid, success=True, message="写入成功")
-
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult:
-        if self._process.stdout is None:
-            return ProcessReadResult(pid=self.pid, success=True, stdout="", stderr="")
-
-        chunks: list[bytes] = []
-        loop = asyncio.get_event_loop()
-        start = loop.time()
-        while loop.time() - start < wait_seconds:
-            remaining = wait_seconds - (loop.time() - start)
-            if remaining <= 0:
-                break
-            read_task = asyncio.ensure_future(self._process.stdout.read(4096))
-            done, _ = await asyncio.wait({read_task}, timeout=min(0.5, remaining))
-            if not done:
-                read_task.cancel()
-                if chunks:
-                    break
-                continue
-            data = read_task.result()
-            if data:
-                chunks.append(data)
-            else:
-                break
-
-        raw = b"".join(chunks).decode("utf-8", errors="replace")
-        if unescape_ansi:
-            raw = _ANSI_ESCAPE_RE.sub("", raw)
-        exit_note = None
-        if self._process.returncode is not None:
-            exit_note = f"注意：当前程序{self.pid}已经退出\n"
-        return ProcessReadResult(
-            pid=self.pid, success=True, stdout=raw, stderr="", exit_note=exit_note
-        )
-
-    async def wait(self, timeout: float) -> ProcessWaitResult:
-        wait_task = asyncio.ensure_future(self._process.wait())
-        done, _ = await asyncio.wait({wait_task}, timeout=timeout)
-        if not done:
-            wait_task.cancel()
-            return ProcessWaitResult(pid=self.pid, success=False, error="等待超时")
-        returncode = wait_task.result()
-        return ProcessWaitResult(
-            pid=self.pid, success=True, returncode=returncode, stdout="", stderr=""
-        )
-
-    async def kill(self, graceful: bool = True) -> ProcessKillResult:
-        if graceful:
-            self._process.terminate()
-            wait_task = asyncio.ensure_future(self._process.wait())
-            done, _ = await asyncio.wait({wait_task}, timeout=5.0)
-            if not done:
-                wait_task.cancel()
-                self._process.kill()
-                await self._process.wait()
-        else:
-            self._process.kill()
-            await self._process.wait()
-        return ProcessKillResult(pid=self.pid, success=True, message="进程已终止")
-
-
 class SshTrojanTransport:
     def __init__(
         self,
-        host: str,
         registry: Registry,
-        port: int = 22,
-        username: Optional[str] = None,
+        process: Process,
     ):
-        if username is None:
-            import getpass
-
-            username = getpass.getuser()
-
-        self.host = host
-        self.port = port
-        self.username = username
         self.registry = registry
+        self._bash_process = process
         self.trojan_path: Optional[Path] = None
         self.remote_trojan_path: Optional[str] = None
         self._trojan_transport: Optional[TrojanTransport] = None
-        self._bash_process: Optional[Process] = None
 
         self.task_supervisor: TaskSupervisor = PlainTaskSupervisor()
         if registry.has_member("task_supervisor"):
@@ -131,9 +42,6 @@ class SshTrojanTransport:
     async def _execute_in_bash(
         self, command: str, timeout: float = 10.0
     ) -> tuple[int, str, str]:
-        if self._bash_process is None:
-            raise RuntimeError("Bash shell not started")
-
         marker = f"CMD_RESULT_{int(asyncio.get_event_loop().time())}"
         full_command = f'{{ {command}; }} 2>&1; echo "{marker}:$?"'
 
@@ -219,8 +127,6 @@ class SshTrojanTransport:
         return remote_path
 
     async def _start_trojan_process(self, remote_trojan_path: str) -> bool:
-        if self._bash_process is None:
-            raise RuntimeError("Bash shell not started")
         command = f"python3 {remote_trojan_path}"
         write_result = await self._bash_process.stdio_write(command, with_enter=True)
         if not write_result.success:
@@ -228,12 +134,10 @@ class SshTrojanTransport:
         await asyncio.sleep(0.5)
         return True
 
-    async def connect(self, process: Process) -> bool:
+    async def connect(self) -> bool:
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(
-                level="INFO", content=f"开始连接SSH服务器: {self.host}:{self.port}"
-            ),
+            UiNotice(level="INFO", content="开始连接SSH服务器"),
         )
 
         self.trojan_path = Path(tempfile.mktemp(suffix=".py"))
@@ -243,13 +147,11 @@ class SshTrojanTransport:
         trojan_content = trojan_file_path.read_text(encoding="utf-8")
         self.trojan_path.write_text(trojan_content, encoding="utf-8")
 
-        self._bash_process = process
-
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"检查远程机器Python版本: {self.host}:{self.port}",
+                content="检查远程机器Python版本",
             ),
         )
 
@@ -258,7 +160,7 @@ class SshTrojanTransport:
                 "ui_log",
                 UiNotice(
                     level="ERROR",
-                    content=f"远程机器Python版本检查失败: {self.host}:{self.port}",
+                    content="远程机器Python版本检查失败",
                 ),
             )
             await self._cleanup()
@@ -266,16 +168,14 @@ class SshTrojanTransport:
 
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(
-                level="INFO", content=f"Python版本检查通过: {self.host}:{self.port}"
-            ),
+            UiNotice(level="INFO", content="Python版本检查通过"),
         )
 
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"复制控制程序到远程机器: {self.host}:{self.port}",
+                content="复制控制程序到远程机器",
             ),
         )
 
@@ -289,15 +189,13 @@ class SshTrojanTransport:
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"控制程序已复制到远程机器: {self.host}:{self.port}",
+                content="控制程序已复制到远程机器",
             ),
         )
 
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(
-                level="INFO", content=f"启动远程控制程序: {self.host}:{self.port}"
-            ),
+            UiNotice(level="INFO", content="启动远程控制程序"),
         )
 
         if not await self._start_trojan_process(remote_trojan_path):
@@ -305,7 +203,7 @@ class SshTrojanTransport:
                 "ui_log",
                 UiNotice(
                     level="ERROR",
-                    content=f"启动远程控制程序失败: {self.host}:{self.port}",
+                    content="启动远程控制程序失败",
                 ),
             )
             await self._cleanup()
@@ -315,7 +213,7 @@ class SshTrojanTransport:
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"远程控制程序启动成功: {self.host}:{self.port}",
+                content="远程控制程序启动成功",
             ),
         )
 
@@ -330,7 +228,6 @@ class SshTrojanTransport:
         if self.trojan_path and self.trojan_path.exists():
             self.trojan_path.unlink(missing_ok=True)
 
-        self._bash_process = None
         self._trojan_transport = None
 
     async def send_request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
