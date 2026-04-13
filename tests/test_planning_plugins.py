@@ -26,8 +26,10 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = PlanningStatusReminderPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
-        self.status_file = self.temp_dir / "STATUS.md"
-        self.todolist_file = self.temp_dir / "TODOLIST.md"
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.status_file = self.planning_dir / "STATUS.md"
+        self.todolist_file = self.planning_dir / "TODOLIST.md"
 
         self.status_file.write_text("# Test Status\n")
         self.todolist_file.write_text("# Test TodoList\n")
@@ -42,7 +44,7 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         from linhai.agent.planning import PlanningPromptMessage
 
         self.mock_planning_message = MagicMock(spec=PlanningPromptMessage)
-        self.mock_planning_message.planning_folder = self.temp_dir
+        self.mock_planning_message.planning_folder = self.planning_dir
 
         self.mock_agent.message_processor.get_messages.return_value = [
             self.mock_planning_message
@@ -58,6 +60,8 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
                 return self.mock_agent
             elif name == "agent_context_orchestration":
                 return self.orchestration
+            elif name == "conversation_folder":
+                return self.temp_dir
             else:
                 return None
 
@@ -88,14 +92,24 @@ class TestPlanningStatusReminderPlugin(unittest.IsolatedAsyncioTestCase):
         planning_folder = self.plugin._get_planning_folder()
 
         self.assertIsNotNone(planning_folder)
-        self.assertEqual(planning_folder, self.temp_dir)
+        self.assertEqual(planning_folder, self.planning_dir)
 
-    async def test_planning_folder_not_found_when_no_planning_message(self):
-        """测试没有PlanningPromptMessage时返回None。"""
-        self.mock_agent.message_processor.get_messages.return_value = []
+    async def test_planning_folder_not_found_when_conversation_folder_missing(self):
+        """测试conversation_folder为None时返回None。"""
+        # 临时修改side_effect，使conversation_folder返回None
+        original_side_effect = self.registry.get_member_typechecked.side_effect
+
+        def new_side_effect(name, cls):
+            if name == "conversation_folder":
+                return None
+            return original_side_effect(name, cls)
+
+        self.registry.get_member_typechecked.side_effect = new_side_effect
 
         planning_folder = self.plugin._get_planning_folder()
 
+        # 恢复side_effect
+        self.registry.get_member_typechecked.side_effect = original_side_effect
         self.assertIsNone(planning_folder)
 
     async def test_counters_increment_on_non_write_tools(self):
@@ -419,7 +433,9 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = DesignMdReminderPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
-        self.design_file = self.temp_dir / "DESIGN.md"
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.design_file = self.planning_dir / "DESIGN.md"
         self.design_file.write_text("# Design\n")
 
         self.mock_agent = MagicMock()
@@ -430,7 +446,7 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         from linhai.agent.planning import PlanningPromptMessage
 
         self.mock_planning_message = MagicMock(spec=PlanningPromptMessage)
-        self.mock_planning_message.planning_folder = self.temp_dir
+        self.mock_planning_message.planning_folder = self.planning_dir
 
         self.mock_agent.message_processor.get_messages.return_value = [
             self.mock_planning_message
@@ -439,6 +455,8 @@ class TestDesignMdReminderPlugin(unittest.IsolatedAsyncioTestCase):
         def side_effect(name, cls):
             if name == "agent":
                 return self.mock_agent
+            elif name == "conversation_folder":
+                return self.temp_dir
             return None
 
         self.registry.get_member_typechecked.side_effect = side_effect

@@ -30,16 +30,14 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.planning_folder is not None:
             return self.planning_folder
 
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        if agent is None:
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
             return None
 
-        for msg in agent.message_processor.get_messages():
-            if isinstance(msg, PlanningPromptMessage):
-                self.planning_folder = msg.planning_folder
-                return self.planning_folder
-
-        return None
+        self.planning_folder = conversation_folder / "planning"
+        return self.planning_folder
 
     def _get_current_state(self) -> str:
         from linhai.agent.orchestration import AgentContextOrchestration
@@ -183,15 +181,13 @@ class TodolistCheckerPlugin(Plugin):
         self.registry = registry
 
     def _get_planning_folder(self) -> Optional[Path]:
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        if agent is None:
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
             return None
 
-        for msg in agent.message_processor.get_messages():
-            if isinstance(msg, PlanningPromptMessage):
-                return msg.planning_folder
-
-        return None
+        return conversation_folder / "planning"
 
     def _has_unfinished_tasks(self, todolist_path: Path) -> bool:
         if not todolist_path.exists():
@@ -246,16 +242,14 @@ class DesignMdReminderPlugin(Plugin):
         if self.planning_folder is not None:
             return self.planning_folder
 
-        agent = self.registry.get_member_typechecked("agent", Agent)
-        if agent is None:
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
             return None
 
-        for msg in agent.message_processor.get_messages():
-            if isinstance(msg, PlanningPromptMessage):
-                self.planning_folder = msg.planning_folder
-                return self.planning_folder
-
-        return None
+        self.planning_folder = conversation_folder / "planning"
+        return self.planning_folder
 
     def _is_design_in_messages(self, messages: list[Message]) -> bool:
         planning_folder = self._get_planning_folder()

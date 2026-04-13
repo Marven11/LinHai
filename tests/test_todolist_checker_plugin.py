@@ -24,21 +24,22 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
         self.plugin = TodolistCheckerPlugin(self.registry)
 
         self.temp_dir = Path(tempfile.mkdtemp())
-        self.todolist_file = self.temp_dir / "TODOLIST.md"
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.todolist_file = self.planning_dir / "TODOLIST.md"
 
         self.mock_agent = AsyncMock()
         self.mock_agent.message_processor = MagicMock()
         self.mock_agent.message_processor.add_new_message = AsyncMock()
         self.mock_agent.message_processor.get_messages = MagicMock(return_value=[])
 
-        self.mock_planning_message = MagicMock(spec=PlanningPromptMessage)
-        self.mock_planning_message.planning_folder = self.temp_dir
-
         def side_effect(name, cls):
             if name == "agent" and cls.__name__ == "Agent":
                 return self.mock_agent
             if name == "state_machine":
                 return self.state_machine
+            if name == "conversation_folder":
+                return self.temp_dir
             return None
 
         self.registry.get_member_typechecked.side_effect = side_effect
@@ -73,9 +74,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_action_when_todolist_not_exists(self):
         """测试TODOLIST.md文件不存在时不执行任何操作。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
         # 确保文件不存在
         if self.todolist_file.exists():
             self.todolist_file.unlink()
@@ -86,10 +84,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_error_when_all_tasks_completed(self):
         """测试所有任务都完成时没有错误消息。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 - [x] 任务1
@@ -105,10 +99,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_when_todo_item_exists(self):
         """测试存在未完成任务时添加错误消息。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 - [x] 已完成的任务
@@ -129,10 +119,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_when_dot_task_exists(self):
         """测试存在进行中任务时添加错误消息。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 - [x] 已完成的任务
@@ -146,10 +132,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_when_space_task_exists(self):
         """测试存在空格任务时添加错误消息。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 - [x] 已完成
@@ -163,10 +145,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_handles_file_read_error_gracefully(self):
         """测试文件读取错误时优雅处理。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         # 创建TODOLIST.md文件
         self.todolist_file.write_text("test")
         # 设置读取权限，使读取失败
@@ -186,10 +164,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_mixed_tasks_with_indentation(self):
         """测试混合任务和缩进的情况。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 - [x] 已完成的任务
@@ -209,10 +183,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_empty_todolist(self):
         """测试空的TODOLIST.md文件。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         self.todolist_file.write_text("")
 
         await self.plugin.before_waiting_user(self.mock_agent)
@@ -221,10 +191,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_todolist_with_only_comments(self):
         """测试只有注释的TODOLIST.md文件。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 <!-- 这是一个注释 -->
@@ -238,10 +204,6 @@ class TestTodolistCheckerPlugin(unittest.IsolatedAsyncioTestCase):
 
     async def test_todolist_with_markdown_formatting(self):
         """测试包含markdown格式的TODOLIST.md文件。"""
-        self.mock_agent.message_processor.get_messages.return_value = [
-            self.mock_planning_message
-        ]
-
         todolist_content = """# 待办任务列表
 
 **重要任务**:
