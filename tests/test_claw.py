@@ -47,6 +47,14 @@ class TestClawInitialization(unittest.TestCase):
 
             plugin._initialize_claw_files()
 
+    def test_agents_md_contains_communication_style_guide(self):
+        """测试AGENTS_MD常量包含沟通风格指南章节"""
+        from linhai.prompt import AGENTS_MD
+
+        self.assertIn("沟通风格指南（可选初始化选项）", AGENTS_MD)
+        self.assertIn("直接积极的主张", AGENTS_MD)
+        self.assertIn("避免否定对比句式", AGENTS_MD)
+
 
 class TestClawPinnedMessages(unittest.TestCase):
     """测试pinned messages中的claw内容添加"""
