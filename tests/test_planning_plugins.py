@@ -9,6 +9,7 @@ from linhai.plugin.planning import (
     UserInputRuntimeMessagePlugin,
     DesignMdReminderPlugin,
     PlanningInitOverridePlugin,
+    PlanningHeadingCheckPlugin,
 )
 from linhai.plugin.file_operations import Plugin
 from linhai.agent.lifecycle import Lifecycle
@@ -599,6 +600,179 @@ class TestPlanningInitOverridePlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("STATUS.md", call_args.message)
         self.assertIn("TODOLIST.md", call_args.message)
         self.assertIn("DESIGN.md", call_args.message)
+
+
+class TestPlanningHeadingCheckPlugin(unittest.IsolatedAsyncioTestCase):
+    """测试PlanningHeadingCheckPlugin插件。"""
+
+    def setUp(self):
+        """设置测试环境。"""
+        self.registry = MagicMock(spec=Registry)
+        self.plugin = PlanningHeadingCheckPlugin(self.registry)
+
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.planning_dir = self.temp_dir / "planning"
+        self.planning_dir.mkdir()
+        self.status_file = self.planning_dir / "STATUS.md"
+        self.todolist_file = self.planning_dir / "TODOLIST.md"
+        self.design_file = self.planning_dir / "DESIGN.md"
+
+        self.mock_agent = AsyncMock()
+        self.mock_agent.message_processor = MagicMock()
+        self.mock_agent.message_processor.add_new_message = AsyncMock()
+
+        def side_effect(name, cls):
+            if name == "agent":
+                return self.mock_agent
+            elif name == "conversation_folder":
+                return self.temp_dir
+            else:
+                return None
+
+        self.registry.get_member_typechecked.side_effect = side_effect
+
+    def tearDown(self):
+        """清理测试环境。"""
+        import shutil
+
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    async def test_plugin_inherits_from_base_class(self):
+        """测试插件继承自Plugin基类。"""
+        from linhai.plugin.file_operations import Plugin
+
+        self.assertIsInstance(self.plugin, Plugin)
+
+    async def test_register_method_adds_callback(self):
+        """测试register方法正确注册回调。"""
+        mock_lifecycle = MagicMock()
+        self.plugin.register(mock_lifecycle)
+        mock_lifecycle.after_message_generation.register.assert_called_once_with(
+            self.plugin.after_message_generation
+        )
+
+    async def test_contains_heading_detection(self):
+        """测试一级标题检测逻辑。"""
+        # 包含一级标题
+        content_with_heading = "# 标题\n一些内容"
+        self.assertTrue(self.plugin._contains_heading(content_with_heading))
+
+        # 不包含一级标题
+        content_without_heading = "## 二级标题\n一些内容"
+        self.assertFalse(self.plugin._contains_heading(content_without_heading))
+
+        # 包含以# 开头的行但中间有空格
+        content_with_heading_space = "#  标题"
+        self.assertTrue(self.plugin._contains_heading(content_with_heading_space))
+
+        # 包含#但后面没有空格
+        content_with_hash_no_space = "#标题"
+        self.assertFalse(self.plugin._contains_heading(content_with_hash_no_space))
+
+    async def test_planning_folder_detection(self):
+        """测试planning文件夹检测逻辑。"""
+        planning_folder = self.plugin._get_planning_folder()
+        self.assertIsNotNone(planning_folder)
+        self.assertEqual(planning_folder, self.planning_dir)
+
+    async def test_no_action_when_no_planning_folder(self):
+        """测试没有planning文件夹时不执行操作。"""
+        # 使conversation_folder返回None
+        self.registry.get_member_typechecked.side_effect = lambda name, cls: None
+
+        result = await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            _full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {"filepath": str(self.status_file)},
+                },
+            ],
+        )
+        self.assertIsNone(result)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_no_action_when_not_planning_file(self):
+        """测试写入非planning文件时不执行操作。"""
+        result = await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            _full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {"filepath": "/tmp/other.txt"},
+                },
+            ],
+        )
+        self.assertIsNone(result)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_runtime_message_added_when_heading_detected(self):
+        """测试检测到一级标题时添加RuntimeMessage。"""
+        result = await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            _full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.status_file),
+                        "content": "# STATUS.md\n一些内容",
+                    },
+                },
+            ],
+        )
+        self.assertIsNone(result)
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        from linhai.agent.messages import RuntimeMessage
+
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("一级标题", call_args.message)
+        self.assertIn("STATUS.md", call_args.message)
+
+    async def test_no_runtime_message_when_no_heading(self):
+        """测试没有一级标题时不添加RuntimeMessage。"""
+        result = await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            _full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "write_file",
+                    "arguments": {
+                        "filepath": str(self.status_file),
+                        "content": "一些内容",
+                    },
+                },
+            ],
+        )
+        self.assertIsNone(result)
+        self.mock_agent.message_processor.add_new_message.assert_not_called()
+
+    async def test_replace_file_content_tool_also_checked(self):
+        """测试replace_file_content工具也会被检查。"""
+        result = await self.plugin.after_message_generation(
+            parsed_answer=MagicMock(),
+            _full_response="Test response",
+            tool_calls=[
+                {
+                    "name": "replace_file_content",
+                    "arguments": {
+                        "filepath": str(self.status_file),
+                        "old": "旧内容",
+                        "new": "# 新标题\n新内容",
+                    },
+                },
+            ],
+        )
+        self.assertIsNone(result)
+        self.mock_agent.message_processor.add_new_message.assert_called_once()
+        call_args = self.mock_agent.message_processor.add_new_message.call_args[0][0]
+        from linhai.agent.messages import RuntimeMessage
+
+        self.assertIsInstance(call_args, RuntimeMessage)
+        self.assertIn("一级标题", call_args.message)
 
 
 if __name__ == "__main__":

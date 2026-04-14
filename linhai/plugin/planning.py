@@ -363,3 +363,93 @@ class UserInputRuntimeMessagePlugin(Plugin):
 
     def register(self, lifecycle: Lifecycle):
         lifecycle.after_message_generation.register(self.after_message_generation)
+
+
+class PlanningHeadingCheckPlugin(Plugin):
+    """检查planning文件中是否包含一级标题的插件。"""
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self.registry = registry
+        self.planning_folder: Optional[Path] = None
+
+    def _get_planning_folder(self) -> Optional[Path]:
+        if self.planning_folder is not None:
+            return self.planning_folder
+
+        conversation_folder = self.registry.get_member_typechecked(
+            "conversation_folder", Path
+        )
+        if conversation_folder is None:
+            return None
+
+        self.planning_folder = conversation_folder / "planning"
+        return self.planning_folder
+
+    def _is_planning_file(self, filepath: str, planning_folder: Path) -> bool:
+        """检查文件是否为planning文件夹下的STATUS.md、TODOLIST.md或DESIGN.md"""
+        if not filepath or not isinstance(filepath, str):
+            return False
+
+        filepath_obj = Path(filepath)
+        abs_path = filepath_obj.absolute()
+
+        planning_files = [
+            planning_folder / "STATUS.md",
+            planning_folder / "TODOLIST.md",
+            planning_folder / "DESIGN.md",
+        ]
+
+        for pf in planning_files:
+            if abs_path == pf.absolute():
+                return True
+        return False
+
+    def _contains_heading(self, content: str) -> bool:
+        """检查内容是否包含一级标题（以# 开头的行）"""
+        return any(line.startswith("# ") for line in content.split("\n"))
+
+    async def after_message_generation(
+        self,
+        parsed_answer,
+        _full_response: str,
+        tool_calls: list[dict],
+    ) -> None:
+        planning_folder = self._get_planning_folder()
+        if planning_folder is None:
+            return
+
+        write_tools = {"write_file", "replace_file_content"}
+        for tool_call in tool_calls:
+            tool_name = tool_call.get("name")
+            if tool_name not in write_tools:
+                continue
+
+            tool_arguments = tool_call.get("arguments", {})
+            filepath = tool_arguments.get("filepath")
+            content = None
+            if tool_name == "write_file":
+                content = tool_arguments.get("content")
+            elif tool_name == "replace_file_content":
+                content = tool_arguments.get("new")
+
+            if not filepath or content is None:
+                continue
+
+            if not self._is_planning_file(filepath, planning_folder):
+                continue
+
+            if self._contains_heading(content):
+                agent = self.registry.get_member_typechecked("agent", Agent)
+                if agent is None:
+                    return
+
+                filename = Path(filepath).name
+                await agent.message_processor.add_new_message(
+                    RuntimeMessage(
+                        f"你刚刚向planning文件{filename}添加了内容`# xxx`，这是一级标题吗？这是违反system prompt的标题吗？你之后要如何改进文件内容以符合要求？"
+                    )
+                )
+
+    def register(self, lifecycle: Lifecycle):
+        lifecycle.after_message_generation.register(self.after_message_generation)
