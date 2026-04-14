@@ -30,7 +30,9 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.mock_agent_message.pinned_messages = []
         self.mock_agent_message.notification_messages = {}
         self.mock_orchestration = Mock(spec=AgentContextOrchestration)
-        self.mock_orchestration.large_messages = {}
+        self.mock_orchestration.large_messages = set()
+        self.mock_orchestration.agent_message = self.mock_agent_message
+        self.mock_orchestration.cleaned_messages = {}
         Lifecycle(self.registry)
 
         self.registry.register_member("agent", self.mock_agent)

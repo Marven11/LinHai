@@ -24,6 +24,9 @@ def _build_context_statistics(
     cumulative_output_tokens=None,
     cumulative_cache_miss_count=None,
     large_message_count=0,
+    cleanable_large_message_count=0,
+    cleanable_large_message_tokens=0,
+    can_clean_large_messages=False,
     messages_stats=None,
     pinned_stats=None,
     notification_stats=None,
@@ -57,6 +60,9 @@ def _build_context_statistics(
             notification_details if notification_details is not None else []
         ),
         large_message_count=large_message_count,
+        cleanable_large_message_count=cleanable_large_message_count,
+        cleanable_large_message_tokens=cleanable_large_message_tokens,
+        can_clean_large_messages=can_clean_large_messages,
         hard_limit=hard_limit,
         used_tokens=used_tokens,
         token_limit=token_limit,
@@ -117,7 +123,9 @@ class TestContextTab(unittest.TestCase):
         mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
 
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
@@ -211,7 +219,9 @@ class TestContextTab(unittest.TestCase):
         mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
 
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         mock_agent.get_threshold_info.return_value = {
             "hard_limit": 8000,
@@ -305,6 +315,9 @@ class TestContextTab(unittest.TestCase):
         self.assertNotIn("消息平均Token数", stats_call_args)
         self.assertIn("最长消息", stats_call_args)
         self.assertIn("大消息数量: 0", stats_call_args)
+        self.assertIn("可清理大消息: 0", stats_call_args)
+        self.assertIn("可清理大消息token量: 0", stats_call_args)
+        self.assertIn("是否可清理: 否", stats_call_args)
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
         self.assertIn("当前用量: 6000", token_stats_args)
@@ -454,7 +467,9 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         )
 
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         mock_token_usage = AnswerTokenUsage(
             input_tokens=1000,

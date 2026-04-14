@@ -158,7 +158,9 @@ class TestPlanningTabInApp(unittest.TestCase):
         mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -218,7 +220,9 @@ class TestPlanningTabInApp(unittest.TestCase):
         mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)
@@ -288,7 +292,9 @@ class TestPlanningTabInApp(unittest.TestCase):
         mock_agent_message.pinned_messages = []
         mock_agent_message.notification_messages = {}
         mock_orchestration = Mock(spec=AgentContextOrchestration)
-        mock_orchestration.large_messages = {}
+        mock_orchestration.large_messages = set()
+        mock_orchestration.agent_message = mock_agent_message
+        mock_orchestration.cleaned_messages = {}
 
         registry.register_member("agent", mock_agent)
         registry.register_member("agent_message", mock_agent_message)

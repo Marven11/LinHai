@@ -12,7 +12,11 @@ from linhai.context_statistics import (
 )
 
 from linhai.agent.message import AgentMessage
-from linhai.agent.orchestration import AgentContextOrchestration
+from linhai.agent.orchestration import (
+    AgentContextOrchestration,
+    check_cleanable_threshold,
+    get_cleanable_large_messages,
+)
 from linhai.agent import Agent
 from linhai.token_manager import TokenManager
 
@@ -139,7 +143,12 @@ class ContextTabWidget(Static):
             + "\n"
             + _format_longest_message(msg["longest"])
             + "\n"
-            "大消息数量: " + str(stats["large_message_count"])
+            "大消息数量: " + str(stats["large_message_count"]) + "\n"
+            "可清理大消息: " + str(stats["cleanable_large_message_count"]) + "\n"
+            "可清理大消息token量: "
+            + str(stats["cleanable_large_message_tokens"])
+            + "\n"
+            "是否可清理: " + ("是" if stats["can_clean_large_messages"] else "否")
         )
 
     def _update_pinned_message_statistics(self, stats: ContextStatistics) -> None:
@@ -290,6 +299,15 @@ class ContextTabWidget(Static):
             generation_count = token_manager.generation_count
             cumulative_token_usage = token_manager.cumulative_token_usage
 
+        cleanable_messages = get_cleanable_large_messages(
+            orchestration.large_messages,
+            orchestration.agent_message,
+            cleaned_messages_dict=orchestration.cleaned_messages,
+        )
+        can_clean, cleanable_count, cleanable_tokens = check_cleanable_threshold(
+            cleanable_messages
+        )
+
         notification_details = compute_notification_details(
             agent_message.notification_messages
         )
@@ -300,6 +318,9 @@ class ContextTabWidget(Static):
             notification_entries=notification_entries,
             notification_details=notification_details,
             large_message_count=len(orchestration.large_messages),
+            cleanable_large_message_count=cleanable_count,
+            cleanable_large_message_tokens=cleanable_tokens,
+            can_clean_large_messages=can_clean,
             threshold_info=threshold_info,
             token_limit=token_limit,
             generation_count=generation_count,

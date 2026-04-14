@@ -67,6 +67,9 @@ class ContextStatistics(TypedDict):
     notification_messages: MessageGroupStatistics
     notification_details: list[NotificationMessageDisplay]
     large_message_count: int
+    cleanable_large_message_count: int
+    cleanable_large_message_tokens: int
+    can_clean_large_messages: bool
     hard_limit: int | None
     used_tokens: int | None
     token_limit: int | None
@@ -248,6 +251,9 @@ def compute_context_statistics(
     notification_entries: list[Message],
     notification_details: list[NotificationMessageDisplay],
     large_message_count: int,
+    cleanable_large_message_count: int,
+    cleanable_large_message_tokens: int,
+    can_clean_large_messages: bool,
     threshold_info: ThresholdInfo | None,
     token_limit: int | None,
     generation_count: int | None,
@@ -289,6 +295,9 @@ def compute_context_statistics(
         notification_messages=notif_stats,
         notification_details=notification_details,
         large_message_count=large_message_count,
+        cleanable_large_message_count=cleanable_large_message_count,
+        cleanable_large_message_tokens=cleanable_large_message_tokens,
+        can_clean_large_messages=can_clean_large_messages,
         hard_limit=hard_limit,
         used_tokens=used_tokens,
         token_limit=token_limit,
