@@ -8,7 +8,7 @@ from typing import Dict, Optional, Any, Union
 from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.agent.messages import FileContentMessage
-from ..main import HostControl
+from ..protocol import HostControl
 from ..process import Process, ProcessCreateResult
 
 

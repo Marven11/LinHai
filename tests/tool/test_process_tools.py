@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from linhai.base import ToolCallMessage
 from linhai.tool.base import ToolCallResultMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.machine_control.main import register_machine_control_tools
+from linhai.machine_control.tools import register_machine_control_tools
 from linhai.machine_control import MachineControl
 from linhai.tool.main import ToolManager
 from linhai.registry import Registry

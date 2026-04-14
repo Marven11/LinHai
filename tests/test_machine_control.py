@@ -90,7 +90,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         """测试注册工具"""
         # 工具注册是通过register_machine_control_tools函数完成的
         # 这里我们测试该函数返回的ToolSet不为空
-        from linhai.machine_control.main import register_machine_control_tools
+        from linhai.machine_control.tools import register_machine_control_tools
 
         toolset = register_machine_control_tools(self.machine_control)
         self.assertIsInstance(toolset, ToolSet)

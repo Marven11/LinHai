@@ -284,7 +284,7 @@ class TestConnectBashAsMachineTool(unittest.IsolatedAsyncioTestCase):
         self.machine_control = MachineControl(self.registry)
 
     def test_tool_registered(self):
-        from linhai.machine_control.main import register_machine_control_tools
+        from linhai.machine_control.tools import register_machine_control_tools
 
         toolset = register_machine_control_tools(self.machine_control)
         tool_names = list(toolset.tools.keys())

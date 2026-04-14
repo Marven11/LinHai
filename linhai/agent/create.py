@@ -432,7 +432,7 @@ async def _create_llm_instances(context: "AgentBuildContext") -> LlmManager:
 async def _create_tool_manager(
     context: "AgentBuildContext", multimodal_toolset
 ) -> Tuple[ToolManager, Optional["MachineControl"]]:
-    from linhai.machine_control.main import register_machine_control_tools
+    from linhai.machine_control.tools import register_machine_control_tools
     from linhai.tool.mcp_connector import MCPConnector
 
     registry = context["registry"]

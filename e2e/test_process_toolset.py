@@ -5,7 +5,8 @@ import pytest
 
 pytestmark = pytest.mark.asyncio
 
-from linhai.machine_control.main import MachineControl, register_machine_control_tools
+from linhai.machine_control.main import MachineControl
+from linhai.machine_control.tools import register_machine_control_tools
 from linhai.registry import Registry
 from linhai.sandbox import NoSandbox
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
