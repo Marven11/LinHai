@@ -31,7 +31,7 @@ class MessagesList(VerticalScroll):
         self,
         registry: Registry,
         tui_config: TUIConfig,
-        theme: str,
+        theme: str | None,
         lifecycle: Lifecycle,
         get_refresh_interval,
         *args,

@@ -74,7 +74,6 @@ Screen {
         from linhai.config import get_default_config_path
 
         self.config_path = config_path or get_default_config_path()
-        self.theme = "nord"
 
     def compose(self) -> ComposeResult:
         """Compose the UI."""

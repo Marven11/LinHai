@@ -79,6 +79,18 @@ EXTENSION_TO_TYPE = {
 }
 
 
+def _syntax_or_text(content: str, lexer: str, theme: str | None) -> Syntax | Text:
+    if theme is not None:
+        return Syntax(
+            content,
+            lexer=lexer,
+            theme=theme,
+            background_color="#2E3440",
+            word_wrap=True,
+        )
+    return Text(content)
+
+
 class MarkdownParagraphWithoutNewLine(MarkdownBlock):
     """类似MarkdownParagraph但是删掉了_update_from_block函数，应该只会有性能上的影响"""
 
@@ -359,7 +371,10 @@ class ToolCallWidget(Static):
     """
 
     def __init__(
-        self, theme: str, segment: Segment, get_refresh_interval: Callable[[], float]
+        self,
+        theme: str | None,
+        segment: Segment,
+        get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.theme = theme
@@ -392,12 +407,10 @@ class ToolCallWidget(Static):
     def update_display(self) -> None:
         if self.has_error:
             self.update(
-                Syntax(
+                _syntax_or_text(
                     self.json_str,
                     lexer="markdown",
                     theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
                 )
             )
             self.border_title = "tool call (error)"
@@ -466,12 +479,10 @@ class ToolCallWidget(Static):
                     )
 
             self.update(
-                Syntax(
+                _syntax_or_text(
                     self.current_content.strip(),
                     lexer="markdown",
                     theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
                 )
             )
 
@@ -515,12 +526,10 @@ class ToolCallWidget(Static):
         if not self.has_error:
             simplified = parse_and_simplify_toolcall(self.json_str)
         self.update(
-            Syntax(
+            _syntax_or_text(
                 simplified,
                 lexer="python",
                 theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
             )
         )
 
@@ -542,12 +551,10 @@ class ToolCallWidget(Static):
         else:
             self.border_title = "tool call [点击隐藏]"
             self.update(
-                Syntax(
+                _syntax_or_text(
                     self.current_content.strip(),
                     lexer="markdown",
                     theme=self.theme,
-                    background_color="#2E3440",
-                    word_wrap=True,
                 )
             )
 
@@ -596,7 +603,7 @@ class ReasoningContentWidget(Static):
         self,
         role: str,
         sender_name: str,
-        theme: str,
+        theme: str | None,
         segment: Segment,
         get_refresh_interval: Callable[[], float],
     ):
@@ -645,12 +652,10 @@ class ReasoningContentWidget(Static):
         content_to_display = self.content_str.strip()
 
         if self.is_expanded:
-            renderable = Syntax(
+            renderable = _syntax_or_text(
                 content_to_display,
                 lexer="markdown",
                 theme=self.theme,
-                background_color="#2E3440",
-                word_wrap=True,
             )
         else:
             lines = [line for line in content_to_display.splitlines() if line]
@@ -682,7 +687,7 @@ class UserMessageWidget(Markdown):
             return MarkdownParagraphWithoutNewLine
         return Markdown.BLOCKS[block_name]
 
-    def __init__(self, content: str, sender_name: str, theme: str):
+    def __init__(self, content: str, sender_name: str, theme: str | None):
         super().__init__()
         self.theme = theme
         self.content_str = content
@@ -730,7 +735,7 @@ class NormalContentWidget(Markdown):
         self,
         role: str,
         sender_name: str,
-        theme: str,
+        theme: str | None,
         segment: Segment,
         get_refresh_interval: Callable[[], float],
     ):
@@ -792,7 +797,7 @@ class MessageWidget(Static):
         self,
         role: str,
         sender_name: str,
-        theme: str,
+        theme: str | None,
         parsed_answer: ParsedAnswer,
         get_refresh_interval: Callable[[], float],
     ):

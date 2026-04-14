@@ -99,7 +99,8 @@ class TUIApp(App):
         init_files: list[Path],
     ):
         super().__init__()
-        self.theme = tui_config.theme
+        if tui_config.theme is not None:
+            self.theme = tui_config.theme
         self.registry = registry
         self.registry.register_queue("exit_signal")
         TextualTaskSupervisor(self, registry)

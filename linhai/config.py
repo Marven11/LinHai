@@ -400,7 +400,7 @@ class TUIConfig(BaseModel):
     """TUI配置类型定义。"""
 
     use_nerd_font: bool = Field(default=False, description="是否使用Nerd Font图标")
-    theme: str = Field(default="nord", description="TUI主题名称")
+    theme: Optional[str] = Field(default=None, description="TUI主题名称")
 
     def __str__(self) -> str:
         """返回TUI配置的字符串表示"""
