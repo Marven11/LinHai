@@ -137,40 +137,7 @@ class TestAgentSessionStop(unittest.IsolatedAsyncioTestCase):
         mock_supervisor.cancel.assert_called_once_with("task-1")
 
 
-class TestAgentSessionGetMessages(unittest.TestCase):
-    def test_get_messages_filters_unknown_roles(self):
-        mock_agent = MagicMock()
-        mock_msg = MagicMock()
-        mock_msg.get_content.return_value = "hello"
-        mock_agent.message_processor.get_messages.return_value = [mock_msg]
-        mock_manager = MagicMock()
-        session = AgentSession(
-            agent_id="test-id",
-            agent=mock_agent,
-            task_name="task-1",
-            manager=mock_manager,
-        )
-        result = session.get_messages()
-        self.assertEqual(result, [])
-
-    def test_get_messages_includes_user_messages(self):
-        from linhai.base import UserMessage
-
-        mock_agent = MagicMock()
-        user_msg = UserMessage("hello")
-        mock_agent.message_processor.get_messages.return_value = [user_msg]
-        mock_manager = MagicMock()
-        session = AgentSession(
-            agent_id="test-id",
-            agent=mock_agent,
-            task_name="task-1",
-            manager=mock_manager,
-        )
-        result = session.get_messages()
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["role"], "user")
-        self.assertEqual(result[0]["content"], "hello")
-
+class TestAgentSessionRegistry(unittest.TestCase):
     def test_registry_property(self):
         mock_registry = MagicMock()
         mock_agent = MagicMock()
@@ -205,36 +172,35 @@ class TestAgentSessionSendMessage(unittest.IsolatedAsyncioTestCase):
 
 
 class TestNewSchemas(unittest.TestCase):
-    def test_message_request(self):
-        from linhai.webui.schemas import MessageRequest
-
-        req = MessageRequest(content="hello")
-        self.assertEqual(req.content, "hello")
-
-    def test_message_item(self):
-        from linhai.webui.schemas import MessageItem
-
-        item = MessageItem(role="user", content="hello")
-        self.assertEqual(item.role, "user")
-
-    def test_ws_segment_event(self):
-        from linhai.webui.schemas import WsSegmentEvent
-
-        event = WsSegmentEvent(segment_type="normal", content="hi", is_finished=False)
-        self.assertEqual(event.type, "segment")
-        self.assertEqual(event.segment_type, "normal")
-
     def test_ws_state_change_event(self):
         from linhai.webui.schemas import WsStateChangeEvent
 
         event = WsStateChangeEvent(old_state="working", new_state="waiting_user")
         self.assertEqual(event.type, "state_change")
 
-    def test_ws_ui_log_event(self):
-        from linhai.webui.schemas import WsUiLogEvent
+    def test_webui_user_message(self):
+        from linhai.webui.schemas import WebuiUserMessage
 
-        event = WsUiLogEvent(level="INFO", content="test")
-        self.assertEqual(event.type, "ui_log")
+        msg: WebuiUserMessage = {"type": "user", "content": "hello"}
+        self.assertEqual(msg["type"], "user")
+
+    def test_webui_agent_message(self):
+        from linhai.webui.schemas import WebuiAgentMessage
+
+        msg: WebuiAgentMessage = {"type": "agent", "content": "", "segments": []}
+        self.assertEqual(msg["type"], "agent")
+        self.assertEqual(msg["segments"], [])
+
+    def test_webui_notification_message(self):
+        from linhai.webui.schemas import WebuiNotificationMessage
+
+        msg: WebuiNotificationMessage = {
+            "type": "notification",
+            "level": "INFO",
+            "content": "test",
+        }
+        self.assertEqual(msg["type"], "notification")
+        self.assertEqual(msg["level"], "INFO")
 
 
 class TestPlainTaskSupervisor(unittest.IsolatedAsyncioTestCase):

@@ -1,5 +1,3 @@
-"""AgentManager模块，管理多个Agent实例的生命周期。"""
-
 import asyncio
 import uuid
 from datetime import datetime
@@ -16,11 +14,16 @@ from linhai.agent.create import (
 )
 from linhai.agent.main import Agent
 from linhai.config import load_config
-from linhai.base import UserMessage, Message, AssistantMessage, SystemMessage
+from linhai.jsonpubsub import JsonPublisher, TaggedEvent
+from .schemas import (
+    WebuiUserMessage,
+    WebuiNotificationMessage,
+    WebuiAgentMessage,
+    WebuiSegmentType,
+)
 
 
 class AgentSession:
-    """封装单个Agent及其运行任务。"""
 
     def __init__(
         self,
@@ -34,9 +37,11 @@ class AgentSession:
         self._task_name = task_name
         self._manager = manager
         self.created_at = datetime.now()
+        self._messages_data: dict = {"messages": []}
+        self._publisher = JsonPublisher(self._messages_data)
+        self._lock = asyncio.Lock()
 
     def get_state(self) -> str:
-        """获取Agent当前状态。"""
         return self.agent.state_machine.state
 
     @property
@@ -48,35 +53,49 @@ class AgentSession:
         return llm_instance.get_name()
 
     async def send_message(self, content: str) -> None:
+        from linhai.base import UserMessage
+
         await self.registry.send("user_message", UserMessage(content))
+        self.add_user_message(content)
 
-    def get_messages(self) -> list[dict]:
-        result: list[dict] = []
-        for msg in self.agent.message_processor.get_messages():
-            role = self._get_message_role(msg)
-            if role is None:
-                continue
-            content = self._get_message_content(msg)
-            if content is None:
-                continue
-            result.append({"role": role, "content": content})
-        return result
+    def add_user_message(self, content: str) -> None:
+        msg: WebuiUserMessage = {"type": "user", "content": content}
+        self._messages_data["messages"].append(msg)
 
-    @staticmethod
-    def _get_message_role(msg: Message) -> Optional[str]:
-        if isinstance(msg, SystemMessage):
-            return "system"
-        if isinstance(msg, UserMessage):
-            return "user"
-        if isinstance(msg, AssistantMessage):
-            return "assistant"
-        return None
+    def add_notification(self, level: str, content: str) -> None:
+        msg: WebuiNotificationMessage = {
+            "type": "notification",
+            "level": level,
+            "content": content,
+        }
+        self._messages_data["messages"].append(msg)
 
-    @staticmethod
-    def _get_message_content(msg: Message) -> Optional[str]:
-        if isinstance(msg, (UserMessage, AssistantMessage)):
-            return msg.message
-        return msg.get_content()
+    def add_agent_message(self) -> int:
+        msg: WebuiAgentMessage = {
+            "type": "agent",
+            "content": "",
+            "segments": [],
+        }
+        self._messages_data["messages"].append(msg)
+        return len(self._messages_data["messages"]) - 1
+
+    def add_segment_to_agent_message(
+        self, agent_idx: int, segment: WebuiSegmentType
+    ) -> None:
+        agent_msg = self._messages_data["messages"][agent_idx]
+        agent_msg["segments"].append(segment)
+
+    def update_agent_message_content(self, agent_idx: int, content: str) -> None:
+        agent_msg = self._messages_data["messages"][agent_idx]
+        agent_msg["content"] = content
+
+    async def get_diff(self) -> list[TaggedEvent]:
+        async with self._lock:
+            return self._publisher.calculate_diff()
+
+    async def handle_reset(self) -> TaggedEvent:
+        async with self._lock:
+            return self._publisher.reset()
 
     def get_context_stats(self) -> dict:
         agent = self.agent
@@ -168,7 +187,6 @@ class AgentSession:
         return result
 
     async def stop(self) -> None:
-        """停止Agent并清理资源。"""
         task = self._manager._task_supervisor.tasks.get(self._task_name)
         if task is not None and not task.done():
             self._manager._task_supervisor.cancel(self._task_name)
@@ -176,7 +194,6 @@ class AgentSession:
 
 
 class AgentManager:
-    """管理多个Agent实例的生命周期。"""
 
     def __init__(self, config_path: Path):
         self.sessions: dict[str, AgentSession] = {}
@@ -186,7 +203,6 @@ class AgentManager:
         self._task_supervisor = PlainTaskSupervisor()
 
     def _create_registry(self) -> Registry:
-        """创建独立的Registry实例。"""
         registry = Registry()
         registry.register_member("task_supervisor", self._task_supervisor)
         TokenManager(registry)
@@ -197,7 +213,6 @@ class AgentManager:
         profile_name: Optional[str] = None,
         init_messages: Optional[list[str]] = None,
     ) -> AgentSession:
-        """创建新的Agent实例。"""
         agent_id = str(uuid.uuid4())
         registry = self._create_registry()
 
@@ -261,11 +276,9 @@ class AgentManager:
         return self.sessions.get(agent_id)
 
     def list_agents(self) -> list[AgentSession]:
-        """列出所有Agent实例。"""
         return list(self.sessions.values())
 
     async def delete_agent(self, agent_id: str) -> bool:
-        """停止并删除指定的Agent。"""
         session = self.sessions.get(agent_id)
         if session is None:
             return False

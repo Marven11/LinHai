@@ -154,6 +154,7 @@ class JsonSubscriber:
                 event["event"]["action"] == "replace" and event["event"]["keys"] == []
             )
             self.data = event["event"]["value"]
+            self.event_counter = 0
             return
         if event["idx"] != self.event_counter:
             raise RuntimeError("Some events are missing")
@@ -194,9 +195,7 @@ def example():
         sub.update_data(e)
     assert sub.data == {"bio": "litiansuo is making some diff"}, f"{sub.data=}"
 
-    data["info"] = [
-        {"name": "litiansuo", "age": 24}
-    ]
+    data["info"] = [{"name": "litiansuo", "age": 24}]
     for e in pub.calculate_diff():
         sub.update_data(e)
 
