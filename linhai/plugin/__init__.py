@@ -47,7 +47,7 @@ from .sudo_stdio_checker import SudoStdioCheckerPlugin
 from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
 from .system_message_leaning import MachineControlIntroductionPlugin
-from .planning import TodolistCheckerPlugin
+from .planning import TodolistCheckerPlugin, PlanningHeadingCheckPlugin
 from .reminder import ReminderPlugin, ReminderWriteGuardPlugin
 from .python_chore import PythonCommentCheckerPlugin
 from .catgirl_tone import CatgirlTonePlugin
@@ -94,6 +94,7 @@ __all__ = [
     "VolcanoDeepseekFixPlugin",
     "MachineControlIntroductionPlugin",
     "TodolistCheckerPlugin",
+    "PlanningHeadingCheckPlugin",
     "ReminderPlugin",
     "ReminderWriteGuardPlugin",
     "is_small_file",
