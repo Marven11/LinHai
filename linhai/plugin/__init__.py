@@ -43,6 +43,7 @@ from .security_config import (
 from .file_permission_plugin import FileOperationPermissionPlugin
 
 from .sudo_stdio_checker import SudoStdioCheckerPlugin
+from .sudo_bash_hint import SudoBashHintPlugin
 
 from .afk_plugin import AfkPlugin
 from .claw import ClawHeartbeatPlugin
@@ -104,4 +105,5 @@ __all__ = [
     "READ_FILE_COMMANDS",
     "PythonCommentCheckerPlugin",
     "CatgirlTonePlugin",
+    "SudoBashHintPlugin",
 ]

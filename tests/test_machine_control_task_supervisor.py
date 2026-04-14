@@ -144,7 +144,7 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl("host", registry)
+        control = SshMachineControl(registry=registry, host="host")
         call_count = 0
 
         async def mock_call_tool(name, args):
@@ -175,7 +175,7 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl("host", registry)
+        control = SshMachineControl(registry=registry, host="host")
         test_data = b"y" * 100
 
         async def mock_call_tool(name, args):
@@ -201,7 +201,7 @@ class TestSshHostUploadFailure(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl("host", registry)
+        control = SshMachineControl(registry=registry, host="host")
 
         async def mock_call_tool(name, args):
             if name == "create_temp_dir":

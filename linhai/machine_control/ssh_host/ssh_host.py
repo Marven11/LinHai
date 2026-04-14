@@ -18,8 +18,8 @@ class SshMachineControl:
 
     def __init__(
         self,
-        host: str,
         registry: Registry,
+        host: str = "",
         port: int = 22,
         username: Optional[str] = None,
     ):

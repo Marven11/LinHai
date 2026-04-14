@@ -54,6 +54,26 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.switch_machine(machine_id)
 
     @toolset.register_tool(
+        name="connect_bash_as_machine",
+        desc="连接已经打开的任何bash进程，部署jsonrpc远控进程并操控，可用于sudo bash, docker exec -it sh, adb shell, nc -l等任何场景打开的bash",
+        args={
+            "machine_id": ToolArgInfo(desc="新机器的ID", type="str"),
+            "pid": ToolArgInfo(desc="要连接的bash进程PID", type="str"),
+            "source_machine": ToolArgInfo(
+                desc="进程所在的机器ID，默认当前机器", type="str"
+            ),
+        },
+        required_args=["machine_id", "pid"],
+        conflict_with=None,
+    )
+    async def connect_bash_as_machine_tool(
+        machine_id: str,
+        pid: str,
+        source_machine: Optional[str] = None,
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return await machine_control.add_bash_machine(machine_id, pid, source_machine)
+
+    @toolset.register_tool(
         name="connect_ssh_machine",
         desc="连接到SSH机器并添加到可用机器列表",
         args={
@@ -672,6 +692,51 @@ class MachineControl:
 
         return ToolResultSuccess(content=f"已切换到机器: {machine_id}")
 
+    async def add_bash_machine(
+        self,
+        machine_id: str,
+        pid: str,
+        source_machine: Optional[str] = None,
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if machine_id in self.machines:
+            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
+
+        source_machine_id = source_machine or self.target_machine
+        if source_machine_id not in self.machines:
+            return ToolResultFailed(content=f"源机器不存在: {source_machine_id}")
+
+        source_host = self.machines[source_machine_id]
+        process = source_host.get_process(pid)
+        if process is None:
+            return ToolResultFailed(
+                content=f"进程不存在: {pid} (在机器 {source_machine_id} 上)"
+            )
+
+        bash_control = SshMachineControl(
+            registry=self.registry,
+        )
+
+        connected = await bash_control.connect(process)
+        if not connected:
+            return ToolResultFailed(content=f"连接bash进程失败: PID {pid}")
+
+        self.machines[machine_id] = bash_control
+        self.machine_descriptions[machine_id] = (
+            f"Bash进程主机 (PID: {pid}, 来自: {source_machine_id})"
+        )
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(
+                level="INFO",
+                content=f"Bash连接成功: 已连接bash进程为机器 {machine_id} (PID: {pid})",
+            ),
+        )
+
+        return ToolResultSuccess(
+            content=f"已成功连接bash进程为机器: {machine_id} (PID: {pid})"
+        )
+
     async def add_ssh_machine(
         self,
         machine_id: str,
@@ -683,7 +748,7 @@ class MachineControl:
             return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
 
         ssh_control = SshMachineControl(
-            host=host, registry=self.registry, port=port, username=username
+            registry=self.registry, host=host, port=port, username=username
         )
 
         ssh_cmd = [
