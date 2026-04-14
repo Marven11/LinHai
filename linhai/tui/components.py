@@ -15,6 +15,7 @@ from textual import work, events
 from textual.app import ComposeResult
 from textual.timer import Timer
 from textual.widgets import Markdown, Static, TextArea
+from textual.widgets._markdown import MarkdownStream
 from textual.widgets.markdown import MarkdownBlock
 
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
@@ -741,12 +742,13 @@ class NormalContentWidget(Markdown):
     ):
         super().__init__()
         self.theme = theme
-        self.content_str = ""
         self.display_name = sender_name
         self.role = role
-        self.timer = None
+        self.timer: Timer | None = None
         self._segment = segment
         self.get_refresh_interval = get_refresh_interval
+        self._stream: MarkdownStream | None = None
+        self._streamed_content = ""
         self.add_class(f"{self.role}-message")
         self.border_title = self.display_name
 
@@ -757,26 +759,38 @@ class NormalContentWidget(Markdown):
         return Markdown.BLOCKS[block_name]
 
     def on_mount(self) -> None:
-        """组件挂载时开始显示"""
+        """组件挂载时开始流式显示"""
+        self._stream = Markdown.get_stream(self)
         refresh_interval = self.get_refresh_interval()
         self.timer = self.set_interval(refresh_interval, self.update_display)
 
-    def update_display(self) -> None:
-        """更新普通消息显示，按字符换行"""
-        if self._segment["is_finished"] and self.timer:
-            self.timer.stop()
-
+    async def update_display(self) -> None:
+        """增量更新普通消息显示"""
         segment_content = self._segment["content"]
-        if segment_content != self.content_str:
-            self.content_str = segment_content
 
-        content_to_display = self.content_str.strip()
+        if segment_content != self._streamed_content:
+            new_content = segment_content.removeprefix(self._streamed_content)
+            self._streamed_content = segment_content
 
-        self.update(content_to_display)
+            if self._segment["is_finished"]:
+                if self._stream is not None:
+                    await self._stream.stop()
+                    self._stream = None
+                self.update(segment_content.strip())
+                if self.timer:
+                    self.timer.stop()
+            elif new_content and self._stream is not None:
+                await self._stream.write(new_content)
+        elif self._segment["is_finished"] and self.timer:
+            if self._stream is not None:
+                await self._stream.stop()
+                self._stream = None
+            self.update(segment_content.strip())
+            self.timer.stop()
 
     def content_is_empty(self) -> bool:
         """检查内容是否为空或只包含空白字符"""
-        return not self.content_str.strip()
+        return not self._streamed_content.strip()
 
     def stop_timer(self) -> None:
         """停止timer，防止删除后继续更新"""
