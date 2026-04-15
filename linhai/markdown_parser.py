@@ -111,8 +111,13 @@ def extract_tool_calls_with_errors(
 
     for i, block in enumerate(renderer.code_blocks):
         if block["language"].lower() == language.lower():
+            content = block["content"]
+            stripped = content.strip()
+            if stripped != content:
+                errors.append(f"第{i}个工具调用有多余的空白字符，已经去除")
+                content = stripped
             try:
-                data = json.loads(block["content"])
+                data = json.loads(content)
 
                 if not isinstance(data, dict):
                     errors.append(
