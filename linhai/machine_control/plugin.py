@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import TYPE_CHECKING, Optional, Literal, Union
 from linhai.agent import Agent
 from linhai.agent.lifecycle import Lifecycle
 from linhai.base import Message
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
+
+from linhai.tool.base import ToolResultFailed
+from .ssh_host.ssh_host import SshMachineControl
 
 if TYPE_CHECKING:
     from .main import MachineControl
@@ -93,3 +98,60 @@ class MachineControlPlugin:
         """注册插件回调。"""
         lifecycle.before_message_generation.register(self.before_message_generation)
         lifecycle.after_toolcall.register(self.after_toolcall)
+
+
+class MachineHeartbeatPlugin:
+    """多跳机器控制heartbeat插件，定期发送ping保持连接活跃。"""
+
+    CURRENT_MACHINE_INTERVAL = 5.0
+    OTHER_MACHINE_INTERVAL = 30.0
+
+    def __init__(self, registry: Registry, machine_control: MachineControl):
+        self.registry = registry
+        self.machine_control = machine_control
+        self._last_heartbeat: dict[str, float] = {}
+        self._inflight: set[str] = set()
+
+    async def _before_agent_loop(self, agent: Agent) -> None:
+        from linhai.task_supervisor import TaskSupervisor
+
+        ts = self.registry.get_member_typechecked("task_supervisor", TaskSupervisor)
+        ts.create_supervised_task("machine_heartbeat", self._heartbeat_loop)
+
+    async def _heartbeat_loop(self) -> None:
+        while True:
+            await asyncio.sleep(1.0)
+            now = time.monotonic()
+            for machine_id in list(self.machine_control.machines.keys()):
+                if machine_id == "master_host":
+                    continue
+                if machine_id in self._inflight:
+                    continue
+
+                host = self.machine_control.machines.get(machine_id)
+                if not isinstance(host, SshMachineControl):
+                    continue
+
+                is_current = machine_id == self.machine_control.target_machine
+                interval = (
+                    self.CURRENT_MACHINE_INTERVAL
+                    if is_current
+                    else self.OTHER_MACHINE_INTERVAL
+                )
+                last = self._last_heartbeat.get(machine_id, 0)
+                if now - last < interval:
+                    continue
+
+                self._inflight.add(machine_id)
+                result = await host.call_tool("ping", {})
+                self._inflight.discard(machine_id)
+                if not isinstance(result, ToolResultFailed):
+                    self._last_heartbeat[machine_id] = time.monotonic()
+                    for source_id in self.machine_control.get_source_chain(machine_id):
+                        if source_id != "master_host":
+                            self._last_heartbeat[source_id] = self._last_heartbeat[
+                                machine_id
+                            ]
+
+    def register(self, lifecycle: Lifecycle) -> None:
+        lifecycle.before_agent_loop.register(self._before_agent_loop)

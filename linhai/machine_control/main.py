@@ -8,7 +8,7 @@ from linhai.utils.common import UiNotice
 from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
-from .plugin import MachineControlPlugin
+from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
 
 
 class MachineControl:
@@ -22,6 +22,9 @@ class MachineControl:
         }
         self.machine_descriptions: Dict[str, str] = {
             "master_host": "本地主机",
+        }
+        self.source_machines: Dict[str, str | None] = {
+            "master_host": None,
         }
         registry.register_member("machine_control", self)
 
@@ -72,6 +75,7 @@ class MachineControl:
             return ToolResultFailed(content=f"连接bash进程失败: PID {pid}")
 
         self.machines[machine_id] = bash_control
+        self.source_machines[machine_id] = source_machine_id
         self.machine_descriptions[machine_id] = (
             f"Bash进程主机 (PID: {pid}, 来自: {source_machine_id})"
         )
@@ -140,6 +144,7 @@ class MachineControl:
             return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
 
         self.machines[machine_id] = ssh_control
+        self.source_machines[machine_id] = self.target_machine
         self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
 
         await self.registry.send_if_exists(
@@ -173,6 +178,7 @@ class MachineControl:
         await ether_control.initialize()
 
         self.machines[machine_id] = ether_control
+        self.source_machines[machine_id] = None
         self.machine_descriptions[machine_id] = (
             f"EtherGhost webshell主机 (类型: {session_type})"
         )
@@ -298,7 +304,19 @@ class MachineControl:
         except Exception as e:
             return ToolResultFailed(content=f"文件传输失败: {e}")
 
+    def get_source_chain(self, machine_id: str) -> list[str]:
+        chain: list[str] = []
+        visited: set[str] = set()
+        current = self.source_machines.get(machine_id)
+        while current is not None and current not in visited:
+            visited.add(current)
+            chain.append(current)
+            current = self.source_machines.get(current)
+        return chain
+
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
         plugin = MachineControlPlugin(self.registry, self)
         plugin.register(lifecycle)
+        heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
+        heartbeat_plugin.register(lifecycle)
