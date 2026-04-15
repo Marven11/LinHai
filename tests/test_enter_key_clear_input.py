@@ -8,6 +8,7 @@ from linhai.tui.app import TUIApp
 from linhai.registry import Registry
 from linhai.config import TUIConfig
 from linhai.tui.messages_list import MessagesList
+from linhai.sandbox import NoSandbox
 
 
 class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
@@ -40,7 +41,7 @@ class TestEnterKeyClearsInput(unittest.IsolatedAsyncioTestCase):
         self.registry.register_member(
             "agent_context_orchestration", self.mock_orchestration
         )
-        self.registry.register_member("process_sandbox", None)
+        self.registry.register_member("process_sandbox", NoSandbox())
 
         # 模拟cli_args
         import argparse
