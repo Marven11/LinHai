@@ -275,7 +275,7 @@ async def test_webui_streaming_e2e():
             if "event" in data:
                 sub.update_data(data)
             await ws.send(
-                json.dumps({"type": "user_message", "content": "Say hello in one word"})
+                json.dumps({"type": "user_message", "content": "Introduce yourself with 50 words"})
             )
             finished = False
             start_time = time.time()
@@ -300,12 +300,12 @@ async def test_webui_streaming_e2e():
         assert finished, "Agent did not produce response"
         messages = sub.data.get("messages", [])
         user_msgs = [m for m in messages if m.get("type") == "user"]
-        assert any(m.get("content") == "Say hello in one word" for m in user_msgs)
+        assert any(m.get("content") == "Introduce yourself with 50 words" for m in user_msgs)
         agent_msgs = [m for m in messages if m.get("type") == "agent"]
         assert len(agent_msgs) >= 1, f"No agent messages found: {messages}"
         assert any(
-            len(m.get("content", "")) > 0 for m in agent_msgs
-        ), f"Agent message has empty content: {agent_msgs}"
+            len(m.get("content", "")) > 10 for m in agent_msgs
+        ), f"Agent message has short content: {agent_msgs}"
         session = routes._manager.sessions.get(agent_id)
         assert session is not None
         server_data = copy.deepcopy(session._messages_data)
