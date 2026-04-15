@@ -31,13 +31,6 @@ class TestSshTrojanTransport(unittest.TestCase):
             return_value=self.mock_task_supervisor
         )
 
-        self.transport = SshTrojanTransport(
-            host="test-host",
-            registry=self.registry,
-            port=22,
-            username="testuser",
-        )
-
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
@@ -86,6 +79,10 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
+            transport = SshTrojanTransport(
+                registry=self.registry,
+                process=mock_process,
+            )
 
             with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
                 with patch("pathlib.Path.exists", return_value=True):
@@ -98,11 +95,11 @@ class TestSshTrojanTransport(unittest.TestCase):
                                     mock_loop_instance = Mock()
                                     mock_loop_instance.time = Mock(return_value=0)
                                     mock_loop.return_value = mock_loop_instance
-                                    result = await self.transport.connect(mock_process)
+                                    result = await transport.connect()
                                     self.assertTrue(result)
-                                    self.assertTrue(self.transport.is_connected())
+                                    self.assertTrue(transport.is_connected())
                                     self.assertTrue(self.send_if_exists_mock.called)
-                                    await self.transport.disconnect()
+                                    await transport.disconnect()
 
         self.loop.run_until_complete(test())
 
@@ -118,6 +115,10 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
+            transport = SshTrojanTransport(
+                registry=self.registry,
+                process=mock_process,
+            )
 
             with patch("tempfile.mktemp", return_value="/tmp/trojan_local.py"):
                 with patch("pathlib.Path.exists", return_value=True):
@@ -130,9 +131,9 @@ class TestSshTrojanTransport(unittest.TestCase):
                                     mock_loop_instance = Mock()
                                     mock_loop_instance.time = Mock(return_value=0)
                                     mock_loop.return_value = mock_loop_instance
-                                    result = await self.transport.connect(mock_process)
+                                    result = await transport.connect()
                                     self.assertFalse(result)
-                                    self.assertFalse(self.transport.is_connected())
+                                    self.assertFalse(transport.is_connected())
 
         self.loop.run_until_complete(test())
 
@@ -141,6 +142,10 @@ class TestSshTrojanTransport(unittest.TestCase):
         async def test():
             empty_read = ProcessReadResult(pid="1", success=True, stdout="", stderr="")
             mock_process = self._make_mock_process([empty_read, empty_read])
+            transport = SshTrojanTransport(
+                registry=self.registry,
+                process=mock_process,
+            )
 
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop_instance = Mock()
@@ -148,9 +153,7 @@ class TestSshTrojanTransport(unittest.TestCase):
                 mock_loop_instance.time = Mock(side_effect=lambda: next(time_values))
                 mock_loop.return_value = mock_loop_instance
 
-                self.transport._bash_process = mock_process
-
-                exit_code, output, error = await self.transport._execute_in_bash(
+                exit_code, output, error = await transport._execute_in_bash(
                     "test command", timeout=0.5
                 )
 
@@ -166,25 +169,31 @@ class TestSshTrojanTransport(unittest.TestCase):
             mock_trojan_transport.is_connected = Mock(return_value=True)
 
             mock_bash_process = AsyncMock()
+            transport = SshTrojanTransport(
+                registry=self.registry,
+                process=mock_bash_process,
+            )
 
-            self.transport._trojan_transport = mock_trojan_transport
-            self.transport._bash_process = mock_bash_process
+            transport._trojan_transport = mock_trojan_transport
 
-            await self.transport.disconnect()
+            await transport.disconnect()
 
             mock_trojan_transport.disconnect.assert_called_once()
-
-            self.assertIsNone(self.transport._trojan_transport)
-            self.assertIsNone(self.transport._bash_process)
+            self.assertIsNone(transport._trojan_transport)
 
         self.loop.run_until_complete(test())
 
     def test_send_request_not_connected(self):
         async def test():
-            self.transport._trojan_transport = None
+            mock_process = self._make_mock_process([])
+            transport = SshTrojanTransport(
+                registry=self.registry,
+                process=mock_process,
+            )
+            transport._trojan_transport = None
 
             with self.assertRaises(ConnectionError) as context:
-                await self.transport.send_request("test_method", {"param": "value"})
+                await transport.send_request("test_method", {"param": "value"})
 
             self.assertIn("未建立连接", str(context.exception))
 

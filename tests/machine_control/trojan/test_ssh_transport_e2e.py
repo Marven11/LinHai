@@ -14,10 +14,6 @@ class TestSshTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
 
-        transport = SshTrojanTransport(
-            registry=registry,
-        )
-
         trojan_source = (
             Path(__file__).parent.parent.parent.parent
             / "linhai"
@@ -38,11 +34,15 @@ class TestSshTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
         )
 
         adapter = _AsyncioProcessAdapter(process)
-        return transport, adapter
+        transport = SshTrojanTransport(
+            registry=registry,
+            process=adapter,
+        )
+        return transport
 
     async def test_connect_with_local_bash(self):
-        transport, adapter = await self._create_transport_with_bash()
-        result = await transport.connect(adapter)
+        transport = await self._create_transport_with_bash()
+        result = await transport.connect()
         self.assertTrue(result)
         self.assertTrue(transport.is_connected())
 
@@ -54,8 +54,8 @@ class TestSshTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
             await transport.disconnect()
 
     async def test_process_create_with_local_bash(self):
-        transport, adapter = await self._create_transport_with_bash()
-        result = await transport.connect(adapter)
+        transport = await self._create_transport_with_bash()
+        result = await transport.connect()
         self.assertTrue(result)
 
         try:
