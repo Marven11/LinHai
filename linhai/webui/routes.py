@@ -1,6 +1,7 @@
 import anyio
 import asyncio
 import json
+import time
 from typing import Optional
 from fastapi import APIRouter, HTTPException, WebSocket
 
@@ -17,9 +18,8 @@ from .schemas import (
     ProfileInfo,
     LlmInfo,
 )
-from .agent_manager import AgentManager, AgentSession
+from .agent_manager import AgentManager
 from ..config import get_default_config_path
-from ..parsed_message import Segment
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 config_router = APIRouter(prefix="/api", tags=["config"])
@@ -101,7 +101,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     if "ui_log" not in registry.queues:
         registry.register_queue("ui_log")
 
-    current_agent_idx: int | None = None
+    if "parsed_agent_answer" not in registry.queues:
+        registry.register_queue("parsed_agent_answer")
+
     prev_state: Optional[str] = None
     client_disconnected = anyio.Event()
 
@@ -122,34 +124,41 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     reset_event = await session.handle_reset()
                     await websocket.send_json(reset_event)
 
-    async def on_new_parsed_answer(parsed_answer):
-        nonlocal current_agent_idx
-        current_agent_idx = session.add_agent_message()
+    async def handle_parsed_answer(parsed_answer):
+        agent_idx = session.add_agent_message()
 
-    async def on_segment(parsed_answer, segment: Segment):
-        if current_agent_idx is not None:
-            session.add_segment_to_agent_message(current_agent_idx, segment)
+        async def receive_segments():
+            while True:
+                segment = await parsed_answer.segment_queue.get()
+                session.add_segment_to_agent_message(agent_idx, segment)
+                content = parsed_answer._answer.get_current_content()
+                session.update_agent_message_content(agent_idx, content)
 
-    async def on_parsing(parsed_answer):
-        nonlocal current_agent_idx
-        if current_agent_idx is not None:
-            content = parsed_answer._answer.get_current_content()
-            session.update_agent_message_content(current_agent_idx, content)
-            current_agent_idx = None
+        receive_task = asyncio.create_task(receive_segments())
+        await parsed_answer.wait_parsing()
+        receive_task.cancel()
+        try:
+            await receive_task
+        except asyncio.CancelledError:
+            pass
 
-    session.agent.lifecycle.after_new_parsed_answer.register(on_new_parsed_answer)
-    session.agent.lifecycle.after_segment.register(on_segment)
-    session.agent.lifecycle.after_parsing.register(on_parsing)
+        content = parsed_answer._answer.get_current_content()
+        session.update_agent_message_content(agent_idx, content)
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(monitor_disconnect)
 
         while not client_disconnected.is_set():
+            start_time = time.perf_counter()
             events: list = []
 
             tagged_events = await session.get_diff()
             for tagged_event in tagged_events:
                 events.append(tagged_event)
+
+            while not registry.is_empty("parsed_agent_answer"):
+                parsed_answer = await registry.receive("parsed_agent_answer")
+                tg.start_soon(handle_parsed_answer, parsed_answer)
 
             while not registry.is_empty("ui_log"):
                 notice = await registry.receive("ui_log")
@@ -170,16 +179,11 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
             for event in events:
                 await websocket.send_json(event)
-
-            await asyncio.sleep(0.1)
+            elapsed = time.perf_counter() - start_time
+            if elapsed < 0.1:
+                await asyncio.sleep(0.1 - elapsed)
 
         tg.cancel_scope.cancel()
-
-    session.agent.lifecycle.after_new_parsed_answer._callbacks.remove(
-        on_new_parsed_answer
-    )
-    session.agent.lifecycle.after_segment._callbacks.remove(on_segment)
-    session.agent.lifecycle.after_parsing._callbacks.remove(on_parsing)
 
 
 @router.get("/{agent_id}/context", response_model=ContextStatsResponse)
