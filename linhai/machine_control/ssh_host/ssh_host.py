@@ -83,6 +83,9 @@ class SshMachineControl:
         else:
             return ToolResultSuccess(content=str(result))
 
+    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+        return await self.call_tool("ping", {})
+
     async def close(self):
         """关闭连接。"""
         if self.transport:

@@ -1,7 +1,7 @@
 import asyncio
 import time
 import unittest
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock
 
 from linhai.machine_control.main import MachineControl
 from linhai.machine_control.plugin import MachineHeartbeatPlugin
@@ -55,59 +55,140 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
         self.assertEqual(self.plugin.OTHER_MACHINE_INTERVAL, 30.0)
 
     def test_heartbeat_skips_master_host(self):
-        async def test():
-            self.mc.target_machine = "master_host"
-            self.plugin._last_heartbeat = {}
-            self.plugin._inflight = set()
-            await asyncio.sleep(0.1)
-            self.assertEqual(self.plugin._last_heartbeat, {})
+        self.plugin._next_heartbeat = {}
+        now = time.monotonic()
+        new_machines = {
+            mid: now
+            for mid in self.mc.machines
+            if mid != "master_host" and mid not in self.plugin._next_heartbeat
+        }
+        self.plugin._next_heartbeat.update(new_machines)
+        self.assertEqual(self.plugin._next_heartbeat, {})
 
-        asyncio.run(test())
+    def test_discover_new_machines(self):
+        mock_host = AsyncMock()
+        self.mc.machines["ssh_hop1"] = mock_host
+        self.mc.source_machines["ssh_hop1"] = "master_host"
+
+        now = time.monotonic()
+        new_machines = {
+            mid: now
+            for mid in self.mc.machines
+            if mid != "master_host" and mid not in self.plugin._next_heartbeat
+        }
+        self.plugin._next_heartbeat.update(new_machines)
+        self.assertIn("ssh_hop1", self.plugin._next_heartbeat)
+        self.assertEqual(self.plugin._next_heartbeat["ssh_hop1"], now)
+
+    def test_discover_skips_already_known(self):
+        mock_host = AsyncMock()
+        self.mc.machines["ssh_hop1"] = mock_host
+        self.mc.source_machines["ssh_hop1"] = "master_host"
+
+        now = time.monotonic()
+        self.plugin._next_heartbeat["ssh_hop1"] = now + 100
+        new_machines = {
+            mid: now
+            for mid in self.mc.machines
+            if mid != "master_host" and mid not in self.plugin._next_heartbeat
+        }
+        self.plugin._next_heartbeat.update(new_machines)
+        self.assertEqual(self.plugin._next_heartbeat["ssh_hop1"], now + 100)
+
+    def test_pick_earliest_due(self):
+        now = time.monotonic()
+        self.plugin._next_heartbeat = {
+            "a": now + 10,
+            "b": now - 1,
+            "c": now - 5,
+        }
+        result = self.plugin._pick_earliest_due(now)
+        self.assertEqual(result, "c")
+
+    def test_pick_earliest_due_none_ready(self):
+        now = time.monotonic()
+        self.plugin._next_heartbeat = {
+            "a": now + 10,
+            "b": now + 5,
+        }
+        result = self.plugin._pick_earliest_due(now)
+        self.assertIsNone(result)
+
+    def test_pick_earliest_due_empty(self):
+        result = self.plugin._pick_earliest_due(time.monotonic())
+        self.assertIsNone(result)
 
     def test_heartbeat_updates_source_chain_on_success(self):
         async def test():
             mock_host = AsyncMock()
-            mock_host.call_tool = AsyncMock(
-                return_value=ToolResultSuccess(content="pong")
-            )
+            mock_host.ping = AsyncMock(return_value=ToolResultSuccess(content="pong"))
             self.mc.machines["ssh_bash_hop2"] = mock_host
             self.mc.source_machines["ssh_hop1"] = "master_host"
             self.mc.source_machines["ssh_bash_hop2"] = "ssh_hop1"
             self.mc.target_machine = "ssh_bash_hop2"
 
-            with patch(
-                "linhai.machine_control.plugin.SshMachineControl",
-                type(mock_host),
-            ):
-                result = await mock_host.call_tool("ping", {})
-                self.assertNotIsInstance(result, ToolResultFailed)
+            self.plugin._next_heartbeat["ssh_bash_hop2"] = 0
+            self.plugin._next_heartbeat["ssh_hop1"] = 0
 
-                self.plugin._last_heartbeat["ssh_bash_hop2"] = time.monotonic()
-                for source_id in self.mc.get_source_chain("ssh_bash_hop2"):
-                    if source_id != "master_host":
-                        self.plugin._last_heartbeat[source_id] = (
-                            self.plugin._last_heartbeat["ssh_bash_hop2"]
-                        )
+            earliest_id = self.plugin._pick_earliest_due(time.monotonic())
+            self.assertEqual(earliest_id, "ssh_bash_hop2")
 
-                self.assertIn("ssh_bash_hop2", self.plugin._last_heartbeat)
-                self.assertIn("ssh_hop1", self.plugin._last_heartbeat)
-                self.assertNotIn("master_host", self.plugin._last_heartbeat)
+            result = await mock_host.ping()
+            self.assertNotIsInstance(result, ToolResultFailed)
+
+            interval = self.plugin._get_interval("ssh_bash_hop2")
+            next_time = time.monotonic() + interval
+            self.plugin._next_heartbeat["ssh_bash_hop2"] = next_time
+            for source_id in self.mc.get_source_chain("ssh_bash_hop2"):
+                if (
+                    source_id != "master_host"
+                    and source_id in self.plugin._next_heartbeat
+                ):
+                    source_next = time.monotonic() + self.plugin._get_interval(
+                        source_id
+                    )
+                    self.plugin._next_heartbeat[source_id] = max(
+                        self.plugin._next_heartbeat[source_id], source_next
+                    )
+
+            self.assertIn("ssh_bash_hop2", self.plugin._next_heartbeat)
+            self.assertIn("ssh_hop1", self.plugin._next_heartbeat)
+            self.assertNotIn("master_host", self.plugin._next_heartbeat)
+
+            self.assertGreater(
+                self.plugin._next_heartbeat["ssh_bash_hop2"], time.monotonic()
+            )
+            self.assertGreater(
+                self.plugin._next_heartbeat["ssh_hop1"], time.monotonic()
+            )
 
         asyncio.run(test())
 
     def test_heartbeat_no_update_on_failure(self):
         async def test():
             mock_host = AsyncMock()
-            mock_host.call_tool = AsyncMock(
+            mock_host.ping = AsyncMock(
                 return_value=ToolResultFailed(content="connection lost")
             )
             self.mc.machines["ssh_hop1"] = mock_host
             self.mc.source_machines["ssh_hop1"] = "master_host"
             self.mc.target_machine = "ssh_hop1"
 
-            result = await mock_host.call_tool("ping", {})
+            self.plugin._next_heartbeat["ssh_hop1"] = 0
+
+            earliest_id = self.plugin._pick_earliest_due(time.monotonic())
+            self.assertEqual(earliest_id, "ssh_hop1")
+
+            result = await mock_host.ping()
             self.assertIsInstance(result, ToolResultFailed)
-            self.assertEqual(self.plugin._last_heartbeat, {})
+
+            interval = self.plugin._get_interval("ssh_hop1")
+            next_time = time.monotonic() + interval
+            self.plugin._next_heartbeat["ssh_hop1"] = next_time
+
+            self.assertGreater(
+                self.plugin._next_heartbeat["ssh_hop1"], time.monotonic()
+            )
 
         asyncio.run(test())
 

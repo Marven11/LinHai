@@ -267,6 +267,13 @@ class EtherGhostMachineControl(HostControl):
             return ToolResultFailed(content=f"目标机器上未安装sed (uuid: {self._uuid})")
         return ToolResultSuccess(content=result)
 
+    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+        if self.session is None:
+            return ToolResultFailed(content="Session未初始化")
+        if await self.session.test_usablility():
+            return ToolResultSuccess(content="pong")
+        return ToolResultFailed(content="ping failed: session not usable")
+
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:

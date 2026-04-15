@@ -265,6 +265,9 @@ class MasterHostControl:
         except Exception as e:
             return ToolResultFailed(content=f"上传文件失败: {e}")
 
+    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+        return ToolResultSuccess(content="pong")
+
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
