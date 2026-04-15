@@ -381,6 +381,50 @@ EXAMPLES_SECRET_USAGE = """
 ```
 """
 
+EXAMPLE_MULTIHOP_MACHINES = """
+```json toolcall
+{"name": "connect_ssh_machine", "arguments": {"machine_id": "ssh_hop1", "host": "example.com", "username": "foobar"}}
+```
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "ssh_hop1"}}
+```
+
+如果成功的话应该可以切换到ssh_hop1上，直接在ssh_hop1上创建`sudo -S bash`以输入密码
+
+```json toolcall
+{"name": "process_create", "arguments": {"argv": ["sudo", "-S", "bash"]}}
+```
+
+现在等待`sudo -S bash`启动
+
+---
+
+`sudo -S bash`应该已经启动了，输入密码然后连接为机器
+
+```json toolcall
+{
+  "name": "process_stdio_write",
+  "with_secret": ["EXAMPLECOM_FOOBAR_PASSWORD"],
+  "arguments": {"pid": "1145141919", "content": "<$EXAMPLECOM_FOOBAR_PASSWORD$>"}
+}
+```
+
+确认一下密码是否成功输入，然后直接连接为机器并切换
+
+```json toolcall
+{"name": "process_stdio_read", "arguments": {"pid": "1145141919", "timeout": 1}}
+```
+
+```json toolcall
+{"name": "connect_bash_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
+```
+
+```json toolcall
+{"name": "switch_machine", "arguments": {"machine_id": "ssh_bash_hop2"}}
+```
+"""
+
 EXAMPLES_PLANNING_MODE = """
 ### TODOLIST.md示例
 
@@ -433,6 +477,7 @@ EXAMPLES_PLANNING_MODE = """
 EXAMPLES_ITEMS = [
     ("TOOL CALL", EXAMPLES_TOOL_CALL),
     ("SECRET", EXAMPLES_SECRET_USAGE),
+    ("MULTIHOP MACHINES", EXAMPLE_MULTIHOP_MACHINES),
 ]
 
 # ===============================
