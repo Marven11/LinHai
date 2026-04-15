@@ -41,6 +41,7 @@ dev = [
     "pyright",
     "pytest",
     "pytest-asyncio",
+    "websockets",
 ]
 
 [tool.hatch.build.targets.wheel]

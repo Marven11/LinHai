@@ -1,7 +1,16 @@
 import copy
 import json
+import os
 import sys
+import tempfile
+import threading
+import time
 from pathlib import Path
+
+import pytest
+import tomli_w
+import uvicorn
+from httpx import AsyncClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -210,3 +219,95 @@ def test_websocket_multi_turn():
         client.delete(f"/api/agents/{agent_id}")
     finally:
         teardown_manager()
+
+
+def _write_e2e_config() -> Path:
+    from linhai.config import LLMConfig
+
+    llm_config = LLMConfig(
+        name="deepseek",
+        base_url="http://192.168.114.149:8124/v1/deepseek",
+        api_key="x",
+        model="deepseek-reasoner",
+    )
+    config_data = {
+        "llm": [llm_config.model_dump(exclude_none=True)],
+        "agent": [{"name": "default", "default_llm": "deepseek"}],
+    }
+    config_path = Path(tempfile.mkdtemp()) / "config.toml"
+    with open(config_path, "wb") as f:
+        tomli_w.dump(config_data, f)
+    return config_path
+
+
+@pytest.mark.asyncio
+async def test_webui_streaming_e2e():
+    import asyncio
+    import websockets
+
+    config_path = _write_e2e_config()
+    routes._manager = AgentManager(config_path=config_path)
+    app = create_app()
+    port = 18765
+    server_thread = threading.Thread(
+        target=uvicorn.run,
+        kwargs={"app": app, "host": "127.0.0.1", "port": port, "log_level": "error"},
+        daemon=True,
+    )
+    server_thread.start()
+    async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
+        for _ in range(50):
+            try:
+                resp = await client.get("/api/agents")
+                if resp.status_code == 200:
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(0.2)
+        resp = await client.post("/api/agents", json={"init_messages": []})
+        assert resp.status_code == 200
+        agent_id = resp.json()["id"]
+        sub = JsonSubscriber()
+        async with websockets.connect(
+            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws"
+        ) as ws:
+            data = json.loads(await ws.recv())
+            if "event" in data:
+                sub.update_data(data)
+            await ws.send(
+                json.dumps({"type": "user_message", "content": "Say hello in one word"})
+            )
+            finished = False
+            start_time = time.time()
+            while time.time() - start_time < 300:
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    pass
+                data = json.loads(raw)
+                if "event" in data:
+                    sub.update_data(data)
+                if isinstance(data, dict) and data.get("type") == "state_change":
+                    if data.get("new_state") == "waiting_user":
+                        finished = True
+                        break
+                messages = sub.data.get("messages", []) if sub.data else []
+                agent_msgs = [m for m in messages if m.get("type") == "agent"]
+                if any(m.get("content", "").strip() for m in agent_msgs):
+                    await asyncio.sleep(5)
+                    finished = True
+                    break
+        assert finished, "Agent did not produce response"
+        messages = sub.data.get("messages", [])
+        user_msgs = [m for m in messages if m.get("type") == "user"]
+        assert any(m.get("content") == "Say hello in one word" for m in user_msgs)
+        agent_msgs = [m for m in messages if m.get("type") == "agent"]
+        assert len(agent_msgs) >= 1, f"No agent messages found: {messages}"
+        assert any(
+            len(m.get("content", "")) > 0 for m in agent_msgs
+        ), f"Agent message has empty content: {agent_msgs}"
+        session = routes._manager.sessions.get(agent_id)
+        assert session is not None
+        server_data = copy.deepcopy(session._messages_data)
+        assert sub.data == server_data
+        await client.delete(f"/api/agents/{agent_id}")
