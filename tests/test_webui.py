@@ -67,11 +67,42 @@ class TestAgentManager(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("test-id", manager.sessions)
             mock_session.stop.assert_called_once()
 
+    async def test_agent_manager_delete_calls_check_tasks(self):
+        with patch("linhai.webui.agent_manager.load_config"):
+            manager = AgentManager(config_path="/fake/path")
+            mock_session = MagicMock(spec=AgentSession)
+            mock_session.stop = AsyncMock()
+            manager.sessions["test-id"] = mock_session
+            manager._registries["test-id"] = MagicMock()
+            manager._registries["test-id"].call_cleanups = AsyncMock()
+
+            result = await manager.delete_agent("test-id")
+            self.assertTrue(result)
+
     async def test_agent_manager_delete_nonexistent_agent(self):
         with patch("linhai.webui.agent_manager.load_config"):
             manager = AgentManager(config_path="/fake/path")
             result = await manager.delete_agent("non-existent")
             self.assertFalse(result)
+
+
+class TestAgentSessionInitMessages(unittest.TestCase):
+    def test_session_init_messages_in_messages_data(self):
+        mock_agent = MagicMock()
+        mock_agent.state_machine.state = "waiting_user"
+        mock_manager = MagicMock()
+        session = AgentSession(
+            agent_id="test-id",
+            agent=mock_agent,
+            task_name="task-1",
+            manager=mock_manager,
+        )
+        session.add_user_message("hello")
+        session.add_user_message("world")
+        messages = session._messages_data["messages"]
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["content"], "hello")
+        self.assertEqual(messages[1]["content"], "world")
 
 
 class TestAgentSession(unittest.TestCase):

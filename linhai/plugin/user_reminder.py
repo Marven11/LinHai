@@ -22,7 +22,7 @@ class UserReminderPlugin(Plugin):
                 config_dir = Path(config_path).parent
                 reminder_file = config_dir / reminder_file
 
-        if not reminder_file.exists():
+        if not reminder_file.is_file():
             return
 
         content = reminder_file.read_text(encoding="utf-8").strip()

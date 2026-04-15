@@ -110,6 +110,41 @@ class TestTextualTaskSupervisor(unittest.IsolatedAsyncioTestCase):
             supervisor.cancel("nonexistent")
 
 
+class TestPlainTaskSupervisorCheckErrors(unittest.IsolatedAsyncioTestCase):
+    async def test_check_tasks_no_errors(self):
+        supervisor = PlainTaskSupervisor()
+
+        async def work():
+            pass
+
+        supervisor.create_supervised_task("ok", work)
+        await supervisor.wait("ok")
+        await supervisor.check_tasks_for_errors()
+
+    async def test_check_tasks_raises_on_error(self):
+        supervisor = PlainTaskSupervisor()
+
+        async def fail():
+            raise ValueError("task failed")
+
+        supervisor.create_supervised_task("bad", fail)
+        await asyncio.sleep(0.05)
+        with self.assertRaises(ValueError):
+            await supervisor.check_tasks_for_errors()
+
+    async def test_check_tasks_ignores_cancelled(self):
+        supervisor = PlainTaskSupervisor()
+
+        async def long_work():
+            await asyncio.sleep(100)
+
+        supervisor.create_supervised_task("cancel_me", long_work)
+        await asyncio.sleep(0.01)
+        supervisor.cancel("cancel_me")
+        await asyncio.sleep(0.01)
+        await supervisor.check_tasks_for_errors()
+
+
 class TestTUIAppRegistersTaskSupervisor(unittest.IsolatedAsyncioTestCase):
     async def test_cli_app_registers_textual_task_supervisor(self):
         import argparse

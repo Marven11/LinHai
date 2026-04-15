@@ -258,6 +258,10 @@ class AgentManager:
         )
         self.sessions[agent_id] = session
 
+        if init_messages:
+            for msg in init_messages:
+                session.add_user_message(msg)
+
         return session
 
     def get_registry(self, agent_id: str) -> Optional[Registry]:
@@ -284,6 +288,7 @@ class AgentManager:
             return False
 
         await session.stop()
+        await self._task_supervisor.check_tasks_for_errors()
         registry = self._registries.pop(agent_id, None)
         if registry is not None:
             await registry.call_cleanups()

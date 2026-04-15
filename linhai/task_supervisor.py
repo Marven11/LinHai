@@ -62,6 +62,16 @@ class PlainTaskSupervisor:
         task.cancel()
         return False, None
 
+    async def check_tasks_for_errors(self) -> None:
+        errors: list[BaseException] = []
+        for task in self.tasks.values():
+            if task.done() and not task.cancelled():
+                exc = task.exception()
+                if exc is not None:
+                    errors.append(exc)
+        if errors:
+            raise errors[0]
+
 
 class TextualTaskSupervisor:
     def __init__(self, app: App, registry: "Registry") -> None:
