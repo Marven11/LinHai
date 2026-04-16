@@ -234,7 +234,7 @@ class LlmManager:
                             ),
                         )
                     else:
-                        delay = min(5 * 1.5**retry_count, 300)
+                        delay = min(5 * 1.5**retry_count, 30)
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
