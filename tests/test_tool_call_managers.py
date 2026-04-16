@@ -110,7 +110,13 @@ class TestLoadImageUrlWarningPlugin(unittest.IsolatedAsyncioTestCase):
     async def test_ignore_other_tools(self):
         """Test that other tools are ignored."""
         tool_calls = [
-            {"name": "fetch_article", "arguments": {"url": "http://example.com"}},
+            {
+                "name": "fetch_webpage",
+                "arguments": {
+                    "url": "http://example.com",
+                    "http_downloader": "selenium",
+                },
+            },
             {"name": "read_file", "arguments": {"filepath": "/etc/passwd"}},
         ]
 

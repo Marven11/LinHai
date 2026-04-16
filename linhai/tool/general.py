@@ -79,21 +79,23 @@ def _download_with_httpx(url: str) -> str:
 
 
 @utils_tools.register_tool(
-    name="fetch_article",
+    name="fetch_webpage",
     desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
     args={
         "url": ToolArgInfo(desc="目标网页URL", type="str"),
         "http_downloader": ToolArgInfo(
-            desc="HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
+            desc="HTML下载器，必须指定'selenium'或'httpx'",
             type="str",
         ),
     },
-    required_args=["url"],
+    required_args=["url", "http_downloader"],
 )
-def fetch_article(url: str, http_downloader: str = "none"):
+def fetch_webpage(url: str, http_downloader: str):
 
-    if http_downloader not in ("none", "selenium", "httpx"):
-        return ToolResultFailed(content=f"错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'{http_downloader}'")
+    if http_downloader not in ("selenium", "httpx"):
+        return ToolResultFailed(
+            content=f"错误: http_downloader参数只能是'selenium'或'httpx'，得到'{http_downloader}'"
+        )
 
     with tempfile.NamedTemporaryFile(suffix=".md", delete=True) as file:
         output_md = file.name
@@ -234,7 +236,9 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
                     break
 
             if not results:
-                return ToolResultFailed(content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。")
+                return ToolResultFailed(
+                    content="未找到相关搜索结果。可能是由于DuckDuckGo的机器人检测或查询无匹配结果。请尝试重新表述搜索或稍后重试。"
+                )
 
             output = []
             output.append(f"找到 {len(results)} 个搜索结果：\n")

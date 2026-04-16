@@ -4,7 +4,7 @@
 """
 
 from .general import (
-    fetch_article,
+    fetch_webpage,
     search_web,
     quickjs_calculator,
 )
@@ -29,7 +29,7 @@ __all__ = [
     "ToolSet",
     "ToolManager",
     "MCPConnector",
-    "fetch_article",
+    "fetch_webpage",
     "search_web",
     "quickjs_calculator",
 ]

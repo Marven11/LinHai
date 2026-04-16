@@ -6,32 +6,32 @@ import tempfile
 import os
 
 from linhai.tool.base import ToolSet, ToolArgInfo, ToolResultFailed
-from linhai.tool.general import fetch_article
+from linhai.tool.general import fetch_webpage
 
 
-class TestFetchArticleTool(unittest.TestCase):
-    """Test cases for the fetch_article tool."""
+class TestFetchWebpageTool(unittest.TestCase):
+    """Test cases for the fetch_webpage tool."""
 
     def setUp(self):
         self.toolset = ToolSet()
         self.toolset.register_tool(
-            name="fetch_article",
+            name="fetch_webpage",
             desc="抓取网页并转换为Markdown格式",
             args={
                 "url": ToolArgInfo(desc="目标网页URL", type="str"),
                 "http_downloader": ToolArgInfo(
-                    desc="HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
+                    desc="HTML下载器，必须指定'selenium'或'httpx'",
                     type="str",
                 ),
             },
-            required_args=["url"],
-        )(fetch_article)
+            required_args=["url", "http_downloader"],
+        )(fetch_webpage)
 
     @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_article_success(self, mock_subprocess, mock_which, mock_driver):
-        """测试fetch_article工具成功转换网页为Markdown"""
+    def test_fetch_webpage_success(self, mock_subprocess, mock_which, mock_driver):
+        """测试fetch_webpage工具成功转换网页为Markdown"""
         mock_which.return_value = "/usr/bin/pandoc"
 
         mock_driver_instance = mock_driver.return_value.__enter__.return_value
@@ -69,7 +69,8 @@ class TestFetchArticleTool(unittest.TestCase):
             ),
         ):
             result = self.toolset.call_tool(
-                "fetch_article", {"url": "http://example.com"}
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "selenium"},
             )
 
         self.assertIn("测试标题", result.content)
@@ -83,25 +84,23 @@ class TestFetchArticleTool(unittest.TestCase):
         if os.path.exists(tmp_md_path):
             os.unlink(tmp_md_path)
 
-    def test_fetch_article_default_http_downloader(self):
-        """测试fetch_article使用默认http_downloader（none）参数"""
-        # 验证工具注册包含http_downloader参数
-        tool_info = self.toolset.get_tools()["fetch_article"]
-        # 工具信息结构可能包含'args'和'required_args'，但先检查键是否存在
+    def test_fetch_webpage_required_http_downloader(self):
+        """测试fetch_webpage的http_downloader为必填参数"""
+        tools = self.toolset.get_tools()
+        self.assertIn("fetch_webpage", tools)
+        tool_info = tools["fetch_webpage"]
         self.assertIn("args", tool_info)
         self.assertIn("http_downloader", tool_info["args"])
         self.assertEqual(
             tool_info["args"]["http_downloader"]["desc"],
-            "HTML下载器，可选值：'none'或'selenium'（默认使用selenium）或'httpx'",
+            "HTML下载器，必须指定'selenium'或'httpx'",
         )
         self.assertEqual(tool_info["args"]["http_downloader"]["type"], "str")
-        # 验证参数是可选参数：如果存在'required_args'，则检查http_downloader不在其中
-        if "required_args" in tool_info:
-            self.assertNotIn("http_downloader", tool_info["required_args"])
+        self.assertIn("http_downloader", tool_info["required"])
 
     @unittest.mock.patch("linhai.tool.general._download_with_httpx")
-    def test_fetch_article_httpx_downloader(self, mock_httpx_download):
-        """测试fetch_article使用httpx下载器"""
+    def test_fetch_webpage_httpx_downloader(self, mock_httpx_download):
+        """测试fetch_webpage使用httpx下载器"""
         mock_httpx_download.return_value = "<html><body>Test content</body></html>"
 
         # 模拟pandoc已安装和其他依赖
@@ -114,54 +113,60 @@ class TestFetchArticleTool(unittest.TestCase):
                 ):
                     # 测试调用工具时指定http_downloader='httpx'
                     result = self.toolset.call_tool(
-                        "fetch_article",
+                        "fetch_webpage",
                         {"url": "http://example.com", "http_downloader": "httpx"},
                     )
                     # 验证调用了httpx下载函数
                     mock_httpx_download.assert_called_once_with("http://example.com")
                     self.assertIn("Test", result.content)
 
-    def test_fetch_article_invalid_http_downloader(self):
-        """测试fetch_article使用无效的http_downloader参数"""
+    def test_fetch_webpage_invalid_http_downloader(self):
+        """测试fetch_webpage使用无效的http_downloader参数"""
         # 测试调用工具时指定无效的http_downloader值
         result = self.toolset.call_tool(
-            "fetch_article", {"url": "http://example.com", "http_downloader": "invalid"}
+            "fetch_webpage", {"url": "http://example.com", "http_downloader": "invalid"}
         )
         # 验证返回了正确的错误信息
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn(
-            "错误: http_downloader参数只能是'none'（默认selenium）、'selenium'或'httpx'，得到'invalid'",
+            "错误: http_downloader参数只能是'selenium'或'httpx'，得到'invalid'",
             result.content,
         )
 
     @unittest.mock.patch("linhai.tool.general._download_with_selenium")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
-    def test_fetch_article_pandoc_not_installed(self, mock_which, mock_download):
+    def test_fetch_webpage_pandoc_not_installed(self, mock_which, mock_download):
         """测试pandoc未安装的情况"""
         mock_which.return_value = None
         mock_download.return_value = "<html><body>Test</body></html>"
 
-        result = self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+        result = self.toolset.call_tool(
+            "fetch_webpage",
+            {"url": "http://example.com", "http_downloader": "selenium"},
+        )
 
         self.assertIsInstance(result, ToolResultFailed)
         self.assertEqual(result.content, "错误：pandoc未安装，请先安装pandoc")
 
     @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
-    def test_fetch_article_webdriver_error(self, mock_which, mock_driver):
+    def test_fetch_webpage_webdriver_error(self, mock_which, mock_driver):
         """测试webdriver出错的情况"""
         mock_which.return_value = "/usr/bin/pandoc"
 
         mock_driver.side_effect = Exception("WebDriver错误")
 
         with self.assertRaises(Exception) as context:
-            self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+            self.toolset.call_tool(
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "selenium"},
+            )
         self.assertIn("WebDriver错误", str(context.exception))
 
     @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_article_pandoc_error(self, mock_subprocess, mock_which, mock_driver):
+    def test_fetch_webpage_pandoc_error(self, mock_subprocess, mock_which, mock_driver):
         """测试pandoc转换出错的情况"""
         mock_which.return_value = "/usr/bin/pandoc"
 
@@ -171,13 +176,16 @@ class TestFetchArticleTool(unittest.TestCase):
         mock_subprocess.side_effect = Exception("Pandoc错误")
 
         with self.assertRaises(Exception) as context:
-            self.toolset.call_tool("fetch_article", {"url": "http://example.com"})
+            self.toolset.call_tool(
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "selenium"},
+            )
         self.assertIn("Pandoc错误", str(context.exception))
 
     @unittest.mock.patch("linhai.tool.general.Firefox")
     @unittest.mock.patch("linhai.tool.general.shutil.which")
     @unittest.mock.patch("linhai.tool.general.subprocess.run")
-    def test_fetch_article_table_attributes_removed(
+    def test_fetch_webpage_table_attributes_removed(
         self, mock_subprocess, mock_which, mock_driver
     ):
         """测试表格属性被正确删除"""
@@ -213,7 +221,8 @@ class TestFetchArticleTool(unittest.TestCase):
             ),
         ):
             result = self.toolset.call_tool(
-                "fetch_article", {"url": "http://example.com"}
+                "fetch_webpage",
+                {"url": "http://example.com", "http_downloader": "selenium"},
             )
 
         self.assertIn("<table>", result.content)
