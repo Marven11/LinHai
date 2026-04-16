@@ -612,6 +612,7 @@ def _register_default_plugins(lifecycle):
         ProcessArgvCheckerPlugin,
         SudoStdioCheckerPlugin,
         PythonCommentCheckerPlugin,
+        SudoBashHintPlugin,
     )
     from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
@@ -643,6 +644,7 @@ def _register_default_plugins(lifecycle):
         SudoStdioCheckerPlugin(lifecycle.registry),
         TodolistCheckerPlugin(lifecycle.registry),
         PythonCommentCheckerPlugin(lifecycle.registry),
+        SudoBashHintPlugin(lifecycle.registry),
     ]
 
     for plugin in plugins:
