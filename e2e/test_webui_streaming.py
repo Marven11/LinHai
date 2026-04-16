@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import os
@@ -228,7 +229,7 @@ def _write_e2e_config() -> Path:
         name="deepseek",
         base_url="http://192.168.114.149:8124/v1/deepseek",
         api_key="x",
-        model="deepseek-reasoner",
+        model="deepseek-chat",
     )
     config_data = {
         "llm": [llm_config.model_dump(exclude_none=True)],
@@ -240,9 +241,28 @@ def _write_e2e_config() -> Path:
     return config_path
 
 
+async def _wait_for_agent_turn(ws, sub, timeout=120):
+    start_time = time.time()
+    reached_waiting = False
+    while time.time() - start_time < timeout:
+        recv_timeout = 2.0 if reached_waiting else 5.0
+        try:
+            raw = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
+        except asyncio.TimeoutError:
+            if reached_waiting:
+                return True
+            continue
+        data = json.loads(raw)
+        if "event" in data:
+            sub.update_data(data)
+        if isinstance(data, dict) and data.get("type") == "state_change":
+            if data.get("new_state") == "waiting_user":
+                reached_waiting = True
+    return False
+
+
 @pytest.mark.asyncio
 async def test_webui_streaming_e2e():
-    import asyncio
     import websockets
 
     config_path = _write_e2e_config()
@@ -272,40 +292,48 @@ async def test_webui_streaming_e2e():
             f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws"
         ) as ws:
             data = json.loads(await ws.recv())
-            if "event" in data:
-                sub.update_data(data)
+            assert "event" in data
+            sub.update_data(data)
+
             await ws.send(
-                json.dumps({"type": "user_message", "content": "Introduce yourself with 50 words"})
+                json.dumps(
+                    {
+                        "type": "user_message",
+                        "content": "Write a 200-word essay about artificial intelligence and its impact on society",
+                    }
+                )
             )
-            finished = False
-            start_time = time.time()
-            while time.time() - start_time < 300:
-                try:
-                    raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
-                except asyncio.TimeoutError:
-                    pass
-                data = json.loads(raw)
-                if "event" in data:
-                    sub.update_data(data)
-                if isinstance(data, dict) and data.get("type") == "state_change":
-                    if data.get("new_state") == "waiting_user":
-                        finished = True
-                        break
-                messages = sub.data.get("messages", []) if sub.data else []
-                agent_msgs = [m for m in messages if m.get("type") == "agent"]
-                if any(m.get("content", "").strip() for m in agent_msgs):
-                    await asyncio.sleep(5)
-                    finished = True
-                    break
-        assert finished, "Agent did not produce response"
+            finished1 = await _wait_for_agent_turn(ws, sub, timeout=120)
+            assert finished1, "Agent did not complete first turn within 120s"
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "user_message",
+                        "content": "Now summarize your essay in exactly 100 words",
+                    }
+                )
+            )
+            finished2 = await _wait_for_agent_turn(ws, sub, timeout=120)
+            assert finished2, "Agent did not complete second turn within 120s"
+
         messages = sub.data.get("messages", [])
         user_msgs = [m for m in messages if m.get("type") == "user"]
-        assert any(m.get("content") == "Introduce yourself with 50 words" for m in user_msgs)
+        assert len(user_msgs) == 2, f"Expected 2 user messages, got {len(user_msgs)}"
+        assert (
+            user_msgs[0]["content"]
+            == "Write a 200-word essay about artificial intelligence and its impact on society"
+        )
+        assert (
+            user_msgs[1]["content"] == "Now summarize your essay in exactly 100 words"
+        )
         agent_msgs = [m for m in messages if m.get("type") == "agent"]
-        assert len(agent_msgs) >= 1, f"No agent messages found: {messages}"
-        assert any(
-            len(m.get("content", "")) > 10 for m in agent_msgs
-        ), f"Agent message has short content: {agent_msgs}"
+        assert (
+            len(agent_msgs) >= 2
+        ), f"Expected 2+ agent messages, got {len(agent_msgs)}"
+        assert all(
+            len(m.get("content", "")) > 50 for m in agent_msgs
+        ), f"Agent messages too short: {[m.get('content', '')[:50] for m in agent_msgs]}"
         session = routes._manager.sessions.get(agent_id)
         assert session is not None
         server_data = copy.deepcopy(session._messages_data)
