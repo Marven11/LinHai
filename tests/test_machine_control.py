@@ -218,7 +218,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         proc = host_control.get_process("12347")
         self.assertIsNotNone(proc)
         result = await proc.stdio_read(wait_seconds=2.0)
-        self.assertIn("final output", result.stdout)
+        self.assertIn(b"final output", result.stdout)
 
     async def test_process_stdio_read_with_running_process(self):
         """测试stdio_read - 进程仍在运行"""
@@ -240,7 +240,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         proc = host_control.get_process("12348")
         self.assertIsNotNone(proc)
         result = await proc.stdio_read(wait_seconds=2.0)
-        self.assertIn("ongoing output", result.stdout)
+        self.assertIn(b"ongoing output", result.stdout)
 
     def test_process_operations(self):
         """测试进程操作"""

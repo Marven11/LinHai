@@ -112,22 +112,24 @@ class MasterHostControl:
                     pid=pid,
                     success=True,
                     returncode=subprocess.returncode,
-                    stdout=read_result.stdout,
-                    stderr=read_result.stderr,
+                    stdout=read_result.stdout.decode("utf-8", errors="replace"),
+                    stderr=read_result.stderr.decode("utf-8", errors="replace"),
                 )
 
             read_result = await lp.stdio_read(wait_seconds=2.0)
+            stdout_text = read_result.stdout.decode("utf-8", errors="replace")
+            stderr_text = read_result.stderr.decode("utf-8", errors="replace")
             message = f"等待失败，程序在{wait_second}秒后在运行。"
-            if read_result.stdout or read_result.stderr:
-                message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{read_result.stdout}\nstderr:\n{read_result.stderr}"
+            if stdout_text or stderr_text:
+                message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_text}\nstderr:\n{stderr_text}"
             else:
                 message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
             return ProcessCreateResult(
                 pid=pid,
                 success=True,
                 returncode=None,
-                stdout=read_result.stdout,
-                stderr=read_result.stderr,
+                stdout=stdout_text,
+                stderr=stderr_text,
                 message=message,
             )
         except Exception as e:

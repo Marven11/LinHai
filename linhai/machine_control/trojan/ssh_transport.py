@@ -1,5 +1,4 @@
 import asyncio
-import re
 import tempfile
 import base64
 import gzip
@@ -17,9 +16,8 @@ from linhai.machine_control.process import (
     ProcessWriteResult,
     ProcessWaitResult,
 )
+from rich.text import Text
 from .transport import TrojanTransport
-
-_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 class SshTrojanTransport:
@@ -61,7 +59,11 @@ class SshTrojanTransport:
             read_result = await self._bash_process.stdio_read(wait_seconds=1.0)
             if not read_result.success:
                 break
-            buffer += read_result.stdout
+            decoded = read_result.stdout.decode("utf-8", errors="replace")
+            text = Text.from_ansi(decoded).plain
+            if decoded.endswith("\n"):
+                text += "\n"
+            buffer += text
             while "\n" in buffer:
                 line, buffer = buffer.split("\n", 1)
                 line = line.rstrip()

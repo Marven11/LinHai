@@ -38,7 +38,7 @@ class TestSshMachineControlConnect(unittest.TestCase):
             )
             mock_process.stdio_read = AsyncMock(
                 return_value=ProcessReadResult(
-                    pid="1", success=True, stdout="CMD_RESULT_0:0\n", stderr=""
+                    pid="1", success=True, stdout=b"CMD_RESULT_0:0\n", stderr=b""
                 )
             )
             mock_process.kill = AsyncMock(

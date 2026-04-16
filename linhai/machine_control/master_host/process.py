@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import time
 from typing import Awaitable, Callable
 
@@ -67,25 +66,17 @@ class LocalProcess:
         await self._process.stdin.drain()
         return ProcessWriteResult(pid=pid, success=True, message="写入成功")
 
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult:
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         pid = self.pid
         stdout_data, stderr_data = await self._read_nonblocking(wait_seconds)
-        stdout_str = stdout_data.decode("utf-8", errors="replace")
-        stderr_str = stderr_data.decode("utf-8", errors="replace")
-        if unescape_ansi:
-            ansi_escape = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-            stdout_str = ansi_escape.sub("", stdout_str)
-            stderr_str = ansi_escape.sub("", stderr_str)
         exit_note = None
         if self._process.returncode is not None:
             exit_note = f"注意：当前程序{pid}已经退出\n"
         return ProcessReadResult(
             pid=pid,
             success=True,
-            stdout=stdout_str,
-            stderr=stderr_str,
+            stdout=stdout_data,
+            stderr=stderr_data,
             exit_note=exit_note,
         )
 

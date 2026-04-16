@@ -9,6 +9,7 @@ from linhai.tool.base import (
     ToolResultFailed,
     ToolSet,
 )
+from rich.text import Text
 
 if TYPE_CHECKING:
     from .main import MachineControl
@@ -273,31 +274,34 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         desc="读取进程的标准输出和标准错误内容。",
         args={
             "pid": ToolArgInfo(desc="进程ID", type="str"),
-            "unescape_ansi": ToolArgInfo(
-                desc="是否反转义ANSI序列，默认为True", type="bool"
-            ),
             "timeout": ToolArgInfo(desc="超时时间（秒），默认60秒", type="float"),
         },
         required_args=["pid"],
         conflict_with=None,
     )
     async def process_stdio_read_tool(
-        pid: str, unescape_ansi: bool = True, timeout: float = 60.0
+        pid: str, timeout: float = 60.0
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
         proc = host_control.get_process(pid)
         if proc is None:
             return ToolResultFailed(content=f"进程不存在: {pid}")
-        read_result = await proc.stdio_read(timeout, unescape_ansi)
+        read_result = await proc.stdio_read(timeout)
         if not read_result.success:
             return ToolResultFailed(content=read_result.error or "读取失败")
+        stdout_text = Text.from_ansi(
+            read_result.stdout.decode("utf-8", errors="replace")
+        ).plain
+        stderr_text = Text.from_ansi(
+            read_result.stderr.decode("utf-8", errors="replace")
+        ).plain
         return ToolResultSuccess(
             content=json.dumps(
                 {
                     "pid": pid,
                     "success": True,
-                    "stdout": read_result.stdout,
-                    "stderr": read_result.stderr,
+                    "stdout": stdout_text,
+                    "stderr": stderr_text,
                     "exit_note": read_result.exit_note,
                 }
             )

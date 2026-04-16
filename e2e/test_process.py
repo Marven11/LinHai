@@ -65,7 +65,7 @@ async def test_interactive_bash_write_and_read():
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
     assert read_result.success
-    assert "hello_from_bash" in read_result.stdout
+    assert b"hello_from_bash" in read_result.stdout
 
     await proc.kill()
 
@@ -81,19 +81,19 @@ async def test_interactive_bash_multiple_commands():
     await asyncio.sleep(0.5)
     read1 = await proc.stdio_read(wait_seconds=2.0)
     assert read1.success
-    assert "cmd1" in read1.stdout
+    assert b"cmd1" in read1.stdout
 
     await proc.stdio_write("echo cmd2", with_enter=True)
     await asyncio.sleep(0.5)
     read2 = await proc.stdio_read(wait_seconds=2.0)
     assert read2.success
-    assert "cmd2" in read2.stdout
+    assert b"cmd2" in read2.stdout
 
     await proc.stdio_write("echo cmd3", with_enter=True)
     await asyncio.sleep(0.5)
     read3 = await proc.stdio_read(wait_seconds=2.0)
     assert read3.success
-    assert "cmd3" in read3.stdout
+    assert b"cmd3" in read3.stdout
 
     await proc.kill()
 
@@ -112,7 +112,7 @@ async def test_interactive_bash_nonblocking_read():
     await asyncio.sleep(0.5)
     read_after = await proc.stdio_read(wait_seconds=2.0)
     assert read_after.success
-    assert "after_empty_read" in read_after.stdout
+    assert b"after_empty_read" in read_after.stdout
 
     await proc.kill()
 
@@ -128,7 +128,7 @@ async def test_interactive_bash_stderr():
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
     assert read_result.success
-    assert "err_msg" in read_result.stderr
+    assert b"err_msg" in read_result.stderr
 
     await proc.kill()
 
@@ -146,7 +146,7 @@ async def test_interactive_bash_with_variables():
     await asyncio.sleep(0.5)
     read_result = await proc.stdio_read(wait_seconds=2.0)
     assert read_result.success
-    assert "hello123" in read_result.stdout
+    assert b"hello123" in read_result.stdout
 
     await proc.kill()
 
@@ -203,6 +203,6 @@ async def test_stdio_write_without_enter():
     await asyncio.sleep(0.5)
     read_after = await proc.stdio_read(wait_seconds=2.0)
     assert read_after.success
-    assert "hello" in read_after.stdout
+    assert b"hello" in read_after.stdout
 
     await proc.kill()

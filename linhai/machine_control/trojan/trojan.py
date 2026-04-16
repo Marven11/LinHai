@@ -165,7 +165,7 @@ class Trojan:
         await process.stdin.drain()
         return {"message": f"已向进程 {pid} 写入 {len(content)} 字节"}
 
-    async def process_stdio_read(self, pid, unescape_ansi=True, timeout=60.0):
+    async def process_stdio_read(self, pid, timeout=60.0):
         assert pid in self._processes, f"进程不存在: {pid}"
         process = self._processes[pid]
         stdout_str, stderr_str, timeout_msg, exit_note = await self._read_process_stdio(

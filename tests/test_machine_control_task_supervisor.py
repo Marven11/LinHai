@@ -31,15 +31,15 @@ class _FakeProcess:
         self._write_history.append((content, with_enter))
         return ProcessWriteResult(pid=self._pid, success=True)
 
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult:
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         if self._read_index < len(self._responses):
             data = self._responses[self._read_index]
             self._read_index += 1
-            return ProcessReadResult(pid=self._pid, success=True, stdout=data)
+            return ProcessReadResult(
+                pid=self._pid, success=True, stdout=data.encode("utf-8")
+            )
         return ProcessReadResult(
-            pid=self._pid, success=True, stdout="", exit_note="进程已退出"
+            pid=self._pid, success=True, stdout=b"", exit_note="进程已退出"
         )
 
     async def wait(self, timeout: float) -> ProcessWaitResult:

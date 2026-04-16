@@ -44,9 +44,9 @@ class TestSshTrojanTransport(unittest.TestCase):
             return_value=ProcessWriteResult(pid="1", success=True, message="写入成功")
         )
         responses = iter(read_responses)
-        default = ProcessReadResult(pid="1", success=True, stdout="", stderr="")
+        default = ProcessReadResult(pid="1", success=True, stdout=b"", stderr=b"")
 
-        async def read_side_effect(wait_seconds, unescape_ansi=True):
+        async def read_side_effect(wait_seconds):
             return next(responses, default)
 
         mock_process.stdio_read = AsyncMock(side_effect=read_side_effect)
@@ -62,20 +62,20 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout="Python 3.14.2\nCMD_RESULT_0:0\n",
-                    stderr="",
+                    stdout=b"Python 3.14.2\nCMD_RESULT_0:0\n",
+                    stderr=b"",
                 ),
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout="/tmp/trojan.py\nCMD_RESULT_0:0\n",
-                    stderr="",
+                    stdout=b"/tmp/trojan.py\nCMD_RESULT_0:0\n",
+                    stderr=b"",
                 ),
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout="CMD_RESULT_0:0\n",
-                    stderr="",
+                    stdout=b"CMD_RESULT_0:0\n",
+                    stderr=b"",
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
@@ -110,8 +110,8 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ProcessReadResult(
                     pid="1",
                     success=True,
-                    stdout="Python 2.7.18\nCMD_RESULT_0:0\n",
-                    stderr="",
+                    stdout=b"Python 2.7.18\nCMD_RESULT_0:0\n",
+                    stderr=b"",
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
@@ -140,7 +140,9 @@ class TestSshTrojanTransport(unittest.TestCase):
     @unittest.skipIf(shutil.which("bash") is None, "系统没有bash，跳过测试")
     def test_command_timeout_with_real_bash(self):
         async def test():
-            empty_read = ProcessReadResult(pid="1", success=True, stdout="", stderr="")
+            empty_read = ProcessReadResult(
+                pid="1", success=True, stdout=b"", stderr=b""
+            )
             mock_process = self._make_mock_process([empty_read, empty_read])
             transport = SshTrojanTransport(
                 registry=self.registry,

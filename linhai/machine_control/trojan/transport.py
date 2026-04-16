@@ -15,27 +15,27 @@ class JsonRpcResponse(Dict[str, Any]):
 class _ProcessLineReader:
     def __init__(self, process: Process) -> None:
         self._process = process
-        self._buffer = ""
+        self._buffer = b""
 
     async def readline(self, timeout: float = 1.0) -> Optional[str]:
-        while "\n" not in self._buffer:
-            result = await self._process.stdio_read(timeout, unescape_ansi=False)
+        while b"\n" not in self._buffer:
+            result = await self._process.stdio_read(timeout)
             if not result.success or (
                 not result.stdout and result.exit_note is not None
             ):
                 if self._buffer:
                     remaining = self._buffer
-                    self._buffer = ""
-                    return remaining
+                    self._buffer = b""
+                    return remaining.decode("utf-8", errors="replace")
                 return None
             if not result.stdout:
                 return ""
             self._buffer += result.stdout
 
-        idx = self._buffer.index("\n")
+        idx = self._buffer.index(b"\n")
         line = self._buffer[:idx]
         self._buffer = self._buffer[idx + 1 :]
-        return line
+        return line.decode("utf-8", errors="replace")
 
 
 class TrojanTransport:

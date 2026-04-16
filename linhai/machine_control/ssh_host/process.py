@@ -39,14 +39,11 @@ class RemoteProcess:
             pid=self._pid, success=False, error=str(result.content)
         )
 
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult:
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         result = await self._ssh_control.call_tool(
             "process_stdio_read",
             {
                 "pid": self._pid,
-                "unescape_ansi": unescape_ansi,
                 "timeout": wait_seconds,
             },
         )
@@ -55,8 +52,8 @@ class RemoteProcess:
             return ProcessReadResult(
                 pid=self._pid,
                 success=data.get("success", True),
-                stdout=data.get("stdout", ""),
-                stderr=data.get("stderr", ""),
+                stdout=data.get("stdout", "").encode("utf-8"),
+                stderr=data.get("stderr", "").encode("utf-8"),
                 exit_note=data.get("exit_note"),
                 error=data.get("error"),
             )

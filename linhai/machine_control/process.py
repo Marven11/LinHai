@@ -26,8 +26,8 @@ class ProcessWriteResult(ProcessResultBase):
 
 @dataclasses.dataclass
 class ProcessReadResult(ProcessResultBase):
-    stdout: str = ""
-    stderr: str = ""
+    stdout: bytes = b""
+    stderr: bytes = b""
     exit_note: str | None = None
 
 
@@ -51,9 +51,7 @@ class Process(Protocol):
         self, content: str, with_enter: bool
     ) -> ProcessWriteResult: ...
 
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult: ...
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult: ...
 
     async def wait(self, timeout: float) -> ProcessWaitResult: ...
 

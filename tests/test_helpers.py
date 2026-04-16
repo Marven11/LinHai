@@ -1,7 +1,6 @@
 """测试辅助工具模块，包含仅用于测试的类。"""
 
 import asyncio
-import re
 from typing import Optional
 
 from linhai.machine_control.process import (
@@ -10,8 +9,6 @@ from linhai.machine_control.process import (
     ProcessWriteResult,
     ProcessWaitResult,
 )
-
-_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 class _AsyncioProcessAdapter:
@@ -33,11 +30,9 @@ class _AsyncioProcessAdapter:
         await self._process.stdin.drain()
         return ProcessWriteResult(pid=self.pid, success=True, message="写入成功")
 
-    async def stdio_read(
-        self, wait_seconds: float, unescape_ansi: bool = True
-    ) -> ProcessReadResult:
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
         if self._process.stdout is None:
-            return ProcessReadResult(pid=self.pid, success=True, stdout="", stderr="")
+            return ProcessReadResult(pid=self.pid, success=True, stdout=b"", stderr=b"")
 
         chunks: list[bytes] = []
         loop = asyncio.get_event_loop()
@@ -59,14 +54,12 @@ class _AsyncioProcessAdapter:
             else:
                 break
 
-        raw = b"".join(chunks).decode("utf-8", errors="replace")
-        if unescape_ansi:
-            raw = _ANSI_ESCAPE_RE.sub("", raw)
+        raw = b"".join(chunks)
         exit_note = None
         if self._process.returncode is not None:
             exit_note = f"注意：当前程序{self.pid}已经退出\n"
         return ProcessReadResult(
-            pid=self.pid, success=True, stdout=raw, stderr="", exit_note=exit_note
+            pid=self.pid, success=True, stdout=raw, stderr=b"", exit_note=exit_note
         )
 
     async def wait(self, timeout: float) -> ProcessWaitResult:
