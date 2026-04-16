@@ -1,6 +1,5 @@
 """Configuration module for LinHai agent."""
 
-import os
 import re
 from pathlib import Path
 from typing import Optional, Union, Literal
@@ -107,7 +106,7 @@ class MCPConfig(BaseModel):
     """MCP服务器配置类型定义。"""
 
     name: str = Field(..., min_length=1, description="MCP服务器的唯一标识名称")
-    server_script_path: str = Field(..., description="MCP服务器脚本的路径")
+    command: str = Field(..., description="启动MCP服务器的完整命令")
 
     @field_validator("name")
     def validate_name(cls, v):  # pylint: disable=no-self-argument
@@ -120,9 +119,7 @@ class MCPConfig(BaseModel):
 
     def __str__(self) -> str:
         """返回MCP配置的字符串表示"""
-        return (
-            f"MCPConfig(name={self.name}, server_script_path={self.server_script_path})"
-        )
+        return f"MCPConfig(name={self.name}, command={self.command})"
 
 
 class MacOsSandboxConfig(BaseModel):
@@ -444,13 +441,5 @@ def load_config(config_path: Union[str, Path]) -> Config:
         config_data = tomllib.load(f)
 
     config = Config(**config_data)
-
-    config_dir = config_path.parent
-    for agent_config in config.agent:
-        for mcp_config in agent_config.mcp:
-            if not os.path.isabs(mcp_config.server_script_path):
-                mcp_config.server_script_path = str(
-                    config_dir / mcp_config.server_script_path
-                )
 
     return config

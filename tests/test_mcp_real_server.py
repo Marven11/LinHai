@@ -65,7 +65,7 @@ compress_threshold = 80000
 
 [[agent.mcp]]
 name = "calculator"
-server_script_path = "{server_path}"
+command = "python {server_path}"
 """
         config_path = self.create_test_config(config_content)
 

@@ -27,8 +27,8 @@ class TestMCPConfig(unittest.TestCase):
         config_path.write_text(config_content, encoding="utf-8")
         return config_path
 
-    def test_mcp_config_relative_path_conversion(self):
-        """测试相对路径转换为绝对路径。"""
+    def test_mcp_config_command_stored_as_is(self):
+        """测试command字段原样存储。"""
         config_content = """
 [[llm]]
 name = "test"
@@ -41,11 +41,11 @@ compress_threshold = 80000
 
 [[agent.mcp]]
 name = "calculator"
-server_script_path = "mcp_server_example.py"
+command = "python mcp_server_example.py"
 
 [[agent.mcp]]
 name = "another_server"
-server_script_path = "../another_server.py"
+command = "uv run ../another_server.py"
 """
         config_path = self.create_test_config(config_content)
 
@@ -54,24 +54,12 @@ server_script_path = "../another_server.py"
         assert config.agent is not None
         agent = config.agent[0]
         self.assertEqual(len(agent.mcp), 2)
-
-        calculator_path = agent.mcp[0].server_script_path
-        self.assertTrue(os.path.isabs(calculator_path))
-        self.assertEqual(
-            calculator_path, str(config_path.parent / "mcp_server_example.py")
-        )
-
-        another_path = agent.mcp[1].server_script_path
-        self.assertTrue(os.path.isabs(another_path))
-        expected_path = os.path.normpath(
-            str(config_path.parent.parent / "another_server.py")
-        )
-        self.assertEqual(os.path.normpath(another_path), expected_path)
+        self.assertEqual(agent.mcp[0].command, "python mcp_server_example.py")
+        self.assertEqual(agent.mcp[1].command, "uv run ../another_server.py")
 
     def test_mcp_config_absolute_path_unchanged(self):
         """测试绝对路径保持不变。"""
-        absolute_path = "/usr/local/bin/mcp_server"
-        config_content = f"""
+        config_content = """
 [[llm]]
 name = "test"
 base_url = "https://example.com"
@@ -83,7 +71,7 @@ compress_threshold = 80000
 
 [[agent.mcp]]
 name = "absolute_server"
-server_script_path = "{absolute_path}"
+command = "uv run /usr/local/bin/mcp_server"
 """
         config_path = self.create_test_config(config_content)
 
@@ -92,7 +80,7 @@ server_script_path = "{absolute_path}"
         assert config.agent is not None
         agent = config.agent[0]
         self.assertEqual(len(agent.mcp), 1)
-        self.assertEqual(agent.mcp[0].server_script_path, absolute_path)
+        self.assertEqual(agent.mcp[0].command, "uv run /usr/local/bin/mcp_server")
 
     def test_mcp_config_no_mcp_servers(self):
         """测试没有MCP服务器配置的情况。"""
@@ -128,7 +116,7 @@ compress_threshold = 80000
 
 [[agent.mcp]]
 name = "invalid name!"
-server_script_path = "server.py"
+command = "python server.py"
 """
         config_path = self.create_test_config(config_content)
 

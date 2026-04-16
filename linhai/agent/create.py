@@ -437,14 +437,9 @@ async def _create_tool_manager(
 
     registry = context["registry"]
     mcp_connector = MCPConnector(registry)
-    if context["mcp_configs"] and context["config_basedir"] is not None:
+    if context["mcp_configs"]:
         for mcp_config in context["mcp_configs"]:
-            server_script_path = (
-                context["config_basedir"] / mcp_config.server_script_path
-            )
-            await mcp_connector.connect_mcp_server(
-                mcp_config.name, server_script_path.absolute().as_posix()
-            )
+            await mcp_connector.connect_mcp_server(mcp_config.name, mcp_config.command)
 
     tool_manager = ToolManager(
         registry=registry,
