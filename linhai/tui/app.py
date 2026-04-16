@@ -22,6 +22,7 @@ from .components import (
     AnimatedWelcomeWidget,
     FooterWidget,
     ExtendedTextArea,
+    CommandCompletionMenu,
 )
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
@@ -84,10 +85,8 @@ class TUIApp(App):
         layout: horizontal;
         align-vertical: bottom;
     }
-    AutoComplete {
-        & AutoCompleteList {
-            max-height: 2;
-        }
+    CommandCompletionMenu {
+        display: none;
     }
     """
 
@@ -114,9 +113,6 @@ class TUIApp(App):
         self.current_response_buffer = ""
 
         self.token_manager = TokenManager(registry)
-
-        self.completions = []
-        self.autocomplete = None
 
         self.tui_config = tui_config
 
@@ -150,9 +146,11 @@ class TUIApp(App):
                 )
                 yield self.messages_list
 
+                yield CommandCompletionMenu(id="completion-menu")
                 with Horizontal(id="input-container"):
                     yield ExtendedTextArea(
                         on_enter_key=self._handle_message_submission,
+                        get_command_completions=self._get_command_completions,
                         placeholder="Enter发送，Shift+Enter换行（如果终端支持）",
                         id="input",
                         show_line_numbers=False,
@@ -198,22 +196,14 @@ class TUIApp(App):
         agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.run()
 
-    def _generate_dynamic_completions(self) -> list[str]:
-        """动态生成@补全列表"""
-        from linhai.agent import Agent
+    def _get_command_completions(self) -> list[str]:
+        from linhai.agent.command_callback import CommandCallback
 
-        agent = self.registry.get_member_typechecked("agent", Agent)
-
-        llm_manager = agent.llm_manager
-        llm_names = [llm.get_name() for llm in llm_manager.llms]
-        completions = [f"@{name}" for name in llm_names]
-        completions.insert(0, "@default")
-        return completions
+        return CommandCallback.get_command_completions()
 
     async def on_mount(self) -> None:
         """应用挂载时启动输出队列监听"""
         self.registry.register_cleanup(close_all_terminals_async)
-        self.completions = self._generate_dynamic_completions()
         await self.messages_list.start_listening()
         if self.init_messages:
             await self.messages_list.add_initial_messages(self.init_messages)

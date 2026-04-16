@@ -979,17 +979,187 @@ class MessageGenerationWidget(Static):
         self.tomount = None
 
 
-class ExtendedTextArea(TextArea):
-    """A subclass of TextArea with parenthesis-closing functionality."""
+class CommandCompletionMenu(Static):
+    DEFAULT_CSS = """
+    CommandCompletionMenu {
+        display: none;
+        width: 100%;
+        height: auto;
+        max-height: 10;
+        background: $surface;
+        border: tall $accent;
+        padding: 0 1;
+        overflow: hidden auto;
+    }
+    """
 
-    def __init__(self, on_enter_key: Callable[[], Awaitable], *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.candidates: list[str] = []
+        self.selected_index: int = 0
+        self.is_visible: bool = False
+
+    def update_candidates(self, _prefix: str, candidates: list[str]) -> None:
+        if not candidates:
+            self.hide_menu()
+            return
+        self.candidates = candidates[:8]
+        self.selected_index = min(self.selected_index, len(self.candidates) - 1)
+        self.is_visible = True
+        self.display = True
+        self._render_candidates()
+
+    def hide_menu(self) -> None:
+        self.display = False
+        self.is_visible = False
+        self.candidates = []
+
+    def select_up(self) -> None:
+        if self.candidates:
+            self.selected_index = (self.selected_index - 1) % len(self.candidates)
+            self._render_candidates()
+
+    def select_down(self) -> None:
+        if self.candidates:
+            self.selected_index = (self.selected_index + 1) % len(self.candidates)
+            self._render_candidates()
+
+    def get_selected(self) -> str | None:
+        if 0 <= self.selected_index < len(self.candidates):
+            return self.candidates[self.selected_index]
+        return None
+
+    def _render_candidates(self) -> None:
+        text = Text()
+        for i, candidate in enumerate(self.candidates):
+            if i > 0:
+                text.append("\n")
+            if i == self.selected_index:
+                text.append(f" {candidate}", style=Style(reverse=True, bold=True))
+            else:
+                text.append(f" {candidate}")
+        self.update(text)
+
+
+class ExtendedTextArea(TextArea):
+
+    def __init__(
+        self,
+        on_enter_key: Callable[[], Awaitable],
+        get_command_completions: Callable[[], list[str]],
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.on_enter_key = on_enter_key
+        self.get_command_completions = get_command_completions
+        self._completion_timer: Timer | None = None
+
+    def _get_completion_menu(self) -> CommandCompletionMenu | None:
+        results = self.app.query("#completion-menu")
+        for widget in results:
+            if isinstance(widget, CommandCompletionMenu):
+                return widget
+        return None
+
+    def _find_command_prefix(self) -> tuple[str, int, int] | None:
+        row, col = self.cursor_location
+        line = self.document.get_line(row)
+        text_before = line[:col]
+        slash_idx = text_before.rfind("/")
+        if slash_idx == -1:
+            return None
+        if slash_idx > 0 and text_before[slash_idx - 1] not in (" ", "\t"):
+            return None
+        return text_before[slash_idx:], slash_idx, row
+
+    def _update_completion(self) -> None:
+        menu = self._get_completion_menu()
+        if menu is None:
+            return
+        result = self._find_command_prefix()
+        if result is None:
+            if menu.is_visible:
+                menu.hide_menu()
+            return
+        prefix, _, _ = result
+        commands = self.get_command_completions()
+        matches = [c for c in commands if c.startswith(prefix)]
+        if not matches or (len(matches) == 1 and matches[0] == prefix):
+            menu.hide_menu()
+        else:
+            menu.update_candidates(prefix, matches)
+
+    def _complete_command(self) -> None:
+        menu = self._get_completion_menu()
+        if menu is None or not menu.is_visible:
+            return
+        selected = menu.get_selected()
+        if selected is None:
+            return
+        result = self._find_command_prefix()
+        if result is None:
+            return
+        _prefix, slash_col, row = result
+        _, col = self.cursor_location
+        line = self.document.get_line(row)
+        after_cursor = line[col:]
+        replacement = selected
+        if not (after_cursor and after_cursor[0] == " "):
+            replacement += " "
+        new_line = line[:slash_col] + replacement + after_cursor
+        new_col = slash_col + len(replacement)
+        all_lines = self.text.split("\n")
+        all_lines[row] = new_line
+        self.text = "\n".join(all_lines)
+        self.move_cursor((row, new_col))
+        menu.hide_menu()
+
+    def _schedule_update(self) -> None:
+        if self._completion_timer is not None:
+            self._completion_timer.stop()
+        self._completion_timer = self.set_timer(0.05, self._update_completion)
+
+    def action_cursor_up(self, select: bool = False) -> None:
+        menu = self._get_completion_menu()
+        if menu is not None and menu.is_visible:
+            menu.select_up()
+        else:
+            super().action_cursor_up(select=select)
+
+    def action_cursor_down(self, select: bool = False) -> None:
+        menu = self._get_completion_menu()
+        if menu is not None and menu.is_visible:
+            menu.select_down()
+        else:
+            super().action_cursor_down(select=select)
 
     async def _on_key(self, event: events.Key) -> None:
+        menu = self._get_completion_menu()
+        is_visible = menu is not None and menu.is_visible
+
         if event.key == "enter":
+            if menu:
+                menu.hide_menu()
             await self.on_enter_key()
             event.stop()
+            return
+
         if event.key == "shift+enter":
             self.insert("\n")
             event.stop()
+            self._schedule_update()
+            return
+
+        if is_visible:
+            if event.key == "tab":
+                self._complete_command()
+                event.stop()
+                return
+            if event.key == "escape":
+                if menu is not None:
+                    menu.hide_menu()
+                event.stop()
+                return
+
+        self._schedule_update()
