@@ -36,9 +36,19 @@ class WsStateChangeEvent(BaseModel):
 
 class AgentCreateRequest(BaseModel):
     profile_name: Optional[str] = Field(default=None, description="Agent profile名称")
-    init_messages: list[str] = Field(
-        default_factory=list, description="初始用户消息列表"
+    llm_name: Optional[str] = Field(default=None, description="指定使用的LLM名称")
+    planning: bool = Field(default=False, description="启用文档规划模式")
+    afk: bool = Field(default=False, description="禁止Agent暂停")
+    disable_waiting_marker: bool = Field(
+        default=False, description="关闭出现#LINHAI_WAITING_USER才暂停的功能"
     )
+    claw_enabled: bool = Field(default=False, description="启用CLAW模式")
+    claw_folder: Optional[str] = Field(default=None, description="CLAW目录路径")
+    checklist_path: Optional[str] = Field(default=None, description="检查清单文件路径")
+    rss: list[str] = Field(default_factory=list, description="RSS feed URL列表")
+    telegram: bool = Field(default=False, description="启用Telegram远程控制")
+    message: list[str] = Field(default_factory=list, description="初始用户消息列表")
+    file: list[str] = Field(default_factory=list, description="初始文件路径列表")
 
 
 class AgentInfo(BaseModel):

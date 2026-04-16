@@ -38,7 +38,7 @@ async def test_health_check(client):
 
 
 async def test_create_agent(client):
-    response = await client.post("/api/agents", json={"init_messages": ["Hello"]})
+    response = await client.post("/api/agents", json={"message": ["Hello"]})
     assert response.status_code == 200
     data = response.json()
     assert "id" in data
@@ -54,9 +54,7 @@ async def test_list_agents(client):
 
 
 async def test_get_agent_state(client):
-    create_response = await client.post(
-        "/api/agents", json={"init_messages": ["Say hello"]}
-    )
+    create_response = await client.post("/api/agents", json={"message": ["Say hello"]})
     agent_id = create_response.json()["id"]
 
     await asyncio.sleep(1)
@@ -72,7 +70,7 @@ async def test_get_agent_state(client):
 
 
 async def test_delete_agent(client):
-    create_response = await client.post("/api/agents", json={"init_messages": ["Test"]})
+    create_response = await client.post("/api/agents", json={"message": ["Test"]})
     agent_id = create_response.json()["id"]
 
     delete_response = await client.delete(f"/api/agents/{agent_id}")

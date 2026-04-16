@@ -10,12 +10,29 @@ class TestSchemas(unittest.TestCase):
     def test_agent_create_request_defaults(self):
         req = AgentCreateRequest()
         self.assertIsNone(req.profile_name)
-        self.assertEqual(req.init_messages, [])
+        self.assertIsNone(req.llm_name)
+        self.assertFalse(req.planning)
+        self.assertFalse(req.afk)
+        self.assertFalse(req.disable_waiting_marker)
+        self.assertFalse(req.claw_enabled)
+        self.assertIsNone(req.claw_folder)
+        self.assertIsNone(req.checklist_path)
+        self.assertEqual(req.rss, [])
+        self.assertFalse(req.telegram)
+        self.assertEqual(req.message, [])
+        self.assertEqual(req.file, [])
 
     def test_agent_create_request_with_values(self):
-        req = AgentCreateRequest(profile_name="test", init_messages=["hello"])
+        req = AgentCreateRequest(
+            profile_name="test",
+            llm_name="gpt-4",
+            planning=True,
+            message=["hello"],
+        )
         self.assertEqual(req.profile_name, "test")
-        self.assertEqual(req.init_messages, ["hello"])
+        self.assertEqual(req.llm_name, "gpt-4")
+        self.assertTrue(req.planning)
+        self.assertEqual(req.message, ["hello"])
 
     def test_agent_info(self):
         info = AgentInfo(

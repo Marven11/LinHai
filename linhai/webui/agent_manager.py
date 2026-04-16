@@ -208,28 +208,9 @@ class AgentManager:
         TokenManager(registry)
         return registry
 
-    async def create_agent(
-        self,
-        profile_name: Optional[str] = None,
-        init_messages: Optional[list[str]] = None,
-    ) -> AgentSession:
+    async def create_agent(self, build_args: AgentBuildArguments) -> AgentSession:
         agent_id = str(uuid.uuid4())
         registry = self._create_registry()
-
-        build_args: AgentBuildArguments = {
-            "rss": [],
-            "telegram": False,
-            "disable_waiting_marker": False,
-            "afk": False,
-            "claw_enabled": False,
-            "claw_folder": None,
-            "message": init_messages or [],
-            "file": [],
-            "planning": False,
-            "llm_name": None,
-            "checklist_path": None,
-            "profile_name": profile_name,
-        }
 
         context = create_agent_build_context(
             registry=registry,
@@ -258,9 +239,8 @@ class AgentManager:
         )
         self.sessions[agent_id] = session
 
-        if init_messages:
-            for msg in init_messages:
-                session.add_user_message(msg)
+        for msg in build_args.get("message", []):
+            session.add_user_message(msg)
 
         return session
 

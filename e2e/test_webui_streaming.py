@@ -64,7 +64,7 @@ def test_websocket_initial_state():
         app = create_app()
         client = TestClient(app)
 
-        response = client.post("/api/agents", json={"init_messages": ["Say hello"]})
+        response = client.post("/api/agents", json={"message": ["Say hello"]})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
@@ -90,7 +90,7 @@ def test_websocket_user_message():
         app = create_app()
         client = TestClient(app)
 
-        response = client.post("/api/agents", json={"init_messages": []})
+        response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
@@ -125,7 +125,7 @@ def test_websocket_reset_recovery():
         app = create_app()
         client = TestClient(app)
 
-        response = client.post("/api/agents", json={"init_messages": []})
+        response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
@@ -172,7 +172,7 @@ def test_websocket_multi_turn():
         app = create_app()
         client = TestClient(app)
 
-        response = client.post("/api/agents", json={"init_messages": []})
+        response = client.post("/api/agents", json={"message": []})
         assert response.status_code == 200
         agent_id = response.json()["id"]
 
@@ -284,7 +284,7 @@ async def test_webui_streaming_e2e():
             except Exception:
                 pass
             await asyncio.sleep(0.2)
-        resp = await client.post("/api/agents", json={"init_messages": []})
+        resp = await client.post("/api/agents", json={"message": []})
         assert resp.status_code == 200
         agent_id = resp.json()["id"]
         sub = JsonSubscriber()

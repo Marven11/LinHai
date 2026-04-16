@@ -34,13 +34,32 @@ def get_manager() -> AgentManager:
     return _manager
 
 
+from pathlib import Path as _Path
+
+
 @router.post("", response_model=AgentCreateResponse)
 async def create_agent(request: AgentCreateRequest):
+    from linhai.agent.create import AgentBuildArguments as _AgentBuildArguments
+
+    build_args: _AgentBuildArguments = {
+        "rss": request.rss,
+        "telegram": request.telegram,
+        "disable_waiting_marker": request.disable_waiting_marker,
+        "afk": request.afk,
+        "claw_enabled": request.claw_enabled,
+        "claw_folder": _Path(request.claw_folder) if request.claw_folder else None,
+        "message": request.message,
+        "file": [_Path(f) for f in request.file],
+        "planning": request.planning,
+        "llm_name": request.llm_name,
+        "checklist_path": (
+            _Path(request.checklist_path) if request.checklist_path else None
+        ),
+        "profile_name": request.profile_name,
+    }
+
     manager = get_manager()
-    session = await manager.create_agent(
-        profile_name=request.profile_name,
-        init_messages=request.init_messages,
-    )
+    session = await manager.create_agent(build_args)
     return AgentCreateResponse(
         id=session.agent_id,
         state=session.get_state(),
@@ -134,13 +153,10 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 content = parsed_answer._answer.get_current_content()
                 session.update_agent_message_content(agent_idx, content)
 
-        receive_task = asyncio.create_task(receive_segments())
-        await parsed_answer.wait_parsing()
-        receive_task.cancel()
-        try:
-            await receive_task
-        except asyncio.CancelledError:
-            pass
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(receive_segments)
+            await parsed_answer.wait_parsing()
+            tg.cancel_scope.cancel()
 
         content = parsed_answer._answer.get_current_content()
         session.update_agent_message_content(agent_idx, content)
