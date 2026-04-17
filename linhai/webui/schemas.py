@@ -110,6 +110,33 @@ class ProfileInfo(BaseModel):
     name: str = Field(..., description="Profile名称")
 
 
+class LlmDetailInfo(BaseModel):
+    name: str = Field(..., description="LLM名称")
+    model: str = Field(..., description="模型名称")
+    token_limit: int = Field(..., description="token限制")
+    support_image: bool = Field(..., description="是否支持图像")
+    is_current: bool = Field(..., description="是否是当前使用的LLM")
+    is_default: bool = Field(..., description="是否是默认LLM")
+    error_count: int = Field(..., description="错误计数")
+
+
+class LlmListResponse(BaseModel):
+    llms: list[LlmDetailInfo] = Field(default_factory=list, description="LLM列表")
+
+
+class SwitchLlmRequest(BaseModel):
+    llm_name: str = Field(..., description="要切换到的LLM名称")
+
+
+class WsProcessUpdateEvent(BaseModel):
+    type: Literal["process_update"] = "process_update"
+    events: list
+
+
+class KillProcessRequest(BaseModel):
+    machine_id: str = Field(..., description="进程所在机器ID")
+
+
 class ConfigResponse(BaseModel):
     profiles: list[ProfileInfo] = Field(
         default_factory=list, description="可用Profile列表"

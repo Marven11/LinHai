@@ -39,6 +39,8 @@ class AgentSession:
         self.created_at = datetime.now()
         self._messages_data: dict = {"messages": []}
         self._publisher = JsonPublisher(self._messages_data)
+        self._processes_data: dict = {"processes": []}
+        self._process_publisher = JsonPublisher(self._processes_data)
         self._lock = asyncio.Lock()
 
     def get_state(self) -> str:
@@ -185,6 +187,47 @@ class AgentSession:
             else:
                 result[key] = None
         return result
+
+    def get_llms(self) -> list:
+        if not self.registry.has_member("llm_manager"):
+            return []
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
+        return llm_manager.list_available_llms()
+
+    async def switch_llm(self, name: str) -> None:
+        from linhai.llm_manager import LlmManager
+
+        llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
+        await llm_manager.switch_to_llm(name)
+
+    def get_processes(self) -> list[dict[str, str]]:
+        if not self.registry.has_member("machine_control"):
+            return []
+        from linhai.machine_control.main import MachineControl
+
+        mc = self.registry.get_member_typechecked("machine_control", MachineControl)
+        return mc.list_processes()
+
+    def sync_processes(self) -> list[TaggedEvent]:
+        self._processes_data["processes"] = self.get_processes()
+        return self._process_publisher.calculate_diff()
+
+    async def kill_process(self, pid: str, machine_id: str) -> bool:
+        if not self.registry.has_member("machine_control"):
+            return False
+        from linhai.machine_control.main import MachineControl
+
+        mc = self.registry.get_member_typechecked("machine_control", MachineControl)
+        host = mc.machines.get(machine_id)
+        if host is None:
+            return False
+        proc = host.get_process(pid)
+        if proc is None:
+            return False
+        result = await proc.kill(graceful=True)
+        return result.success
 
     async def stop(self) -> None:
         task = self._manager._task_supervisor.tasks.get(self._task_name)

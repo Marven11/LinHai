@@ -136,6 +136,9 @@ class EtherGhostMachineControl(HostControl):
     def get_process(self, pid: str) -> Process | None:
         return None
 
+    def list_process_pids(self) -> list[str]:
+        return []
+
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:

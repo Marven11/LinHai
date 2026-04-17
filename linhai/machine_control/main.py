@@ -314,6 +314,13 @@ class MachineControl:
             current = self.source_machines.get(current)
         return chain
 
+    def list_processes(self) -> list[dict[str, str]]:
+        result: list[dict[str, str]] = []
+        for machine_id, host_control in self.machines.items():
+            for pid in host_control.list_process_pids():
+                result.append({"pid": pid, "machine_id": machine_id})
+        return result
+
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
         plugin = MachineControlPlugin(self.registry, self)

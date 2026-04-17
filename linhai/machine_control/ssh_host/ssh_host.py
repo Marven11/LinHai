@@ -180,6 +180,9 @@ class SshMachineControl:
     def get_process(self, pid: str) -> Process | None:
         return self._processes.get(pid)
 
+    def list_process_pids(self) -> list[str]:
+        return list(self._processes.keys())
+
     async def change_directory(
         self, directory: str
     ) -> ToolResultSuccess | ToolResultFailed:

@@ -138,6 +138,9 @@ class MasterHostControl:
     def get_process(self, pid: str) -> Process | None:
         return self._processes.get(pid)
 
+    def list_process_pids(self) -> list[str]:
+        return list(self._processes.keys())
+
     async def _handle_process_exit(self, pid: str) -> None:
         self._processes.pop(pid, None)
 

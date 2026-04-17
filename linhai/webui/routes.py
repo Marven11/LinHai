@@ -17,6 +17,11 @@ from .schemas import (
     ConfigResponse,
     ProfileInfo,
     LlmInfo,
+    LlmDetailInfo,
+    LlmListResponse,
+    SwitchLlmRequest,
+    WsProcessUpdateEvent,
+    KillProcessRequest,
 )
 from .agent_manager import AgentManager
 from ..config import get_default_config_path
@@ -193,6 +198,10 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 )
             prev_state = current_state
 
+            process_events = session.sync_processes()
+            if process_events:
+                events.append(WsProcessUpdateEvent(events=process_events).model_dump())
+
             for event in events:
                 await websocket.send_json(event)
             elapsed = time.perf_counter() - start_time
@@ -233,6 +242,58 @@ async def get_agent_planning(agent_id: str):
         raise HTTPException(status_code=404, detail="Agent不存在")
     files = session.get_planning_files()
     return PlanningFileResponse(**files)
+
+
+@router.get("/{agent_id}/llms", response_model=LlmListResponse)
+async def get_agent_llms(agent_id: str):
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    llms_data = session.get_llms()
+    llm_infos = []
+    for item in llms_data:
+        llm_infos.append(
+            LlmDetailInfo(
+                name=item["name"],
+                model=item["model"],
+                token_limit=item["token_limit"],
+                support_image=item["support_image"],
+                is_current=item["is_current"],
+                is_default=item["is_default"],
+                error_count=item["error_count"],
+            )
+        )
+    return LlmListResponse(llms=llm_infos)
+
+
+@router.post("/{agent_id}/switch_llm")
+async def switch_agent_llm(agent_id: str, request: SwitchLlmRequest):
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    available = session.get_llms()
+    valid_names = [l["name"] for l in available]
+    if request.llm_name not in valid_names:
+        raise HTTPException(
+            status_code=400,
+            detail=f"LLM {request.llm_name} 不存在，可用: {', '.join(valid_names)}",
+        )
+    await session.switch_llm(request.llm_name)
+    return {"message": f"已切换到LLM: {request.llm_name}"}
+
+
+@router.post("/{agent_id}/processes/{pid}/kill")
+async def kill_agent_process(agent_id: str, pid: str, request: KillProcessRequest):
+    manager = get_manager()
+    session = manager.get_agent(agent_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Agent不存在")
+    success = await session.kill_process(pid, request.machine_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="进程不存在或终止失败")
+    return {"message": f"进程 {pid} 已终止"}
 
 
 @config_router.get("/config", response_model=ConfigResponse)

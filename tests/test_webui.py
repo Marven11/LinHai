@@ -430,3 +430,136 @@ class TestAgentManagerConfigInfo(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(info["profiles"][0]["name"], "default")
             self.assertEqual(len(info["llms"]), 1)
             self.assertEqual(info["llms"][0]["name"], "gpt")
+
+
+class TestAgentSessionLlmMethods(unittest.TestCase):
+    def _make_session(self, agent_mock=None, registry_mock=None):
+        if agent_mock is None:
+            agent_mock = MagicMock()
+        if registry_mock is None:
+            registry_mock = MagicMock()
+        agent_mock.registry = registry_mock
+        manager = MagicMock()
+        return AgentSession(
+            agent_id="test-id",
+            agent=agent_mock,
+            task_name="task-1",
+            manager=manager,
+        )
+
+    def test_get_llms_no_manager(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = False
+        session = self._make_session(registry_mock=registry_mock)
+        result = session.get_llms()
+        self.assertEqual(result, [])
+
+    def test_get_llms_with_manager(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = True
+        mock_llm_manager = MagicMock()
+        mock_llm_manager.list_available_llms.return_value = [
+            {
+                "name": "gpt",
+                "model": "gpt-4",
+                "token_limit": 128000,
+                "support_image": True,
+                "is_current": True,
+                "is_default": True,
+                "error_count": 0,
+            },
+        ]
+        registry_mock.get_member_typechecked.return_value = mock_llm_manager
+        session = self._make_session(registry_mock=registry_mock)
+        result = session.get_llms()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "gpt")
+
+
+class TestAgentSessionProcessMethods(unittest.TestCase):
+    def _make_session(self, agent_mock=None, registry_mock=None):
+        if agent_mock is None:
+            agent_mock = MagicMock()
+        if registry_mock is None:
+            registry_mock = MagicMock()
+        agent_mock.registry = registry_mock
+        manager = MagicMock()
+        return AgentSession(
+            agent_id="test-id",
+            agent=agent_mock,
+            task_name="task-1",
+            manager=manager,
+        )
+
+    def test_get_processes_no_machine_control(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = False
+        session = self._make_session(registry_mock=registry_mock)
+        result = session.get_processes()
+        self.assertEqual(result, [])
+
+    def test_get_processes_with_machine_control(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = True
+        mock_mc = MagicMock()
+        mock_mc.list_processes.return_value = [
+            {"pid": "123", "machine_id": "master_host"}
+        ]
+        registry_mock.get_member_typechecked.return_value = mock_mc
+        session = self._make_session(registry_mock=registry_mock)
+        result = session.get_processes()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["pid"], "123")
+
+
+class TestNewLlmSchemas(unittest.TestCase):
+    def test_llm_detail_info(self):
+        from linhai.webui.schemas import LlmDetailInfo
+
+        info = LlmDetailInfo(
+            name="gpt",
+            model="gpt-4",
+            token_limit=128000,
+            support_image=True,
+            is_current=True,
+            is_default=True,
+            error_count=0,
+        )
+        self.assertEqual(info.name, "gpt")
+        self.assertTrue(info.is_current)
+
+    def test_llm_list_response(self):
+        from linhai.webui.schemas import LlmListResponse, LlmDetailInfo
+
+        resp = LlmListResponse(
+            llms=[
+                LlmDetailInfo(
+                    name="gpt",
+                    model="gpt-4",
+                    token_limit=128000,
+                    support_image=True,
+                    is_current=True,
+                    is_default=True,
+                    error_count=0,
+                ),
+            ]
+        )
+        self.assertEqual(len(resp.llms), 1)
+
+    def test_switch_llm_request(self):
+        from linhai.webui.schemas import SwitchLlmRequest
+
+        req = SwitchLlmRequest(llm_name="gpt")
+        self.assertEqual(req.llm_name, "gpt")
+
+    def test_kill_process_request(self):
+        from linhai.webui.schemas import KillProcessRequest
+
+        req = KillProcessRequest(machine_id="master_host")
+        self.assertEqual(req.machine_id, "master_host")
+
+    def test_ws_process_update_event(self):
+        from linhai.webui.schemas import WsProcessUpdateEvent
+
+        event = WsProcessUpdateEvent(events=[{"pid": "1", "machine_id": "m"}])
+        self.assertEqual(event.type, "process_update")
