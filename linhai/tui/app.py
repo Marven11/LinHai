@@ -26,6 +26,7 @@ from .components import (
 )
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
+from .process_tab import ProcessTabWidget
 from ..token_manager import TokenManager
 from .messages_list import MessagesList
 
@@ -163,6 +164,9 @@ class TUIApp(App):
 
             with TabPane("Context", id="context-tab"):
                 yield ContextTabWidget(self.registry)
+
+            with TabPane("Process", id="process-tab"):
+                yield ProcessTabWidget(self.registry)
 
             cli_args = self.registry.get_member_typechecked(
                 "cli_args", argparse.Namespace

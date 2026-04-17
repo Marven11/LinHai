@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Dict, Optional, Union, Any
 from linhai.agent.messages import FileContentMessage
+from linhai.machine_control.process import ProcessCreateInfo
 from linhai.tool.base import (
     ToolArgInfo,
     ToolResultSuccess,
@@ -238,12 +239,27 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         result = await host_control.create_process(argv, wait_second)
         if not result.success:
             return ToolResultFailed(content=result.error or "创建进程失败")
-        if result.returncode is not None:
+        if result.returncode is None:
+            from linhai.agent.lifecycle import Lifecycle
+
+            process = host_control.get_process(result.pid)
+            if process is not None and "lifecycle" in machine_control.registry.members:
+                lifecycle = machine_control.registry.get_member_typechecked(
+                    "lifecycle", Lifecycle
+                )
+                await lifecycle.after_process_create.trigger(
+                    ProcessCreateInfo(
+                        process=process,
+                        argv=argv,
+                        machine_id=machine_control.target_machine,
+                        initial_returncode=None,
+                    )
+                )
             return ToolResultSuccess(
-                content=f"<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
+                content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
             )
         return ToolResultSuccess(
-            content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
+            content=f"<<pid>>{result.pid}<<pid>><<returncode>>{result.returncode}<<returncode>><<stdout>>{result.stdout}<<stdout>><<stderr>>{result.stderr}<<stderr>>"
         )
 
     @toolset.register_tool(

@@ -8,6 +8,7 @@ from .components import (
 )
 from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
+from .process_tab import ProcessTabWidget
 from .app import TUIApp
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "MessageWidget",
     "ContextTabWidget",
     "PlanningTabWidget",
+    "ProcessTabWidget",
     "TUIApp",
 ]

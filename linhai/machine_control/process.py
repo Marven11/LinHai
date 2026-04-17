@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Protocol
+import time
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    pass
 
 
 @dataclasses.dataclass
@@ -56,3 +60,16 @@ class Process(Protocol):
     async def wait(self, timeout: float) -> ProcessWaitResult: ...
 
     async def kill(self, graceful: bool = True) -> ProcessKillResult: ...
+
+
+@dataclasses.dataclass
+class ProcessCreateInfo:
+    process: Process
+    argv: list[str]
+    machine_id: str
+    created_at: float = 0.0
+    initial_returncode: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.created_at == 0.0:
+            self.created_at = time.monotonic()

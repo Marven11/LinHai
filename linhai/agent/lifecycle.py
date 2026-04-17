@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from linhai.agent.main import Agent
     from linhai.parsed_message import ParsedAnswer, Segment
     from linhai.agent.user_message_handler import ParsedUserMessage
+    from linhai.machine_control.process import ProcessCreateInfo
 
 BeforeMessageGenerationCallback: TypeAlias = Callable[[], Awaitable[None]]
 
@@ -113,6 +114,11 @@ AfterParsedUserMessageCallback: TypeAlias = Callable[
     Awaitable[bool | None],
 ]
 
+AfterProcessCreateCallback: TypeAlias = Callable[
+    ["ProcessCreateInfo"],
+    Awaitable[None],
+]
+
 
 def _is_tool_result(value: ToolResultSuccess | ToolResultFailed | dict) -> bool:
     return isinstance(value, (ToolResultSuccess, ToolResultFailed))
@@ -146,3 +152,4 @@ class Lifecycle:
         self.before_cache_invalidate = BroadcastSlot()
         self.after_cache_invalidate = BroadcastSlot()
         self.after_parsed_user_message = ShortCircuitSlot()
+        self.after_process_create = BroadcastSlot()
