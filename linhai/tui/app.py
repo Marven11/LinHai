@@ -28,6 +28,7 @@ from .context_tab import ContextTabWidget
 from .planning_tab import PlanningTabWidget
 from .process_tab import ProcessTabWidget
 from ..token_manager import TokenManager
+from ..utils.i18n import t
 from .messages_list import MessagesList
 
 ASCII_ART = r"""
@@ -152,7 +153,12 @@ class TUIApp(App):
                     yield ExtendedTextArea(
                         on_enter_key=self._handle_message_submission,
                         get_command_completions=self._get_command_completions,
-                        placeholder="Enter发送，Shift+Enter换行（如果终端支持）",
+                        placeholder=t(
+                            {
+                                "zh_CN": "Enter发送，Shift+Enter换行（如果终端支持）",
+                                "en": "Enter to send, Shift+Enter for newline (if terminal supports)",
+                            }
+                        ),
                         id="input",
                         show_line_numbers=False,
                     )
@@ -235,10 +241,16 @@ class TUIApp(App):
 
         @cliapp_tool.register_tool(
             name="suicide",
-            desc="杀死自己并退出APP",
+            desc=t({"zh_CN": "杀死自己并退出APP", "en": "Kill self and exit the app"}),
             args={
                 "return_code": ToolArgInfo(
-                    desc="退出代码，0表示成功，非0表示错误", type="int"
+                    desc=t(
+                        {
+                            "zh_CN": "退出代码，0表示成功，非0表示错误",
+                            "en": "Exit code, 0 for success, non-zero for error",
+                        }
+                    ),
+                    type="int",
                 ),
             },
             required_args=["return_code"],
