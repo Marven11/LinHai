@@ -792,6 +792,14 @@ class NormalContentWidget(Markdown):
         """检查内容是否为空或只包含空白字符"""
         return not self._streamed_content.strip()
 
+    async def on_unmount(self) -> None:
+        if self.timer:
+            self.timer.stop()
+            self.timer = None
+        if self._stream is not None:
+            await self._stream.stop()
+            self._stream = None
+
     def stop_timer(self) -> None:
         """停止timer，防止删除后继续更新"""
         if self.timer:
