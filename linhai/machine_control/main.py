@@ -18,8 +18,8 @@ class MachineControl:
     def __init__(
         self,
         registry: Registry,
+        remote_machines: list[RemoteMachineConfig],
         tmux_terminal: bool = True,
-        remote_machines: list[RemoteMachineConfig] | None = None,
     ):
         self.registry = registry
         self.target_machine = "master_host"
