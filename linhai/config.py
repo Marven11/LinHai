@@ -180,6 +180,9 @@ class AgentConfig(BaseModel):
     process_sandbox: Optional[ProcessSandboxConfig] = Field(
         default=None, description="进程沙箱配置。"
     )
+    plugins: Optional[list[str]] = Field(
+        default=None, description="用户插件列表，指定plugins/目录下的插件模块名。"
+    )
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument

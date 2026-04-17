@@ -1,6 +1,8 @@
 """Agent创建模块，负责初始化Agent实例和相关组件。"""
 
+import importlib
 import os
+import sys
 from pathlib import Path
 import tempfile
 from typing import TypedDict, Optional, Tuple, Union
@@ -105,6 +107,7 @@ class AgentBuildContext(TypedDict):
     file: list[Path]
     process_sandbox: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]]
     config: Config
+    plugins: Optional[list[str]]
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -221,6 +224,7 @@ def create_agent_build_context(
         "file": build_args.get("file", []),
         "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
         "config": config,
+        "plugins": agent_config.plugins,
     }
 
 
@@ -373,6 +377,15 @@ async def create_agent_from_context(
     )
 
     _register_default_plugins(agent.lifecycle)
+
+    plugins = context.get("plugins")
+    if isinstance(plugins, list):
+        _load_user_plugins(
+            plugins,
+            context["registry"],
+            agent.lifecycle,
+            context["config_basedir"],
+        )
 
     return agent
 
@@ -646,3 +659,24 @@ def _register_default_plugins(lifecycle):
 
     for plugin in plugins:
         plugin.register(lifecycle)
+
+
+def _load_user_plugins(
+    plugin_names: list[str],
+    registry: Registry,
+    lifecycle,
+    config_basedir: Optional[Path],
+) -> None:
+    plugins_dir = (config_basedir or Path.cwd()) / "plugins"
+    if not plugins_dir.is_dir():
+        raise ValueError(f"Plugins directory not found: {plugins_dir}")
+    plugins_dir_str = str(plugins_dir.absolute())
+    if plugins_dir_str not in sys.path:
+        sys.path.insert(0, plugins_dir_str)
+    for plugin_name in plugin_names:
+        module = importlib.import_module(plugin_name)
+        if "register_linhai_plugins" not in dir(module):
+            raise ValueError(
+                f"Plugin '{plugin_name}' has no register_linhai_plugins function"
+            )
+        module.register_linhai_plugins(registry, lifecycle)
