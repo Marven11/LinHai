@@ -536,7 +536,7 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
         for file_path in context["file"]:
             if file_path.suffix.lower() in _IMAGE_EXTENSIONS:
                 pinned_messages.append(
-                    load_image(str(file_path), context["registry"], "raw")
+                    await load_image(str(file_path), context["registry"], "raw")
                 )
             else:
                 with open(file_path, "r", encoding="utf-8") as f:

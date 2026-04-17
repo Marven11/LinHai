@@ -6,16 +6,22 @@
 from __future__ import annotations
 import base64
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Literal
 from PIL import Image
 from io import BytesIO
 
+from typing import TYPE_CHECKING
+
 from linhai.base import Message
 from linhai.agent.lifecycle import Lifecycle
 from linhai.type_hints import LanguageModelMessage
 from linhai.registry import Registry
+
+if TYPE_CHECKING:
+    from linhai.machine_control import MachineControl
 
 
 class ImageMessage(Message):
@@ -138,8 +144,11 @@ class ImageMessage(Message):
         )
 
 
-def load_image(
-    image_filepath: str, registry: Registry, quality: Literal["compressed", "raw"]
+async def load_image(
+    image_filepath: str,
+    registry: Registry,
+    quality: Literal["compressed", "raw"],
+    machine_control: "MachineControl | None" = None,
 ) -> ImageMessage:
     """加载图片文件并返回ImageMessage。
 
@@ -147,6 +156,7 @@ def load_image(
         image_filepath: 图片文件路径
         registry: Registry实例（用于动态获取LLM支持状态）
         quality: 图片质量，"compressed"表示压缩图像，"raw"表示原始图像（默认）
+        machine_control: MachineControl实例（可选，用于支持远程机器读取）
 
     Returns:
         ImageMessage: 包含图片数据的消息对象
@@ -155,7 +165,24 @@ def load_image(
         FileNotFoundError: 图片文件不存在
         ValueError: 图像文件损坏或格式不支持
     """
-    path = Path(image_filepath)
+    from linhai.tool.base import ToolResultFailed
+
+    temp_path: Path | None = None
+    if machine_control is not None and machine_control.target_machine != "master_host":
+        suffix = Path(image_filepath).suffix or ".png"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            temp_path = Path(tmp.name)
+        host = machine_control.machines[machine_control.target_machine]
+        result = await host.download_file_concurrent(image_filepath, str(temp_path))
+        if isinstance(result, ToolResultFailed):
+            os.unlink(temp_path)
+            raise FileNotFoundError(
+                f"从机器 {machine_control.target_machine} 下载图片失败: {result.content}"
+            )
+        path = temp_path
+    else:
+        path = Path(image_filepath)
+
     if not path.exists():
         raise FileNotFoundError(f"图片文件不存在: {image_filepath}")
 
@@ -204,15 +231,18 @@ def load_image(
                 mime_type = "image/jpeg"
             image_bytes = buffer.getvalue()
 
-    return ImageMessage(
+    result = ImageMessage(
         image_bytes=image_bytes,
         mime_type=mime_type,
-        filename=path.name,
+        filename=Path(image_filepath).name,
         registry=registry,
         quality=quality,
         width=width,
         height=height,
     )
+    if temp_path is not None:
+        os.unlink(temp_path)
+    return result
 
 
 from linhai.tool.base import ToolSet, ToolArgInfo
@@ -252,7 +282,7 @@ class MultimodalToolsetManager:
                 desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
                 args={
                     "image_filepath": ToolArgInfo(
-                        desc="图片文件在master_host的路径", type="str"
+                        desc="图片文件在当前机器的路径", type="str"
                     ),
                     "quality": ToolArgInfo(
                         desc="图片质量，compressed表示压缩图像，raw表示原始图像",
@@ -261,10 +291,19 @@ class MultimodalToolsetManager:
                 },
                 required_args=["image_filepath"],
             )
-            def _load_image(
+            async def _load_image(
                 image_filepath, quality: Literal["compressed", "raw"] = "raw"
             ) -> ImageMessage:
-                return load_image(image_filepath, self.registry, quality)
+                from linhai.machine_control import MachineControl
+
+                machine_control: MachineControl | None = None
+                if self.registry.has_member("machine_control"):
+                    machine_control = self.registry.get_member_typechecked(
+                        "machine_control", MachineControl
+                    )
+                return await load_image(
+                    image_filepath, self.registry, quality, machine_control
+                )
 
             agent = self.registry.get_member_typechecked("agent", Agent)
             await agent.message_processor.add_new_message(

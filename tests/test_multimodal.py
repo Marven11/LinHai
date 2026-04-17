@@ -1,5 +1,6 @@
 """Tests for multimodal functionality."""
 
+import asyncio
 import base64
 import json
 import tempfile
@@ -158,7 +159,9 @@ class TestLoadImage(TestCase):
             temp_path = f.name
 
         try:
-            result = load_image(temp_path, self.mock_registry, quality="raw")
+            result = asyncio.run(
+                load_image(temp_path, self.mock_registry, quality="raw")
+            )
             self.assertIsInstance(result, ImageMessage)
             self.assertEqual(result.mime_type, "image/png")
             self.assertEqual(result.filename, Path(temp_path).name)
@@ -175,7 +178,11 @@ class TestLoadImage(TestCase):
 
     def test_load_image_not_found(self):
         with self.assertRaises(FileNotFoundError):
-            load_image("/nonexistent/path/image.png", self.mock_registry, quality="raw")
+            asyncio.run(
+                load_image(
+                    "/nonexistent/path/image.png", self.mock_registry, quality="raw"
+                )
+            )
 
     def test_load_image_different_mime_types(self):
         from PIL import Image
@@ -208,7 +215,9 @@ class TestLoadImage(TestCase):
                     temp_path = f.name
 
                 try:
-                    result = load_image(temp_path, self.mock_registry, quality="raw")
+                    result = asyncio.run(
+                        load_image(temp_path, self.mock_registry, quality="raw")
+                    )
                     self.assertEqual(result.mime_type, expected_mime)
                 finally:
                     Path(temp_path).unlink()
@@ -227,10 +236,14 @@ class TestLoadImage(TestCase):
             temp_path = f.name
 
         try:
-            result = load_image(temp_path, self.mock_registry, quality="raw")
+            result = asyncio.run(
+                load_image(temp_path, self.mock_registry, quality="raw")
+            )
             self.assertEqual(result.quality, "raw")
 
-            result2 = load_image(temp_path, self.mock_registry, quality="compressed")
+            result2 = asyncio.run(
+                load_image(temp_path, self.mock_registry, quality="compressed")
+            )
             self.assertEqual(result2.quality, "compressed")
         finally:
             Path(temp_path).unlink()
