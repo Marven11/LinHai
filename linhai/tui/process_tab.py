@@ -11,6 +11,7 @@ from textual.widgets import Button, Static
 
 from linhai.machine_control.process import ProcessCreateInfo
 from linhai.registry import Registry
+from linhai.utils.i18n import t
 
 
 class ProcessRowWidget(Horizontal):
@@ -70,10 +71,17 @@ class ProcessRowWidget(Horizontal):
         created_str = datetime.fromtimestamp(self._info.created_at).strftime("%H:%M:%S")
         yield Static(created_str, classes="time")
         if self._returncode is None:
-            yield Static("Running", classes="status status-running")
-            yield Button("Kill", variant="error", classes="kill-btn")
+            yield Static(
+                t({"en": "Running", "zh_CN": "运行中"}), classes="status status-running"
+            )
+            yield Button(
+                t({"en": "Kill", "zh_CN": "终止"}), variant="error", classes="kill-btn"
+            )
         else:
-            yield Static(f"Exit {self._returncode}", classes="status status-exited")
+            yield Static(
+                t({"en": "Exit {}", "zh_CN": "退出 {}"}).format(self._returncode),
+                classes="status status-exited",
+            )
             yield Static("", classes="kill-btn")
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -87,11 +95,13 @@ class ProcessRowWidget(Horizontal):
         status_widget = self.query_one(".status", Static)
         kill_btns = self.query(".kill-btn")
         if returncode is None:
-            status_widget.update("Running")
+            status_widget.update(t({"en": "Running", "zh_CN": "运行中"}))
             status_widget.set_class(True, "status-running")
             status_widget.set_class(False, "status-exited")
         else:
-            status_widget.update(f"Exit {returncode}")
+            status_widget.update(
+                t({"en": "Exit {}", "zh_CN": "退出 {}"}).format(returncode)
+            )
             status_widget.set_class(False, "status-running")
             status_widget.set_class(True, "status-exited")
             for btn in kill_btns:
@@ -120,7 +130,10 @@ class ProcessTabWidget(Static):
 
     def compose(self) -> ComposeResult:
         with VerticalScroll():
-            yield Static("No processes created yet.", id="process-empty")
+            yield Static(
+                t({"en": "No processes created yet.", "zh_CN": "尚未创建进程。"}),
+                id="process-empty",
+            )
 
     def on_mount(self) -> None:
         from linhai.agent.lifecycle import Lifecycle
