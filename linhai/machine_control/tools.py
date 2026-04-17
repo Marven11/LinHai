@@ -70,24 +70,27 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.add_bash_machine(machine_id, pid, source_machine)
 
     @toolset.register_tool(
-        name="connect_ssh_machine",
-        desc="连接到SSH机器并添加到可用机器列表",
+        name="list_remote_configs",
+        desc="列出所有预设的远程机器配置",
+        args={},
+        required_args=[],
+    )
+    async def list_remote_configs_tool() -> ToolResultSuccess:
+        return await machine_control.list_remote_configs()
+
+    @toolset.register_tool(
+        name="connect_remote_config",
+        desc="根据预设的远程机器配置连接远程机器",
         args={
-            "machine_id": ToolArgInfo(desc="机器ID", type="str"),
-            "host": ToolArgInfo(desc="SSH主机地址", type="str"),
-            "port": ToolArgInfo(desc="SSH端口，默认22", type="int"),
-            "username": ToolArgInfo(desc="SSH用户名，默认当前用户", type="str"),
+            "name": ToolArgInfo(desc="远程机器配置的名称", type="str"),
         },
-        required_args=["machine_id", "host"],
+        required_args=["name"],
         conflict_with=None,
     )
-    async def connect_ssh_machine_tool(
-        machine_id: str,
-        host: str,
-        port: int = 22,
-        username: Optional[str] = None,
+    async def connect_remote_config_tool(
+        name: str,
     ) -> ToolResultSuccess | ToolResultFailed:
-        return await machine_control.add_ssh_machine(machine_id, host, port, username)
+        return await machine_control.connect_remote_config(name)
 
     @toolset.register_tool(
         name="connect_ether_ghost_machine",

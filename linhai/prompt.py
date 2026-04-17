@@ -383,7 +383,7 @@ EXAMPLES_SECRET_USAGE = """
 
 EXAMPLE_MULTIHOP_MACHINES = """
 ```json toolcall
-{"name": "connect_ssh_machine", "arguments": {"machine_id": "ssh_hop1", "host": "example.com", "username": "foobar"}}
+{"name": "connect_remote_config", "arguments": {"name": "ssh_hop1"}}
 ```
 
 ```json toolcall

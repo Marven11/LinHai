@@ -2,6 +2,7 @@
 
 from typing import Dict, Optional, Any
 from linhai.agent.lifecycle import Lifecycle
+from linhai.config import RemoteMachineConfig
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
@@ -14,9 +15,17 @@ from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
 class MachineControl:
     """机器控制管理器，负责注册工具和切换机器。"""
 
-    def __init__(self, registry: Registry, tmux_terminal: bool = True):
+    def __init__(
+        self,
+        registry: Registry,
+        tmux_terminal: bool = True,
+        remote_machines: list[RemoteMachineConfig] | None = None,
+    ):
         self.registry = registry
         self.target_machine = "master_host"
+        self.remote_machines: Dict[str, RemoteMachineConfig] = {
+            cfg.name: cfg for cfg in (remote_machines or [])
+        }
         self.machines: Dict[str, HostControl] = {
             "master_host": MasterHostControl(registry, tmux_terminal=tmux_terminal),
         }
@@ -92,72 +101,65 @@ class MachineControl:
             content=f"已成功连接bash进程为机器: {machine_id} (PID: {pid})"
         )
 
-    async def add_ssh_machine(
-        self,
-        machine_id: str,
-        host: str,
-        port: int = 22,
-        username: Optional[str] = None,
+    async def connect_remote_config(
+        self, name: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        if machine_id in self.machines:
-            return ToolResultFailed(content=f"机器ID已存在: {machine_id}")
+        if name not in self.remote_machines:
+            available = ", ".join(self.remote_machines.keys()) or "无"
+            return ToolResultFailed(
+                content=f"远程机器配置未找到: {name}。可用配置: {available}"
+            )
+        if name in self.machines:
+            return ToolResultFailed(content=f"机器ID已存在: {name}")
 
-        ssh_control = SshMachineControl(
-            registry=self.registry, host=host, port=port, username=username
-        )
+        config = self.remote_machines[name]
 
-        ssh_cmd = [
-            "ssh",
-            f"{username or 'root'}@{host}",
-            "-p",
-            str(port),
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "ConnectTimeout=10",
-            "-o",
-            "ServerAliveInterval=30",
-            "-o",
-            "ServerAliveCountMax=3",
-            "bash",
-            "-s",
-        ]
+        ssh_control = SshMachineControl(registry=self.registry)
 
         current_host = self.machines[self.target_machine]
-        result = await current_host.create_process(ssh_cmd, wait_second=15.0)
+        result = await current_host.create_process(config.argv, wait_second=15.0)
 
         if not result.success:
-            return ToolResultFailed(content=f"连接SSH机器失败: {result.error}")
+            return ToolResultFailed(content=f"连接远程机器失败: {result.error}")
 
         if result.returncode is not None:
             return ToolResultFailed(
-                content=f"SSH进程立即退出(code={result.returncode}): {result.stderr}"
+                content=f"连接进程立即退出(code={result.returncode}): {result.stderr}"
             )
 
         process = current_host.get_process(result.pid)
         if process is None:
-            return ToolResultFailed(content=f"SSH进程不存在: {result.pid}")
+            return ToolResultFailed(content=f"连接进程不存在: {result.pid}")
 
         connected = await ssh_control.connect(process)
         if not connected:
             await process.kill()
-            return ToolResultFailed(content=f"连接SSH机器失败: {host}:{port}")
+            return ToolResultFailed(content=f"连接远程机器失败: {name}")
 
-        self.machines[machine_id] = ssh_control
-        self.source_machines[machine_id] = self.target_machine
-        self.machine_descriptions[machine_id] = f"SSH远程主机 ({host}:{port})"
+        self.machines[name] = ssh_control
+        self.source_machines[name] = self.target_machine
+        desc = config.description or f"远程机器 ({name})"
+        self.machine_descriptions[name] = desc
 
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"SSH连接成功: 已连接到远程机器 {machine_id} ({host}:{port}), 用户名 {username}",
+                content=f"远程机器连接成功: {name}",
             ),
         )
 
-        return ToolResultSuccess(
-            content=f"已成功添加SSH机器: {machine_id} ({host}:{port})"
-        )
+        return ToolResultSuccess(content=f"已成功连接远程机器: {name}")
+
+    async def list_remote_configs(self) -> ToolResultSuccess:
+        if not self.remote_machines:
+            return ToolResultSuccess(content="没有预设的远程机器配置")
+        lines = ["可用的远程机器配置:"]
+        for name, cfg in self.remote_machines.items():
+            desc = cfg.description or "无描述"
+            connected = " (已连接)" if name in self.machines else ""
+            lines.append(f"  - {name}: {desc} [argv: {cfg.argv}]{connected}")
+        return ToolResultSuccess(content="\n".join(lines))
 
     async def add_ether_ghost_machine(
         self,
