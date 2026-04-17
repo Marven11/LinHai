@@ -1,12 +1,14 @@
 import asyncio
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from linhai.machine_control.master_host.tmux_terminal import (
     TmuxTerminal,
     KEY_TO_TMUX,
     is_tmux_available,
     _SESSION_PREFIX,
+    _session_exists,
+    _MAX_NAME_RETRIES,
 )
 
 
@@ -89,12 +91,43 @@ class TestTmuxTerminal(unittest.TestCase):
 
     def test_close_and_verify(self):
         t = self._create_terminal()
-        name = t.session_name
         t.send("echo before_close")
         t.send_key("enter")
         self.loop.run_until_complete(asyncio.sleep(0.3))
         t.close()
         self.terminals_to_cleanup.remove(t)
+
+    def test_session_exists_true(self):
+        t = self._create_terminal()
+        self.assertTrue(_session_exists(t.session_name))
+
+    def test_session_exists_false(self):
+        self.assertFalse(_session_exists("linhai_nonexistent_session_xyz"))
+
+    @patch("linhai.machine_control.master_host.tmux_terminal._session_exists")
+    def test_name_conflict_retries(self, mock_exists):
+        mock_exists.return_value = True
+        with self.assertRaises(ValueError) as ctx:
+            TmuxTerminal()
+        self.assertIn("conflict", str(ctx.exception))
+        self.assertEqual(mock_exists.call_count, _MAX_NAME_RETRIES)
+
+    @patch("linhai.machine_control.master_host.tmux_terminal._session_exists")
+    def test_name_conflict_resolves_on_second_try(self, mock_exists):
+        call_count = 0
+        original_session_exists = _session_exists
+
+        def side_effect(name):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return True
+            return original_session_exists(name)
+
+        mock_exists.side_effect = side_effect
+        t = TmuxTerminal()
+        self.terminals_to_cleanup.append(t)
+        self.assertTrue(t.session_name.startswith(_SESSION_PREFIX))
 
     def test_start_reading_is_noop(self):
         t = self._create_terminal()

@@ -43,10 +43,20 @@ KEY_TO_TMUX = {
 }
 
 _SESSION_PREFIX = "linhai_"
+_MAX_NAME_RETRIES = 3
 
 
 def is_tmux_available() -> bool:
     return shutil.which("tmux") is not None
+
+
+def _session_exists(name: str) -> bool:
+    result = subprocess.run(
+        ["tmux", "has-session", "-t", name],
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 class TmuxTerminal:
@@ -58,6 +68,15 @@ class TmuxTerminal:
         cwd: str | None = None,
     ):
         self.session_name = _SESSION_PREFIX + generate_id("tmux")
+        for _ in range(_MAX_NAME_RETRIES):
+            if not _session_exists(self.session_name):
+                break
+            self.session_name = _SESSION_PREFIX + generate_id("tmux")
+        else:
+            raise ValueError(
+                f"tmux session name conflict after {_MAX_NAME_RETRIES} retries: "
+                f"{self.session_name}"
+            )
         self._columns = columns
         self._lines = lines
 
