@@ -8,6 +8,7 @@ from linhai.tui.context_tab import ContextTabWidget
 from linhai.context_statistics import estimate_message_tokens
 from linhai.registry import Registry
 from linhai.config import TUIConfig
+from linhai.utils.i18n import t
 from linhai.agent.message import AgentMessage
 from linhai.agent.orchestration import AgentContextOrchestration
 
@@ -310,19 +311,42 @@ class TestContextTab(unittest.TestCase):
         mock_token_stats_text.update.assert_called_once()
 
         stats_call_args = mock_stats_text.update.call_args[0][0]
-        self.assertIn("总消息数: 3", stats_call_args)
-        self.assertIn("平均长度", stats_call_args)
+        self.assertIn(
+            f"{t({'zh_CN': '总消息数', 'en': 'Total messages'})}: 3", stats_call_args
+        )
+        self.assertIn(t({"zh_CN": "平均长度", "en": "Average length"}), stats_call_args)
         self.assertNotIn("消息平均Token数", stats_call_args)
-        self.assertIn("最长消息", stats_call_args)
-        self.assertIn("大消息数量: 0", stats_call_args)
-        self.assertIn("可清理大消息: 0", stats_call_args)
-        self.assertIn("可清理大消息token量: 0", stats_call_args)
-        self.assertIn("是否可清理: 否", stats_call_args)
+        self.assertIn(
+            t({"zh_CN": "最长消息", "en": "Longest message"}), stats_call_args
+        )
+        self.assertIn(
+            f"{t({'zh_CN': '大消息数量', 'en': 'Large messages'})}: 0", stats_call_args
+        )
+        self.assertIn(
+            f"{t({'zh_CN': '可清理大消息', 'en': 'Cleanable large messages'})}: 0",
+            stats_call_args,
+        )
+        self.assertIn(
+            f"{t({'zh_CN': '可清理大消息token量', 'en': 'Cleanable large messages tokens'})}: 0",
+            stats_call_args,
+        )
+        self.assertIn(
+            f"{t({'zh_CN': '是否可清理', 'en': 'Can clean'})}: {t({'zh_CN': '否', 'en': 'No'})}",
+            stats_call_args,
+        )
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
-        self.assertIn("当前用量: 6000", token_stats_args)
-        self.assertIn("Token限制: 128000", token_stats_args)
-        self.assertIn("当前消息缓存状态（实际）", token_stats_args)
+        self.assertIn(
+            f"{t({'zh_CN': '当前用量', 'en': 'Current usage'})}: 6000", token_stats_args
+        )
+        self.assertIn(
+            f"{t({'zh_CN': 'Token限制', 'en': 'Token limit'})}: 128000",
+            token_stats_args,
+        )
+        self.assertIn(
+            f"{t({'zh_CN': '当前消息缓存状态', 'en': 'Current message cache status'})}（{t({'zh_CN': '实际', 'en': 'actual'})}）",
+            token_stats_args,
+        )
         self.assertNotIn("当前消息估算缓存Token数", token_stats_args)
 
     def test_update_token_usage_no_threshold(self):
@@ -349,7 +373,9 @@ class TestContextTab(unittest.TestCase):
         stats = _build_context_statistics()
         widget._update_token_usage(stats)
 
-        mock_token_stats_text.update.assert_called_once_with("不可用")
+        mock_token_stats_text.update.assert_called_once_with(
+            t({"zh_CN": "不可用", "en": "N/A"})
+        )
 
     def test_update_token_usage_with_no_cache(self):
         """测试无缓存时的token用量显示"""
@@ -388,8 +414,13 @@ class TestContextTab(unittest.TestCase):
         mock_pb_model.update.assert_called_once_with(total=128000.0, progress=3000.0)
 
         token_stats_args = mock_token_stats_text.update.call_args[0][0]
-        self.assertIn("当前用量: 3000", token_stats_args)
-        self.assertIn("Token限制: 128000", token_stats_args)
+        self.assertIn(
+            f"{t({'zh_CN': '当前用量', 'en': 'Current usage'})}: 3000", token_stats_args
+        )
+        self.assertIn(
+            f"{t({'zh_CN': 'Token限制', 'en': 'Token limit'})}: 128000",
+            token_stats_args,
+        )
         self.assertNotIn("缓存比例", token_stats_args)
 
     def test_update_token_usage_no_token_limit(self):
@@ -530,15 +561,21 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
     def test_pinned_empty(self):
         widget, _, mock_pinned_text, _, _ = self._create_widget_with_mocks()
         widget.update_display()
-        mock_pinned_text.update.assert_called_with("无置顶消息")
+        mock_pinned_text.update.assert_called_with(
+            t({"zh_CN": "无置顶消息", "en": "No pinned messages"})
+        )
 
     def test_notification_empty(self):
         widget, _, _, mock_notif_text, mock_notif_list_text = (
             self._create_widget_with_mocks()
         )
         widget.update_display()
-        mock_notif_text.update.assert_called_with("无通知消息")
-        mock_notif_list_text.update.assert_called_with("无通知消息")
+        mock_notif_text.update.assert_called_with(
+            t({"zh_CN": "无通知消息", "en": "No notification messages"})
+        )
+        mock_notif_list_text.update.assert_called_with(
+            t({"zh_CN": "无通知消息", "en": "No notification messages"})
+        )
 
     def test_pinned_with_messages(self):
         from linhai.base import UserMessage
@@ -556,10 +593,12 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         self.assertEqual(mock_pinned_sparkline.data, expected_data)
 
         text_arg = mock_pinned_text.update.call_args[0][0]
-        self.assertIn("总消息数: 2", text_arg)
-        self.assertIn("平均长度", text_arg)
+        self.assertIn(
+            f"{t({'zh_CN': '总消息数', 'en': 'Total messages'})}: 2", text_arg
+        )
+        self.assertIn(t({"zh_CN": "平均长度", "en": "Average length"}), text_arg)
         self.assertNotIn("消息平均Token数", text_arg)
-        self.assertNotIn("最长消息", text_arg)
+        self.assertNotIn(t({"zh_CN": "最长消息", "en": "Longest message"}), text_arg)
         self.assertNotIn("大消息", text_arg)
 
     def test_notification_with_messages(self):
@@ -578,10 +617,12 @@ class TestPinnedAndNotificationStats(unittest.TestCase):
         widget.update_display()
 
         text_arg = mock_notif_text.update.call_args[0][0]
-        self.assertIn("总消息数: 2", text_arg)
-        self.assertIn("平均长度", text_arg)
+        self.assertIn(
+            f"{t({'zh_CN': '总消息数', 'en': 'Total messages'})}: 2", text_arg
+        )
+        self.assertIn(t({"zh_CN": "平均长度", "en": "Average length"}), text_arg)
         self.assertNotIn("消息平均Token数", text_arg)
-        self.assertIn("最长消息", text_arg)
+        self.assertIn(t({"zh_CN": "最长消息", "en": "Longest message"}), text_arg)
 
     def test_notification_details_display(self):
         from linhai.base import UserMessage

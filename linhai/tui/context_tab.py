@@ -21,15 +21,21 @@ from linhai.agent import Agent
 from linhai.token_manager import TokenManager
 
 from linhai.registry import Registry
+from linhai.utils.i18n import t
 
 
 def _format_longest_message(longest: LongestMessageInfo | None) -> str:
     if longest is None:
-        return "最长消息: 未知, 0 token"
+        return t(
+            {
+                "zh_CN": "最长消息: 未知, 0 token",
+                "en": "Longest message: unknown, 0 token",
+            }
+        )
     type_display = longest["type_name"]
     if longest["tool_name"] is not None:
-        type_display += f", 来自{longest['tool_name']}"
-    return f"最长消息: {type_display}, {longest['tokens']} token"
+        type_display += f", {t({'zh_CN': '来自', 'en': 'from'})}{longest['tool_name']}"
+    return f"{t({'zh_CN': '最长消息', 'en': 'Longest message'})}: {type_display}, {longest['tokens']} token"
 
 
 class ContextTabWidget(Static):
@@ -90,37 +96,56 @@ class ContextTabWidget(Static):
     def compose(self) -> ComposeResult:
         with VerticalScroll():
             with Collapsible(
-                title="消息统计", id="msg-stats-collapsible", collapsed=False
+                title=t({"zh_CN": "消息统计", "en": "Message Statistics"}),
+                id="msg-stats-collapsible",
+                collapsed=False,
             ):
-                yield Label("普通消息", classes="title")
+                yield Label(
+                    t({"zh_CN": "普通消息", "en": "Normal Messages"}), classes="title"
+                )
                 yield Sparkline(id="msg-stats-sparkline", summary_function=max)
                 yield Static(id="msg-stats-text")
-                yield Label("置顶消息", classes="title")
+                yield Label(
+                    t({"zh_CN": "置顶消息", "en": "Pinned Messages"}), classes="title"
+                )
                 yield Sparkline(id="pinned-stats-sparkline", summary_function=max)
                 yield Static(id="pinned-stats-text")
-                yield Label("通知消息", classes="title")
+                yield Label(
+                    t({"zh_CN": "通知消息", "en": "Notification Messages"}),
+                    classes="title",
+                )
                 yield Static(id="notification-stats-text")
             with Collapsible(
-                title="通知消息列表",
+                title=t({"zh_CN": "通知消息列表", "en": "Notification List"}),
                 id="notification-list-collapsible",
                 collapsed=True,
             ):
                 yield Static(id="notification-list-text")
             with Collapsible(
-                title="上下文Token用量", id="token-usage-collapsible", collapsed=False
+                title=t({"zh_CN": "上下文Token用量", "en": "Context Token Usage"}),
+                id="token-usage-collapsible",
+                collapsed=False,
             ):
-                yield Label("相对硬限制", classes="token-usage-label")
+                yield Label(
+                    t({"zh_CN": "相对硬限制", "en": "Relative to Hard Limit"}),
+                    classes="token-usage-label",
+                )
                 yield ProgressBar(id="pb-hard-limit", show_eta=False)
-                yield Label("相对模型限制", classes="token-usage-label")
+                yield Label(
+                    t({"zh_CN": "相对模型限制", "en": "Relative to Model Limit"}),
+                    classes="token-usage-label",
+                )
                 yield ProgressBar(id="pb-model-limit", show_eta=False)
                 yield Static(id="token-stats-text")
             with Collapsible(
-                title="缓存状态", id="cache-status-collapsible", collapsed=False
+                title=t({"zh_CN": "缓存状态", "en": "Cache Status"}),
+                id="cache-status-collapsible",
+                collapsed=False,
             ):
                 yield ProgressBar(id="pb-cache-ratio", show_eta=False)
                 yield Static(id="cache-stats-text")
             with Collapsible(
-                title="Token用量状态",
+                title=t({"zh_CN": "Token用量状态", "en": "Token Usage Status"}),
                 id="cumulative-token-collapsible",
                 collapsed=False,
             ):
@@ -137,18 +162,39 @@ class ContextTabWidget(Static):
 
         stats_text = self.query_one("#msg-stats-text", Static)
         stats_text.update(
-            "总消息数: " + str(msg["count"]) + "\n"
-            "平均长度: "
-            + f"{msg['avg_tokens']:.1f} token"
+            t({"zh_CN": "总消息数", "en": "Total messages"})
+            + ": "
+            + str(msg["count"])
+            + "\n"
+            + t({"zh_CN": "平均长度", "en": "Average length"})
+            + f": {msg['avg_tokens']:.1f} token"
             + "\n"
             + _format_longest_message(msg["longest"])
             + "\n"
-            "大消息数量: " + str(stats["large_message_count"]) + "\n"
-            "可清理大消息: " + str(stats["cleanable_large_message_count"]) + "\n"
-            "可清理大消息token量: "
+            + t({"zh_CN": "大消息数量", "en": "Large messages"})
+            + ": "
+            + str(stats["large_message_count"])
+            + "\n"
+            + t({"zh_CN": "可清理大消息", "en": "Cleanable large messages"})
+            + ": "
+            + str(stats["cleanable_large_message_count"])
+            + "\n"
+            + t(
+                {
+                    "zh_CN": "可清理大消息token量",
+                    "en": "Cleanable large messages tokens",
+                }
+            )
+            + ": "
             + str(stats["cleanable_large_message_tokens"])
             + "\n"
-            "是否可清理: " + ("是" if stats["can_clean_large_messages"] else "否")
+            + t({"zh_CN": "是否可清理", "en": "Can clean"})
+            + ": "
+            + (
+                t({"zh_CN": "是", "en": "Yes"})
+                if stats["can_clean_large_messages"]
+                else t({"zh_CN": "否", "en": "No"})
+            )
         )
 
     def _update_pinned_message_statistics(self, stats: ContextStatistics) -> None:
@@ -158,23 +204,32 @@ class ContextTabWidget(Static):
 
         stats_text = self.query_one("#pinned-stats-text", Static)
         if pinned["count"] == 0:
-            stats_text.update("无置顶消息")
+            stats_text.update(t({"zh_CN": "无置顶消息", "en": "No pinned messages"}))
             return
         stats_text.update(
-            "总消息数: " + str(pinned["count"]) + "\n"
-            "平均长度: " + f"{pinned['avg_tokens']:.1f} token"
+            t({"zh_CN": "总消息数", "en": "Total messages"})
+            + ": "
+            + str(pinned["count"])
+            + "\n"
+            + t({"zh_CN": "平均长度", "en": "Average length"})
+            + f": {pinned['avg_tokens']:.1f} token"
         )
 
     def _update_notification_message_statistics(self, stats: ContextStatistics) -> None:
         notif = stats["notification_messages"]
         stats_text = self.query_one("#notification-stats-text", Static)
         if notif["count"] == 0:
-            stats_text.update("无通知消息")
+            stats_text.update(
+                t({"zh_CN": "无通知消息", "en": "No notification messages"})
+            )
             return
         stats_text.update(
-            "总消息数: " + str(notif["count"]) + "\n"
-            "平均长度: "
-            + f"{notif['avg_tokens']:.1f} token"
+            t({"zh_CN": "总消息数", "en": "Total messages"})
+            + ": "
+            + str(notif["count"])
+            + "\n"
+            + t({"zh_CN": "平均长度", "en": "Average length"})
+            + f": {notif['avg_tokens']:.1f} token"
             + "\n"
             + _format_longest_message(notif["longest"])
         )
@@ -183,7 +238,9 @@ class ContextTabWidget(Static):
         notif_list_text = self.query_one("#notification-list-text", Static)
         details = stats["notification_details"]
         if not details:
-            notif_list_text.update("无通知消息")
+            notif_list_text.update(
+                t({"zh_CN": "无通知消息", "en": "No notification messages"})
+            )
             return
         lines: list[str] = []
         for item in details:
@@ -197,7 +254,7 @@ class ContextTabWidget(Static):
         token_stats_text = self.query_one("#token-stats-text", Static)
 
         if stats["hard_limit"] is None or stats["used_tokens"] is None:
-            token_stats_text.update("不可用")
+            token_stats_text.update(t({"zh_CN": "不可用", "en": "N/A"}))
             return
 
         used = stats["used_tokens"]
@@ -211,22 +268,26 @@ class ContextTabWidget(Static):
 
         generation_count = stats["generation_count"]
         if generation_count is not None:
-            generation_line = f"回答生成次数: {generation_count}"
+            generation_line = f"{t({'zh_CN': '回答生成次数', 'en': 'Generation count'})}: {generation_count}"
         else:
-            generation_line = "回答生成次数: 不可用"
+            generation_line = f"{t({'zh_CN': '回答生成次数', 'en': 'Generation count'})}: {t({'zh_CN': '不可用', 'en': 'N/A'})}"
 
         lines = [
-            f"当前用量: {used}",
-            f"Token限制: {token_limit}",
+            f"{t({'zh_CN': '当前用量', 'en': 'Current usage'})}: {used}",
+            f"{t({'zh_CN': 'Token限制', 'en': 'Token limit'})}: {token_limit}",
             generation_line,
         ]
         cache_info = stats["cache_info"]
         if cache_info is not None and cache_info["cached_tokens"] > 0:
-            label = "估算" if cache_info["is_estimated"] else "实际"
+            label = (
+                t({"zh_CN": "估算", "en": "estimated"})
+                if cache_info["is_estimated"]
+                else t({"zh_CN": "实际", "en": "actual"})
+            )
             percentage = cache_info["percentage"]
             abnormal_note = ""
             lines.append(
-                f"当前消息缓存状态（{label}）: {cache_info['cached_tokens']} token ({percentage:.1f}%){abnormal_note}"
+                f"{t({'zh_CN': '当前消息缓存状态', 'en': 'Current message cache status'})}（{label}）: {cache_info['cached_tokens']} token ({percentage:.1f}%){abnormal_note}"
             )
         token_stats_text.update("\n".join(lines))
 
@@ -236,7 +297,7 @@ class ContextTabWidget(Static):
 
         cumulative_cache = stats["cumulative_cache"]
         if cumulative_cache is None:
-            cache_stats_text.update("暂无数据")
+            cache_stats_text.update(t({"zh_CN": "暂无数据", "en": "No data"}))
             return
 
         cache_percentage = cumulative_cache["cache_percentage"]
@@ -244,25 +305,25 @@ class ContextTabWidget(Static):
 
         abnormal_note = ""
         cache_stats_text.update(
-            f"平均缓存比例: {cache_percentage:.1f}%{abnormal_note}\n"
-            f"平均输入Token: {cumulative_cache['avg_input']:.0f}\n"
-            f"平均输出Token: {cumulative_cache['avg_output']:.0f}\n"
-            f"平均缓存Token: {cumulative_cache['avg_cached']:.0f}\n"
-            f"平均缓存创建Token: {cumulative_cache['avg_cache_creation']:.0f}"
+            f"{t({'zh_CN': '平均缓存比例', 'en': 'Avg cache ratio'})}: {cache_percentage:.1f}%{abnormal_note}\n"
+            f"{t({'zh_CN': '平均输入Token', 'en': 'Avg input tokens'})}: {cumulative_cache['avg_input']:.0f}\n"
+            f"{t({'zh_CN': '平均输出Token', 'en': 'Avg output tokens'})}: {cumulative_cache['avg_output']:.0f}\n"
+            f"{t({'zh_CN': '平均缓存Token', 'en': 'Avg cached tokens'})}: {cumulative_cache['avg_cached']:.0f}\n"
+            f"{t({'zh_CN': '平均缓存创建Token', 'en': 'Avg cache creation tokens'})}: {cumulative_cache['avg_cache_creation']:.0f}"
         )
 
     def _update_cumulative_token_usage(self, stats: ContextStatistics) -> None:
         cumulative_stats_text = self.query_one("#cumulative-token-stats-text", Static)
 
         if stats["cumulative_total_tokens"] is None:
-            cumulative_stats_text.update("暂无数据")
+            cumulative_stats_text.update(t({"zh_CN": "暂无数据", "en": "No data"}))
             return
 
         cumulative_stats_text.update(
-            f"累计Token用量: {stats['cumulative_total_tokens']}\n"
-            f"累计输入Token用量: {stats['cumulative_input_tokens']}\n"
-            f"累计输出Token用量: {stats['cumulative_output_tokens']}\n"
-            f"缓存失效次数: {stats['cumulative_cache_miss_count']}"
+            f"{t({'zh_CN': '累计Token用量', 'en': 'Cumulative token usage'})}: {stats['cumulative_total_tokens']}\n"
+            f"{t({'zh_CN': '累计输入Token用量', 'en': 'Cumulative input tokens'})}: {stats['cumulative_input_tokens']}\n"
+            f"{t({'zh_CN': '累计输出Token用量', 'en': 'Cumulative output tokens'})}: {stats['cumulative_output_tokens']}\n"
+            f"{t({'zh_CN': '缓存失效次数', 'en': 'Cache miss count'})}: {stats['cumulative_cache_miss_count']}"
         )
 
     def update_display(self) -> None:
