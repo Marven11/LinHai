@@ -786,7 +786,8 @@ class NormalContentWidget(Markdown):
                 await self._stream.stop()
                 self._stream = None
             self.update(segment_content.strip())
-            self.timer.stop()
+            if self.timer:
+                self.timer.stop()
 
     def content_is_empty(self) -> bool:
         """检查内容是否为空或只包含空白字符"""
