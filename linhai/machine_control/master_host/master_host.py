@@ -1,15 +1,15 @@
 """Master host control module for tools that interact with the local machine."""
 
 import asyncio
+import os
 import time
-from typing import Optional, Union
+from pathlib import Path
+from typing import Optional
 from linhai.machine_control.http_message import HttpMessage
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.base import Message
 from linhai.agent.messages import FileContentMessage
 
 from .http import http_request
-from .command import change_directory
 from .terminal import (
     terminal_create,
     terminal_send_keys,
@@ -23,7 +23,6 @@ from .file import (
     write_file,
     replace_file_content,
     list_files,
-    get_absolute_path,
     read_file_with_sed,
 )
 
@@ -43,8 +42,18 @@ class MasterHostControl:
 
     def __init__(self, registry: Registry, tmux_terminal: bool = True):
         self._registry = registry
+        self._cwd = os.getcwd()
         self._processes: dict[str, LocalProcess] = {}
         configure_terminals(tmux_terminal)
+
+    def _resolve_path(self, path: str) -> Path:
+        p = Path(path)
+        if p.is_absolute():
+            return p
+        return Path(self._cwd) / p
+
+    def resolve_path(self, path: str) -> Path:
+        return self._resolve_path(path)
 
     async def http_request(
         self,
@@ -90,6 +99,7 @@ class MasterHostControl:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                cwd=self._cwd,
                 start_new_session=True,
             )
             pid = str(subprocess.pid)
@@ -147,8 +157,14 @@ class MasterHostControl:
     async def change_directory(
         self, directory: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """改变当前工作目录"""
-        return change_directory(directory)
+        target = self._resolve_path(directory)
+        if not target.exists():
+            return ToolResultFailed(content=f"目录不存在: {directory}")
+        if not target.is_dir():
+            return ToolResultFailed(content=f"路径不是目录: {directory}")
+        old_cwd = self._cwd
+        self._cwd = str(target)
+        return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
@@ -157,7 +173,7 @@ class MasterHostControl:
             "process_sandbox", ProcessSandboxProtocol
         )
         bash_argv = sandbox.wrap_argv(["/usr/bin/env", "bash"])
-        result = await terminal_create(columns, lines, bash_argv)
+        result = await terminal_create(columns, lines, bash_argv, cwd=self._cwd)
         if result.startswith("创建终端失败"):
             return ToolResultFailed(content=result)
         return ToolResultSuccess(content=result)
@@ -199,42 +215,42 @@ class MasterHostControl:
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
     ) -> FileContentMessage | ToolResultFailed:
-        """读取文件内容"""
-        return await asyncio.to_thread(read_file, filepath, show_line_numbers)
+        resolved = self._resolve_path(filepath)
+        return await asyncio.to_thread(read_file, str(resolved), show_line_numbers)
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
-        """写入内容到文件"""
-        return await asyncio.to_thread(write_file, filepath, content, override)
+        resolved = self._resolve_path(filepath)
+        return await asyncio.to_thread(write_file, str(resolved), content, override)
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed:
-        """替换文件内容中的指定字符串"""
+        resolved = self._resolve_path(filepath)
         return await asyncio.to_thread(
-            replace_file_content, filepath, old, new, replace_times
+            replace_file_content, str(resolved), old, new, replace_times
         )
 
     async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
-        """列出指定文件夹中的文件和子目录"""
-        return await asyncio.to_thread(list_files, dirpath)
+        resolved = self._resolve_path(dirpath)
+        return await asyncio.to_thread(list_files, str(resolved))
 
     async def get_absolute_path(
         self, path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """获取路径的绝对路径"""
-        return await asyncio.to_thread(get_absolute_path, path)
+        resolved = self._resolve_path(path)
+        return ToolResultSuccess(content=f"绝对路径: {resolved.as_posix()}")
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """执行sed表达式并返回输出"""
+        resolved = self._resolve_path(filepath)
         sandbox = self._registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
         )
         return await asyncio.to_thread(
-            read_file_with_sed, expression, filepath, sandbox.wrap_argv
+            read_file_with_sed, expression, str(resolved), sandbox.wrap_argv
         )
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
@@ -259,14 +275,14 @@ class MasterHostControl:
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        import os
         import pathlib
 
-        if os.path.exists(remote_path):
-            return ToolResultFailed(content=f"文件已存在: {remote_path}")
+        resolved = self._resolve_path(remote_path)
+        if resolved.exists():
+            return ToolResultFailed(content=f"文件已存在: {resolved}")
         try:
-            pathlib.Path(remote_path).write_bytes(data)
-            return ToolResultSuccess(content=f"文件已上传: {remote_path}")
+            pathlib.Path(resolved).write_bytes(data)
+            return ToolResultSuccess(content=f"文件已上传: {resolved}")
         except Exception as e:
             return ToolResultFailed(content=f"上传文件失败: {e}")
 
@@ -276,13 +292,13 @@ class MasterHostControl:
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        import os
         import pathlib
 
-        if not os.path.exists(remote_path):
-            return ToolResultFailed(content=f"文件不存在: {remote_path}")
+        resolved_remote = self._resolve_path(remote_path)
+        if not resolved_remote.exists():
+            return ToolResultFailed(content=f"文件不存在: {resolved_remote}")
         try:
-            data = pathlib.Path(remote_path).read_bytes()
+            data = pathlib.Path(resolved_remote).read_bytes()
             pathlib.Path(local_path).write_bytes(data)
             return ToolResultSuccess(content=f"文件已下载: {local_path}")
         except Exception as e:

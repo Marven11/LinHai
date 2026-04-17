@@ -86,6 +86,7 @@ class TestTerminalCreateSandbox(unittest.IsolatedAsyncioTestCase):
             columns=80,
             lines=24,
             bash_argv=["bwrap", "--ro-bind", "/", "/", "/usr/bin/env", "bash"],
+            cwd=host._cwd,
         )
 
 

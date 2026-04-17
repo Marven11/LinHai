@@ -248,32 +248,156 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hasattr(self.host_control, "get_process"))
 
     async def test_change_directory(self):
-        """测试改变目录"""
+        """测试改变目录 - 使用_cwd而非os.chdir"""
+        import tempfile
         import os
-        from unittest.mock import patch
+        from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+
+        old_cwd = self.host_control._cwd
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = await self.host_control.change_directory(tmpdir)
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIn("切换到了", result.content)
+            self.assertEqual(self.host_control._cwd, tmpdir)
+
+        result = await self.host_control.change_directory("/nonexistent_dir_xyz")
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("目录不存在", result.content)
+
+        self.host_control._cwd = old_cwd
+
+    async def test_resolve_path_relative(self):
+        """测试_resolve_path解析相对路径"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            resolved = self.host_control._resolve_path("subdir/file.txt")
+            expected = os.path.join(tmpdir, "subdir", "file.txt")
+            self.assertEqual(str(resolved), expected)
+
+    async def test_resolve_path_absolute(self):
+        """测试_resolve_path绝对路径不修改"""
+        resolved = self.host_control._resolve_path("/absolute/path/file.txt")
+        self.assertEqual(str(resolved), "/absolute/path/file.txt")
+
+    async def test_write_file_resolves_cwd(self):
+        """测试write_file使用_cwd解析相对路径"""
+        import tempfile
+        import os
         from linhai.tool.base import ToolResultSuccess
 
-        with (
-            patch(
-                "linhai.machine_control.master_host.command.os.getcwd"
-            ) as mock_getcwd,
-            patch("linhai.machine_control.master_host.command.os.chdir") as mock_chdir,
-        ):
-            mock_getcwd.return_value = "/old/dir"
-            mock_chdir.return_value = None
-
-            result = await self.host_control.change_directory("/new/dir")
-
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.write_file("test_write.txt", "hello world")
             self.assertIsInstance(result, ToolResultSuccess)
-            self.assertEqual(result.content, "从目录/old/dir切换到了/new/dir")
-            mock_getcwd.assert_called_once()
-            mock_chdir.assert_called_once_with("/new/dir")
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "test_write.txt")))
+            with open(os.path.join(tmpdir, "test_write.txt")) as f:
+                self.assertEqual(f.read(), "hello world")
+
+    async def test_read_file_resolves_cwd(self):
+        """测试read_file使用_cwd解析相对路径"""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            with open(os.path.join(tmpdir, "test_read.txt"), "w") as f:
+                f.write("read content")
+            result = await self.host_control.read_file("test_read.txt")
+            self.assertIn("read content", result.content)
+
+    async def test_replace_file_content_resolves_cwd(self):
+        """测试replace_file_content使用_cwd解析相对路径"""
+        import tempfile
+        import os
+        from linhai.tool.base import ToolResultSuccess
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            with open(os.path.join(tmpdir, "test_replace.txt"), "w") as f:
+                f.write("old text here")
+            result = await self.host_control.replace_file_content(
+                "test_replace.txt", "old text", "new text"
+            )
+            self.assertIsInstance(result, ToolResultSuccess)
+            with open(os.path.join(tmpdir, "test_replace.txt")) as f:
+                self.assertEqual(f.read(), "new text here")
+
+    async def test_list_files_resolves_cwd(self):
+        """测试list_files使用_cwd解析相对路径"""
+        import tempfile
+        import os
+        from linhai.tool.base import ToolResultSuccess
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subdir = os.path.join(tmpdir, "subdir")
+            os.makedirs(subdir)
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.list_files("subdir")
+            self.assertIsInstance(result, ToolResultSuccess)
+
+    async def test_get_absolute_path_resolves_cwd(self):
+        """测试get_absolute_path使用_cwd解析相对路径"""
+        import tempfile
+        import os
+        from linhai.tool.base import ToolResultSuccess
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            result = await self.host_control.get_absolute_path("relative/path")
+            self.assertIsInstance(result, ToolResultSuccess)
+            expected = os.path.join(tmpdir, "relative", "path")
+            self.assertIn(expected, result.content)
+
+    async def test_change_directory_affects_file_ops(self):
+        """测试change_directory后文件操作使用新cwd"""
+        import tempfile
+        import os
+        from linhai.tool.base import ToolResultSuccess
+
+        old_cwd = self.host_control._cwd
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            await self.host_control.change_directory(tmpdir)
+            self.assertEqual(self.host_control._cwd, tmpdir)
+
+            await self.host_control.write_file("after_cd.txt", "written after cd")
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "after_cd.txt")))
+
+            result = await self.host_control.read_file("after_cd.txt")
+            self.assertIn("written after cd", result.content)
+
+        self.host_control._cwd = old_cwd
+
+    async def test_create_process_passes_cwd(self):
+        """测试create_process传递cwd给子进程"""
+        import tempfile
+        from unittest.mock import patch, AsyncMock
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.host_control._cwd = tmpdir
+            with patch("asyncio.create_subprocess_exec") as mock_create:
+                mock_process = AsyncMock()
+                mock_process.pid = 99999
+                mock_process.returncode = 0
+                mock_process.stdout = AsyncMock()
+                mock_process.stdout.read = AsyncMock(return_value=b"")
+                mock_process.stderr = AsyncMock()
+                mock_process.stderr.read = AsyncMock(return_value=b"")
+                mock_create.return_value = mock_process
+
+                await self.host_control.create_process(["pwd"])
+                mock_create.assert_called_once()
+                call_kwargs = mock_create.call_args
+                self.assertEqual(call_kwargs.kwargs.get("cwd"), tmpdir)
 
     def test_file_operations(self):
         """测试文件操作"""
         self.assertTrue(hasattr(self.host_control, "read_file"))
         self.assertTrue(hasattr(self.host_control, "write_file"))
-
         self.assertTrue(hasattr(self.host_control, "replace_file_content"))
         self.assertTrue(hasattr(self.host_control, "list_files"))
         self.assertTrue(hasattr(self.host_control, "get_absolute_path"))

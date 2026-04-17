@@ -181,7 +181,16 @@ async def load_image(
             )
         path = temp_path
     else:
-        path = Path(image_filepath)
+        if machine_control is not None:
+            from linhai.machine_control.master_host import MasterHostControl
+
+            master = machine_control.machines.get("master_host")
+            if isinstance(master, MasterHostControl):
+                path = master.resolve_path(image_filepath)
+            else:
+                path = Path(image_filepath)
+        else:
+            path = Path(image_filepath)
 
     if not path.exists():
         raise FileNotFoundError(f"图片文件不存在: {image_filepath}")

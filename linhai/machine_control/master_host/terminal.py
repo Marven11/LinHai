@@ -70,6 +70,7 @@ class PyteTerminal:
         columns: int = 80,
         lines: int = 24,
         bash_argv: list[str] | None = None,
+        cwd: str | None = None,
     ):
         self.screen = pyte.Screen(columns, lines)
         self.stream = pyte.Stream()
@@ -91,6 +92,7 @@ class PyteTerminal:
             stdout=self.slave,
             stderr=self.slave,
             env=env,
+            cwd=cwd,
             start_new_session=True,
         )
 
@@ -156,6 +158,7 @@ async def terminal_create(
     columns: int = 80,
     lines: int = 24,
     bash_argv: list[str] | None = None,
+    cwd: str | None = None,
 ) -> str:
     """新建虚拟终端
 
@@ -170,9 +173,13 @@ async def terminal_create(
     try:
         term_id = generate_id("terminal")
         if _use_tmux:
-            terminal = TmuxTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
+            terminal = TmuxTerminal(
+                columns=columns, lines=lines, bash_argv=bash_argv, cwd=cwd
+            )
         else:
-            terminal = PyteTerminal(columns=columns, lines=lines, bash_argv=bash_argv)
+            terminal = PyteTerminal(
+                columns=columns, lines=lines, bash_argv=bash_argv, cwd=cwd
+            )
         terminals[term_id] = terminal
         await terminal.start_reading()
         return term_id

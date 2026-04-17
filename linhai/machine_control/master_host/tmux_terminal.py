@@ -55,6 +55,7 @@ class TmuxTerminal:
         columns: int = 80,
         lines: int = 24,
         bash_argv: list[str] | None = None,
+        cwd: str | None = None,
     ):
         self.session_name = _SESSION_PREFIX + generate_id("tmux")
         self._columns = columns
@@ -74,6 +75,8 @@ class TmuxTerminal:
                 str(columns),
                 "-y",
                 str(lines),
+                "-c",
+                cwd or ".",
             ]
             + bash_argv,
             check=True,
