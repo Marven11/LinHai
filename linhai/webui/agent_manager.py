@@ -41,6 +41,8 @@ class AgentSession:
         self._publisher = JsonPublisher(self._messages_data)
         self._processes_data: dict = {"processes": []}
         self._process_publisher = JsonPublisher(self._processes_data)
+        self._status_bar_data: dict = {"status_bar": []}
+        self._status_bar_publisher = JsonPublisher(self._status_bar_data)
         self._lock = asyncio.Lock()
 
     def get_state(self) -> str:
@@ -209,6 +211,34 @@ class AgentSession:
 
         mc = self.registry.get_member_typechecked("machine_control", MachineControl)
         return mc.list_processes()
+
+    def get_status_bar_pieces(self) -> list[str]:
+        agent = self.agent
+        registry = self.registry
+        token_pieces: list[str] = []
+        if registry.has_member("token_manager"):
+            token_manager = registry.get_member_typechecked(
+                "token_manager", TokenManager
+            )
+            token_pieces = token_manager.get_token_display_pieces(
+                agent, current_answer_token=0, use_nerd_font=False
+            )
+        from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
+
+        if registry.has_member("process_sandbox"):
+            sandbox = registry.get_member_typechecked(
+                "process_sandbox", ProcessSandboxProtocol
+            )
+            if not isinstance(sandbox, NoSandbox):
+                token_pieces.append("◭")
+        _, llm_instance = agent.get_current_llm_info()
+        llm_name = llm_instance.get_name()
+        token_pieces.append(f"✦ {llm_name}")
+        return token_pieces
+
+    def sync_status_bar(self) -> list[TaggedEvent]:
+        self._status_bar_data["status_bar"] = self.get_status_bar_pieces()
+        return self._status_bar_publisher.calculate_diff()
 
     def sync_processes(self) -> list[TaggedEvent]:
         self._processes_data["processes"] = self.get_processes()

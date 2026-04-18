@@ -141,6 +141,11 @@ class WsProcessUpdateEvent(BaseModel):
     events: list
 
 
+class WsStatusBarUpdateEvent(BaseModel):
+    type: Literal["status_bar_update"] = "status_bar_update"
+    events: list
+
+
 class KillProcessRequest(BaseModel):
     machine_id: str = Field(..., description="进程所在机器ID")
 

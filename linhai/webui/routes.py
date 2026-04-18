@@ -21,6 +21,7 @@ from .schemas import (
     LlmListResponse,
     SwitchLlmRequest,
     WsProcessUpdateEvent,
+    WsStatusBarUpdateEvent,
     KillProcessRequest,
 )
 from .agent_manager import AgentManager
@@ -225,6 +226,12 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
             process_events = session.sync_processes()
             if process_events:
                 events.append(WsProcessUpdateEvent(events=process_events).model_dump())
+
+            status_bar_events = session.sync_status_bar()
+            if status_bar_events:
+                events.append(
+                    WsStatusBarUpdateEvent(events=status_bar_events).model_dump()
+                )
 
             for event in events:
                 await websocket.send_json(event)

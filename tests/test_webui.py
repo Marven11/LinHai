@@ -564,6 +564,23 @@ class TestNewLlmSchemas(unittest.TestCase):
         event = WsProcessUpdateEvent(events=[{"pid": "1", "machine_id": "m"}])
         self.assertEqual(event.type, "process_update")
 
+    def test_ws_status_bar_update_event(self):
+        from linhai.webui.schemas import WsStatusBarUpdateEvent
+
+        event = WsStatusBarUpdateEvent(
+            events=[
+                {
+                    "idx": 0,
+                    "event": {
+                        "action": "replace",
+                        "keys": [],
+                        "value": {"status_bar": ["test"]},
+                    },
+                }
+            ]
+        )
+        self.assertEqual(event.type, "status_bar_update")
+
 
 class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -614,3 +631,76 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
 
             response = self.client.post("/api/agents", json={})
             self.assertEqual(response.status_code, 200)
+
+
+class TestAgentSessionStatusBar(unittest.TestCase):
+    def _make_session(self, agent_mock=None, registry_mock=None):
+        if agent_mock is None:
+            agent_mock = MagicMock()
+        if registry_mock is None:
+            registry_mock = MagicMock()
+        agent_mock.registry = registry_mock
+        manager = MagicMock()
+        return AgentSession(
+            agent_id="test-id",
+            agent=agent_mock,
+            task_name="task-1",
+            manager=manager,
+        )
+
+    def test_get_status_bar_pieces_no_token_manager(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = False
+        mock_llm = MagicMock()
+        mock_llm.get_name.return_value = "gpt-4"
+        mock_agent = MagicMock()
+        mock_agent.get_current_llm_info.return_value = (None, mock_llm)
+        session = self._make_session(mock_agent, registry_mock)
+        pieces = session.get_status_bar_pieces()
+        self.assertEqual(pieces, ["✦ gpt-4"])
+
+    def test_get_status_bar_pieces_with_token_manager(self):
+        registry_mock = MagicMock()
+
+        def has_member_side_effect(name):
+            return name == "token_manager"
+
+        registry_mock.has_member.side_effect = has_member_side_effect
+        mock_tm = MagicMock()
+        mock_tm.get_token_display_pieces.return_value = ["❐ 5", "↓ 1.0k"]
+        registry_mock.get_member_typechecked.return_value = mock_tm
+        mock_llm = MagicMock()
+        mock_llm.get_name.return_value = "deepseek"
+        mock_agent = MagicMock()
+        mock_agent.get_current_llm_info.return_value = (None, mock_llm)
+        session = self._make_session(mock_agent, registry_mock)
+        pieces = session.get_status_bar_pieces()
+        self.assertIn("❐ 5", pieces)
+        self.assertIn("↓ 1.0k", pieces)
+        self.assertIn("✦ deepseek", pieces)
+        self.assertEqual(pieces[-1], "✦ deepseek")
+
+    def test_sync_status_bar_returns_events(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = False
+        mock_llm = MagicMock()
+        mock_llm.get_name.return_value = "gpt"
+        mock_agent = MagicMock()
+        mock_agent.get_current_llm_info.return_value = (None, mock_llm)
+        session = self._make_session(mock_agent, registry_mock)
+        events = session.sync_status_bar()
+        self.assertIsInstance(events, list)
+        self.assertEqual(session._status_bar_data["status_bar"], ["✦ gpt"])
+
+    def test_sync_status_bar_no_diff_after_same_data(self):
+        registry_mock = MagicMock()
+        registry_mock.has_member.return_value = False
+        mock_llm = MagicMock()
+        mock_llm.get_name.return_value = "gpt"
+        mock_agent = MagicMock()
+        mock_agent.get_current_llm_info.return_value = (None, mock_llm)
+        session = self._make_session(mock_agent, registry_mock)
+        events1 = session.sync_status_bar()
+        self.assertTrue(len(events1) > 0)
+        events2 = session.sync_status_bar()
+        self.assertEqual(len(events2), 0)
