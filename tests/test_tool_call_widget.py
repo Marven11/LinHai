@@ -1,9 +1,11 @@
 import unittest
 import asyncio
+from unittest.mock import patch
 from textual.app import App, ComposeResult
 from textual.widgets import Markdown
 from linhai.tui.components import ToolCallWidget, _ToolCallCollapseHeader
 from linhai.parsed_message import Segment
+from linhai.utils.i18n import t
 
 
 def _make_segment(content: str, is_finished: bool) -> Segment:
@@ -108,12 +110,17 @@ class TestToolCallWidgetMarkdown(unittest.TestCase):
     def test_expand_unfinished_border_title_has_hint(self):
         asyncio.run(self._test_expand_unfinished_border_title())
 
-    async def _test_expand_unfinished_border_title(self):
+    @patch("linhai.utils.i18n.locale.getlocale")
+    async def _test_expand_unfinished_border_title(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
         segment = _make_segment('{"name": "test", "arguments":', is_finished=False)
         async with _TestApp(segment).run_test() as pilot:
             widget = pilot.app.query_one(ToolCallWidget)
             widget._expand()
-            self.assertEqual(widget.border_title, "tool call [点击隐藏]")
+            self.assertEqual(
+                widget.border_title,
+                t({"zh_CN": "tool call [点击隐藏]", "en": "tool call [click to hide]"}),
+            )
 
     def test_click_does_not_collapse_when_finished(self):
         asyncio.run(self._test_click_no_collapse_finished())
@@ -156,7 +163,9 @@ class TestToolCallWidgetMarkdown(unittest.TestCase):
     def test_collapse_border_title_has_expand_hint(self):
         asyncio.run(self._test_collapse_border_title())
 
-    async def _test_collapse_border_title(self):
+    @patch("linhai.utils.i18n.locale.getlocale")
+    async def _test_collapse_border_title(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
         segment = _make_segment(
             '{"name": "test", "arguments": {"key": "val"}}', is_finished=True
         )
@@ -164,7 +173,15 @@ class TestToolCallWidgetMarkdown(unittest.TestCase):
             widget = pilot.app.query_one(ToolCallWidget)
             widget._expand()
             widget._collapse()
-            self.assertEqual(widget.border_title, "tool call [点击展开]")
+            self.assertEqual(
+                widget.border_title,
+                t(
+                    {
+                        "zh_CN": "tool call [点击展开]",
+                        "en": "tool call [click to expand]",
+                    }
+                ),
+            )
 
     def test_error_uses_syntax(self):
         asyncio.run(self._test_expand_error())

@@ -2,7 +2,9 @@
 
 import unittest
 from unittest.mock import Mock, patch
+
 from linhai.tui.components import ReasoningContentWidget
+from linhai.utils.i18n import t
 
 
 class TestReasoningContentWidget(unittest.TestCase):
@@ -34,16 +36,17 @@ class TestReasoningContentWidget(unittest.TestCase):
         self.assertEqual(self.widget.sender_name, self.sender_name)
         self.assertFalse(self.widget.is_expanded)
 
-    def test_border_title_calculation(self):
-        """Test border title calculation in different states."""
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_border_title_calculation(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
         self.widget.is_expanded = False
         title = self.widget.calculate_border_title()
-        self.assertIn("[点击展开]", title)
+        self.assertIn(t({"zh_CN": "[点击展开]", "en": "[click to expand]"}), title)
         self.assertIn(self.sender_name, title)
 
         self.widget.is_expanded = True
         title = self.widget.calculate_border_title()
-        self.assertIn("[点击隐藏]", title)
+        self.assertIn(t({"zh_CN": "[点击隐藏]", "en": "[click to hide]"}), title)
         self.assertIn(self.sender_name, title)
 
     def test_feed_string(self):

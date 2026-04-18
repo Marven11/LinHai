@@ -85,6 +85,71 @@ class TestI18n(unittest.TestCase):
         from linhai.utils.i18n import t
 
 
+class TestComponentsI18n(unittest.TestCase):
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_collapse_header_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t({"zh_CN": "▼ 工具", "en": "▼ Tool"})
+        self.assertEqual(result, "▼ 工具")
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_collapse_header_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t({"zh_CN": "▼ 工具", "en": "▼ Tool"})
+        self.assertEqual(result, "▼ Tool")
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_call_expand_collapse(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "tool call [点击展开]", "en": "tool call [click to expand]"}),
+            "tool call [点击展开]",
+        )
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "tool call [点击展开]", "en": "tool call [click to expand]"}),
+            "tool call [click to expand]",
+        )
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_call_hide_toggle(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "tool call [点击隐藏]", "en": "tool call [click to hide]"}),
+            "tool call [点击隐藏]",
+        )
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "tool call [点击隐藏]", "en": "tool call [click to hide]"}),
+            "tool call [click to hide]",
+        )
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_reasoning_toggle(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "[点击隐藏]", "en": "[click to hide]"}), "[点击隐藏]"
+        )
+        self.assertEqual(
+            t({"zh_CN": "[点击展开]", "en": "[click to expand]"}), "[点击展开]"
+        )
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        self.assertEqual(
+            t({"zh_CN": "[点击隐藏]", "en": "[click to hide]"}), "[click to hide]"
+        )
+        self.assertEqual(
+            t({"zh_CN": "[点击展开]", "en": "[click to expand]"}),
+            "[click to expand]",
+        )
+
+    def test_components_import(self):
+        from linhai.tui.components import (
+            _ToolCallCollapseHeader,
+            ToolCallWidget,
+            ReasoningContentWidget,
+        )
+
+
 class TestPromptI18n(unittest.TestCase):
     def test_all_prompt_constants_are_strings(self):
         from linhai import prompt

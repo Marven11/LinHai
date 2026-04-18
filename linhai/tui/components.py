@@ -19,6 +19,7 @@ from textual.widgets._markdown import MarkdownStream
 from textual.widgets.markdown import MarkdownBlock
 
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
+from linhai.utils.i18n import t
 from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
 from linhai.utils.common import parse_and_simplify_toolcall
@@ -338,7 +339,7 @@ class _ToolCallCollapseHeader(Static):
     """
 
     def __init__(self, collapse_callback: Callable[[], None]):
-        super().__init__("▼ 工具")
+        super().__init__(t({"zh_CN": "▼ 工具", "en": "▼ Tool"}))
         self._collapse_callback = collapse_callback
 
     def on_click(self, event: events.Click) -> None:
@@ -522,7 +523,9 @@ class ToolCallWidget(Static):
 
         self.is_collapsed = True
         self.add_class("collapsed")
-        self.border_title = "tool call [点击展开]"
+        self.border_title = t(
+            {"zh_CN": "tool call [点击展开]", "en": "tool call [click to expand]"}
+        )
         simplified = "<bad toolcall>"
         if not self.has_error:
             simplified = parse_and_simplify_toolcall(self.json_str)
@@ -550,7 +553,9 @@ class ToolCallWidget(Static):
             self._markdown_widget = Markdown(self.current_content.strip())
             self.mount(self._markdown_widget)
         else:
-            self.border_title = "tool call [点击隐藏]"
+            self.border_title = t(
+                {"zh_CN": "tool call [点击隐藏]", "en": "tool call [click to hide]"}
+            )
             self.update(
                 _syntax_or_text(
                     self.current_content.strip(),
@@ -621,7 +626,12 @@ class ReasoningContentWidget(Static):
         self.add_class("reasoning-widget-collapsed")
 
     def calculate_border_title(self) -> str:
-        return f"{self.sender_name} (reasoning) {'[点击隐藏]' if self.is_expanded else '[点击展开]'}"
+        toggle = (
+            t({"zh_CN": "[点击隐藏]", "en": "[click to hide]"})
+            if self.is_expanded
+            else t({"zh_CN": "[点击展开]", "en": "[click to expand]"})
+        )
+        return f"{self.sender_name} (reasoning) {toggle}"
 
     def on_click(self):
         if self.is_expanded:
