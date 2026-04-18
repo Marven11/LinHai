@@ -9,6 +9,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
+from linhai.utils.i18n import t
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.base import Message
 
@@ -126,7 +127,14 @@ class CommandWhitelistPlugin(Plugin):
         if agent and self.allowed_commands:
             allowed_str = ", ".join([" ".join(cmd) for cmd in self.allowed_commands])
             agent.message_processor.update_notification_message(
-                RuntimeMessage(f"允许的命令: {allowed_str}"),
+                RuntimeMessage(
+                    t(
+                        {
+                            "zh_CN": f"允许的命令: {allowed_str}",
+                            "en": f"Allowed commands: {allowed_str}",
+                        }
+                    )
+                ),
                 source="command_whitelist",
                 sort_value=10,
             )

@@ -9,6 +9,7 @@ from linhai.agent.messages import RuntimeMessage, FileContentMessage
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.agent.planning import PlanningPromptMessage
 from linhai.registry import Registry
+from linhai.utils.i18n import t
 from linhai.base import Answer, UserMessage, Message
 from linhai.plugin.file_operations import Plugin
 
@@ -112,14 +113,26 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.status_counter >= 5:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    f"你已经连续{self.status_counter}次没有修改STATUS.md，你偏离计划了吗？"
+                    t(
+                        {
+                            "zh_CN": f"你已经连续{self.status_counter}次没有修改STATUS.md，你偏离计划了吗？",
+                            "en": f"You have not modified STATUS.md for {self.status_counter} consecutive times. Have you deviated from the plan?",
+                        }
+                    )
                 ),
                 source="planning_status_reminder",
                 sort_value=0,
             )
         elif self.status_counter >= 3:
             agent.message_processor.update_notification_message(
-                RuntimeMessage("提醒：你应该更新STATUS.md以反应当前状态"),
+                RuntimeMessage(
+                    t(
+                        {
+                            "zh_CN": "提醒：你应该更新STATUS.md以反应当前状态",
+                            "en": "Reminder: You should update STATUS.md to reflect current state",
+                        }
+                    )
+                ),
                 source="planning_status_reminder",
                 sort_value=0,
             )
@@ -131,7 +144,12 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.todolist_counter >= 8:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你偏离任务了吗？你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？"
+                    t(
+                        {
+                            "zh_CN": f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你偏离任务了吗？你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？",
+                            "en": f"You have not modified TODOLIST.md for {self.todolist_counter} consecutive times. Have you deviated from the task? How should you modify TODOLIST.md? Does the current task need to be broken down? Should it be postponed?",
+                        }
+                    )
                 ),
                 source="planning_todolist_reminder",
                 sort_value=0,
@@ -139,7 +157,12 @@ class PlanningStatusReminderPlugin(Plugin):
         if self.todolist_counter >= 6:
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？"
+                    t(
+                        {
+                            "zh_CN": f"你已经连续{self.todolist_counter}次没有修改TODOLIST.md，你应该如何修改TODOLIST.md? 当前任务是否需要分解？当前任务是否需要被推迟？",
+                            "en": f"You have not modified TODOLIST.md for {self.todolist_counter} consecutive times. How should you modify TODOLIST.md? Does the current task need to be broken down? Should it be postponed?",
+                        }
+                    )
                 ),
                 source="planning_todolist_reminder",
                 sort_value=0,
@@ -276,8 +299,14 @@ class DesignMdReminderPlugin(Plugin):
             self._design_reminded = False
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    "当前没有查看DESIGN.md的内容，你应该重新读取再继续任务吗？"
-                    "你应该如何修改DESIGN.md以符合任务的最新要求？"
+                    t(
+                        {
+                            "zh_CN": "当前没有查看DESIGN.md的内容，你应该重新读取再继续任务吗？"
+                            "你应该如何修改DESIGN.md以符合任务的最新要求？",
+                            "en": "DESIGN.md content is not currently visible. Should you re-read it before continuing? "
+                            "How should you modify DESIGN.md to meet the latest task requirements?",
+                        }
+                    )
                 ),
                 source="planning_design_reminder",
                 sort_value=0,

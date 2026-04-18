@@ -13,6 +13,7 @@ from linhai.markdown_parser import extract_tool_calls
 from linhai.base import Answer
 from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
+from linhai.utils.i18n import t
 
 from .helpers import JsonValue
 
@@ -64,7 +65,12 @@ class PromptFastAgentPlugin(Plugin):
         # 更新notification消息，显示当前模型的工具限制
         agent.message_processor.update_notification_message(
             RuntimeMessage(
-                f"你现在是{model_name}，为了避免一次性造成大量错误，runtime会在你调用超过{max_toolcall}个工具时打断你"
+                t(
+                    {
+                        "zh_CN": f"你现在是{model_name}，为了避免一次性造成大量错误，runtime会在你调用超过{max_toolcall}个工具时打断你",
+                        "en": f"You are now {model_name}, runtime will interrupt after {max_toolcall} tool calls to prevent mass errors",
+                    }
+                )
             ),
             source="prompt_fast_agent",
             sort_value=100,
@@ -209,19 +215,24 @@ class SingleToolCallReminderPlugin(Plugin):
             if self.single_tool_call_count >= 2:
                 agent.message_processor.update_notification_message(
                     RuntimeMessage(
-                        f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
-                        "除开特殊原因不要每次只调用一个工具！"
-                        """
-多个工具调用的语法为markdown语法，在一个回答中输出多个json toolcall代码块，如:
-
-```json toolcall
-{"name": "read_file", ...}
-```
-
-```json toolcall
-{"name": "read_file", ...}
-```
-"""
+                        t(
+                            {
+                                "zh_CN": (
+                                    f"注意：你连续{self.single_tool_call_count}次仅调用一个工具，"
+                                    "除开特殊原因不要每次只调用一个工具！"
+                                    "\n多个工具调用的语法为markdown语法，在一个回答中输出多个json toolcall代码块，如:\n\n"
+                                    '```json toolcall\n{"name": "read_file", ...}\n```\n\n'
+                                    '```json toolcall\n{"name": "read_file", ...}\n```\n'
+                                ),
+                                "en": (
+                                    f"Note: You have called only one tool for {self.single_tool_call_count} consecutive times. "
+                                    "Avoid calling only one tool at a time unless there's a special reason!"
+                                    "\nMultiple tool calls use markdown syntax, output multiple json toolcall code blocks in one response, e.g.:\n\n"
+                                    '```json toolcall\n{"name": "read_file", ...}\n```\n\n'
+                                    '```json toolcall\n{"name": "read_file", ...}\n```'
+                                ),
+                            }
+                        )
                     ),
                     source="single_tool_call_reminder",
                     sort_value=0,

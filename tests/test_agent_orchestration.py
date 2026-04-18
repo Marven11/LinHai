@@ -94,10 +94,9 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 验证返回值
         self.assertIsNotNone(result)
         assert result is not None
-        self.assertIn("黄灯状态", result)
-        self.assertIn("上下文占用量", result)
-        self.assertIn("总大消息数", result)
-        self.assertIn("可清理", result)
+        self.assertIn("黄灯", result)
+        self.assertIn("%", result)
+        self.assertIn(": 1", result)
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息），因为通知没有被添加，只是返回
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
@@ -127,8 +126,8 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 对于失效状态，应该返回消息字符串
         self.assertIsNotNone(result)
         assert result is not None
-        self.assertIn("失效", result)
-        self.assertIn("token用量信息已失效", result)
+        self.assertIn(": 1", result)
+        self.assertIn("token", result)
         # 消息数量应该仍然是3（2条pinned_messages + 1条普通消息）
         self.assertEqual(len(self.message_processor.get_messages()), 3)
 
@@ -263,7 +262,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         # 检查通知消息中包含失效状态
         self.assertIsNotNone(context["notification_message"])
         assert context["notification_message"] is not None
-        self.assertIn("失效", context["notification_message"])
+        self.assertIn("token", context["notification_message"])
 
     def test_red_state_with_dirty_state_allows_normal_tools(self):
         """测试红灯状态下，如果token用量失效，正常工具应该被允许。"""
@@ -627,9 +626,7 @@ class TestAgentContextOrchestration(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(notifications)
         # 验证消息内容符合issue要求
         notification_msg = notifications["message"].get_content()
-        self.assertIn(
-            "【注意】你应该立即开始使用正确的工具调用清理上下文", notification_msg
-        )
+        self.assertIn("json toolcall", notification_msg)
         self.assertIn("```json toolcall", notification_msg)
 
     async def test_consecutive_red_block_notification_cleared_after_success(

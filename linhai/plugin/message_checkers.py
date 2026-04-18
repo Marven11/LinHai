@@ -19,6 +19,7 @@ from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.base import Answer, AssistantMessage, Message
 from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
+from linhai.utils.i18n import t
 
 from .helpers import JsonValue
 
@@ -234,7 +235,12 @@ class OnlyReasoningPlugin(Plugin):
         if reasoning_content and not full_response.strip():
             agent.message_processor.update_notification_message(
                 RuntimeMessage(
-                    "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容"
+                    t(
+                        {
+                            "zh_CN": "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容",
+                            "en": "Detected no output after thinking, with tool calls before </thinking> tag. Actual content should be output after the </thinking> tag",
+                        }
+                    )
                 ),
                 source="only_reasoning",
                 sort_value=0,

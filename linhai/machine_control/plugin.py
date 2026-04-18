@@ -8,6 +8,7 @@ from linhai.agent.lifecycle import Lifecycle
 from linhai.base import Message
 from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
+from linhai.utils.i18n import t
 
 from linhai.tool.base import ToolResultFailed
 
@@ -28,7 +29,14 @@ class MachineControlPlugin:
         """在消息生成前更新notification_message。"""
         agent = self.registry.get_member_typechecked("agent", Agent)
         agent.message_processor.update_notification_message(
-            RuntimeMessage(f"当前在{self.machine_control.target_machine}上"),
+            RuntimeMessage(
+                t(
+                    {
+                        "zh_CN": f"当前在{self.machine_control.target_machine}上",
+                        "en": f"Currently on {self.machine_control.target_machine}",
+                    }
+                )
+            ),
             source="machine_control",
             sort_value=0,
         )

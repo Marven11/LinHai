@@ -223,5 +223,222 @@ class TestPromptI18n(unittest.TestCase):
         self.assertIn("LinHai Wanderer", result)
 
 
+class TestNotificationMessageI18n(unittest.TestCase):
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_status_reminder_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你已经连续5次没有修改STATUS.md，你偏离计划了吗？",
+                "en": "You have not modified STATUS.md for 5 consecutive times. Have you deviated from the plan?",
+            }
+        )
+        self.assertIn("STATUS.md", result)
+        self.assertIn("偏离计划", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_status_reminder_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你已经连续5次没有修改STATUS.md，你偏离计划了吗？",
+                "en": "You have not modified STATUS.md for 5 consecutive times. Have you deviated from the plan?",
+            }
+        )
+        self.assertIn("STATUS.md", result)
+        self.assertIn("deviated", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_todolist_reminder_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你已经连续8次没有修改TODOLIST.md，你偏离任务了吗？",
+                "en": "You have not modified TODOLIST.md for 8 consecutive times. Have you deviated from the task?",
+            }
+        )
+        self.assertIn("TODOLIST.md", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_todolist_reminder_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你已经连续8次没有修改TODOLIST.md，你偏离任务了吗？",
+                "en": "You have not modified TODOLIST.md for 8 consecutive times. Have you deviated from the task?",
+            }
+        )
+        self.assertIn("TODOLIST.md", result)
+        self.assertIn("deviated", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_orchestration_red_light_suggestion_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "建议: 立即暂停当前任务，开始使用context_forget_large_message清理上下文",
+                "en": "Suggestion: Stop current task immediately and start using context_forget_large_message to clean up context",
+            }
+        )
+        self.assertIn("context_forget_large_message", result)
+        self.assertIn("建议", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_orchestration_red_light_suggestion_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "建议: 立即暂停当前任务，开始使用context_forget_large_message清理上下文",
+                "en": "Suggestion: Stop current task immediately and start using context_forget_large_message to clean up context",
+            }
+        )
+        self.assertIn("context_forget_large_message", result)
+        self.assertIn("Suggestion", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_orchestration_green_light_suggestion_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "建议: 不要担心消息限制，立即工作",
+                "en": "Suggestion: Do not worry about message limits, keep working",
+            }
+        )
+        self.assertIn("立即工作", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_orchestration_green_light_suggestion_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "建议: 不要担心消息限制，立即工作",
+                "en": "Suggestion: Do not worry about message limits, keep working",
+            }
+        )
+        self.assertIn("keep working", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_call_managers_model_limit_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你现在是test-model，为了避免一次性造成大量错误，runtime会在你调用超过5个工具时打断你",
+                "en": "You are now test-model, runtime will interrupt after 5 tool calls to prevent mass errors",
+            }
+        )
+        self.assertIn("test-model", result)
+        self.assertIn("打断", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_tool_call_managers_model_limit_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "你现在是test-model，为了避免一次性造成大量错误，runtime会在你调用超过5个工具时打断你",
+                "en": "You are now test-model, runtime will interrupt after 5 tool calls to prevent mass errors",
+            }
+        )
+        self.assertIn("test-model", result)
+        self.assertIn("interrupt", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_message_checkers_only_reasoning_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容",
+                "en": "Detected no output after thinking, with tool calls before </thinking> tag. Actual content should be output after the </thinking> tag",
+            }
+        )
+        self.assertIn("</thinking>", result)
+        self.assertIn("检测", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_message_checkers_only_reasoning_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "检测到在思考后没有输出任何内容而是在</thinking>标签前就输出了工具调用等，应该在</thinking>标签后输出实际内容",
+                "en": "Detected no output after thinking, with tool calls before </thinking> tag. Actual content should be output after the </thinking> tag",
+            }
+        )
+        self.assertIn("</thinking>", result)
+        self.assertIn("Detected", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_machine_control_current_machine_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "当前在master_host上",
+                "en": "Currently on master_host",
+            }
+        )
+        self.assertIn("master_host", result)
+        self.assertIn("当前在", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_machine_control_current_machine_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "当前在master_host上",
+                "en": "Currently on master_host",
+            }
+        )
+        self.assertIn("master_host", result)
+        self.assertIn("Currently", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_security_config_allowed_commands_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "允许的命令: ls, cat",
+                "en": "Allowed commands: ls, cat",
+            }
+        )
+        self.assertIn("允许的命令", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_security_config_allowed_commands_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "允许的命令: ls, cat",
+                "en": "Allowed commands: ls, cat",
+            }
+        )
+        self.assertIn("Allowed commands", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_design_reminder_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "当前没有查看DESIGN.md的内容，你应该重新读取再继续任务吗？"
+                "你应该如何修改DESIGN.md以符合任务的最新要求？",
+                "en": "DESIGN.md content is not currently visible. Should you re-read it before continuing? "
+                "How should you modify DESIGN.md to meet the latest task requirements?",
+            }
+        )
+        self.assertIn("DESIGN.md", result)
+        self.assertIn("重新读取", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_planning_design_reminder_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t(
+            {
+                "zh_CN": "当前没有查看DESIGN.md的内容，你应该重新读取再继续任务吗？"
+                "你应该如何修改DESIGN.md以符合任务的最新要求？",
+                "en": "DESIGN.md content is not currently visible. Should you re-read it before continuing? "
+                "How should you modify DESIGN.md to meet the latest task requirements?",
+            }
+        )
+        self.assertIn("DESIGN.md", result)
+        self.assertIn("re-read", result)
+
+
 if __name__ == "__main__":
     unittest.main()

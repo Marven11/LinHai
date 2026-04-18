@@ -56,7 +56,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         )
         warning_message = call_args[0][0]
         self.assertIsInstance(warning_message, RuntimeMessage)
-        self.assertIn("检测到在思考后没有输出任何内容", warning_message.message)
+        self.assertIn("</thinking>", warning_message.message)
 
         ui_call_args = self.registry.send_if_exists.call_args
         self.assertEqual(ui_call_args[0][0], "ui_log")
