@@ -41,6 +41,11 @@ jobs:
           cp config-example.toml /root/.config/linhai/config.toml
           ls -la /root/.config/linhai/config.toml
 
+      - name: Check PR references issue
+        run: |
+          echo "Checking if PR references an issue and has no competing PRs..."
+          python3 .gitea/scripts/check_pr_issue.py
+
       - name: Check PR for missing tests (issue 46)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
