@@ -202,10 +202,10 @@ class AgentSession:
         llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
         await llm_manager.switch_to_llm(name)
 
-    def get_processes(self) -> list[dict[str, str]]:
+    def get_processes(self):
         if not self.registry.has_member("machine_control"):
             return []
-        from linhai.machine_control.main import MachineControl
+        from linhai.machine_control.main import MachineControl, _ProcessEntry
 
         mc = self.registry.get_member_typechecked("machine_control", MachineControl)
         return mc.list_processes()

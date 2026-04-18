@@ -411,6 +411,74 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hasattr(self.host_control, "terminal_close"))
 
 
+class TestListProcesses(unittest.TestCase):
+    """测试list_processes返回argv/status/returncode"""
+
+    def setUp(self):
+        self.registry = Mock(spec=Registry)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
+
+    def test_list_processes_empty(self):
+        """测试无进程时返回空列表"""
+        result = self.machine_control.list_processes()
+        self.assertEqual(result, [])
+
+    def test_store_and_list_processes(self):
+        """测试存储进程信息后list_processes返回完整数据"""
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = None
+        mock_host.list_process_pids = Mock(return_value=["123"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+
+        self.machine_control.store_process_info("123", "master_host", ["echo", "hello"])
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["pid"], "123")
+        self.assertEqual(result[0]["machine_id"], "master_host")
+        self.assertEqual(result[0]["argv"], ["echo", "hello"])
+        self.assertEqual(result[0]["status"], "running")
+        self.assertIsNone(result[0]["returncode"])
+
+    def test_list_processes_exited(self):
+        """测试已退出进程的status为exited"""
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_host.list_process_pids = Mock(return_value=["456"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(result[0]["status"], "exited")
+        self.assertEqual(result[0]["returncode"], 0)
+
+    def test_list_processes_error_when_no_process(self):
+        """测试get_process返回None时status为error"""
+        mock_host = Mock()
+        mock_host.list_process_pids = Mock(return_value=["789"])
+        mock_host.get_process = Mock(return_value=None)
+        self.machine_control.machines = {"master_host": mock_host}
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(result[0]["status"], "error")
+        self.assertIsNone(result[0]["returncode"])
+
+    def test_list_processes_no_stored_info(self):
+        """测试未存储info时argv为空列表"""
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = None
+        mock_host.list_process_pids = Mock(return_value=["111"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(result[0]["argv"], [])
+
+
 class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
     """MachineControlPlugin测试类"""
 

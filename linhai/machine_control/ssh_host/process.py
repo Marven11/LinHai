@@ -24,6 +24,10 @@ class RemoteProcess:
     def pid(self) -> str:
         return self._pid
 
+    @property
+    def returncode(self) -> int | None:
+        return None
+
     async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
         result = await self._ssh_control.call_tool(
             "process_stdio_write",

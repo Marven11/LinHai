@@ -128,6 +128,14 @@ class SwitchLlmRequest(BaseModel):
     llm_name: str = Field(..., description="要切换到的LLM名称")
 
 
+class ProcessInfo(BaseModel):
+    pid: str = Field(..., description="进程ID")
+    machine_id: str = Field(..., description="机器ID")
+    argv: list[str] = Field(default_factory=list, description="进程参数列表")
+    status: Literal["running", "exited", "error"] = Field(..., description="进程状态")
+    returncode: Optional[int] = Field(default=None, description="退出码")
+
+
 class WsProcessUpdateEvent(BaseModel):
     type: Literal["process_update"] = "process_update"
     events: list

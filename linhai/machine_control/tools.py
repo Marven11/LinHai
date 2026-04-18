@@ -258,6 +258,9 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                         initial_returncode=None,
                     )
                 )
+            machine_control.store_process_info(
+                result.pid, machine_control.target_machine, argv
+            )
             return ToolResultSuccess(
                 content=f"<<pid>>{result.pid}<<pid>><<message>>{result.message}<<message>>"
             )

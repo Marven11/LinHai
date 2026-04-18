@@ -1,6 +1,6 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional, TypedDict
 from linhai.agent.lifecycle import Lifecycle
 from linhai.config import RemoteMachineConfig
 from linhai.registry import Registry
@@ -10,6 +10,18 @@ from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
 from .ssh_host.ssh_host import SshMachineControl
 from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
+
+
+class _StoredProcessInfo(TypedDict):
+    argv: list[str]
+
+
+class _ProcessEntry(TypedDict):
+    pid: str
+    machine_id: str
+    argv: list[str]
+    status: str
+    returncode: int | None
 
 
 class MachineControl:
@@ -35,6 +47,7 @@ class MachineControl:
         self.source_machines: Dict[str, str | None] = {
             "master_host": None,
         }
+        self._process_infos: Dict[str, _StoredProcessInfo] = {}
         registry.register_member("machine_control", self)
 
     async def switch_machine(
@@ -316,11 +329,30 @@ class MachineControl:
             current = self.source_machines.get(current)
         return chain
 
-    def list_processes(self) -> list[dict[str, str]]:
-        result: list[dict[str, str]] = []
+    def store_process_info(self, pid: str, machine_id: str, argv: list[str]) -> None:
+        self._process_infos[f"{machine_id}:{pid}"] = {"argv": argv}
+
+    def list_processes(self) -> list[_ProcessEntry]:
+        result: list[_ProcessEntry] = []
         for machine_id, host_control in self.machines.items():
             for pid in host_control.list_process_pids():
-                result.append({"pid": pid, "machine_id": machine_id})
+                info = self._process_infos.get(f"{machine_id}:{pid}")
+                process = host_control.get_process(pid)
+                if process is not None:
+                    returncode = process.returncode
+                    status = "exited" if returncode is not None else "running"
+                else:
+                    returncode = None
+                    status = "error"
+                result.append(
+                    {
+                        "pid": pid,
+                        "machine_id": machine_id,
+                        "argv": info["argv"] if info else [],
+                        "status": status,
+                        "returncode": returncode,
+                    }
+                )
         return result
 
     def register_plugin(self, lifecycle: "Lifecycle"):

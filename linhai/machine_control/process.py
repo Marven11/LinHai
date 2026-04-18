@@ -51,6 +51,9 @@ class Process(Protocol):
     @property
     def pid(self) -> str: ...
 
+    @property
+    def returncode(self) -> int | None: ...
+
     async def stdio_write(
         self, content: str, with_enter: bool
     ) -> ProcessWriteResult: ...
