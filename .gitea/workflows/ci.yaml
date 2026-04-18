@@ -108,6 +108,12 @@ jobs:
           echo "Checking for Any/object type annotations in function parameters..."
           uv run python .gitea/scripts/check_any_object_type_annotations.py
 
+      - name: Check for None/empty default arguments (issue #1121)
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "Checking for None/empty default arguments in function parameters..."
+          uv run python .gitea/scripts/check_none_default_args.py
+
       - name: Check for new Python comments
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
