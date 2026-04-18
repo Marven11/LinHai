@@ -319,7 +319,7 @@ class Trojan:
 
         process = await asyncio.create_subprocess_exec(
             "/usr/bin/env",
-            "bash",
+            "sh",
             "-i",
             stdin=slave,
             stdout=slave,

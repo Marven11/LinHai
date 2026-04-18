@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from linhai.machine_control.trojan.ssh_transport import SshTrojanTransport
+from linhai.machine_control.trojan.shell_transport import ShellTrojanTransport
 from tests.test_helpers import _AsyncioProcessAdapter
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor

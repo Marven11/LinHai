@@ -6,20 +6,20 @@ import tempfile
 import os
 from pathlib import Path
 
-from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+from linhai.machine_control.posix_shell.posix_shell_control import PosixShellControl
 from tests.test_helpers import _AsyncioProcessAdapter
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 
 
-class TestSshMachineControlE2E(unittest.IsolatedAsyncioTestCase):
+class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
     async def _create_control_with_bash(
         self,
-    ) -> tuple[SshMachineControl, _AsyncioProcessAdapter, asyncio.subprocess.Process]:
+    ) -> tuple[PosixShellControl, _AsyncioProcessAdapter, asyncio.subprocess.Process]:
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
 
-        control = SshMachineControl(
+        control = PosixShellControl(
             host="localhost",
             registry=registry,
         )

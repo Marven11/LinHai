@@ -139,12 +139,14 @@ class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
 
 class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
     async def test_upload_uses_task_supervisor(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
         from linhai.task_supervisor import PlainTaskSupervisor
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry, host="host")
         call_count = 0
 
         async def mock_call_tool(name, args):
@@ -170,12 +172,14 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
         import base64
         import tempfile
         import os
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
         from linhai.task_supervisor import PlainTaskSupervisor
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry, host="host")
         test_data = b"y" * 100
 
         async def mock_call_tool(name, args):
@@ -196,12 +200,14 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
 class TestSshHostUploadFailure(unittest.IsolatedAsyncioTestCase):
     async def test_upload_chunk_failure_propagates(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
         from linhai.task_supervisor import PlainTaskSupervisor
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = SshMachineControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry, host="host")
 
         async def mock_call_tool(name, args):
             if name == "create_temp_dir":

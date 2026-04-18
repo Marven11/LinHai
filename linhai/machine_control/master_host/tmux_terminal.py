@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+from collections.abc import Sequence
 
 from linhai.utils.common import generate_id
 
@@ -64,7 +65,7 @@ class TmuxTerminal:
         self,
         columns: int = 80,
         lines: int = 24,
-        bash_argv: list[str] | None = None,
+        shell_argv: Sequence[str] = ("/usr/bin/env", "bash"),
         cwd: str | None = None,
     ):
         self.session_name = _SESSION_PREFIX + generate_id("tmux")
@@ -80,9 +81,6 @@ class TmuxTerminal:
         self._columns = columns
         self._lines = lines
 
-        if bash_argv is None:
-            bash_argv = ["/usr/bin/env", "bash"]
-
         subprocess.run(
             [
                 "tmux",
@@ -97,7 +95,7 @@ class TmuxTerminal:
                 "-c",
                 cwd or ".",
             ]
-            + bash_argv,
+            + list(shell_argv),
             check=True,
             capture_output=True,
         )

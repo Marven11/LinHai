@@ -1,4 +1,4 @@
-"""SSH机器控制类，用于通过SSH连接远程机器并执行工具。"""
+"""Posix Shell机器控制类，用于通过posix shell连接远程机器并执行工具。"""
 
 import asyncio
 import json
@@ -8,13 +8,13 @@ from linhai.registry import Registry
 from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
-from ..trojan.ssh_transport import SshTrojanTransport
+from ..trojan.shell_transport import ShellTrojanTransport
 from ..process import Process, ProcessCreateResult
 from .process import RemoteProcess
 
 
-class SshMachineControl:
-    """SSH机器控制类，负责通过SSH连接远程机器并调用工具。"""
+class PosixShellControl:
+    """Posix Shell机器控制类，负责通过posix shell连接远程机器并调用工具。"""
 
     def __init__(
         self,
@@ -26,23 +26,23 @@ class SshMachineControl:
         self.registry = registry
         self._username = username
         self._processes: dict[str, RemoteProcess] = {}
-        self.transport: Optional[SshTrojanTransport] = None
+        self.transport: Optional[ShellTrojanTransport] = None
 
     @property
     def username(self) -> str | None:
-        """返回SSH用户名"""
+        """返回用户名"""
         return self._username
 
     async def connect(self, process: Process) -> bool:
-        """连接到SSH服务器并启动trojan。
+        """连接到远程机器并启动trojan。
 
         Args:
-            process: 已建立的SSH bash进程（通过stdio交互）
+            process: 已建立的posix shell进程（通过stdio交互）
 
         Returns:
             连接是否成功
         """
-        self.transport = SshTrojanTransport(registry=self.registry, process=process)
+        self.transport = ShellTrojanTransport(registry=self.registry, process=process)
         return await self.transport.connect()
 
     async def call_tool(

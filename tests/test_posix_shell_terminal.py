@@ -4,7 +4,7 @@ import unittest
 import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
-from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+from linhai.machine_control.posix_shell.posix_shell_control import PosixShellControl
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
@@ -15,7 +15,7 @@ class TestSshTerminal(unittest.TestCase):
     def setUp(self):
         """设置测试环境"""
         self.registry = Mock(spec=Registry)
-        self.ssh_control = SshMachineControl(
+        self.ssh_control = PosixShellControl(
             host="test-host",
             registry=self.registry,
             port=22,
@@ -121,7 +121,7 @@ class TestSshTerminal(unittest.TestCase):
 
             result = await self.ssh_control.terminal_read_screen(terminal_id="term_123")
             self.assertIsInstance(result, ToolResultSuccess)
-            # ssh_host.py中的terminal_read_screen方法会解码base64
+            # posix_shell.py中的terminal_read_screen方法会解码base64
             self.assertEqual(result.content, raw_output.decode("utf-8"))
 
             # 验证call_tool被正确调用

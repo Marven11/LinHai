@@ -85,7 +85,7 @@ class TestTerminalCreateSandbox(unittest.IsolatedAsyncioTestCase):
         mock_cls.assert_called_once_with(
             columns=80,
             lines=24,
-            bash_argv=["bwrap", "--ro-bind", "/", "/", "/usr/bin/env", "bash"],
+            shell_argv=["bwrap", "--ro-bind", "/", "/", "/usr/bin/env", "bash"],
             cwd=host._cwd,
         )
 
@@ -96,7 +96,7 @@ class TestPyteTerminalBashArgv(unittest.TestCase):
 
         with patch("subprocess.Popen") as mock_popen:
             mock_popen.return_value = Mock()
-            PyteTerminal(bash_argv=["custom", "bash"])
+            PyteTerminal(shell_argv=["custom", "bash"])
 
         called_argv = mock_popen.call_args[0][0]
         self.assertEqual(called_argv, ["custom", "bash"])

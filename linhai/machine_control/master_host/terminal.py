@@ -5,6 +5,7 @@ import os
 import pty
 import signal
 import subprocess
+from collections.abc import Sequence
 from typing import List, Union
 
 import pyte
@@ -69,7 +70,7 @@ class PyteTerminal:
         self,
         columns: int = 80,
         lines: int = 24,
-        bash_argv: list[str] | None = None,
+        shell_argv: Sequence[str] = ("/usr/bin/env", "bash"),
         cwd: str | None = None,
     ):
         self.screen = pyte.Screen(columns, lines)
@@ -83,11 +84,8 @@ class PyteTerminal:
         env["COLUMNS"] = str(columns)
         env["LINES"] = str(lines)
 
-        if bash_argv is None:
-            bash_argv = ["/usr/bin/env", "bash"]
-
         self.process = subprocess.Popen(
-            bash_argv,
+            list(shell_argv),
             stdin=self.slave,
             stdout=self.slave,
             stderr=self.slave,
@@ -157,7 +155,7 @@ class PyteTerminal:
 async def terminal_create(
     columns: int = 80,
     lines: int = 24,
-    bash_argv: list[str] | None = None,
+    shell_argv: Sequence[str] = ("/usr/bin/env", "bash"),
     cwd: str | None = None,
 ) -> str:
     """新建虚拟终端
@@ -165,7 +163,7 @@ async def terminal_create(
     Args:
         columns: 终端列数
         lines: 终端行数
-        bash_argv: bash启动命令的argv，为None时使用默认值
+        shell_argv: shell启动命令的argv
 
     Returns:
         终端对应的ID
@@ -174,11 +172,11 @@ async def terminal_create(
         term_id = generate_id("terminal")
         if _use_tmux:
             terminal = TmuxTerminal(
-                columns=columns, lines=lines, bash_argv=bash_argv, cwd=cwd
+                columns=columns, lines=lines, shell_argv=shell_argv, cwd=cwd
             )
         else:
             terminal = PyteTerminal(
-                columns=columns, lines=lines, bash_argv=bash_argv, cwd=cwd
+                columns=columns, lines=lines, shell_argv=shell_argv, cwd=cwd
             )
         terminals[term_id] = terminal
         await terminal.start_reading()

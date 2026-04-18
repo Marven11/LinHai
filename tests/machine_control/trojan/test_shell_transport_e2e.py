@@ -3,13 +3,13 @@ import json
 import unittest
 from pathlib import Path
 
-from linhai.machine_control.trojan.ssh_transport import SshTrojanTransport
+from linhai.machine_control.trojan.shell_transport import ShellTrojanTransport
 from tests.test_helpers import _AsyncioProcessAdapter
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 
 
-class TestSshTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
+class TestShellTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
     async def _create_transport_with_bash(self):
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
@@ -34,7 +34,7 @@ class TestSshTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
         )
 
         adapter = _AsyncioProcessAdapter(process)
-        transport = SshTrojanTransport(
+        transport = ShellTrojanTransport(
             registry=registry,
             process=adapter,
         )

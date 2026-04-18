@@ -128,7 +128,7 @@ class TestProcessCreateInfo(unittest.TestCase):
         info = ProcessCreateInfo(
             process=proc,
             argv=["python", "script.py"],
-            machine_id="ssh_host",
+            machine_id="posix_shell",
             created_at=t,
             initial_returncode=0,
         )

@@ -20,14 +20,14 @@ from rich.text import Text
 from .transport import TrojanTransport
 
 
-class SshTrojanTransport:
+class ShellTrojanTransport:
     def __init__(
         self,
         registry: Registry,
         process: Process,
     ):
         self.registry = registry
-        self._bash_process = process
+        self._shell_process = process
         self.trojan_path: Optional[Path] = None
         self.remote_trojan_path: Optional[str] = None
         self._trojan_transport: Optional[TrojanTransport] = None
@@ -38,13 +38,13 @@ class SshTrojanTransport:
                 "task_supervisor", TaskSupervisor
             )
 
-    async def _execute_in_bash(
+    async def _execute_in_shell(
         self, command: str, timeout: float = 10.0
     ) -> tuple[int, str, str]:
         marker = f"CMD_RESULT_{int(asyncio.get_event_loop().time())}"
         full_command = f'{{ {command}; }} 2>&1; echo "{marker}:$?"'
 
-        write_result = await self._bash_process.stdio_write(
+        write_result = await self._shell_process.stdio_write(
             full_command, with_enter=True
         )
         if not write_result.success:
@@ -56,7 +56,7 @@ class SshTrojanTransport:
         start_time = asyncio.get_event_loop().time()
 
         while asyncio.get_event_loop().time() - start_time < timeout:
-            read_result = await self._bash_process.stdio_read(wait_seconds=1.0)
+            read_result = await self._shell_process.stdio_read(wait_seconds=1.0)
             if not read_result.success:
                 break
             decoded = read_result.stdout.decode("utf-8", errors="replace")
@@ -90,7 +90,7 @@ class SshTrojanTransport:
         return exit_code, "\n".join(output_lines), ""
 
     async def _check_python_version(self) -> bool:
-        exit_code, output, error = await self._execute_in_bash("python3 -V")
+        exit_code, output, error = await self._execute_in_shell("python3 -V")
         if exit_code != 0 or "Python 3" not in output:
             await self.registry.send_if_exists(
                 "ui_log",
@@ -116,7 +116,7 @@ class SshTrojanTransport:
         echo "$REMOTE_TEMP_PATH"
         """
 
-        exit_code, output, error = await self._execute_in_bash(command.strip())
+        exit_code, output, error = await self._execute_in_shell(command.strip())
 
         if exit_code != 0:
             error_msg = error or "创建远程临时文件失败"
@@ -131,7 +131,7 @@ class SshTrojanTransport:
 
     async def _start_trojan_process(self, remote_trojan_path: str) -> bool:
         command = f"python3 {remote_trojan_path}"
-        write_result = await self._bash_process.stdio_write(command, with_enter=True)
+        write_result = await self._shell_process.stdio_write(command, with_enter=True)
         if not write_result.success:
             return False
         await asyncio.sleep(0.5)
@@ -140,7 +140,7 @@ class SshTrojanTransport:
     async def connect(self) -> bool:
         await self.registry.send_if_exists(
             "ui_log",
-            UiNotice(level="INFO", content="开始连接SSH服务器"),
+            UiNotice(level="INFO", content="开始连接远程机器"),
         )
 
         self.trojan_path = Path(tempfile.mktemp(suffix=".py"))
@@ -222,7 +222,7 @@ class SshTrojanTransport:
 
         self._trojan_transport = TrojanTransport(
             registry=self.registry,
-            process=self._bash_process,
+            process=self._shell_process,
         )
         self._trojan_transport.start_reading()
         return True

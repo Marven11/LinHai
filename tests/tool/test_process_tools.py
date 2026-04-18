@@ -53,7 +53,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         mock_machine_control = MagicMock(spec=MachineControl)
         mock_machine_control.machines = {
             "master_host": "machine1",
-            "ssh_host": "machine2",
+            "posix_shell": "machine2",
         }
         mock_machine_control.target_machine = "master_host"
         mock_machine_control_class.return_value = mock_machine_control
@@ -71,7 +71,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(mock_machine_control.target_machine)
         # 验证machine_control有正确的机器列表
         self.assertIn("master_host", mock_machine_control.machines)
-        self.assertIn("ssh_host", mock_machine_control.machines)
+        self.assertIn("posix_shell", mock_machine_control.machines)
 
     def test_process_create_tool_definition(self):
         """测试process_create工具定义是否存在于工具列表中"""
@@ -192,7 +192,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
         # 创建模拟对象
         mock_registry = MagicMock(spec=Registry)
         mock_machine_control = MagicMock(spec=MachineControl)
-        mock_machine_control.machines = {"master_host": "mock1", "ssh_host": "mock2"}
+        mock_machine_control.machines = {"master_host": "mock1", "posix_shell": "mock2"}
         mock_machine_control.target_machine = "master_host"
 
         # 模拟Registry返回MachineControl
@@ -225,7 +225,7 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
             function_arguments={"arg": "value"},
             assert_success=True,
             with_secret=None,
-            on_machine="ssh_host",
+            on_machine="posix_shell",
         )
 
         # 执行工具调用

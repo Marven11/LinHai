@@ -5,7 +5,7 @@ import asyncio
 import shutil
 from unittest.mock import AsyncMock, Mock, patch
 
-from linhai.machine_control.trojan.ssh_transport import SshTrojanTransport
+from linhai.machine_control.trojan.shell_transport import ShellTrojanTransport
 from linhai.machine_control.process import (
     ProcessKillResult,
     ProcessReadResult,
@@ -14,7 +14,7 @@ from linhai.machine_control.process import (
 from linhai.registry import Registry
 
 
-class TestSshTrojanTransport(unittest.TestCase):
+class TestShellTrojanTransport(unittest.TestCase):
     """SSH Trojan Transport测试类"""
 
     def setUp(self):
@@ -79,7 +79,7 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
-            transport = SshTrojanTransport(
+            transport = ShellTrojanTransport(
                 registry=self.registry,
                 process=mock_process,
             )
@@ -115,7 +115,7 @@ class TestSshTrojanTransport(unittest.TestCase):
                 ),
             ]
             mock_process = self._make_mock_process(read_responses)
-            transport = SshTrojanTransport(
+            transport = ShellTrojanTransport(
                 registry=self.registry,
                 process=mock_process,
             )
@@ -144,7 +144,7 @@ class TestSshTrojanTransport(unittest.TestCase):
                 pid="1", success=True, stdout=b"", stderr=b""
             )
             mock_process = self._make_mock_process([empty_read, empty_read])
-            transport = SshTrojanTransport(
+            transport = ShellTrojanTransport(
                 registry=self.registry,
                 process=mock_process,
             )
@@ -155,7 +155,7 @@ class TestSshTrojanTransport(unittest.TestCase):
                 mock_loop_instance.time = Mock(side_effect=lambda: next(time_values))
                 mock_loop.return_value = mock_loop_instance
 
-                exit_code, output, error = await transport._execute_in_bash(
+                exit_code, output, error = await transport._execute_in_shell(
                     "test command", timeout=0.5
                 )
 
@@ -171,7 +171,7 @@ class TestSshTrojanTransport(unittest.TestCase):
             mock_trojan_transport.is_connected = Mock(return_value=True)
 
             mock_bash_process = AsyncMock()
-            transport = SshTrojanTransport(
+            transport = ShellTrojanTransport(
                 registry=self.registry,
                 process=mock_bash_process,
             )
@@ -188,7 +188,7 @@ class TestSshTrojanTransport(unittest.TestCase):
     def test_send_request_not_connected(self):
         async def test():
             mock_process = self._make_mock_process([])
-            transport = SshTrojanTransport(
+            transport = ShellTrojanTransport(
                 registry=self.registry,
                 process=mock_process,
             )

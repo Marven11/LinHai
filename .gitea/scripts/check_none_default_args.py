@@ -2,21 +2,66 @@ import sys
 import os
 import subprocess
 import ast
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
+
+_added_lines_cache: Dict[str, Dict[str, Set[int]]] = {}
+
+
+def _resolve_base_ref(base_ref: str) -> str:
+    check_cmd = ["git", "rev-parse", "--verify", base_ref]
+    if subprocess.run(check_cmd, capture_output=True).returncode != 0:
+        return "HEAD^"
+    return base_ref
+
+
+def _ensure_diff_cache(base_ref: str) -> None:
+    if base_ref in _added_lines_cache:
+        return
+    resolved = _resolve_base_ref(base_ref)
+    cmd = ["git", "diff", "-M", "--unified=0", resolved, "HEAD", "--", "linhai/"]
+    try:
+        output = subprocess.check_output(
+            cmd, universal_newlines=True, stderr=subprocess.DEVNULL
+        )
+    except subprocess.CalledProcessError:
+        _added_lines_cache[base_ref] = {}
+        return
+
+    result: Dict[str, Set[int]] = {}
+    current_file = None
+    current_line_number = None
+    for line in output.split("\n"):
+        if line.startswith("diff --git "):
+            parts = line.split(" b/")
+            if len(parts) >= 2:
+                current_file = parts[-1].strip()
+        elif line.startswith("+++ b/"):
+            current_file = line[6:].strip()
+        elif line.startswith("@@"):
+            parts = line.split(" ")
+            for part in parts:
+                if part.startswith("+"):
+                    try:
+                        current_line_number = int(part[1:].split(",")[0])
+                    except ValueError:
+                        pass
+                    break
+        elif line.startswith("+") and not line.startswith("+++"):
+            if current_file and current_line_number is not None:
+                result.setdefault(current_file, set()).add(current_line_number)
+                current_line_number += 1
+    _added_lines_cache[base_ref] = result
 
 
 def get_changed_python_files(base_ref: str = "origin/main") -> List[str]:
     try:
-        check_cmd = ["git", "rev-parse", "--verify", base_ref]
-        if subprocess.run(check_cmd, capture_output=True).returncode != 0:
-            base_ref = "HEAD^"
-
+        resolved = _resolve_base_ref(base_ref)
         cmd = [
             "git",
             "diff",
             "--name-only",
             "--diff-filter=ACMR",
-            base_ref,
+            resolved,
             "HEAD",
             "--",
             "linhai/",
@@ -35,36 +80,8 @@ def get_changed_python_files(base_ref: str = "origin/main") -> List[str]:
 
 
 def get_added_line_numbers(file_path: str, base_ref: str = "origin/main") -> Set[int]:
-    added_lines: Set[int] = set()
-    try:
-        check_cmd = ["git", "rev-parse", "--verify", base_ref]
-        if subprocess.run(check_cmd, capture_output=True).returncode != 0:
-            base_ref = "HEAD^"
-
-        cmd = ["git", "diff", "--unified=0", base_ref, "HEAD", "--", file_path]
-        diff_output = subprocess.check_output(
-            cmd, universal_newlines=True, stderr=subprocess.DEVNULL
-        )
-    except subprocess.CalledProcessError:
-        return added_lines
-
-    lines = diff_output.split("\n")
-    current_line_number = None
-    for line in lines:
-        if line.startswith("@@"):
-            parts = line.split(" ")
-            for part in parts:
-                if part.startswith("+"):
-                    try:
-                        current_line_number = int(part[1:].split(",")[0])
-                    except ValueError:
-                        pass
-                    break
-        elif line.startswith("+") and not line.startswith("+++"):
-            if current_line_number is not None:
-                added_lines.add(current_line_number)
-                current_line_number += 1
-    return added_lines
+    _ensure_diff_cache(base_ref)
+    return _added_lines_cache.get(base_ref, {}).get(file_path, set())
 
 
 def is_none_empty_default(node: ast.expr) -> Tuple[bool, str]:

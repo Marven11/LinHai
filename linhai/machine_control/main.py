@@ -8,7 +8,7 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
 from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
-from .ssh_host.ssh_host import SshMachineControl
+from .posix_shell.posix_shell_control import PosixShellControl
 from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
 
 
@@ -68,7 +68,7 @@ class MachineControl:
 
         return ToolResultSuccess(content=f"已切换到机器: {machine_id}")
 
-    async def add_bash_machine(
+    async def add_posix_shell_machine(
         self,
         machine_id: str,
         pid: str,
@@ -88,30 +88,30 @@ class MachineControl:
                 content=f"进程不存在: {pid} (在机器 {source_machine_id} 上)"
             )
 
-        bash_control = SshMachineControl(
+        shell_control = PosixShellControl(
             registry=self.registry,
         )
 
-        connected = await bash_control.connect(process)
+        connected = await shell_control.connect(process)
         if not connected:
-            return ToolResultFailed(content=f"连接bash进程失败: PID {pid}")
+            return ToolResultFailed(content=f"连接posix shell进程失败: PID {pid}")
 
-        self.machines[machine_id] = bash_control
+        self.machines[machine_id] = shell_control
         self.source_machines[machine_id] = source_machine_id
         self.machine_descriptions[machine_id] = (
-            f"Bash进程主机 (PID: {pid}, 来自: {source_machine_id})"
+            f"Posix shell进程主机 (PID: {pid}, 来自: {source_machine_id})"
         )
 
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"Bash连接成功: 已连接bash进程为机器 {machine_id} (PID: {pid})",
+                content=f"Posix shell连接成功: 已连接posix shell进程为机器 {machine_id} (PID: {pid})",
             ),
         )
 
         return ToolResultSuccess(
-            content=f"已成功连接bash进程为机器: {machine_id} (PID: {pid})"
+            content=f"已成功连接posix shell进程为机器: {machine_id} (PID: {pid})"
         )
 
     async def connect_remote_config(
@@ -127,7 +127,7 @@ class MachineControl:
 
         config = self.remote_machines[name]
 
-        ssh_control = SshMachineControl(registry=self.registry)
+        shell_control = PosixShellControl(registry=self.registry)
 
         current_host = self.machines[self.target_machine]
         result = await current_host.create_process(config.argv, wait_second=15.0)
@@ -144,12 +144,12 @@ class MachineControl:
         if process is None:
             return ToolResultFailed(content=f"连接进程不存在: {result.pid}")
 
-        connected = await ssh_control.connect(process)
+        connected = await shell_control.connect(process)
         if not connected:
             await process.kill()
             return ToolResultFailed(content=f"连接远程机器失败: {name}")
 
-        self.machines[name] = ssh_control
+        self.machines[name] = shell_control
         self.source_machines[name] = self.target_machine
         desc = config.description or f"远程机器 ({name})"
         self.machine_descriptions[name] = desc

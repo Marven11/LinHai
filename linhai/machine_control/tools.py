@@ -66,11 +66,11 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.switch_machine(machine_id)
 
     @toolset.register_tool(
-        name="connect_bash_as_machine",
+        name="connect_posix_shell_as_machine",
         desc=t(
             {
-                "zh_CN": "连接已经打开的任何bash进程，部署jsonrpc远控进程并操控，可用于sudo bash, docker exec -it sh, adb shell, nc -l等任何场景打开的bash",
-                "en": "Connect to any existing bash process and control via jsonrpc. Usable for sudo bash, docker exec -it sh, adb shell, nc -l, etc.",
+                "zh_CN": "连接已经打开的任何posix shell进程，部署jsonrpc远控进程并操控，可用于sudo bash, docker exec -it sh, adb shell, nc -l等任何场景打开的posix shell",
+                "en": "Connect to any existing posix shell process and control via jsonrpc. Usable for sudo bash, docker exec -it sh, adb shell, nc -l, etc.",
             }
         ),
         args={
@@ -81,8 +81,8 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
             "pid": ToolArgInfo(
                 desc=t(
                     {
-                        "zh_CN": "要连接的bash进程PID",
-                        "en": "PID of the bash process to connect",
+                        "zh_CN": "要连接的posix shell进程PID",
+                        "en": "PID of the posix shell process to connect",
                     }
                 ),
                 type="str",
@@ -100,12 +100,14 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         required_args=["machine_id", "pid"],
         conflict_with=None,
     )
-    async def connect_bash_as_machine_tool(
+    async def connect_posix_shell_as_machine_tool(
         machine_id: str,
         pid: str,
         source_machine: Optional[str] = None,
     ) -> ToolResultSuccess | ToolResultFailed:
-        return await machine_control.add_bash_machine(machine_id, pid, source_machine)
+        return await machine_control.add_posix_shell_machine(
+            machine_id, pid, source_machine
+        )
 
     @toolset.register_tool(
         name="list_remote_configs",

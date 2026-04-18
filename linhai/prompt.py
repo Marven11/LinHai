@@ -817,7 +817,7 @@ EXAMPLE_MULTIHOP_MACHINES = t(
 ```
 
 ```json toolcall
-{"name": "connect_bash_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
 ```
 
 ```json toolcall
@@ -860,7 +860,7 @@ Confirm if the password was entered successfully, then connect as a machine and 
 ```
 
 ```json toolcall
-{"name": "connect_bash_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
+{"name": "connect_posix_shell_as_machine", "arguments": {"machine_id": "ssh_bash_hop2", "pid": "1145141919", "source_machine": "ssh_hop1"}}
 ```
 
 ```json toolcall

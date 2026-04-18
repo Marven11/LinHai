@@ -2,7 +2,7 @@ import unittest
 import asyncio
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
-from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+from linhai.machine_control.posix_shell.posix_shell_control import PosixShellControl
 from linhai.machine_control.process import (
     ProcessReadResult,
     ProcessWriteResult,
@@ -11,7 +11,7 @@ from linhai.machine_control.process import (
 from linhai.registry import Registry
 
 
-class TestSshMachineControlConnect(unittest.TestCase):
+class TestPosixShellControlConnect(unittest.TestCase):
 
     def setUp(self):
         self.registry = Mock(spec=Registry)
@@ -19,7 +19,7 @@ class TestSshMachineControlConnect(unittest.TestCase):
         self.registry.send_if_exists = self.send_if_exists_mock
         self.registry.has_member = Mock(return_value=False)
 
-        self.control = SshMachineControl(
+        self.control = PosixShellControl(
             host="test-host", registry=self.registry, port=22, username="testuser"
         )
 
@@ -50,7 +50,7 @@ class TestSshMachineControlConnect(unittest.TestCase):
             mock_transport_instance.disconnect = AsyncMock()
 
             with patch(
-                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
                 return_value=mock_transport_instance,
             ) as mock_transport_class:
                 result = await self.control.connect(mock_process)
@@ -75,7 +75,7 @@ class TestSshMachineControlConnect(unittest.TestCase):
             mock_transport_instance.disconnect = AsyncMock()
 
             with patch(
-                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
                 return_value=mock_transport_instance,
             ):
                 with self.assertRaises(RuntimeError):
@@ -93,7 +93,7 @@ class TestSshMachineControlConnect(unittest.TestCase):
             mock_transport_instance.disconnect = AsyncMock()
 
             with patch(
-                "linhai.machine_control.ssh_host.ssh_host.SshTrojanTransport",
+                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
                 return_value=mock_transport_instance,
             ) as mock_transport_class:
                 result = await self.control.connect(mock_process)

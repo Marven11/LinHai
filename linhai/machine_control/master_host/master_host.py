@@ -172,8 +172,8 @@ class MasterHostControl:
         sandbox = self._registry.get_member_typechecked(
             "process_sandbox", ProcessSandboxProtocol
         )
-        bash_argv = sandbox.wrap_argv(["/usr/bin/env", "bash"])
-        result = await terminal_create(columns, lines, bash_argv, cwd=self._cwd)
+        shell_argv = sandbox.wrap_argv(["/usr/bin/env", "bash"])
+        result = await terminal_create(columns, lines, shell_argv, cwd=self._cwd)
         if result.startswith("创建终端失败"):
             return ToolResultFailed(content=result)
         return ToolResultSuccess(content=result)

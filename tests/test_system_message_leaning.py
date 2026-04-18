@@ -37,7 +37,7 @@ class TestMachineControlPlugin(unittest.TestCase):
     def test_adds_machine_control_when_multiple_machines(self):
         self.machine_control.machines = {
             "master_host": MagicMock(),
-            "ssh_host": MagicMock(),
+            "posix_shell": MagicMock(),
         }
         asyncio.run(self.call_before_helper())
         prompt = self.system_message.get_content()
@@ -46,7 +46,7 @@ class TestMachineControlPlugin(unittest.TestCase):
     def test_idempotent_when_multiple_machines(self):
         self.machine_control.machines = {
             "master_host": MagicMock(),
-            "ssh_host": MagicMock(),
+            "posix_shell": MagicMock(),
         }
         asyncio.run(self.call_before_helper())
         first_prompt = self.system_message.get_content()

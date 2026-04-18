@@ -65,11 +65,11 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
         )
         self.machine_control.machines = {
             "master_host": mock_host_control,
-            "ssh_host": mock_host_control2,
+            "posix_shell": mock_host_control2,
         }
         result = await self.machine_control.list_all_terminals()
         self.assertIn("机器 master_host", result.content)
-        self.assertIn("机器 ssh_host", result.content)
+        self.assertIn("机器 posix_shell", result.content)
         self.assertIn("远程终端", result.content)
 
     async def test_switch_machine_not_found(self):
@@ -766,10 +766,12 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
         from unittest.mock import Mock, AsyncMock
         from linhai.tool.base import ToolResultSuccess
         from linhai.machine_control.master_host.master_host import MasterHostControl
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
 
         mock_master = Mock(spec=MasterHostControl)
-        mock_ssh = Mock(spec=SshMachineControl)
+        mock_ssh = Mock(spec=PosixShellControl)
         mock_ssh.download_file_concurrent = AsyncMock(
             return_value=ToolResultSuccess(content="<<message>>下载成功<<message>>")
         )
@@ -779,12 +781,12 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
 
         self.machine_control.machines = {
             "master_host": mock_master,
-            "ssh_host": mock_ssh,
+            "posix_shell": mock_ssh,
         }
 
         result = await self.machine_control.transfer_file(
             from_filepath="/tmp/source",
-            from_machine="ssh_host",
+            from_machine="posix_shell",
             to_filepath="/tmp/dest",
             to_machine="master_host",
         )

@@ -12,13 +12,13 @@ from linhai.machine_control.process import (
 from linhai.tool.base import ToolResultSuccess
 
 if TYPE_CHECKING:
-    from .ssh_host import SshMachineControl
+    from .posix_shell_control import PosixShellControl
 
 
 class RemoteProcess:
-    def __init__(self, pid: str, ssh_control: "SshMachineControl") -> None:
+    def __init__(self, pid: str, shell_control: "PosixShellControl") -> None:
         self._pid = pid
-        self._ssh_control = ssh_control
+        self._shell_control = shell_control
 
     @property
     def pid(self) -> str:
@@ -29,7 +29,7 @@ class RemoteProcess:
         return None
 
     async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
-        result = await self._ssh_control.call_tool(
+        result = await self._shell_control.call_tool(
             "process_stdio_write",
             {"pid": self._pid, "content": content, "with_enter": with_enter},
         )
@@ -44,7 +44,7 @@ class RemoteProcess:
         )
 
     async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
-        result = await self._ssh_control.call_tool(
+        result = await self._shell_control.call_tool(
             "process_stdio_read",
             {
                 "pid": self._pid,
@@ -66,7 +66,7 @@ class RemoteProcess:
         )
 
     async def wait(self, timeout: float) -> ProcessWaitResult:
-        result = await self._ssh_control.call_tool(
+        result = await self._shell_control.call_tool(
             "process_wait", {"pid": self._pid, "timeout": timeout}
         )
         if isinstance(result, ToolResultSuccess):
@@ -85,7 +85,7 @@ class RemoteProcess:
         )
 
     async def kill(self, graceful: bool = True) -> ProcessKillResult:
-        result = await self._ssh_control.call_tool(
+        result = await self._shell_control.call_tool(
             "process_kill", {"pid": self._pid, "graceful": graceful}
         )
         if isinstance(result, ToolResultSuccess):

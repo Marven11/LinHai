@@ -111,7 +111,7 @@ class TestSudoBashHintPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         mock_agent.message_processor.add_new_message.assert_called_once()
         call_args = mock_agent.message_processor.add_new_message.call_args[0][0]
-        self.assertIn("connect_bash_as_machine", call_args.message)
+        self.assertIn("connect_posix_shell_as_machine", call_args.message)
 
     async def test_after_toolcall_sudo_path_bash_no_hint(self):
         mock_agent = Mock()
@@ -198,31 +198,37 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
 
         self.machine_control = MachineControl(self.registry, remote_machines=[])
 
-    async def test_add_bash_machine_duplicate_id(self):
+    async def test_add_posix_shell_machine_duplicate_id(self):
         from linhai.tool.base import ToolResultFailed
 
-        result = await self.machine_control.add_bash_machine("master_host", "123")
+        result = await self.machine_control.add_posix_shell_machine(
+            "master_host", "123"
+        )
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("机器ID已存在", result.content)
 
-    async def test_add_bash_machine_source_not_found(self):
+    async def test_add_posix_shell_machine_source_not_found(self):
         from linhai.tool.base import ToolResultFailed
 
-        result = await self.machine_control.add_bash_machine(
+        result = await self.machine_control.add_posix_shell_machine(
             "new_machine", "123", source_machine="nonexistent"
         )
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("源机器不存在", result.content)
 
-    async def test_add_bash_machine_process_not_found(self):
+    async def test_add_posix_shell_machine_process_not_found(self):
         from linhai.tool.base import ToolResultFailed
 
-        result = await self.machine_control.add_bash_machine("new_machine", "99999")
+        result = await self.machine_control.add_posix_shell_machine(
+            "new_machine", "99999"
+        )
         self.assertIsInstance(result, ToolResultFailed)
         self.assertIn("进程不存在", result.content)
 
-    async def test_add_bash_machine_connect_failure(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+    async def test_add_posix_shell_machine_connect_failure(self):
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
 
         mock_host = Mock()
         mock_process = Mock()
@@ -230,16 +236,20 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control.machines["master_host"] = mock_host
 
         with patch.object(
-            SshMachineControl, "connect", new_callable=AsyncMock, return_value=False
+            PosixShellControl, "connect", new_callable=AsyncMock, return_value=False
         ):
             from linhai.tool.base import ToolResultFailed
 
-            result = await self.machine_control.add_bash_machine("bash_machine", "123")
+            result = await self.machine_control.add_posix_shell_machine(
+                "bash_machine", "123"
+            )
             self.assertIsInstance(result, ToolResultFailed)
-            self.assertIn("连接bash进程失败", result.content)
+            self.assertIn("连接posix shell进程失败", result.content)
 
-    async def test_add_bash_machine_success(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+    async def test_add_posix_shell_machine_success(self):
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
         from linhai.tool.base import ToolResultSuccess
 
         mock_host = Mock()
@@ -248,26 +258,30 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         self.machine_control.machines["master_host"] = mock_host
 
         with patch.object(
-            SshMachineControl, "connect", new_callable=AsyncMock, return_value=True
+            PosixShellControl, "connect", new_callable=AsyncMock, return_value=True
         ):
-            result = await self.machine_control.add_bash_machine("bash_machine", "123")
+            result = await self.machine_control.add_posix_shell_machine(
+                "bash_machine", "123"
+            )
             self.assertIsInstance(result, ToolResultSuccess)
             self.assertIn("bash_machine", result.content)
             self.assertIn("bash_machine", self.machine_control.machines)
             self.assertIn(
-                "Bash进程主机",
+                "Posix shell进程主机",
                 self.machine_control.machine_descriptions["bash_machine"],
             )
 
-    async def test_add_bash_machine_source_machine_parameter(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+    async def test_add_posix_shell_machine_source_machine_parameter(self):
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
         from linhai.tool.base import ToolResultFailed
 
         mock_remote = Mock()
         mock_remote.get_process = Mock(return_value=None)
         self.machine_control.machines["remote_host"] = mock_remote
 
-        result = await self.machine_control.add_bash_machine(
+        result = await self.machine_control.add_posix_shell_machine(
             "bash_machine", "456", source_machine="remote_host"
         )
         self.assertIsInstance(result, ToolResultFailed)
@@ -288,21 +302,25 @@ class TestConnectBashAsMachineTool(unittest.IsolatedAsyncioTestCase):
 
         toolset = register_machine_control_tools(self.machine_control)
         tool_names = list(toolset.tools.keys())
-        self.assertIn("connect_bash_as_machine", tool_names)
+        self.assertIn("connect_posix_shell_as_machine", tool_names)
 
 
-class TestSshMachineControlHostOptional(unittest.IsolatedAsyncioTestCase):
+class TestPosixShellControlHostOptional(unittest.IsolatedAsyncioTestCase):
     def test_ssh_machine_control_without_host(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
 
-        ctrl = SshMachineControl(registry=Mock())
+        ctrl = PosixShellControl(registry=Mock())
         self.assertIsNotNone(ctrl)
         self.assertIsNone(ctrl.transport)
 
     def test_ssh_machine_control_with_host(self):
-        from linhai.machine_control.ssh_host.ssh_host import SshMachineControl
+        from linhai.machine_control.posix_shell.posix_shell_control import (
+            PosixShellControl,
+        )
 
-        ctrl = SshMachineControl(registry=Mock(), host="example.com", port=2222)
+        ctrl = PosixShellControl(registry=Mock(), host="example.com", port=2222)
         self.assertIsNotNone(ctrl)
 
 

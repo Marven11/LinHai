@@ -54,7 +54,7 @@ class SudoBashHintPlugin(Plugin):
         await agent.message_processor.add_new_message(
             RuntimeMessage(
                 "提示：检测到你使用sudo运行了非bash/sh命令。"
-                "优先考虑运行sudo bash并使用connect_bash_as_machine工具连接bash为机器，"
+                "优先考虑运行sudo bash并使用connect_posix_shell_as_machine工具连接posix shell为机器，"
                 "以避免用非标准方式读写文件并避免转义带来的心智负担"
             )
         )
