@@ -39,12 +39,38 @@ def get_manager() -> AgentManager:
     return _manager
 
 
-from pathlib import Path as _Path
+from pathlib import Path
 
 
 @router.post("", response_model=AgentCreateResponse)
 async def create_agent(request: AgentCreateRequest):
     from linhai.agent.create import AgentBuildArguments as _AgentBuildArguments
+
+    if request.claw_folder:
+        claw_folder_path = Path(request.claw_folder)
+        if not claw_folder_path.is_dir():
+            raise HTTPException(
+                status_code=400,
+                detail=f"CLAW目录不存在或不是目录: {request.claw_folder}",
+            )
+    else:
+        claw_folder_path = None
+
+    file_paths: list[Path] = []
+    for f in request.file:
+        p = Path(f)
+        if not p.exists():
+            raise HTTPException(status_code=400, detail=f"文件不存在: {f}")
+        file_paths.append(p)
+
+    checklist_path = None
+    if request.checklist_path:
+        checklist_path = Path(request.checklist_path)
+        if not checklist_path.is_file():
+            raise HTTPException(
+                status_code=400,
+                detail=f"检查清单文件不存在或不是文件: {request.checklist_path}",
+            )
 
     build_args: _AgentBuildArguments = {
         "rss": request.rss,
@@ -52,14 +78,12 @@ async def create_agent(request: AgentCreateRequest):
         "disable_waiting_marker": request.disable_waiting_marker,
         "afk": request.afk,
         "claw_enabled": request.claw_enabled,
-        "claw_folder": _Path(request.claw_folder) if request.claw_folder else None,
+        "claw_folder": claw_folder_path,
         "message": request.message,
-        "file": [_Path(f) for f in request.file],
+        "file": file_paths,
         "planning": request.planning,
         "llm_name": request.llm_name,
-        "checklist_path": (
-            _Path(request.checklist_path) if request.checklist_path else None
-        ),
+        "checklist_path": checklist_path,
         "profile_name": request.profile_name,
     }
 

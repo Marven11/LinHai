@@ -563,3 +563,54 @@ class TestNewLlmSchemas(unittest.TestCase):
 
         event = WsProcessUpdateEvent(events=[{"pid": "1", "machine_id": "m"}])
         self.assertEqual(event.type, "process_update")
+
+
+class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        from fastapi.testclient import TestClient
+        from linhai.webui.app import create_app
+        from linhai.webui import routes
+
+        routes._manager = None
+        self.client = TestClient(create_app())
+
+    def tearDown(self):
+        from linhai.webui import routes
+
+        routes._manager = None
+
+    def test_invalid_claw_folder_returns_400(self):
+        response = self.client.post(
+            "/api/agents",
+            json={"claw_enabled": True, "claw_folder": "/nonexistent/path"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("CLAW目录不存在", response.json()["detail"])
+
+    def test_invalid_file_returns_400(self):
+        response = self.client.post(
+            "/api/agents",
+            json={"file": ["/nonexistent/file.txt"]},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("文件不存在", response.json()["detail"])
+
+    def test_invalid_checklist_path_returns_400(self):
+        response = self.client.post(
+            "/api/agents",
+            json={"checklist_path": "/nonexistent/checklist.md"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("检查清单文件不存在", response.json()["detail"])
+
+    def test_none_paths_pass_validation(self):
+        with patch("linhai.webui.routes.get_manager") as mock_get:
+            mock_manager = MagicMock()
+            mock_session = MagicMock()
+            mock_session.agent_id = "test-id"
+            mock_session.get_state.return_value = "waiting_user"
+            mock_manager.create_agent = AsyncMock(return_value=mock_session)
+            mock_get.return_value = mock_manager
+
+            response = self.client.post("/api/agents", json={})
+            self.assertEqual(response.status_code, 200)
