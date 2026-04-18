@@ -85,5 +85,78 @@ class TestI18n(unittest.TestCase):
         from linhai.utils.i18n import t
 
 
+class TestPromptI18n(unittest.TestCase):
+    def test_all_prompt_constants_are_strings(self):
+        from linhai import prompt
+
+        constants = [
+            prompt.OVERVIEW,
+            prompt.INTRODUCTION_SOUL,
+            prompt.INTRODUCTION_TOOL_USE,
+            prompt.INTRODUCTION_WAITING_USER,
+            prompt.INTRODUCTION_GLOBAL_PROMPT,
+            prompt.INTRODUCTION_CONTEXT_MANAGEMENT,
+            prompt.INTRODUCTION_SECRET_SYSTEM,
+            prompt.INTRODUCTION_MACHINE_CONTROL_BASIC,
+            prompt.INTRODUCTION_MACHINE_CONTROL,
+            prompt.INTRODUCTION_PLANNING_MODE,
+            prompt.RULES_TOOL_USE,
+            prompt.RULES_CODING_STYLE,
+            prompt.RULES_USER_ITERATION,
+            prompt.EXAMPLES_TOOL_CALL,
+            prompt.EXAMPLES_SECRET_USAGE,
+            prompt.EXAMPLE_MULTIHOP_MACHINES,
+            prompt.EXAMPLES_PLANNING_MODE,
+            prompt.AGENTS_MD,
+            prompt.BOOTSTRAP_MD,
+            prompt.IDENTITY_MD,
+            prompt.SOUL_MD,
+            prompt.USER_MD,
+            prompt.REMINDER_MD,
+            prompt.COMPRESS_RANGE_PROMPT,
+            prompt.PLANNING_MODE_PROMPT,
+        ]
+        for const in constants:
+            self.assertIsInstance(const, str)
+            self.assertTrue(len(const) > 0)
+
+    def test_format_placeholders_in_secret_system(self):
+        from linhai.prompt import INTRODUCTION_SECRET_SYSTEM
+
+        self.assertIn("{secrets_list}", INTRODUCTION_SECRET_SYSTEM)
+
+    def test_format_placeholders_in_planning_mode(self):
+        from linhai.prompt import INTRODUCTION_PLANNING_MODE
+
+        self.assertIn("{status_file}", INTRODUCTION_PLANNING_MODE)
+        self.assertIn("{todolist_file}", INTRODUCTION_PLANNING_MODE)
+        self.assertIn("{design_file}", INTRODUCTION_PLANNING_MODE)
+
+    def test_format_placeholders_in_planning_mode_prompt(self):
+        from linhai.prompt import PLANNING_MODE_PROMPT
+
+        self.assertIn("{status_file}", PLANNING_MODE_PROMPT)
+        self.assertIn("{todolist_file}", PLANNING_MODE_PROMPT)
+        self.assertIn("{design_file}", PLANNING_MODE_PROMPT)
+
+    def test_format_placeholders_in_compress_range(self):
+        from linhai.prompt import COMPRESS_RANGE_PROMPT
+
+        self.assertIn("{|SUMMERIZATION|}", COMPRESS_RANGE_PROMPT)
+        self.assertIn("{|SUGGESTED_MESSAGE_COUNT|}", COMPRESS_RANGE_PROMPT)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_prompt_overview_zh_cn(self, mock_getlocale):
+        mock_getlocale.return_value = ("zh_CN", "UTF-8")
+        result = t({"zh_CN": "你是林海漫游", "en": "You are LinHai Wanderer"})
+        self.assertIn("林海漫游", result)
+
+    @patch("linhai.utils.i18n.locale.getlocale")
+    def test_prompt_overview_en(self, mock_getlocale):
+        mock_getlocale.return_value = ("en_US", "UTF-8")
+        result = t({"zh_CN": "你是林海漫游", "en": "You are LinHai Wanderer"})
+        self.assertIn("LinHai Wanderer", result)
+
+
 if __name__ == "__main__":
     unittest.main()
