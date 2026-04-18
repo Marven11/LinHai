@@ -17,7 +17,7 @@ class TestRemoteConfigE2E(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
         registry.register_member("process_sandbox", NoSandbox())
-        mc = MachineControl(registry)
+        mc = MachineControl(registry, remote_machines=[])
         result = await mc.list_remote_configs()
         self.assertIn("没有预设", result.content)
 
@@ -41,7 +41,7 @@ class TestRemoteConfigE2E(unittest.IsolatedAsyncioTestCase):
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
         registry.register_member("process_sandbox", NoSandbox())
-        mc = MachineControl(registry)
+        mc = MachineControl(registry, remote_machines=[])
         result = await mc.connect_remote_config("nonexistent")
         self.assertIn("未找到", result.content)
 

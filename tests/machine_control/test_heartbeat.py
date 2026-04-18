@@ -14,7 +14,7 @@ class TestSourceChain(unittest.TestCase):
         self.registry = Mock(spec=Registry)
         self.registry.send_if_exists = AsyncMock()
         self.registry.register_member = Mock()
-        self.mc = MachineControl(self.registry, tmux_terminal=False)
+        self.mc = MachineControl(self.registry, remote_machines=[], tmux_terminal=False)
 
     def test_master_host_has_no_source(self):
         self.assertIsNone(self.mc.source_machines["master_host"])
@@ -45,7 +45,7 @@ class TestMachineHeartbeatPlugin(unittest.TestCase):
         self.registry = Mock(spec=Registry)
         self.registry.send_if_exists = AsyncMock()
         self.registry.register_member = Mock()
-        self.mc = MachineControl(self.registry, tmux_terminal=False)
+        self.mc = MachineControl(self.registry, remote_machines=[], tmux_terminal=False)
         self.plugin = MachineHeartbeatPlugin(self.registry, self.mc)
 
     def test_current_machine_interval(self):

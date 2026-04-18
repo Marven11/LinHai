@@ -100,6 +100,7 @@ command = "python {server_path}"
             "message": [],
             "file": [],
             "process_sandbox": None,
+            "config": config,
         }
         agent = await create_agent_from_context(context)
         self.assertIsInstance(agent, Agent)

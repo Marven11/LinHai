@@ -107,6 +107,7 @@ command = "python {server_script_path}"
             "message": [],
             "file": [],
             "process_sandbox": None,
+            "config": config,
         }
         result = asyncio.run(create_agent_from_context(context))
 
@@ -161,6 +162,7 @@ compress_threshold = 80000
             "message": [],
             "file": [],
             "process_sandbox": None,
+            "config": config,
         }
         result = asyncio.run(create_agent_from_context(context))
 

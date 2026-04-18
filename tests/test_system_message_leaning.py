@@ -20,7 +20,7 @@ class TestMachineControlPlugin(unittest.TestCase):
         self.system_message = SystemMessage(self.mock_registry)
         self.mock_registry.members["system_message"] = self.system_message
 
-        self.machine_control = MachineControl(self.mock_registry)
+        self.machine_control = MachineControl(self.mock_registry, remote_machines=[])
         self.mock_registry.members["machine_control"] = self.machine_control
 
         self.plugin = MachineControlIntroductionPlugin(self.mock_registry)

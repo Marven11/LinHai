@@ -21,7 +21,7 @@ class TestMachineControl(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """测试前准备"""
         self.registry = Mock(spec=Registry)
-        self.machine_control = MachineControl(self.registry)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
         self.tool_manager = Mock(spec=ToolManager)
 
     def test_initialization(self):
@@ -678,7 +678,7 @@ class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
         self.registry = Mock(spec=Registry)
         from linhai.machine_control import MachineControl
 
-        self.machine_control = MachineControl(self.registry)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
 
     async def test_transfer_file_same_machine(self):
         """测试同一台机器传输应失败"""

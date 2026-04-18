@@ -196,7 +196,7 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists = AsyncMock()
         from linhai.machine_control import MachineControl
 
-        self.machine_control = MachineControl(self.registry)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
 
     async def test_add_bash_machine_duplicate_id(self):
         from linhai.tool.base import ToolResultFailed
@@ -281,7 +281,7 @@ class TestConnectBashAsMachineTool(unittest.IsolatedAsyncioTestCase):
         self.registry.send_if_exists = AsyncMock()
         from linhai.machine_control import MachineControl
 
-        self.machine_control = MachineControl(self.registry)
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
 
     def test_tool_registered(self):
         from linhai.machine_control.tools import register_machine_control_tools
