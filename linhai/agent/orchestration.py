@@ -22,6 +22,7 @@ from linhai.utils.tokenizer import count_tokens
 from linhai.registry import Registry
 from linhai.tool.base import ToolSet, ToolResultSuccess, ToolResultFailed, ToolArgInfo
 from linhai.utils.common import UiNotice
+from linhai.utils.i18n import t
 from linhai.type_hints import ThresholdInfo
 from linhai.token_manager import TokenManager
 from linhai.base import Message
@@ -353,7 +354,12 @@ class AgentContextOrchestration:
 
         @toolset.register_tool(
             name="context_forget_large_message",
-            desc="清理大消息：如果当前有至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息，全部删除并返回每条被删除的消息的repr。",
+            desc=t(
+                {
+                    "zh_CN": "清理大消息：如果当前有至少{MIN_CLEANABLE_LARGE_MESSAGES}条大消息，全部删除并返回每条被删除的消息的repr。",
+                    "en": "Clean large messages: delete all if at least {MIN_CLEANABLE_LARGE_MESSAGES} exist, return repr of each.",
+                }
+            ),
             args={},
             required_args=[],
             conflict_with=["context_forget_range_step1", "context_forget_range_step2"],
@@ -371,7 +377,12 @@ class AgentContextOrchestration:
 
         @toolset.register_tool(
             name="context_forget_range_step1",
-            desc="压缩范围第一步：生成消息列表总结并返回range_clean_id。",
+            desc=t(
+                {
+                    "zh_CN": "压缩范围第一步：生成消息列表总结并返回range_clean_id。",
+                    "en": "Compress range step 1: generate message list summary and return range_clean_id.",
+                }
+            ),
             args={},
             required_args=[],
             conflict_with=[
@@ -387,22 +398,44 @@ class AgentContextOrchestration:
 
         @toolset.register_tool(
             name="context_forget_range_step2",
-            desc="压缩范围第二步：使用range_clean_id确认删除范围并执行删除。",
+            desc=t(
+                {
+                    "zh_CN": "压缩范围第二步：使用range_clean_id确认删除范围并执行删除。",
+                    "en": "Compress range step 2: use range_clean_id to confirm and execute deletion.",
+                }
+            ),
             args={
                 "range_clean_id": ToolArgInfo(
-                    desc="range_clean_id，从第一步获取",
+                    desc=t(
+                        {
+                            "zh_CN": "range_clean_id，从第一步获取",
+                            "en": "range_clean_id from step 1",
+                        }
+                    ),
                     type="str",
                 ),
                 "start_id": ToolArgInfo(
-                    desc="开始删除的消息ID",
+                    desc=t(
+                        {
+                            "zh_CN": "开始删除的消息ID",
+                            "en": "Start message ID to delete",
+                        }
+                    ),
                     type="int",
                 ),
                 "end_id": ToolArgInfo(
-                    desc="结束删除的消息ID",
+                    desc=t(
+                        {"zh_CN": "结束删除的消息ID", "en": "End message ID to delete"}
+                    ),
                     type="int",
                 ),
                 "description": ToolArgInfo(
-                    desc="描述删除内容，建议包含待办任务",
+                    desc=t(
+                        {
+                            "zh_CN": "描述删除内容，建议包含待办任务",
+                            "en": "Description of deletion, suggest including TODO tasks",
+                        }
+                    ),
                     type="str",
                 ),
             },

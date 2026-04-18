@@ -25,6 +25,7 @@ from linhai.tool.base import (
 )
 from linhai.registry import Registry
 from linhai.utils.common import generate_id
+from linhai.utils.i18n import t
 
 
 def analyze_content(content_type: str, content: bytes) -> tuple[bool, Optional[str]]:
@@ -80,11 +81,23 @@ def _download_with_httpx(url: str) -> str:
 
 @utils_tools.register_tool(
     name="fetch_webpage",
-    desc="抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
+    desc=t(
+        {
+            "zh_CN": "抓取网页并转换为Markdown格式，保存原始HTML和转换的markdown到临时目录，返回HTML, markdown的路径和markdown的内容",
+            "en": "Fetch a webpage and convert to Markdown format, save raw HTML and converted markdown to temp directory, return paths and markdown content",
+        }
+    ),
     args={
-        "url": ToolArgInfo(desc="目标网页URL", type="str"),
+        "url": ToolArgInfo(
+            desc=t({"zh_CN": "目标网页URL", "en": "Target webpage URL"}), type="str"
+        ),
         "http_downloader": ToolArgInfo(
-            desc="HTML下载器，必须指定'selenium'或'httpx'",
+            desc=t(
+                {
+                    "zh_CN": "HTML下载器，必须指定'selenium'或'httpx'",
+                    "en": "HTML downloader, must be 'selenium' or 'httpx'",
+                }
+            ),
             type="str",
         ),
     },
@@ -167,10 +180,25 @@ markdown内容如下
 
 @utils_tools.register_tool(
     name="search_web",
-    desc="使用DuckDuckGo进行网页搜索并返回格式化结果",
+    desc=t(
+        {
+            "zh_CN": "使用DuckDuckGo进行网页搜索并返回格式化结果",
+            "en": "Search the web using DuckDuckGo and return formatted results",
+        }
+    ),
     args={
-        "query": ToolArgInfo(desc="搜索查询", type="str"),
-        "max_results": ToolArgInfo(desc="最大结果数量（默认5）", type="int"),
+        "query": ToolArgInfo(
+            desc=t({"zh_CN": "搜索查询", "en": "Search query"}), type="str"
+        ),
+        "max_results": ToolArgInfo(
+            desc=t(
+                {
+                    "zh_CN": "最大结果数量（默认5）",
+                    "en": "Maximum number of results (default 5)",
+                }
+            ),
+            type="int",
+        ),
     },
     required_args=["query"],
 )
@@ -259,10 +287,21 @@ async def search_web(query: str, max_results: int = 5) -> ToolResult:
 
 @utils_tools.register_tool(
     name="quickjs_calculator",
-    desc="使用quickjs计算数学表达式。直接eval JavaScript表达式。建议在计算任何数字时优先使用此工具。",
+    desc=t(
+        {
+            "zh_CN": "使用quickjs计算数学表达式。直接eval JavaScript表达式。建议在计算任何数字时优先使用此工具。",
+            "en": "Evaluate math expressions using quickjs. Directly eval JavaScript expressions. Recommended to use this tool first when calculating numbers.",
+        }
+    ),
     args={
         "expression": ToolArgInfo(
-            desc="数学表达式，例如 '2 + 3 * 4' 或 '10 % 3'", type="str"
+            desc=t(
+                {
+                    "zh_CN": "数学表达式，例如 '2 + 3 * 4' 或 '10 % 3'",
+                    "en": "Math expression, e.g. '2 + 3 * 4' or '10 % 3'",
+                }
+            ),
+            type="str",
         ),
     },
     required_args=["expression"],

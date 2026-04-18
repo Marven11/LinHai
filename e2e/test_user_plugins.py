@@ -27,7 +27,7 @@ LLM_NAME = "ds"
 def _create_plugin_dir(tmpdir: str) -> Path:
     plugins_dir = Path(tmpdir) / "plugins"
     plugin_dir = plugins_dir / "litiansuo_plugin"
-    plugin_dir.mkdir(parents=True)
+    plugin_dir.mkdir(parents=True, exist_ok=True)
     (plugin_dir / "__init__.py").write_text(
         "from linhai.agent import Agent\n"
         "from linhai.agent.messages import RuntimeMessage\n"

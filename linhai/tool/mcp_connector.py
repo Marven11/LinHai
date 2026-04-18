@@ -26,6 +26,7 @@ from .base import ToolArgInfo, ToolSet, ToolResultSuccess, ToolResultFailed
 from ..registry import Registry
 from ..sandbox import ProcessSandboxProtocol, NoSandbox
 from ..task_supervisor import PlainTaskSupervisor
+from ..utils.i18n import t
 
 
 class MCPServerConnection:
@@ -72,7 +73,12 @@ class MCPServerConnection:
                         ),
                         args={
                             "args": ToolArgInfo(
-                                desc="此MCP工具的参数，一个object，各个参数如以下json schema所示",
+                                desc=t(
+                                    {
+                                        "zh_CN": "此MCP工具的参数，一个object，各个参数如以下json schema所示",
+                                        "en": "Arguments for this MCP tool, an object with parameters as described in the JSON schema",
+                                    }
+                                ),
                                 type=mcp_tool.inputSchema,
                             ),
                         },
@@ -141,13 +147,30 @@ class MCPConnector:
 
         @connector_toolset.register_tool(
             name="connect_mcp_server",
-            desc="通过stdio连接到一个外部服务（本地脚本）",
+            desc=t(
+                {
+                    "zh_CN": "通过stdio连接到一个外部服务（本地脚本）",
+                    "en": "Connect to an external service via stdio (local script)",
+                }
+            ),
             args={
                 "name": ToolArgInfo(
-                    desc="MCP服务器的名字，为这个MCP服务器命名", type="str"
+                    desc=t(
+                        {
+                            "zh_CN": "MCP服务器的名字，为这个MCP服务器命名",
+                            "en": "Name for the MCP server",
+                        }
+                    ),
+                    type="str",
                 ),
                 "command": ToolArgInfo(
-                    desc="MCP服务器的连接路径，如python xxx", type="str"
+                    desc=t(
+                        {
+                            "zh_CN": "MCP服务器的连接路径，如python xxx",
+                            "en": "Connection command for the MCP server, e.g. python xxx",
+                        }
+                    ),
+                    type="str",
                 ),
             },
             required_args=["name", "command"],
@@ -181,9 +204,22 @@ class MCPConnector:
 
         @connector_toolset.register_tool(
             name="disconnect_mcp_server",
-            desc="断开一个已连接的外部服务",
+            desc=t(
+                {
+                    "zh_CN": "断开一个已连接的外部服务",
+                    "en": "Disconnect a connected external service",
+                }
+            ),
             args={
-                "name": ToolArgInfo(desc="要断开的MCP服务器名字", type="str"),
+                "name": ToolArgInfo(
+                    desc=t(
+                        {
+                            "zh_CN": "要断开的MCP服务器名字",
+                            "en": "Name of the MCP server to disconnect",
+                        }
+                    ),
+                    type="str",
+                ),
             },
             required_args=["name"],
         )
@@ -196,7 +232,12 @@ class MCPConnector:
 
         @connector_toolset.register_tool(
             name="list_mcp_servers",
-            desc="列出所有已连接的外部服务",
+            desc=t(
+                {
+                    "zh_CN": "列出所有已连接的外部服务",
+                    "en": "List all connected external services",
+                }
+            ),
             args={},
             required_args=[],
         )

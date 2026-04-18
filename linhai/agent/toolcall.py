@@ -17,6 +17,7 @@ from linhai.tool.base import (
 from linhai.tool.main import ToolManager
 from linhai.utils.common import UiNotice
 from linhai.utils.tokenizer import count_tokens, get_cl100k_base_tokenizer
+from linhai.utils.i18n import t
 
 from .lifecycle import Lifecycle
 from .message import AgentMessage
@@ -95,7 +96,7 @@ class AgentToolcall:
         llm_manager = self.registry.get_member_typechecked("llm_manager", LlmManager)
         llm_names = [llm.get_name() for llm in llm_manager.llms]
 
-        desc = "切换到指定的LLM。"
+        desc = t({"zh_CN": "切换到指定的LLM。", "en": "Switch to a specified LLM."})
         if llm_names:
             desc += "可用的LLM包括: " + ", ".join(llm_names)
 
@@ -103,7 +104,12 @@ class AgentToolcall:
             name="switch_llm",
             desc=desc,
             args={
-                "llm_name": ToolArgInfo(desc="要切换到的LLM名称", type="str"),
+                "llm_name": ToolArgInfo(
+                    desc=t(
+                        {"zh_CN": "要切换到的LLM名称", "en": "LLM name to switch to"}
+                    ),
+                    type="str",
+                ),
             },
             required_args=["llm_name"],
         )
@@ -113,7 +119,12 @@ class AgentToolcall:
 
         @toolset.register_tool(
             name="current_llm",
-            desc="显示当前使用的LLM名称",
+            desc=t(
+                {
+                    "zh_CN": "显示当前使用的LLM名称",
+                    "en": "Display the currently used LLM name",
+                }
+            ),
             args={},
             required_args=[],
         )
@@ -124,7 +135,12 @@ class AgentToolcall:
 
         @toolset.register_tool(
             name="list_llm",
-            desc="列出所有可用的LLM及其状态，包括名称、模型、token限制、是否支持图像等",
+            desc=t(
+                {
+                    "zh_CN": "列出所有可用的LLM及其状态，包括名称、模型、token限制、是否支持图像等",
+                    "en": "List all available LLMs with status including name, model, token limit, image support, etc.",
+                }
+            ),
             args={},
             required_args=[],
         )
@@ -151,7 +167,7 @@ class AgentToolcall:
 
         @toolset.register_tool(
             name="get_token_usage",
-            desc="获取token使用情况。",
+            desc=t({"zh_CN": "获取token使用情况。", "en": "Get token usage."}),
             args={},
             required_args=[],
         )

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from linhai.registry import Registry
 from linhai.type_hints import AgentState
+from linhai.utils.i18n import t
 from linhai.tool.base import (
     ToolArgInfo,
     ToolSet,
@@ -45,8 +46,18 @@ class AgentStateMachine:
 
         @sleep_toolset.register_tool(
             name="sleep",
-            desc="睡眠X秒，返回开始和结束时间",
-            args={"seconds": ToolArgInfo(desc="睡眠的秒数", type="float")},
+            desc=t(
+                {
+                    "zh_CN": "睡眠X秒，返回开始和结束时间",
+                    "en": "Sleep for X seconds, return start and end time",
+                }
+            ),
+            args={
+                "seconds": ToolArgInfo(
+                    desc=t({"zh_CN": "睡眠的秒数", "en": "Seconds to sleep"}),
+                    type="float",
+                )
+            },
             required_args=["seconds"],
         )
         async def sleep_tool(seconds: float) -> ToolResultSuccess:

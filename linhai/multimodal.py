@@ -19,6 +19,7 @@ from linhai.base import Message
 from linhai.agent.lifecycle import Lifecycle
 from linhai.type_hints import LanguageModelMessage
 from linhai.registry import Registry
+from linhai.utils.i18n import t
 
 if TYPE_CHECKING:
     from linhai.machine_control import MachineControl
@@ -288,13 +289,29 @@ class MultimodalToolsetManager:
 
             @self.toolset.register_tool(
                 name="load_image",
-                desc="加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
+                desc=t(
+                    {
+                        "zh_CN": "加载图片文件并返回图片数据，用于多模态LLM查看图片内容",
+                        "en": "Load image file and return data for multimodal LLM to view",
+                    }
+                ),
                 args={
                     "image_filepath": ToolArgInfo(
-                        desc="图片文件在当前机器的路径", type="str"
+                        desc=t(
+                            {
+                                "zh_CN": "图片文件在当前机器的路径",
+                                "en": "Image file path on current machine",
+                            }
+                        ),
+                        type="str",
                     ),
                     "quality": ToolArgInfo(
-                        desc="图片质量，compressed表示压缩图像，raw表示原始图像",
+                        desc=t(
+                            {
+                                "zh_CN": "图片质量，compressed表示压缩图像，raw表示原始图像",
+                                "en": "Image quality, compressed for compressed image, raw for original",
+                            }
+                        ),
                         type="str",
                     ),
                 },
