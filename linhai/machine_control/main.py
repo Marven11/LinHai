@@ -9,7 +9,9 @@ from linhai.utils.common import UiNotice
 from .protocol import HostControl
 from .master_host.master_host import MasterHostControl
 from .posix_shell.posix_shell_control import PosixShellControl
+from .bash_host.bash_host import BashHostControl
 from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
+from .process import Process
 
 
 class _StoredProcessInfo(TypedDict):
@@ -32,9 +34,11 @@ class MachineControl:
         registry: Registry,
         remote_machines: list[RemoteMachineConfig],
         tmux_terminal: bool = True,
+        remote_shell_control: str = "auto",
     ):
         self.registry = registry
         self.target_machine = "master_host"
+        self.remote_shell_control = remote_shell_control
         self.remote_machines: Dict[str, RemoteMachineConfig] = {
             cfg.name: cfg for cfg in (remote_machines or [])
         }
@@ -88,12 +92,28 @@ class MachineControl:
                 content=f"进程不存在: {pid} (在机器 {source_machine_id} 上)"
             )
 
+        if self.remote_shell_control == "bash":
+            return await self._connect_bash_control(
+                machine_id, process, source_machine_id, pid
+            )
+
         shell_control = PosixShellControl(
             registry=self.registry,
         )
 
         connected = await shell_control.connect(process)
         if not connected:
+            if self.remote_shell_control == "auto":
+                await self.registry.send_if_exists(
+                    "ui_log",
+                    UiNotice(
+                        level="INFO",
+                        content="Python控制连接失败，尝试回退到bash控制",
+                    ),
+                )
+                return await self._connect_bash_control(
+                    machine_id, process, source_machine_id, pid
+                )
             return ToolResultFailed(content=f"连接posix shell进程失败: PID {pid}")
 
         self.machines[machine_id] = shell_control
@@ -112,6 +132,36 @@ class MachineControl:
 
         return ToolResultSuccess(
             content=f"已成功连接posix shell进程为机器: {machine_id} (PID: {pid})"
+        )
+
+    async def _connect_bash_control(
+        self,
+        machine_id: str,
+        process: Process,
+        source_machine_id: str,
+        pid: str,
+    ) -> ToolResultSuccess | ToolResultFailed:
+        bash_control = BashHostControl(registry=self.registry)
+        connected = await bash_control.connect(process)
+        if not connected:
+            return ToolResultFailed(content=f"Bash控制连接失败: PID {pid}")
+
+        self.machines[machine_id] = bash_control
+        self.source_machines[machine_id] = source_machine_id
+        self.machine_descriptions[machine_id] = (
+            f"Bash shell主机 (PID: {pid}, 来自: {source_machine_id})"
+        )
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(
+                level="INFO",
+                content=f"Bash控制连接成功: 已连接bash shell进程为机器 {machine_id} (PID: {pid})",
+            ),
+        )
+
+        return ToolResultSuccess(
+            content=f"已成功连接bash shell进程为机器: {machine_id} (PID: {pid})"
         )
 
     async def connect_remote_config(

@@ -255,8 +255,9 @@ async def _wait_for_agent_turn(ws, sub, timeout=120):
         data = json.loads(raw)
         if "event" in data:
             sub.update_data(data)
-        if sub.data and sub.data.get("state") == "waiting_user":
-            reached_waiting = True
+        if isinstance(data, dict) and data.get("type") == "state_change":
+            if data.get("new_state") == "waiting_user":
+                reached_waiting = True
     return False
 
 
@@ -335,6 +336,6 @@ async def test_webui_streaming_e2e():
         ), f"Agent messages too short: {[m.get('content', '')[:50] for m in agent_msgs]}"
         session = routes._manager.sessions.get(agent_id)
         assert session is not None
-        server_data = copy.deepcopy(session._data)
+        server_data = copy.deepcopy(session._messages_data)
         assert sub.data == server_data
         await client.delete(f"/api/agents/{agent_id}")

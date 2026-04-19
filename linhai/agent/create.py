@@ -468,6 +468,7 @@ async def _create_tool_manager(
             registry,
             tmux_terminal=context["tool_config"].tmux_terminal,
             remote_machines=context["config"].tools.remote_machines,
+            remote_shell_control=context["config"].tools.remote_shell_control,
         )
         tool_manager.register_toolset(
             "machine_control", register_machine_control_tools(machine_control)

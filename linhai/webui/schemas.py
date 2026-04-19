@@ -28,6 +28,12 @@ class WebuiAgentMessage(TypedDict):
 WebuiMessage = Union[WebuiUserMessage, WebuiNotificationMessage, WebuiAgentMessage]
 
 
+class WsStateChangeEvent(BaseModel):
+    type: Literal["state_change"] = "state_change"
+    old_state: str = Field(..., description="旧状态")
+    new_state: str = Field(..., description="新状态")
+
+
 class AgentCreateRequest(BaseModel):
     profile_name: Optional[str] = Field(default=None, description="Agent profile名称")
     llm_name: Optional[str] = Field(default=None, description="指定使用的LLM名称")
@@ -128,6 +134,16 @@ class ProcessInfo(BaseModel):
     argv: list[str] = Field(default_factory=list, description="进程参数列表")
     status: Literal["running", "exited", "error"] = Field(..., description="进程状态")
     returncode: Optional[int] = Field(default=None, description="退出码")
+
+
+class WsProcessUpdateEvent(BaseModel):
+    type: Literal["process_update"] = "process_update"
+    events: list
+
+
+class WsStatusBarUpdateEvent(BaseModel):
+    type: Literal["status_bar_update"] = "status_bar_update"
+    events: list
 
 
 class KillProcessRequest(BaseModel):

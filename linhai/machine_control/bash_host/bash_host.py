@@ -1,0 +1,247 @@
+"""BashHostControl: 通过raw bash命令控制远程机器。"""
+
+import asyncio
+from typing import Any, Dict, Optional, Union
+
+from linhai.agent.messages import FileContentMessage
+from linhai.machine_control.http_message import HttpMessage
+from linhai.machine_control.process import Process, ProcessCreateResult
+from linhai.registry import Registry
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
+from linhai.utils.common import UiNotice
+
+
+class BashHostControl:
+    """通过raw bash命令控制远程机器，不依赖远程Python环境。"""
+
+    GLOBAL_TIMEOUT = 30.0
+    MARKER_PREFIX = "_LINHAI_CMD_RESULT_"
+
+    def __init__(self, registry: Registry) -> None:
+        self.registry = registry
+        self._shell_process: Optional[Process] = None
+        self._tmp_dir: str = ""
+        self._encoding: str = "utf-8"
+        self._counter: int = 0
+        self._timeout_mode: str = "builtin"
+
+    def _next_marker(self) -> str:
+        self._counter += 1
+        return f"{self.MARKER_PREFIX}{self._counter}"
+
+    async def connect(self, process: Process) -> bool:
+        self._shell_process = process
+
+        rc, stdout, stderr = await self._execute_raw(
+            "TMPDIR=$(mktemp -d /tmp/linhai_bash_XXXXXX) && echo $TMPDIR && echo $TMPDIR > $TMPDIR/.dir"
+        )
+        if rc != 0:
+            await self.registry.send_if_exists(
+                "ui_log",
+                UiNotice(level="ERROR", content=f"创建远程临时目录失败: {stderr}"),
+            )
+            return False
+        self._tmp_dir = stdout.strip()
+
+        rc, stdout, stderr = await self._execute_raw("echo $LANG")
+        if rc == 0 and stdout.strip():
+            lang = stdout.strip().lower()
+            if "utf-8" in lang or "utf8" in lang:
+                self._encoding = "utf-8"
+            else:
+                self._encoding = "ascii"
+        else:
+            self._encoding = "ascii"
+
+        rc, stdout, _ = await self._execute_raw(
+            "timeout --version 2>/dev/null && echo HAS_TIMEOUT"
+        )
+        if rc == 0 and "HAS_TIMEOUT" in stdout:
+            self._timeout_mode = "timeout"
+        else:
+            rc, _, _ = await self._execute_raw("perl -e 'print 1' 2>/dev/null")
+            if rc == 0:
+                self._timeout_mode = "perl"
+            else:
+                self._timeout_mode = "builtin"
+
+        await self._execute_raw("mkfifo --version 2>/dev/null || echo no_fifo")
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(
+                level="INFO",
+                content=f"Bash控制连接成功 (编码: {self._encoding}, timeout: {self._timeout_mode}, 临时目录: {self._tmp_dir})",
+            ),
+        )
+        return True
+
+    async def _execute_raw(
+        self, command: str, timeout: float = 0.0
+    ) -> tuple[int, str, str]:
+        if self._shell_process is None:
+            return 1, "", "未建立连接"
+
+        shell_proc = self._shell_process
+        effective_timeout = timeout if timeout > 0 else self.GLOBAL_TIMEOUT
+        marker = self._next_marker()
+
+        timeout_secs = int(effective_timeout)
+        if self._timeout_mode == "timeout":
+            full_command = (
+                f"timeout {timeout_secs} sh -c '{{ {command}; }} 2>&1'; "
+                f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+            )
+        elif self._timeout_mode == "perl":
+            full_command = (
+                f"perl -e 'alarm shift; exec @ARGV' {timeout_secs} sh -c '{{ {command}; }} 2>&1'; "
+                f"_RC=$?; echo ''; echo '{marker}:'$_RC"
+            )
+        else:
+            full_command = (
+                f"{{ {command}; }} 2>&1 & _CPID=$!; "
+                f"( sleep {timeout_secs}; kill -9 $_CPID 2>/dev/null ) & "
+                f"_WPID=$!; "
+                f"wait $_CPID 2>/dev/null; _RC=$?; "
+                f"kill $_WPID 2>/dev/null; wait $_WPID 2>/dev/null; "
+                f"echo ''; echo '{marker}:'$_RC"
+            )
+
+        write_result = await shell_proc.stdio_write(full_command, with_enter=True)
+        if not write_result.success:
+            return 1, "", f"写入命令失败: {write_result.error}"
+
+        output_lines: list[str] = []
+        buffer = ""
+        result_line: str | None = None
+
+        while result_line is None:
+            read_result = await shell_proc.stdio_read(wait_seconds=1.0)
+            if not read_result.success:
+                break
+            decoded = read_result.stdout.decode(self._encoding, errors="replace")
+            buffer += decoded
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.rstrip()
+                if line.startswith(f"{marker}:"):
+                    result_line = line
+                    break
+                output_lines.append(line)
+
+        if result_line is None:
+            return 1, "\n".join(output_lines), "无法获取命令返回码"
+
+        parts = result_line.split(":", 1)
+        if len(parts) == 2 and parts[1].strip().isdigit():
+            exit_code = int(parts[1].strip())
+        else:
+            exit_code = 1
+
+        return exit_code, "\n".join(output_lines), ""
+
+    async def ping(self) -> ToolResultSuccess | ToolResultFailed:
+        rc, stdout, stderr = await self._execute_raw("echo pong", timeout=5.0)
+        if rc == 0 and "pong" in stdout:
+            return ToolResultSuccess(content="pong")
+        return ToolResultFailed(
+            content=f"ping失败: rc={rc}, stdout={stdout}, stderr={stderr}"
+        )
+
+    async def http_request(
+        self,
+        method: str,
+        url: str,
+        params: Optional[Dict[str, Union[str, int, float, bool]]] = dict(),
+        headers: Optional[Dict[str, str]] = dict(),
+        data: Optional[str] = "",
+        follow_redirects: bool = False,
+        timeout: int = 60,
+        auth: Optional[tuple[str, str]] = ("", ""),
+        cookies: Optional[Dict[str, str]] = dict(),
+        json_data: Optional[Dict[str, Any]] = dict(),
+        proxy: Optional[str] = "",
+        verify: Optional[bool] = False,
+    ) -> HttpMessage | ToolResultFailed:
+        raise NotImplementedError("http_request尚未在bash控制中实现")
+
+    async def change_directory(
+        self, directory: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("change_directory尚未在bash控制中实现")
+
+    async def create_process(
+        self, argv: list[str], wait_second: Optional[float] = 0.0
+    ) -> ProcessCreateResult:
+        raise NotImplementedError("create_process尚未在bash控制中实现")
+
+    def get_process(self, pid: str) -> Process | None:
+        raise NotImplementedError("get_process尚未在bash控制中实现")
+
+    async def terminal_create(
+        self, columns: int = 80, lines: int = 24
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("terminal_create尚未在bash控制中实现")
+
+    async def terminal_send_keys(
+        self, terminal_id: str, keys: list[str]
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("terminal_send_keys尚未在bash控制中实现")
+
+    async def terminal_send_string(
+        self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("terminal_send_string尚未在bash控制中实现")
+
+    async def terminal_read_screen(
+        self, terminal_id: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("terminal_read_screen尚未在bash控制中实现")
+
+    async def terminal_close(
+        self, terminal_id: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("terminal_close尚未在bash控制中实现")
+
+    async def read_file(
+        self, filepath: str, show_line_numbers: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed | FileContentMessage:
+        raise NotImplementedError("read_file尚未在bash控制中实现")
+
+    async def write_file(
+        self, filepath: str, content: str, override: bool = False
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("write_file尚未在bash控制中实现")
+
+    async def replace_file_content(
+        self, filepath: str, old: str, new: str, replace_times: Optional[int] = 0
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("replace_file_content尚未在bash控制中实现")
+
+    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("list_files尚未在bash控制中实现")
+
+    async def get_absolute_path(
+        self, path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("get_absolute_path尚未在bash控制中实现")
+
+    async def read_file_with_sed(
+        self, expression: str, filepath: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("read_file_with_sed尚未在bash控制中实现")
+
+    async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("get_terminals尚未在bash控制中实现")
+
+    def list_process_pids(self) -> list[str]:
+        raise NotImplementedError("list_process_pids尚未在bash控制中实现")
+
+    async def download_file_concurrent(
+        self, remote_path: str, local_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("download_file_concurrent尚未在bash控制中实现")
+
+    async def upload_file_concurrent(
+        self, data: bytes, remote_path: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        raise NotImplementedError("upload_file_concurrent尚未在bash控制中实现")

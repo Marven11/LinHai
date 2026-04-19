@@ -116,7 +116,7 @@ class TestAgentSessionInitMessages(unittest.TestCase):
         )
         session.add_user_message("hello")
         session.add_user_message("world")
-        messages = session._data["messages"]
+        messages = session._messages_data["messages"]
         self.assertEqual(len(messages), 2)
         self.assertEqual(messages[0]["content"], "hello")
         self.assertEqual(messages[1]["content"], "world")
@@ -220,17 +220,29 @@ class TestAgentSessionSendMessage(unittest.IsolatedAsyncioTestCase):
 
 
 class TestNewSchemas(unittest.TestCase):
-    def test_ws_user_message(self):
-        msg = {"type": "user", "content": "hello"}
+    def test_ws_state_change_event(self):
+        from linhai.webui.schemas import WsStateChangeEvent
+
+        event = WsStateChangeEvent(old_state="working", new_state="waiting_user")
+        self.assertEqual(event.type, "state_change")
+
+    def test_webui_user_message(self):
+        from linhai.webui.schemas import WebuiUserMessage
+
+        msg: WebuiUserMessage = {"type": "user", "content": "hello"}
         self.assertEqual(msg["type"], "user")
 
-    def test_ws_agent_message(self):
-        msg: dict = {"type": "agent", "content": "", "segments": []}
+    def test_webui_agent_message(self):
+        from linhai.webui.schemas import WebuiAgentMessage
+
+        msg: WebuiAgentMessage = {"type": "agent", "content": "", "segments": []}
         self.assertEqual(msg["type"], "agent")
         self.assertEqual(msg["segments"], [])
 
-    def test_ws_notification_message(self):
-        msg = {
+    def test_webui_notification_message(self):
+        from linhai.webui.schemas import WebuiNotificationMessage
+
+        msg: WebuiNotificationMessage = {
             "type": "notification",
             "level": "INFO",
             "content": "test",
@@ -546,6 +558,29 @@ class TestNewLlmSchemas(unittest.TestCase):
         req = KillProcessRequest(machine_id="master_host")
         self.assertEqual(req.machine_id, "master_host")
 
+    def test_ws_process_update_event(self):
+        from linhai.webui.schemas import WsProcessUpdateEvent
+
+        event = WsProcessUpdateEvent(events=[{"pid": "1", "machine_id": "m"}])
+        self.assertEqual(event.type, "process_update")
+
+    def test_ws_status_bar_update_event(self):
+        from linhai.webui.schemas import WsStatusBarUpdateEvent
+
+        event = WsStatusBarUpdateEvent(
+            events=[
+                {
+                    "idx": 0,
+                    "event": {
+                        "action": "replace",
+                        "keys": [],
+                        "value": {"status_bar": ["test"]},
+                    },
+                }
+            ]
+        )
+        self.assertEqual(event.type, "status_bar_update")
+
 
 class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -598,11 +633,10 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status_code, 200)
 
 
-class TestAgentSessionStatusBar(unittest.IsolatedAsyncioTestCase):
+class TestAgentSessionStatusBar(unittest.TestCase):
     def _make_session(self, agent_mock=None, registry_mock=None):
         if agent_mock is None:
             agent_mock = MagicMock()
-            agent_mock.state_machine.state = "idle"
         if registry_mock is None:
             registry_mock = MagicMock()
         agent_mock.registry = registry_mock
@@ -646,7 +680,7 @@ class TestAgentSessionStatusBar(unittest.IsolatedAsyncioTestCase):
         self.assertIn("✦ deepseek", pieces)
         self.assertEqual(pieces[-1], "✦ deepseek")
 
-    def test_sync_status_bar_updates_data(self):
+    def test_sync_status_bar_returns_events(self):
         registry_mock = MagicMock()
         registry_mock.has_member.return_value = False
         mock_llm = MagicMock()
@@ -654,22 +688,19 @@ class TestAgentSessionStatusBar(unittest.IsolatedAsyncioTestCase):
         mock_agent = MagicMock()
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
-        session.sync_status_bar()
-        self.assertEqual(session._data["status_bar"], ["✦ gpt"])
+        events = session.sync_status_bar()
+        self.assertIsInstance(events, list)
+        self.assertEqual(session._status_bar_data["status_bar"], ["✦ gpt"])
 
-    async def test_sync_status_bar_no_diff_after_same_data(self):
+    def test_sync_status_bar_no_diff_after_same_data(self):
         registry_mock = MagicMock()
         registry_mock.has_member.return_value = False
         mock_llm = MagicMock()
         mock_llm.get_name.return_value = "gpt"
         mock_agent = MagicMock()
-        mock_agent.state_machine.state = "idle"
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
-        session.sync_status_bar()
-
-        diff1 = await session.get_diff()
-        self.assertTrue(len(diff1) > 0)
-        session.sync_status_bar()
-        diff2 = await session.get_diff()
-        self.assertEqual(len(diff2), 0)
+        events1 = session.sync_status_bar()
+        self.assertTrue(len(events1) > 0)
+        events2 = session.sync_status_bar()
+        self.assertEqual(len(events2), 0)

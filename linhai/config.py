@@ -340,6 +340,10 @@ class ToolConfig(BaseModel):
         default=True,
         description="是否在tmux可用时使用tmux作为终端后端。",
     )
+    remote_shell_control: str = Field(
+        default="auto",
+        description="远程shell控制方式: python, bash, auto",
+    )
     enable_toolsets: Optional[list[str]] = Field(
         default=None,
         description="启用指定工具集，设置后仅加载这些工具集。",

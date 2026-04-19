@@ -234,6 +234,7 @@ class TestAddBashMachine(unittest.IsolatedAsyncioTestCase):
         mock_process = Mock()
         mock_host.get_process = Mock(return_value=mock_process)
         self.machine_control.machines["master_host"] = mock_host
+        self.machine_control.remote_shell_control = "python"
 
         with patch.object(
             PosixShellControl, "connect", new_callable=AsyncMock, return_value=False

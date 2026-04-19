@@ -10,6 +10,7 @@ from .schemas import (
     AgentCreateResponse,
     AgentInfo,
     AgentListResponse,
+    WsStateChangeEvent,
     ContextStatsResponse,
     TokenUsageInfo,
     PlanningFileResponse,
@@ -19,6 +20,8 @@ from .schemas import (
     LlmDetailInfo,
     LlmListResponse,
     SwitchLlmRequest,
+    WsProcessUpdateEvent,
+    WsStatusBarUpdateEvent,
     KillProcessRequest,
 )
 from .agent_manager import AgentManager
@@ -150,6 +153,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     if "parsed_agent_answer" not in registry.queues:
         registry.register_queue("parsed_agent_answer")
 
+    prev_state: Optional[str] = None
     client_disconnected = anyio.Event()
 
     async def monitor_disconnect():
@@ -206,15 +210,28 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 notice = await registry.receive("ui_log")
                 session.add_notification(notice.level, notice.content)
 
-            current_state = session.get_state()
-            session.set_state(current_state)
-
-            session.sync_processes()
-            session.sync_status_bar()
-
             tagged_events_after = await session.get_diff()
             for tagged_event in tagged_events_after:
                 events.append(tagged_event)
+
+            current_state = session.get_state()
+            if prev_state is not None and current_state != prev_state:
+                events.append(
+                    WsStateChangeEvent(
+                        old_state=prev_state, new_state=current_state
+                    ).model_dump()
+                )
+            prev_state = current_state
+
+            process_events = session.sync_processes()
+            if process_events:
+                events.append(WsProcessUpdateEvent(events=process_events).model_dump())
+
+            status_bar_events = session.sync_status_bar()
+            if status_bar_events:
+                events.append(
+                    WsStatusBarUpdateEvent(events=status_bar_events).model_dump()
+                )
 
             for event in events:
                 await websocket.send_json(event)
