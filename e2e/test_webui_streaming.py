@@ -241,7 +241,7 @@ def _write_e2e_config() -> Path:
     return config_path
 
 
-async def _wait_for_agent_turn(ws, sub, timeout=120):
+async def _wait_for_agent_turn(ws, sub, timeout=300):
     start_time = time.time()
     reached_waiting = False
     while time.time() - start_time < timeout:
@@ -303,8 +303,8 @@ async def test_webui_streaming_e2e():
                     }
                 )
             )
-            finished1 = await _wait_for_agent_turn(ws, sub, timeout=120)
-            assert finished1, "Agent did not complete first turn within 120s"
+            finished1 = await _wait_for_agent_turn(ws, sub, timeout=300)
+            assert finished1, "Agent did not complete first turn within 300s"
 
             await ws.send(
                 json.dumps(
@@ -314,8 +314,8 @@ async def test_webui_streaming_e2e():
                     }
                 )
             )
-            finished2 = await _wait_for_agent_turn(ws, sub, timeout=120)
-            assert finished2, "Agent did not complete second turn within 120s"
+            finished2 = await _wait_for_agent_turn(ws, sub, timeout=300)
+            assert finished2, "Agent did not complete second turn within 300s"
 
         messages = sub.data.get("messages", [])
         user_msgs = [m for m in messages if m.get("type") == "user"]

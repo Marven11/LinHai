@@ -41,10 +41,20 @@ jobs:
 
       - name: Create config file for tests
         run: |
-          # 创建测试所需的配置文件，匹配测试期望的路径
           mkdir -p /root/.config/linhai/
-          cp config-example.toml /root/.config/linhai/config.toml
-          ls -la /root/.config/linhai/config.toml
+          cat > /root/.config/linhai/config.toml << 'EOF'
+          [[llm]]
+          name = "deepseek"
+          base_url = "https://api.deepseek.com/v1"
+          api_key = "sk-xxx"
+          model = "deepseek-reasoner"
+          [memory]
+          file_path = "./AGENTS.md"
+          [[agent]]
+          compress_threshold = 0.8
+          [tools]
+          max_toolcall_token_in_round = 30000
+          EOF
 
       - name: Check PR references issue
         run: |
@@ -189,7 +199,19 @@ jobs:
       - name: Create config file for nix unittests
         run: |
           mkdir -p /root/.config/linhai/
-          cp config-example.toml /root/.config/linhai/config.toml
+          cat > /root/.config/linhai/config.toml << 'EOF'
+          [[llm]]
+          name = "deepseek"
+          base_url = "https://api.deepseek.com/v1"
+          api_key = "sk-xxx"
+          model = "deepseek-reasoner"
+          [memory]
+          file_path = "./AGENTS.md"
+          [[agent]]
+          compress_threshold = 0.8
+          [tools]
+          max_toolcall_token_in_round = 30000
+          EOF
 
       - name: Run unittests in nix develop
         env:
@@ -222,7 +244,19 @@ jobs:
       - name: Create config file for tests
         run: |
           mkdir -p /root/.config/linhai/
-          cp config-example.toml /root/.config/linhai/config.toml
+          cat > /root/.config/linhai/config.toml << 'EOF'
+          [[llm]]
+          name = "deepseek"
+          base_url = "https://api.deepseek.com/v1"
+          api_key = "sk-xxx"
+          model = "deepseek-reasoner"
+          [memory]
+          file_path = "./AGENTS.md"
+          [[agent]]
+          compress_threshold = 0.8
+          [tools]
+          max_toolcall_token_in_round = 30000
+          EOF
 
       - name: Run e2e tests
         run: |
