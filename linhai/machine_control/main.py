@@ -214,16 +214,6 @@ class MachineControl:
 
         return ToolResultSuccess(content=f"已成功连接远程机器: {name}")
 
-    async def list_remote_configs(self) -> ToolResultSuccess:
-        if not self.remote_machines:
-            return ToolResultSuccess(content="没有预设的远程机器配置")
-        lines = ["可用的远程机器配置:"]
-        for name, cfg in self.remote_machines.items():
-            desc = cfg.description or "无描述"
-            connected = " (已连接)" if name in self.machines else ""
-            lines.append(f"  - {name}: {desc} [argv: {cfg.argv}]{connected}")
-        return ToolResultSuccess(content="\n".join(lines))
-
     async def add_ether_ghost_machine(
         self,
         machine_id: str,

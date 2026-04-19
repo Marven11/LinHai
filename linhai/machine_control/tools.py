@@ -110,20 +110,6 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         )
 
     @toolset.register_tool(
-        name="list_remote_configs",
-        desc=t(
-            {
-                "zh_CN": "列出所有预设的远程机器配置",
-                "en": "List all preset remote machine configurations",
-            }
-        ),
-        args={},
-        required_args=[],
-    )
-    async def list_remote_configs_tool() -> ToolResultSuccess:
-        return await machine_control.list_remote_configs()
-
-    @toolset.register_tool(
         name="connect_remote_config",
         desc=t(
             {
