@@ -70,7 +70,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
     async def test_add_user_message(self):
         session = self._make_session()
         session.add_user_message("hello")
-        msgs = session._messages_data["messages"]
+        msgs = session._data["messages"]
         self.assertEqual(len(msgs), 1)
         self.assertEqual(msgs[0]["type"], "user")
         self.assertEqual(msgs[0]["content"], "hello")
@@ -78,7 +78,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
     async def test_add_notification(self):
         session = self._make_session()
         session.add_notification("INFO", "test notice")
-        msgs = session._messages_data["messages"]
+        msgs = session._data["messages"]
         self.assertEqual(len(msgs), 1)
         self.assertEqual(msgs[0]["type"], "notification")
         self.assertEqual(msgs[0]["level"], "INFO")
@@ -87,7 +87,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
         session = self._make_session()
         idx = session.add_agent_message()
         self.assertEqual(idx, 0)
-        msgs = session._messages_data["messages"]
+        msgs = session._data["messages"]
         self.assertEqual(msgs[0]["type"], "agent")
         self.assertEqual(msgs[0]["content"], "")
         self.assertEqual(msgs[0]["segments"], [])
@@ -101,7 +101,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
             "is_finished": False,
         }
         session.add_segment_to_agent_message(idx, seg)
-        agent_msg = session._messages_data["messages"][idx]
+        agent_msg = session._data["messages"][idx]
         self.assertEqual(len(agent_msg["segments"]), 1)
         self.assertEqual(agent_msg["segments"][0]["content"], "hello")
 
@@ -116,7 +116,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
         session.add_segment_to_agent_message(idx, seg)
         seg["content"] += " world"
         seg["is_finished"] = True
-        agent_msg = session._messages_data["messages"][idx]
+        agent_msg = session._data["messages"][idx]
         self.assertEqual(agent_msg["segments"][0]["content"], "hello world")
         self.assertTrue(agent_msg["segments"][0]["is_finished"])
 
@@ -124,7 +124,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
         session = self._make_session()
         idx = session.add_agent_message()
         session.update_agent_message_content(idx, "full response")
-        agent_msg = session._messages_data["messages"][idx]
+        agent_msg = session._data["messages"][idx]
         self.assertEqual(agent_msg["content"], "full response")
 
     async def test_multiple_messages_order(self):
@@ -133,7 +133,7 @@ class TestAgentSessionMessages(unittest.IsolatedAsyncioTestCase):
         idx = session.add_agent_message()
         session.update_agent_message_content(idx, "hello")
         session.add_notification("INFO", "done")
-        msgs = session._messages_data["messages"]
+        msgs = session._data["messages"]
         self.assertEqual(len(msgs), 3)
         self.assertEqual(msgs[0]["type"], "user")
         self.assertEqual(msgs[1]["type"], "agent")
@@ -292,7 +292,15 @@ class TestAgentSessionPubSubIntegration(unittest.IsolatedAsyncioTestCase):
         events = await session.get_diff()
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["event"]["action"], "replace")
-        self.assertEqual(events[0]["event"]["value"], {"messages": []})
+        self.assertEqual(
+            events[0]["event"]["value"],
+            {
+                "messages": [],
+                "state": "waiting_user",
+                "processes": [],
+                "status_bar": [],
+            },
+        )
 
     async def test_diff_after_add_returns_events(self):
         session = self._make_session()
@@ -347,7 +355,7 @@ class TestAgentSessionPubSubIntegration(unittest.IsolatedAsyncioTestCase):
         await session.handle_reset()
 
         sub = JsonSubscriber()
-        sub.data = copy.deepcopy(session._messages_data)
+        sub.data = copy.deepcopy(session._data)
 
         session.add_user_message("world")
         events = await session.get_diff()
@@ -374,7 +382,7 @@ class TestAgentSessionSend(unittest.IsolatedAsyncioTestCase):
         )
         await session.send_message("hello")
         mock_registry.send.assert_called_once()
-        msgs = session._messages_data["messages"]
+        msgs = session._data["messages"]
         self.assertEqual(len(msgs), 1)
         self.assertEqual(msgs[0]["type"], "user")
         self.assertEqual(msgs[0]["content"], "hello")
