@@ -89,35 +89,20 @@ class TestLoadUserPlugins(TestCase):
             )
         self.assertIn("register_linhai_plugins", str(ctx.exception))
 
-    def test_load_user_plugins_no_basedir_uses_cwd(self):
-        original_cwd = os.getcwd()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            os.chdir(tmpdir)
-            try:
-                plugin_dir = Path("plugins") / "cwd_plugin"
-                plugin_dir.mkdir(parents=True)
-                (plugin_dir / "__init__.py").write_text(
-                    "cwd_loaded = True\n\n"
-                    "def register_linhai_plugins(registry, lifecycle):\n"
-                    "    pass\n"
-                )
+    def test_load_user_plugins_no_basedir_raises(self):
+        registry = Registry()
 
-                registry = Registry()
+        class FakeLifecycle:
+            pass
 
-                class FakeLifecycle:
-                    pass
-
-                _load_user_plugins(
-                    ["cwd_plugin"],
-                    registry,
-                    FakeLifecycle(),
-                    None,
-                )
-                module = sys.modules.get("cwd_plugin")
-                assert module is not None
-                self.assertTrue(module.cwd_loaded)
-            finally:
-                os.chdir(original_cwd)
+        with self.assertRaises(ValueError) as ctx:
+            _load_user_plugins(
+                ["any_plugin"],
+                registry,
+                FakeLifecycle(),
+                None,
+            )
+        self.assertIn("config_basedir", str(ctx.exception))
 
     def test_plugins_in_build_context(self):
         config = Config(

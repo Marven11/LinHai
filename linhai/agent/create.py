@@ -680,7 +680,9 @@ def _load_user_plugins(
     lifecycle,
     config_basedir: Optional[Path],
 ) -> None:
-    plugins_dir = (config_basedir or Path.cwd()) / "plugins"
+    if config_basedir is None:
+        raise ValueError("config_basedir is required for loading plugins")
+    plugins_dir = config_basedir / "plugins"
     if not plugins_dir.is_dir():
         raise ValueError(f"Plugins directory not found: {plugins_dir}")
     plugins_dir_str = str(plugins_dir.absolute())
