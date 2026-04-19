@@ -12,12 +12,20 @@ class JsonRpcResponse(Dict[str, Any]):
     pass
 
 
-class _ProcessLineReader:
-    def __init__(self, process: Process) -> None:
-        self._process = process
+class TrojanTransport:
+    def __init__(
+        self,
+        registry: Registry,
+        process: Process,
+    ):
+        self.registry = registry
+        self._process: Process = process
         self._buffer = b""
+        self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
+        self._reader_started: bool = False
+        self._connection_valid = True
 
-    async def readline(self, timeout: float = 1.0) -> Optional[str]:
+    async def _readline(self, timeout: float = 1.0) -> Optional[str]:
         while b"\n" not in self._buffer:
             result = await self._process.stdio_read(timeout)
             if not result.success or (
@@ -36,20 +44,6 @@ class _ProcessLineReader:
         line = self._buffer[:idx]
         self._buffer = self._buffer[idx + 1 :]
         return line.decode("utf-8", errors="replace")
-
-
-class TrojanTransport:
-    def __init__(
-        self,
-        registry: Registry,
-        process: Process,
-    ):
-        self.registry = registry
-        self._process: Process = process
-        self._line_reader: _ProcessLineReader = _ProcessLineReader(process)
-        self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
-        self._reader_started: bool = False
-        self._connection_valid = True
 
     def start_reading(self) -> None:
         if not self._reader_started:
@@ -102,10 +96,19 @@ class TrojanTransport:
             raise result
         if isinstance(result, BaseException):
             raise result
-        return dict(result)
+        response = dict(result)
+        if "error" in response:
+            error_content = response["error"]
+            if isinstance(error_content, dict) and "message" in error_content:
+                raise RuntimeError(error_content["message"])
+            raise RuntimeError(str(error_content))
+        resp_result = response.get("result")
+        if resp_result is None:
+            raise RuntimeError("响应中缺少result字段")
+        return response
 
     async def _read_one_response(self) -> None:
-        line = await self._line_reader.readline(timeout=1.0)
+        line = await self._readline(timeout=1.0)
         if line is None:
             self._connection_valid = False
             self._fail_pending_futures()

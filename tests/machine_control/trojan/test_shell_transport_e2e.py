@@ -3,14 +3,15 @@ import json
 import unittest
 from pathlib import Path
 
-from linhai.machine_control.trojan.shell_transport import ShellTrojanTransport
+from linhai.machine_control.trojan.transport import TrojanTransport
+from linhai.machine_control.trojan.shell_transport import setup_trojan_in_shell
 from tests.test_helpers import _AsyncioProcessAdapter
 from linhai.registry import Registry
 from linhai.task_supervisor import PlainTaskSupervisor
 
 
-class TestShellTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
-    async def _create_transport_with_bash(self):
+class TestSetupTrojanInShellE2E(unittest.IsolatedAsyncioTestCase):
+    async def _create_connected_transport(self):
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
 
@@ -34,17 +35,16 @@ class TestShellTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
         )
 
         adapter = _AsyncioProcessAdapter(process)
-        transport = ShellTrojanTransport(
-            registry=registry,
-            process=adapter,
-        )
+        remote_path = await setup_trojan_in_shell(adapter, registry)
+        if remote_path is None:
+            raise RuntimeError("setup_trojan_in_shell failed")
+
+        transport = TrojanTransport(registry=registry, process=adapter)
+        transport.start_reading()
         return transport
 
     async def test_connect_with_local_bash(self):
-        transport = await self._create_transport_with_bash()
-        result = await transport.connect()
-        self.assertTrue(result)
-        self.assertTrue(transport.is_connected())
+        transport = await self._create_connected_transport()
 
         try:
             ping_result = await transport.send_request("ping", {})
@@ -54,9 +54,7 @@ class TestShellTrojanTransportE2E(unittest.IsolatedAsyncioTestCase):
             await transport.disconnect()
 
     async def test_process_create_with_local_bash(self):
-        transport = await self._create_transport_with_bash()
-        result = await transport.connect()
-        self.assertTrue(result)
+        transport = await self._create_connected_transport()
 
         try:
             create_result = await transport.send_request(

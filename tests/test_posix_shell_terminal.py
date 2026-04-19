@@ -16,10 +16,7 @@ class TestSshTerminal(unittest.TestCase):
         """设置测试环境"""
         self.registry = Mock(spec=Registry)
         self.ssh_control = PosixShellControl(
-            host="test-host",
             registry=self.registry,
-            port=22,
-            username="testuser",
         )
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)

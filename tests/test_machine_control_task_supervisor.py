@@ -64,7 +64,6 @@ class TestTrojanTransportConstruction(unittest.IsolatedAsyncioTestCase):
         process = _FakeProcess()
         transport = TrojanTransport(registry, process=process)
         self.assertIsNotNone(transport._process)
-        self.assertIsNotNone(transport._line_reader)
 
 
 class TestTrojanTransportRequest(unittest.IsolatedAsyncioTestCase):
@@ -146,7 +145,7 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = PosixShellControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry)
         call_count = 0
 
         async def mock_call_tool(name, args):
@@ -179,7 +178,7 @@ class TestSshHostUploadWithTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = PosixShellControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry)
         test_data = b"y" * 100
 
         async def mock_call_tool(name, args):
@@ -207,7 +206,7 @@ class TestSshHostUploadFailure(unittest.IsolatedAsyncioTestCase):
 
         registry = Registry()
         registry.register_member("task_supervisor", PlainTaskSupervisor())
-        control = PosixShellControl(registry=registry, host="host")
+        control = PosixShellControl(registry=registry)
 
         async def mock_call_tool(name, args):
             if name == "create_temp_dir":

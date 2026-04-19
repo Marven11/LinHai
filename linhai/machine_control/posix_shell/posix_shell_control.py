@@ -1,5 +1,3 @@
-"""Posix Shell机器控制类，用于通过posix shell连接远程机器并执行工具。"""
-
 import asyncio
 import json
 from typing import Dict, Optional, Any
@@ -7,77 +5,43 @@ from typing import Dict, Optional, Any
 from linhai.registry import Registry
 from linhai.machine_control.http_message import HttpMessage, build_http_message
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
-from linhai.utils.common import UiNotice
-from ..trojan.shell_transport import ShellTrojanTransport
-from ..process import Process, ProcessCreateResult
+from ..trojan.transport import TrojanTransport
+from ..trojan.shell_transport import setup_trojan_in_shell
 from .process import RemoteProcess
+from ..process import Process, ProcessCreateResult
 
 
 class PosixShellControl:
-    """Posix Shell机器控制类，负责通过posix shell连接远程机器并调用工具。"""
-
     def __init__(
         self,
         registry: Registry,
         host: str = "",
         port: int = 22,
-        username: Optional[str] = None,
     ):
         self.registry = registry
-        self._username = username
+        self._host = host
+        self._port = port
+        self.registry = registry
         self._processes: dict[str, RemoteProcess] = {}
-        self.transport: Optional[ShellTrojanTransport] = None
-
-    @property
-    def username(self) -> str | None:
-        """返回用户名"""
-        return self._username
+        self.transport: Optional[TrojanTransport] = None
 
     async def connect(self, process: Process) -> bool:
-        """连接到远程机器并启动trojan。
+        remote_path = await setup_trojan_in_shell(process, self.registry)
+        if remote_path is None:
+            return False
 
-        Args:
-            process: 已建立的posix shell进程（通过stdio交互）
-
-        Returns:
-            连接是否成功
-        """
-        self.transport = ShellTrojanTransport(registry=self.registry, process=process)
-        return await self.transport.connect()
+        self.transport = TrojanTransport(registry=self.registry, process=process)
+        self.transport.start_reading()
+        return True
 
     async def call_tool(
         self, name: str, args: Dict[str, object]
     ) -> ToolResultSuccess | ToolResultFailed:
-        """调用指定工具。
-
-        Args:
-            name: 工具名称
-            args: 工具参数
-
-        Returns:
-            工具执行结果
-        """
         if self.transport is None:
             return ToolResultFailed(content="未建立连接")
-        try:
-            response = await self.transport.send_request(name, args)
-        except ConnectionError as e:
-            return ToolResultFailed(content=f"连接已失效: {e}")
-        except Exception as e:
-            return ToolResultFailed(content=f"请求失败: {e}")
 
-        if "error" in response:
-            error_content = response["error"]
-            if isinstance(error_content, dict) and "message" in error_content:
-                error_message = error_content["message"]
-            else:
-                error_message = str(error_content)
-            return ToolResultFailed(content=f"工具执行失败: {error_message}")
-
+        response = await self.transport.send_request(name, args)
         result = response.get("result")
-        if result is None:
-            return ToolResultFailed(content="响应中缺少result字段")
-
         if isinstance(result, dict) and "message" in result:
             return ToolResultSuccess(content=str(result["message"]))
         else:
@@ -87,7 +51,6 @@ class PosixShellControl:
         return await self.call_tool("ping", {})
 
     async def close(self):
-        """关闭连接。"""
         if self.transport:
             await self.transport.disconnect()
             self.transport = None
@@ -186,13 +149,11 @@ class PosixShellControl:
     async def change_directory(
         self, directory: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """改变当前工作目录"""
         return await self.call_tool("change_directory", {"directory": directory})
 
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:
-        """创建远程终端"""
         return await self.call_tool(
             "terminal_create", {"columns": columns, "lines": lines}
         )
@@ -200,7 +161,6 @@ class PosixShellControl:
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
     ) -> ToolResultSuccess | ToolResultFailed:
-        """发送按键到远程终端"""
         return await self.call_tool(
             "terminal_send_keys", {"term_id": terminal_id, "keys": keys}
         )
@@ -212,7 +172,6 @@ class PosixShellControl:
         with_enter: bool = True,
         wait_seconds: float = 0.3,
     ) -> ToolResultSuccess | ToolResultFailed:
-        """发送字符串到远程终端"""
         return await self.call_tool(
             "terminal_send_string",
             {
@@ -226,7 +185,6 @@ class PosixShellControl:
     async def terminal_read_screen(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """读取远程终端屏幕内容"""
         result = await self.call_tool("terminal_read_screen", {"term_id": terminal_id})
         if isinstance(result, ToolResultSuccess):
             import base64
@@ -239,11 +197,9 @@ class PosixShellControl:
     async def terminal_close(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """关闭远程终端"""
         return await self.call_tool("terminal_close", {"term_id": terminal_id})
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
-        """获取远程终端列表"""
         result = await self.call_tool("terminal_list", {})
         if isinstance(result, ToolResultSuccess):
             return ToolResultSuccess(content=result.content)
@@ -255,7 +211,6 @@ class PosixShellControl:
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
-        """读取文件"""
         return await self.call_tool(
             "read_file", {"filepath": filepath, "show_line_numbers": show_line_numbers}
         )
@@ -263,7 +218,6 @@ class PosixShellControl:
     async def write_file(
         self, filepath: str, content: str, override: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
-        """写入文件内容"""
         return await self.call_tool(
             "write_file",
             {"filepath": filepath, "content": content, "override": override},
@@ -272,26 +226,22 @@ class PosixShellControl:
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed:
-        """替换文件内容"""
         params: Dict[str, Any] = {"filepath": filepath, "old": old, "new": new}
         if replace_times is not None:
             params["replace_times"] = replace_times
         return await self.call_tool("replace_file_content", params)
 
     async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
-        """列出指定文件夹中的文件"""
         return await self.call_tool("list_files", {"dirpath": dirpath})
 
     async def get_absolute_path(
         self, path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """获取路径的绝对路径"""
         return await self.call_tool("get_absolute_path", {"path": path})
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """执行sed表达式并返回输出"""
         return await self.call_tool(
             "read_file_with_sed", {"expression": expression, "filepath": filepath}
         )
@@ -299,15 +249,6 @@ class PosixShellControl:
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """并发上传文件到远程机器。
-
-        Args:
-            data: 文件内容（bytes）
-            remote_path: 远程文件路径
-
-        Returns:
-            执行结果
-        """
         import base64
         import math
 
@@ -380,15 +321,6 @@ class PosixShellControl:
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        """从远程机器并发下载文件到本地。
-
-        Args:
-            remote_path: 远程文件路径
-            local_path: 本地保存路径
-
-        Returns:
-            执行结果
-        """
         import base64
         import math
 

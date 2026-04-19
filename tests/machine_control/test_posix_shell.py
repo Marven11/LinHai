@@ -20,7 +20,7 @@ class TestPosixShellControlConnect(unittest.TestCase):
         self.registry.has_member = Mock(return_value=False)
 
         self.control = PosixShellControl(
-            host="test-host", registry=self.registry, port=22, username="testuser"
+            registry=self.registry,
         )
 
         self.loop = asyncio.new_event_loop()
@@ -33,32 +33,27 @@ class TestPosixShellControlConnect(unittest.TestCase):
         async def test():
             mock_process = AsyncMock()
             mock_process.pid = "1"
-            mock_process.stdio_write = AsyncMock(
-                return_value=ProcessWriteResult(pid="1", success=True, message="ok")
-            )
-            mock_process.stdio_read = AsyncMock(
-                return_value=ProcessReadResult(
-                    pid="1", success=True, stdout=b"CMD_RESULT_0:0\n", stderr=b""
-                )
-            )
-            mock_process.kill = AsyncMock(
-                return_value=ProcessKillResult(pid="1", success=True, message="ok")
-            )
 
             mock_transport_instance = AsyncMock()
-            mock_transport_instance.connect = AsyncMock(return_value=True)
-            mock_transport_instance.disconnect = AsyncMock()
+            mock_transport_instance.start_reading = Mock()
 
-            with patch(
-                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
-                return_value=mock_transport_instance,
-            ) as mock_transport_class:
+            with (
+                patch(
+                    "linhai.machine_control.posix_shell.posix_shell_control.setup_trojan_in_shell",
+                    new_callable=AsyncMock,
+                    return_value="/tmp/trojan.py",
+                ) as mock_setup,
+                patch(
+                    "linhai.machine_control.posix_shell.posix_shell_control.TrojanTransport",
+                    return_value=mock_transport_instance,
+                ) as mock_transport_class,
+            ):
                 result = await self.control.connect(mock_process)
                 self.assertTrue(result)
+                mock_setup.assert_called_once_with(mock_process, self.registry)
                 mock_transport_class.assert_called_once_with(
                     registry=self.registry, process=mock_process
                 )
-                mock_transport_instance.connect.assert_called_once_with()
                 self.assertEqual(self.control.transport, mock_transport_instance)
 
         self.loop.run_until_complete(test())
@@ -68,41 +63,29 @@ class TestPosixShellControlConnect(unittest.TestCase):
             mock_process = AsyncMock()
             mock_process.pid = "1"
 
-            mock_transport_instance = AsyncMock()
-            mock_transport_instance.connect = AsyncMock(
-                side_effect=RuntimeError("connection failed")
-            )
-            mock_transport_instance.disconnect = AsyncMock()
-
             with patch(
-                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
-                return_value=mock_transport_instance,
+                "linhai.machine_control.posix_shell.posix_shell_control.setup_trojan_in_shell",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("connection failed"),
             ):
                 with self.assertRaises(RuntimeError):
                     await self.control.connect(mock_process)
 
         self.loop.run_until_complete(test())
 
-    def test_connect_returns_false_when_transport_fails(self):
+    def test_connect_returns_false_when_setup_fails(self):
         async def test():
             mock_process = AsyncMock()
             mock_process.pid = "1"
 
-            mock_transport_instance = AsyncMock()
-            mock_transport_instance.connect = AsyncMock(return_value=False)
-            mock_transport_instance.disconnect = AsyncMock()
-
             with patch(
-                "linhai.machine_control.posix_shell.posix_shell_control.ShellTrojanTransport",
-                return_value=mock_transport_instance,
-            ) as mock_transport_class:
+                "linhai.machine_control.posix_shell.posix_shell_control.setup_trojan_in_shell",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
                 result = await self.control.connect(mock_process)
                 self.assertFalse(result)
-                mock_transport_class.assert_called_once_with(
-                    registry=self.registry, process=mock_process
-                )
-                mock_transport_instance.connect.assert_called_once_with()
-                self.assertEqual(self.control.transport, mock_transport_instance)
+                self.assertIsNone(self.control.transport)
 
         self.loop.run_until_complete(test())
 
