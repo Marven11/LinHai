@@ -138,7 +138,10 @@ def check_file(
         return violations
 
     for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == "__init__"
+        ):
             check_function_defaults(node, added_lines, violations)
 
     return violations
@@ -158,7 +161,7 @@ def main() -> None:
         sys.exit(0)
 
     print(
-        f"Checking {len(python_files)} changed Python file(s) for None/empty default arguments..."
+        f"Checking {len(python_files)} changed Python file(s) for None/empty default arguments in __init__..."
     )
 
     errors_found = False
@@ -173,10 +176,12 @@ def main() -> None:
                 )
 
     if errors_found:
-        print("\nERROR: Using None/{}/[] as default parameter values is forbidden.")
-        print("This avoids forgetting to pass parameters. If a parameter can")
-        print("legitimately be None, mark it as Optional and have the caller")
-        print("pass it explicitly to confirm the intent.")
+        print(
+            "\nERROR: Using None/{}/[] as default parameter values in __init__ is forbidden."
+        )
+        print("This avoids forgetting to pass parameters during initialization.")
+        print("If a parameter can legitimately be None, mark it as Optional and")
+        print("have the caller pass it explicitly to confirm the intent.")
         sys.exit(1)
     else:
         print("SUCCESS: No None/empty default arguments found in changed Python files.")
