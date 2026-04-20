@@ -72,6 +72,34 @@ class MachineControl:
 
         return ToolResultSuccess(content=f"已切换到机器: {machine_id}")
 
+    async def disconnect_machine(
+        self, machine_id: str
+    ) -> ToolResultSuccess | ToolResultFailed:
+        if machine_id not in self.machines:
+            return ToolResultFailed(content=f"机器未找到: {machine_id}")
+
+        host_control = self.machines[machine_id]
+        if isinstance(host_control, MasterHostControl):
+            return ToolResultFailed(content="不能断开master_host")
+
+        await host_control.disconnect()
+
+        del self.machines[machine_id]
+        self.source_machines.pop(machine_id, None)
+        self.machine_descriptions.pop(machine_id, None)
+
+        switched = ""
+        if self.target_machine == machine_id:
+            self.target_machine = "master_host"
+            switched = "，已自动切换到机器: master_host"
+
+        await self.registry.send_if_exists(
+            "ui_log",
+            UiNotice(level="INFO", content=f"已断开机器: {machine_id}{switched}"),
+        )
+
+        return ToolResultSuccess(content=f"已断开机器: {machine_id}{switched}")
+
     async def add_posix_shell_machine(
         self,
         machine_id: str,

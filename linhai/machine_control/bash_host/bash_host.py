@@ -245,3 +245,7 @@ class BashHostControl:
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
         raise NotImplementedError("upload_file_concurrent尚未在bash控制中实现")
+
+    async def disconnect(self) -> None:
+        if self._shell_process is not None:
+            await self._shell_process.kill(graceful=True)

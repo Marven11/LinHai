@@ -298,3 +298,6 @@ class EtherGhostMachineControl(HostControl):
             return ToolResultSuccess(content=f"文件已上传: {remote_path}")
         else:
             return ToolResultFailed(content="上传文件失败")
+
+    async def disconnect(self) -> None:
+        self.session = None

@@ -279,6 +279,9 @@ class MasterHostControl:
     async def ping(self) -> ToolResultSuccess | ToolResultFailed:
         return ToolResultSuccess(content="pong")
 
+    async def disconnect(self) -> None:
+        raise RuntimeError("不能断开master_host")
+
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:

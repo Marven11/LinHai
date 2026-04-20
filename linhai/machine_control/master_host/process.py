@@ -145,6 +145,12 @@ class LocalProcess:
         else:
             self._process.kill()
             await _wait_process_exit(self._process, 5.0)
+        if self._process.stdin is not None and not self._process.stdin.is_closing():
+            self._process.stdin.close()
+        if self._process.stdout is not None:
+            await _read_stream_chunk(self._process.stdout, 0.1, 65536)
+        if self._process.stderr is not None:
+            await _read_stream_chunk(self._process.stderr, 0.1, 65536)
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)

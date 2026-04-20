@@ -66,6 +66,32 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         return await machine_control.switch_machine(machine_id)
 
     @toolset.register_tool(
+        name="disconnect_machine",
+        desc=t(
+            {
+                "zh_CN": "断开指定机器的连接，master_host无法断开",
+                "en": "Disconnect a specified machine. master_host cannot be disconnected.",
+            }
+        ),
+        args={
+            "machine_id": ToolArgInfo(
+                desc=t(
+                    {
+                        "zh_CN": "要断开的机器ID",
+                        "en": "Machine ID to disconnect",
+                    }
+                ),
+                type="str",
+            )
+        },
+        required_args=["machine_id"],
+    )
+    async def disconnect_machine_tool(
+        machine_id: str,
+    ) -> ToolResultSuccess | ToolResultFailed:
+        return await machine_control.disconnect_machine(machine_id)
+
+    @toolset.register_tool(
         name="connect_posix_shell_as_machine",
         desc=t(
             {

@@ -734,6 +734,76 @@ class TestMasterHostControlConcurrentFiles(unittest.IsolatedAsyncioTestCase):
             self.assertIn("文件不存在", result.content)
 
 
+class TestDisconnectMachine(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.registry = Mock(spec=Registry)
+        self.registry.send_if_exists = AsyncMock()
+        self.machine_control = MachineControl(self.registry, remote_machines=[])
+
+    async def test_disconnect_machine_not_found(self):
+        result = await self.machine_control.disconnect_machine("nonexistent")
+        from linhai.tool.base import ToolResultFailed
+
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("机器未找到", result.content)
+
+    async def test_disconnect_master_host_raises(self):
+        from linhai.tool.base import ToolResultFailed
+
+        result = await self.machine_control.disconnect_machine("master_host")
+        self.assertIsInstance(result, ToolResultFailed)
+        self.assertIn("master_host", result.content)
+
+    async def test_disconnect_non_current_machine(self):
+        mock_host = Mock()
+        mock_host.disconnect = AsyncMock()
+        self.machine_control.machines["remote"] = mock_host
+        self.machine_control.source_machines["remote"] = "master_host"
+        self.machine_control.machine_descriptions["remote"] = "test"
+
+        from linhai.tool.base import ToolResultSuccess
+
+        result = await self.machine_control.disconnect_machine("remote")
+        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertNotIn("remote", self.machine_control.machines)
+        self.assertNotIn("remote", self.machine_control.source_machines)
+        self.assertNotIn("remote", self.machine_control.machine_descriptions)
+        self.assertEqual(self.machine_control.target_machine, "master_host")
+        self.assertNotIn("已自动切换", result.content)
+
+    async def test_disconnect_current_machine_switches_to_master(self):
+        mock_host = Mock()
+        mock_host.disconnect = AsyncMock()
+        self.machine_control.machines["remote"] = mock_host
+        self.machine_control.source_machines["remote"] = "master_host"
+        self.machine_control.machine_descriptions["remote"] = "test"
+        self.machine_control.target_machine = "remote"
+
+        from linhai.tool.base import ToolResultSuccess
+
+        result = await self.machine_control.disconnect_machine("remote")
+        self.assertIsInstance(result, ToolResultSuccess)
+        self.assertEqual(self.machine_control.target_machine, "master_host")
+        self.assertIn("已自动切换到机器: master_host", result.content)
+
+    async def test_disconnect_tool_registered(self):
+        from linhai.machine_control.tools import register_machine_control_tools
+
+        toolset = register_machine_control_tools(self.machine_control)
+        tool_names = list(toolset.tools.keys())
+        self.assertIn("disconnect_machine", tool_names)
+
+
+class TestMasterHostControlDisconnect(unittest.IsolatedAsyncioTestCase):
+
+    async def test_master_host_disconnect_raises(self):
+        host_control = _create_host_control()
+        with self.assertRaises(RuntimeError) as ctx:
+            await host_control.disconnect()
+        self.assertIn("master_host", str(ctx.exception))
+
+
 class TestMachineControlTransferFile(unittest.IsolatedAsyncioTestCase):
     """测试MachineControl的transfer_file方法"""
 

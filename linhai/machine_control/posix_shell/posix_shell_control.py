@@ -50,7 +50,7 @@ class PosixShellControl:
     async def ping(self) -> ToolResultSuccess | ToolResultFailed:
         return await self.call_tool("ping", {})
 
-    async def close(self):
+    async def disconnect(self) -> None:
         if self.transport:
             await self.transport.disconnect()
             self.transport = None

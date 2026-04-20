@@ -55,7 +55,7 @@ class TestPosixShellControlE2E(unittest.IsolatedAsyncioTestCase):
         return control, adapter, process
 
     async def _cleanup_process(self, control, process):
-        await control.close()
+        await control.disconnect()
         if process.stdin and not process.stdin.is_closing():
             process.stdin.close()
         process.kill()
