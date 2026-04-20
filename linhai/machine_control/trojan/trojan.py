@@ -93,25 +93,11 @@ class Trojan:
                 )
             }
         else:
-            stdout_str, stderr_str, timeout_msg, _ = await self._read_process_stdio(
-                process, timeout=2.0, max_read_size=32 * 1024, check_exit=False
-            )
-
-            message = f"等待失败，程序在{wait_second}秒后在运行。"
-            if timeout_msg:
-                message += f" {timeout_msg}"
-            if stdout_str or stderr_str:
-                message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_str}\nstderr:\n{stderr_str}"
-            else:
-                message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
-
             return {
                 "message": json.dumps(
                     {
                         "pid": pid,
-                        "stdout": stdout_str,
-                        "stderr": stderr_str,
-                        "message": message,
+                        "message": f"等待失败，程序在{wait_second}秒后在运行。建议使用process_*系列工具进行读写stdio或者进一步等待程序",
                     }
                 )
             }

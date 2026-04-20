@@ -174,8 +174,8 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.pid, "12345")
             self.assertIn("output", result.stdout)
 
-    async def test_process_create_timeout_with_output(self):
-        """测试process_create - 超时但有输出"""
+    async def test_process_create_timeout_no_stdio_read(self):
+        """测试process_create - 超时时不应读取stdio"""
         with (
             patch("asyncio.create_subprocess_exec") as mock_create,
             patch("time.perf_counter") as mock_time,
@@ -184,11 +184,7 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
 
             mock_process = AsyncMock()
             mock_process.pid = 12346
-            mock_process.returncode = None  # 进程仍在运行
-            mock_process.stdout = AsyncMock()
-            mock_process.stdout.read = AsyncMock(return_value=b"")
-            mock_process.stderr = AsyncMock()
-            mock_process.stderr.read = AsyncMock(return_value=b"error output")
+            mock_process.returncode = None
             mock_create.return_value = mock_process
 
             mock_time.side_effect = [0.0, 0.5, 1.0, 1.5, 1.6, 1.6, 4.0]
@@ -197,6 +193,8 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.success)
             self.assertEqual(result.pid, "12346")
             self.assertIn("等待失败", result.message)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "")
 
     async def test_process_stdio_read_with_exited_process(self):
         """测试stdio_read - 进程已退出"""

@@ -126,21 +126,11 @@ class MasterHostControl:
                     stderr=read_result.stderr.decode("utf-8", errors="replace"),
                 )
 
-            read_result = await lp.stdio_read(wait_seconds=2.0)
-            stdout_text = read_result.stdout.decode("utf-8", errors="replace")
-            stderr_text = read_result.stderr.decode("utf-8", errors="replace")
-            message = f"等待失败，程序在{wait_second}秒后在运行。"
-            if stdout_text or stderr_text:
-                message += f" 至今为止该进程已输出到stdout/stderr的内容：\nstdout:\n{stdout_text}\nstderr:\n{stderr_text}"
-            else:
-                message += " 建议使用process_*系列工具进行读写stdio或者进一步等待程序"
             return ProcessCreateResult(
                 pid=pid,
                 success=True,
                 returncode=None,
-                stdout=stdout_text,
-                stderr=stderr_text,
-                message=message,
+                message=f"等待失败，程序在{wait_second}秒后在运行。建议使用process_*系列工具进行读写stdio或者进一步等待程序",
             )
         except Exception as e:
             return ProcessCreateResult(pid="", success=False, error=str(e))
