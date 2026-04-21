@@ -37,12 +37,8 @@ class AgentSession:
         self._task_name = task_name
         self._manager = manager
         self.created_at = datetime.now()
-        self._messages_data: dict = {"messages": []}
-        self._publisher = JsonPublisher(self._messages_data)
-        self._processes_data: dict = {"processes": []}
-        self._process_publisher = JsonPublisher(self._processes_data)
-        self._status_bar_data: dict = {"status_bar": []}
-        self._status_bar_publisher = JsonPublisher(self._status_bar_data)
+        self._data: dict = {"messages": [], "processes": [], "status_bar": []}
+        self._publisher = JsonPublisher(self._data)
         self._lock = asyncio.Lock()
 
     def get_state(self) -> str:
@@ -64,7 +60,7 @@ class AgentSession:
 
     def add_user_message(self, content: str) -> None:
         msg: WebuiUserMessage = {"type": "user", "content": content}
-        self._messages_data["messages"].append(msg)
+        self._data["messages"].append(msg)
 
     def add_notification(self, level: str, content: str) -> None:
         msg: WebuiNotificationMessage = {
@@ -72,7 +68,7 @@ class AgentSession:
             "level": level,
             "content": content,
         }
-        self._messages_data["messages"].append(msg)
+        self._data["messages"].append(msg)
 
     def add_agent_message(self) -> int:
         msg: WebuiAgentMessage = {
@@ -80,17 +76,17 @@ class AgentSession:
             "content": "",
             "segments": [],
         }
-        self._messages_data["messages"].append(msg)
-        return len(self._messages_data["messages"]) - 1
+        self._data["messages"].append(msg)
+        return len(self._data["messages"]) - 1
 
     def add_segment_to_agent_message(
         self, agent_idx: int, segment: WebuiSegmentType
     ) -> None:
-        agent_msg = self._messages_data["messages"][agent_idx]
+        agent_msg = self._data["messages"][agent_idx]
         agent_msg["segments"].append(segment)
 
     def update_agent_message_content(self, agent_idx: int, content: str) -> None:
-        agent_msg = self._messages_data["messages"][agent_idx]
+        agent_msg = self._data["messages"][agent_idx]
         agent_msg["content"] = content
 
     async def get_diff(self) -> list[TaggedEvent]:
@@ -236,13 +232,11 @@ class AgentSession:
         token_pieces.append(f"✦ {llm_name}")
         return token_pieces
 
-    def sync_status_bar(self) -> list[TaggedEvent]:
-        self._status_bar_data["status_bar"] = self.get_status_bar_pieces()
-        return self._status_bar_publisher.calculate_diff()
+    def sync_status_bar(self) -> None:
+        self._data["status_bar"] = self.get_status_bar_pieces()
 
-    def sync_processes(self) -> list[TaggedEvent]:
-        self._processes_data["processes"] = self.get_processes()
-        return self._process_publisher.calculate_diff()
+    def sync_processes(self) -> None:
+        self._data["processes"] = self.get_processes()
 
     async def kill_process(self, pid: str, machine_id: str) -> bool:
         if not self.registry.has_member("machine_control"):

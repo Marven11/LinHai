@@ -152,9 +152,16 @@ def test_websocket_reset_recovery():
             assert desynced_sub.data is None
 
             ws.send_text(json.dumps({"type": "reset"}))
-            _feed_events_until(
-                ws, desynced_sub, lambda s: s.data is not None, max_iterations=10
-            )
+            for _ in range(10):
+                data = ws.receive_json(mode="text")
+                if "event" in data and data.get("idx") == -1:
+                    desynced_sub.update_data(data)
+                    break
+                continue
+            if desynced_sub.data is None:
+                _feed_events_until(
+                    ws, desynced_sub, lambda s: s.data is not None, max_iterations=10
+                )
 
             assert desynced_sub.data is not None
             assert (
@@ -341,6 +348,6 @@ async def test_webui_streaming_e2e():
         ), f"Agent messages too short: {[m.get('content', '')[:50] for m in agent_msgs]}"
         session = routes._manager.sessions.get(agent_id)
         assert session is not None
-        server_data = copy.deepcopy(session._messages_data)
+        server_data = copy.deepcopy(session._data)
         assert sub.data == server_data
         await client.delete(f"/api/agents/{agent_id}")

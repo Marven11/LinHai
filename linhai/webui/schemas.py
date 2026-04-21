@@ -136,16 +136,6 @@ class ProcessInfo(BaseModel):
     returncode: Optional[int] = Field(default=None, description="退出码")
 
 
-class WsProcessUpdateEvent(BaseModel):
-    type: Literal["process_update"] = "process_update"
-    events: list
-
-
-class WsStatusBarUpdateEvent(BaseModel):
-    type: Literal["status_bar_update"] = "status_bar_update"
-    events: list
-
-
 class KillProcessRequest(BaseModel):
     machine_id: str = Field(..., description="进程所在机器ID")
 
