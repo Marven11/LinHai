@@ -234,7 +234,7 @@ class TestProcessTabRealApp(unittest.TestCase):
                 status_static = rows[0].query_one(".status")
                 self.assertIn("Exit 0", str(status_static.render()))
 
-                self.assertTrue(kill_btn.disabled)
+                self.assertFalse(kill_btn.display)
 
         asyncio.run(_run())
 

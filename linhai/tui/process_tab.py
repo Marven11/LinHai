@@ -47,7 +47,6 @@ class ProcessRowWidget(Horizontal):
     ProcessRowWidget Button.kill-btn {
         width: 8;
         height: 1;
-        min-width: 0;
         padding: 0 1;
         text-style: bold;
     }
@@ -106,8 +105,7 @@ class ProcessRowWidget(Horizontal):
             status_widget.set_class(True, "status-exited")
             for btn in kill_btns:
                 if isinstance(btn, Button):
-                    btn.disabled = True
-                    btn.label = ""
+                    btn.display = False
 
 
 class ProcessTabWidget(Static):
