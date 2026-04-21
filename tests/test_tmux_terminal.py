@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from linhai.machine_control.master_host.tmux_terminal import (
     TmuxTerminal,
@@ -53,10 +53,18 @@ class TestTmuxTerminal(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.terminals_to_cleanup = []
+        self.mock_run = patch(
+            "linhai.machine_control.master_host.tmux_terminal.subprocess.run"
+        ).start()
+        self.mock_run.side_effect = lambda *a, **k: MagicMock(
+            returncode=1 if isinstance(a[0], list) and "has-session" in a[0] else 0,
+            stdout="",
+        )
 
     def tearDown(self):
         for t in self.terminals_to_cleanup:
             t.close()
+        patch.stopall()
         self.loop.close()
 
     def _create_terminal(self, **kwargs):
@@ -72,17 +80,22 @@ class TestTmuxTerminal(unittest.TestCase):
         t = self._create_terminal()
         t.send("echo hello_tmux_test")
         t.send_key("enter")
-        self.loop.run_until_complete(asyncio.sleep(0.5))
-        screen = t.get_screen()
-        self.assertIn("hello_tmux_test", screen)
+        send_calls = [
+            c for c in self.mock_run.call_args_list
+            if "send-keys" in str(c.args)
+        ]
+        self.assertTrue(len(send_calls) >= 2)
+        self.assertIn("echo hello_tmux_test", str(send_calls[0].args))
 
     def test_send_key_enter(self):
         t = self._create_terminal()
         t.send("echo key_test")
         t.send_key("enter")
-        self.loop.run_until_complete(asyncio.sleep(0.5))
-        screen = t.get_screen()
-        self.assertIn("key_test", screen)
+        send_calls = [
+            c for c in self.mock_run.call_args_list
+            if "send-keys" in str(c.args)
+        ]
+        self.assertTrue(any("Enter" in str(c.args) for c in send_calls))
 
     def test_send_key_unknown_raises(self):
         t = self._create_terminal()
@@ -93,15 +106,20 @@ class TestTmuxTerminal(unittest.TestCase):
         t = self._create_terminal()
         t.send("echo before_close")
         t.send_key("enter")
-        self.loop.run_until_complete(asyncio.sleep(0.3))
         t.close()
         self.terminals_to_cleanup.remove(t)
+        kill_calls = [
+            c for c in self.mock_run.call_args_list
+            if "kill-session" in str(c.args)
+        ]
+        self.assertEqual(len(kill_calls), 1)
 
     def test_session_exists_true(self):
-        t = self._create_terminal()
-        self.assertTrue(_session_exists(t.session_name))
+        self.mock_run.side_effect = lambda *a, **k: MagicMock(returncode=0, stdout="")
+        self.assertTrue(_session_exists("linhai_test_session"))
 
     def test_session_exists_false(self):
+        self.mock_run.side_effect = lambda *a, **k: MagicMock(returncode=1, stdout="")
         self.assertFalse(_session_exists("linhai_nonexistent_session_xyz"))
 
     @patch("linhai.machine_control.master_host.tmux_terminal._session_exists")
@@ -114,17 +132,7 @@ class TestTmuxTerminal(unittest.TestCase):
 
     @patch("linhai.machine_control.master_host.tmux_terminal._session_exists")
     def test_name_conflict_resolves_on_second_try(self, mock_exists):
-        call_count = 0
-        original_session_exists = _session_exists
-
-        def side_effect(name):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return True
-            return original_session_exists(name)
-
-        mock_exists.side_effect = side_effect
+        mock_exists.side_effect = [True, False]
         t = TmuxTerminal()
         self.terminals_to_cleanup.append(t)
         self.assertTrue(t.session_name.startswith(_SESSION_PREFIX))

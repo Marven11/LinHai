@@ -14,7 +14,7 @@ from linhai.agent.create import (
 )
 from linhai.agent.main import Agent
 from linhai.config import load_config
-from linhai.jsonpubsub import JsonPublisher, TaggedEvent
+from linhai.utils.jsonpubsub import JsonPublisher, TaggedEvent
 from .schemas import (
     WebuiUserMessage,
     WebuiNotificationMessage,

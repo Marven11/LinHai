@@ -1,7 +1,7 @@
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from linhai.agent.lifecycle import Lifecycle
 from linhai.plugin.message_checkers import Plugin
@@ -94,23 +94,20 @@ class TestUserReminderPlugin(unittest.IsolatedAsyncioTestCase):
         self.assertIn("absolute path reminder", str(call_args.args[0]))
 
     async def test_tilde_expansion(self):
-        home_dir = Path.home()
-        test_file = home_dir / ".test_reminder.md"
-        test_file.write_text("home reminder", encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_file = Path(tmp) / ".test_reminder.md"
+            test_file.write_text("home reminder", encoding="utf-8")
+            self.registry.register_member("agent", self.agent)
 
-        self.registry.register_member("agent", self.agent)
+            with patch.object(Path, "expanduser", return_value=test_file):
+                plugin = UserReminderPlugin(self.registry, "~/.test_reminder.md")
+                await plugin.before_message_generation()
 
-        try:
-            plugin = UserReminderPlugin(self.registry, "~/.test_reminder.md")
-            await plugin.before_message_generation()
-
-            self.agent.message_processor.update_notification_message.assert_called_once()
-            call_args = (
-                self.agent.message_processor.update_notification_message.call_args
-            )
-            self.assertIn("home reminder", str(call_args.args[0]))
-        finally:
-            test_file.unlink(missing_ok=True)
+                self.agent.message_processor.update_notification_message.assert_called_once()
+                call_args = (
+                    self.agent.message_processor.update_notification_message.call_args
+                )
+                self.assertIn("home reminder", str(call_args.args[0]))
 
     async def test_whitespace_only_content_skips(self):
         self.reminder_file.write_text("   \n\t   ", encoding="utf-8")

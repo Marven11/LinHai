@@ -1,7 +1,7 @@
 """测试流式JSON解析器的数组元素编号功能"""
 
 import unittest
-from linhai.streamjson.main import StreamJsonParser, Value
+from linhai.utils.streamjson import StreamJsonParser, Value
 
 
 class TestStreamJsonArrayIndexing(unittest.TestCase):

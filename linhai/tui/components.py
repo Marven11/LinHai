@@ -1,6 +1,5 @@
 """TUI UI components for LinHai agent."""
 
-import asyncio
 import colorsys
 import json
 import re
@@ -20,7 +19,7 @@ from textual.widgets.markdown import MarkdownBlock
 
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.utils.i18n import t
-from linhai.streamjson.main import StreamJsonParser, Value, ValuePiece
+from linhai.utils.streamjson import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
 from linhai.utils.common import parse_and_simplify_toolcall
 
