@@ -3,7 +3,7 @@ import copy
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 
-from linhai.jsonpubsub import JsonPublisher, JsonSubscriber, TaggedEvent
+from linhai.utils.jsonpubsub import JsonPublisher, JsonSubscriber, TaggedEvent
 from linhai.webui.schemas import (
     WebuiUserMessage,
     WebuiNotificationMessage,

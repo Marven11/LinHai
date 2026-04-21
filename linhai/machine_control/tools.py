@@ -409,15 +409,24 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
                 ),
                 type="Optional[float]",
             ),
+            "pty": ToolArgInfo(
+                desc=t(
+                    {
+                        "zh_CN": "是否使用伪终端创建进程，默认为False。启用后进程将拥有完整的PTY环境，适用于需要交互式终端的程序如ssh",
+                        "en": "Whether to create process with a pseudo-terminal, default False. Enables full PTY environment for interactive programs like ssh",
+                    }
+                ),
+                type="bool",
+            ),
         },
         required_args=["argv"],
         conflict_with=None,
     )
     async def process_create_tool(
-        argv: list[str], wait_second: Optional[float] = None
+        argv: list[str], wait_second: Optional[float] = None, pty: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        result = await host_control.create_process(argv, wait_second)
+        result = await host_control.create_process(argv, wait_second, pty=pty)
         if not result.success:
             return ToolResultFailed(content=result.error or "创建进程失败")
         if result.returncode is None:

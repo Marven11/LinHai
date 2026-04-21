@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from starlette.testclient import TestClient
 
-from linhai.jsonpubsub import JsonSubscriber
+from linhai.utils.jsonpubsub import JsonSubscriber
 from linhai.webui import create_app
 from linhai.webui.agent_manager import AgentManager
 from linhai.webui import routes

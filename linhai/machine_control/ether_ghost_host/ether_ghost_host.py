@@ -112,8 +112,10 @@ class EtherGhostMachineControl(HostControl):
         )
 
     async def create_process(
-        self, argv: list[str], wait_second: Optional[float] = None
+        self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
     ) -> ProcessCreateResult:
+        if pty:
+            raise RuntimeError("EtherGhost不支持pty模式")
         if self.session is None:
             return ProcessCreateResult(pid="", success=False, error="Session未初始化")
 

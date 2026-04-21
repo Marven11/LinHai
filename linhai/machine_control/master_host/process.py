@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import select
 import time
 from typing import Awaitable, Callable
 
@@ -151,6 +153,124 @@ class LocalProcess:
             await _read_stream_chunk(self._process.stdout, 0.1, 65536)
         if self._process.stderr is not None:
             await _read_stream_chunk(self._process.stderr, 0.1, 65536)
+        if self._on_exit and not self._exited:
+            self._exited = True
+            await self._on_exit(pid)
+        return ProcessKillResult(pid=pid, success=True, message="进程已终止")
+
+
+class LocalPtyProcess:
+    def __init__(
+        self,
+        process: asyncio.subprocess.Process,
+        master_fd: int,
+        slave_fd: int,
+        on_exit: Callable[[str], Awaitable[None]],
+    ) -> None:
+        self._process = process
+        self._master_fd = master_fd
+        self._slave_fd = slave_fd
+        self._on_exit = on_exit
+        self._exited = False
+
+    @property
+    def pid(self) -> str:
+        return str(self._process.pid)
+
+    @property
+    def returncode(self) -> int | None:
+        return self._process.returncode
+
+    async def stdio_write(self, content: str, with_enter: bool) -> ProcessWriteResult:
+        pid = self.pid
+        if with_enter:
+            content = content + "\n"
+        os.write(self._master_fd, content.encode("utf-8"))
+        return ProcessWriteResult(pid=pid, success=True, message="写入成功")
+
+    async def stdio_read(self, wait_seconds: float) -> ProcessReadResult:
+        pid = self.pid
+        data = b""
+        deadline = time.monotonic() + wait_seconds
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            readable, _, _ = select.select(
+                [self._master_fd], [], [], min(0.1, remaining)
+            )
+            if not readable:
+                continue
+            chunk = os.read(self._master_fd, 4096)
+            if not chunk:
+                break
+            data += chunk
+            if len(data) >= 32768:
+                break
+        exit_note = None
+        if self._process.returncode is not None:
+            exit_note = f"注意：当前程序{pid}已经退出\n"
+        return ProcessReadResult(
+            pid=pid,
+            success=True,
+            stdout=data,
+            stderr=b"",
+            exit_note=exit_note,
+        )
+
+    async def wait(self, timeout: float) -> ProcessWaitResult:
+        pid = self.pid
+        if timeout > 3600:
+            return ProcessWaitResult(
+                pid=pid, success=False, error="超时时间不能超过3600秒"
+            )
+        exited = await _wait_process_exit(self._process, timeout)
+        if not exited:
+            return ProcessWaitResult(
+                pid=pid, success=False, error=f"等待进程 {pid} 超时"
+            )
+        stdout_data = b""
+        deadline = time.monotonic() + 2.0
+        while time.monotonic() < deadline:
+            readable, _, _ = select.select([self._master_fd], [], [], 0.1)
+            if not readable:
+                if self._process.returncode is not None:
+                    break
+                continue
+            chunk = os.read(self._master_fd, 65536)
+            if not chunk:
+                break
+            stdout_data += chunk
+        if self._on_exit and not self._exited:
+            self._exited = True
+            await self._on_exit(pid)
+        return ProcessWaitResult(
+            pid=pid,
+            success=True,
+            returncode=self._process.returncode,
+            stdout=stdout_data.decode("utf-8", errors="replace"),
+            stderr="",
+        )
+
+    def _close_fds(self) -> None:
+        if self._master_fd >= 0:
+            os.close(self._master_fd)
+            self._master_fd = -1
+        if self._slave_fd >= 0:
+            os.close(self._slave_fd)
+            self._slave_fd = -1
+
+    async def kill(self, graceful: bool = True) -> ProcessKillResult:
+        pid = self.pid
+        if graceful:
+            self._process.terminate()
+            exited = await _wait_process_exit(self._process, 5.0)
+            if not exited:
+                self._process.kill()
+                await _wait_process_exit(self._process, 5.0)
+        else:
+            self._process.kill()
+            await _wait_process_exit(self._process, 5.0)
         if self._on_exit and not self._exited:
             self._exited = True
             await self._on_exit(pid)

@@ -294,6 +294,19 @@ class TestProcessTools(unittest.IsolatedAsyncioTestCase):
             "ui_log", unittest.mock.ANY  # CliRuntimeNotice
         )
 
+    def test_process_create_pty_parameter(self):
+        mock_machine_control = Mock()
+        mock_machine_control.machines = {"master_host": Mock()}
+        mock_machine_control.target_machine = "master_host"
+
+        toolset = register_machine_control_tools(mock_machine_control)
+        tool_func = toolset.get_tool("process_create")
+
+        signature = inspect.signature(tool_func)
+        self.assertIn("pty", signature.parameters)
+        param = signature.parameters["pty"]
+        self.assertEqual(param.default, False)
+
 
 if __name__ == "__main__":
     unittest.main()
