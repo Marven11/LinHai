@@ -34,12 +34,23 @@ def _create_agent() -> Agent:
         pinned_messages=[],
     )
     agent.registry = registry
-    registry.get_member_typechecked = MagicMock(return_value=agent)
+
+    umh_mock = MagicMock()
+    umh_mock.has_message = MagicMock(return_value=False)
+    umh_mock.receive_and_dispatch = AsyncMock(return_value=False)
+
+    def _get_member(name, t):
+        if name == "user_message_handler":
+            return umh_mock
+        return agent
+
+    registry.get_member_typechecked = MagicMock(side_effect=_get_member)
+    agent.user_message_handler = umh_mock
     return agent
 
 
 class TestSleepTool(unittest.IsolatedAsyncioTestCase):
-    async def test_sleep_tool_sets_state_and_fields(self):
+    async def test_sleep_tool_waits_and_returns_working(self):
         agent = _create_agent()
         toolset = agent.state_machine.generate_sleep_toolset()
         sleep_fn = toolset.get_tool("sleep")
@@ -48,22 +59,16 @@ class TestSleepTool(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(agent.state_machine.sleeping_since)
         self.assertIsNone(agent.state_machine.sleeping_deadline)
 
-        result = await sleep_fn(seconds=5.0)
+        result = await sleep_fn(seconds=0.1)
 
-        self.assertEqual(agent.state_machine.state, "sleeping")
-        self.assertIsNotNone(agent.state_machine.sleeping_since)
-        self.assertIsNotNone(agent.state_machine.sleeping_deadline)
-
-        expected_deadline = agent.state_machine.sleeping_since + timedelta(seconds=5.0)
-        self.assertAlmostEqual(
-            (agent.state_machine.sleeping_deadline - expected_deadline).total_seconds(),
-            0.0,
-            places=1,
-        )
+        self.assertEqual(agent.state_machine.state, "working")
+        self.assertIsNone(agent.state_machine.sleeping_since)
+        self.assertIsNone(agent.state_machine.sleeping_deadline)
 
         from linhai.tool.base import ToolResultSuccess
 
         self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIn("睡眠完成", result.content)
 
 
 class TestStateSleeping(unittest.IsolatedAsyncioTestCase):
@@ -214,6 +219,44 @@ class TestSleepingUserMessageInterrupt(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(agent.state_machine.state, "working")
         agent.message_processor.add_new_message.assert_called_once()
+
+
+class TestSleepToolTiming(unittest.IsolatedAsyncioTestCase):
+    async def test_second_tool_runs_after_sleep(self):
+        agent = _create_agent()
+        toolset = agent.state_machine.generate_sleep_toolset()
+        sleep_fn = toolset.get_tool("sleep")
+
+        execution_order: list[str] = []
+
+        async def fake_other_tool():
+            execution_order.append("other_tool")
+
+        async def call_tools_concurrently():
+            await sleep_fn(seconds=0.1)
+            execution_order.append("sleep_done")
+
+        task = asyncio.create_task(call_tools_concurrently())
+        await asyncio.sleep(0.01)
+        self.assertEqual(execution_order, [])
+        await task
+        await fake_other_tool()
+
+        self.assertEqual(execution_order, ["sleep_done", "other_tool"])
+
+    async def test_sleep_then_another_tool_sequential(self):
+        agent = _create_agent()
+        toolset = agent.state_machine.generate_sleep_toolset()
+        sleep_fn = toolset.get_tool("sleep")
+
+        execution_order: list[str] = []
+
+        await sleep_fn(seconds=0.1)
+        execution_order.append("after_sleep")
+        execution_order.append("other_tool")
+
+        self.assertEqual(execution_order, ["after_sleep", "other_tool"])
+        self.assertEqual(agent.state_machine.state, "working")
 
 
 class TestAgentStateType(unittest.TestCase):

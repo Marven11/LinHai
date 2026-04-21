@@ -1,7 +1,7 @@
 import unittest
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from linhai.agent.state_machine import AgentStateMachine
 from linhai.registry import Registry
@@ -10,6 +10,12 @@ from linhai.registry import Registry
 def _create_sm() -> AgentStateMachine:
     registry = MagicMock(spec=Registry)
     registry.register_member = MagicMock()
+    registry.get_member_typechecked = MagicMock(
+        return_value=MagicMock(
+            has_message=MagicMock(return_value=False),
+            receive_and_dispatch=AsyncMock(return_value=False),
+        )
+    )
     return AgentStateMachine(registry)
 
 
@@ -124,29 +130,23 @@ class TestFinishSleeping(unittest.TestCase):
 
 
 class TestGenerateSleepToolset(unittest.IsolatedAsyncioTestCase):
-    async def test_sleep_tool_sets_sleeping_state(self):
+    async def test_sleep_tool_waits_then_returns_working(self):
         sm = _create_sm()
         toolset = sm.generate_sleep_toolset()
         sleep_fn = toolset.get_tool("sleep")
 
         self.assertEqual(sm.state, "waiting_user")
 
-        result = await sleep_fn(seconds=5.0)
+        result = await sleep_fn(seconds=0.1)
 
-        self.assertEqual(sm.state, "sleeping")
-        self.assertIsNotNone(sm.sleeping_since)
-        self.assertIsNotNone(sm.sleeping_deadline)
-
-        expected_deadline = sm.sleeping_since + timedelta(seconds=5.0)
-        self.assertAlmostEqual(
-            (sm.sleeping_deadline - expected_deadline).total_seconds(),
-            0.0,
-            places=1,
-        )
+        self.assertEqual(sm.state, "working")
+        self.assertIsNone(sm.sleeping_since)
+        self.assertIsNone(sm.sleeping_deadline)
 
         from linhai.tool.base import ToolResultSuccess
 
         self.assertIsInstance(result, ToolResultSuccess)
+        self.assertIn("睡眠完成", result.content)
 
 
 if __name__ == "__main__":

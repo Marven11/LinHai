@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from linhai.registry import Registry
@@ -40,6 +41,34 @@ class AgentStateMachine:
         self.sleeping_deadline = None
         self.state = "working"
 
+    async def execute_sleep(self) -> str:
+        from .user_message_handler import UserMessageHandler
+
+        user_message_handler = self.registry.get_member_typechecked(
+            "user_message_handler", UserMessageHandler
+        )
+        assert self.sleeping_since is not None
+        assert self.sleeping_deadline is not None
+
+        while True:
+            if self.state != "sleeping":
+                return f"睡眠被中断，从 {self.sleeping_since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
+            if user_message_handler.has_message():
+                should_interrupt = await user_message_handler.receive_and_dispatch()
+                if should_interrupt:
+                    self.finish_sleeping()
+                    return f"睡眠被用户消息打断，从 {self.sleeping_since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
+            now = datetime.now()
+            if now >= self.sleeping_deadline:
+                break
+            remaining = (self.sleeping_deadline - now).total_seconds()
+            sleep_time = min(1.0, remaining)
+            await asyncio.sleep(sleep_time)
+
+        since = self.sleeping_since
+        self.finish_sleeping()
+        return f"睡眠完成，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
     def generate_sleep_toolset(self) -> ToolSet:
         state_machine = self
         sleep_toolset = ToolSet()
@@ -65,8 +94,7 @@ class AgentStateMachine:
             state_machine.transition_to_sleeping(
                 start, start + timedelta(seconds=seconds)
             )
-            return ToolResultSuccess(
-                content=f"开始睡眠{seconds}秒，从 {start.strftime('%Y-%m-%d %H:%M:%S')}"
-            )
+            result = await state_machine.execute_sleep()
+            return ToolResultSuccess(content=result)
 
         return sleep_toolset
