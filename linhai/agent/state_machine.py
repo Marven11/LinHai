@@ -50,22 +50,24 @@ class AgentStateMachine:
         assert self.sleeping_since is not None
         assert self.sleeping_deadline is not None
 
+        since = self.sleeping_since
+        deadline = self.sleeping_deadline
+
         while True:
             if self.state != "sleeping":
-                return f"睡眠被中断，从 {self.sleeping_since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
+                return f"睡眠被中断，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
             if user_message_handler.has_message():
                 should_interrupt = await user_message_handler.receive_and_dispatch()
                 if should_interrupt:
                     self.finish_sleeping()
-                    return f"睡眠被用户消息打断，从 {self.sleeping_since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
+                    return f"睡眠被用户消息打断，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 开始"
             now = datetime.now()
-            if now >= self.sleeping_deadline:
+            if now >= deadline:
                 break
-            remaining = (self.sleeping_deadline - now).total_seconds()
+            remaining = (deadline - now).total_seconds()
             sleep_time = min(1.0, remaining)
             await asyncio.sleep(sleep_time)
 
-        since = self.sleeping_since
         self.finish_sleeping()
         return f"睡眠完成，从 {since.strftime('%Y-%m-%d %H:%M:%S')} 到 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
