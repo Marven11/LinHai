@@ -10,6 +10,14 @@ from linhai.machine_control.process import Process, ProcessCreateResult
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
+from .file import (
+    read_file as _read_file,
+    write_file as _write_file,
+    replace_file_content as _replace_file_content,
+    list_files as _list_files,
+    get_absolute_path as _get_absolute_path,
+    read_file_with_sed as _read_file_with_sed,
+)
 from .process import BashProcess
 
 
@@ -27,6 +35,10 @@ class BashHostControl:
         self._counter: int = 0
         self._timeout_mode: str = "builtin"
         self._processes: dict[str, BashProcess] = {}
+
+    def make_temp_path(self, prefix: str) -> str:
+        self._counter += 1
+        return f"{self._tmp_dir}/{prefix}_{self._counter}"
 
     def _next_marker(self) -> str:
         self._counter += 1
@@ -269,30 +281,30 @@ class BashHostControl:
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
     ) -> ToolResultSuccess | ToolResultFailed | FileContentMessage:
-        raise NotImplementedError("read_file尚未在bash控制中实现")
+        return await _read_file(self, filepath, show_line_numbers)
 
     async def write_file(
         self, filepath: str, content: str, override: bool = False
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("write_file尚未在bash控制中实现")
+        return await _write_file(self, filepath, content, override)
 
     async def replace_file_content(
         self, filepath: str, old: str, new: str, replace_times: Optional[int] = None
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("replace_file_content尚未在bash控制中实现")
+        return await _replace_file_content(self, filepath, old, new, replace_times)
 
     async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("list_files尚未在bash控制中实现")
+        return await _list_files(self, dirpath)
 
     async def get_absolute_path(
         self, path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("get_absolute_path尚未在bash控制中实现")
+        return await _get_absolute_path(self, path)
 
     async def read_file_with_sed(
         self, expression: str, filepath: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("read_file_with_sed尚未在bash控制中实现")
+        return await _read_file_with_sed(self, expression, filepath)
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
         raise NotImplementedError("get_terminals尚未在bash控制中实现")
