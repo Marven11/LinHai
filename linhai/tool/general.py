@@ -66,7 +66,8 @@ def _download_with_selenium(url: str) -> str:
 def _download_with_httpx(url: str) -> str:
     """使用httpx下载网页内容"""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "text/markdown, text/html, */*",
     }
     try:
         with httpx.Client(timeout=30.0, follow_redirects=True) as client:
