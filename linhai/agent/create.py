@@ -610,6 +610,7 @@ def _register_sandbox(
 def _register_default_plugins(lifecycle):
     """注册默认的Plugin。"""
     from linhai.plugin import (
+        WaitingUserReminderPlugin,
         WrongEndPlugin,
         SlowStartPlugin,
         WeirdTokenPlugin,
@@ -640,6 +641,7 @@ def _register_default_plugins(lifecycle):
     from .orchestration import RedStateToolBlockPlugin, NotificationMessagePlugin
 
     plugins = [
+        WaitingUserReminderPlugin(lifecycle.registry),
         WrongEndPlugin(lifecycle.registry),
         SlowStartPlugin(lifecycle.registry),
         WeirdTokenPlugin(lifecycle.registry),

@@ -3,6 +3,7 @@
 from .message_checkers import Plugin
 from .message_checkers import (
     WaitingUserPlugin,
+    WaitingUserReminderPlugin,
     WrongEndPlugin,
     EndThinkPlugin,
     OnlyReasoningPlugin,
@@ -64,6 +65,7 @@ from .helpers import (
 __all__ = [
     "Plugin",
     "WaitingUserPlugin",
+    "WaitingUserReminderPlugin",
     "WrongEndPlugin",
     "EndThinkPlugin",
     "OnlyReasoningPlugin",

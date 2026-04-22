@@ -651,6 +651,42 @@ class MisplacedToolCallPlugin(Plugin):
         lifecycle.after_message_generation.register(self.after_message_generation)
 
 
+class WaitingUserReminderPlugin(Plugin):
+
+    REMINDER_THRESHOLD = 10
+    REMINDER_MESSAGE = (
+        f"注意：你应该在消息的末尾使用{WAITING_USER_MARKER!r}以停下等待用户，"
+        "除非你还需要继续调用工具"
+    )
+
+    def __init__(self, registry: Registry):
+        super().__init__(registry)
+        self._message_count = 0
+
+    async def before_message_generation(self) -> None:
+        agent = self.registry.members.get("agent")
+        if agent is None:
+            return
+
+        if self._message_count < self.REMINDER_THRESHOLD:
+            agent.message_processor.update_notification_message(
+                RuntimeMessage(self.REMINDER_MESSAGE),
+                source="waiting_user_reminder",
+                sort_value=800,
+            )
+        else:
+            agent.message_processor.update_notification_message(
+                None, source="waiting_user_reminder", sort_value=800
+            )
+
+    async def after_message_generation(self, parsed_answer, full_response, tool_calls):
+        self._message_count += 1
+
+    def register(self, lifecycle: "Lifecycle"):
+        lifecycle.before_message_generation.register(self.before_message_generation)
+        lifecycle.after_message_generation.register(self.after_message_generation)
+
+
 class GlmInsultMaskPlugin(Plugin):
     """GLM脏话检查插件，屏蔽脏话为拼音。"""
 
