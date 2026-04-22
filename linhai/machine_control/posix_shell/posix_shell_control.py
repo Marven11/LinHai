@@ -8,7 +8,7 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from ..trojan.transport import TrojanTransport
 from ..trojan.shell_transport import setup_trojan_in_shell
 from .process import RemoteProcess
-from ..process import Process, ProcessCreateResult
+from ..process import Process, ProcessCreateResult, ProcessCreateInfo
 
 
 class PosixShellControl:
@@ -19,6 +19,7 @@ class PosixShellControl:
         port: int = 22,
     ):
         self.registry = registry
+        self._machine_id: str = ""
         self._host = host
         self._port = port
         self.registry = registry
@@ -138,8 +139,26 @@ class PosixShellControl:
 
         rp = RemoteProcess(pid, self)
         self._processes[pid] = rp
+        await self._notify_process_created(pid, argv)
         return ProcessCreateResult(
             pid=pid, success=True, returncode=None, message=data.get("message", "")
+        )
+
+    async def _notify_process_created(self, pid: str, argv: list[str]) -> None:
+        if "lifecycle" not in self.registry.members:
+            return
+        from linhai.agent.lifecycle import Lifecycle
+
+        process = self.get_process(pid)
+        if process is None:
+            return
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        await lifecycle.after_process_create.trigger(
+            ProcessCreateInfo(
+                process=process,
+                argv=argv,
+                machine_id=self._machine_id,
+            )
         )
 
     def get_process(self, pid: str) -> Process | None:

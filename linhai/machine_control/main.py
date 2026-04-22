@@ -11,7 +11,7 @@ from .master_host.master_host import MasterHostControl
 from .posix_shell.posix_shell_control import PosixShellControl
 from .bash_host.bash_host import BashHostControl
 from .plugin import MachineControlPlugin, MachineHeartbeatPlugin
-from .process import Process
+from .process import Process, ProcessCreateInfo
 
 
 class _StoredProcessInfo(TypedDict):
@@ -145,6 +145,7 @@ class MachineControl:
             return ToolResultFailed(content=f"连接posix shell进程失败: PID {pid}")
 
         self.machines[machine_id] = shell_control
+        shell_control._machine_id = machine_id
         self.source_machines[machine_id] = source_machine_id
         self.machine_descriptions[machine_id] = (
             f"Posix shell进程主机 (PID: {pid}, 来自: {source_machine_id})"
@@ -175,6 +176,7 @@ class MachineControl:
             return ToolResultFailed(content=f"Bash控制连接失败: PID {pid}")
 
         self.machines[machine_id] = bash_control
+        bash_control._machine_id = machine_id
         self.source_machines[machine_id] = source_machine_id
         self.machine_descriptions[machine_id] = (
             f"Bash shell主机 (PID: {pid}, 来自: {source_machine_id})"
@@ -228,6 +230,7 @@ class MachineControl:
             return ToolResultFailed(content=f"连接远程机器失败: {name}")
 
         self.machines[name] = shell_control
+        shell_control._machine_id = name
         self.source_machines[name] = self.target_machine
         desc = config.description or f"远程机器 ({name})"
         self.machine_descriptions[name] = desc
@@ -429,3 +432,8 @@ class MachineControl:
         plugin.register(lifecycle)
         heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
         heartbeat_plugin.register(lifecycle)
+
+        async def _on_process_create(info: "ProcessCreateInfo") -> None:
+            self.store_process_info(info.process.pid, info.machine_id, info.argv)
+
+        lifecycle.after_process_create.register(_on_process_create)

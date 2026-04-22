@@ -13,7 +13,11 @@ from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.agent.messages import FileContentMessage
 from linhai.registry import Registry
 from linhai.sandbox import ProcessSandboxProtocol
-from linhai.machine_control.process import Process, ProcessCreateResult
+from linhai.machine_control.process import (
+    Process,
+    ProcessCreateResult,
+    ProcessCreateInfo,
+)
 
 from .http import http_request
 from .terminal import (
@@ -43,6 +47,7 @@ class MasterHostControl:
 
     def __init__(self, registry: Registry, tmux_terminal: bool = True):
         self._registry = registry
+        self._machine_id = "master_host"
         self._cwd = os.getcwd()
         self._processes: dict[str, LocalProcess | LocalPtyProcess] = {}
         configure_terminals(tmux_terminal)
@@ -87,6 +92,23 @@ class MasterHostControl:
             verify,
         )
 
+    async def _notify_process_created(self, pid: str, argv: list[str]) -> None:
+        if "lifecycle" not in self._registry.members:
+            return
+        from linhai.agent.lifecycle import Lifecycle
+
+        process = self.get_process(pid)
+        if process is None:
+            return
+        lifecycle = self._registry.get_member_typechecked("lifecycle", Lifecycle)
+        await lifecycle.after_process_create.trigger(
+            ProcessCreateInfo(
+                process=process,
+                argv=argv,
+                machine_id=self._machine_id,
+            )
+        )
+
     async def create_process(
         self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
     ) -> ProcessCreateResult:
@@ -111,6 +133,7 @@ class MasterHostControl:
                     subprocess, master_fd, slave_fd, on_exit=self._handle_process_exit
                 )
                 self._processes[pid] = lp
+                await self._notify_process_created(pid, argv)
                 if wait_second is None:
                     wait_second = 1.0
                 start = time.perf_counter()
@@ -145,6 +168,7 @@ class MasterHostControl:
             pid = str(subprocess.pid)
             lp = LocalProcess(subprocess, on_exit=self._handle_process_exit)
             self._processes[pid] = lp
+            await self._notify_process_created(pid, argv)
 
             if wait_second is None:
                 wait_second = 1.0

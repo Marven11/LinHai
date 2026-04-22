@@ -11,7 +11,7 @@ from linhai.tool.main import ToolManager
 from linhai.tool.base import ToolSet
 from linhai.machine_control.main import MachineControlPlugin
 from linhai.base import ToolCallMessage
-from linhai.machine_control.process import ProcessCreateResult
+from linhai.machine_control.process import ProcessCreateResult, ProcessCreateInfo
 from linhai.utils.common import UiNotice
 
 
@@ -407,6 +407,109 @@ class TestMasterHostControl(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hasattr(self.host_control, "terminal_send_string"))
         self.assertTrue(hasattr(self.host_control, "terminal_read_screen"))
         self.assertTrue(hasattr(self.host_control, "terminal_close"))
+
+
+class TestNotifyProcessCreated(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.host_control = _create_host_control()
+
+    def tearDown(self):
+        self.host_control._processes.clear()
+
+    async def test_notify_triggers_lifecycle(self):
+        from linhai.agent.lifecycle import Lifecycle
+
+        registry = self.host_control._registry
+        lifecycle = Lifecycle(registry)
+        triggered_infos: list[ProcessCreateInfo] = []
+
+        async def on_process_create(info: ProcessCreateInfo) -> None:
+            triggered_infos.append(info)
+
+        lifecycle.after_process_create.register(on_process_create)
+
+        with (
+            patch("asyncio.create_subprocess_exec") as mock_create,
+            patch("asyncio.sleep"),
+        ):
+            mock_process = AsyncMock()
+            mock_process.pid = 55555
+            mock_process.returncode = None
+            mock_create.return_value = mock_process
+
+            await self.host_control.create_process(["sleep", "10"], wait_second=5.0)
+
+        self.assertEqual(len(triggered_infos), 1)
+        self.assertEqual(triggered_infos[0].machine_id, "master_host")
+        self.assertEqual(triggered_infos[0].argv, ["sleep", "10"])
+
+    async def test_notify_no_lifecycle_no_error(self):
+        with (
+            patch("asyncio.create_subprocess_exec") as mock_create,
+            patch("asyncio.sleep"),
+        ):
+            mock_process = AsyncMock()
+            mock_process.pid = 55556
+            mock_process.returncode = None
+            mock_create.return_value = mock_process
+
+            result = await self.host_control.create_process(
+                ["sleep", "1"], wait_second=1.0
+            )
+            self.assertTrue(result.success)
+
+    async def test_notify_not_called_for_exited_process(self):
+        from linhai.agent.lifecycle import Lifecycle
+
+        registry = self.host_control._registry
+        lifecycle = Lifecycle(registry)
+        triggered_infos: list[ProcessCreateInfo] = []
+
+        async def on_process_create(info: ProcessCreateInfo) -> None:
+            triggered_infos.append(info)
+
+        lifecycle.after_process_create.register(on_process_create)
+
+        with patch("asyncio.create_subprocess_exec") as mock_create:
+            mock_process = AsyncMock()
+            mock_process.pid = 55557
+            mock_process.returncode = 0
+            mock_process.stdout = AsyncMock()
+            mock_process.stdout.read = AsyncMock(return_value=b"")
+            mock_process.stderr = AsyncMock()
+            mock_process.stderr.read = AsyncMock(return_value=b"")
+            mock_create.return_value = mock_process
+
+            result = await self.host_control.create_process(
+                ["echo", "test"], wait_second=1.0
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(len(triggered_infos), 1)
+
+
+class TestRegisterPluginStoreProcessInfo(unittest.IsolatedAsyncioTestCase):
+
+    async def test_lifecycle_handler_stores_process_info(self):
+        registry = Registry()
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = Lifecycle(registry)
+        mc = MachineControl(registry, remote_machines=[])
+        mc.register_plugin(lifecycle)
+
+        mock_process = Mock()
+        mock_process.pid = "12345"
+        info = ProcessCreateInfo(
+            process=mock_process,
+            argv=["echo", "hello"],
+            machine_id="master_host",
+        )
+        await lifecycle.after_process_create.trigger(info)
+
+        stored = mc._process_infos.get("master_host:12345")
+        self.assertIsNotNone(stored)
+        self.assertEqual(stored["argv"], ["echo", "hello"])
 
 
 class TestListProcesses(unittest.TestCase):

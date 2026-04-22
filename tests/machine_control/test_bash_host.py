@@ -160,6 +160,7 @@ class TestBashHostControlProcessMgmt(unittest.TestCase):
         self.registry = Mock(spec=Registry)
         self.registry.send_if_exists = AsyncMock()
         self.registry.has_member = Mock(return_value=False)
+        self.registry.members = {}
         self.control = BashHostControl(registry=self.registry)
 
     def tearDown(self):

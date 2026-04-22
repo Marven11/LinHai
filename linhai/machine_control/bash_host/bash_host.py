@@ -6,7 +6,11 @@ from typing import Any, Dict, Optional, Union
 
 from linhai.agent.messages import FileContentMessage
 from linhai.machine_control.http_message import HttpMessage
-from linhai.machine_control.process import Process, ProcessCreateResult
+from linhai.machine_control.process import (
+    Process,
+    ProcessCreateResult,
+    ProcessCreateInfo,
+)
 from linhai.registry import Registry
 from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 from linhai.utils.common import UiNotice
@@ -29,6 +33,7 @@ class BashHostControl:
 
     def __init__(self, registry: Registry) -> None:
         self.registry = registry
+        self._machine_id: str = ""
         self._shell_process: Optional[Process] = None
         self._tmp_dir: str = ""
         self._encoding: str = "utf-8"
@@ -226,6 +231,7 @@ class BashHostControl:
 
         proc = BashProcess(pid=pid, proc_dir=proc_dir, host=self)
         self._processes[pid] = proc
+        await self._notify_process_created(pid, argv)
 
         effective_wait = wait_second if wait_second is not None else 1.0
         if effective_wait > 0:
@@ -249,6 +255,23 @@ class BashHostControl:
                 )
 
         return ProcessCreateResult(pid=pid, success=True, returncode=None)
+
+    async def _notify_process_created(self, pid: str, argv: list[str]) -> None:
+        if "lifecycle" not in self.registry.members:
+            return
+        from linhai.agent.lifecycle import Lifecycle
+
+        process = self.get_process(pid)
+        if process is None:
+            return
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        await lifecycle.after_process_create.trigger(
+            ProcessCreateInfo(
+                process=process,
+                argv=argv,
+                machine_id=self._machine_id,
+            )
+        )
 
     def get_process(self, pid: str) -> Process | None:
         return self._processes.get(pid)
