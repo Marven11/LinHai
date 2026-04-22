@@ -23,6 +23,7 @@ from .file import (
     read_file_with_sed as _read_file_with_sed,
 )
 from .process import BashProcess
+from . import terminal as _terminal
 
 
 class BashHostControl:
@@ -279,27 +280,29 @@ class BashHostControl:
     async def terminal_create(
         self, columns: int = 80, lines: int = 24
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("terminal_create尚未在bash控制中实现")
+        return await _terminal.terminal_create(self, columns, lines)
 
     async def terminal_send_keys(
         self, terminal_id: str, keys: list[str]
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("terminal_send_keys尚未在bash控制中实现")
+        return await _terminal.terminal_send_keys(self, terminal_id, keys)
 
     async def terminal_send_string(
         self, terminal_id: str, string: str, with_enter: bool, wait_seconds: float = 0.3
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("terminal_send_string尚未在bash控制中实现")
+        return await _terminal.terminal_send_string(
+            self, terminal_id, string, with_enter, wait_seconds
+        )
 
     async def terminal_read_screen(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("terminal_read_screen尚未在bash控制中实现")
+        return await _terminal.terminal_read_screen(self, terminal_id)
 
     async def terminal_close(
         self, terminal_id: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("terminal_close尚未在bash控制中实现")
+        return await _terminal.terminal_close(self, terminal_id)
 
     async def read_file(
         self, filepath: str, show_line_numbers: bool = False
@@ -330,7 +333,7 @@ class BashHostControl:
         return await _read_file_with_sed(self, expression, filepath)
 
     async def get_terminals(self) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("get_terminals尚未在bash控制中实现")
+        return await _terminal.get_terminals(self, self._machine_id)
 
     def list_process_pids(self) -> list[str]:
         return list(self._processes.keys())
