@@ -11,8 +11,6 @@ from .schemas import (
     AgentInfo,
     AgentListResponse,
     WsStateChangeEvent,
-    ContextStatsResponse,
-    TokenUsageInfo,
     PlanningFileResponse,
     ConfigResponse,
     ProfileInfo,
@@ -223,6 +221,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
             session.sync_processes()
             session.sync_status_bar()
+            session.sync_context()
 
             for event in events:
                 await websocket.send_json(event)
@@ -231,29 +230,6 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 await asyncio.sleep(0.1 - elapsed)
 
         tg.cancel_scope.cancel()
-
-
-@router.get("/{agent_id}/context", response_model=ContextStatsResponse)
-async def get_agent_context(agent_id: str):
-    manager = get_manager()
-    session = manager.get_agent(agent_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Agent不存在")
-    stats = session.get_context_stats()
-    cumulative = None
-    if stats["cumulative_token_usage"] is not None:
-        cumulative = TokenUsageInfo(**stats["cumulative_token_usage"])
-    return ContextStatsResponse(
-        message_count=stats["message_count"],
-        pinned_message_count=stats["pinned_message_count"],
-        notification_count=stats["notification_count"],
-        large_message_count=stats["large_message_count"],
-        traffic_light=stats["traffic_light"],
-        context_usage_ratio=stats["context_usage_ratio"],
-        is_dirty=stats["is_dirty"],
-        cumulative_token_usage=cumulative,
-        generation_count=stats["generation_count"],
-    )
 
 
 @router.get("/{agent_id}/planning", response_model=PlanningFileResponse)

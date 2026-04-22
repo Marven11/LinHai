@@ -37,7 +37,12 @@ class AgentSession:
         self._task_name = task_name
         self._manager = manager
         self.created_at = datetime.now()
-        self._data: dict = {"messages": [], "processes": [], "status_bar": []}
+        self._data: dict = {
+            "messages": [],
+            "processes": [],
+            "status_bar": [],
+            "context": {},
+        }
         self._publisher = JsonPublisher(self._data)
         self._lock = asyncio.Lock()
 
@@ -97,74 +102,78 @@ class AgentSession:
         async with self._lock:
             return self._publisher.reset()
 
-    def get_context_stats(self) -> dict:
+    def sync_context(self) -> None:
+        from linhai.context_statistics import (
+            compute_context_statistics,
+            compute_notification_details,
+        )
+        from linhai.agent.orchestration import (
+            AgentContextOrchestration,
+            get_cleanable_large_messages,
+            check_cleanable_threshold,
+        )
+
         agent = self.agent
-        mp = agent.message_processor
         registry = self.registry
+        mp = agent.message_processor
+        messages = mp.messages
+        pinned_messages = mp.pinned_messages
+        notification_entries = list(
+            entry["message"] for entry in mp.notification_messages.values()
+        )
 
         threshold_info = agent.get_threshold_info()
-        usage_ratio = None
-        traffic_light = "绿灯"
-        if threshold_info is not None:
-            usage_ratio = threshold_info["usage_ratio"]
-            percentage = usage_ratio * 100
-            if percentage < 80:
-                traffic_light = "绿灯"
-            elif percentage < 90:
-                traffic_light = "黄灯"
-            else:
-                traffic_light = "红灯"
+        _, current_llm = agent.get_current_llm_info()
+        token_limit = current_llm.get_token_limit()
 
-        is_dirty = False
-        large_message_count = 0
+        current_token_usage = None
+        generation_count = None
+        cumulative_token_usage = None
+
         if registry.has_member("token_manager"):
-            from linhai.token_manager import TokenManager
-
             token_manager = registry.get_member_typechecked(
                 "token_manager", TokenManager
             )
-            is_dirty = token_manager.is_dirty
+            current_token_usage = token_manager.current_token_usage
+            generation_count = token_manager.generation_count
+            cumulative_token_usage = token_manager.cumulative_token_usage
 
+        large_message_count = 0
+        cleanable_count = 0
+        cleanable_tokens = 0
+        can_clean = False
         if registry.has_member("agent_context_orchestration"):
-            from linhai.agent.orchestration import AgentContextOrchestration
-
             orchestration = registry.get_member_typechecked(
                 "agent_context_orchestration", AgentContextOrchestration
             )
             large_message_count = len(orchestration.large_messages)
-
-        cumulative_usage = None
-        generation_count = 0
-        if registry.has_member("token_manager"):
-            from linhai.token_manager import TokenManager
-
-            token_manager = registry.get_member_typechecked(
-                "token_manager", TokenManager
+            cleanable_messages = get_cleanable_large_messages(
+                orchestration.large_messages,
+                orchestration.agent_message,
+                cleaned_messages_dict=orchestration.cleaned_messages,
             )
-            generation_count = token_manager.generation_count
-            if token_manager.cumulative_token_usage is not None:
-                cu = token_manager.cumulative_token_usage
-                cumulative_usage = {
-                    "input_tokens": cu["input_tokens"],
-                    "output_tokens": cu["output_tokens"],
-                    "total_tokens": cu["total_tokens"],
-                    "cached_input_tokens": cu["cached_input_tokens"],
-                    "cache_creation_input_tokens": cu["cache_creation_input_tokens"],
-                    "message_count": cu["message_count"],
-                    "cache_miss_count": cu["cache_miss_count"],
-                }
+            can_clean, cleanable_count, cleanable_tokens = check_cleanable_threshold(
+                cleanable_messages
+            )
 
-        return {
-            "message_count": mp.get_message_count(),
-            "pinned_message_count": len(mp.pinned_messages),
-            "notification_count": len(mp.notification_messages),
-            "large_message_count": large_message_count,
-            "traffic_light": traffic_light,
-            "context_usage_ratio": usage_ratio,
-            "is_dirty": is_dirty,
-            "cumulative_token_usage": cumulative_usage,
-            "generation_count": generation_count,
-        }
+        notification_details = compute_notification_details(mp.notification_messages)
+
+        stats = compute_context_statistics(
+            messages=messages,
+            pinned_messages=pinned_messages,
+            notification_entries=notification_entries,
+            notification_details=notification_details,
+            large_message_count=large_message_count,
+            cleanable_large_message_count=cleanable_count,
+            cleanable_large_message_tokens=cleanable_tokens,
+            can_clean_large_messages=can_clean,
+            threshold_info=threshold_info,
+            token_limit=token_limit,
+            generation_count=generation_count,
+            current_token_usage=current_token_usage,
+            cumulative_token_usage=cumulative_token_usage,
+        )
+        self._data["context"] = stats
 
     def get_planning_files(self) -> dict[str, str | None]:
         from pathlib import Path

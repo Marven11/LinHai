@@ -294,7 +294,7 @@ class TestAgentSessionPubSubIntegration(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[0]["event"]["action"], "replace")
         self.assertEqual(
             events[0]["event"]["value"],
-            {"messages": [], "processes": [], "status_bar": []},
+            {"messages": [], "processes": [], "status_bar": [], "context": {}},
         )
 
     async def test_diff_after_add_returns_events(self):

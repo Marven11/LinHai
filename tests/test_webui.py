@@ -280,36 +280,6 @@ class TestPlainTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
 
 class TestNewSchemasContextPlanning(unittest.TestCase):
-    def test_token_usage_info(self):
-        from linhai.webui.schemas import TokenUsageInfo
-
-        info = TokenUsageInfo(
-            input_tokens=100,
-            output_tokens=50,
-            total_tokens=150,
-            cached_input_tokens=80,
-            cache_creation_input_tokens=10,
-            message_count=5,
-            cache_miss_count=1,
-        )
-        self.assertEqual(info.input_tokens, 100)
-        self.assertEqual(info.message_count, 5)
-
-    def test_context_stats_response(self):
-        from linhai.webui.schemas import ContextStatsResponse
-
-        resp = ContextStatsResponse(
-            message_count=10,
-            pinned_message_count=2,
-            notification_count=1,
-            large_message_count=0,
-            traffic_light="绿灯",
-            is_dirty=False,
-            generation_count=3,
-        )
-        self.assertEqual(resp.message_count, 10)
-        self.assertIsNone(resp.cumulative_token_usage)
-
     def test_planning_file_response(self):
         from linhai.webui.schemas import PlanningFileResponse
 
@@ -328,7 +298,7 @@ class TestNewSchemasContextPlanning(unittest.TestCase):
         self.assertEqual(resp.llms[0].model, "gpt-4")
 
 
-class TestAgentSessionContextStats(unittest.TestCase):
+class TestAgentSessionSyncContext(unittest.TestCase):
     def _make_session(self, agent_mock=None, registry_mock=None):
         if agent_mock is None:
             agent_mock = MagicMock()
@@ -343,57 +313,60 @@ class TestAgentSessionContextStats(unittest.TestCase):
             manager=manager,
         )
 
-    def test_get_context_stats_basic(self):
+    def _setup_basic_agent(self):
         mock_agent = MagicMock()
         mock_agent.get_threshold_info.return_value = None
+        mock_llm = MagicMock()
+        mock_llm.get_token_limit.return_value = 128000
+        mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         mock_mp = MagicMock()
-        mock_mp.get_message_count.return_value = 5
-        mock_mp.pinned_messages = [MagicMock()]
-        mock_mp.notification_messages = {}
-        mock_agent.message_processor = mock_mp
-        mock_registry = MagicMock()
-        mock_registry.has_member.return_value = False
-
-        session = self._make_session(mock_agent, mock_registry)
-        stats = session.get_context_stats()
-
-        self.assertEqual(stats["message_count"], 5)
-        self.assertEqual(stats["pinned_message_count"], 1)
-        self.assertEqual(stats["traffic_light"], "绿灯")
-        self.assertFalse(stats["is_dirty"])
-
-    def test_get_context_stats_yellow_light(self):
-        mock_agent = MagicMock()
-        mock_agent.get_threshold_info.return_value = {"usage_ratio": 0.85}
-        mock_mp = MagicMock()
-        mock_mp.get_message_count.return_value = 10
+        mock_mp.messages = []
         mock_mp.pinned_messages = []
         mock_mp.notification_messages = {}
         mock_agent.message_processor = mock_mp
         mock_registry = MagicMock()
         mock_registry.has_member.return_value = False
+        return mock_agent, mock_registry
 
+    def test_sync_context_basic(self):
+        mock_agent, mock_registry = self._setup_basic_agent()
         session = self._make_session(mock_agent, mock_registry)
-        stats = session.get_context_stats()
+        session.sync_context()
+        ctx = session._data["context"]
+        self.assertIn("messages", ctx)
+        self.assertIn("pinned_messages", ctx)
+        self.assertIn("notification_messages", ctx)
+        self.assertEqual(ctx["large_message_count"], 0)
 
-        self.assertEqual(stats["traffic_light"], "黄灯")
-        self.assertEqual(stats["context_usage_ratio"], 0.85)
-
-    def test_get_context_stats_red_light(self):
-        mock_agent = MagicMock()
-        mock_agent.get_threshold_info.return_value = {"usage_ratio": 0.95}
-        mock_mp = MagicMock()
-        mock_mp.get_message_count.return_value = 10
-        mock_mp.pinned_messages = []
-        mock_mp.notification_messages = {}
-        mock_agent.message_processor = mock_mp
-        mock_registry = MagicMock()
-        mock_registry.has_member.return_value = False
-
+    def test_sync_context_with_threshold(self):
+        mock_agent, mock_registry = self._setup_basic_agent()
+        mock_agent.get_threshold_info.return_value = {
+            "usage_ratio": 0.85,
+            "hard_limit": 100000,
+            "used_tokens": 85000,
+        }
         session = self._make_session(mock_agent, mock_registry)
-        stats = session.get_context_stats()
+        session.sync_context()
+        ctx = session._data["context"]
+        self.assertEqual(ctx["hard_limit"], 100000)
+        self.assertEqual(ctx["used_tokens"], 85000)
 
-        self.assertEqual(stats["traffic_light"], "红灯")
+    def test_sync_context_updates_data(self):
+        mock_agent, mock_registry = self._setup_basic_agent()
+        session = self._make_session(mock_agent, mock_registry)
+        self.assertEqual(session._data["context"], {})
+        session.sync_context()
+        self.assertNotEqual(session._data["context"], {})
+
+    def test_sync_context_no_diff_after_same_data(self):
+        mock_agent, mock_registry = self._setup_basic_agent()
+        session = self._make_session(mock_agent, mock_registry)
+        session.sync_context()
+        events1 = session._publisher.calculate_diff()
+        self.assertTrue(len(events1) > 0)
+        session.sync_context()
+        events2 = session._publisher.calculate_diff()
+        self.assertEqual(len(events2), 0)
 
     def test_get_planning_files_no_planning(self):
         mock_registry = MagicMock()
@@ -579,7 +552,7 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
             json={"claw_enabled": True, "claw_folder": "/nonexistent/path"},
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("CLAW目录不存在", response.json()["detail"])
+        self.assertIn("CLAW\u76ee\u5f55\u4e0d\u5b58\u5728", response.json()["detail"])
 
     def test_invalid_file_returns_400(self):
         response = self.client.post(
@@ -587,7 +560,7 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
             json={"file": ["/nonexistent/file.txt"]},
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("文件不存在", response.json()["detail"])
+        self.assertIn("\u6587\u4ef6\u4e0d\u5b58\u5728", response.json()["detail"])
 
     def test_invalid_checklist_path_returns_400(self):
         response = self.client.post(
@@ -595,7 +568,10 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
             json={"checklist_path": "/nonexistent/checklist.md"},
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("检查清单文件不存在", response.json()["detail"])
+        self.assertIn(
+            "\u68c0\u67e5\u6e05\u5355\u6587\u4ef6\u4e0d\u5b58\u5728",
+            response.json()["detail"],
+        )
 
     def test_none_paths_pass_validation(self):
         with patch("linhai.webui.routes.get_manager") as mock_get:
@@ -634,7 +610,7 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
         pieces = session.get_status_bar_pieces()
-        self.assertEqual(pieces, ["✦ gpt-4"])
+        self.assertEqual(pieces, ["\u2726 gpt-4"])
 
     def test_get_status_bar_pieces_with_token_manager(self):
         registry_mock = MagicMock()
@@ -644,7 +620,7 @@ class TestAgentSessionStatusBar(unittest.TestCase):
 
         registry_mock.has_member.side_effect = has_member_side_effect
         mock_tm = MagicMock()
-        mock_tm.get_token_display_pieces.return_value = ["❐ 5", "↓ 1.0k"]
+        mock_tm.get_token_display_pieces.return_value = ["\u2750 5", "\u2193 1.0k"]
         registry_mock.get_member_typechecked.return_value = mock_tm
         mock_llm = MagicMock()
         mock_llm.get_name.return_value = "deepseek"
@@ -652,10 +628,10 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
         pieces = session.get_status_bar_pieces()
-        self.assertIn("❐ 5", pieces)
-        self.assertIn("↓ 1.0k", pieces)
-        self.assertIn("✦ deepseek", pieces)
-        self.assertEqual(pieces[-1], "✦ deepseek")
+        self.assertIn("\u2750 5", pieces)
+        self.assertIn("\u2193 1.0k", pieces)
+        self.assertIn("\u2726 deepseek", pieces)
+        self.assertEqual(pieces[-1], "\u2726 deepseek")
 
     def test_sync_status_bar_updates_data(self):
         registry_mock = MagicMock()
@@ -666,7 +642,7 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
         session.sync_status_bar()
-        self.assertEqual(session._data["status_bar"], ["✦ gpt"])
+        self.assertEqual(session._data["status_bar"], ["\u2726 gpt"])
 
     def test_sync_status_bar_no_diff_after_same_data(self):
         registry_mock = MagicMock()
