@@ -1,4 +1,6 @@
-from typing import TypedDict, Literal, Union, Type, TypeVar
+from __future__ import annotations
+
+from typing import TypedDict, Literal, Union, Type, TypeVar, NotRequired
 import copy
 
 T = TypeVar("T")
@@ -13,6 +15,7 @@ class DataUpdateEvent(TypedDict):
 class TaggedEvent(TypedDict):
     idx: int
     event: DataUpdateEvent
+    gen: NotRequired[int]
 
 
 def calculate_diff(old, new) -> list[DataUpdateEvent]:
@@ -110,12 +113,13 @@ class JsonPublisher:
         self.old_data = None
         self._data = data
         self.event_counter = 0
+        self._generation = 0
 
     def calculate_diff(self):
 
         data = copy.deepcopy(self._data)
         events = [
-            TaggedEvent(idx=self.event_counter + i, event=event)
+            TaggedEvent(idx=self.event_counter + i, event=event, gen=self._generation)
             for i, event in enumerate(calculate_diff(self.old_data, data))
         ]
         self.event_counter += len(events)
@@ -125,9 +129,11 @@ class JsonPublisher:
     def reset(self) -> TaggedEvent:
         self.old_data = copy.deepcopy(self._data)
         self.event_counter = 0
+        self._generation += 1
         return TaggedEvent(
             idx=-1,
             event=DataUpdateEvent(action="replace", keys=[], value=self.old_data),
+            gen=self._generation,
         )
 
 
@@ -135,6 +141,7 @@ class JsonSubscriber:
     def __init__(self):
         self.data = None
         self.event_counter = 0
+        self._generation = 0
 
     def update_root(self, event: DataUpdateEvent):
         if event["action"] == "replace":
@@ -155,6 +162,9 @@ class JsonSubscriber:
             )
             self.data = event["event"]["value"]
             self.event_counter = 0
+            self._generation = event.get("gen", self._generation)
+            return
+        if event.get("gen", 0) != self._generation:
             return
         if event["idx"] != self.event_counter:
             raise RuntimeError("Some events are missing")

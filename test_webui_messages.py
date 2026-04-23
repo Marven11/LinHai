@@ -16,6 +16,7 @@ from linhai.webui.agent_manager import AgentSession
 def apply_reset_to_subscriber(sub: JsonSubscriber, reset_event: TaggedEvent):
     sub.data = copy.deepcopy(reset_event["event"]["value"])
     sub.event_counter = 0
+    sub._generation = reset_event.get("gen", 0)
 
 
 class TestWebuiMessageTypes(unittest.TestCase):
@@ -258,11 +259,10 @@ class TestJsonPubSubWithMessages(unittest.TestCase):
         for e in pub.calculate_diff():
             sub.update_data(e)
 
-        pub.reset()
+        reset_event = pub.reset()
 
         sub2 = JsonSubscriber()
-        sub2.data = copy.deepcopy(data)
-        sub2.event_counter = 0
+        sub2.update_data(reset_event)
 
         data["messages"].append({"type": "user", "content": "world"})
         for e in pub.calculate_diff():
@@ -347,10 +347,10 @@ class TestAgentSessionPubSubIntegration(unittest.IsolatedAsyncioTestCase):
         session.add_user_message("hello")
         await session.get_diff()
 
-        await session.handle_reset()
+        reset_event = await session.handle_reset()
 
         sub = JsonSubscriber()
-        sub.data = copy.deepcopy(session._data)
+        sub.update_data(reset_event)
 
         session.add_user_message("world")
         events = await session.get_diff()

@@ -39,28 +39,14 @@ def _write_e2e_config() -> Path:
 
 
 async def _wait_for_agent_turn(ws, sub, timeout=120):
-    start_time = time.time()
-    reached_waiting = False
-    while time.time() - start_time < timeout:
-        recv_timeout = 2.0 if reached_waiting else 5.0
-        try:
-            raw = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
-        except asyncio.TimeoutError:
-            if reached_waiting:
-                return True
-            continue
-        data = json.loads(raw)
-        if "event" in data:
-            sub.update_data(data)
-        if isinstance(data, dict) and data.get("type") == "state_change":
-            if data.get("new_state") == "waiting_user":
-                reached_waiting = True
-    return False
+    raise NotImplementedError("Use AsyncEventFeeder instead")
 
 
 @pytest.mark.asyncio
 async def test_webui_status_bar_e2e():
     import websockets
+
+    from e2e.conftest import AsyncEventFeeder
 
     config_path = _write_e2e_config()
     routes._manager = AgentManager(config_path=config_path)
@@ -94,6 +80,9 @@ async def test_webui_status_bar_e2e():
             assert "event" in data
             sub.update_data(data)
 
+            feeder = AsyncEventFeeder(ws, sub)
+            await feeder.start()
+
             await ws.send(
                 json.dumps(
                     {
@@ -102,8 +91,12 @@ async def test_webui_status_bar_e2e():
                     }
                 )
             )
-            finished = await _wait_for_agent_turn(ws, sub, timeout=120)
+            finished = await feeder.wait_for_completion(
+                min_duration=30, quiet_period=5, timeout=120
+            )
             assert finished, "Agent did not complete turn within 120s"
+
+            await feeder.stop()
 
             status_bar = sub.data.get("status_bar")
             assert (
