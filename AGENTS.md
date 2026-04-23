@@ -1,6 +1,6 @@
 ## 在本地编写代码时
 
-- 你的源码文件就在这个文件夹的`./linhai`文件夹中
+- 你的源码文件就在这个文件夹的`./linhai`文件夹中，先检查当前文件夹路径和当前branch，**不要**切换到其他文件夹编写代码，**更不要**污染别人的工作
 - 在测试代码实现时，可以在终端中使用命令：`uv run python -m linhai --config ./config.toml -m '<message>'`
 - Registry.get_member_typechecked使用时必须先确认registry.py的内容，必须先了解其的所有注意事项
 - 对于空行、多余空格等问题: 使用black格式化以清理
