@@ -11,7 +11,6 @@ from .schemas import (
     AgentInfo,
     AgentListResponse,
     WsStateChangeEvent,
-    PlanningFileResponse,
     ConfigResponse,
     ProfileInfo,
     LlmInfo,
@@ -221,6 +220,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
             session.sync_processes()
             session.sync_status_bar()
+            session.sync_planning()
             session.sync_context()
 
             for event in events:
@@ -230,16 +230,6 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 await asyncio.sleep(0.1 - elapsed)
 
         tg.cancel_scope.cancel()
-
-
-@router.get("/{agent_id}/planning", response_model=PlanningFileResponse)
-async def get_agent_planning(agent_id: str):
-    manager = get_manager()
-    session = manager.get_agent(agent_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Agent不存在")
-    files = session.get_planning_files()
-    return PlanningFileResponse(**files)
 
 
 @router.get("/{agent_id}/llms", response_model=LlmListResponse)

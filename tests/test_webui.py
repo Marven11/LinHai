@@ -280,13 +280,6 @@ class TestPlainTaskSupervisor(unittest.IsolatedAsyncioTestCase):
 
 
 class TestNewSchemasContextPlanning(unittest.TestCase):
-    def test_planning_file_response(self):
-        from linhai.webui.schemas import PlanningFileResponse
-
-        resp = PlanningFileResponse(status="# Status", todolist=None, design="# Design")
-        self.assertEqual(resp.status, "# Status")
-        self.assertIsNone(resp.todolist)
-
     def test_config_response(self):
         from linhai.webui.schemas import ConfigResponse, ProfileInfo, LlmInfo
 

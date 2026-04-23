@@ -42,6 +42,7 @@ class AgentSession:
             "processes": [],
             "status_bar": [],
             "context": {},
+            "planning": {},
         }
         self._publisher = JsonPublisher(self._data)
         self._lock = asyncio.Lock()
@@ -240,6 +241,9 @@ class AgentSession:
         llm_name = llm_instance.get_name()
         token_pieces.append(f"✦ {llm_name}")
         return token_pieces
+
+    def sync_planning(self) -> None:
+        self._data["planning"] = self.get_planning_files()
 
     def sync_status_bar(self) -> None:
         self._data["status_bar"] = self.get_status_bar_pieces()

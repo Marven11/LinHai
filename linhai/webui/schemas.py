@@ -68,12 +68,6 @@ class AgentCreateResponse(BaseModel):
     message: str = Field(default="Agent创建成功", description="响应消息")
 
 
-class PlanningFileResponse(BaseModel):
-    status: Optional[str] = Field(default=None, description="STATUS.md内容")
-    todolist: Optional[str] = Field(default=None, description="TODOLIST.md内容")
-    design: Optional[str] = Field(default=None, description="DESIGN.md内容")
-
-
 class LlmInfo(BaseModel):
     name: str = Field(..., description="LLM名称")
     model: str = Field(..., description="模型名称")
