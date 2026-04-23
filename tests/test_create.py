@@ -62,7 +62,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.tools = Mock()
         mock_config.tools.enable_toolsets = None
         mock_config.tools.disable_toolsets = None
-        mock_config.tools.secret.config_path = ""
+        mock_config.agent[0].secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
@@ -172,7 +172,7 @@ class TestCreateAgent(unittest.TestCase):
         mock_config.tools = Mock()
         mock_config.tools.enable_toolsets = None
         mock_config.tools.disable_toolsets = None
-        mock_config.tools.secret.config_path = ""
+        mock_config.agent[0].secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()
@@ -277,8 +277,8 @@ class TestCreateLLMInstances(unittest.TestCase):
         mock_config.agent = [Mock()]
         mock_config.agent[0].mcp = []
         mock_config.tools = Mock()
-        mock_config.tools.secret = Mock()
-        mock_config.tools.secret.config_path = None
+        mock_config.agent[0].secret = Mock()
+        mock_config.agent[0].secret.config_path = None
         context = {
             "registry": mock_registry,
             "llms": llm_configs,
@@ -295,7 +295,7 @@ class TestCreateLLMInstances(unittest.TestCase):
             "telegram_config": None,
             "mcp_configs": mock_config.agent[0].mcp,
             "tool_config": mock_config.tools,
-            "secret_config_path": mock_config.tools.secret.config_path,
+            "secret_config_path": mock_config.agent[0].secret.config_path,
             "message": [],
             "file": [],
         }
@@ -378,8 +378,8 @@ class TestCreateToolManager(unittest.TestCase):
 
         registry = Mock()
         config = Mock()
-        config.secret.config_path = ""
         config.agent = [Mock(mcp=[])]
+        config.agent[0].secret.config_path = ""
         config.agent[0].enable_toolsets = None
         config.agent[0].disable_toolsets = None
         config.tools = config
@@ -403,7 +403,7 @@ class TestCreateToolManager(unittest.TestCase):
             "telegram_config": None,
             "mcp_configs": config.agent[0].mcp,
             "tool_config": config.tools,
-            "secret_config_path": config.tools.secret.config_path,
+            "secret_config_path": config.agent[0].secret.config_path,
             "message": [],
             "file": [],
         }
@@ -557,7 +557,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
         mock_config.tools = Mock()
         mock_config.tools.enable_toolsets = None
         mock_config.tools.disable_toolsets = None
-        mock_config.tools.secret.config_path = ""
+        mock_config.agent[0].secret.config_path = ""
         mock_config.user_prompt = Mock()()()
         mock_config.user_prompt.file_path = "prompt.md"
         mock_config.subagent = Mock()

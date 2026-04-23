@@ -49,8 +49,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.tools.enable_toolsets = None
         self.config.tools.disable_toolsets = None
         self.config.tools.max_toolcall_token_in_round = 0.3
-        self.config.tools.secret = Mock()
-        self.config.tools.secret.config_path = None
+        self.config.agent[0].secret = Mock()
+        self.config.agent[0].secret.config_path = None
         self.config.user_prompt = None
         self.config.remote_control = Mock()
         self.config.remote_control.telegram = None

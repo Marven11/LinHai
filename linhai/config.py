@@ -147,6 +147,16 @@ class ProcessSandboxConfig(BaseModel):
     )
 
 
+class SecretSubConfig(BaseModel):
+    """Secret子配置类型定义。"""
+
+    config_path: str = Field(default="", description="Secret配置文件路径。")
+
+    def __str__(self) -> str:
+        """返回Secret子配置的字符串表示"""
+        return f"SecretSubConfig(config_path={self.config_path})"
+
+
 class AgentConfig(BaseModel):
     """Agent配置类型定义。"""
 
@@ -179,6 +189,9 @@ class AgentConfig(BaseModel):
     )
     process_sandbox: Optional[ProcessSandboxConfig] = Field(
         default=None, description="进程沙箱配置。"
+    )
+    secret: SecretSubConfig = Field(
+        default_factory=SecretSubConfig, description="Secret子配置"
     )
     plugins: Optional[list[str]] = Field(
         default=None, description="用户插件列表，指定plugins/目录下的插件模块名。"
@@ -245,16 +258,6 @@ class UserPromptConfig(BaseModel):
     def __str__(self) -> str:
         """返回内存配置的字符串表示"""
         return f"UserPromptConfig(file_path={self.file_path}, reminder_file_path={self.reminder_file_path})"
-
-
-class SecretSubConfig(BaseModel):
-    """Secret子配置类型定义。"""
-
-    config_path: str = Field(default="", description="Secret配置文件路径。")
-
-    def __str__(self) -> str:
-        """返回Secret子配置的字符串表示"""
-        return f"SecretSubConfig(config_path={self.config_path})"
 
 
 class TelegramConfig(BaseModel):
@@ -328,9 +331,6 @@ class ToolConfig(BaseModel):
 
     remote_machines: list[RemoteMachineConfig] = Field(
         default_factory=list, description="预设的远程机器配置列表"
-    )
-    secret: SecretSubConfig = Field(
-        default_factory=SecretSubConfig, description="Secret子配置"
     )
     max_toolcall_token_in_round: Union[int, float] = Field(
         default=0.3,
@@ -409,7 +409,7 @@ class ToolConfig(BaseModel):
 
     def __str__(self) -> str:
         """返回工具配置的字符串表示"""
-        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, enable_toolsets={self.enable_toolsets}, disable_toolsets={self.disable_toolsets}, secret={self.secret})"
+        return f"ToolConfig(max_toolcall_token_in_round={self.max_toolcall_token_in_round}, enable_toolsets={self.enable_toolsets}, disable_toolsets={self.disable_toolsets})"
 
 
 class ClawConfig(BaseModel):

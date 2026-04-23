@@ -426,6 +426,7 @@ model = "test_model"
     def test_field_descriptions_additional(self):
         """Test that additional config fields have descriptions."""
         from linhai.config import (
+            AgentConfig,
             TelegramConfig,
             RemoteControlConfig,
             ToolConfig,
@@ -448,10 +449,12 @@ model = "test_model"
             "telegram should have a description",
         )
 
-        tool_fields = ToolConfig.model_fields
+        agent_fields = AgentConfig.model_fields
         self.assertIsNotNone(
-            tool_fields["secret"].description, "secret should have a description"
+            agent_fields["secret"].description, "secret should have a description"
         )
+
+        tool_fields = ToolConfig.model_fields
         self.assertIsNotNone(
             tool_fields["max_toolcall_token_in_round"].description,
             "max_toolcall_token_in_round should have a description",

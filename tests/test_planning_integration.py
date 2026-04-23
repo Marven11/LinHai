@@ -16,18 +16,16 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         mock_llm_config = MagicMock()
         mock_llm_config.name = "test_llm"
         self.mock_config.llm = [mock_llm_config]
-        # 模拟tools.secret.config_path以通过secret系统初始化
         mock_tools = MagicMock()
-        mock_secret = MagicMock()
-        mock_secret.config_path = "/tmp/test_secret_config.json"
-        mock_tools.secret = mock_secret
         self.mock_config.tools = mock_tools
-        # 模拟agent.compress_threshold
         self.mock_config.agent = [MagicMock()]
         self.mock_config.agent[0].compress_threshold = 0.9
         self.mock_config.agent[0].allowed_commands = None
         self.mock_config.agent[0].mcp = MagicMock()
         self.mock_config.agent[0].default_llm = None
+        mock_secret = MagicMock()
+        mock_secret.config_path = "/tmp/test_secret_config.json"
+        self.mock_config.agent[0].secret = mock_secret
 
         self.mock_config_basedir = Path("/tmp/test_config")
 

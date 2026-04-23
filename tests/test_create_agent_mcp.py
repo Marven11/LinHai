@@ -96,7 +96,7 @@ command = "python {server_script_path}"
             "mcp_configs": config.agent[0].mcp,
             "tool_config": config.tools,
             "secret_config_path": (
-                config.tools.secret.config_path if config.tools.secret else None
+                config.agent[0].secret.config_path if config.agent[0].secret else None
             ),
             "rss": [],
             "telegram": False,
@@ -151,7 +151,7 @@ compress_threshold = 80000
             "mcp_configs": config.agent[0].mcp,
             "tool_config": config.tools,
             "secret_config_path": (
-                config.tools.secret.config_path if config.tools.secret else None
+                config.agent[0].secret.config_path if config.agent[0].secret else None
             ),
             "rss": [],
             "telegram": False,

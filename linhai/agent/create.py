@@ -212,7 +212,7 @@ def create_agent_build_context(
         "mcp_configs": agent_config.mcp,
         "tool_config": config.tools,
         "secret_config_path": (
-            config.tools.secret.config_path if config.tools.secret else None
+            agent_config.secret.config_path if agent_config.secret else None
         ),
         "rss": build_args.get("rss", []),
         "telegram": build_args.get("telegram", False),

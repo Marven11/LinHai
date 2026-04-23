@@ -72,8 +72,8 @@ class TestPinnedMessages(unittest.IsolatedAsyncioTestCase):
             "mcp_configs": self.config.agent[0].mcp,
             "tool_config": self.config.tools,
             "secret_config_path": (
-                self.config.tools.secret.config_path
-                if self.config.tools.secret
+                self.config.agent[0].secret.config_path
+                if self.config.agent[0].secret
                 else None
             ),
             "message": [],
