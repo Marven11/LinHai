@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import tiktoken
+from linhai.utils.tokenizer import get_cl100k_base_tokenizer
 
 
 class TestSplitAndSaveLargeOutput(unittest.TestCase):
@@ -72,7 +72,7 @@ class TestSplitAndSaveLargeOutput(unittest.TestCase):
 
     def test_split_content_distribution(self):
         """验证内容被均匀分割到3个部分。"""
-        tokenizer = tiktoken.get_encoding("cl100k_base")
+        tokenizer = get_cl100k_base_tokenizer()
         toolcall = self._create_toolcall_instance()
 
         text = "a" * 3000
