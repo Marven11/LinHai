@@ -14,6 +14,13 @@ if [ -z "${CI:-}" ]; then
     exit 0
 fi
 
+# If current branch is main, this is not a PR, skip the check
+current_branch="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}"
+if [ "$current_branch" = "main" ]; then
+    echo "Current branch is main, not a PR. Skipping empty PR check."
+    exit 0
+fi
+
 # Get the list of changed files between current HEAD and target branch
 changed_files=$(git diff --name-only "$TARGET_BRANCH" HEAD 2>/dev/null || true)
 
