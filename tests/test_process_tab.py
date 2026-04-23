@@ -16,6 +16,7 @@ from linhai.machine_control.process import (
 from linhai.registry import Registry
 from linhai.tui.app import TUIApp
 from linhai.tui.process_tab import ProcessRowWidget, ProcessTabWidget
+from textual.widgets import Static
 
 
 class _FakeProcess:
@@ -267,7 +268,7 @@ class TestProcessTabRealApp(unittest.TestCase):
 
                 entry = process_tab._entries.get("300")
                 self.assertIsNotNone(entry)
-                _, returncode = entry
+                _, returncode, exit_time = entry
                 self.assertEqual(returncode, 0)
 
                 status_static = rows[0].query_one(".status")
@@ -297,6 +298,168 @@ class TestProcessTabRealApp(unittest.TestCase):
                 self.assertEqual(len(process_tab._entries), 3)
                 rows = process_tab.query(ProcessRowWidget)
                 self.assertEqual(len(rows), 3)
+
+        asyncio.run(_run())
+
+
+class TestProcessTabExitCleanup(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+
+        self.locale_patch = patch(
+            "linhai.utils.i18n.locale.getlocale", return_value=("en_US", "UTF-8")
+        )
+        self.locale_patch.start()
+        super().setUp()
+
+    def tearDown(self):
+        self.locale_patch.stop()
+        super().tearDown()
+
+    def test_exited_process_records_exit_time(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+
+                proc = _FakeProcess("400", exits_on_wait=True)
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "test"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                self.assertIsNone(process_tab._entries["400"][2])
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+                await pilot.pause()
+
+                entry = process_tab._entries.get("400")
+                self.assertIsNotNone(entry)
+                _, returncode, exit_time = entry
+                self.assertEqual(returncode, 0)
+                self.assertIsNotNone(exit_time)
+
+        asyncio.run(_run())
+
+    def test_exited_process_cleaned_after_timeout(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+                process_tab._EXIT_CLEANUP_SECONDS = 0.0
+
+                proc = _FakeProcess("500", exits_on_wait=True)
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "cleanup"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+                await pilot.pause()
+
+                self.assertIn("500", process_tab._entries)
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+
+                self.assertNotIn("500", process_tab._entries)
+                self.assertNotIn("500", process_tab._rows)
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 0)
+
+                empty = process_tab.query_one("#process-empty", Static)
+                self.assertTrue(empty.display)
+
+        asyncio.run(_run())
+
+    def test_recently_exited_process_not_cleaned(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+                process_tab._EXIT_CLEANUP_SECONDS = 99999.0
+
+                proc = _FakeProcess("600", exits_on_wait=True)
+                info = ProcessCreateInfo(
+                    process=proc,
+                    argv=["echo", "keep"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(info)
+                await pilot.pause()
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+                await pilot.pause()
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+
+                self.assertIn("600", process_tab._entries)
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 1)
+
+        asyncio.run(_run())
+
+    def test_mixed_running_and_old_exited(self):
+        registry, lifecycle = _make_registry()
+        app = _make_app(registry)
+
+        async def _run():
+            import time as _time
+
+            async with app.run_test() as pilot:
+                process_tab = pilot.app.query_one(ProcessTabWidget)
+                process_tab._EXIT_CLEANUP_SECONDS = 0.0
+
+                exited_proc = _FakeProcess("700", exits_on_wait=True)
+                exited_info = ProcessCreateInfo(
+                    process=exited_proc,
+                    argv=["echo", "old"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(exited_info)
+                await pilot.pause()
+
+                running_proc = _FakeProcess("701", exits_on_wait=False)
+                running_info = ProcessCreateInfo(
+                    process=running_proc,
+                    argv=["sleep", "inf"],
+                    machine_id="master_host",
+                    initial_returncode=None,
+                )
+                await lifecycle.after_process_create.trigger(running_info)
+                await pilot.pause()
+
+                process_tab._entries["700"] = (exited_info, 0, _time.monotonic() - 1.0)
+
+                self.assertEqual(len(process_tab._entries), 2)
+
+                process_tab._poll_statuses()
+                await pilot.pause()
+
+                self.assertNotIn("700", process_tab._entries)
+                self.assertIn("701", process_tab._entries)
+                rows = process_tab.query(ProcessRowWidget)
+                self.assertEqual(len(rows), 1)
 
         asyncio.run(_run())
 

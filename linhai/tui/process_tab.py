@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+import time
 from datetime import datetime
 from typing import Callable, Awaitable
 
@@ -123,7 +124,9 @@ class ProcessTabWidget(Static):
     def __init__(self, registry: Registry) -> None:
         super().__init__()
         self.registry = registry
-        self._entries: dict[str, tuple[ProcessCreateInfo, int | None]] = {}
+        self._entries: dict[str, tuple[ProcessCreateInfo, int | None, float | None]] = (
+            {}
+        )
         self._rows: dict[str, ProcessRowWidget] = {}
 
     def compose(self) -> ComposeResult:
@@ -140,9 +143,11 @@ class ProcessTabWidget(Static):
         lifecycle.after_process_create.register(self._on_process_create)
         self.set_interval(2.0, self._poll_statuses)
 
+    _EXIT_CLEANUP_SECONDS = 300.0
+
     async def _on_process_create(self, info: ProcessCreateInfo) -> None:
         pid = info.process.pid
-        self._entries[pid] = (info, info.initial_returncode)
+        self._entries[pid] = (info, info.initial_returncode, None)
         empty = self.query_one("#process-empty", Static)
         empty.display = False
         row = ProcessRowWidget(info, info.initial_returncode, self._kill_process)
@@ -154,24 +159,41 @@ class ProcessTabWidget(Static):
         entry = self._entries.get(pid)
         if entry is None:
             return
-        info, _ = entry
+        info, _, _ = entry
         await info.process.kill()
-        self._entries[pid] = (info, 0)
+        self._entries[pid] = (info, 0, time.monotonic())
         row = self._rows.get(pid)
         if row is not None:
             row.update_status(0)
 
     def _poll_statuses(self) -> None:
-        for pid, (info, returncode) in list(self._entries.items()):
+        now = time.monotonic()
+        to_remove: list[str] = []
+        for pid, (info, returncode, exit_time) in list(self._entries.items()):
+            if exit_time is not None and now - exit_time > self._EXIT_CLEANUP_SECONDS:
+                to_remove.append(pid)
+                continue
             if returncode is not None:
                 continue
             self._check_process_status(pid, info)
+        for pid in to_remove:
+            self._entries.pop(pid, None)
+            row = self._rows.pop(pid, None)
+            if row is not None:
+                row.remove()
+        if to_remove and not self._entries:
+            empty = self.query_one("#process-empty", Static)
+            empty.display = True
 
     @work(exclusive=True)
     async def _check_process_status(self, pid: str, info: ProcessCreateInfo) -> None:
         result = await info.process.wait(timeout=0.01)
         if result.success:
-            self._entries[pid] = (info, result.returncode)
+            entry = self._entries.get(pid)
+            if entry is not None:
+                _, old_rc, _ = entry
+                if old_rc is None:
+                    self._entries[pid] = (info, result.returncode, time.monotonic())
             row = self._rows.get(pid)
             if row is not None:
                 row.update_status(result.returncode)

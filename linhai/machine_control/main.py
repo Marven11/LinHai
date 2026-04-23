@@ -1,5 +1,7 @@
 """MachineControl类，负责管理多个机器控制类并注册工具。"""
 
+import time
+
 from typing import Any, Dict, Optional, TypedDict
 from linhai.agent.lifecycle import Lifecycle
 from linhai.config import RemoteMachineConfig
@@ -16,6 +18,7 @@ from .process import Process, ProcessCreateInfo
 
 class _StoredProcessInfo(TypedDict):
     argv: list[str]
+    exit_time: float | None
 
 
 class _ProcessEntry(TypedDict):
@@ -400,14 +403,18 @@ class MachineControl:
             current = self.source_machines.get(current)
         return chain
 
+    _EXIT_CLEANUP_SECONDS = 300.0
+
     def store_process_info(self, pid: str, machine_id: str, argv: list[str]) -> None:
-        self._process_infos[f"{machine_id}:{pid}"] = {"argv": argv}
+        self._process_infos[f"{machine_id}:{pid}"] = {"argv": argv, "exit_time": None}
 
     def list_processes(self) -> list[_ProcessEntry]:
+        now = time.monotonic()
         result: list[_ProcessEntry] = []
         for machine_id, host_control in self.machines.items():
             for pid in host_control.list_process_pids():
-                info = self._process_infos.get(f"{machine_id}:{pid}")
+                key = f"{machine_id}:{pid}"
+                info = self._process_infos.get(key)
                 process = host_control.get_process(pid)
                 if process is not None:
                     returncode = process.returncode
@@ -415,6 +422,15 @@ class MachineControl:
                 else:
                     returncode = None
                     status = "error"
+                if (
+                    info is not None
+                    and returncode is not None
+                    and info["exit_time"] is None
+                ):
+                    info["exit_time"] = now
+                if info is not None and info["exit_time"] is not None:
+                    if now - info["exit_time"] > self._EXIT_CLEANUP_SECONDS:
+                        continue
                 result.append(
                     {
                         "pid": pid,

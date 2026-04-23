@@ -579,6 +579,71 @@ class TestListProcesses(unittest.TestCase):
         result = self.machine_control.list_processes()
         self.assertEqual(result[0]["argv"], [])
 
+    def test_list_processes_records_exit_time(self):
+        """测试已退出进程记录exit_time"""
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_host.list_process_pids = Mock(return_value=["100"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+        self.machine_control.store_process_info("100", "master_host", ["echo"])
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(len(result), 1)
+        stored = self.machine_control._process_infos["master_host:100"]
+        self.assertIsNotNone(stored["exit_time"])
+
+    def test_list_processes_filters_old_exited(self):
+        """测试过滤已退出超过300秒的进程"""
+        import time as _time
+
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_host.list_process_pids = Mock(return_value=["200"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+        self.machine_control.store_process_info("200", "master_host", ["echo"])
+        self.machine_control._process_infos["master_host:200"]["exit_time"] = (
+            _time.monotonic() - 301.0
+        )
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(len(result), 0)
+
+    def test_list_processes_keeps_recent_exited(self):
+        """测试保留最近退出的进程"""
+        import time as _time
+
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_host.list_process_pids = Mock(return_value=["300"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+        self.machine_control.store_process_info("300", "master_host", ["echo"])
+        self.machine_control._process_infos["master_host:300"]["exit_time"] = (
+            _time.monotonic() - 100.0
+        )
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(len(result), 1)
+
+    def test_list_processes_keeps_running(self):
+        """测试运行中进程不被过滤"""
+        mock_host = Mock()
+        mock_process = Mock()
+        mock_process.returncode = None
+        mock_host.list_process_pids = Mock(return_value=["400"])
+        mock_host.get_process = Mock(return_value=mock_process)
+        self.machine_control.machines = {"master_host": mock_host}
+        self.machine_control.store_process_info("400", "master_host", ["sleep"])
+
+        result = self.machine_control.list_processes()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["status"], "running")
+
 
 class TestMachineControlPlugin(unittest.IsolatedAsyncioTestCase):
     """MachineControlPlugin测试类"""
