@@ -52,11 +52,25 @@ class AsyncEventFeeder:
     def quiet_period(self):
         return time.time() - self._last_event_time
 
+    def _count_waiting_signals(self) -> int:
+        if self.sub.data is None:
+            return 0
+        messages = self.sub.data.get("messages", [])
+        return sum(
+            1
+            for m in messages
+            if m.get("type") == "agent"
+            and m.get("content", "").endswith("LINHAI_WAITING_USER")
+        )
+
     async def wait_for_completion(
         self, min_duration: float = 30, quiet_period: float = 5, timeout: float = 300
     ):
+        initial_signals = self._count_waiting_signals()
         deadline = time.time() + timeout
         while time.time() < deadline:
+            if self._count_waiting_signals() > initial_signals:
+                return True
             if (
                 self.elapsed_since_start() >= min_duration
                 and self.quiet_period() >= quiet_period

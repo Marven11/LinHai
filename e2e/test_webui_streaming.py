@@ -338,16 +338,10 @@ async def test_webui_streaming_e2e():
         assert (
             user_msgs[1]["content"] == "Now summarize your essay in exactly 100 words"
         )
-        _WAITING_SIGNAL = "LINHAI_WAITING_USER"
-        agent_msgs = [
-            m
-            for m in messages
-            if m.get("type") == "agent"
-            and not m.get("content", "").endswith(_WAITING_SIGNAL)
-        ]
+        agent_msgs = [m for m in messages if m.get("type") == "agent"]
         assert (
             len(agent_msgs) >= 2
-        ), f"Expected 2+ agent messages, got {len(agent_msgs)}"
+        ), f"Expected 2+ agent messages, got {len(agent_msgs)}, messages={messages}"
         assert all(
             len(m.get("content", "")) > 50 for m in agent_msgs
         ), f"Agent messages too short: {[m.get('content', '')[:50] for m in agent_msgs]}"
