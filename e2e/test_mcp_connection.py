@@ -90,7 +90,7 @@ async def _create_mcp_agent(token: str) -> tuple[Agent, MCPConnector]:
                 "X-Title": "LinHai E2E Tests",
             }
         },
-        chat_completion_kwargs={"max_tokens": 300},
+        chat_completion_kwargs={"max_tokens": 5000},
         support_image=False,
         explicit_cache_info=None,
         name=LLM_NAME,
