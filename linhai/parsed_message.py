@@ -22,7 +22,7 @@ class ParsedAnswer:
         self.lifecycle = lifecycle
         self.agent = agent
         self.registry = registry
-        self.segment_queue: asyncio.Queue[Segment] = asyncio.Queue()
+        self.segment_queue: asyncio.Queue[Segment | None] = asyncio.Queue()
         self._parsing_task_name: str = f"parsed_answer_parsing_{id(self)}"
         self.interrupted = False
         from .utils.token_parser import TokenParser
@@ -97,6 +97,7 @@ class ParsedAnswer:
         for parsed_token in self.token_parser.clear():
             await self._process_token(parsed_token)
         await self._finish_current_segment()
+        await self.segment_queue.put(None)
         await self.lifecycle.after_parsing.trigger(self)
 
     async def wait_parsing(self):

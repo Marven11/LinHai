@@ -4,6 +4,7 @@ from linhai.utils.common import (
     simplify_value,
     simplify_toolcall_json,
     parse_and_simplify_toolcall,
+    cluster_tool_calls,
 )
 
 
@@ -182,6 +183,42 @@ class TestToolCallCollapse(unittest.TestCase):
             simplified = parse_and_simplify_toolcall(json_str)
             if should_pass:
                 self.assertNotEqual(simplified, "<parse json error>")
+
+
+class TestClusterToolCalls(unittest.TestCase):
+    def test_basic_clustering(self):
+        result = cluster_tool_calls(
+            ["read_file", "read_file", "list_files", "read_file", "read_file"]
+        )
+        self.assertEqual(result, "read_file*4, list_files")
+
+    def test_single_tool(self):
+        result = cluster_tool_calls(["read_file"])
+        self.assertEqual(result, "read_file")
+
+    def test_all_different(self):
+        result = cluster_tool_calls(["read_file", "list_files", "process_create"])
+        self.assertEqual(result, "read_file, list_files, process_create")
+
+    def test_all_same(self):
+        result = cluster_tool_calls(["read_file", "read_file", "read_file"])
+        self.assertEqual(result, "read_file*3")
+
+    def test_empty(self):
+        result = cluster_tool_calls([])
+        self.assertEqual(result, "")
+
+    def test_mixed_counts(self):
+        result = cluster_tool_calls(
+            ["read_file", "read_file", "list_files", "process_create", "process_create"]
+        )
+        self.assertEqual(result, "read_file*2, list_files, process_create*2")
+
+    def test_interleaved(self):
+        result = cluster_tool_calls(
+            ["read_file", "list_files", "read_file", "list_files", "read_file"]
+        )
+        self.assertEqual(result, "read_file*3, list_files*2")
 
 
 if __name__ == "__main__":

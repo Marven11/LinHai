@@ -21,7 +21,7 @@ from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.utils.i18n import t
 from linhai.utils.streamjson import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
-from linhai.utils.common import parse_and_simplify_toolcall
+from linhai.utils.common import parse_and_simplify_toolcall, cluster_tool_calls
 
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
@@ -327,6 +327,25 @@ class RuntimeMessageWidget(Static):
             self.content_str,
             classes=f"runtime-content runtime-content-{self.level.lower()}",
         )
+
+
+class _ClickStatic(Static):
+    DEFAULT_CSS = """
+    _ClickStatic {
+        width: 100%;
+        color: $text-muted;
+        padding-left: 1;
+        border-left: heavy $background-lighten-2;
+    }
+    """
+
+    def __init__(self, content: str, on_click_fn: Callable[[], None]):
+        super().__init__(content)
+        self._on_click_fn = on_click_fn
+
+    def on_click(self, event: events.Click) -> None:
+        event.stop()
+        self._on_click_fn()
 
 
 class _ToolCallCollapseHeader(Static):
@@ -817,11 +836,12 @@ class NormalContentWidget(Markdown):
 
 
 class MessageWidget(Static):
-    """消息显示组件，支持ParsedAnswer和segment流式显示"""
-
     DEFAULT_CSS = """
-    MessageWidget {
+    MessageWidget.has-runtime-message {
         margin-bottom: 1;
+    }
+    MessageWidget .message-segments {
+        width: 100%;
     }
     """
 
@@ -839,8 +859,21 @@ class MessageWidget(Static):
         self.theme = theme
         self.parsed_answer = parsed_answer
         self.get_refresh_interval = get_refresh_interval
+        self._state = "streaming"
+        self._collapsed_view = _ClickStatic("\u25b6", self._expand_message)
+        self._expand_header = _ClickStatic(
+            t({"zh_CN": "\u25bc \u6d88\u606f", "en": "\u25bc Message"}),
+            self._collapse_message,
+        )
+        self._content = Static(classes="message-segments")
+        self._collapsed_view.display = False
+        self._expand_header.display = False
+        self._auto_transition_timer: Timer | None = None
 
     def on_mount(self):
+        self.mount(self._collapsed_view)
+        self.mount(self._expand_header)
+        self.mount(self._content)
         self._start_processing_segments()
 
     @work(exclusive=False)
@@ -850,6 +883,10 @@ class MessageWidget(Static):
         while True:
             segment = await self.parsed_answer.segment_queue.get()
 
+            if segment is None:
+                self._schedule_auto_transition()
+                break
+
             if not is_first_segment:
                 if (
                     isinstance(last_content_widget, NormalContentWidget)
@@ -858,7 +895,7 @@ class MessageWidget(Static):
                     last_content_widget.stop_timer()
                     last_content_widget.remove()
                 else:
-                    self.mount(SpaceWidget())
+                    self._content.mount(SpaceWidget())
 
             segment_type = segment["segment_type"]
             if segment_type == "toolcall":
@@ -886,9 +923,47 @@ class MessageWidget(Static):
             else:
                 continue
 
-            self.mount(widget)
+            self._content.mount(widget)
             last_content_widget = widget
             is_first_segment = False
+
+    def _schedule_auto_transition(self) -> None:
+        self._auto_transition_timer = self.set_timer(1.0, self._auto_transition)
+
+    def _auto_transition(self) -> None:
+        has_tool_calls = any(
+            isinstance(w, ToolCallWidget) for w in self._content.children
+        )
+        if has_tool_calls:
+            self._collapse_message()
+        else:
+            self._state = "expanded"
+
+    def _get_tool_call_summary(self) -> str:
+        tool_names: list[str] = []
+        for child in self._content.children:
+            if isinstance(child, ToolCallWidget) and not child.has_error:
+                match = re.search(r'"name"\s*:\s*"([^"]+)"', child.json_str)
+                tool_names.append(match.group(1) if match else "unknown")
+        return cluster_tool_calls(tool_names)
+
+    def _collapse_message(self) -> None:
+        if self._state == "collapsed":
+            return
+        self._state = "collapsed"
+        summary = self._get_tool_call_summary()
+        self._collapsed_view.update(f"\u25b6 {summary}")
+        self._collapsed_view.display = True
+        self._expand_header.display = False
+        self._content.display = False
+
+    def _expand_message(self) -> None:
+        if self._state == "expanded":
+            return
+        self._state = "expanded"
+        self._collapsed_view.display = False
+        self._expand_header.display = True
+        self._content.display = True
 
     def finish_streaming(self) -> None:
         """停止所有widget的timer"""
@@ -977,6 +1052,7 @@ class MessageGenerationWidget(Static):
     def __init__(self):
         super().__init__()
         self.tomount: Optional[list] = []
+        self._has_runtime_message = False
 
     def set_message_widget(self, widget: MessageWidget) -> None:
         if self.tomount is not None:
@@ -985,16 +1061,26 @@ class MessageGenerationWidget(Static):
             self.mount(widget)
 
     def add_runtime_message(self, widget: RuntimeMessageWidget) -> None:
+        self._has_runtime_message = True
         if self.tomount is not None:
             self.tomount.append(widget)
         else:
             self.mount(widget)
+            self._apply_runtime_class()
 
     def on_mount(self):
         if self.tomount is not None:
             for widget in self.tomount:
                 self.mount(widget)
         self.tomount = None
+        if self._has_runtime_message:
+            self._apply_runtime_class()
+
+    def _apply_runtime_class(self) -> None:
+        for child in self.children:
+            if isinstance(child, MessageWidget):
+                child.add_class("has-runtime-message")
+                break
 
 
 class CommandCompletionMenu(Static):

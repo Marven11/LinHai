@@ -101,8 +101,8 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         await parsed.start_parsing()
         await parsed.wait_parsing()
 
-        # Should have 3 segments: combined normal, toolcall, normal
-        self.assertEqual(len(segments), 3)
+        self.assertEqual(len(segments), 4)
+        self.assertIsNone(segments[3])
         self.assertEqual(segments[0]["segment_type"], "normal")
         self.assertEqual(segments[0]["content"], "Hello world! ")
         self.assertEqual(segments[1]["segment_type"], "toolcall")
@@ -207,8 +207,8 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         await parsed.start_parsing()
         await parsed.wait_parsing()
 
-        # Should have 3 segments
-        self.assertEqual(len(segments), 3)
+        self.assertEqual(len(segments), 4)
+        self.assertIsNone(segments[3])
         # Verify callback counts
         self.assertEqual(lifecycle.after_segment.trigger.call_count, 3)
         # trigger_after_segment_finished should be called 3 times: when normal segment finishes (due to type change to toolcall), when toolcall segment finishes (due to type change to normal), and when parsing finishes (last normal segment)

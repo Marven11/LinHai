@@ -84,9 +84,24 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
         return f"{name}({', '.join(simplified_args)})"
 
 
+def cluster_tool_calls(tool_names: list[str]) -> str:
+    seen: dict[str, int] = {}
+    order: list[str] = []
+    for name in tool_names:
+        if name not in seen:
+            seen[name] = 0
+            order.append(name)
+        seen[name] += 1
+    parts = []
+    for name in order:
+        count = seen[name]
+        parts.append(f"{name}*{count}" if count > 1 else name)
+    return ", ".join(parts)
+
+
 def parse_and_simplify_toolcall(json_str: str) -> str:
     """简化工具调用格式
-    
+
     即使streamjson没有抛出错误也不一定能保证json格式正确"""
     stripped = json_str.strip()
     if not stripped or stripped[0] != "{":
