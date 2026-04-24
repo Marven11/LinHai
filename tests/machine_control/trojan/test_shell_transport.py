@@ -130,6 +130,8 @@ class TestSetupTrojanInShell(unittest.TestCase):
                 mock_loop.return_value = mock_loop_instance
                 result = await setup_trojan_in_shell(mock_process, self.registry)
                 self.assertIsNotNone(result)
+                self.assertIsInstance(result, tuple)
+                self.assertEqual(len(result), 2)
                 self.assertTrue(self.send_if_exists_mock.called)
 
         self.loop.run_until_complete(test())

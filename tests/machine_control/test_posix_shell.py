@@ -41,7 +41,7 @@ class TestPosixShellControlConnect(unittest.TestCase):
                 patch(
                     "linhai.machine_control.posix_shell.posix_shell_control.setup_trojan_in_shell",
                     new_callable=AsyncMock,
-                    return_value="/tmp/trojan.py",
+                    return_value=("/tmp/trojan.py", "abcd"),
                 ) as mock_setup,
                 patch(
                     "linhai.machine_control.posix_shell.posix_shell_control.TrojanTransport",
@@ -52,7 +52,7 @@ class TestPosixShellControlConnect(unittest.TestCase):
                 self.assertTrue(result)
                 mock_setup.assert_called_once_with(mock_process, self.registry)
                 mock_transport_class.assert_called_once_with(
-                    registry=self.registry, process=mock_process
+                    registry=self.registry, process=mock_process, marker_hex="abcd"
                 )
                 self.assertEqual(self.control.transport, mock_transport_instance)
 

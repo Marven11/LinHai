@@ -62,7 +62,7 @@ class TestTrojanTransportConstruction(unittest.IsolatedAsyncioTestCase):
     async def test_create_with_process(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         self.assertIsNotNone(transport._process)
 
 
@@ -70,7 +70,7 @@ class TestTrojanTransportRequest(unittest.IsolatedAsyncioTestCase):
     async def test_send_request_writes_to_process(self):
         registry, task_supervisor = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         transport._connection_valid = False
         with self.assertRaises(ConnectionError):
             await transport._send_request("test", {})
@@ -78,7 +78,7 @@ class TestTrojanTransportRequest(unittest.IsolatedAsyncioTestCase):
     async def test_send_request_not_connected_raises(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         transport._connection_valid = False
         with self.assertRaises(ConnectionError):
             await transport._send_request("test", {})
@@ -90,14 +90,14 @@ class TestTrojanTransportDisconnect(unittest.IsolatedAsyncioTestCase):
         task_supervisor.cancel = Mock()
         task_supervisor.wait = AsyncMock(side_effect=asyncio.CancelledError)
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         await transport.disconnect()
         self.assertFalse(transport.is_connected())
 
     async def test_disconnect_without_reader(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         await transport.disconnect()
         self.assertFalse(transport.is_connected())
 
@@ -106,7 +106,7 @@ class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
     async def test_fail_pending_futures(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         future = asyncio.get_event_loop().create_future()
         transport._pending_futures["test_id"] = future
         transport._fail_pending_futures()
@@ -117,20 +117,20 @@ class TestTrojanTransportFutures(unittest.IsolatedAsyncioTestCase):
     async def test_is_connected_initially_true(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         self.assertTrue(transport.is_connected())
 
     async def test_is_connected_false_after_disconnect(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         await transport.disconnect()
         self.assertFalse(transport.is_connected())
 
     async def test_connection_valid_state(self):
         registry, _ = _make_registry()
         process = _FakeProcess()
-        transport = TrojanTransport(registry, process=process)
+        transport = TrojanTransport(registry, process=process, marker_hex="abcd")
         self.assertTrue(transport.is_connected())
         transport._connection_valid = False
         self.assertFalse(transport.is_connected())

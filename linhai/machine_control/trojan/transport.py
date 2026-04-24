@@ -17,33 +17,37 @@ class TrojanTransport:
         self,
         registry: Registry,
         process: Process,
+        marker_hex: str,
     ):
         self.registry = registry
         self._process: Process = process
+        self._marker_open = f"<linhai_trojanpy_{marker_hex}>"
+        self._marker_close = f"</linhai_trojanpy_{marker_hex}>"
         self._buffer = b""
         self._pending_futures: Dict[str, asyncio.Future[JsonRpcResponse]] = {}
         self._reader_started: bool = False
         self._connection_valid = True
 
-    async def _readline(self, timeout: float = 1.0) -> Optional[str]:
-        while b"\n" not in self._buffer:
+    async def _read_marker_data(self, timeout: float = 1.0) -> Optional[str]:
+        open_bytes = self._marker_open.encode()
+        close_bytes = self._marker_close.encode()
+        while True:
+            start_idx = self._buffer.find(open_bytes)
+            if start_idx != -1:
+                close_idx = self._buffer.find(close_bytes, start_idx)
+                if close_idx != -1:
+                    json_start = start_idx + len(open_bytes)
+                    json_bytes = self._buffer[json_start:close_idx]
+                    self._buffer = self._buffer[close_idx + len(close_bytes) :]
+                    return json_bytes.decode("utf-8", errors="replace")
             result = await self._process.stdio_read(timeout)
             if not result.success or (
                 not result.stdout and result.exit_note is not None
             ):
-                if self._buffer:
-                    remaining = self._buffer
-                    self._buffer = b""
-                    return remaining.decode("utf-8", errors="replace")
                 return None
             if not result.stdout:
-                return ""
+                continue
             self._buffer += result.stdout
-
-        idx = self._buffer.index(b"\n")
-        line = self._buffer[:idx]
-        self._buffer = self._buffer[idx + 1 :]
-        return line.decode("utf-8", errors="replace")
 
     def start_reading(self) -> None:
         if not self._reader_started:
@@ -72,7 +76,8 @@ class TrojanTransport:
         }
 
         request_json = json.dumps(request)
-        write_result = await self._process.stdio_write(request_json, with_enter=True)
+        wrapped = f"{self._marker_open}{request_json}{self._marker_close}"
+        write_result = await self._process.stdio_write(wrapped, with_enter=False)
         if not write_result.success:
             raise ConnectionError(f"写入失败: {write_result.error}")
 
@@ -108,14 +113,12 @@ class TrojanTransport:
         return response
 
     async def _read_one_response(self) -> None:
-        line = await self._readline(timeout=1.0)
-        if line is None:
+        data = await self._read_marker_data(timeout=1.0)
+        if data is None:
             self._connection_valid = False
             self._fail_pending_futures()
             return
-        if line == "":
-            return
-        response = json.loads(line)
+        response = json.loads(data)
         response_id = response.get("id")
         if response_id is not None:
             future = self._pending_futures.pop(response_id, None)

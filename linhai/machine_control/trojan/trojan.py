@@ -657,26 +657,40 @@ class Trojan:
             self.active_tasks.add(task)
             task.add_done_callback(self._remove_task)
 
+    def _set_marker(self, marker_hex: str) -> None:
+        self._marker_open = f"<linhai_trojanpy_{marker_hex}>"
+        self._marker_close = f"</linhai_trojanpy_{marker_hex}>"
+
     async def read_input(self):
         loop = asyncio.get_event_loop()
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
         await loop.connect_read_pipe(lambda: protocol, sys.stdin)
 
+        buf = b""
         while True:
-            line = await reader.readline()
-            if not line:
+            chunk = await reader.read(4096)
+            if not chunk:
                 await self.request_queue.put(None)
                 break
-            line = line.decode().strip()
-            if not line:
-                continue
-            try:
-                request = json.loads(line)
+            buf += chunk
+            while True:
+                start_idx = buf.find(self._marker_open.encode())
+                if start_idx == -1:
+                    if len(buf) > len(self._marker_open):
+                        buf = buf[-len(self._marker_open) :]
+                    break
+                close_idx = buf.find(self._marker_close.encode(), start_idx)
+                if close_idx == -1:
+                    if len(buf) - start_idx > 1024 * 1024:
+                        buf = buf[start_idx:]
+                    break
+                json_start = start_idx + len(self._marker_open)
+                json_bytes = buf[json_start:close_idx]
+                buf = buf[close_idx + len(self._marker_close) :]
+                request = json.loads(json_bytes.decode("utf-8", errors="replace"))
                 request_id = request.get("id")
                 await self.request_queue.put((request, request_id))
-            except Exception:
-                pass
 
     async def write_responses(self):
         while True:
@@ -684,20 +698,31 @@ class Trojan:
             if response is None:
                 break
             async with self.stdout_lock:
-                print(json.dumps(response), flush=True)
+                data = f"{self._marker_open}{json.dumps(response)}{self._marker_close}"
+                sys.stdout.write(data)
+                sys.stdout.flush()
 
 
-async def main():
+def main():
+    marker_hex = sys.argv[1] if len(sys.argv) > 1 else None
+    if not marker_hex:
+        print("Usage: trojan.py <4-hex-marker>", file=sys.stderr)
+        sys.exit(1)
+
     trojan = Trojan()
-    loop = asyncio.get_running_loop()
-    reader_task = loop.create_task(trojan.read_input())
-    processor_task = loop.create_task(trojan.process_requests())
-    writer_task = loop.create_task(trojan.write_responses())
-    try:
-        await asyncio.gather(reader_task, processor_task, writer_task)
-    except asyncio.CancelledError:
-        pass
+    trojan._set_marker(marker_hex)
+
+    async def _run():
+        loop = asyncio.get_running_loop()
+        reader_task = loop.create_task(trojan.read_input())
+        processor_task = loop.create_task(trojan.process_requests())
+        writer_task = loop.create_task(trojan.write_responses())
+        await asyncio.gather(
+            reader_task, processor_task, writer_task, return_exceptions=True
+        )
+
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

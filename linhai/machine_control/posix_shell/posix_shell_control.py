@@ -27,11 +27,14 @@ class PosixShellControl:
         self.transport: Optional[TrojanTransport] = None
 
     async def connect(self, process: Process) -> bool:
-        remote_path = await setup_trojan_in_shell(process, self.registry)
-        if remote_path is None:
+        result = await setup_trojan_in_shell(process, self.registry)
+        if result is None:
             return False
+        remote_path, marker_hex = result
 
-        self.transport = TrojanTransport(registry=self.registry, process=process)
+        self.transport = TrojanTransport(
+            registry=self.registry, process=process, marker_hex=marker_hex
+        )
         self.transport.start_reading()
         return True
 

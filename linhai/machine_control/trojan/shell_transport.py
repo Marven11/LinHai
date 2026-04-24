@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import gzip
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -61,7 +62,9 @@ async def _execute_in_shell(
     return exit_code, "\n".join(output_lines), ""
 
 
-async def setup_trojan_in_shell(process: Process, registry: Registry) -> Optional[str]:
+async def setup_trojan_in_shell(
+    process: Process, registry: Registry
+) -> Optional[tuple[str, str]]:
     await registry.send_if_exists(
         "ui_log",
         UiNotice(level="INFO", content="开始连接远程机器"),
@@ -127,7 +130,8 @@ async def setup_trojan_in_shell(process: Process, registry: Registry) -> Optiona
         UiNotice(level="INFO", content="启动远程控制程序"),
     )
 
-    start_command = f"python3 {remote_path}"
+    marker_hex = uuid.uuid4().hex[:4]
+    start_command = f"python3 {remote_path} {marker_hex}"
     write_result = await process.stdio_write(start_command, with_enter=True)
     if not write_result.success:
         await registry.send_if_exists(
@@ -143,4 +147,4 @@ async def setup_trojan_in_shell(process: Process, registry: Registry) -> Optiona
         UiNotice(level="INFO", content="远程控制程序启动成功"),
     )
 
-    return remote_path
+    return remote_path, marker_hex
