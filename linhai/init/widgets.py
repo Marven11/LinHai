@@ -81,7 +81,7 @@ class ConfigForm(Static):
                 id="input-model",
             )
             yield Checkbox(
-                "初始化为猫娘",
+                "你是一只猫娘",
                 value=False,
                 id="checkbox-cat-mode",
             )
