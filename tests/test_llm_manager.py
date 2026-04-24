@@ -29,6 +29,7 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.mock_registry = MagicMock(spec=Registry)
         self.mock_registry.send_if_exists = AsyncMock()
         self.mock_registry.register_member = MagicMock()
+        self.mock_registry.has_member = MagicMock(return_value=False)
 
         self.mock_llm1 = MagicMock()
         self.mock_llm1.get_name = MagicMock(return_value="llm1")
@@ -60,8 +61,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.llm_manager.llm_fallback_map["llm1"], "llm2")
         self.assertEqual(self.llm_manager.llm_fallback_map["llm2"], None)
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
-        self.assertEqual(self.llm_manager.llm_stack[0][0], "llm1")
-        self.assertIsNone(self.llm_manager.llm_stack[0][1])
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
+        self.assertIsNone(self.llm_manager.llm_stack[0]["disabled_until"])
 
     def test_get_current_llm(self):
         current_llm = self.llm_manager.get_current_llm()
@@ -69,7 +70,9 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
 
     def test_get_current_llm_without_cleanup(self):
         future_time = datetime.now() + timedelta(seconds=10)
-        self.llm_manager.llm_stack.append(("llm2", future_time))
+        self.llm_manager.llm_stack.append(
+            {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
+        )
 
         current_llm = self.llm_manager.get_current_llm(rotate_invalid_llm=False)
         self.assertEqual(current_llm, self.mock_llm2)
@@ -79,9 +82,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
     async def test_switch_to_llm(self):
         await self.llm_manager.switch_to_llm("llm2")
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
-        self.assertEqual(self.llm_manager.llm_stack[0][0], "llm2")
-        self.assertIsNone(self.llm_manager.llm_stack[0][1])
-        self.mock_registry.send_if_exists.assert_called()
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm2")
+        self.assertIsNone(self.llm_manager.llm_stack[0]["disabled_until"])
 
     async def test_switch_to_llm_invalid(self):
         with self.assertRaises(ValueError) as context:
@@ -115,8 +117,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_llm1.answer_stream.call_count, 1)
         self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
-        self.assertEqual(self.llm_manager.llm_stack[0][0], "llm1")
-        self.assertEqual(self.llm_manager.llm_stack[1][0], "llm2")
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
+        self.assertEqual(self.llm_manager.llm_stack[1]["llm_name"], "llm2")
 
     async def test_answer_stream_fallback_on_network_error(self):
         call_count = 0
@@ -189,7 +191,9 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_stack_cleanup_expired_llms(self):
         future_time = datetime.now() + timedelta(seconds=0.01)
-        self.llm_manager.llm_stack.append(("llm2", future_time))
+        self.llm_manager.llm_stack.append(
+            {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
+        )
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
         self.llm_manager._cleanup_expired_llms()
@@ -198,11 +202,13 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.02)
         self.llm_manager._cleanup_expired_llms()
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
-        self.assertEqual(self.llm_manager.llm_stack[0][0], "llm1")
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm1")
 
     async def test_get_current_llm_after_cleanup(self):
         future_time = datetime.now() + timedelta(seconds=0.01)
-        self.llm_manager.llm_stack.append(("llm2", future_time))
+        self.llm_manager.llm_stack.append(
+            {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
+        )
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
         await asyncio.sleep(0.02)
@@ -212,12 +218,14 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
 
     async def test_switch_to_llm_clears_stack(self):
         future_time = datetime.now() + timedelta(seconds=1)
-        self.llm_manager.llm_stack.append(("llm2", future_time))
+        self.llm_manager.llm_stack.append(
+            {"llm_name": "llm2", "disabled_until": future_time, "retry_count": 0}
+        )
         self.assertEqual(len(self.llm_manager.llm_stack), 2)
 
         await self.llm_manager.switch_to_llm("llm2")
         self.assertEqual(len(self.llm_manager.llm_stack), 1)
-        self.assertEqual(self.llm_manager.llm_stack[0][0], "llm2")
+        self.assertEqual(self.llm_manager.llm_stack[0]["llm_name"], "llm2")
 
     def test_record_error(self):
         initial_count = len(self.llm_manager.llm_errors["llm1"])
@@ -299,6 +307,53 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_count2, 1)
         self.assertEqual(mock_llm3.answer_stream.call_count, 1)
         self.assertEqual(len(llm_manager_chain.llm_stack), 3)
+
+    async def test_answer_stream_switch_on_error(self):
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = Lifecycle(self.mock_registry)
+        self.mock_registry.has_member = MagicMock(
+            side_effect=lambda name: name == "lifecycle"
+        )
+        self.mock_registry.get_member_typechecked = MagicMock(return_value=lifecycle)
+
+        llm_manager_no_fallback = LlmManager(
+            registry=self.mock_registry,
+            llms=[self.mock_llm1, self.mock_llm2],
+            default_llm_name="llm1",
+            llm_fallback_map={"llm1": None, "llm2": None},
+            llm_fallback_duration_map={"llm1": 120, "llm2": 120},
+        )
+
+        error_triggered: list[tuple[str, int]] = []
+
+        async def on_error(llm_name: str, error: Exception, retry_count: int) -> None:
+            error_triggered.append((llm_name, retry_count))
+            if retry_count >= 2:
+                await llm_manager_no_fallback.switch_to_llm("llm2")
+
+        lifecycle.on_llm_error.register(on_error)
+
+        call_count = 0
+
+        async def mock_llm1_fail(history):
+            nonlocal call_count
+            call_count += 1
+            raise Exception("connection error")
+
+        self.mock_llm1.answer_stream = AsyncMock(side_effect=mock_llm1_fail)
+        self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
+
+        history = [MagicMock(spec=Message)]
+        answer = await llm_manager_no_fallback.answer_stream(history)
+        self.assertIsInstance(answer, MockAnswer)
+        self.assertEqual(call_count, 2)
+        self.assertEqual(self.mock_llm2.answer_stream.call_count, 1)
+        self.assertEqual(len(error_triggered), 2)
+        self.assertEqual(error_triggered[0], ("llm1", 1))
+        self.assertEqual(error_triggered[1], ("llm1", 2))
+        self.assertEqual(len(llm_manager_no_fallback.llm_stack), 1)
+        self.assertEqual(llm_manager_no_fallback.llm_stack[0]["llm_name"], "llm2")
 
     async def test_answer_stream_fallback_on_openai_error(self):
         call_count = 0

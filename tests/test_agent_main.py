@@ -48,7 +48,9 @@ class TestAgentMain(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(llm, self.mock_llm1)
 
     def test_get_current_llm_info_after_switch(self):
-        self.llm_manager.llm_stack.append(("llm2", None))
+        self.llm_manager.llm_stack.append(
+            {"llm_name": "llm2", "disabled_until": None, "retry_count": 0}
+        )
         name, llm = self.agent.get_current_llm_info()
         self.assertEqual(name, "llm2")
         self.assertEqual(llm, self.mock_llm2)

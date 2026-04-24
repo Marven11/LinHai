@@ -75,6 +75,7 @@ class Agent:
         command_callback = CommandCallback(registry)
         self.lifecycle.after_parsed_user_message.register(command_callback)
         self.lifecycle.after_token_generation.register(self.after_token_generation)
+        self.lifecycle.on_llm_error.register(self._on_llm_error)
 
     def get_threshold_info(self) -> ThresholdInfo | None:
         """获取阈值信息。
@@ -121,6 +122,12 @@ class Agent:
             "remaining_tokens": remaining_tokens,
             "usage_ratio": usage_ratio,
         }
+
+    async def _on_llm_error(
+        self, llm_name: str, error: Exception, retry_count: int
+    ) -> None:
+        if self.user_message_handler.has_message():
+            await self.user_message_handler.receive_and_dispatch()
 
     async def after_token_generation(
         self, agent: "Agent", answer, current_content

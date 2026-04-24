@@ -119,6 +119,11 @@ AfterProcessCreateCallback: TypeAlias = Callable[
     Awaitable[None],
 ]
 
+OnLlmErrorCallback: TypeAlias = Callable[
+    [str, Exception, int],
+    Awaitable[None],
+]
+
 
 def _is_tool_result(value: ToolResultSuccess | ToolResultFailed | dict) -> bool:
     return isinstance(value, (ToolResultSuccess, ToolResultFailed))
@@ -153,3 +158,4 @@ class Lifecycle:
         self.after_cache_invalidate = BroadcastSlot()
         self.after_parsed_user_message = ShortCircuitSlot()
         self.after_process_create = BroadcastSlot()
+        self.on_llm_error = BroadcastSlot()

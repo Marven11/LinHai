@@ -9,6 +9,12 @@ from linhai.registry import Registry
 from linhai.utils.common import UiNotice
 
 
+class LlmStackElement(TypedDict):
+    llm_name: str
+    disabled_until: datetime | None
+    retry_count: int
+
+
 class LlmInfo(TypedDict):
     name: str
     token_limit: int | None
@@ -19,15 +25,14 @@ class LlmInfo(TypedDict):
 
 
 class LlmManagerError(Exception):
-    """基类异常，用于LlmManager相关错误"""
+    pass
 
 
 class NoAvailableLlmError(LlmManagerError):
-    """所有LLM都被禁用时的异常"""
+    pass
 
 
 class LlmManager:
-    """统一管理多个LLM实例，处理错误重试和自动切换"""
 
     def __init__(
         self,
@@ -37,16 +42,6 @@ class LlmManager:
         llm_fallback_duration_map: dict[str, int],
         default_llm_name: str | None = None,
     ) -> None:
-        """初始化LlmManager
-
-        Args:
-            registry: Registry实例，用于消息通信
-            llms: LanguageModel实例列表
-            default_llm_name: 默认LLM名称，如果为None则使用第一个LLM
-            llm_fallback_map: LLM fallback映射，key为LLM名称，value为fallback的LLM名称
-            llm_fallback_duration_map: LLM fallback持续时间映射（秒），key为LLM名称，value为fallback持续时间（秒）
-
-        """
         self.registry = registry
         self.llms = llms
         self.llm_names = [llm.get_name() for llm in llms]
@@ -57,7 +52,7 @@ class LlmManager:
             self.default_llm_name = default_llm_name
         else:
             raise ValueError(
-                f"错误：默认LLM名称 '{default_llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                f"\u9519\u8bef\uff1a\u9ed8\u8ba4LLM\u540d\u79f0 '{default_llm_name}' \u4e0d\u5b58\u5728\u3002\u53ef\u7528\u7684LLM\u5305\u62ec: {', '.join(self.llm_names)}"
             )
 
         self.llm_fallback_map: dict[str, str | None] = {}
@@ -65,36 +60,38 @@ class LlmManager:
             for llm_name, fallback_name in llm_fallback_map.items():
                 if llm_name not in self.llm_names:
                     raise ValueError(
-                        f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                        f"\u9519\u8bef\uff1aLLM\u540d\u79f0 '{llm_name}' \u4e0d\u5b58\u5728\u3002\u53ef\u7528\u7684LLM\u5305\u62ec: {', '.join(self.llm_names)}"
                     )
                 if fallback_name is not None and fallback_name not in self.llm_names:
                     raise ValueError(
-                        f"错误：fallback LLM名称 '{fallback_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                        f"\u9519\u8bef\uff1afallback LLM\u540d\u79f0 '{fallback_name}' \u4e0d\u5b58\u5728\u3002\u53ef\u7528\u7684LLM\u5305\u62ec: {', '.join(self.llm_names)}"
                     )
                 self.llm_fallback_map[llm_name] = fallback_name
         for llm_name in self.llm_names:
             assert (
                 llm_name in self.llm_fallback_map
-            ), f"LLM名称 '{llm_name}' 未在llm_fallback_map中配置"
+            ), f"LLM\u540d\u79f0 '{llm_name}' \u672a\u5728llm_fallback_map\u4e2d\u914d\u7f6e"
 
         self.llm_fallback_duration_map: dict[str, int] = {}
         if llm_fallback_duration_map is not None:
             for llm_name, duration in llm_fallback_duration_map.items():
                 if llm_name not in self.llm_names:
                     raise ValueError(
-                        f"错误：LLM名称 '{llm_name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                        f"\u9519\u8bef\uff1aLLM\u540d\u79f0 '{llm_name}' \u4e0d\u5b58\u5728\u3002\u53ef\u7528\u7684LLM\u5305\u62ec: {', '.join(self.llm_names)}"
                     )
                 if not isinstance(duration, int) or duration <= 0:
                     raise ValueError(
-                        f"错误：LLM '{llm_name}' 的fallback_duration必须为正整数，得到: {duration}"
+                        f"\u9519\u8bef\uff1aLLM '{llm_name}' \u7684fallback_duration\u5fc5\u987b\u4e3a\u6b63\u6574\u6570\uff0c\u5f97\u5230: {duration}"
                     )
                 self.llm_fallback_duration_map[llm_name] = duration
         for llm_name in self.llm_names:
             if llm_name not in self.llm_fallback_duration_map:
                 self.llm_fallback_duration_map[llm_name] = 120
 
-        self.llm_stack: list[tuple[str, datetime | None]] = [
-            (self.default_llm_name, None)
+        self.llm_stack: list[LlmStackElement] = [
+            LlmStackElement(
+                llm_name=self.default_llm_name, disabled_until=None, retry_count=0
+            )
         ]
         self.llm_errors: dict[str, list[tuple[datetime, str]]] = {
             name: [] for name in self.llm_names
@@ -103,212 +100,193 @@ class LlmManager:
         self.registry.register_member("llm_manager", self)
 
     def _is_llm_expired(self, disabled_until: datetime | None) -> bool:
-        """检查LLM是否已过期
-
-        Args:
-            disabled_until: 禁用截止时间，None表示永不过期
-
-        Returns:
-            bool: 如果LLM已过期则返回True，否则返回False
-        """
         if disabled_until is None:
             return False
         return datetime.now() >= disabled_until
 
     def _cleanup_expired_llms(self) -> None:
-        """清理栈中过期的LLM，但永远保留至少一个元素"""
-        while len(self.llm_stack) > 1 and self._is_llm_expired(self.llm_stack[-1][1]):
+        while len(self.llm_stack) > 1 and self._is_llm_expired(
+            self.llm_stack[-1]["disabled_until"]
+        ):
             self.llm_stack.pop()
 
     def get_current_llm(self, rotate_invalid_llm: bool = True) -> LanguageModel:
-        """获取当前使用的LLM实例
-
-        Args:
-            rotate_invalid_llm: 是否清理过期LLM，默认为True
-                - True: 清理过期LLM后返回栈顶LLM（现有行为）
-                - False: 不清理过期LLM，直接返回栈顶LLM（底栏显示使用）
-
-        Returns:
-            LanguageModel: 当前LLM实例
-        """
         if rotate_invalid_llm:
             self._cleanup_expired_llms()
         assert len(self.llm_stack) > 0, "llm_stack should never be empty"
-        llm_name = self.llm_stack[-1][0]
+        llm_name = self.llm_stack[-1]["llm_name"]
         index = self.llm_names.index(llm_name)
         return self.llms[index]
 
     async def switch_to_llm(self, name: str) -> None:
-        """切换到指定的LLM
-
-        Args:
-            name: 目标LLM名称
-
-        Raises:
-            ValueError: 如果指定的LLM名称不存在
-        """
         if name not in self.llm_names:
             raise ValueError(
-                f"错误：LLM名称 '{name}' 不存在。可用的LLM包括: {', '.join(self.llm_names)}"
+                f"\u9519\u8bef\uff1aLLM\u540d\u79f0 '{name}' \u4e0d\u5b58\u5728\u3002\u53ef\u7528\u7684LLM\u5305\u62ec: {', '.join(self.llm_names)}"
             )
-        self.llm_stack = [(name, None)]
+        self.llm_stack = [
+            LlmStackElement(llm_name=name, disabled_until=None, retry_count=0)
+        ]
         await self.registry.send_if_exists(
-            "ui_log", UiNotice(level="INFO", content=f"已切换到LLM: {name}")
+            "ui_log",
+            UiNotice(level="INFO", content=f"\u5df2\u5207\u6362\u5230LLM: {name}"),
         )
 
     def _record_error(self, llm_name: str, error_type: str) -> None:
-        """记录LLM错误
-
-        Args:
-            llm_name: LLM名称
-            error_type: 错误类型
-        """
         current_time = datetime.now()
         self.llm_errors[llm_name].append((current_time, error_type))
         if len(self.llm_errors[llm_name]) > 100:
             self.llm_errors[llm_name] = self.llm_errors[llm_name][-100:]
 
     def _get_fallback_llm(self, llm_name: str) -> str | None:
-        """获取LLM的fallback配置
-
-        Args:
-            llm_name: LLM名称
-
-        Returns:
-            fallback的LLM名称，如果没有配置则返回None
-        """
         return self.llm_fallback_map.get(llm_name)
 
+    async def _trigger_on_llm_error(
+        self, llm_name: str, error: Exception, retry_count: int
+    ) -> None:
+        from linhai.agent.lifecycle import Lifecycle
+
+        if self.registry.has_member("lifecycle"):
+            lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+            await lifecycle.on_llm_error.trigger(llm_name, error, retry_count)
+
     async def answer_stream(self, history: Sequence[Message]) -> Answer:
-        """生成流式回答
-
-        Args:
-            history: 消息历史序列
-
-        Returns:
-            Answer: 生成的回答
-
-        Raises:
-            ValueError: 如果历史为空
-            NoAvailableLlmError: 如果栈为空（理论上不可能）
-        """
         if not history:
             raise ValueError("history is empty")
-
-        retry_count = 0
-        last_error = None
 
         while True:
             self._cleanup_expired_llms()
             assert len(self.llm_stack) > 0, "llm_stack should never be empty"
-            current_llm_name = self.llm_stack[-1][0]
-            current_llm = self.llms[self.llm_names.index(current_llm_name)]
+            element = self.llm_stack[-1]
+            llm_name = element["llm_name"]
+            current_llm = self.llms[self.llm_names.index(llm_name)]
 
             try:
                 answer = await current_llm.answer_stream(history)
                 return answer
             except asyncio.TimeoutError as e:
-                last_error = e
-                self._record_error(current_llm_name, "timeout")
-                delay = min(5 * 1.5**retry_count, 300)
+                element["retry_count"] += 1
+                self._record_error(llm_name, "timeout")
+                delay = min(5 * 1.5 ** element["retry_count"], 300)
+                await self._trigger_on_llm_error(llm_name, e, element["retry_count"])
                 await self.registry.send_if_exists(
                     "ui_log",
                     UiNotice(
                         level="WARNING",
-                        content=f"LLM '{current_llm_name}' 超时，将在 {delay:.1f} 秒后重试",
+                        content=f"LLM '{llm_name}' \u8d85\u65f6\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                     ),
                 )
                 await asyncio.sleep(delay)
-                retry_count += 1
             except Exception as e:
-                last_error = e
                 error_str = str(e).lower()
-                fallback_llm = self._get_fallback_llm(current_llm_name)
+                fallback_llm = self._get_fallback_llm(llm_name)
 
                 if "rate limit" in error_str or "429" in error_str:
-                    self._record_error(current_llm_name, "rate_limit")
+                    element["retry_count"] += 1
+                    self._record_error(llm_name, "rate_limit")
                     await current_llm.reconnect()
+                    await self._trigger_on_llm_error(
+                        llm_name, e, element["retry_count"]
+                    )
                     if fallback_llm is not None:
                         fallback_duration = self.llm_fallback_duration_map.get(
-                            current_llm_name, 120
+                            llm_name, 120
                         )
-                        disabled_duration = timedelta(seconds=fallback_duration)
-                        disabled_until = datetime.now() + disabled_duration
-                        self.llm_stack.append((fallback_llm, disabled_until))
+                        disabled_until = datetime.now() + timedelta(
+                            seconds=fallback_duration
+                        )
+                        self.llm_stack.append(
+                            LlmStackElement(
+                                llm_name=fallback_llm,
+                                disabled_until=disabled_until,
+                                retry_count=0,
+                            )
+                        )
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 速率限制，已切换到fallback LLM: {fallback_llm}，{fallback_duration}s后恢复",
+                                content=f"LLM '{llm_name}' \u901f\u7387\u9650\u5236\uff0c\u5df2\u5207\u6362\u5230fallback LLM: {fallback_llm}\uff0c{fallback_duration}s\u540e\u6062\u590d",
                             ),
                         )
                     else:
-                        delay = min(5 * 1.5**retry_count, 30)
+                        delay = min(5 * 1.5 ** element["retry_count"], 30)
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 速率限制，将在 {delay:.1f} 秒后重试",
+                                content=f"LLM '{llm_name}' \u901f\u7387\u9650\u5236\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                             ),
                         )
                         await asyncio.sleep(delay)
-                        retry_count += 1
                 elif "connection" in error_str or "network" in error_str:
-                    self._record_error(current_llm_name, "connection")
+                    element["retry_count"] += 1
+                    self._record_error(llm_name, "connection")
+                    await self._trigger_on_llm_error(
+                        llm_name, e, element["retry_count"]
+                    )
                     if fallback_llm is not None:
                         disabled_until = datetime.now() + timedelta(minutes=1)
-                        self.llm_stack.append((fallback_llm, disabled_until))
+                        self.llm_stack.append(
+                            LlmStackElement(
+                                llm_name=fallback_llm,
+                                disabled_until=disabled_until,
+                                retry_count=0,
+                            )
+                        )
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 网络错误，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
+                                content=f"LLM '{llm_name}' \u7f51\u7edc\u9519\u8bef\uff0c\u5df2\u5207\u6362\u5230fallback LLM: {fallback_llm}\uff0c1\u5206\u949f\u540e\u6062\u590d",
                             ),
                         )
                     else:
-                        delay = min(5 * 1.5**retry_count, 300)
+                        delay = min(5 * 1.5 ** element["retry_count"], 300)
                         await self.registry.send_if_exists(
                             "ui_log",
                             UiNotice(
                                 level="WARNING",
-                                content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
+                                content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                             ),
                         )
                         await asyncio.sleep(delay)
-                        retry_count += 1
                 else:
                     if isinstance(e, OpenAIError):
-                        self._record_error(current_llm_name, "openai_error")
+                        element["retry_count"] += 1
+                        self._record_error(llm_name, "openai_error")
+                        await self._trigger_on_llm_error(
+                            llm_name, e, element["retry_count"]
+                        )
                         if fallback_llm is not None:
                             disabled_until = datetime.now() + timedelta(minutes=1)
-                            self.llm_stack.append((fallback_llm, disabled_until))
+                            self.llm_stack.append(
+                                LlmStackElement(
+                                    llm_name=fallback_llm,
+                                    disabled_until=disabled_until,
+                                    retry_count=0,
+                                )
+                            )
                             await self.registry.send_if_exists(
                                 "ui_log",
                                 UiNotice(
                                     level="WARNING",
-                                    content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，已切换到fallback LLM: {fallback_llm}，1分钟后恢复",
+                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5df2\u5207\u6362\u5230fallback LLM: {fallback_llm}\uff0c1\u5206\u949f\u540e\u6062\u590d",
                                 ),
                             )
                         else:
-                            delay = min(5 * 1.5**retry_count, 300)
+                            delay = min(5 * 1.5 ** element["retry_count"], 300)
                             await self.registry.send_if_exists(
                                 "ui_log",
                                 UiNotice(
                                     level="WARNING",
-                                    content=f"LLM '{current_llm_name}' 错误: {error_str[:100]}，将在 {delay:.1f} 秒后重试",
+                                    content=f"LLM '{llm_name}' \u9519\u8bef: {error_str[:100]}\uff0c\u5c06\u5728 {delay:.1f} \u79d2\u540e\u91cd\u8bd5",
                                 ),
                             )
                             await asyncio.sleep(delay)
-                            retry_count += 1
                     else:
                         raise
 
     def list_available_llms(self) -> list[LlmInfo]:
-        """列出所有可用的LLM及其状态
-
-        Returns:
-            list[LlmInfo]: LLM信息列表
-        """
         current_llm = self.get_current_llm(rotate_invalid_llm=False)
         current_llm_name = current_llm.get_name() if current_llm else None
         result: list[LlmInfo] = []
