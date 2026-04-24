@@ -422,6 +422,7 @@ class ToolCallWidget(Static):
         self._markdown_widget: Markdown | None = None
         self._collapse_header: _ToolCallCollapseHeader | None = None
         self.border_title = "tool call"
+        self.tool_name: str = ""
 
     def on_mount(self) -> None:
         """组件挂载时开始解析JSON"""
@@ -468,6 +469,8 @@ class ToolCallWidget(Static):
                     if isinstance(value.value, str)
                     else json.dumps(value.value)
                 )
+                if value.index_key == "name" and isinstance(value.value, str):
+                    self.tool_name = value.value
 
                 if "\n" in final_value:
                     backticks = "`" * self.get_backtick_count(final_value)
@@ -866,19 +869,23 @@ class MessageWidget(Static):
         self._state = "streaming"
         self._collapsed_view = _ClickStatic("\u25b6", self._expand_message)
         self._expand_header = _ClickStatic(
-            t({"zh_CN": "\u25bc \u6d88\u606f", "en": "\u25bc Message"}),
+            "\u25bc",
             self._collapse_message,
         )
         self._content = Static(classes="message-segments")
         self._collapsed_view.display = False
         self._expand_header.display = False
         self._auto_transition_timer: Timer | None = None
+        self._streaming_timer: Timer | None = None
 
     def on_mount(self):
         self.mount(self._collapsed_view)
         self.mount(self._expand_header)
         self.mount(self._content)
         self._start_processing_segments()
+        self._streaming_timer = self.set_interval(
+            self.get_refresh_interval(), self._update_streaming_header
+        )
 
     @work(exclusive=False)
     async def _start_processing_segments(self):
@@ -930,6 +937,9 @@ class MessageWidget(Static):
             self._content.mount(widget)
             last_content_widget = widget
             is_first_segment = False
+            if self._state == "collapsed":
+                summary = self._get_tool_call_summary()
+                self._collapsed_view.update(summary)
 
     def _schedule_auto_transition(self) -> None:
         self._auto_transition_timer = self.set_timer(1.0, self._auto_transition)
@@ -950,8 +960,7 @@ class MessageWidget(Static):
                 if child.has_error:
                     tool_names.append(BAD_TOOLCALL)
                 else:
-                    match = re.search(r'"name"\s*:\s*"([^"]+)"', child.json_str)
-                    tool_names.append(match.group(1) if match else "unknown")
+                    tool_names.append(child.tool_name or "unknown")
         clusters = cluster_tool_calls(tool_names)
         text = Text("\u25b6 ")
         for i, (name, count) in enumerate(clusters):
@@ -961,6 +970,35 @@ class MessageWidget(Static):
             if count > 1:
                 text.append(f"*{count}")
         return text
+
+    def _get_expand_header_text(self) -> Text:
+        tool_names: list[str] = []
+        for child in self._content.children:
+            if isinstance(child, ToolCallWidget):
+                if child._segment["is_finished"] and not child.has_error:
+                    tool_names.append(child.tool_name or "unknown")
+        clusters = cluster_tool_calls(tool_names)
+        text = Text("\u25bc ")
+        for i, (name, count) in enumerate(clusters):
+            if i > 0:
+                text.append(", ")
+            text.append(name, style=Style(bold=True))
+            if count > 1:
+                text.append(f"*{count}")
+        return text
+
+    def _update_streaming_header(self) -> None:
+        if self._state != "streaming":
+            if self._streaming_timer:
+                self._streaming_timer.stop()
+                self._streaming_timer = None
+            return
+        header_text = self._get_expand_header_text()
+        if len(header_text.plain) > 2:
+            self._expand_header.update(header_text)
+            self._expand_header.display = True
+        else:
+            self._expand_header.display = False
 
     def _collapse_message(self) -> None:
         if self._state == "collapsed":
@@ -977,6 +1015,8 @@ class MessageWidget(Static):
             return
         self._state = "expanded"
         self._collapsed_view.display = False
+        header_text = self._get_expand_header_text()
+        self._expand_header.update(header_text)
         self._expand_header.display = True
         self._content.display = True
 
