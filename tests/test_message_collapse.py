@@ -5,6 +5,7 @@ from textual.app import App, ComposeResult
 
 from linhai.tui.components import (
     MessageWidget,
+    NormalContentWidget,
     ToolCallWidget,
     ReasoningContentWidget,
 )
@@ -38,6 +39,27 @@ def _make_reasoning_segment(content="thinking...", is_finished=True):
         "content": content,
         "is_finished": is_finished,
     }
+
+
+def _make_normal_segment(content="", is_finished=True):
+    return {
+        "segment_type": "normal",
+        "content": content,
+        "is_finished": is_finished,
+    }
+
+
+def _mount_normal(msg, content):
+    nc = NormalContentWidget(
+        role="assistant",
+        sender_name="test",
+        theme=None,
+        segment=_make_normal_segment(content, is_finished=True),
+        get_refresh_interval=lambda: 1.0,
+    )
+    nc._streamed_content = content
+    msg._content.mount(nc)
+    return nc
 
 
 class _MessageTestApp(App):
@@ -151,6 +173,65 @@ class TestStreamingHeader(unittest.TestCase):
             self.assertIsNone(msg._streaming_timer)
 
 
+class TestCollapsedSummary(unittest.TestCase):
+    def test_only_tool_calls(self):
+        asyncio.run(self._test_only_tool_calls())
+
+    async def _test_only_tool_calls(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_toolcall(msg, "read_file")
+            _mount_toolcall(msg, "read_file")
+            _mount_toolcall(msg, "list_files")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(summary.plain, "\u25b6 [read_file*2, list_files]")
+
+    def test_text_and_tools_interleaved(self):
+        asyncio.run(self._test_text_and_tools())
+
+    async def _test_text_and_tools(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_normal(msg, "让我来克隆仓库喵")
+            _mount_toolcall(msg, "process_create")
+            _mount_toolcall(msg, "process_create")
+            _mount_toolcall(msg, "list_files")
+            _mount_normal(msg, "现在等待完成喵")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(
+                summary.plain,
+                "\u25b6 让我来克隆仓库喵[process_create*2, list_files]现在等待完成喵",
+            )
+
+    def test_error_tool_call_in_summary(self):
+        asyncio.run(self._test_error_tool())
+
+    async def _test_error_tool(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_normal(msg, "开始处理")
+            _mount_toolcall(msg, "read_file")
+            _mount_toolcall(msg, "bad_call", has_error=True)
+            _mount_normal(msg, "继续")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(
+                summary.plain,
+                "\u25b6 开始处理[read_file, <bad toolcall>]继续",
+            )
+
+    def test_empty_normal_content_skipped(self):
+        asyncio.run(self._test_empty_normal())
+
+    async def _test_empty_normal(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_normal(msg, "   ")
+            _mount_toolcall(msg, "read_file")
+            _mount_normal(msg, "")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(summary.plain, "\u25b6 [read_file]")
+
+
 class TestMessageCollapseInteraction(unittest.TestCase):
     def test_tool_calls_collapsed_to_clustered_summary(self):
         asyncio.run(self._test_tool_calls_collapsed())
@@ -169,7 +250,7 @@ class TestMessageCollapseInteraction(unittest.TestCase):
 
             msg._auto_transition()
             self.assertEqual(msg._state, "collapsed")
-            summary = msg._get_tool_call_summary()
+            summary = msg._get_collapsed_summary()
             self.assertIn("read_file*4", summary)
             self.assertIn("list_files", summary)
 

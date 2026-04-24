@@ -938,7 +938,7 @@ class MessageWidget(Static):
             last_content_widget = widget
             is_first_segment = False
             if self._state == "collapsed":
-                summary = self._get_tool_call_summary()
+                summary = self._get_collapsed_summary()
                 self._collapsed_view.update(summary)
 
     def _schedule_auto_transition(self) -> None:
@@ -953,22 +953,36 @@ class MessageWidget(Static):
         else:
             self._state = "expanded"
 
-    def _get_tool_call_summary(self) -> Text:
-        tool_names: list[str] = []
+    def _get_collapsed_summary(self) -> Text:
+        text = Text("\u25b6 ")
+        pending_tools: list[str] = []
+
+        def flush_tools():
+            if not pending_tools:
+                return
+            clusters = cluster_tool_calls(pending_tools)
+            text.append("[")
+            for i, (name, count) in enumerate(clusters):
+                if i > 0:
+                    text.append(", ")
+                text.append(name, style=Style(bold=True))
+                if count > 1:
+                    text.append(f"*{count}")
+            text.append("]")
+            pending_tools.clear()
+
         for child in self._content.children:
             if isinstance(child, ToolCallWidget):
                 if child.has_error:
-                    tool_names.append(BAD_TOOLCALL)
+                    pending_tools.append(BAD_TOOLCALL)
                 else:
-                    tool_names.append(child.tool_name or "unknown")
-        clusters = cluster_tool_calls(tool_names)
-        text = Text("\u25b6 ")
-        for i, (name, count) in enumerate(clusters):
-            if i > 0:
-                text.append(", ")
-            text.append(name, style=Style(bold=True))
-            if count > 1:
-                text.append(f"*{count}")
+                    pending_tools.append(child.tool_name or "unknown")
+            elif isinstance(child, NormalContentWidget):
+                flush_tools()
+                content = child._streamed_content.strip()
+                if content:
+                    text.append(content)
+        flush_tools()
         return text
 
     def _get_expand_header_text(self) -> Text:
@@ -1004,7 +1018,7 @@ class MessageWidget(Static):
         if self._state == "collapsed":
             return
         self._state = "collapsed"
-        summary = self._get_tool_call_summary()
+        summary = self._get_collapsed_summary()
         self._collapsed_view.update(summary)
         self._collapsed_view.display = True
         self._expand_header.display = False
