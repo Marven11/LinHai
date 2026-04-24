@@ -1,6 +1,8 @@
 """BashHostControl: 通过raw bash命令控制远程机器。"""
 
 import asyncio
+import base64
+import pathlib
 import shlex
 from typing import Any, Dict, Optional, Union
 
@@ -24,6 +26,7 @@ from .file import (
 )
 from .process import BashProcess
 from . import terminal as _terminal
+from .http import http_request as _http_request
 
 
 class BashHostControl:
@@ -41,6 +44,8 @@ class BashHostControl:
         self._counter: int = 0
         self._timeout_mode: str = "builtin"
         self._processes: dict[str, BashProcess] = {}
+        self._cwd: str = ""
+        self._has_curl: bool = False
 
     def make_temp_path(self, prefix: str) -> str:
         self._counter += 1
@@ -64,6 +69,10 @@ class BashHostControl:
             return False
         self._tmp_dir = stdout.strip()
 
+        rc, stdout, _ = await self.execute_raw("pwd")
+        if rc == 0:
+            self._cwd = stdout.strip()
+
         rc, stdout, stderr = await self.execute_raw("echo $LANG")
         if rc == 0 and stdout.strip():
             lang = stdout.strip().lower()
@@ -86,11 +95,14 @@ class BashHostControl:
             else:
                 self._timeout_mode = "builtin"
 
+        rc, _, _ = await self.execute_raw("command -v curl >/dev/null 2>&1")
+        self._has_curl = rc == 0
+
         await self.registry.send_if_exists(
             "ui_log",
             UiNotice(
                 level="INFO",
-                content=f"Bash控制连接成功 (编码: {self._encoding}, timeout: {self._timeout_mode}, 临时目录: {self._tmp_dir})",
+                content=f"Bash控制连接成功 (编码: {self._encoding}, timeout: {self._timeout_mode}, curl: {self._has_curl}, 临时目录: {self._tmp_dir})",
             ),
         )
         return True
@@ -184,12 +196,35 @@ class BashHostControl:
         proxy: Optional[str] = None,
         verify: Optional[bool] = None,
     ) -> HttpMessage | ToolResultFailed:
-        raise NotImplementedError("http_request尚未在bash控制中实现")
+        if not self._has_curl:
+            return ToolResultFailed(content="远程机器没有安装curl")
+        return await _http_request(
+            self,
+            method,
+            url,
+            params,
+            headers,
+            data,
+            follow_redirects,
+            timeout,
+            auth,
+            cookies,
+            json_data,
+            proxy,
+            verify,
+        )
 
     async def change_directory(
         self, directory: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("change_directory尚未在bash控制中实现")
+        rc, stdout, stderr = await self.execute_raw(
+            f"cd {shlex.quote(directory)} 2>&1 && pwd"
+        )
+        if rc != 0:
+            return ToolResultFailed(content=f"切换目录失败: {stderr or stdout}")
+        old_cwd = self._cwd
+        self._cwd = stdout.strip().split("\n")[-1].strip()
+        return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def create_process(
         self, argv: list[str], wait_second: Optional[float] = None, pty: bool = False
@@ -213,8 +248,8 @@ class BashHostControl:
             )
 
         start_cmd = (
-            f"({cmd_str} < /dev/null > {stdout_path}"
-            f" 2> {stderr_path};"
+            f"(cd {shlex.quote(self._cwd)} && {cmd_str} < /dev/null"
+            f" > {stdout_path} 2> {stderr_path};"
             f" echo $? > {rc_path}) & "
             f"echo $!"
         )
@@ -341,12 +376,61 @@ class BashHostControl:
     async def download_file_concurrent(
         self, remote_path: str, local_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("download_file_concurrent尚未在bash控制中实现")
+        rc, _, _ = await self.execute_raw(f"test -f {shlex.quote(remote_path)}")
+        if rc != 0:
+            return ToolResultFailed(content=f"远程文件不存在: {remote_path}")
+
+        rc, size_str, _ = await self.execute_raw(f"wc -c < {shlex.quote(remote_path)}")
+        if rc != 0 or not size_str.strip().isdigit():
+            return ToolResultFailed(content=f"无法获取文件大小: {remote_path}")
+
+        file_size = int(size_str.strip())
+        chunk_size = 30720
+        data = bytearray()
+
+        for offset in range(0, file_size, chunk_size):
+            cmd = (
+                f"dd if={shlex.quote(remote_path)} bs={chunk_size}"
+                f" skip={offset // chunk_size} count=1 2>/dev/null | base64"
+            )
+            rc, b64_data, _ = await self.execute_raw(cmd, timeout=60.0)
+            if rc != 0:
+                return ToolResultFailed(content=f"读取文件块失败 (offset={offset})")
+            if b64_data.strip():
+                data.extend(base64.b64decode(b64_data.strip()))
+
+        pathlib.Path(local_path).write_bytes(bytes(data))
+        return ToolResultSuccess(content=f"文件已下载: {local_path} ({file_size}字节)")
 
     async def upload_file_concurrent(
         self, data: bytes, remote_path: str
     ) -> ToolResultSuccess | ToolResultFailed:
-        raise NotImplementedError("upload_file_concurrent尚未在bash控制中实现")
+        parent = remote_path.rsplit("/", 1)[0] if "/" in remote_path else "."
+        rc, _, _ = await self.execute_raw(f"test -d {shlex.quote(parent)}")
+        if rc != 0:
+            return ToolResultFailed(content=f"远程目录不存在: {parent}")
+
+        chunk_size = 30720
+        tmp_path = self.make_temp_path("upload")
+
+        for i in range(0, len(data), chunk_size):
+            chunk = data[i : i + chunk_size]
+            encoded = base64.b64encode(chunk).decode("ascii")
+            redirect = ">" if i == 0 else ">>"
+            cmd = f"echo '{encoded}' | base64 -d {redirect} {shlex.quote(tmp_path)}"
+            rc, _, stderr = await self.execute_raw(cmd, timeout=30.0)
+            if rc != 0:
+                await self.execute_raw(f"rm -f {shlex.quote(tmp_path)}")
+                return ToolResultFailed(content=f"上传文件块失败: {stderr}")
+
+        rc, _, stderr = await self.execute_raw(
+            f"mv {shlex.quote(tmp_path)} {shlex.quote(remote_path)}"
+        )
+        if rc != 0:
+            await self.execute_raw(f"rm -f {shlex.quote(tmp_path)}")
+            return ToolResultFailed(content=f"移动文件失败: {stderr}")
+
+        return ToolResultSuccess(content=f"文件已上传: {remote_path} ({len(data)}字节)")
 
     async def disconnect(self) -> None:
         if self._shell_process is not None:

@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import os
+import tempfile
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -13,6 +15,7 @@ from linhai.machine_control.process import (
     ProcessWriteResult,
 )
 from linhai.registry import Registry
+from linhai.tool.base import ToolResultSuccess, ToolResultFailed
 
 
 class TestBashProcess(unittest.TestCase):
@@ -269,6 +272,125 @@ class TestBashHostControlProcessMgmt(unittest.TestCase):
             proc = self.control.get_process("42")
             self.assertIsNotNone(proc)
             self.assertEqual(proc.pid, "42")
+
+        self.loop.run_until_complete(test())
+
+
+class TestBashHostChangeDirectory(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.registry = Mock(spec=Registry)
+        self.registry.send_if_exists = AsyncMock()
+        self.registry.has_member = Mock(return_value=False)
+        self.registry.members = {}
+        self.control = BashHostControl(registry=self.registry)
+        self.control._cwd = "/home/user"
+
+    def tearDown(self):
+        self.loop.close()
+
+    def test_change_directory_success(self):
+        async def test():
+            self.control.execute_raw = AsyncMock(return_value=(0, "/tmp", ""))
+            result = await self.control.change_directory("/tmp")
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertEqual(self.control._cwd, "/tmp")
+            self.assertIn("/tmp", result.content)
+
+        self.loop.run_until_complete(test())
+
+    def test_change_directory_failure(self):
+        async def test():
+            self.control.execute_raw = AsyncMock(
+                return_value=(1, "", "not a directory")
+            )
+            result = await self.control.change_directory("/no/such/dir")
+            self.assertIsInstance(result, ToolResultFailed)
+            self.assertEqual(self.control._cwd, "/home/user")
+
+        self.loop.run_until_complete(test())
+
+
+class TestBashHostDownloadUpload(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.registry = Mock(spec=Registry)
+        self.registry.send_if_exists = AsyncMock()
+        self.registry.has_member = Mock(return_value=False)
+        self.registry.members = {}
+        self.control = BashHostControl(registry=self.registry)
+        self.control._tmp_dir = "/tmp/linhai_test"
+        self.control._cwd = "/home/user"
+
+    def tearDown(self):
+        self.loop.close()
+
+    def test_download_file_not_exist(self):
+        async def test():
+            self.control.execute_raw = AsyncMock(return_value=(1, "", ""))
+            result = await self.control.download_file_concurrent(
+                "/no/file", "/tmp/local"
+            )
+            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIn("不存在", result.content)
+
+        self.loop.run_until_complete(test())
+
+    def test_download_small_file(self):
+        async def test():
+            content = b"hello world"
+            b64_content = base64.b64encode(content).decode("ascii")
+            self.control.execute_raw = AsyncMock(
+                side_effect=[
+                    (0, "", ""),
+                    (0, str(len(content)), ""),
+                    (0, b64_content, ""),
+                ]
+            )
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                local_path = f.name
+            try:
+                result = await self.control.download_file_concurrent(
+                    "/remote/file", local_path
+                )
+                self.assertIsInstance(result, ToolResultSuccess)
+                with open(local_path, "rb") as f:
+                    self.assertEqual(f.read(), content)
+            finally:
+                os.unlink(local_path)
+
+        self.loop.run_until_complete(test())
+
+    def test_upload_file_success(self):
+        async def test():
+            data = b"test data for upload"
+            self.control.execute_raw = AsyncMock(
+                side_effect=[
+                    (0, "", ""),
+                    (0, "", ""),
+                    (0, "", ""),
+                ]
+            )
+            result = await self.control.upload_file_concurrent(
+                data, "/remote/path/file.txt"
+            )
+            self.assertIsInstance(result, ToolResultSuccess)
+            self.assertIn("上传", result.content)
+
+        self.loop.run_until_complete(test())
+
+    def test_upload_file_dir_not_exist(self):
+        async def test():
+            self.control.execute_raw = AsyncMock(return_value=(1, "", ""))
+            result = await self.control.upload_file_concurrent(
+                b"data", "/no/dir/file.txt"
+            )
+            self.assertIsInstance(result, ToolResultFailed)
+            self.assertIn("目录不存在", result.content)
 
         self.loop.run_until_complete(test())
 
