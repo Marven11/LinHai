@@ -117,6 +117,11 @@ class StreamJsonParser:
         self.payload = ""
         self.payload_string_parser: StreamJsonStringParser | None = None
         self.started = False
+        self._corrupted = False
+
+    @property
+    def is_corrupted(self) -> bool:
+        return self._corrupted
 
     def is_current_data_finished(self):
         return self.started and not self.stack
@@ -149,17 +154,20 @@ class StreamJsonParser:
         elif c in "}]":
             if not self.stack:
                 self.state = ParserState.INVALID
-                raise RuntimeError("Stack is empty")
+                self._corrupted = True
+                return
             if isinstance(self.stack[-1], int):
                 self.stack.pop()
             pair = self.stack.pop()
             if pair != PAIRS[c]:
                 self.state = ParserState.INVALID
-                raise RuntimeError(f"Bracket mismatch: {pair!r} != {PAIRS[c]!r}")
+                self._corrupted = True
+                return
             if self.stack:
                 if self.stack[-1] in ["{", "["]:
                     self.state = ParserState.INVALID
-                    raise RuntimeError(f"Invalid stack: {self.stack}")
+                    self._corrupted = True
+                    return
                 key = self.stack.pop()
                 if isinstance(key, int):
                     self.stack.append(key + 1)
@@ -174,7 +182,8 @@ class StreamJsonParser:
             self.state = ParserState.ATOMIC_VALUE
         else:
             self.state = ParserState.INVALID
-            raise RuntimeError(f"Unrecognized character: {c!r}")
+            self._corrupted = True
+            return
 
     def feed_char_outside(self, c: str):
         """处理外部状态字符"""
@@ -217,7 +226,8 @@ class StreamJsonParser:
                 self.state = ParserState.ATOMIC_VALUE
             else:
                 self.state = ParserState.INVALID
-                raise RuntimeError(f"数组值起始字符无效: {c!r}")
+                self._corrupted = True
+                return
             return
 
         is_inside_object = (
@@ -231,7 +241,8 @@ class StreamJsonParser:
 
         original_state = self.state
         self.state = ParserState.INVALID
-        raise RuntimeError(f"无法识别字符: {c!r} 在状态 {original_state.value}")
+        self._corrupted = True
+        return
 
     def feed_char_key(self, c: str):
         """处理键状态字符"""
@@ -307,17 +318,19 @@ class StreamJsonParser:
         if self.state in state_handlers:
             state_handlers[self.state](c)
         else:
-            raise RuntimeError("Invalid parser state")
+            self._corrupted = True
+            return
 
     def feed_string(self, s: str):
-        """输入字符串进行解析"""
-
+        if self._corrupted:
+            return
         if self.state == ParserState.STRING_VALUE and all(c not in '"\\' for c in s):
             self.feed_token_string_value(s)
             return
-
         for c in s:
             self.feed_token(c)
+            if self._corrupted:
+                return
             if self.is_current_data_finished():
                 return
 

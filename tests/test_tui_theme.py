@@ -38,7 +38,14 @@ class TestSyntaxOrText(unittest.TestCase):
 
 class TestWidgetsWithNoneTheme(unittest.TestCase):
     def test_toolcall_widget_accepts_none_theme(self):
-        segment = {"segment_type": "toolcall", "content": "", "is_finished": False}
+        segment = {
+            "segment_type": "toolcall",
+            "raw": "",
+            "is_finished": False,
+            "is_corrupted": False,
+            "markdown_representation": "",
+            "tool_name": "",
+        }
         widget = ToolCallWidget(
             theme=None, segment=segment, get_refresh_interval=lambda: 0.05
         )
@@ -73,8 +80,11 @@ class TestWidgetsWithNoneTheme(unittest.TestCase):
     def test_toolcall_renders_text_with_none_theme(self):
         segment = {
             "segment_type": "toolcall",
-            "content": '{"name": "test"}',
+            "raw": '{"name": "test"}',
             "is_finished": False,
+            "is_corrupted": False,
+            "markdown_representation": "- name: `test`",
+            "tool_name": "test",
         }
         widget = ToolCallWidget(
             theme=None, segment=segment, get_refresh_interval=lambda: 0.05

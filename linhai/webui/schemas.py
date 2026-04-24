@@ -2,10 +2,30 @@ from typing import Optional, Literal, TypedDict, Union
 from pydantic import BaseModel, Field
 
 
-class WebuiSegmentType(TypedDict):
-    segment_type: Literal["reasoning", "normal", "toolcall"]
+class WebuiNormalSegment(TypedDict):
+    segment_type: Literal["normal"]
     content: str
     is_finished: bool
+
+
+class WebuiReasoningSegment(TypedDict):
+    segment_type: Literal["reasoning"]
+    content: str
+    is_finished: bool
+
+
+class WebuiToolCallSegment(TypedDict):
+    segment_type: Literal["toolcall"]
+    raw: str
+    is_finished: bool
+    is_corrupted: bool
+    markdown_representation: str
+    tool_name: str
+
+
+WebuiSegmentType = Union[
+    WebuiNormalSegment, WebuiReasoningSegment, WebuiToolCallSegment
+]
 
 
 class WebuiUserMessage(TypedDict):
@@ -22,7 +42,7 @@ class WebuiNotificationMessage(TypedDict):
 class WebuiAgentMessage(TypedDict):
     type: Literal["agent"]
     content: str
-    segments: list[WebuiSegmentType]
+    segments: list[dict]
 
 
 WebuiMessage = Union[WebuiUserMessage, WebuiNotificationMessage, WebuiAgentMessage]

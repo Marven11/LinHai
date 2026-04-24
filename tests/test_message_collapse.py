@@ -9,26 +9,31 @@ from linhai.tui.components import (
     ToolCallWidget,
     ReasoningContentWidget,
 )
+from linhai.parsed_message import ToolCallSegment
 
 
 def _make_toolcall_segment(name, is_finished=True):
-    return {
-        "segment_type": "toolcall",
-        "content": f'{{"name": "{name}", "arguments": {{}}}}',
-        "is_finished": is_finished,
-    }
+    return ToolCallSegment(
+        segment_type="toolcall",
+        raw=f'{{"name": "{name}", "arguments": {{}}}}',
+        is_finished=is_finished,
+        is_corrupted=False,
+        markdown_representation=f"- name: `{name}`\n",
+        tool_name=name,
+    )
 
 
 def _mount_toolcall(msg, name, is_finished=True, has_error=False):
+    seg = _make_toolcall_segment(name, is_finished=is_finished)
+    if has_error:
+        seg["is_corrupted"] = True
+        seg["markdown_representation"] = "<bad toolcall>"
+        seg["tool_name"] = ""
     tc = ToolCallWidget(
         theme=None,
-        segment=_make_toolcall_segment(name, is_finished=is_finished),
+        segment=seg,
         get_refresh_interval=lambda: 1.0,
     )
-    tc.json_str = tc._segment["content"]
-    tc.tool_name = name
-    if has_error:
-        tc.has_error = True
     msg._content.mount(tc)
     return tc
 
@@ -78,7 +83,9 @@ class _MessageTestApp(App):
 
 def _make_toolcall_segment_with_error(is_finished=True):
     seg = _make_toolcall_segment("bad_call", is_finished=is_finished)
-    seg["content"] = "{invalid json"
+    seg["raw"] = "{invalid json"
+    seg["is_corrupted"] = True
+    seg["markdown_representation"] = "<bad toolcall>"
     return seg
 
 

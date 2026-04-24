@@ -1,8 +1,6 @@
 """TUI UI components for LinHai agent."""
 
 import colorsys
-import json
-import re
 import time
 from typing import Union, Optional, Callable, Awaitable
 
@@ -19,8 +17,13 @@ from textual.widgets.markdown import MarkdownBlock
 
 from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.utils.i18n import t
-from linhai.utils.streamjson import StreamJsonParser, Value, ValuePiece
-from linhai.parsed_message import Segment, ParsedAnswer
+from linhai.parsed_message import (
+    Segment,
+    ToolCallSegment,
+    NormalSegment,
+    ReasoningSegment,
+    ParsedAnswer,
+)
 from linhai.utils.common import (
     parse_and_simplify_toolcall,
     cluster_tool_calls,
@@ -30,58 +33,6 @@ from linhai.utils.common import (
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
 ]
-
-EXTENSION_TO_TYPE = {
-    ".py": "python",
-    ".js": "javascript",
-    ".ts": "typescript",
-    ".java": "java",
-    ".cpp": "cpp",
-    ".c": "c",
-    ".cs": "csharp",
-    ".go": "go",
-    ".rs": "rust",
-    ".php": "php",
-    ".rb": "ruby",
-    ".swift": "swift",
-    ".kt": "kotlin",
-    ".scala": "scala",
-    ".pl": "perl",
-    ".lua": "lua",
-    ".r": "r",
-    ".m": "matlab",
-    ".sh": "bash",
-    ".bash": "bash",
-    ".zsh": "bash",
-    ".fish": "bash",
-    ".html": "html",
-    ".htm": "html",
-    ".xml": "xml",
-    ".md": "markdown",
-    ".markdown": "markdown",
-    ".json": "json",
-    ".yaml": "yaml",
-    ".yml": "yaml",
-    ".toml": "toml",
-    ".ini": "ini",
-    ".cfg": "ini",
-    ".conf": "ini",
-    ".csv": "csv",
-    ".tsv": "tsv",
-    ".nix": "nix",
-    ".dockerfile": "dockerfile",
-    ".gitignore": "gitignore",
-    ".gitattributes": "gitattributes",
-    ".dockerignore": "dockerignore",
-    ".css": "css",
-    ".scss": "scss",
-    ".sass": "sass",
-    ".less": "less",
-    ".sql": "sql",
-    ".psql": "sql",
-    ".txt": "text",
-    ".log": "text",
-}
 
 
 def _syntax_or_text(content: str, lexer: str, theme: str | None) -> Syntax | Text:
@@ -370,7 +321,7 @@ class _ToolCallCollapseHeader(Static):
 
 
 class ToolCallWidget(Static):
-    """工具调用显示组件，流式显示键值对表格"""
+    """工具调用显示组件，从ToolCallSegment读取已解析的markdown表示"""
 
     DEFAULT_CSS = """
     ToolCallWidget {
@@ -397,43 +348,38 @@ class ToolCallWidget(Static):
     def __init__(
         self,
         theme: str | None,
-        segment: Segment,
+        segment: ToolCallSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
         self.theme = theme
         self._segment = segment
-        self.json_str = ""
-        self.parser = StreamJsonParser()
-
-        self.timer: Timer | None = None
-
-        self.guessed_content_type = ""
-        self.current_content = ""
-        self.content_before_current_value = ""
-        self.current_key = ""
-        self.current_value = ""
-        self.has_error = False
-        self.error_message = ""
+        self._last_rendered = ""
         self.is_collapsed = False
         self.collapse_timer: Timer | None = None
         self.get_refresh_interval = get_refresh_interval
-
+        self.timer: Timer | None = None
         self._markdown_widget: Markdown | None = None
         self._collapse_header: _ToolCallCollapseHeader | None = None
         self.border_title = "tool call"
-        self.tool_name: str = ""
 
     def on_mount(self) -> None:
-        """组件挂载时开始解析JSON"""
         refresh_interval = self.get_refresh_interval()
         self.timer = self.set_interval(refresh_interval, self.update_display)
 
+    @property
+    def has_error(self) -> bool:
+        return self._segment["is_corrupted"]
+
+    @property
+    def tool_name(self) -> str:
+        return self._segment["tool_name"]
+
     def update_display(self) -> None:
-        if self.has_error:
+        if self._segment["is_corrupted"]:
             self.update(
                 _syntax_or_text(
-                    self.json_str,
+                    self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.theme,
                 )
@@ -446,95 +392,18 @@ class ToolCallWidget(Static):
             self.timer.stop()
             self._start_collapse_timer()
 
-        segment_content = self._segment["content"]
-        if segment_content != self.json_str:
-            new_content = segment_content.removeprefix(self.json_str)
-            self.json_str = segment_content
-            try:
-                self.parser.feed_string(new_content)
-            except RuntimeError as e:
-                self.has_error = True
-                self.error_message = str(e)
-                return
-
-        for value in self.parser:
-            if value.index_key != self.current_key:
-                self.current_key = value.index_key
-                self.content_before_current_value = self.current_content
-                self.current_content += f"- {self.current_key}: `"
-
-            if isinstance(value, Value):
-                final_value = (
-                    value.value
-                    if isinstance(value.value, str)
-                    else json.dumps(value.value)
-                )
-                if value.index_key == "name" and isinstance(value.value, str):
-                    self.tool_name = value.value
-
-                if "\n" in final_value:
-                    backticks = "`" * self.get_backtick_count(final_value)
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{final_value}\n{backticks}\n\n"
-                    )
-                else:
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}: `{final_value}`\n"
-                    )
-
-                new_guessed_type = self._guess_content_type(final_value)
-                if not self.guessed_content_type or new_guessed_type:
-                    self.guessed_content_type = new_guessed_type
-
-                self.current_value = ""
-
-            elif isinstance(value, ValuePiece):
-                self.current_value += value.token
-                if "\n" in self.current_value:
-                    backtick_count = self.get_backtick_count(self.current_value)
-                    backticks = "`" * backtick_count
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}:\n\n{backticks}{self.guessed_content_type}\n{self.current_value}\n{backticks}"
-                    )
-                else:
-                    self.current_content = (
-                        self.content_before_current_value
-                        + f"- {self.current_key}: `{self.current_value}`"
-                    )
-
+        md = self._segment["markdown_representation"]
+        if md != self._last_rendered:
+            self._last_rendered = md
             self.update(
                 _syntax_or_text(
-                    self.current_content.strip(),
+                    md,
                     lexer="markdown",
                     theme=self.theme,
                 )
             )
 
-    def get_backtick_count(self, text: str) -> int:
-        """计算所需的反引号数量，确保至少比文本中连续反引号的最大数量多1，且至少为3"""
-        matches = re.findall(r"^`+", text, re.MULTILINE)
-        if matches:
-            max_count = max(len(match) for match in matches)
-        else:
-            max_count = 0
-        return max(3, max_count + 1)
-
-    def _guess_content_type(self, value: str) -> str:
-        """根据文件后缀名猜测接下来或当前的文件类型"""
-        for ext, content_type in EXTENSION_TO_TYPE.items():
-            if value.endswith(ext):
-                return content_type
-
-        if re.match("^(GET|POST|PUT|DELETE|HEAD|OPTION)", value):
-            return "http"
-
-        return ""
-
     def _collapse(self) -> None:
-        """折叠widget，显示简化内容"""
         if self.is_collapsed:
             return
 
@@ -551,9 +420,9 @@ class ToolCallWidget(Static):
         self.border_title = t(
             {"zh_CN": "tool call [点击展开]", "en": "tool call [click to expand]"}
         )
-        simplified = "<bad toolcall>"
-        if not self.has_error:
-            simplified = parse_and_simplify_toolcall(self.json_str)
+        simplified = BAD_TOOLCALL
+        if not self._segment["is_corrupted"]:
+            simplified = parse_and_simplify_toolcall(self._segment["raw"])
         self.update(
             _syntax_or_text(
                 simplified,
@@ -563,19 +432,18 @@ class ToolCallWidget(Static):
         )
 
     def _expand(self) -> None:
-        """展开widget，显示完整内容"""
         if not self.is_collapsed:
             return
 
         self.is_collapsed = False
         self.remove_class("collapsed")
 
-        if self._segment["is_finished"] and not self.has_error:
+        if self._segment["is_finished"] and not self._segment["is_corrupted"]:
             self.border_title = "tool call"
             self.update("")
             self._collapse_header = _ToolCallCollapseHeader(self._collapse)
             self.mount(self._collapse_header)
-            self._markdown_widget = Markdown(self.current_content.strip())
+            self._markdown_widget = Markdown(self._segment["markdown_representation"])
             self.mount(self._markdown_widget)
         else:
             self.border_title = t(
@@ -583,7 +451,7 @@ class ToolCallWidget(Static):
             )
             self.update(
                 _syntax_or_text(
-                    self.current_content.strip(),
+                    self._segment["markdown_representation"],
                     lexer="markdown",
                     theme=self.theme,
                 )
@@ -596,10 +464,9 @@ class ToolCallWidget(Static):
         self.collapse_timer = self.set_timer(0.2, self._collapse)
 
     def on_click(self) -> None:
-        """点击事件，切换折叠状态"""
         if self.is_collapsed:
             self._expand()
-        elif not self._segment["is_finished"] or self.has_error:
+        elif not self._segment["is_finished"] or self._segment["is_corrupted"]:
             self._collapse()
 
 
@@ -635,7 +502,7 @@ class ReasoningContentWidget(Static):
         role: str,
         sender_name: str,
         theme: str | None,
-        segment: Segment,
+        segment: ReasoningSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
@@ -772,7 +639,7 @@ class NormalContentWidget(Markdown):
         role: str,
         sender_name: str,
         theme: str | None,
-        segment: Segment,
+        segment: NormalSegment,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
@@ -908,14 +775,13 @@ class MessageWidget(Static):
                 else:
                     self._content.mount(SpaceWidget())
 
-            segment_type = segment["segment_type"]
-            if segment_type == "toolcall":
+            if segment["segment_type"] == "toolcall":
                 widget = ToolCallWidget(
                     theme=self.theme,
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
-            elif segment_type == "normal":
+            elif segment["segment_type"] == "normal":
                 widget = NormalContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,
@@ -923,7 +789,7 @@ class MessageWidget(Static):
                     segment=segment,
                     get_refresh_interval=self.get_refresh_interval,
                 )
-            elif segment_type == "reasoning":
+            elif segment["segment_type"] == "reasoning":
                 widget = ReasoningContentWidget(
                     role=self.role,
                     sender_name=self.sender_name,

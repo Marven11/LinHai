@@ -7,6 +7,67 @@ from pydantic import BaseModel
 
 BAD_TOOLCALL = "<bad toolcall>"
 
+EXTENSION_TO_TYPE = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".java": "java",
+    ".cpp": "cpp",
+    ".c": "c",
+    ".cs": "csharp",
+    ".go": "go",
+    ".rs": "rust",
+    ".php": "php",
+    ".rb": "ruby",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".scala": "scala",
+    ".pl": "perl",
+    ".lua": "lua",
+    ".r": "r",
+    ".m": "matlab",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".fish": "bash",
+    ".html": "html",
+    ".htm": "html",
+    ".xml": "xml",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".toml": "toml",
+    ".ini": "ini",
+    ".cfg": "ini",
+    ".conf": "ini",
+    ".csv": "csv",
+    ".tsv": "tsv",
+    ".nix": "nix",
+    ".dockerfile": "dockerfile",
+    ".gitignore": "gitignore",
+    ".gitattributes": "gitattributes",
+    ".dockerignore": "dockerignore",
+    ".css": "css",
+    ".scss": "scss",
+    ".sass": "sass",
+    ".less": "less",
+    ".sql": "sql",
+    ".psql": "sql",
+    ".txt": "text",
+    ".log": "text",
+}
+
+
+def guess_content_type(value: str) -> str:
+    for ext, content_type in EXTENSION_TO_TYPE.items():
+        if value.endswith(ext):
+            return content_type
+    if re.match("^(GET|POST|PUT|DELETE|HEAD|OPTION)", value):
+        return "http"
+    return ""
+
 
 class UiNotice(BaseModel):
     """运行时消息数据模型"""

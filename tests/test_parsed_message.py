@@ -3,7 +3,7 @@
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-from linhai.parsed_message import ParsedAnswer, Segment
+from linhai.parsed_message import ParsedAnswer, Segment, ToolCallSegment
 from linhai.base import Answer
 from linhai.agent.lifecycle import Lifecycle
 from linhai.registry import Registry
@@ -106,6 +106,7 @@ class TestParsedAnswer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(segments[0]["segment_type"], "normal")
         self.assertEqual(segments[0]["content"], "Hello world! ")
         self.assertEqual(segments[1]["segment_type"], "toolcall")
+        self.assertIsInstance(segments[1], dict)
         self.assertEqual(segments[2]["segment_type"], "normal")
         self.assertEqual(segments[2]["content"], "After tool")
 

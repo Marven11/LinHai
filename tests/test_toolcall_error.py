@@ -1,44 +1,46 @@
-"""测试toolcall解析错误处理"""
-
 import unittest
 from linhai.tui.components import ToolCallWidget
-from typing import TypedDict, Literal
+from linhai.parsed_message import ToolCallSegment
+
+
+def _make_toolcall_segment() -> ToolCallSegment:
+    return ToolCallSegment(
+        segment_type="toolcall",
+        raw="",
+        is_finished=False,
+        is_corrupted=False,
+        markdown_representation="",
+        tool_name="",
+    )
 
 
 class TestToolCallErrorHandling(unittest.TestCase):
-    """测试toolcall解析错误处理"""
-
-    def test_invalid_json_display_original(self):
-        """测试无效JSON时显示原始内容"""
+    def test_invalid_json_display_error(self):
         invalid_json = '{"name": "test", "args": {missing_quote: "value"}'
-
-        # 创建mock segment
-        segment = {"segment_type": "toolcall", "content": "", "is_finished": False}
+        segment = _make_toolcall_segment()
+        segment["raw"] = invalid_json
+        segment["is_corrupted"] = True
+        segment["markdown_representation"] = "<bad toolcall>"
 
         widget = ToolCallWidget(
             theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
         )
-        # feed_string方法已删除，直接设置segment内容
-        segment["content"] = invalid_json
-
         widget.update_display()
 
         self.assertTrue(widget.has_error)
-        self.assertEqual(widget.json_str, invalid_json)
 
     def test_valid_json_no_error(self):
-        """测试有效JSON时正常解析"""
         valid_json = '{"name": "test_tool", "arguments": {"param": "value"}}'
-
-        # 创建mock segment
-        segment = {"segment_type": "toolcall", "content": "", "is_finished": False}
+        segment = _make_toolcall_segment()
+        segment["raw"] = valid_json
+        segment["markdown_representation"] = (
+            '- name: `test_tool`\n- arguments: `{"param": "value"}`\n'
+        )
+        segment["tool_name"] = "test_tool"
 
         widget = ToolCallWidget(
             theme="nord", segment=segment, get_refresh_interval=lambda: 0.05
         )
-        # feed_string方法已删除，直接设置segment内容
-        segment["content"] = valid_json
-
         widget.update_display()
 
         self.assertFalse(widget.has_error)

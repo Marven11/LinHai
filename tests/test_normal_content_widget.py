@@ -3,15 +3,17 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 from textual.app import App, ComposeResult
 from linhai.tui.components import NormalContentWidget
-from linhai.parsed_message import Segment
+from linhai.parsed_message import NormalSegment
 
 
-def _make_segment(content: str, is_finished: bool) -> Segment:
-    return Segment(segment_type="normal", content=content, is_finished=is_finished)
+def _make_segment(content: str, is_finished: bool) -> NormalSegment:
+    return NormalSegment(
+        segment_type="normal", content=content, is_finished=is_finished
+    )
 
 
 class _TestApp(App):
-    def __init__(self, segment: Segment, **kwargs):
+    def __init__(self, segment: NormalSegment, **kwargs):
         super().__init__(**kwargs)
         self._segment = segment
 

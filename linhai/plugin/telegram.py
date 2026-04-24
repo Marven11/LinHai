@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from linhai.agent import Agent as AgentType
     from linhai.agent.create import TelegramContext
 
-from linhai.parsed_message import Segment
+from linhai.parsed_message import NormalSegment, Segment
 from linhai.agent.messages import WAITING_USER_MARKER
 from linhai.agent.lifecycle import Lifecycle
 from linhai.agent.state_machine import AgentStateMachine
@@ -43,7 +43,7 @@ class TelegramPlugin(Plugin):
         self._bot = None
         self._application = None
         self._running = False
-        self.send_queue: deque[Segment] = deque()
+        self.send_queue: deque[NormalSegment] = deque()
 
     async def _on_segment_start(self, _parsed_answer, segment: Segment):
         """在segment开始生成时将消息加入发送队列。
@@ -54,9 +54,8 @@ class TelegramPlugin(Plugin):
         segment对象以引用方式存入队列，_process_token直接修改segment["content"]，
         队列中的同一对象会自动获得最新内容。
         """
-        if segment["segment_type"] != "normal":
-            return
-        self.send_queue.append(segment)
+        if segment["segment_type"] == "normal":
+            self.send_queue.append(segment)
 
     async def _edit_with_retry(self, chat_id: int, message_id: int, text: str) -> bool:
         """编辑telegram消息，处理429限流和消息未修改的情况。

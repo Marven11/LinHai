@@ -21,7 +21,7 @@ from linhai.agent.callback_slot import (
 
 if TYPE_CHECKING:
     from linhai.agent.main import Agent
-    from linhai.parsed_message import ParsedAnswer, Segment
+    from linhai.parsed_message import ParsedAnswer, Segment as Segment
     from linhai.agent.user_message_handler import ParsedUserMessage
     from linhai.machine_control.process import ProcessCreateInfo
 
