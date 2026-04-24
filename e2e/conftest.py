@@ -87,6 +87,14 @@ class AsyncEventFeeder:
             except asyncio.CancelledError:
                 pass
 
+    async def drain(self, quiet_period: float = 5.0, timeout: float = 30.0):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.quiet_period() >= quiet_period:
+                return True
+            await asyncio.sleep(0.5)
+        return False
+
     def reset_timing(self):
         self._started_at = time.time()
         self._last_event_time = time.time()

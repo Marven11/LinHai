@@ -337,21 +337,8 @@ async def test_webui_streaming_e2e():
             assert finished2, "Agent did not complete second turn within 300s"
             await _retry_short_response(ws, feeder, sub)
 
+            await feeder.drain()
             await feeder.stop()
-
-        for _ in range(50):
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=1.0)
-                data = json.loads(raw)
-                if "event" in data:
-                    try:
-                        sub.update_data(data)
-                    except RuntimeError:
-                        pass
-            except asyncio.TimeoutError:
-                break
-            except Exception:
-                break
 
         messages = sub.data.get("messages", [])
         user_msgs = [m for m in messages if m.get("type") == "user"]

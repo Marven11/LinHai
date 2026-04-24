@@ -96,6 +96,7 @@ async def test_webui_status_bar_e2e():
             )
             assert finished, "Agent did not complete turn within 120s"
 
+            await feeder.drain()
             await feeder.stop()
 
             status_bar = sub.data.get("status_bar")
