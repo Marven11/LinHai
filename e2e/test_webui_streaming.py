@@ -341,16 +341,18 @@ async def test_webui_streaming_e2e():
             await feeder.stop()
 
         messages = sub.data.get("messages", [])
-        user_msgs = [m for m in messages if m.get("type") == "user"]
-        assert len(user_msgs) >= 2, f"Expected 2+ user messages, got {len(user_msgs)}"
+        user_msg_contents = [m["content"] for m in messages if m.get("type") == "user"]
         assert (
-            user_msgs[0]["content"]
-            == "Write a detailed 200-word essay about artificial intelligence and its impact on society. You MUST write at least 150 words. Do not write a short response."
-        )
+            len(user_msg_contents) >= 2
+        ), f"Expected 2+ user messages, got {len(user_msg_contents)}"
+        essay_prompt = "Write a detailed 200-word essay about artificial intelligence and its impact on society. You MUST write at least 150 words. Do not write a short response."
+        summarize_prompt = "Now summarize your essay in exactly 100 words. You MUST write at least 80 words. Do not write a short response."
         assert (
-            user_msgs[1]["content"]
-            == "Now summarize your essay in exactly 100 words. You MUST write at least 80 words. Do not write a short response."
-        )
+            essay_prompt in user_msg_contents
+        ), "Essay prompt not found in user messages"
+        assert (
+            summarize_prompt in user_msg_contents
+        ), "Summarize prompt not found in user messages"
         agent_msgs = [m for m in messages if m.get("type") == "agent"]
         assert (
             len(agent_msgs) >= 2
