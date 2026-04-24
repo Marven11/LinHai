@@ -450,6 +450,10 @@ class LanguageModel(Protocol):
         """获取LLM的描述信息。"""
         raise NotImplementedError()
 
+    def get_compatibility(self) -> str | None:
+        """获取兼容性标识（如deepseek/glm/minimax/kimi/None）。"""
+        raise NotImplementedError()
+
     async def reconnect(self) -> None:
         """重置底层客户端连接。"""
         raise NotImplementedError()

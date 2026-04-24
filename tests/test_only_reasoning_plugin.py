@@ -36,6 +36,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型只有推理内容没有实际输出时发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -68,6 +69,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型既有推理内容又有实际输出时不发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -89,6 +91,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型没有推理内容时不发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -108,6 +111,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型只有实际输出没有推理内容时不发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -129,6 +133,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型推理内容有但实际输出只有空白字符时发出警告。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -150,6 +155,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试非deepseek模型时不检查只思考不输出。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "minimax"
+        mock_model.get_compatibility.return_value = "minimax"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()
@@ -187,6 +193,7 @@ class TestOnlyReasoningPlugin(unittest.IsolatedAsyncioTestCase):
         """测试deepseek模型有工具调用时不发出警告（因为full_response不为空）。"""
         mock_model = MagicMock(spec=OpenAi)
         mock_model.compatibility = "deepseek"
+        mock_model.get_compatibility.return_value = "deepseek"
         self.mock_agent.get_current_model.return_value = mock_model
 
         parsed_answer = MagicMock()

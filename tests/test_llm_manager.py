@@ -35,12 +35,16 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         self.mock_llm1.get_token_limit = MagicMock(return_value=8000)
         self.mock_llm1.support_image = MagicMock(return_value=True)
         self.mock_llm1.answer_stream = AsyncMock(return_value=MockAnswer())
+        self.mock_llm1.reconnect = AsyncMock()
+        self.mock_llm1.get_compatibility = MagicMock(return_value=None)
 
         self.mock_llm2 = MagicMock()
         self.mock_llm2.get_name = MagicMock(return_value="llm2")
         self.mock_llm2.get_token_limit = MagicMock(return_value=16000)
         self.mock_llm2.support_image = MagicMock(return_value=False)
         self.mock_llm2.answer_stream = AsyncMock(return_value=MockAnswer())
+        self.mock_llm2.reconnect = AsyncMock()
+        self.mock_llm2.get_compatibility = MagicMock(return_value=None)
 
         self.llm_manager = LlmManager(
             registry=self.mock_registry,
@@ -261,6 +265,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
         mock_llm3.get_token_limit = MagicMock(return_value=32000)
         mock_llm3.support_image = MagicMock(return_value=False)
         mock_llm3.answer_stream = AsyncMock(return_value=MockAnswer())
+        mock_llm3.reconnect = AsyncMock()
+        mock_llm3.get_compatibility = MagicMock(return_value=None)
 
         llm_manager_chain = LlmManager(
             registry=self.mock_registry,
@@ -375,6 +381,8 @@ class TestLlmManager(unittest.IsolatedAsyncioTestCase):
             mock_fallback.get_token_limit = MagicMock(return_value=8000)
             mock_fallback.support_image = MagicMock(return_value=False)
             mock_fallback.answer_stream = AsyncMock(return_value=MockAnswer())
+            mock_fallback.reconnect = AsyncMock()
+            mock_fallback.get_compatibility = MagicMock(return_value=None)
 
             mgr = LlmManager(
                 registry=self.mock_registry,

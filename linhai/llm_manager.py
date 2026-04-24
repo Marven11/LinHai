@@ -1,11 +1,21 @@
 from __future__ import annotations
-from typing import Sequence
+
+from typing import Sequence, TypedDict
 import asyncio
 from datetime import datetime, timedelta
 from linhai.base import Message, LanguageModel, Answer
-from linhai.llm import OpenAi, OpenAIError
+from linhai.llm import OpenAIError
 from linhai.registry import Registry
 from linhai.utils.common import UiNotice
+
+
+class LlmInfo(TypedDict):
+    name: str
+    token_limit: int | None
+    support_image: bool
+    is_current: bool
+    is_default: bool
+    error_count: int
 
 
 class LlmManagerError(Exception):
@@ -217,8 +227,7 @@ class LlmManager:
 
                 if "rate limit" in error_str or "429" in error_str:
                     self._record_error(current_llm_name, "rate_limit")
-                    if isinstance(current_llm, OpenAi):
-                        await current_llm.reconnect()
+                    await current_llm.reconnect()
                     if fallback_llm is not None:
                         fallback_duration = self.llm_fallback_duration_map.get(
                             current_llm_name, 120
@@ -294,36 +303,24 @@ class LlmManager:
                     else:
                         raise
 
-    def list_available_llms(self) -> list[dict[str, object]]:
+    def list_available_llms(self) -> list[LlmInfo]:
         """列出所有可用的LLM及其状态
 
         Returns:
-            list[dict]: LLM信息列表，每个字典包含以下键：
-                - name: LLM名称
-                - model: 模型名称
-                - token_limit: token限制
-                - support_image: 是否支持图像
-                - is_current: 是否是当前使用的LLM
-                - is_default: 是否是默认LLM
-                - error_count: 错误计数
+            list[LlmInfo]: LLM信息列表
         """
         current_llm = self.get_current_llm(rotate_invalid_llm=False)
         current_llm_name = current_llm.get_name() if current_llm else None
-        result = []
+        result: list[LlmInfo] = []
         for llm, name in zip(self.llms, self.llm_names):
-            model_name = "unknown"
-            if isinstance(llm, OpenAi):
-                model_name = llm.model
-
             result.append(
-                {
-                    "name": name,
-                    "model": model_name,
-                    "token_limit": llm.get_token_limit(),
-                    "support_image": llm.support_image(),
-                    "is_current": name == current_llm_name,
-                    "is_default": name == self.default_llm_name,
-                    "error_count": len(self.llm_errors[name]),
-                }
+                LlmInfo(
+                    name=name,
+                    token_limit=llm.get_token_limit(),
+                    support_image=llm.support_image(),
+                    is_current=name == current_llm_name,
+                    is_default=name == self.default_llm_name,
+                    error_count=len(self.llm_errors[name]),
+                )
             )
         return result

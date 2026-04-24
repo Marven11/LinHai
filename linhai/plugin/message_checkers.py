@@ -17,7 +17,6 @@ from linhai.agent.messages import (
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls_with_errors
 from linhai.base import Answer, AssistantMessage, Message
-from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
 
@@ -227,7 +226,7 @@ class OnlyReasoningPlugin(Plugin):
         agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
-        if not isinstance(model, OpenAi) or model.compatibility != "deepseek":
+        if model.get_compatibility() != "deepseek":
             return
 
         reasoning_content = parsed_answer._answer.get_reasoning_message()
@@ -586,7 +585,7 @@ class GlmToolCallPlugin(Plugin):
         agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
 
-        if not isinstance(model, OpenAi) or model.compatibility != "glm":
+        if model.get_compatibility() != "glm":
             return
 
         if full_response.lstrip().startswith("<tool_call>"):
@@ -720,7 +719,7 @@ class GlmInsultMaskPlugin(Plugin):
 
         agent = self.registry.get_member_typechecked("agent", Agent)
         model = agent.get_current_model()
-        if not isinstance(model, OpenAi) or model.compatibility != "glm":
+        if model.get_compatibility() != "glm":
             return None
 
         has_insult = False

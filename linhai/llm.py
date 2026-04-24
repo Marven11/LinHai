@@ -353,6 +353,9 @@ class OpenAi:
         self._support_image = support_image
         self._explicit_cache_info = explicit_cache_info
 
+    def get_compatibility(self) -> str | None:
+        return self.compatibility
+
     def support_image(self):
         return self._support_image
 

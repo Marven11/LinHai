@@ -137,7 +137,7 @@ class AgentToolcall:
             name="list_llm",
             desc=t(
                 {
-                    "zh_CN": "列出所有可用的LLM及其状态，包括名称、模型、token限制、是否支持图像等",
+                    "zh_CN": "列出所有可用的LLM及其状态，包括名称、token限制、是否支持图像等",
                     "en": "List all available LLMs with status including name, model, token limit, image support, etc.",
                 }
             ),
@@ -147,12 +147,11 @@ class AgentToolcall:
         def list_llm():
             llms_info = llm_manager.list_available_llms()
 
-            assert llms_info, "There is no way agent run withou LLM"
+            assert llms_info, "There is no way agent run without LLM"
             result = []
             result.append(f"找到 {len(llms_info)} 个LLM:")
             for info in llms_info:
                 result.append(f"  - 名称: {info['name']}")
-                result.append(f"    模型: {info['model']}")
                 result.append(f"    token限制: {info['token_limit']}")
                 result.append(f"    支持图像: {info['support_image']}")
                 result.append(f"    当前使用: {info['is_current']}")

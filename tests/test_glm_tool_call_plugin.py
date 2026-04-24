@@ -13,6 +13,7 @@ class MockAgent:
     def __init__(self, compatibility):
         self.model = MagicMock(spec=OpenAi)
         self.model.compatibility = compatibility
+        self.model.get_compatibility.return_value = compatibility
         self.model.get_token_limit.return_value = 4096
         self.model.get_name.return_value = "mock-glm"
         self.model.support_image.return_value = False

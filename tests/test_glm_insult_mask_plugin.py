@@ -28,7 +28,7 @@ class MockAgent:
         # 使用MagicMock(spec=OpenAi)来模拟模型，与OnlyReasoningPlugin测试一致
         self.model = MagicMock(spec=OpenAi)
         self.model.compatibility = compatibility
-        # 设置必需的方法返回值
+        self.model.get_compatibility.return_value = compatibility
         self.model.get_token_limit.return_value = 4096
         self.model.get_name.return_value = "mock-glm"
         self.model.support_image.return_value = False

@@ -11,7 +11,6 @@ from linhai.agent.messages import RuntimeMessage
 from linhai.registry import Registry
 from linhai.markdown_parser import extract_tool_calls
 from linhai.base import Answer
-from linhai.llm import OpenAi
 from linhai.utils.common import UiNotice
 from linhai.utils.i18n import t
 
@@ -179,11 +178,7 @@ class WeirdTokenPlugin(Plugin):
                 )
                 answer.truncate()
                 return False
-            if (
-                isinstance(model, OpenAi)
-                and model.compatibility == "minimax"
-                and line == "<tool_call>"
-            ):
+            if model.get_compatibility() == "minimax" and line == "<tool_call>":
                 await agent.agent_llm.interrupt(
                     "检测到错误工具调用标记：输出了错误的工具调用: <tool_call>\n你应该使用json toolcall代码块调用工具！",
                     "检测到错误工具调用格式",
