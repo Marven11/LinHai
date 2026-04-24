@@ -953,24 +953,17 @@ class MessageWidget(Static):
         else:
             self._state = "expanded"
 
+    @staticmethod
+    def _shorten_collapsed_content(content: str) -> str:
+        if "\n" in content or len(content) > 40:
+            content = content.replace("\n", " ").replace("\r", " ")
+            if len(content) > 40:
+                return content[:20] + "..." + content[-20:]
+        return content
+
     def _get_collapsed_summary(self) -> Text:
-        text = Text("\u25b6 ")
+        parts: list[str | list[str]] = []
         pending_tools: list[str] = []
-
-        def flush_tools():
-            if not pending_tools:
-                return
-            clusters = cluster_tool_calls(pending_tools)
-            text.append("[")
-            for i, (name, count) in enumerate(clusters):
-                if i > 0:
-                    text.append(", ")
-                text.append(name, style=Style(bold=True))
-                if count > 1:
-                    text.append(f"*{count}")
-            text.append("]")
-            pending_tools.clear()
-
         for child in self._content.children:
             if isinstance(child, ToolCallWidget):
                 if child.has_error:
@@ -978,11 +971,31 @@ class MessageWidget(Static):
                 else:
                     pending_tools.append(child.tool_name or "unknown")
             elif isinstance(child, NormalContentWidget):
-                flush_tools()
+                if pending_tools:
+                    parts.append(pending_tools)
+                    pending_tools = []
                 content = child._streamed_content.strip()
                 if content:
-                    text.append(content)
-        flush_tools()
+                    parts.append(self._shorten_collapsed_content(content))
+        if pending_tools:
+            parts.append(pending_tools)
+
+        text = Text("\u25b6 ")
+        for part in parts:
+            if isinstance(part, list):
+                if len(text.plain) > 2:
+                    text.append(" ")
+                clusters = cluster_tool_calls(part)
+                text.append("[")
+                for j, (name, count) in enumerate(clusters):
+                    if j > 0:
+                        text.append(", ")
+                    text.append(name, style=Style(bold=True))
+                    if count > 1:
+                        text.append(f"*{count}")
+                text.append("]")
+            else:
+                text.append(part)
         return text
 
     def _get_expand_header_text(self) -> Text:

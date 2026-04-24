@@ -200,7 +200,7 @@ class TestCollapsedSummary(unittest.TestCase):
             summary = msg._get_collapsed_summary()
             self.assertEqual(
                 summary.plain,
-                "\u25b6 让我来克隆仓库喵[process_create*2, list_files]现在等待完成喵",
+                "\u25b6 让我来克隆仓库喵 [process_create*2, list_files]现在等待完成喵",
             )
 
     def test_error_tool_call_in_summary(self):
@@ -216,8 +216,53 @@ class TestCollapsedSummary(unittest.TestCase):
             summary = msg._get_collapsed_summary()
             self.assertEqual(
                 summary.plain,
-                "\u25b6 开始处理[read_file, <bad toolcall>]继续",
+                "\u25b6 开始处理 [read_file, <bad toolcall>]继续",
             )
+
+    def test_long_normal_content_shortened(self):
+        asyncio.run(self._test_long_content_shortened())
+
+    async def _test_long_content_shortened(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            long_text = "a" * 21 + "b" * 21
+            _mount_normal(msg, long_text)
+            _mount_toolcall(msg, "read_file")
+            summary = msg._get_collapsed_summary()
+            expected = "\u25b6 " + "a" * 20 + "..." + "b" * 20 + " [read_file]"
+            self.assertEqual(summary.plain, expected)
+
+    def test_newline_in_normal_content_shortened(self):
+        asyncio.run(self._test_newline_shortened())
+
+    async def _test_newline_shortened(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_normal(msg, "hello\nworld")
+            _mount_toolcall(msg, "read_file")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(summary.plain, "\u25b6 hello world [read_file]")
+
+    def test_short_normal_content_not_shortened(self):
+        asyncio.run(self._test_short_content_not_shortened())
+
+    async def _test_short_content_not_shortened(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_normal(msg, "short text")
+            _mount_toolcall(msg, "read_file")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(summary.plain, "\u25b6 short text [read_file]")
+
+    def test_no_space_before_tools_without_preceding_text(self):
+        asyncio.run(self._test_no_space_without_preceding())
+
+    async def _test_no_space_without_preceding(self):
+        async with _MessageTestApp().run_test() as pilot:
+            msg = pilot.app.query_one(MessageWidget)
+            _mount_toolcall(msg, "read_file")
+            summary = msg._get_collapsed_summary()
+            self.assertEqual(summary.plain, "\u25b6 [read_file]")
 
     def test_empty_normal_content_skipped(self):
         asyncio.run(self._test_empty_normal())
