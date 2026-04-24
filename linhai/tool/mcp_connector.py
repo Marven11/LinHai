@@ -175,7 +175,6 @@ class MCPConnector:
             },
             required_args=["name", "command"],
             conflict_with=[
-                "disconnect_mcp_server",
                 "list_mcp_servers",
             ],
         )
