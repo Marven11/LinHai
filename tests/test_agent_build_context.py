@@ -55,6 +55,8 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.config.remote_control = Mock()
         self.config.remote_control.telegram = None
         self.config.agent[0].process_sandbox = None
+        self.config.agent[0].planning = False
+        self.config.agent[0].claw = False
 
     def test_agent_build_context_with_rss(self):
         """测试rss参数从build_args传递到AgentBuildContext"""
@@ -232,6 +234,107 @@ class TestAgentBuildContextParameters(unittest.TestCase):
         self.assertEqual(context["afk"], False)
         self.assertEqual(context["claw_enabled"], False)
         self.assertEqual(context["claw_folder"], None)
+
+    def test_profile_planning_enables_when_cli_false(self):
+        """测试profile中planning=True在CLI未传--planning时生效"""
+        self.config.agent[0].planning = True
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=self.config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
+        self.assertEqual(context["planning"], True)
+
+    def test_profile_claw_enables_when_cli_false(self):
+        """测试profile中claw=True在CLI未传--claw时生效"""
+        self.config.agent[0].claw = True
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": False,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=self.config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
+        self.assertEqual(context["claw_enabled"], True)
+
+    def test_cli_planning_overrides_profile_false(self):
+        """测试CLI --planning覆盖profile中planning=False"""
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": False,
+            "claw_folder": None,
+            "planning": True,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=self.config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
+        self.assertEqual(context["planning"], True)
+
+    def test_both_cli_and_profile_enabled(self):
+        """测试CLI和profile同时启用时结果为True"""
+        self.config.agent[0].planning = True
+        self.config.agent[0].claw = True
+        build_args: AgentBuildArguments = {
+            "rss": [],
+            "telegram": False,
+            "disable_waiting_marker": False,
+            "afk": False,
+            "message": [],
+            "file": [],
+            "claw_enabled": True,
+            "claw_folder": Path("/custom/claw"),
+            "planning": True,
+            "llm_name": None,
+            "checklist_path": None,
+            "profile_name": None,
+        }
+        context = create_agent_build_context(
+            registry=self.registry,
+            config=self.config,
+            config_basedir=Path("."),
+            build_args=build_args,
+        )
+        self.assertEqual(context["planning"], True)
+        self.assertEqual(context["claw_enabled"], True)
 
 
 class TestResolveProcessSandbox(unittest.TestCase):

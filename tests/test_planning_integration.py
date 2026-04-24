@@ -26,6 +26,8 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
         mock_secret = MagicMock()
         mock_secret.config_path = "/tmp/test_secret_config.json"
         self.mock_config.agent[0].secret = mock_secret
+        self.mock_config.agent[0].planning = False
+        self.mock_config.agent[0].claw = False
 
         self.mock_config_basedir = Path("/tmp/test_config")
 

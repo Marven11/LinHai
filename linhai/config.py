@@ -196,6 +196,8 @@ class AgentConfig(BaseModel):
     plugins: Optional[list[str]] = Field(
         default=None, description="用户插件列表，指定plugins/目录下的插件模块名。"
     )
+    planning: bool = Field(default=False, description="是否默认启用文档规划模式。")
+    claw: bool = Field(default=False, description="是否默认启用CLAW模式。")
 
     @field_validator("compress_threshold")
     def validate_compress_threshold(cls, v):  # pylint: disable=no-self-argument
