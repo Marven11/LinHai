@@ -101,6 +101,7 @@ command = "python {server_path}"
             "file": [],
             "process_sandbox": None,
             "config": config,
+            "git_worktree": False,
         }
         agent = await create_agent_from_context(context)
         self.assertIsInstance(agent, Agent)

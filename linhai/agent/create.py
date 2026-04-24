@@ -2,9 +2,9 @@
 
 import importlib
 import os
+import subprocess
 import sys
 from pathlib import Path
-import tempfile
 from typing import TypedDict, Optional, Tuple, Union
 from datetime import datetime
 
@@ -59,7 +59,6 @@ class TelegramContext(TypedDict):
 
 
 class AgentBuildArguments(TypedDict):
-    """Agent构建参数，封装所有来自CLI/请求的运行时参数。"""
 
     rss: list[str]
     telegram: bool
@@ -73,6 +72,7 @@ class AgentBuildArguments(TypedDict):
     llm_name: Optional[str]
     checklist_path: Optional[Path]
     profile_name: Optional[str]
+    git_worktree: bool
 
 
 class AgentBuildContext(TypedDict):
@@ -108,6 +108,7 @@ class AgentBuildContext(TypedDict):
     process_sandbox: Optional[Union[MacOsSandboxConfig, BubblewrapConfig]]
     config: Config
     plugins: Optional[list[str]]
+    git_worktree: bool
 
 
 def _resolve_agent_profile(config: Config, profile_name: Optional[str]) -> AgentConfig:
@@ -139,6 +140,34 @@ def _resolve_process_sandbox(
     if system == "Linux" and process_sandbox.bubblewrap is not None:
         return process_sandbox.bubblewrap
     return None
+
+
+def _setup_git_worktree(
+    registry: Registry, machine_control: Optional["MachineControl"]
+) -> None:
+    conversation_folder = registry.get_member_typechecked("conversation_folder", Path)
+    worktree_path = conversation_folder / "worktree"
+
+    result = subprocess.run(
+        ["git", "worktree", "add", str(worktree_path), "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"git worktree add failed (code {result.returncode}): {result.stderr}"
+        )
+
+    os.chdir(str(worktree_path))
+
+    if machine_control is not None:
+        from linhai.machine_control.master_host.master_host import MasterHostControl
+
+        master_host = machine_control.machines["master_host"]
+        if isinstance(master_host, MasterHostControl):
+            master_host._cwd = str(worktree_path)
+
+    registry.register_member("git_worktree_path", worktree_path)
 
 
 def create_agent_build_context(
@@ -225,6 +254,7 @@ def create_agent_build_context(
         "process_sandbox": _resolve_process_sandbox(agent_config.process_sandbox),
         "config": config,
         "plugins": agent_config.plugins,
+        "git_worktree": build_args.get("git_worktree", False),
     }
 
 
@@ -265,6 +295,9 @@ async def create_agent_from_context(
     toolsets_config = context["enabled_toolsets"]
 
     register_conversation_folder(context["registry"])
+
+    if context.get("git_worktree", False):
+        _setup_git_worktree(context["registry"], machine_control)
 
     agent = Agent(
         llm_manager=llm_manager,
@@ -577,6 +610,20 @@ async def _create_pinned_messages(context: "AgentBuildContext") -> list[Message]
                         )
                     )
 
+    if context["registry"].has_member("git_worktree_path"):
+        worktree_path = context["registry"].get_member_typechecked(
+            "git_worktree_path", Path
+        )
+        pinned_messages.append(
+            RuntimeMessage(
+                f"已创建git worktree工作目录: {worktree_path}\n当前工作目录已切换到该worktree"
+            )
+        )
+        await context["registry"].send_if_exists(
+            "ui_log",
+            UiNotice(level="INFO", content=f"已创建git worktree: {worktree_path}"),
+        )
+
     return pinned_messages
 
 
@@ -597,13 +644,7 @@ def _register_sandbox(
             ), "Sandbox profile is relative when basedir is None"
             sandbox = MacOsSandbox(basedir / sandbox_config.sandbox_profile)
     else:
-        rendered = [
-            s.format(
-                pwd=os.getcwd(), home=str(Path.home()), tmpdir=tempfile.gettempdir()
-            )
-            for s in sandbox_config.argv_template
-        ]
-        sandbox = BubbleWrapSandbox(rendered)
+        sandbox = BubbleWrapSandbox(sandbox_config.argv_template)
     registry.register_member("process_sandbox", sandbox)
 
 

@@ -218,6 +218,10 @@ class MasterHostControl:
             return ToolResultFailed(content=f"路径不是目录: {directory}")
         old_cwd = self._cwd
         self._cwd = str(target)
+        sandbox = self._registry.get_member_typechecked(
+            "process_sandbox", ProcessSandboxProtocol
+        )
+        sandbox.update_pwd(self._cwd)
         return ToolResultSuccess(content=f"从目录{old_cwd}切换到了{self._cwd}")
 
     async def terminal_create(

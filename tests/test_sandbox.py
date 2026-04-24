@@ -258,8 +258,9 @@ class TestRegisterSandbox(unittest.TestCase):
             _register_sandbox(None, registry, config)
 
         sandbox = registry.get_member_typechecked("process_sandbox", BubbleWrapSandbox)
+        rendered = sandbox._render()
         self.assertEqual(
-            sandbox._bubblewrap_argv,
+            rendered,
             [
                 "bwrap",
                 "--bind",
@@ -270,6 +271,42 @@ class TestRegisterSandbox(unittest.TestCase):
                 "/cache",
             ],
         )
+
+
+class TestNoSandboxUpdatePwd(unittest.TestCase):
+    def test_update_pwd_does_nothing(self):
+        sandbox = NoSandbox()
+        sandbox.update_pwd("/new/dir")
+        result = sandbox.wrap_argv(["python"])
+        self.assertEqual(result, ["python"])
+
+
+class TestMacOsSandboxUpdatePwd(unittest.TestCase):
+    @patch.object(Path, "home", return_value=Path("/home/testuser"))
+    def test_update_pwd_renders_new_profile(self, mock_home):
+        with patch("os.getcwd", return_value="/old/dir"):
+            profile_path = _create_profile_file()
+            try:
+                sandbox = MacOsSandbox(profile_path)
+            finally:
+                os.unlink(profile_path)
+        old_profile = sandbox._profile_path
+        sandbox.update_pwd("/new/dir")
+        self.assertNotEqual(sandbox._profile_path, old_profile)
+        with open(sandbox._profile_path) as f:
+            content = f.read()
+        self.assertIn("/new/dir", content)
+        os.unlink(old_profile)
+        os.unlink(sandbox._profile_path)
+
+
+class TestBubbleWrapSandboxUpdatePwd(unittest.TestCase):
+    def test_update_pwd_changes_rendered_output(self):
+        sandbox = BubbleWrapSandbox(["bwrap", "--bind", "{pwd}", "/work"])
+        sandbox._pwd = "/old/dir"
+        self.assertEqual(sandbox._render(), ["bwrap", "--bind", "/old/dir", "/work"])
+        sandbox.update_pwd("/new/dir")
+        self.assertEqual(sandbox._render(), ["bwrap", "--bind", "/new/dir", "/work"])
 
 
 if __name__ == "__main__":

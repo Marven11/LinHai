@@ -82,8 +82,11 @@ class TestClawPinnedMessages(unittest.TestCase):
         mock_config.user_prompt = None
         mock_config.user_prompt = None
 
+        mock_registry = Mock()
+        mock_registry.has_member.return_value = False
+
         mock_context_dict = {
-            "registry": Mock(),
+            "registry": mock_registry,
             "config_basedir": None,
             "llms": [],
             "llm_name": "test-llm",
@@ -106,6 +109,7 @@ class TestClawPinnedMessages(unittest.TestCase):
             "rss": [],
             "telegram": False,
             "disable_waiting_marker": False,
+            "git_worktree": False,
         }
         context = cast(AgentBuildContext, mock_context_dict)
 

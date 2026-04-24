@@ -108,6 +108,7 @@ command = "python {server_script_path}"
             "file": [],
             "process_sandbox": None,
             "config": config,
+            "git_worktree": False,
         }
         result = asyncio.run(create_agent_from_context(context))
 
@@ -163,6 +164,7 @@ compress_threshold = 80000
             "file": [],
             "process_sandbox": None,
             "config": config,
+            "git_worktree": False,
         }
         result = asyncio.run(create_agent_from_context(context))
 

@@ -113,6 +113,7 @@ class TestCreateAgent(unittest.TestCase):
             "llm_name": "test_llm",
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
 
         context = create_agent_build_context(
@@ -236,6 +237,7 @@ class TestCreateAgent(unittest.TestCase):
                 "llm_name": "llm1",
                 "checklist_path": None,
                 "profile_name": None,
+                "git_worktree": False,
             }
 
             context = create_agent_build_context(
@@ -503,6 +505,8 @@ class TestCreatePinnedMessages(unittest.TestCase):
         mock_cli_args.message = None
         mock_cli_args.file = None
 
+        registry.has_member.return_value = False
+
         context = {
             "registry": registry,
             "config": Mock(user_prompt=Mock(file_path=str(prompt_file_path))),
@@ -585,6 +589,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "llm_name": None,
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
 
         context = create_agent_build_context(
@@ -616,6 +621,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "llm_name": None,
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
 
         context = create_agent_build_context(
@@ -647,6 +653,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "llm_name": None,
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
 
         with self.assertRaises(ValueError) as ctx:
@@ -679,6 +686,7 @@ class TestDefaultLlmConfig(unittest.TestCase):
             "llm_name": "llm2",
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
 
         context = create_agent_build_context(

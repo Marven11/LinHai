@@ -11,6 +11,7 @@ from linhai.config import AVAILABLE_TOOLSETS
 class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_registry = MagicMock()
+        self.mock_registry.has_member.return_value = False
         self.mock_config = MagicMock()
         # 模拟LLM配置对象列表
         mock_llm_config = MagicMock()
@@ -45,6 +46,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": None,
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
         context = create_agent_build_context(
             registry=self.mock_registry,
@@ -69,6 +71,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "llm_name": None,
             "checklist_path": None,
             "profile_name": None,
+            "git_worktree": False,
         }
         context = create_agent_build_context(
             registry=self.mock_registry,
@@ -115,6 +118,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "telegram_config": None,
             "message": [],
             "file": [],
+            "git_worktree": False,
         }
 
         # 模拟agent.message_processor.messages
@@ -165,6 +169,7 @@ class TestPlanningIntegration(unittest.IsolatedAsyncioTestCase):
             "telegram_config": None,
             "message": [],
             "file": [],
+            "git_worktree": False,
         }
 
         pinned_messages = await _create_pinned_messages(context)

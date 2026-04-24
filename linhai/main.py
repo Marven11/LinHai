@@ -88,6 +88,7 @@ async def run(args):
         "llm_name": args.llm,
         "checklist_path": args.checklist,
         "profile_name": args.profile,
+        "git_worktree": args.git_worktree,
     }
     context = create_agent_build_context(
         registry=registry,
@@ -181,6 +182,11 @@ def main():
         "--telegram",
         action="store_true",
         help="启用Telegram远程控制功能",
+    )
+    parser.add_argument(
+        "--git-worktree",
+        action="store_true",
+        help="在conversation目录中创建当前git项目的worktree作为工作目录",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")

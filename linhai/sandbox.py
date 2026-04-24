@@ -8,10 +8,15 @@ from typing import Protocol, runtime_checkable
 class ProcessSandboxProtocol(Protocol):
     def wrap_argv(self, argv: list[str]) -> list[str]: ...
 
+    def update_pwd(self, new_pwd: str) -> None: ...
+
 
 class NoSandbox:
     def wrap_argv(self, argv: list[str]) -> list[str]:
         return list(argv)
+
+    def update_pwd(self, new_pwd: str) -> None:
+        pass
 
 
 DEFAULT_MACOS_PROFILE_TEMPLATE = """
@@ -58,26 +63,44 @@ DEFAULT_MACOS_PROFILE_TEMPLATE = """
 
 class MacOsSandbox:
     def __init__(self, sandbox_profile: Path | str) -> None:
-        template = Path(sandbox_profile).read_text()
-        rendered = template.format(
-            pwd=os.getcwd(),
-            home=str(Path.home()),
-            tmpdir=tempfile.gettempdir(),
+        self._template = Path(sandbox_profile).read_text()
+        self._home = str(Path.home())
+        self._tmpdir = tempfile.gettempdir()
+        self._profile_path = self._render_profile(os.getcwd())
+
+    def _render_profile(self, pwd: str) -> str:
+        rendered = self._template.format(
+            pwd=pwd,
+            home=self._home,
+            tmpdir=self._tmpdir,
         )
-        self._profile_file = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".sb", delete=False
-        )
-        self._profile_file.write(rendered)
-        self._profile_file.close()
-        self._profile_path = self._profile_file.name
+        profile_file = tempfile.NamedTemporaryFile(mode="w", suffix=".sb", delete=False)
+        profile_file.write(rendered)
+        profile_file.close()
+        return profile_file.name
 
     def wrap_argv(self, argv: list[str]) -> list[str]:
         return ["sandbox-exec", "-f", self._profile_path] + list(argv)
 
+    def update_pwd(self, new_pwd: str) -> None:
+        self._profile_path = self._render_profile(new_pwd)
+
 
 class BubbleWrapSandbox:
-    def __init__(self, bubblewrap_argv: list[str]) -> None:
-        self._bubblewrap_argv = list(bubblewrap_argv)
+    def __init__(self, argv_template: list[str]) -> None:
+        self._argv_template = list(argv_template)
+        self._home = str(Path.home())
+        self._tmpdir = tempfile.gettempdir()
+        self._pwd = os.getcwd()
+
+    def _render(self) -> list[str]:
+        return [
+            s.format(pwd=self._pwd, home=self._home, tmpdir=self._tmpdir)
+            for s in self._argv_template
+        ]
 
     def wrap_argv(self, argv: list[str]) -> list[str]:
-        return self._bubblewrap_argv + list(argv)
+        return self._render() + list(argv)
+
+    def update_pwd(self, new_pwd: str) -> None:
+        self._pwd = new_pwd

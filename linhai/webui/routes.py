@@ -81,6 +81,7 @@ async def create_agent(request: AgentCreateRequest):
         "llm_name": request.llm_name,
         "checklist_path": checklist_path,
         "profile_name": request.profile_name,
+        "git_worktree": False,
     }
 
     manager = get_manager()
