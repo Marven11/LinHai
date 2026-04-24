@@ -108,7 +108,7 @@ async def test_webui_status_bar_e2e():
             ), f"status_bar is not a list: {type(status_bar)}"
             assert len(status_bar) > 0, "status_bar is empty"
 
-            llm_piece = [p for p in status_bar if "\u2726" in p]
+            llm_piece = [p for p in status_bar if "\U000f0ae2" in p]
             assert (
                 len(llm_piece) > 0
             ), f"No LLM name piece found in status_bar: {status_bar}"

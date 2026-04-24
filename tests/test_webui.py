@@ -603,7 +603,7 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
         pieces = session.get_status_bar_pieces()
-        self.assertEqual(pieces, ["\u2726 gpt-4"])
+        self.assertEqual(pieces, ["\U000f0ae2 gpt-4"])
 
     def test_get_status_bar_pieces_with_token_manager(self):
         registry_mock = MagicMock()
@@ -623,8 +623,8 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         pieces = session.get_status_bar_pieces()
         self.assertIn("\u2750 5", pieces)
         self.assertIn("\u2193 1.0k", pieces)
-        self.assertIn("\u2726 deepseek", pieces)
-        self.assertEqual(pieces[-1], "\u2726 deepseek")
+        self.assertIn("\U000f0ae2 deepseek", pieces)
+        self.assertEqual(pieces[-1], "\U000f0ae2 deepseek")
 
     def test_sync_status_bar_updates_data(self):
         registry_mock = MagicMock()
@@ -635,7 +635,7 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         mock_agent.get_current_llm_info.return_value = (None, mock_llm)
         session = self._make_session(mock_agent, registry_mock)
         session.sync_status_bar()
-        self.assertEqual(session._data["status_bar"], ["\u2726 gpt"])
+        self.assertEqual(session._data["status_bar"], ["\U000f0ae2 gpt"])
 
     def test_sync_status_bar_no_diff_after_same_data(self):
         registry_mock = MagicMock()

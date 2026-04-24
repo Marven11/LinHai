@@ -227,7 +227,7 @@ class AgentSession:
                 "token_manager", TokenManager
             )
             token_pieces = token_manager.get_token_display_pieces(
-                agent, current_answer_token=0, use_nerd_font=False
+                agent, current_answer_token=0, use_nerd_font=True
             )
         from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 
@@ -236,10 +236,10 @@ class AgentSession:
                 "process_sandbox", ProcessSandboxProtocol
             )
             if not isinstance(sandbox, NoSandbox):
-                token_pieces.append("◭")
+                token_pieces.append("\uf132")
         _, llm_instance = agent.get_current_llm_info()
         llm_name = llm_instance.get_name()
-        token_pieces.append(f"✦ {llm_name}")
+        token_pieces.append(b"\xf3\xb0\xab\xa2".decode() + f" {llm_name}")
         return token_pieces
 
     def sync_planning(self) -> None:
