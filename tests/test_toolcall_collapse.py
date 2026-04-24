@@ -5,6 +5,7 @@ from linhai.utils.common import (
     simplify_toolcall_json,
     parse_and_simplify_toolcall,
     cluster_tool_calls,
+    BAD_TOOLCALL,
 )
 
 
@@ -190,35 +191,58 @@ class TestClusterToolCalls(unittest.TestCase):
         result = cluster_tool_calls(
             ["read_file", "read_file", "list_files", "read_file", "read_file"]
         )
-        self.assertEqual(result, "read_file*4, list_files")
+        self.assertEqual(result, [("read_file", 4), ("list_files", 1)])
 
     def test_single_tool(self):
         result = cluster_tool_calls(["read_file"])
-        self.assertEqual(result, "read_file")
+        self.assertEqual(result, [("read_file", 1)])
 
     def test_all_different(self):
         result = cluster_tool_calls(["read_file", "list_files", "process_create"])
-        self.assertEqual(result, "read_file, list_files, process_create")
+        self.assertEqual(
+            result, [("read_file", 1), ("list_files", 1), ("process_create", 1)]
+        )
 
     def test_all_same(self):
         result = cluster_tool_calls(["read_file", "read_file", "read_file"])
-        self.assertEqual(result, "read_file*3")
+        self.assertEqual(result, [("read_file", 3)])
 
     def test_empty(self):
         result = cluster_tool_calls([])
-        self.assertEqual(result, "")
+        self.assertEqual(result, [])
 
     def test_mixed_counts(self):
         result = cluster_tool_calls(
             ["read_file", "read_file", "list_files", "process_create", "process_create"]
         )
-        self.assertEqual(result, "read_file*2, list_files, process_create*2")
+        self.assertEqual(
+            result, [("read_file", 2), ("list_files", 1), ("process_create", 2)]
+        )
 
     def test_interleaved(self):
         result = cluster_tool_calls(
             ["read_file", "list_files", "read_file", "list_files", "read_file"]
         )
-        self.assertEqual(result, "read_file*3, list_files*2")
+        self.assertEqual(result, [("read_file", 3), ("list_files", 2)])
+
+    def test_bad_toolcall_not_merged(self):
+        result = cluster_tool_calls(
+            ["read_file", BAD_TOOLCALL, "read_file", BAD_TOOLCALL, "list_files"]
+        )
+        self.assertEqual(
+            result,
+            [("read_file", 2), (BAD_TOOLCALL, 1), (BAD_TOOLCALL, 1), ("list_files", 1)],
+        )
+
+    def test_only_bad_toolcalls(self):
+        result = cluster_tool_calls([BAD_TOOLCALL, BAD_TOOLCALL, BAD_TOOLCALL])
+        self.assertEqual(
+            result, [(BAD_TOOLCALL, 1), (BAD_TOOLCALL, 1), (BAD_TOOLCALL, 1)]
+        )
+
+    def test_bad_toolcall_at_start(self):
+        result = cluster_tool_calls([BAD_TOOLCALL, "read_file", "read_file"])
+        self.assertEqual(result, [(BAD_TOOLCALL, 1), ("read_file", 2)])
 
 
 if __name__ == "__main__":

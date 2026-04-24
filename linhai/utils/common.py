@@ -5,6 +5,8 @@ import re
 import os
 from pydantic import BaseModel
 
+BAD_TOOLCALL = "<bad toolcall>"
+
 
 class UiNotice(BaseModel):
     """运行时消息数据模型"""
@@ -84,19 +86,24 @@ def simplify_toolcall_json(toolcall_json: dict) -> str:
         return f"{name}({', '.join(simplified_args)})"
 
 
-def cluster_tool_calls(tool_names: list[str]) -> str:
+def cluster_tool_calls(tool_names: list[str]) -> list[tuple[str, int]]:
     seen: dict[str, int] = {}
     order: list[str] = []
     for name in tool_names:
+        if name == BAD_TOOLCALL:
+            order.append(name)
+            continue
         if name not in seen:
             seen[name] = 0
             order.append(name)
         seen[name] += 1
-    parts = []
+    parts: list[tuple[str, int]] = []
     for name in order:
-        count = seen[name]
-        parts.append(f"{name}*{count}" if count > 1 else name)
-    return ", ".join(parts)
+        if name == BAD_TOOLCALL:
+            parts.append((name, 1))
+        else:
+            parts.append((name, seen[name]))
+    return parts
 
 
 def parse_and_simplify_toolcall(json_str: str) -> str:

@@ -21,7 +21,11 @@ from linhai.sandbox import NoSandbox, ProcessSandboxProtocol
 from linhai.utils.i18n import t
 from linhai.utils.streamjson import StreamJsonParser, Value, ValuePiece
 from linhai.parsed_message import Segment, ParsedAnswer
-from linhai.utils.common import parse_and_simplify_toolcall, cluster_tool_calls
+from linhai.utils.common import (
+    parse_and_simplify_toolcall,
+    cluster_tool_calls,
+    BAD_TOOLCALL,
+)
 
 StoppableWidget = Union[
     "ToolCallWidget", "NormalContentWidget", "ReasoningContentWidget"
@@ -939,20 +943,31 @@ class MessageWidget(Static):
         else:
             self._state = "expanded"
 
-    def _get_tool_call_summary(self) -> str:
+    def _get_tool_call_summary(self) -> Text:
         tool_names: list[str] = []
         for child in self._content.children:
-            if isinstance(child, ToolCallWidget) and not child.has_error:
-                match = re.search(r'"name"\s*:\s*"([^"]+)"', child.json_str)
-                tool_names.append(match.group(1) if match else "unknown")
-        return cluster_tool_calls(tool_names)
+            if isinstance(child, ToolCallWidget):
+                if child.has_error:
+                    tool_names.append(BAD_TOOLCALL)
+                else:
+                    match = re.search(r'"name"\s*:\s*"([^"]+)"', child.json_str)
+                    tool_names.append(match.group(1) if match else "unknown")
+        clusters = cluster_tool_calls(tool_names)
+        text = Text("\u25b6 ")
+        for i, (name, count) in enumerate(clusters):
+            if i > 0:
+                text.append(", ")
+            text.append(name, style=Style(bold=True))
+            if count > 1:
+                text.append(f"*{count}")
+        return text
 
     def _collapse_message(self) -> None:
         if self._state == "collapsed":
             return
         self._state = "collapsed"
         summary = self._get_tool_call_summary()
-        self._collapsed_view.update(f"\u25b6 {summary}")
+        self._collapsed_view.update(summary)
         self._collapsed_view.display = True
         self._expand_header.display = False
         self._content.display = False
