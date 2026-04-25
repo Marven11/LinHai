@@ -542,6 +542,12 @@ class AgentContextOrchestration:
             msg for msg in self.large_messages if msg in valid_messages
         }
 
+    def serialize(self) -> dict:
+        raise NotImplementedError
+
+    def restore_from(self, data: dict) -> None:
+        raise NotImplementedError
+
 
 class RedStateToolBlockPlugin:
     """红灯状态工具调用拦截插件。

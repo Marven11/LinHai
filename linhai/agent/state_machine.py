@@ -100,3 +100,9 @@ class AgentStateMachine:
             return ToolResultSuccess(content=result)
 
         return sleep_toolset
+
+    def serialize(self) -> dict:
+        raise NotImplementedError
+
+    def restore_from(self, data: dict) -> None:
+        raise NotImplementedError

@@ -159,3 +159,4 @@ class Lifecycle:
         self.after_parsed_user_message = ShortCircuitSlot()
         self.after_process_create = BroadcastSlot()
         self.on_llm_error = BroadcastSlot()
+        self.after_conversation_restore = BroadcastSlot()

@@ -188,3 +188,9 @@ class TokenManager:
             display_text_pieces.append(piece)
 
         return display_text_pieces
+
+    def serialize(self) -> dict:
+        raise NotImplementedError
+
+    def restore_from(self, data: dict) -> None:
+        raise NotImplementedError
