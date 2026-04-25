@@ -31,24 +31,27 @@ def mock_manager():
 
 
 @pytest.fixture
-def app():
-    return create_app()
+async def client():
+    app = create_app()
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        ac.cookies.set("api_token", app.state.api_token)
+        yield ac
 
 
 @pytest.mark.asyncio
-async def test_list_llms(mock_manager, app):
+async def test_list_llms(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/agents/test-agent-id/llms")
+    resp = await client.get("/api/agents/test-agent-id/llms")
     assert resp.status_code == 200
     data = resp.json()
     assert "llms" in data
 
 
 @pytest.mark.asyncio
-async def test_switch_llm(mock_manager, app):
+async def test_switch_llm(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
     session.registry.has_member = MagicMock(return_value=True)
@@ -77,18 +80,16 @@ async def test_switch_llm(mock_manager, app):
     )
     mock_llm_manager.switch_to_llm = AsyncMock()
     session.registry.get_member_typechecked = MagicMock(return_value=mock_llm_manager)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/test-agent-id/switch_llm",
-            json={"llm_name": "claude"},
-        )
+    resp = await client.post(
+        "/api/agents/test-agent-id/switch_llm",
+        json={"llm_name": "claude"},
+    )
     assert resp.status_code == 200
     mock_llm_manager.switch_to_llm.assert_called_once_with("claude")
 
 
 @pytest.mark.asyncio
-async def test_switch_llm_invalid(mock_manager, app):
+async def test_switch_llm_invalid(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
     session.registry.has_member = MagicMock(return_value=True)
@@ -108,29 +109,25 @@ async def test_switch_llm_invalid(mock_manager, app):
     )
     mock_llm_manager.switch_to_llm = AsyncMock()
     session.registry.get_member_typechecked = MagicMock(return_value=mock_llm_manager)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/test-agent-id/switch_llm",
-            json={"llm_name": "nonexistent"},
-        )
+    resp = await client.post(
+        "/api/agents/test-agent-id/switch_llm",
+        json={"llm_name": "nonexistent"},
+    )
     assert resp.status_code == 400
 
 
 @pytest.mark.asyncio
-async def test_agent_state(mock_manager, app):
+async def test_agent_state(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/agents/test-agent-id")
+    resp = await client.get("/api/agents/test-agent-id")
     assert resp.status_code == 200
     data = resp.json()
     assert data["state"] == "waiting_user"
 
 
 @pytest.mark.asyncio
-async def test_kill_process(mock_manager, app):
+async def test_kill_process(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
     session.registry.has_member = MagicMock(return_value=True)
@@ -141,57 +138,47 @@ async def test_kill_process(mock_manager, app):
     mock_host.get_process.return_value = mock_proc
     mock_mc.machines = {"master_host": mock_host}
     session.registry.get_member_typechecked = MagicMock(return_value=mock_mc)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/test-agent-id/processes/123/kill",
-            json={"machine_id": "master_host"},
-        )
+    resp = await client.post(
+        "/api/agents/test-agent-id/processes/123/kill",
+        json={"machine_id": "master_host"},
+    )
     assert resp.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_kill_process_not_found(mock_manager, app):
+async def test_kill_process_not_found(mock_manager, client):
     manager, session = mock_manager
     manager._registries["test-agent-id"] = session.registry
     session.registry.has_member = MagicMock(return_value=True)
     mock_mc = MagicMock()
     mock_mc.machines = {}
     session.registry.get_member_typechecked = MagicMock(return_value=mock_mc)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/test-agent-id/processes/999/kill",
-            json={"machine_id": "master_host"},
-        )
+    resp = await client.post(
+        "/api/agents/test-agent-id/processes/999/kill",
+        json={"machine_id": "master_host"},
+    )
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_agent_not_found_llms(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/agents/nonexistent/llms")
+async def test_agent_not_found_llms(client):
+    resp = await client.get("/api/agents/nonexistent/llms")
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_agent_not_found_switch_llm(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/nonexistent/switch_llm",
-            json={"llm_name": "gpt"},
-        )
+async def test_agent_not_found_switch_llm(client):
+    resp = await client.post(
+        "/api/agents/nonexistent/switch_llm",
+        json={"llm_name": "gpt"},
+    )
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_agent_not_found_kill_process(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/agents/nonexistent/processes/123/kill",
-            json={"machine_id": "master_host"},
-        )
+async def test_agent_not_found_kill_process(client):
+    resp = await client.post(
+        "/api/agents/nonexistent/processes/123/kill",
+        json={"machine_id": "master_host"},
+    )
     assert resp.status_code == 404

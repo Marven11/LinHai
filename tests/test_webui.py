@@ -532,7 +532,10 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
         from linhai.webui import routes
 
         routes._manager = None
-        self.client = TestClient(create_app())
+        app = create_app()
+        self.token = app.state.api_token
+        self.client = TestClient(app)
+        self.client.cookies.set("api_token", self.token)
 
     def tearDown(self):
         from linhai.webui import routes
@@ -651,3 +654,52 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         session.sync_status_bar()
         events2 = session._publisher.calculate_diff()
         self.assertEqual(len(events2), 0)
+
+
+class TestAuthMiddleware(unittest.TestCase):
+    def setUp(self):
+        from fastapi.testclient import TestClient
+        from linhai.webui.app import create_app
+        from linhai.webui import routes
+
+        routes._manager = None
+        app = create_app()
+        self.token = app.state.api_token
+        self.client = TestClient(app)
+
+    def tearDown(self):
+        from linhai.webui import routes
+
+        routes._manager = None
+
+    def test_health_no_auth(self):
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, 200)
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.get("/api/agents")
+        self.assertEqual(response.status_code, 401)
+
+    def test_auth_correct_key(self):
+        response = self.client.post(
+            "/api/auth",
+            json={"api_key": self.token},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("api_token", response.cookies)
+
+    def test_auth_wrong_key(self):
+        response = self.client.post(
+            "/api/auth",
+            json={"api_key": "wrong"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_authenticated_request(self):
+        self.client.cookies.set("api_token", self.token)
+        with patch("linhai.webui.routes.get_manager") as mock_get:
+            mock_manager = MagicMock()
+            mock_manager.list_agents.return_value = []
+            mock_get.return_value = mock_manager
+            response = self.client.get("/api/agents")
+            self.assertEqual(response.status_code, 200)

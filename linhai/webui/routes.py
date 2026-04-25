@@ -133,6 +133,10 @@ async def delete_agent(agent_id: str):
 
 @router.websocket("/{agent_id}/ws")
 async def agent_websocket(websocket: WebSocket, agent_id: str):
+    if websocket.cookies.get("api_token") != websocket.app.state.api_token:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
     manager = get_manager()
     session = manager.get_agent(agent_id)
     if session is None:

@@ -133,3 +133,7 @@ class ConfigResponse(BaseModel):
         default_factory=list, description="可用Profile列表"
     )
     llms: list[LlmInfo] = Field(default_factory=list, description="可用LLM列表")
+
+
+class AuthRequest(BaseModel):
+    api_key: str = Field(..., description="API密钥")

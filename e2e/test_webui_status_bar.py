@@ -51,6 +51,7 @@ async def test_webui_status_bar_e2e():
     config_path = _write_e2e_config()
     routes._manager = AgentManager(config_path=config_path)
     app = create_app()
+    token = app.state.api_token
     port = 18766
     import threading
 
@@ -61,6 +62,7 @@ async def test_webui_status_bar_e2e():
     )
     server_thread.start()
     async with AsyncClient(base_url=f"http://127.0.0.1:{port}") as client:
+        client.cookies.set("api_token", token)
         for _ in range(50):
             try:
                 resp = await client.get("/api/agents")
@@ -74,7 +76,8 @@ async def test_webui_status_bar_e2e():
         agent_id = resp.json()["id"]
         sub = JsonSubscriber()
         async with websockets.connect(
-            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws"
+            f"ws://127.0.0.1:{port}/api/agents/{agent_id}/ws",
+            additional_headers={"Cookie": f"api_token={token}"},
         ) as ws:
             data = json.loads(await ws.recv())
             assert "event" in data
