@@ -517,6 +517,7 @@ class AgentContextOrchestration:
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.before_add_new_message.register(self._before_add_new_message)
         lifecycle.before_message_generation.register(self._before_message_generation)
+        lifecycle.after_conversation_restore.register(self._after_conversation_restore)
 
     async def _before_add_new_message(self, message: "Message") -> None:
         """在添加新消息前检查是否为大消息。"""
@@ -542,11 +543,30 @@ class AgentContextOrchestration:
             msg for msg in self.large_messages if msg in valid_messages
         }
 
+    async def _after_conversation_restore(self) -> None:
+        """对话恢复后重新计算大消息列表。"""
+        from linhai.base import AssistantMessage
+        from linhai.multimodal import ImageMessage
+
+        self.large_messages = set()
+        self.cleaned_messages = {}
+        for msg in self.agent_message.get_messages():
+            if isinstance(msg, AssistantMessage):
+                continue
+            if isinstance(msg, ImageMessage):
+                self.large_messages.add(msg)
+            else:
+                content = msg.get_content()
+                if content is not None:
+                    token_count = count_tokens(content)
+                    if token_count > LARGE_MESSAGE_TOKEN_THRESHOLD:
+                        self.large_messages.add(msg)
+
     def serialize(self) -> dict:
-        raise NotImplementedError
+        return {"consecutive_red_block_count": self.consecutive_red_block_count}
 
     def restore_from(self, data: dict) -> None:
-        raise NotImplementedError
+        self.consecutive_red_block_count = data.get("consecutive_red_block_count", 0)
 
 
 class RedStateToolBlockPlugin:

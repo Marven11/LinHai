@@ -190,7 +190,19 @@ class TokenManager:
         return display_text_pieces
 
     def serialize(self) -> dict:
-        raise NotImplementedError
+        return {
+            "cumulative_token_usage": (
+                dict(self.cumulative_token_usage)
+                if self.cumulative_token_usage
+                else None
+            ),
+            "explicit_cache_tokens": self.explicit_cache_tokens,
+            "is_dirty": self.is_dirty,
+            "generation_count": self.generation_count,
+        }
 
     def restore_from(self, data: dict) -> None:
-        raise NotImplementedError
+        self.cumulative_token_usage = data.get("cumulative_token_usage")
+        self.explicit_cache_tokens = data.get("explicit_cache_tokens", 0)
+        self.is_dirty = data.get("is_dirty", False)
+        self.generation_count = data.get("generation_count", 0)

@@ -388,9 +388,3 @@ class AgentMessage:
         if message in self.messages:
             return self.messages.index(message)
         return None
-
-    def serialize(self) -> dict:
-        raise NotImplementedError
-
-    def restore_from(self, data: dict) -> None:
-        raise NotImplementedError

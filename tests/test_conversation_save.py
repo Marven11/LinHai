@@ -80,7 +80,7 @@ class TestRestoreConversation(unittest.IsolatedAsyncioTestCase):
         filepath = Path(self.temp_dir) / "test.json"
         data = {
             "version": CONVERSATION_VERSION,
-            "members": {"member_a": {"key": "restored"}},
+            "members": {"member_a": {"key": "restored"}, "lifecycle": {}},
         }
         filepath.write_text(json.dumps(data), encoding="utf-8")
         registry = Registry()

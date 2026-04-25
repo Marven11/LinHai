@@ -36,3 +36,9 @@ class UserMessageHandler:
         agent = self.registry.get_member_typechecked("agent", Agent)
         await agent.message_processor.add_new_message(msg)
         return True
+
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass

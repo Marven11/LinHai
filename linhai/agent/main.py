@@ -314,3 +314,9 @@ class Agent:
                 break
             await asyncio.to_thread(self.message_processor._save_context)
             await asyncio.sleep(0)
+
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass

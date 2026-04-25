@@ -18,6 +18,12 @@ class NoSandbox:
     def update_pwd(self, new_pwd: str) -> None:
         pass
 
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass
+
 
 DEFAULT_MACOS_PROFILE_TEMPLATE = """
 (version 1)
@@ -66,7 +72,8 @@ class MacOsSandbox:
         self._template = Path(sandbox_profile).read_text()
         self._home = str(Path.home())
         self._tmpdir = tempfile.gettempdir()
-        self._profile_path = self._render_profile(os.getcwd())
+        self._pwd = os.getcwd()
+        self._profile_path = self._render_profile(self._pwd)
 
     def _render_profile(self, pwd: str) -> str:
         rendered = self._template.format(
@@ -83,7 +90,16 @@ class MacOsSandbox:
         return ["sandbox-exec", "-f", self._profile_path] + list(argv)
 
     def update_pwd(self, new_pwd: str) -> None:
+        self._pwd = new_pwd
         self._profile_path = self._render_profile(new_pwd)
+
+    def serialize(self) -> dict:
+        return {"pwd": self._pwd}
+
+    def restore_from(self, data: dict) -> None:
+        pwd = data.get("pwd")
+        if pwd is not None:
+            self.update_pwd(pwd)
 
 
 class BubbleWrapSandbox:
@@ -104,3 +120,11 @@ class BubbleWrapSandbox:
 
     def update_pwd(self, new_pwd: str) -> None:
         self._pwd = new_pwd
+
+    def serialize(self) -> dict:
+        return {"pwd": self._pwd}
+
+    def restore_from(self, data: dict) -> None:
+        pwd = data.get("pwd")
+        if pwd is not None:
+            self.update_pwd(pwd)

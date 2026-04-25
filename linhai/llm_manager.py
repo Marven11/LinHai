@@ -286,6 +286,36 @@ class LlmManager:
                     else:
                         raise
 
+    def serialize(self) -> dict:
+        return {
+            "llm_stack": [
+                {
+                    "llm_name": elem["llm_name"],
+                    "disabled_until": (
+                        elem["disabled_until"].isoformat()
+                        if elem["disabled_until"]
+                        else None
+                    ),
+                    "retry_count": elem["retry_count"],
+                }
+                for elem in self.llm_stack
+            ]
+        }
+
+    def restore_from(self, data: dict) -> None:
+        self.llm_stack = [
+            LlmStackElement(
+                llm_name=elem["llm_name"],
+                disabled_until=(
+                    datetime.fromisoformat(elem["disabled_until"])
+                    if elem["disabled_until"]
+                    else None
+                ),
+                retry_count=elem["retry_count"],
+            )
+            for elem in data["llm_stack"]
+        ]
+
     def list_available_llms(self) -> list[LlmInfo]:
         current_llm = self.get_current_llm(rotate_invalid_llm=False)
         current_llm_name = current_llm.get_name() if current_llm else None

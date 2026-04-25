@@ -354,3 +354,9 @@ class MultimodalToolsetManager:
         agent = self.registry.get_member_typechecked("agent", Agent)
         llm = agent.get_current_model()
         return llm.support_image()
+
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass

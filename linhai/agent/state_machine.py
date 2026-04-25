@@ -102,7 +102,7 @@ class AgentStateMachine:
         return sleep_toolset
 
     def serialize(self) -> dict:
-        raise NotImplementedError
+        return {"state": self.state}
 
     def restore_from(self, data: dict) -> None:
-        raise NotImplementedError
+        self.state = data.get("state", "waiting_user")

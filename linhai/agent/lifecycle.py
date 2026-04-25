@@ -160,3 +160,9 @@ class Lifecycle:
         self.after_process_create = BroadcastSlot()
         self.on_llm_error = BroadcastSlot()
         self.after_conversation_restore = BroadcastSlot()
+
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass

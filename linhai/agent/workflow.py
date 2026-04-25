@@ -65,6 +65,12 @@ class RangeCleanManager:
         """检查ID是否有效"""
         return range_clean_id in self._clean_infos
 
+    def serialize(self) -> dict:
+        return {}
+
+    def restore_from(self, data: dict) -> None:
+        pass
+
 
 def _prepare_messages_for_compression(agent: "linhai.agent.Agent") -> str:
     """准备消息用于压缩，包括计算显示间隔"""

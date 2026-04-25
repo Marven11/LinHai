@@ -207,12 +207,6 @@ class SystemMessage:
         instance.examples_items = data["examples_items"]
         return instance
 
-    def serialize(self) -> dict:
-        raise NotImplementedError
-
-    def restore_from(self, data: dict) -> None:
-        raise NotImplementedError
-
 
 class UserMessage:
     """用户消息类，用于表示用户角色消息。"""
