@@ -235,6 +235,7 @@ class ToolManager:
 
         lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
         lifecycle.before_message_generation.register(self.update_tools_definition)
+        lifecycle.after_conversation_restore.register(self.update_tools_definition)
 
     async def update_tools_definition(self):
         """更新SystemMessage中的工具定义（before_message_generation回调）。"""

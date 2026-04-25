@@ -99,6 +99,7 @@ class MCPConnector:
         registry.register_member("mcp_connector", self)
         self.registry = registry
         self.sessions: dict[str, MCPServerConnection] = {}
+        self._saved_session_info: dict[str, dict] = {}
         self.connector_toolset = self.init_connector_toolset()
 
     def get_toolsets(self) -> list[ToolSet]:
@@ -251,3 +252,40 @@ class MCPConnector:
             )
 
         return connector_toolset
+
+    def serialize(self) -> dict:
+        sessions = {}
+        for name, conn in self.sessions.items():
+            sessions[name] = {"command": conn.command}
+        return {"sessions": sessions}
+
+    def restore_from(self, data: dict) -> None:
+        self._saved_session_info = data.get("sessions", {})
+        self.sessions = {}
+
+    def register_lifecycle(self) -> None:
+        from linhai.agent.lifecycle import Lifecycle
+
+        lifecycle = self.registry.get_member_typechecked("lifecycle", Lifecycle)
+        lifecycle.after_conversation_restore.register(self._after_conversation_restore)
+
+    async def _after_conversation_restore(self) -> None:
+        if not self._saved_session_info:
+            return
+
+        from linhai.agent.messages import RuntimeMessage
+        from linhai.agent.message import AgentMessage
+
+        lines = ["conversation恢复：以下MCP服务器在保存时已连接，现已断开:"]
+        for name, info in self._saved_session_info.items():
+            lines.append(f"  - {name}: 启动命令={info.get('command', 'unknown')}")
+
+        agent_message = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+        agent_message.update_notification_message(
+            RuntimeMessage("\n".join(lines)),
+            source="mcp_disconnected",
+            sort_value=0,
+        )
+        self._saved_session_info = {}

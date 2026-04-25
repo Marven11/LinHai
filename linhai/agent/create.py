@@ -327,6 +327,13 @@ async def create_agent_from_context(
     if machine_control is not None:
         machine_control.register_plugin(agent.lifecycle)
     multimodal_manager.register_lifecycle(agent.lifecycle)
+    if context["registry"].has_member("mcp_connector"):
+        from linhai.tool.mcp_connector import MCPConnector
+
+        mcp_connector = context["registry"].get_member_typechecked(
+            "mcp_connector", MCPConnector
+        )
+        mcp_connector.register_lifecycle()
     tool_manager.register_lifecycle()
 
     if context["allowed_commands"]:

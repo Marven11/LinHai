@@ -55,6 +55,7 @@ class MachineControl:
             "master_host": None,
         }
         self._process_infos: Dict[str, _StoredProcessInfo] = {}
+        self._saved_machine_info: dict = {}
         registry.register_member("machine_control", self)
 
     async def switch_machine(
@@ -442,14 +443,65 @@ class MachineControl:
                 )
         return result
 
+    def serialize(self) -> dict:
+        machines = {}
+        for machine_id in list(self.machine_descriptions.keys()):
+            if machine_id == "master_host":
+                continue
+            argv = []
+            for key, info in self._process_infos.items():
+                if key.startswith(f"{machine_id}:"):
+                    argv = info["argv"]
+                    break
+            machines[machine_id] = {
+                "description": self.machine_descriptions.get(machine_id, ""),
+                "source_machine": self.source_machines.get(machine_id),
+                "argv": argv,
+            }
+        return {"machines": machines}
+
+    def restore_from(self, data: dict) -> None:
+        self._saved_machine_info = data.get("machines", {})
+        master = self.machines.get("master_host")
+        self.machines = {"master_host": master} if master else {}
+        self.machine_descriptions = {"master_host": "本地主机"}
+        self.source_machines = {"master_host": None}
+        self.target_machine = "master_host"
+        self._process_infos = {}
+
     def register_plugin(self, lifecycle: "Lifecycle"):
         """注册插件到lifecycle。"""
         plugin = MachineControlPlugin(self.registry, self)
         plugin.register(lifecycle)
         heartbeat_plugin = MachineHeartbeatPlugin(self.registry, self)
         heartbeat_plugin.register(lifecycle)
+        lifecycle.after_conversation_restore.register(self._after_conversation_restore)
 
         async def _on_process_create(info: "ProcessCreateInfo") -> None:
             self.store_process_info(info.process.pid, info.machine_id, info.argv)
 
         lifecycle.after_process_create.register(_on_process_create)
+
+    async def _after_conversation_restore(self) -> None:
+        if not self._saved_machine_info:
+            return
+
+        from linhai.agent.messages import RuntimeMessage
+        from linhai.agent.message import AgentMessage
+
+        lines = ["conversation恢复：以下远程机器在保存时已连接，现已断开:"]
+        for machine_id, info in self._saved_machine_info.items():
+            desc = info.get("description", "unknown")
+            argv = info.get("argv", [])
+            argv_str = " ".join(argv) if argv else "unknown"
+            lines.append(f"  - {machine_id}: {desc}, 启动参数={argv_str}")
+
+        agent_message = self.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+        agent_message.update_notification_message(
+            RuntimeMessage("\n".join(lines)),
+            source="machine_disconnected",
+            sort_value=0,
+        )
+        self._saved_machine_info = {}
