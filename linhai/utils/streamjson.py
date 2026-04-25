@@ -328,7 +328,10 @@ class StreamJsonParser:
             self.feed_token_string_value(s)
             return
         for c in s:
-            self.feed_token(c)
+            try:
+                self.feed_token(c)
+            except RuntimeError:
+                self._corrupted = True
             if self._corrupted:
                 return
             if self.is_current_data_finished():
