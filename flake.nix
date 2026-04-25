@@ -87,7 +87,6 @@
             pydantic
             chardet
             bashlex
-            tiktoken
             pillow
             tomli-w
             feedparser

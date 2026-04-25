@@ -24,7 +24,6 @@ dependencies = [
     "pydantic",
     "chardet",
     "bashlex",
-    "tiktoken",
     "pillow",
     "tomli-w",
     "ether-ghost @ git+https://github.com/Marven11/EtherGhost.git@dev",
@@ -43,6 +42,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "websockets",
+    "tiktoken",
 ]
 
 [tool.hatch.build.targets.wheel]
