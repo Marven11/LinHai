@@ -846,38 +846,27 @@ def register_machine_control_tools(machine_control: "MachineControl") -> ToolSet
         name="list_files",
         desc=t(
             {
-                "zh_CN": "基于pathlib.glob匹配文件，尊重gitignore",
-                "en": "List files using pathlib.glob, respecting gitignore",
+                "zh_CN": "列出指定文件夹中的文件(使用./表示当前文件夹)",
+                "en": "List files in a directory (use ./ for current directory)",
             }
         ),
         args={
             "dirpath": ToolArgInfo(
                 desc=t(
                     {
-                        "zh_CN": "文件夹路径，使用./表示当前目录，在glob为true时支持*和**，如*/*.py",
-                        "en": "Directory path, use ./ for current directory. Supports * and ** when glob=true, e.g. */*.py",
+                        "zh_CN": "文件夹路径，使用./表示当前目录",
+                        "en": "Directory path, use ./ for current directory",
                     }
                 ),
                 type="str",
-            ),
-            "glob": ToolArgInfo(
-                desc=t(
-                    {
-                        "zh_CN": "是否启用glob模式匹配文件，默认False，仅master_host支持",
-                        "en": "Enable glob pattern matching, default False, master_host only",
-                    }
-                ),
-                type="bool",
-            ),
+            )
         },
         required_args=["dirpath"],
         conflict_with=None,
     )
-    async def list_files_tool(
-        dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
+    async def list_files_tool(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         host_control = machine_control.machines[machine_control.target_machine]
-        return await host_control.list_files(dirpath, glob)
+        return await host_control.list_files(dirpath)
 
     @toolset.register_tool(
         name="get_absolute_path",

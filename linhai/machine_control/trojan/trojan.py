@@ -256,9 +256,7 @@ class Trojan:
         Path(filepath).write_text(new_content, encoding="utf-8")
         return {"message": f"已替换{count}次"}
 
-    async def list_files(self, dirpath, glob=False):
-        if glob:
-            return {"error": "glob仅支持master_host"}
+    async def list_files(self, dirpath):
         path = Path(dirpath)
         if not path.exists():
             return {"error": f"路径不存在: {dirpath}"}

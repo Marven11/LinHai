@@ -354,11 +354,7 @@ class BashHostControl:
     ) -> ToolResultSuccess | ToolResultFailed:
         return await _replace_file_content(self, filepath, old, new, replace_times)
 
-    async def list_files(
-        self, dirpath: str, glob: bool = False
-    ) -> ToolResultSuccess | ToolResultFailed:
-        if glob:
-            return ToolResultFailed(content="glob仅支持master_host")
+    async def list_files(self, dirpath: str) -> ToolResultSuccess | ToolResultFailed:
         return await _list_files(self, dirpath)
 
     async def get_absolute_path(
