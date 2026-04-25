@@ -9,10 +9,19 @@ from linhai.agent.conversation import save_context
 from linhai.type_hints import ChatCompletionContentPartTextParam
 
 
-from linhai.base import Message, LanguageModelMessage
-from .messages import RuntimeMessage
-
-from linhai.base import UserMessage
+from linhai.base import Message, LanguageModelMessage, SystemMessage
+from .messages import (
+    RuntimeMessage,
+    GlobalPrompt,
+    PathPrompt,
+    ChecklistMessage,
+    FileContentMessage,
+    DynamicFileContentMessage,
+    PreviousReasoningMessage,
+    SpoofedReasoningMessage,
+    MessagesListSummerizeMessage,
+)
+from linhai.base import UserMessage, AssistantMessage
 from linhai.utils.common import UiNotice
 
 
@@ -47,6 +56,22 @@ class ExplicitCacheMessage(Message):
         _ = registry
         data = json.loads(json_str)
         return cls(text=data["text"])
+
+
+MESSAGE_CLASS_REGISTRY: dict[str, type[Message]] = {
+    "RuntimeMessage": RuntimeMessage,
+    "GlobalPrompt": GlobalPrompt,
+    "PathPrompt": PathPrompt,
+    "ChecklistMessage": ChecklistMessage,
+    "UserMessage": UserMessage,
+    "AssistantMessage": AssistantMessage,
+    "FileContentMessage": FileContentMessage,
+    "DynamicFileContentMessage": DynamicFileContentMessage,
+    "PreviousReasoningMessage": PreviousReasoningMessage,
+    "SpoofedReasoningMessage": SpoofedReasoningMessage,
+    "MessagesListSummerizeMessage": MessagesListSummerizeMessage,
+    "ExplicitCacheMessage": ExplicitCacheMessage,
+}
 
 
 class AgentMessage:
@@ -388,3 +413,56 @@ class AgentMessage:
         if message in self.messages:
             return self.messages.index(message)
         return None
+
+    @staticmethod
+    def _serialize_messages(messages: List[Message]) -> list[dict]:
+        result = []
+        for msg in messages:
+            result.append({"type": msg.__class__.__name__, "data": msg.to_json()})
+        return result
+
+    def _restore_messages(self, data_list: list[dict]) -> List[Message]:
+        result = []
+        for item in data_list:
+            cls = MESSAGE_CLASS_REGISTRY.get(item["type"])
+            if cls is None:
+                raise RuntimeError(f"Unknown message type: {item['type']}")
+            result.append(cls.from_json(item["data"], self.registry))
+        return result
+
+    def serialize(self) -> dict:
+        pinned_without_system = [
+            msg for msg in self.pinned_messages if not isinstance(msg, SystemMessage)
+        ]
+        notification_data = []
+        for entry in self.notification_messages.values():
+            notification_data.append(
+                {
+                    "source": entry["source"],
+                    "sort_value": entry["sort_value"],
+                    "message": {
+                        "type": entry["message"].__class__.__name__,
+                        "data": entry["message"].to_json(),
+                    },
+                }
+            )
+        return {
+            "pinned_messages": self._serialize_messages(pinned_without_system),
+            "messages": self._serialize_messages(self.messages),
+            "notification_messages": notification_data,
+        }
+
+    def restore_from(self, data: dict) -> None:
+        self.pinned_messages = self._restore_messages(data["pinned_messages"])
+        self.messages = self._restore_messages(data["messages"])
+        self.notification_messages = {}
+        for entry in data["notification_messages"]:
+            cls = MESSAGE_CLASS_REGISTRY.get(entry["message"]["type"])
+            if cls is None:
+                raise RuntimeError(f"Unknown message type: {entry['message']['type']}")
+            msg = cls.from_json(entry["message"]["data"], self.registry)
+            self.notification_messages[entry["source"]] = {
+                "source": entry["source"],
+                "message": msg,
+                "sort_value": entry["sort_value"],
+            }

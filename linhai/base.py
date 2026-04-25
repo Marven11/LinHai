@@ -207,6 +207,20 @@ class SystemMessage:
         instance.examples_items = data["examples_items"]
         return instance
 
+    def serialize(self) -> dict:
+        return {
+            "overview": self.overview,
+            "introduction_items": self.introduction_items,
+            "rules_items": self.rules_items,
+            "examples_items": self.examples_items,
+        }
+
+    def restore_from(self, data: dict) -> None:
+        self.overview = data["overview"]
+        self.introduction_items = data["introduction_items"]
+        self.rules_items = data["rules_items"]
+        self.examples_items = data["examples_items"]
+
 
 class UserMessage:
     """用户消息类，用于表示用户角色消息。"""
