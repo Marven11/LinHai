@@ -5,8 +5,9 @@ LinHai 主程序入口模块。
 """
 
 from pathlib import Path
-import asyncio
 import argparse
+import asyncio
+import os
 import unittest
 import sys
 
@@ -52,7 +53,12 @@ def run_webui(args):
     config_path = args.config or get_default_config_path()
     AgentManager(config_path=config_path)
 
-    app = create_app()
+    api_token = args.api_token
+    if api_token is None:
+        api_token = os.urandom(16).hex()
+        print(api_token, file=sys.stderr)
+
+    app = create_app(api_token=api_token)
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
 
@@ -212,6 +218,12 @@ def main():
         type=int,
         default=8000,
         help="WebUI服务监听端口",
+    )
+    webui_parser.add_argument(
+        "--api-token",
+        type=str,
+        default=None,
+        help="指定API token（用于e2e测试）",
     )
     webui_parser.add_argument(
         "--config",

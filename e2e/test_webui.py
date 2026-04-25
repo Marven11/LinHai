@@ -24,7 +24,7 @@ def setup_manager():
 
 @pytest.fixture
 async def client():
-    app = create_app()
+    app = create_app(api_token="e2e-test-token")
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:

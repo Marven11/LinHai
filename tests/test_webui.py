@@ -540,7 +540,7 @@ class TestCreateAgentPathValidation(unittest.IsolatedAsyncioTestCase):
         from linhai.webui import routes
 
         routes._manager = None
-        app = create_app()
+        app = create_app(api_token="test-token")
         self.token = app.state.api_token
         self.client = TestClient(app)
         self.client.cookies.set("api_token", self.token)
@@ -664,6 +664,14 @@ class TestAgentSessionStatusBar(unittest.TestCase):
         self.assertEqual(len(events2), 0)
 
 
+class TestCreateAppWithToken(unittest.TestCase):
+    def test_create_app_with_specified_token(self):
+        from linhai.webui.app import create_app
+
+        app = create_app(api_token="test-fixed-token")
+        self.assertEqual(app.state.api_token, "test-fixed-token")
+
+
 class TestAuthMiddleware(unittest.TestCase):
     def setUp(self):
         from fastapi.testclient import TestClient
@@ -671,7 +679,8 @@ class TestAuthMiddleware(unittest.TestCase):
         from linhai.webui import routes
 
         routes._manager = None
-        app = create_app()
+        self._token = "test-token-for-auth"
+        app = create_app(api_token=self._token)
         self.token = app.state.api_token
         self.client = TestClient(app)
 

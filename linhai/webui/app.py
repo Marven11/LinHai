@@ -1,8 +1,5 @@
 """WebUI FastAPI应用。"""
 
-import os
-import sys
-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,14 +10,13 @@ from .schemas import AuthRequest
 _AUTH_WHITELIST_PATHS = frozenset({"/health", "/api/auth"})
 
 
-def create_app() -> FastAPI:
+def create_app(api_token: str) -> FastAPI:
     """创建并配置FastAPI应用。
 
-    初始化时生成随机API token并打印到stderr。
-    注意：通过stdio泄漏密钥的问题是已知限制，后续会解决。
+    Args:
+        api_token: API认证token，用于验证请求。
     """
-    token = os.urandom(16).hex()
-    print(token, file=sys.stderr)
+    token = api_token
 
     app = FastAPI(
         title="LinHai WebUI API",

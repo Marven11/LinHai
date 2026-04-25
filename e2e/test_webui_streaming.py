@@ -46,7 +46,7 @@ def _feed_events_until(ws, sub, predicate, max_iterations=30):
 def test_websocket_agent_not_found():
     setup_manager()
     try:
-        app = create_app()
+        app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
         client.cookies.set("api_token", app.state.api_token)
         try:
@@ -62,7 +62,7 @@ def test_websocket_agent_not_found():
 def test_websocket_initial_state():
     setup_manager()
     try:
-        app = create_app()
+        app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
         client.cookies.set("api_token", app.state.api_token)
 
@@ -89,7 +89,7 @@ def test_websocket_initial_state():
 def test_websocket_user_message():
     setup_manager()
     try:
-        app = create_app()
+        app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
         client.cookies.set("api_token", app.state.api_token)
 
@@ -125,7 +125,7 @@ def test_websocket_user_message():
 def test_websocket_reset_recovery():
     setup_manager()
     try:
-        app = create_app()
+        app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
         client.cookies.set("api_token", app.state.api_token)
 
@@ -173,7 +173,7 @@ def test_websocket_reset_recovery():
 def test_websocket_multi_turn():
     setup_manager()
     try:
-        app = create_app()
+        app = create_app(api_token="e2e-test-token")
         client = TestClient(app)
         client.cookies.set("api_token", app.state.api_token)
 
@@ -281,7 +281,7 @@ async def test_webui_streaming_e2e():
 
     config_path = _write_e2e_config()
     routes._manager = AgentManager(config_path=config_path)
-    app = create_app()
+    app = create_app(api_token="e2e-test-token")
     token = app.state.api_token
     port = 18765
     server_thread = threading.Thread(

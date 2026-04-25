@@ -50,7 +50,7 @@ async def test_webui_status_bar_e2e():
 
     config_path = _write_e2e_config()
     routes._manager = AgentManager(config_path=config_path)
-    app = create_app()
+    app = create_app(api_token="e2e-test-token")
     token = app.state.api_token
     port = 18766
     import threading
