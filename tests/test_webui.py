@@ -34,6 +34,14 @@ class TestSchemas(unittest.TestCase):
         self.assertTrue(req.planning)
         self.assertEqual(req.message, ["hello"])
 
+    def test_agent_create_request_restore_path(self):
+        req = AgentCreateRequest(restore_path="/tmp/save.json")
+        self.assertEqual(req.restore_path, "/tmp/save.json")
+
+    def test_agent_create_request_restore_path_default_none(self):
+        req = AgentCreateRequest()
+        self.assertIsNone(req.restore_path)
+
     def test_agent_info(self):
         info = AgentInfo(
             id="test-id",

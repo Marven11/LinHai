@@ -89,6 +89,7 @@ async def run(args):
         "checklist_path": args.checklist,
         "profile_name": args.profile,
         "git_worktree": args.git_worktree,
+        "restore_path": None,
     }
     context = create_agent_build_context(
         registry=registry,

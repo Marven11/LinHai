@@ -301,6 +301,12 @@ class AgentManager:
 
         agent = await create_agent_from_context(context)
 
+        restore_path = build_args.get("restore_path")
+        if restore_path is not None:
+            from linhai.agent.conversation_save import restore_conversation
+
+            await restore_conversation(registry, restore_path)
+
         token_manager = registry.get_member_typechecked("token_manager", TokenManager)
         token_manager.start_watching()
 
@@ -322,7 +328,24 @@ class AgentManager:
         for msg in build_args.get("message", []):
             session.add_user_message(msg)
 
+        if restore_path is not None:
+            self._populate_session_from_restored(session)
+
         return session
+
+    def _populate_session_from_restored(self, session: AgentSession) -> None:
+        from linhai.agent.message import AgentMessage
+        from linhai.base import UserMessage, AssistantMessage
+
+        agent_message = session.registry.get_member_typechecked(
+            "agent_message", AgentMessage
+        )
+        for msg in agent_message.messages:
+            if isinstance(msg, UserMessage):
+                session.add_user_message(msg.get_content())
+            elif isinstance(msg, AssistantMessage):
+                idx = session.add_agent_message()
+                session.update_agent_message_content(idx, msg.get_content())
 
     def get_registry(self, agent_id: str) -> Optional[Registry]:
         return self._registries.get(agent_id)

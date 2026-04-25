@@ -19,6 +19,8 @@ from .schemas import (
     SwitchLlmRequest,
     KillProcessRequest,
 )
+from pathlib import Path
+
 from .agent_manager import AgentManager
 from ..config import get_default_config_path
 
@@ -33,9 +35,6 @@ def get_manager() -> AgentManager:
     if _manager is None:
         _manager = AgentManager(get_default_config_path())
     return _manager
-
-
-from pathlib import Path
 
 
 @router.post("", response_model=AgentCreateResponse)
@@ -82,6 +81,7 @@ async def create_agent(request: AgentCreateRequest):
         "checklist_path": checklist_path,
         "profile_name": request.profile_name,
         "git_worktree": False,
+        "restore_path": Path(request.restore_path) if request.restore_path else None,
     }
 
     manager = get_manager()

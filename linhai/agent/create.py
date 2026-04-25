@@ -73,6 +73,7 @@ class AgentBuildArguments(TypedDict):
     checklist_path: Optional[Path]
     profile_name: Optional[str]
     git_worktree: bool
+    restore_path: Optional[Path]
 
 
 class AgentBuildContext(TypedDict):

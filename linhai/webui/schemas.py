@@ -69,6 +69,9 @@ class AgentCreateRequest(BaseModel):
     telegram: bool = Field(default=False, description="启用Telegram远程控制")
     message: list[str] = Field(default_factory=list, description="初始用户消息列表")
     file: list[str] = Field(default_factory=list, description="初始文件路径列表")
+    restore_path: Optional[str] = Field(
+        default=None, description="恢复会话的保存文件路径"
+    )
 
 
 class AgentInfo(BaseModel):
