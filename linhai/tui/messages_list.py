@@ -21,6 +21,9 @@ from .components import (
     MessageWidget,
     UserMessageWidget,
     MessageGenerationWidget,
+    ToolCallWidget,
+    NormalContentWidget,
+    ReasoningContentWidget,
 )
 
 
@@ -174,6 +177,95 @@ class MessagesList(VerticalScroll):
         self.mount(widget)
         if self.should_auto_scroll():
             self.scroll_end(animate=False)
+
+    def serialize(self) -> dict:
+        messages = []
+        for msg in self.messages:
+            if isinstance(msg, UserMessageWidget):
+                messages.append(
+                    {
+                        "type": "user",
+                        "content": msg.content_str,
+                        "sender_name": msg.display_name,
+                    }
+                )
+            elif isinstance(msg, MessageGenerationWidget):
+                msg_data: dict = {
+                    "type": "assistant",
+                    "segments": [],
+                    "sender_name": "",
+                    "runtime_messages": [],
+                }
+                for child in msg.children:
+                    if isinstance(child, MessageWidget):
+                        msg_data["sender_name"] = child.sender_name
+                        for seg_widget in child._content.children:
+                            if isinstance(
+                                seg_widget,
+                                (
+                                    ToolCallWidget,
+                                    NormalContentWidget,
+                                    ReasoningContentWidget,
+                                ),
+                            ):
+                                msg_data["segments"].append(dict(seg_widget._segment))
+                    elif isinstance(child, RuntimeMessageWidget):
+                        msg_data["runtime_messages"].append(
+                            {
+                                "level": child.level,
+                                "content": child.content_str,
+                            }
+                        )
+                messages.append(msg_data)
+            elif isinstance(msg, RuntimeMessageWidget):
+                messages.append(
+                    {
+                        "type": "runtime",
+                        "level": msg.level,
+                        "content": msg.content_str,
+                    }
+                )
+        return {"messages": messages}
+
+    def restore_from(self, data: dict) -> None:
+        self.messages.clear()
+        for msg_data in data.get("messages", []):
+            msg_type = msg_data["type"]
+            if msg_type == "user":
+                widget = UserMessageWidget(
+                    content=msg_data["content"],
+                    sender_name=msg_data["sender_name"],
+                    theme=self.theme,
+                )
+                self.mount(widget)
+                widget.update_display()
+                self.messages.append(widget)
+            elif msg_type == "assistant":
+                generation_widget = MessageGenerationWidget()
+                self.mount(generation_widget)
+                message_widget = MessageWidget(
+                    role="assistant",
+                    sender_name=msg_data["sender_name"],
+                    theme=self.theme,
+                    parsed_answer=None,
+                    get_refresh_interval=self.get_refresh_interval,
+                )
+                message_widget._restored_segments = msg_data.get("segments", [])
+                generation_widget.set_message_widget(message_widget)
+                for rt_data in msg_data.get("runtime_messages", []):
+                    rt_widget = RuntimeMessageWidget(
+                        level=rt_data["level"],
+                        content=rt_data["content"],
+                    )
+                    generation_widget.add_runtime_message(rt_widget)
+                self.messages.append(generation_widget)
+            elif msg_type == "runtime":
+                widget = RuntimeMessageWidget(
+                    level=msg_data["level"],
+                    content=msg_data["content"],
+                )
+                self.mount(widget)
+        self.is_user_scroll_to_end = True
 
     async def on_unmount(self) -> None:
         """组件卸载时清理任务"""

@@ -724,7 +724,7 @@ class MessageWidget(Static):
         role: str,
         sender_name: str,
         theme: str | None,
-        parsed_answer: ParsedAnswer,
+        parsed_answer: ParsedAnswer | None,
         get_refresh_interval: Callable[[], float],
     ):
         super().__init__()
@@ -733,6 +733,7 @@ class MessageWidget(Static):
         self.theme = theme
         self.parsed_answer = parsed_answer
         self.get_refresh_interval = get_refresh_interval
+        self._restored_segments: list[dict] | None = None
         self._state = "streaming"
         self._collapsed_view = _ClickStatic("\u25b6", self._expand_message)
         self._expand_header = _ClickStatic(
@@ -749,13 +750,67 @@ class MessageWidget(Static):
         self.mount(self._collapsed_view)
         self.mount(self._expand_header)
         self.mount(self._content)
-        self._start_processing_segments()
+        if self._restored_segments is not None:
+            self._restore_segments(self._restored_segments)
+        else:
+            self._start_processing_segments()
         self._streaming_timer = self.set_interval(
             self.get_refresh_interval(), self._update_streaming_header
         )
 
+    def _restore_segments(self, segments: list[dict]) -> None:
+        for i, segment_data in enumerate(segments):
+            if i > 0:
+                self._content.mount(SpaceWidget())
+            segment_type = segment_data["segment_type"]
+            if segment_type == "toolcall":
+                seg = ToolCallSegment(
+                    segment_type="toolcall",
+                    raw=segment_data["raw"],
+                    is_finished=segment_data["is_finished"],
+                    is_corrupted=segment_data["is_corrupted"],
+                    markdown_representation=segment_data["markdown_representation"],
+                    tool_name=segment_data["tool_name"],
+                )
+                widget = ToolCallWidget(
+                    theme=self.theme,
+                    segment=seg,
+                    get_refresh_interval=self.get_refresh_interval,
+                )
+            elif segment_type == "normal":
+                seg = NormalSegment(
+                    segment_type="normal",
+                    content=segment_data["content"],
+                    is_finished=segment_data["is_finished"],
+                )
+                widget = NormalContentWidget(
+                    role=self.role,
+                    sender_name=self.sender_name,
+                    theme=self.theme,
+                    segment=seg,
+                    get_refresh_interval=self.get_refresh_interval,
+                )
+            elif segment_type == "reasoning":
+                seg = ReasoningSegment(
+                    segment_type="reasoning",
+                    content=segment_data["content"],
+                    is_finished=segment_data["is_finished"],
+                )
+                widget = ReasoningContentWidget(
+                    role=self.role,
+                    sender_name=self.sender_name,
+                    theme=self.theme,
+                    segment=seg,
+                    get_refresh_interval=self.get_refresh_interval,
+                )
+            else:
+                continue
+            self._content.mount(widget)
+        self._auto_transition()
+
     @work(exclusive=False)
     async def _start_processing_segments(self):
+        assert self.parsed_answer is not None
         is_first_segment = True
         last_content_widget = None
         while True:
