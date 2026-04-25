@@ -13,6 +13,7 @@ from linhai.machine_control.master_host.file import (
     list_files,
     get_absolute_path,
     find_most_similar_in_files,
+    _list_files_glob,
 )
 
 
@@ -129,6 +130,80 @@ class TestFileTools(unittest.TestCase):
         file_names = [line.split()[-1] for line in file_lines]
         expected_order = sorted(test_files)
         self.assertEqual(file_names, expected_order)
+
+    def test_list_files_glob_pattern(self):
+        """测试glob模式匹配文件"""
+        (Path(self.temp_dir) / "a.py").write_text("py")
+        (Path(self.temp_dir) / "b.txt").write_text("txt")
+        sub = Path(self.temp_dir) / "sub"
+        sub.mkdir()
+        (sub / "c.py").write_text("py")
+
+        result = list_files(self.temp_dir, glob=True, glob_pattern="*.py")
+        self.assertIn("a.py", result.content)
+        self.assertNotIn("b.txt", result.content)
+
+    def test_list_files_glob_recursive_pattern(self):
+        """测试glob递归模式**匹配子目录文件"""
+        (Path(self.temp_dir) / "a.py").write_text("py")
+        sub = Path(self.temp_dir) / "sub"
+        sub.mkdir()
+        (sub / "b.py").write_text("py")
+        (sub / "c.txt").write_text("txt")
+
+        result = list_files(self.temp_dir, glob=True, glob_pattern="**/*.py")
+        self.assertIn("a.py", result.content)
+        self.assertIn("b.py", result.content)
+        self.assertNotIn("c.txt", result.content)
+
+    def test_list_files_glob_default_pattern(self):
+        """测试glob默认pattern为**匹配所有文件"""
+        (Path(self.temp_dir) / "a.py").write_text("py")
+        sub = Path(self.temp_dir) / "sub"
+        sub.mkdir()
+        (sub / "b.py").write_text("py")
+
+        result = list_files(self.temp_dir, glob=True)
+        self.assertIn("a.py", result.content)
+        self.assertIn("b.py", result.content)
+
+    def test_list_files_glob_respects_gitignore(self):
+        """测试glob尊重gitignore"""
+        (Path(self.temp_dir) / "a.py").write_text("py")
+        (Path(self.temp_dir) / "b.pyc").write_text("pyc")
+        (Path(self.temp_dir) / ".gitignore").write_text("*.pyc\n")
+
+        result = list_files(self.temp_dir, glob=True, glob_pattern="*")
+        self.assertIn("a.py", result.content)
+        self.assertNotIn("b.pyc", result.content)
+
+    def test_list_files_glob_excludes_git_dir(self):
+        """测试glob排除.git目录"""
+        git_dir = Path(self.temp_dir) / ".git"
+        git_dir.mkdir()
+        (git_dir / "config").write_text("config")
+        (Path(self.temp_dir) / "a.py").write_text("py")
+
+        result = list_files(self.temp_dir, glob=True, glob_pattern="**")
+        self.assertIn("a.py", result.content)
+        self.assertNotIn(".git", result.content)
+        self.assertNotIn("config", result.content)
+
+    def test_list_files_glob_clusters_by_directory(self):
+        """测试glob按目录聚类输出"""
+        sub = Path(self.temp_dir) / "sub"
+        sub.mkdir()
+        (sub / "a.py").write_text("py")
+        (sub / "b.py").write_text("py")
+        (Path(self.temp_dir) / "c.py").write_text("py")
+
+        result = list_files(self.temp_dir, glob=True, glob_pattern="**")
+        self.assertIn("{a.py,b.py}", result.content)
+
+    def test_list_files_glob_nonexistent_dir(self):
+        """测试glob在不存在目录上返回空结果"""
+        result = list_files("/nonexistent/path", glob=True, glob_pattern="*")
+        self.assertTrue(result.content == "" or "不存在" not in result.content)
 
     def test_get_absolute_path(self):
         """测试获取绝对路径"""

@@ -3,10 +3,13 @@
 from pathlib import Path
 from typing import Callable
 import difflib
+import itertools
 import json
 import stat
 import subprocess
 import time
+
+import pathspec
 
 
 from linhai.agent.messages import FileContentMessage
@@ -291,16 +294,47 @@ def get_file_info(file_path: Path) -> str:
         )
 
 
-def list_files(dirpath: str) -> ToolResultSuccess | ToolResultFailed:
-    """列出指定文件夹中的文件和子目录。
+def _list_files_glob(
+    dir_path: Path, pattern: str
+) -> ToolResultSuccess | ToolResultFailed:
+    spec = None
+    gitignore_path = dir_path / ".gitignore"
+    if gitignore_path.is_file():
+        gitignore = gitignore_path.read_text(encoding="utf-8")
+        spec = pathspec.PathSpec.from_lines("gitignore", gitignore.splitlines())
 
-    Args:
-        dirpath: 文件夹路径
+    files: list[Path] = []
+    for file in dir_path.glob(pattern):
+        if not file.is_file():
+            continue
+        if ".git" in file.parts:
+            continue
+        if spec is not None:
+            rel = file.relative_to(dir_path)
+            if spec.match_file(str(rel)):
+                continue
+        files.append(file)
+        if len(files) >= 5000:
+            break
 
-    Returns:
-        包含文件列表和子目录列表的字符串
-    """
+    files.sort(key=lambda f: (len(f.parts), f.parts))
+    truncated = len(files) == 5000
+
+    lines: list[str] = []
+    for parent, group in itertools.groupby(files, lambda f: f.parent.as_posix()):
+        names = ",".join(f.name for f in group)
+        lines.append(f"{parent}/{{{names}}}")
+
+    header = "Showing top 5000 files\n" if truncated else ""
+    return ToolResultSuccess(content=f"{header}{chr(10).join(lines)}")
+
+
+def list_files(
+    dirpath: str, glob: bool = False, glob_pattern: str = "**"
+) -> ToolResultSuccess | ToolResultFailed:
     dir_path = Path(dirpath)
+    if glob:
+        return _list_files_glob(dir_path, glob_pattern)
     if not dir_path.exists():
         return ToolResultFailed(content=f"文件夹路径{dir_path.as_posix()!r}不存在")
     if not dir_path.is_dir():
